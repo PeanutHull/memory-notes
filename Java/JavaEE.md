@@ -1,4 +1,4 @@
-###Servlet
+### Servlet
 1. 认识：为创建基于web的java应用程序，可以访问所有java API。是运行在web服务器上的，作为来自http请求和数据库之间的中间层。可以搜集表单等浏览器的东西和创建动态网页
 1. 特点：Servlet在web服务器的地址空间执行，不会一个客户端一个进程，性能好。独立于平台，安全性好
 1. Servlet项目结构
@@ -325,3 +325,44 @@
      1. `String getDisplayLanguage()` // 语言名称
      1. `String getISO3Country()` // 国家的3个字母缩写
      1. `String getISO3Language()` // 语言的3个字母缩写
+
+### JSP
+1. 理解：`Java Server Pages` 动态生成html、xml的web网页的标准。为java提供接口服务于http，跨平台。使用JSP标签在html中插入java代码，通常<% %>包裹。主要用于实现界面
+1. 特点
+   - jsp已经是编译好的，不需要预先载入解释器和目标脚本
+   - JSP基于Java API
+   - 与纯Servlet比较，方便编写html，而不用大量的println
+1. 实例
+      ```Java
+      <body>
+        <%
+          out.println("Hello World！");
+        %>
+      </body>
+      ```
+1. 生命周期
+   - 编译阶段：解析jsp转成Servlet，编译Servlet文件，生成servlet类
+   - 初始化阶段：加载Servlet类，创建实例，调用初始化方法——jspInit()
+   - 执行阶段：调用Servlet服务方法：_jspService(HttpServletRequest request,HttpServletResponse response)
+   - 销毁阶段：销毁Servlet实例:jspDestroy()
+   - 实例
+      ```Java
+      <body>
+      <h1>666</h1>
+      <%!
+        public void jspInit(){}
+        public void jspDestroy(){}
+      %>
+      <%
+        System.out.println(request.getRemoteAddr());
+      %>
+      </body>
+      ```
+1. 语法
+   - 脚本程序
+     1. `<% 代码片段 %>`
+     1. `<jsp:scriptlet>代码片段</jsp:scriptlet>`
+   - 声明变量/方法
+     1. `<%! declaration; [ declaration; ] +... %>`
+     1. `<jsp:declaration>代码片段</jsp:declaration>`
+   - 表达式
