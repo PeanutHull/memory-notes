@@ -266,11 +266,6 @@
         Date dNow = new Date();
         SimpleDateFormat ft = new SimpleDateFormat ("E yyyy.MM.dd 'at' hh:mm:ss a zzz");
         ft.format(dNow)
-        // 格式化时期显示
-        ystem.out.printf("%s %tB %<\te, %<\tY", "Due date:", date);
-        // 日期转字符型
-        SimpleDateFormat ft = new SimpleDateFormat ("E yyyy.MM.dd 'at' hh:mm:ss a zzz");
-        ft.parse(input);
         // 解析字符串为时间
         SimpleDateFormat ft = new SimpleDateFormat ("yyyy-MM-dd");
         String input = "1818-11-11";
@@ -736,7 +731,7 @@
 1. Character类
    - 定义：对单个字符进行操作，包装一个char类型的对象
    - 示例：
-    ```
+    ```Java
     char ch = 'a';
     char uniChar = '\u039A'; // unicode形式
     char[] charArray ={ 'a', 'b', 'c', 'd', 'e' }; // 字符数组

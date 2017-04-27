@@ -78,3 +78,31 @@ URL和URN都是一种URI,
       Cache-Control: no-cache
       ```
     - 特点：普通的post请求，头信息里注明内容长度，头信息每行一条，空行之后便是body，即内容entity
+1. Http
+   - 请求头信息
+     1. `Accept` // 指定客户端可接受的MIME类型，如 image/png
+     1. `Accept-Charset` //字符集，如ISO-8859-1
+     1. `Accept-Encoding` // 编码类型，如gzip
+     1. `Accept-Language` // 首选语言，如en、en-us、ru
+     1. `Host` // 主机和端口
+     1. `Content-Length` // POST数据的大小，字节为单位
+     1. `Cookie` // 携带的服务器给的cookie
+     1. `Authorization` // 鉴权信息     
+     1. `User-Agent` // 客户端标识
+     1. `Connection` // 是否处理持久Http连接，Keep-Alive为持久连接
+     1. `If-Modified-Since` // 数据缓冲，否则服务器返回304
+     1. `If-Unmodified-Since` // 数据缓冲
+     1. `Referer` // 上一个页面的url
+   - 相应头信息
+     1. `Allow` // 服务器支持的方法
+     1. `Cache-Control` // 表示此文档是否可安全缓冲，有public、private、no-cache，private表示只能存在私有缓冲中
+     1. `Connection` // 是否持久连接：close、keep-alive
+     1. `Content-Disposition` // 指定保存的文件名
+     1. `Content-Encoding` // 编码方式
+     1. `Content-Language` //
+     1. `Content-Length` // keep-alive时不需要
+     1. `Content-Type` // MIME类型
+     1. `Expires` // 过期时间，即缓冲删除时间
+     1. `Last-Modified` // 文件最后修改时间
+     1. `Location、Refresh、Retry-After`
+     1. `Set-Cookie`
