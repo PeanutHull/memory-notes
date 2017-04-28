@@ -332,37 +332,127 @@
    - jsp已经是编译好的，不需要预先载入解释器和目标脚本
    - JSP基于Java API
    - 与纯Servlet比较，方便编写html，而不用大量的println
-1. 实例
-      ```Java
-      <body>
-        <%
-          out.println("Hello World！");
-        %>
-      </body>
-      ```
 1. 生命周期
    - 编译阶段：解析jsp转成Servlet，编译Servlet文件，生成servlet类
    - 初始化阶段：加载Servlet类，创建实例，调用初始化方法——jspInit()
    - 执行阶段：调用Servlet服务方法：_jspService(HttpServletRequest request,HttpServletResponse response)
    - 销毁阶段：销毁Servlet实例:jspDestroy()
-   - 实例
-      ```Java
-      <body>
-      <h1>666</h1>
-      <%!
-        public void jspInit(){}
-        public void jspDestroy(){}
-      %>
-      <%
-        System.out.println(request.getRemoteAddr());
-      %>
-      </body>
-      ```
-1. 语法
-   - 脚本程序
-     1. `<% 代码片段 %>`
-     1. `<jsp:scriptlet>代码片段</jsp:scriptlet>`
+1. 语法：就是一些含有意义的标签
+   - 注释
+     1. `<%-- 不会被编译不会--%>`
+     1. `<!-- 网页源代码可见 -->`
+     1. `<\% %\> \' \"`：转义
    - 声明变量/方法
      1. `<%! declaration; [ declaration; ] +... %>`
-     1. `<jsp:declaration>代码片段</jsp:declaration>`
-   - 表达式
+     1. `<jsp:declaration> 代码片段 </jsp:declaration>`
+   - 脚本程序
+     1. `<% 代码片段 %>`
+     1. `<jsp:scriptlet> 代码片段 </jsp:scriptlet>`
+   - 表达式：单语句，不能有分号，转为String后插入页面
+     1. `<%= 表达式 %>`
+     1. `<jsp:expression> 表达式 </jsp:expression>`
+   - 流程控制
+     1. if判断
+        ```Java
+        <% if (day == 1 | day == 7) { %>
+        <% } else { %>
+        <% } %>
+        ```
+      1. switch
+        ```Java
+        <%
+        switch(day) {
+          case 0:
+            break;
+          default:
+        }
+        %>
+        ```
+       1. for循环
+        ```Java
+        <%for ( i = 1; data <= 3; i++){ %>
+        <%}%>
+        ```
+1. 指令
+   - `<%@ page ... %>`：页面依赖属性：如脚本语言、error页面、缓存需求等
+     1. 属性
+        - `import` // 导入的类
+        - `extends` // 指定Servlet从哪儿继承
+        - `contentType` // MIME和字符编码
+        - `info` // 页面的描述信息
+        - `language` // 指定页面的脚本语言，默认java
+        - `session` // 是否使用session
+        - `errorPage` // 发生错误转向的错误页面
+        - `isErrorPage` // 表示本页面是否可作为错误页面
+        - `buffer` // out对象使用缓冲区的大小
+        - `autoFlush` // 控制out对象的缓冲区
+        - `isELIgnored` // 是否执行EL表达式
+        - `isScriptingEnabled` // 脚本元素是否能被使用
+        - `isThreadSafe` // 指定对页面的访问是否为线程安全
+   - `<%@ include file="文件相对地址" %>`：包含其他文件，如jsp、html、文本文件
+     1. 等价于`<jsp:directive.include file="文件相对 url 地址"/>`
+   - `<%@ taglib uri="" prefix="" %>`：引入标签库或者自定义标签
+
+1. 行为：使用XML动态插入文件/Html、重用JavaBean组件等
+   - 形式：<jsp:action_name attribute="value" />
+   - 属性
+     1. id：行为元素的唯一标识，通过PageContext调用
+     1. scope：识别行为元素的生命周期，四个值：page、request、session、application
+   - 组成
+     1. 创建XML元素
+        - 标签
+          1. `jsp:element`：动态创建XML元素
+          1. `jsp:attribute`：定义XML元素的属性
+          1. `jsp:body`：定义XML元素的主体
+        - 使用
+          ```Java
+          <jsp:element name="xmlElement">
+            <jsp:attribute name="xmlElementAttr">
+            </jsp:attribute>
+            <jsp:body>
+            </jsp:body>
+          </jsp:element>
+          ```
+     1. 使用JavaBean
+        - 标签     
+          1. `jsp:useBean`：使用JavaBean组件，java组件重用
+          1. `jsp:getProperty/setProperty`：JavaBean组件的值
+        - 属性
+          1. `name` // 指定适用的Bean
+          1. `property` // 属性名
+          1. `value` // 属性值
+          1. `param` // 默认值
+        - 使用
+          ```Java
+          <jsp:useBean id="" >
+            <jsp:setProperty name="" property=""/>
+            <jsp:getProperty name="" property=""/>
+          </jsp:useBean>
+          ```
+     1. 引入页面
+        - 使用：`<jsp:include page="" flush="true" />`，flush表示引入前是否刷新缓冲区
+        - 使用：`jsp:plugin`：用于包含Applet和JavaBean对象
+          ```Java
+          <jsp:plugin type="applet" codebase="dirname" code="MyApplet.class" width="60" height="80">
+            <jsp:param name="fontcolor" value="red" />
+            <jsp:param name="background" value="black" />
+            <jsp:fallback></jsp:fallback>
+          </jsp:plugin>
+          ```
+     1. 跳转：向另一个文件传递request对象。`<jsp:forward page="" />`
+     1. 文本模板：`jsp:text`
+        - 理解：只能包含文本和EL表达式
+1. 隐含对象
+   - 组成
+     1. `page` // 类似this关键字，整个页面的代表
+     1. `config` // ServletConfig类的实例
+     1. `pageContext` // PageContext类的实例，提供对JSP页面所有对象和命名空间的访问
+     1. `application` // ServletContext类的实例，与应用上下文有关
+     1. `request` // HttpServletRequest类的实例
+     1. `response` // HttpServletResponse类的实例
+     1. `session` // HttpSession类的实例
+     1. `out` // PrintWriter类的实例，用于输出结果
+     1. `Exception` // Exception类的对象，代表JSP页面中的异常对象
+   - 解释
+     1. pageContext：包含request/response/application/config/session/out对象，也包含指令信息，如缓冲信息/页面scop/错误页面地址，还有一些字段：PAGE\_SCOPE/REQUEST\_SCOPE/SESSION_SCOPE等
+     1. out：print/println的打印方法，flush()刷新输出流
