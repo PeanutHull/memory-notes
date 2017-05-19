@@ -11,7 +11,7 @@
    - doGet、doPost
    - destory()：只被调用一次
 1. 参数
-   - request：请求
+   - request：请求，是javax.servlet.http.HttpServletRequest类的实例
      1. 方法
         ```Java
         getParameter()：单个参数
@@ -29,7 +29,7 @@
           request.getParameterValues(paramName);
         }
         ```
-      1. 请求方法补充
+      1. 方法补充
          - `Enumeration getHeaderNames()` // 返回所有头信息
          - `Cookie[] getCookies()` //
          - `HttpSession getSession()` // 获取session对话，无则创建
@@ -41,7 +41,7 @@
          - `String getQueryString()` // get参数
          - `int getContentLength()` // post的长度，字节为单位，未知为-1
          - `String getRemoteAddr()` // 获取请求者ip
-   - response：响应
+   - response：响应，是javax.servlet.http.HttpServletResponse类的实例
      1. 方法
         ```Java
         setContentType()
@@ -56,7 +56,7 @@
         out.println("<html>");
         out.println("</html>");
         ```
-     1. 响应方法补充
+     1. 方法补充
          - `void setStatus(int sc)` // 设置状态码
          - `void addCookie(Cookie cookie)`
          - `void addHeader(String name, String value)`
@@ -311,6 +311,8 @@
             <location>/ErrorHandler</location>
         </error-page>
         ```
+1. 包
+ - 理解：其他类文件，固定的存放在`/WEB-INF/classes/`中
 1. 调试：`System.out.println()`，输出的信息会记录在web服务器日志里
 1. 国际化
    - 概念
@@ -327,7 +329,7 @@
      1. `String getISO3Language()` // 语言的3个字母缩写
 
 ### JSP
-1. 理解：`Java Server Pages` 动态生成html、xml的web网页的标准。为java提供接口服务于http，跨平台。使用JSP标签在html中插入java代码，通常<% %>包裹。主要用于实现界面
+1. 理解：`Java Server Pages` 动态生成html、xml的web网页的标准。为java提供接口服务于http协议，跨平台。使用JSP标签在html中插入java代码，通常<% %>包裹。主要用于实现界面
 1. 特点
    - jsp已经是编译好的，不需要预先载入解释器和目标脚本
    - JSP基于Java API
@@ -359,20 +361,20 @@
         <% } %>
         ```
       1. switch
-        ```Java
-        <%
-        switch(day) {
-          case 0:
-            break;
-          default:
-        }
-        %>
-        ```
+         ```Java
+         <%
+         switch(day) {
+           case 0:
+             break;
+           default:
+         }
+         %>
+         ```
        1. for循环
-        ```Java
-        <%for ( i = 1; data <= 3; i++){ %>
-        <%}%>
-        ```
+          ```Java
+          <%for ( i = 1; data <= 3; i++){ %>
+          <%}%>
+          ```
 1. 指令
    - `<%@ page ... %>`：页面依赖属性：如脚本语言、error页面、缓存需求等
      1. 属性
@@ -456,3 +458,156 @@
    - 解释
      1. pageContext：包含request/response/application/config/session/out对象，也包含指令信息，如缓冲信息/页面scop/错误页面地址，还有一些字段：PAGE\_SCOPE/REQUEST\_SCOPE/SESSION_SCOPE等
      1. out：print/println的打印方法，flush()刷新输出流
+1. EL表达式语言
+   - 理解：可使用各种类型的数据来创建算术/逻辑表达式
+   - 使用：${expr}，不使用`<%@ page isELIgnored ="true|false" %>`
+   - 举例
+     ```Java
+     ${2*box.width+2*box.height}
+     ```
+   - 基础操作符
+     1. `.` // 访问一个bean属性或者映射条目
+     1. `[]` // 数组或者链表的元素
+     1. `+-*/%` // 加减乘除取余
+     1. `==!=><` // 各种等于不等于
+     1. `&&||!` // 与或非
+     1. `empty` // 是否为空
+   - EL中的函数：${ns:func(param1, param2)}，这些函数必须被定义在自定义标签库中
+1. 标准标签库
+   - 理解：JSTL，是JSP标签集合，封装了JSP应用的通用核心功能。支持迭代、判断、xml操作、sql标签、自定义标签
+   - 分类
+     1. 核心标签
+     1. 格式化标签
+     1. sql标签
+     1. xml标签
+     1. JSTL函数
+   - 安装：将官方jar包放到`/WEB-INF/lib/`下，web.xml添加配置
+     ```XML
+     <jsp-config>
+       <taglib>
+         <taglib-uri>http://java.sun.com/jstl/fmt</taglib-uri>
+         <taglib-location>/WEB-INF/fmt.tld</taglib-location>
+       </taglib>
+     </jsp-config>
+     ```
+   - 使用
+     1. 核心标签：先引用`<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>`
+        - `<c:out>` // 在JSP中显示数据
+        - `<c:set>` // 保存数据，设置变量值和对象属性，类似`<jsp:setProperty>`
+        - `<c:remove>` // 删除数据
+          ```Java
+          <c:set var="salary" scope="session" value="${2000*2}"/>
+          <c:out value="${salary}"/>
+          <c:remove var="salary"/>
+          ```
+        - `<c:catch>` // 处理异常状况，将错误信息储存起来
+        - `<c:if>` // if
+          ```Java
+          <c:catch var ="catchException">
+            <% int x = 5/0;%>
+          </c:catch>
+          <c:if test = "${catchException != null}">
+            发生了异常: ${catchException.message}</p>
+          </c:if>
+          ```
+        - `<c:choose>/<c:when>/<c:otherwise>` // 只当做`<c:when>`和`<c:otherwise>`的父标签，用于判断
+          ```Java
+          <c:choose>
+              <c:when test="${salary <= 0}"></c:when>
+              <c:when test="${salary > 1000}"></c:when>
+              <c:otherwise></c:otherwise>
+          </c:choose>
+          ```
+        - `<c:import>` // 检索url，将其内容展示给页面
+        - `<c:forEach>` // 接受多种集合类型
+          ```Java
+          <c:forEach var="i" begin="1" end="5">
+            Item <c:out value="${i}"/><p>
+          </c:forEach>
+          ```
+        - `<c:forTokens>` // 根据指定分隔符分隔内容并迭代输出
+          ```Java
+          <c:forTokens items="google,runoob,taobao" delims="," var="name">
+            <c:out value="${name}"/><p>
+          </c:forTokens>
+          ```
+        - `<c:redirect>` // 重定向至url，`<c:redirect url="http://www.runoob.com"/>`
+        - `<c:url>` // 使用可选参数构造url
+        - `<c:param>` // 给包含或重定向的页面传递参数
+          ```Java
+          <c:url var="myURL" value="main.jsp">
+            <c:param name="name" value="Runoob"/>
+            <c:param name="url" value="www.runoob.com"/>
+          </c:url>
+          ```
+     1. 格式化标签：引入`<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>`
+        - `<fmt:formatNumber>` // 针对指定格式或精度的数字
+        - `<fmt:parseNumber>` // 解析代表数字、货币、百分比的字符串
+        - `<fmt:formatDate>` // 针对日期和时间
+        - `<fmt:parseDate>` // 解析代表日期和时间的字符串
+        - `<fmt:setLocale>` // 指定地区
+        - `<fmt:timeZone>` // 指定时区
+        - `<fmt:setTimeZone>` // 指定时区
+        - `<fmt:bundle>` // 绑定资源
+        - `<fmt:setBundle>` // 绑定资源
+        - `<fmt:message>` // 显示资源配置文件信息
+        - `<fmt:requestEncoding>` // 设置request的字符编码
+        - TODO 以上没有仔细看：http://www.runoob.com/jsp/jsp-jstl.html
+     1. sql标签：引入`<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/sql" %>`
+        - `<sql:setDataSource>` // 指定数据源
+        - `<sql:query>` // 运行查询语句
+        - `<sql:update>` // 运行更新语句
+        - `<sql:param>` // 设置sql语句的参数
+        - `<sql:dateParam>` // 将SQL语句中的日期参数设为指定的java.util.Date值
+        - `<sql:transaction>` // 执行事务语句
+          ```Java
+          <sql:setDataSource var="snapshot" driver="com.mysql.jdbc.Driver"
+              url="jdbc:mysql://localhost/TEST"
+              user="root"  password="pass123"/>
+          <sql:query dataSource="${snapshot}" var="result">
+              SELECT * from Employees;
+          </sql:query>
+          ```
+     1. xml标签：引入`***xml %>`
+        - `<x:out>` // 类似<%= ... >，只用于XPath表达式
+        - `<x:parse>` // 解析xml
+        - `<x:set>` // 设置XPath表达式
+        - `<x:if>` // 判断XPath表达式
+        - `<x:forEach>` // 迭代xml的节点
+        - `<x:choose>/<x:when>/<x:otherwise>` // 
+        - `<x:transform>` // XSL转换应用在XML中
+        - `<x:param>` // 和<x:transform>共同使用，用于设置XSL样式表
+     1. JSTL函数：引入`<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>`
+        - `fn:length()` // 字符串长度
+        - `fn:join()` // 字符串合并
+        - `fn:replace()` // 替换字符串
+        - `fn:split()` // 分割字符串
+        - `fn:trim()` // 移除首尾空白
+        - `fn:toLowerCase()/fn:toUpperCase()` // 转大小写
+        - `fn:indexOf()	` // 返回指定字符串出现的位置
+        - `fn:substring()/fn:substringAfter()/` // 返回(之前/之后)的子串
+        - `fn:contains()/fn:containsIgnoreCase()` // 测试字符串是否包含指定的子串
+        - `fn:startsWith()` // 是否以指定开头开始
+        - `fn:endsWith()` // 是否以指定后缀结尾
+        - `fn:escapeXml()` // 跳过可以作为XML标记的字符
+1. 自定义标签
+   - 方法
+     1. 创建自定义标签类
+      ```Java
+      import javax.servlet.jsp.tagext.*;
+      public class HelloTag extends SimpleTagSupport {
+        public void doTag() throws JspException, IOException {
+          JspWriter out = getJspContext().getOut();
+          out.println("Hello Custom Tag!");
+        }
+      }
+      ```
+      1. 建立标签配置文件：ROOT\WEB-INF\xxx.tld
+1. 处理xml文档
+   - 发送xml：修改页面头`<%@ page contentType="text/xml" %>`
+   - 展示xml
+      ```Java
+      <c:import var="bookInfo" url="http://localhost:8080/books.xml"/> // 载入xml文档
+      <x:parse xml="${bookInfo}" var="output"/>
+      <x:out select="$output/books/book[1]/name" />
+      ```

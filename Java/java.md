@@ -27,7 +27,7 @@
      1. Spring
      1. Hibernate,IBatis
      1. SpringMVC, Struts
-     1. Quartz、Ehcache、apache commons
+     1. Quartz、Ehcache、Apache commons
    - 版本： 主要区别为基础类库的不同
      1. Java SE： java标准版，包含最普遍的类库，针对普通的java程序。有面向对象/API/JVM..
      1. Java EE： java企业版，类库最多的，针对服务器、web应用。本身是一个规范
@@ -401,9 +401,7 @@
    - 捕获异常：case语句包含异常的声明，定义捕获哪种类型的异常
         ```Java
         try{
-
         }catch(ExceptionName e1) {
-
         }
         // 例子
         try{
@@ -414,13 +412,10 @@
         }
         // 多重捕获
         try{
-        
         }catch(异常类型1 异常的变量名1){
-        
         }catch(异常类型2 异常的变量名2){
-        
         }finally{
-            // 此代码块总会被执行，适用善后性质的语句
+        // 此代码块总会被执行，适用善后性质的语句
         }
         try{
             file = new FileInputStream(fileName);
@@ -440,8 +435,7 @@
     - 自定义异常
         ```Java
         // 声明异常类
-        class MyException extends Exception/RuntimeException{
-        }
+        class MyException extends Exception/RuntimeException{}
         ```
 
 ### 面向对象
@@ -685,6 +679,7 @@
    1. 内部类
       - 定义：就是一个类中定义的类，对应的是外部类
       - 作用：更好的封装
+### 类的解释
 1. System：系统类
 1. 包装类
    - 定义：将内置数据类型作为当做对象使用。都是抽象类Number的子类，属于java.lang包
@@ -847,13 +842,8 @@
         in.close();
         fileIn.close();
         ```
+### 使用
 1. Applet基础：是java的一种应用程序，要求浏览器支持JVM，作用类似flash，嵌入在html中，现在基本没人用
-
-### WIKI
-1. java程序特点
-     1. 源文件名：必须和类名相同
-     1. 主方法入口：所有java程序由public static void main(String[] args)开始执行
-1. 关联知识点：多线程 io jvm 分布式 mysql spring redis mq 微服务
 1. 开发
  - Eclipse开发java：创建java项目——创建程序包——编写java源程序——运行java
  - Eclipse开发java web： 安装Java/Eclipse/Tomcat——Eclipse配置JRE——集成Tomcat——创建项目——部署(发布)到tomcat——启动tomcat
@@ -862,7 +852,13 @@
  - java web项目组成
      1. index.jsp
      1. WEB-INF:classes放字节码文件，lib放jar包
-1. 环知识点：基础，web开发，常用框架，工程与设计模式，数据库和网络，数据结构和算法
+### WIKI
+1. java程序特点
+     1. 源文件名：必须和类名相同
+     1. 主方法入口：所有java程序由public static void main(String[] args)开始执行
+1. 知识点
+ - 环知识点：基础，web开发，常用框架，工程与设计模式，数据库和网络，数据结构和算法
+ - 扩展知识点：多线程 io jvm 分布式 mysql spring redis mq 微服务
 1. 关键字： 不能用于标识符的使用
      1. 面向对象
          - 包： package
