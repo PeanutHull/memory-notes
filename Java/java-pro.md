@@ -1,5 +1,5 @@
 ### 数据结构
-1. 数组：（Array）存储在堆上的对象，用来存储固定大小的多个同类型变量
+1. 数组：（Array）存储在堆上的对象，长度是固定的，用来存储固定数量的多个同类型变量
    - 定义：`数据类型 数组名[] 或者 数据类型[] 数组名`
    - 声明
         ```Java
@@ -202,9 +202,49 @@
      1. `void load(InputStream streamIn) throws IOException` // 从输入流中读取属性列表
      1. `Enumeration propertyNames( )` // 按简单的面向行的格式从输入字符流中读取属性列表
      1. `Object setProperty(String key, String value)` // 调用Hashtable的put方法
-     1. `void store(OutputStream streamOut, String description)` //
-1. 集合框架：（Collection）Java2引入，是用来代表和操作集合的统一架构，集合框架围绕一组标准接口而设计，可以直接使用接口的标准实现，如LinkedList、HashSet、TreeSet，也可以通过接口实现自己的集合。提供了预先包装的数据结构供使用
-   - 特点：对基本集合(动态数组/链表/树/哈希表)的实现是高性能的，允许不同类型的集合以类似的方式工作，对集合的扩展和适应是简单的。
+     1. `void store(OutputStream streamOut, String description)`
+### 集合框架
+1. 简介：Java2引入，是用来代表/操作集合的统一架构，集合框架围绕一组标准接口而设计，可以直接使用接口的标准实现，如LinkedList、HashSet、TreeSet，也可以通过接口实现自己的集合。提供了预先包装的数据结构供使用
+1. 理解：具有共同属性的数据集合。对数据进行组织和大数量的操作，是盛装其他对象的容器
+1. 分类
+   - Collection：内部都是一个个的对象
+     1. List：(序列)排列有序可重复
+        - ArrayList：(数组序列)
+     1. Queue：(队列)排列有序可重复
+        - LinkedList：(链表)，同时也是List的实现类
+     1. Set：(集)无序不可重复
+        - HashSet：(哈希集)
+   - Map：有众多子接口
+     1. HashMap：(哈希表)
+1. Collection
+   - 比较：
+     1. List查询效率高，插入和删除低，因为改起其他元素改变；Set查询效率低，插入和删除效率高
+     1. Set没有List的get方法，只能通过foreach和iterator方法遍历，而且每次迭代的结果都不一样。Set中不论添加多少次，因为不能重复，所以只能有一个
+1. Map：(映射) 用来存储键值对。可以通过key查找value。内部以映射存储数据，就是Entry(键值对)类的实例，key和value可以是任意的对象。key不可重复，value可以。组成有Map自己是个接口、众多子接口和实现类。支持泛型：`Map<k,v>`
+   - 特点
+     1. 访问的值不存在，抛出NoSuchElementException异常
+     1. 对象类型和Map的元素类型不兼容时，抛出ClassCastException
+     1. 不允许使用Null对象的Map中使用Null，抛出NullPointerException
+     1. 修改只读Map时，抛出UnsupportedOperationException
+   - 方法
+     1. `Object get(Object k)` // 通过键返回值，不存在为null
+     1. `Object put(Object k, Object v)` // 更新或添加
+     1. `Object remove(Object k)` // 通过键删除
+     1. `void putAll(Map m)` // 一个映射复制到另一个映射
+     1. 
+     1. `boolean equals(Object obj)` // 比价指定的对象和此映射是否相同
+     1. `boolean containsKey(Object k)` // 是否存在指定键
+     1. `boolean containsValue(Object v)` // 是否存在指定值
+     1. `int size( )` // 返回关系数量
+     1. `boolean isEmpty()` // 是否为空
+     1. `void clear( )` // 删除所有映射关系
+     1. 
+     1. `Set keySet( )` // 返回键的Set视图
+     1. `Collection values( )` // 返回值的Collection视图
+     1. `Set entrySet( )` // 返回映射关系的Set视图
+     1. 
+     1. `int hashCode()` // 返回映射的哈希码值
+1. 内部组成
    - 组成：接口、实现类(集合类)、算法（如搜索和排序）
      1. 接口
         - `Collection`：最基本集合接口，java不提供直接继承自Collection的类来使用，只提供继承Collection的子接口，如List和Set
@@ -212,23 +252,21 @@
         - `Set`：无序的，与Collection完全一样，但是行为上不同。不能有相同元素。子接口SortedSet接口保存有序集合。
         - `Map`：唯一键映射到值。Map.Entry描述Map中的键值对，是Map的内部类。子接口SortedMap，使key保持升序。
         - `Enumeration`：一个传统的接口和数据定义方法，已被迭代器取代
-     1. 集合类`：具体类可以直接使用，抽象类提供了接口的部分实现
+     1. 集合类：具体类可以直接使用，抽象类提供了接口的部分实现
         - `AbstractCollection`：实现了大部分的集合接口
-        - `AbstractList`：继承于AbstractCollection，实现了大部分List接口。子类AbstractSequentialList提供对数据元素的链式访问，不是随机访问。
+        - `AbstractList`：继承于AbstractCollection，实现了大部分List接口。子类AbstractSequentialList提供对数据元素的链式访问，不是随机访问
+        - `ArrayList`：实现可变大小的数组，非同步        
         - `LinkedList`：实现了List接口，允许null存在。用于创建链表数据结构，查找效率低。没有同步方法，多线程需要自己实现访问同步，解决方案：创建List时候构造一个同步的List。
-        - `ArrayList`：实现可变大小的数组，非同步
-        - `
         - `AbstractSet`：继承于AbstractCollection，实现大部分Set接口
         - `HashSet`：不允许元素重复，不保证元素顺序，最多有一个null值
         - `LinkedHashSet`：可预知迭代顺序的Set接口的哈希表和链接列表实现
         - `TreeSet`：实现Set接口，实现排序等功能
-        - `
         - `AbstractMap`：实现大部分Map接口
         - `HashMap`：是一个散列表，是键值对的映射。根据键的哈希值存储数据，访问速度很快。不同步，最多一个null。WeakHashMap：弱秘钥的哈希表；LinkedHashMap：按自然顺序对元素排序；IdentityHashMap：比较文档时使用引用相等
         - `TreeMap`：使用一棵树
      1. 集合算法：被定义为集合类的静态方法，定义了三个静态变量：EMPTY\_SET，EMPTY\_LIST，EMPTY_MAP，不可改变
-     1. 迭代器：用来遍历集合中的元素，类似for和增强for，继承自Iterator接口或继承自ListIterator
-        - 遍历ArrayList
+   - 迭代器：用来遍历集合中的元素，类似for和增强for，继承自Iterator接口或继承自ListIterator
+     1. 遍历ArrayList
             ```Java
             // 组建数组
             List<String> list=new ArrayList<String>();
@@ -247,7 +285,7 @@
             Iterator<String> ite=list.iterator();
             while(ite.hasNext()) {}
             ```
-        - 遍历Map
+     1. 遍历Map
             ```Java
             Map<String, String> map = new HashMap<String, String>();
             map.put("1", "value1");
@@ -277,55 +315,13 @@
                 tmpValue = v;
             }
             ```
-     1. 比较器：用来精确定义排序规则，以不同方式排序集合。使用Comparator
-   - 比较：
-     1. List存储的是有序的，可以重复的元素；Set接口是无序的，不重复的。
-     1. List查询效率高，插入和删除低，因为改起其他元素改变；Set查询效率低，插入和删除效率高
-   - 映射：（Map）Map接口是用来存储键值对
-     1. 特点
-        - 访问的值不存在，抛出NoSuchElementException异常
-        - 对象类型和Map的元素类型不兼容时，抛出ClassCastException
-        - 不允许使用Null对象的Map中使用Null，抛出NullPointerException
-        - 修改只读Map时，抛出UnsupportedOperationException
-     1. 方法
-        - `Object get(Object k)` // 通过键返回值，不存在为null
-        - `Object put(Object k, Object v)` // 更新或添加
-        - `Object remove(Object k)` // 通过键删除
-        - `void putAll(Map m)` // 一个映射复制到另一个映射
-        -
-        - `boolean equals(Object obj)` // 比价指定的对象和此映射是否相同
-        - `boolean containsKey(Object k)` // 是否存在指定键
-        - `boolean containsValue(Object v)` // 是否存在指定值
-        - `int size( )` // 返回关系数量
-        - `boolean isEmpty()` // 是否为空
-        - `void clear( )` // 删除所有映射关系
-        -
-        - `Set keySet( )` // 返回键的Set视图
-        - `Collection values( )` // 返回值的Collection视图
-        - `Set entrySet( )` // 返回映射关系的Set视图
-        -
-        - `int hashCode()` // 返回映射的哈希码值
+   - 比较器：用来精确定义排序规则，以不同方式排序集合。使用Comparator
+1. 特点：对基本集合(动态数组/链表/树/哈希表)的实现是高性能的，允许不同类型的集合以类似的方式工作，对集合的扩展和适应是简单的。重点是ArrayList、HashSet、HashMap
+### 泛型
 1. 泛型
-   - 理解：JDK5引入的新特性，提供编译时的类型安全检测机制。允许编译时检测到非法的类型。本质是参数化类型，就是根据参数类型去决定程序
-   - 泛型方法：根据参数类型，泛型方法适当处理每一个方法调用
-     1. 特点：都有尖括号分隔的类型参数声明部分，这个部分包含n个类型的参数，称为类型变量。类型参数能被用来声明返回值类型，也能作为泛型方法的得到实参的占位符，即引用类型，不是原始类型
-     1. 举例
-        ```Java
-        // 泛型方法 printArray                         
-        public static < E > void printArray( E[] inputArray ){
-            // 输出数组元素            
-            for ( E element : inputArray ){        
-                System.out.printf( "%s ", element );
-            }
-        }
-        // 可以传入不同类型
-        Integer[] intArray = { 1, 2, 3, 4, 5 };
-        Double[] doubleArray = { 1.1, 2.2, 3.3, 4.4 };
-        printArray( intArray  ); // 传递一个整型数组
-        printArray( doubleArray ); // 传递一个双精度型数组
-        // 有界的类型参数
-        public static <T extends Comparable<T>> T maximum(T x, T y, T z)
-        ```
+   - 理解：JDK5引入的新特性，提供编译时的类型检测
+   - 特点
+     1. 泛型集合中的限定类型，不能使用基本数据类型，非要使用就通过包装类限定存入的类型。如int就用Integer，long就用Long。int的包装类就是Integer
    - 泛型类：类后面加类型参数声明部分，包含n个类型参数
      1. 定义
         ```Java
@@ -351,20 +347,45 @@
             }
         }
         ```
+   - 泛型方法：根据参数类型，泛型方法适当处理每一个方法调用
+     1. 特点：都有尖括号分隔的类型参数声明部分，这个部分包含n个类型的参数，称为类型变量。类型参数能被用来声明返回值类型，也能作为泛型方法的得到实参的占位符，即引用类型，不是原始类型
+     1. 举例
+        ```Java
+        // 泛型方法 printArray                         
+        public static < E > void printArray( E[] inputArray ){
+            // 输出数组元素            
+            for ( E element : inputArray ){        
+                System.out.printf( "%s ", element );
+            }
+        }
+        // 可以传入不同类型
+        Integer[] intArray = { 1, 2, 3, 4, 5 };
+        Double[] doubleArray = { 1.1, 2.2, 3.3, 4.4 };
+        printArray( intArray  ); // 传递一个整型数组
+        printArray( doubleArray ); // 传递一个双精度型数组
+        // 有界的类型参数
+        public static <T extends Comparable<T>> T maximum(T x, T y, T z)
+        ```
+   - 泛型成员变量
+        ```Java
+        // Course是一个对象
+        public List<Course> course; // 带有泛型的变量
+        this.course = new ArrayList<Course>(); // 赋值带有泛型的变量
+        ```
    - 类型通配符:用?代替具体的类型参数，如List<?>可以代表List<String>,List<Integer>等
         ```Java
         public static void getData(List<?> data) {}
         // 只接受Number及其子类型
         public static void getUperNumber(List<? extends Number> data)
         ```
-1. 网络编程
-   - 理解：java.net包中，有接口和类提供低层次的通信细节。
-   - Socket编程
-     1. 使用套接字建立TCP连接的过程
-        - 服务器实例化ServerSocket对象，调用accept()方法，等待客户端连接相应端口
-        - 客户端实例化Socket对象，指定地址等参数请求连接，连接建立
-        - 服务端的accept()方法返回新的与客户端连接的socket引用，使用I/O流进行通信，服务端和客户端的输出流和输入流分别相互连接。TCP是双向的，两个数据流可以同一时间发送
-     1. 实例
+### 网络编程
+1. 理解：java.net包中，有接口和类提供低层次的通信细节。
+1. Socket编程
+   - 使用套接字建立TCP连接的过程
+     1. 服务器实例化ServerSocket对象，调用accept()方法，等待客户端连接相应端口
+     1. 客户端实例化Socket对象，指定地址等参数请求连接，连接建立
+     1. 服务端的accept()方法返回新的与客户端连接的socket引用，使用I/O流进行通信，服务端和客户端的输出流和输入流分别相互连接。TCP是双向的，两个数据流可以同一时间发送
+   - 实例
         ```Java
         // 服务端
         public class GreetingServer extends Thread{
@@ -393,87 +414,87 @@
         Socket client = new Socket(serverName, port);
         client.close();
         ```
-     1. ServerSocket类的构造方法
-        - `public ServerSocket(int port) throws IOException` // 绑端口
-        - `public ServerSocket(int port, int backlog) throws IOException` // 指定backlog和本地端口号
-        - `public ServerSocket(int port, int backlog, InetAddress address) throws IOException` // 绑定backlog、端口和本地ip
-        - `public ServerSocket() throws IOException` // 创建非绑定Socket
-     1. ServerSocket类的常用方法
-        - `public int getLocalPort()` // 返回监听的端口
-        - `public Socket accept() throws IOException` // 开始监听
-        - `public void setSoTimeout(int timeout)` // 指定超时时间，毫秒为单位
-        - `public void bind(SocketAddress host, int backlog)` // 绑定ip和backlog
-     1. Socket类的构造方法：java.net.Socket代表服务端和客户端都用来通信。客户端实例化Socket，服务端通过accept()方法返回
-        - `public Socket(String host, int port) throws UnknownHostException, IOException.` // 连接指定主机ip和端口
-        - `public Socket(InetAddress host, int port) throws IOException` // 少了找不到异常
-        - `public Socket(String host, int port, InetAddress localAddress, int localPort) throws IOException.` // 连接到远程主机和端口
-        - `public Socket()` // 创建未连接的套接字
-     1. Socket类的常用方法
-        - `public void connect(SocketAddress host, int timeout) throws IOException` // 开始连接和超时时间
-        - `public InetAddress getInetAddress()` // 返回地址
-        - `public int getPort()` // 获得远程接口
-        - `public SocketAddress getRemoteSocketAddress()` // 获得远程地址
-        - `public int getLocalPort()` // 获得本地接口
-        - `public InputStream getInputStream() throws IOException` // 获得输入流
-        - `public OutputStream getOutputStream() throws IOException` // 获得输出流
-        - `public void close() throws IOException` // 关闭套接字
-      1. InetAddress类的方法
-        - `static InetAddress getByAddress(byte[] addr)`
-        - `static InetAddress getByName(String host)`
-        - `String getHostName() `
-        - `` // 
-        - `String toString()` // ip地址转为String
-        - `` // 
-   - URL处理
-     1. URL 类方法
-        - `public URL(String protocol, String host, int port, String file) throws MalformedURLException` // 创建url
-        - `public URL(String url) throws MalformedURLException` // 给定url创建url
-        - `public URL(URL context, String url) throws MalformedURLException` // 创建相对url地址
-        - `public String getPath()` // 
-        - `public String getQuery()` // 
-        - `public String getAuthority()` // 
-        - `public int getPort()` // 80
-        - `public int getDefaultPort()` // 80
-        - `public String getProtocol()` // http、https
-        - `public String getHost()` // baidu.com
-        - `public String getFile()` // index.html
-        - `public String getRef()` // 获得锚点:j2se
-        - `public URLConnection openConnection() throws IOException` // 打开url，访问资源
-     1. URLConnections类方法：返回HttpURLConnection或者JarURLConnection对象
-        - `Object getContent()` // 获得内容
-        - `Object getContent(Class[] classes)` // 检索链接内容
-        - `String getContentEncoding()` // 返回 content-encoding 值
-        - `int getContentLength()` // 返回 content-type
-        - `int getLastModified()` // 返回 last-modified
-        - `long getExpiration()`
-        - `long getIfModifiedSince()`
-        - `public void setDoInput/setDoOutput(boolean input)` // 设置url连接是否用于输入/输出
-        - `public InputStream getInputStream() throws IOException` // 返回输入流，用于读取
-        - `public OutputStream getOutputStream() throws IOException` // 返回输出流，用于写入
-        - `public URL getURL()` // 返回url
-1. 多线程
-   - 理解：阻塞当前进程，让出cpu。是并发执行的，线程多了因为上下文的切换反而效率下降，使用更小资源开销，轮候使用cpu，存在等待。
-   - 状态
-     1. 新建：new或者Thread类及其子类建立线程对象后
-     1. 就绪：线程对象调用start()后，等待JVM调度器的调度
-     1. 运行：获取cpu资源，可以执行run()，可以变为就绪、阻塞、死亡状态
-     1. 阻塞：三种阻塞类型
-        - 等待阻塞：运行中的线程执行wait()方法
-        - 同步阻塞：线程获取synchronized同步锁失败
-        - 其他阻塞：调用sleep()或join()发出io请求时，当这些结束时，线程重新进入就绪状态
-     1. 死亡：完成任务或者终止条件发生时
-   - 优先级：整数，范围1~10，默认5，但是不能保证线程执行的顺序，非常依赖于平台
-   - 创建
-     1. 实现Runnable接口
+   - ServerSocket类的构造方法
+     1. `public ServerSocket(int port) throws IOException` // 绑端口
+     1. `public ServerSocket(int port, int backlog) throws IOException` // 指定backlog和本地端口号
+     1. `public ServerSocket(int port, int backlog, InetAddress address) throws IOException` // 绑定backlog、端口和本地ip
+     1. `public ServerSocket() throws IOException` // 创建非绑定Socket
+   - ServerSocket类的常用方法
+     1. `public int getLocalPort()` // 返回监听的端口
+     1. `public Socket accept() throws IOException` // 开始监听
+     1. `public void setSoTimeout(int timeout)` // 指定超时时间，毫秒为单位
+     1. `public void bind(SocketAddress host, int backlog)` // 绑定ip和backlog
+   - Socket类的构造方法：java.net.Socket代表服务端和客户端都用来通信。客户端实例化Socket，服务端通过accept()方法返回
+     1. `public Socket(String host, int port) throws UnknownHostException, IOException.` // 连接指定主机ip和端口
+     1. `public Socket(InetAddress host, int port) throws IOException` // 少了找不到异常
+     1. `public Socket(String host, int port, InetAddress localAddress, int localPort) throws IOException.` // 连接到远程主机和端口
+     1. `public Socket()` // 创建未连接的套接字
+   - Socket类的常用方法
+     1. `public void connect(SocketAddress host, int timeout) throws IOException` // 开始连接和超时时间
+     1. `public InetAddress getInetAddress()` // 返回地址
+     1. `public int getPort()` // 获得远程接口
+     1. `public SocketAddress getRemoteSocketAddress()` // 获得远程地址
+     1. `public int getLocalPort()` // 获得本地接口
+     1. `public InputStream getInputStream() throws IOException` // 获得输入流
+     1. `public OutputStream getOutputStream() throws IOException` // 获得输出流
+     1. `public void close() throws IOException` // 关闭套接字
+    - InetAddress类的方法
+     1. `static InetAddress getByAddress(byte[] addr)`
+     1. `static InetAddress getByName(String host)`
+     1. `String getHostName() `
+     1. `` // 
+     1. `String toString()` // ip地址转为String
+     1. `` // 
+1. URL处理
+   - URL 类方法
+     1. `public URL(String protocol, String host, int port, String file) throws MalformedURLException` // 创建url
+     1. `public URL(String url) throws MalformedURLException` // 给定url创建url
+     1. `public URL(URL context, String url) throws MalformedURLException` // 创建相对url地址
+     1. `public String getPath()` // 
+     1. `public String getQuery()` // 
+     1. `public String getAuthority()` // 
+     1. `public int getPort()` // 80
+     1. `public int getDefaultPort()` // 80
+     1. `public String getProtocol()` // http、https
+     1. `public String getHost()` // baidu.com
+     1. `public String getFile()` // index.html
+     1. `public String getRef()` // 获得锚点:j2se
+     1. `public URLConnection openConnection() throws IOException` // 打开url，访问资源
+   - URLConnections类方法：返回HttpURLConnection或者JarURLConnection对象
+     1. `Object getContent()` // 获得内容
+     1. `Object getContent(Class[] classes)` // 检索链接内容
+     1. `String getContentEncoding()` // 返回 content-encoding 值
+     1. `int getContentLength()` // 返回 content-type
+     1. `int getLastModified()` // 返回 last-modified
+     1. `long getExpiration()`
+     1. `long getIfModifiedSince()`
+     1. `public void setDoInput/setDoOutput(boolean input)` // 设置url连接是否用于输入/输出
+     1. `public InputStream getInputStream() throws IOException` // 返回输入流，用于读取
+     1. `public OutputStream getOutputStream() throws IOException` // 返回输出流，用于写入
+     1. `public URL getURL()` // 返回url
+### 多线程
+1. 理解：阻塞当前进程，让出cpu。是并发执行的，线程多了因为上下文的切换反而效率下降，使用更小资源开销，轮候使用cpu，存在等待。
+1. 状态
+   - 新建：new或者Thread类及其子类建立线程对象后
+   - 就绪：线程对象调用start()后，等待JVM调度器的调度
+   - 运行：获取cpu资源，可以执行run()，可以变为就绪、阻塞、死亡状态
+   - 阻塞：三种阻塞类型
+     1. 等待阻塞：运行中的线程执行wait()方法
+     1. 同步阻塞：线程获取synchronized同步锁失败
+     1. 其他阻塞：调用sleep()或join()发出io请求时，当这些结束时，线程重新进入就绪状态
+   - 死亡：完成任务或者终止条件发生时
+1. 优先级：整数，范围1~10，默认5，但是不能保证线程执行的顺序，非常依赖于平台
+1. 创建
+   - 实现Runnable接口
         ```Java
         class RunnableDemo implements Runnable {}
         ```
-     1. 继承Thread类
-        - 实例
+   - 继承Thread类
+     1. 实例
         ```Java
         class ThreadDemo extends Thread {}
         ```
-        - 普通方法
+     1. 普通方法
           1. `public void start()` // 线程开始执行，JVM调用run方法
           1. `public void run()` // 
           1. `public void interrupt()` // 中断线程
@@ -481,13 +502,13 @@
           1. `public final void setName(String name)/setPriority(int priority)` // 设置名字、优先级
           1. `public final void setDaemon(boolean on)` // 设为守护线程或用户线程
           1. `public final void join(long millisec)` // 设置等待该线程的最长时间
-        - 静态方法
+     1. 静态方法
           1. `public static void yield()` // 暂停当前进程，执行其他进程
           1. `public static void sleep(long millisec)` // 毫秒数休眠
           1. `public static boolean holdsLock(Object x)` // 当且仅当当前线程在指定的对象上保持监视器锁时，才返回 true
           1. `public static Thread currentThread()` // 返回对当前正在执行的线程对象的引用
           1. `public static void dumpStack()` // 将当前线程的堆栈跟踪打印至标准错误流
-     1. 通过Callable和Future
+   - 通过Callable和Future
         ```Java
         public class CallableThreadTest implements Callable<Integer> {
             public static void main(String[] args)  {
@@ -500,16 +521,16 @@
             Thread.currentThread().getName();
         }
         ```
-      1. 比较：使用Runnable、Callable还可以继承其他类，使用Thread，直接使用this获得当前线程
-   - 概念：线程同步、线程间通信、线程死锁、线程控制(挂起/停止/恢复)
-1. 版本更新
-   - Java 8：即jdk1.8，14年3月发布
-     1. 新特性
-        - Lambda 表达式：Lambda允许函数作为参数传递
-        - 方法引用：可以直接引用已有对象/类的方法，使语言结构更简洁紧凑
-        - 实现方法：就是类在接口里有个实现的方法
-        - 新工具：如新的编译工具，Nashorn引擎jjs、类依赖分析器jdeps
-        - Stream API：即java.util.stream，把真正的函数式编程引入java中
-        - DateTime API：加强日期和时间的处理
-        - Optional 类：解决空指针异常
-        - Nashorn JavaScript 引擎：允许在JVM上运行javascript应用
+   - 比较：使用Runnable、Callable还可以继承其他类，使用Thread，直接使用this获得当前线程
+1. 概念：线程同步、线程间通信、线程死锁、线程控制(挂起/停止/恢复)
+### 版本
+1. Java 8：即jdk1.8，14年3月发布
+   - 新特性
+     1. Lambda 表达式：Lambda允许函数作为参数传递
+     1. 方法引用：可以直接引用已有对象/类的方法，使语言结构更简洁紧凑
+     1. 实现方法：就是类在接口里有个实现的方法
+     1. 新工具：如新的编译工具，Nashorn引擎jjs、类依赖分析器jdeps
+     1. Stream API：即java.util.stream，把真正的函数式编程引入java中
+     1. DateTime API：加强日期和时间的处理
+     1. Optional 类：解决空指针异常
+     1. Nashorn JavaScript 引擎：允许在JVM上运行javascript应用
