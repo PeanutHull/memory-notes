@@ -438,3 +438,19 @@
      1. `<s:form action="">`
      1. `<s:radio label="" name="" list="{'',''}" />`
      1. `<s:select label="" name="" value="%{''}" list="%{#{'':''}}">`
+### Spring
+1. 认识：用于构建轻量级、强壮的J2EE应用程序，为了解决开发的复杂性。为应用程序提供基础设施。
+1. 理解：Spring的功能可以用在任何J2EE服务器中。通过启用POJO编程模型，不需要使用EJB容器产品
+1. 特点
+   1. 分层架构，灵活选用其中的组件
+   1. AOP，面向方面编程
+   1. IOC，控制反转容器
+   1. 提供一致的事务管理，可以变成本地事务、全局事务
+1. 架构
+   - Spring Core：主要组件BeanFactory，使用IOC将配置、依赖规范和应用程序分开
+   - Spring Context：Spring的上下文是个配置文件，包括企业服务，有JNDI、EJB、mail、i18n、校验
+   - Spring AOP：通过配置管理特性，AOP模块为其他应用提供事务管理服务，不用依赖EJB组件，就可集成声明性事务管理
+   - Spring ORM：插入了很多ORM框架，如JDO、Hibernate、iBatis，都遵从Spring的通用事务和DAO异常结构
+   - Spring DAO：提供异常层次结构，来管理异常和不同数据库的错误信息，简化了错误处理，
+   - Spring Web：为基于Web的应用程度提供上下文，支持与Struts的集成，简化了参数绑定到对象的工作
+   - Spring Web MVC：是全功能构建Web的MVC框架，包括了JSP、Velocity等
