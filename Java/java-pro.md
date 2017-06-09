@@ -216,10 +216,15 @@
         - HashSet：(哈希集)
    - Map：有众多子接口
      1. HashMap：(哈希表)
+   - 工具接口和类
+     1. Collections：工具类，最常用sort方法
+     1. Comparable接口：默认比较规则
+     1. Comparator接口：临时比较规则
 1. Collection
    - 比较：
      1. List查询效率高，插入和删除低，因为改起其他元素改变；Set查询效率低，插入和删除效率高
      1. Set没有List的get方法，只能通过foreach和iterator方法遍历，而且每次迭代的结果都不一样。Set中不论添加多少次，因为不能重复，所以只能有一个
+   - Java.util.Collections：工具类，
 1. Map：(映射) 用来存储键值对。可以通过key查找value。内部以映射存储数据，就是Entry(键值对)类的实例，key和value可以是任意的对象。key不可重复，value可以。组成有Map自己是个接口、众多子接口和实现类。支持泛型：`Map<k,v>`
    - 特点
      1. 访问的值不存在，抛出NoSuchElementException异常
@@ -249,8 +254,8 @@
      1. 接口
         - `Collection`：最基本集合接口，java不提供直接继承自Collection的类来使用，只提供继承Collection的子接口，如List和Set
         - `List`：是有序的，精确控制每个元素的位置。通过索引(类似数组的小标)访问其中的元素，允许有相同元素
-        - `Set`：无序的，与Collection完全一样，但是行为上不同。不能有相同元素。子接口SortedSet接口保存有序集合。
-        - `Map`：唯一键映射到值。Map.Entry描述Map中的键值对，是Map的内部类。子接口SortedMap，使key保持升序。
+        - `Set`：无序的，与Collection完全一样，但是行为上不同。不能有相同元素，访问集合中的元素只能根据元素本身来访问。子接口SortedSet接口保存有序集合
+        - `Map`：唯一键映射到值。Map.Entry描述Map中的键值对，是Map的内部类。子接口SortedMap，使key保持升序
         - `Enumeration`：一个传统的接口和数据定义方法，已被迭代器取代
      1. 集合类：具体类可以直接使用，抽象类提供了接口的部分实现
         - `AbstractCollection`：实现了大部分的集合接口
@@ -262,59 +267,48 @@
         - `LinkedHashSet`：可预知迭代顺序的Set接口的哈希表和链接列表实现
         - `TreeSet`：实现Set接口，实现排序等功能
         - `AbstractMap`：实现大部分Map接口
-        - `HashMap`：是一个散列表，是键值对的映射。根据键的哈希值存储数据，访问速度很快。不同步，最多一个null。WeakHashMap：弱秘钥的哈希表；LinkedHashMap：按自然顺序对元素排序；IdentityHashMap：比较文档时使用引用相等
+        - `HashMap`：是一个散列表，是键值对的映射。根据键的哈希值存储数据，访问速度很快。线程不同步，即任意时刻可有多个线程同时写HashMap，可能导致数据不一致，使用synchronizedMap方法具有同步的能力。键最多一个null。WeakHashMap：弱秘钥的哈希表；LinkedHashMap：按自然顺序对元素排序；IdentityHashMap：比较文档时使用引用相等
         - `TreeMap`：使用一棵树
      1. 集合算法：被定义为集合类的静态方法，定义了三个静态变量：EMPTY\_SET，EMPTY\_LIST，EMPTY_MAP，不可改变
    - 迭代器：用来遍历集合中的元素，类似for和增强for，继承自Iterator接口或继承自ListIterator
      1. 遍历ArrayList
-            ```Java
-            // 组建数组
-            List<String> list=new ArrayList<String>();
-            list.add("Hello");
-            list.add("World");
-            list.add("HAHAHAHA");
-            // for循环
-            for(int i=0;i<list.size();i++) {}
-            // foreach
-            for (String str : list) {}
-            // 链表转为数组遍历
-            String[] strArray=new String[list.size()];
-            list.toArray(strArray);
-            for(int i=0;i<strArray.length;i++) {}
-            // 迭代器遍历
-            Iterator<String> ite=list.iterator();
-            while(ite.hasNext()) {}
-            ```
+        ```Java
+        // for循环
+        for(int i=0;i<list.size();i++) {}
+        // foreach
+        for (String str : list) {}
+        // 链表转为数组遍历
+        String[] strArray=new String[list.size()];
+        list.toArray(strArray);
+        for(int i=0;i<strArray.length;i++) {}
+        // 迭代器遍历
+        Iterator<String> ite=list.iterator();
+        while(ite.hasNext()) {}
+        ```
      1. 遍历Map
-            ```Java
-            Map<String, String> map = new HashMap<String, String>();
-            map.put("1", "value1");
-            map.put("2", "value2");
-            map.put("3", "value3");
-            String tmpKey;
-            String tmpValue;
-            // 通过Map.keySet遍历
-            for (String key : map.keySet()) {
-                tmpKey = key
-                tmpValue = map.get(key));
-            }
-            // 通过Map.entrySet使用iterator遍历
-            Iterator<Map.Entry<String, String>> it = map.entrySet().iterator();
-            while (it.hasNext()) {
-                Map.Entry<String, String> entry = it.next();
-                tmpKey = entry.getKey();
-                tmpValue = entry.getValue();
-            }
-            // 推荐，尤其容量大时。通过Map.entrySet遍历
-            for (Map.Entry<String, String> entry : map.entrySet()) {
-                tmpKey = entry.getKey();
-                tmpValue = entry.getValue();
-            }
-            // 通过Map.values()遍历所有的value，但不能遍历key
-            for (String v : map.values()) {
-                tmpValue = v;
-            }
-            ```
+        ```Java
+        // 通过Map.keySet遍历
+        for (String key : map.keySet()) {
+            tmpKey = key
+            tmpValue = map.get(key));
+        }
+        // 通过Map.entrySet使用iterator遍历
+        Iterator<Map.Entry<String, String>> it = map.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry<String, String> entry = it.next();
+            tmpKey = entry.getKey();
+            tmpValue = entry.getValue();
+        }
+        // 推荐，尤其容量大时。通过Map.entrySet遍历
+        for (Map.Entry<String, String> entry : map.entrySet()) {
+            tmpKey = entry.getKey();
+            tmpValue = entry.getValue();
+        }
+        // 通过Map.values()遍历所有的value，但不能遍历key
+        for (String v : map.values()) {
+            tmpValue = v;
+        }
+        ```
    - 比较器：用来精确定义排序规则，以不同方式排序集合。使用Comparator
 1. 特点：对基本集合(动态数组/链表/树/哈希表)的实现是高性能的，允许不同类型的集合以类似的方式工作，对集合的扩展和适应是简单的。重点是ArrayList、HashSet、HashMap
 ### 泛型
@@ -333,7 +327,6 @@
             public T get() {
                 return t;
             }
-
             // 使用
             public static void main(String[] args) {
                 Box<Integer> integerBox = new Box<Integer>();
