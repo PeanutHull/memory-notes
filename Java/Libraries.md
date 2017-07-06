@@ -298,159 +298,69 @@
         - `onSave()` // 被保存前
         - `preFlush` // flush前
      1. 使用：实现Interceptor类/继承EmptyInterceptor类
-### Strut 2
-1. 理解：最初理解为WebWork 2。是一个应用程序框架，是1.X版本的完全重写版。目的是更容易开发web程序
-1. 功能
-   - POJO 表单和 POJO 动作：处理表单
-   - 标签支持：包括ajax标签功能
-   - 视图技术：支持多个视图选项JSP，Freemarker，Velocity和XSLT
+### POJO编程模型、轻量级容器
+1. POJO
+   - 理解：简单java对象(Plain Old Java Objects)
+   - 特点
+     1. 编写应用程序类快速和简单
+     1. 使用面向对象的角度写代码
+1. 轻量级容器
+   - 理解：提供了可插拔的体系结构
+   - 容器提供的服务
+     1. 声明周期管理
+     1. 依赖解析
+     1. 组件查找
+     1. 应用程序配置
+     1. 事物管理
+     1. 安全性
+     1. 线程管理
+     1. 对象和资源池
+     1. 对组件的远程访问
+     1. 通过JMX之类的API管理组件
+     1. 容器的扩展和定制
+   - 控制反转
+     1. 分类：依赖查找、依赖注入
+### Maven
+1. 理解：项目对象模型(POM)，用一小段描述来管理项目的构建、报告和文档的项目管理工具
+1. 标签：项目构建工具
 1. 特点
-   - MVC：控制器调度servlet过滤器和拦截器实现，值栈和OGNL提供共同主线，连接和集成其他组件
-   - 易于整合
-   - 模板支持
-   - 插件支持
-1. 架构
-   - 动作
-   - 拦截器
-   - 值栈/OGNL
-   - 结果/结果类型
-   - 视图技术
-1. 流程
-   - 接收请求，路由指向适当的动作
-   - 前置拦截器，做验证等
-   - 执行动作
-   - 后置拦截器启动
-   - 返回视图
+   - 简化了构建过程，即是一个标准化的构建项目的方式
+   - 来自于意第绪语（犹太语），意为知识的积累
+1. 组成
+   1. 项目对象模型：POM，表述了项目的资源，是做什么，而不是怎么做。有源码/测试/依赖，位于根目录下
+   1. 标准集合
+   1. 项目生命周期，包括插件和目标
+   1. 依赖管理系统
+1. 原理
+   1. 读取pom文件
+   1. 下载依赖到本地
+   1. 构建生命周期
+   1. 构建phase(阶段)/goal(目标)：阶段由一系列的目标组成
+   1. 构建插件：额外的构建目标，有官方的、也可自定义
+   1. 构建配置
 1. 使用
-   1. 配置文件：连接动作、视图、控制器的配置文件，如struts.xml，web.xml，struts.properties
-      - web.xml：配置路由指向strut2框架处理
-        ```Java
-        <filter>
-            <filter-name>struts2</filter-name>
-            <filter-class>org.apache.struts2.dispatcher.FilterDispatcher</filter-class>
-        </filter>
-        <filter-mapping>
-            <filter-name>struts2</filter-name>
-            <url-pattern>/*</url-pattern>
-        </filter-mapping>
-        ```
-      - struts.xml：配置具体的动作和路由映射
-        ```Java
-        <action name="路由名" class="指向的动作" method="execute">
-            <result name="success">显示的视图</result>
-        </action>
-        ```
-   1. 拦截器
-      - 功能
-        1. 动作之前调用
-        1. 动作之后调用
-        1. 捕获异常，以便执行交替处理
-      - 部分方法
-        - alias：别名
-        - i18n：跟踪选定的语言
-        - params：设置动作的参数
-        - validation：验证支持
-      - 实例
-        ```Java
-        <action name="hello" 
-         class="com.tutorialspoint.Struts 2.HelloWorldAction" 
-         method="execute">
-            <interceptor-ref name="params"/> // 拦截器
-            <interceptor-ref name="myinterceptor" /> // 拦截器
-            <result name="success">/HelloWorld.jsp</result>
-        </action>
-        ```
-   1. 视图和结果
-      - 结果
-        1. 返回不用的结果，如XML何JSON，默认结果类型dispatcher。兼容多种标记语言，如Velocity，Freemaker，XSLT和Tiles
-        ```Java
-        // 使用FreeMarker模板引擎输出
-        <result name="success" type="freemarker">
-            <param name="location">/hello.fm</param>
-         </result>
-        // 重定向
-        <result name="success" type="redirect">
-            <param name="location">/xxx.jsp</param >
-        </result>
-        ```
-1. 标签
-   - 控制标签
-     1. if：`<s:if test="%{false}"></s:else>`
-     1. iterator：迭代标签
-        ```Java
-        <s:iterator value="days">
-            <s:property/>
-        </s:iterator>
-        ```
-     1. merge：融合标签
-        ```Java
-        <s:append var="myAppendIterator">
-            <s:param value="%{myList1}" />
-            <s:param value="%{myList2}" />
-        </s:append>
-        ```
-     1. append ：附加标签
-        ```Java
-        <s:merge var="myMergedIterator">
-            <s:param value="%{myList1}" />
-            <s:param value="%{myList2}" />
-        </s:merge>
-        ```
-     1. generator：生成器标签
-        ```Java
-        <s:generator val="%{'aaa,bbb,ccc,ddd,eee'}">
-            <s:iterator>
-                <s:property /><br/>
-            </s:iterator>
-        </s:generator>
-        ```
-   - 数据标签
-     1. property ：属性标签，`<s:property value="" default="" />`
-     1. set ：属性标签，`<s:set name="" value=""/>`
-     1. push：向栈中push
-        ```Java
-        <s:push value="user">
-            <s:propery value="firstName" />
-        </s:push>
-        ```
-     1. i18n/test：文本，`<s:text/i18n name="main.title"/>`
-     1. date：日期，`<s:date name="person.birthday" format="dd/MM/yyyy" />`
-     1. url：`<s:url value="">`
-     1. ui：参数标签
-        ```Java
-        <ui:component>
-            <ui:param name="key"     value="[0]"/>
-        </ui:component>
-        ```
-     1. include：包含另一个jsp
-        ```Java
-        <s:include value="myJsp.jsp">
-            <s:param name="param1" value="value2" />
-        </s:include>
-        ```
-     1. bean
-        ```Java
-        <s:bean name="org.apache.struts2.util.Counter" var="counter">
-            <s:param name="first" value="20"/>
-        </s:bean>
-        ```
-   - 表单标签
-     1. `<s:form action="">`
-     1. `<s:radio label="" name="" list="{'',''}" />`
-     1. `<s:select label="" name="" value="%{''}" list="%{#{'':''}}">`
-### Spring
-1. 认识：用于构建轻量级、健壮的J2EE应用程序，为了解决开发的复杂性。为应用程序提供基础设施。
-1. 理解：Spring的功能可以用在任何J2EE服务器中。通过启用POJO编程模型，不需要使用EJB容器产品
-1. 特点
-   1. 分层架构，灵活选用其中的组件
-   1. AOP，面向方面编程
-   1. IOC，控制反转容器
-   1. 提供一致的事务管理，可以变成本地事务、全局事务
-1. 架构
-   - Spring Core：主要组件BeanFactory，使用IOC将配置、依赖规范和应用程序分开
-   - Spring Context：Spring的上下文是个配置文件，包括企业服务，有JNDI、EJB、mail、i18n、校验
-   - Spring AOP：通过配置管理特性，AOP模块为其他应用提供事务管理服务，不用依赖EJB组件，就可集成声明性事务管理
-   - Spring ORM：插入了很多ORM框架，如JDO、Hibernate、iBatis，都遵从Spring的通用事务和DAO异常结构
-   - Spring DAO：提供异常层次结构，来管理异常和不同数据库的错误信息，简化了错误处理，
-   - Spring Web：为基于Web的应用程度提供上下文，支持与Struts的集成，简化了参数绑定到对象的工作
-   - Spring Web MVC：是全功能构建Web的MVC框架，包括了JSP、Velocity等
+   - 使用过程
+     1. 安装
+     1. 指定jar包仓库位置
+     1. 编辑pom文件，指定依赖
+   - 功能点
+     1. 父pom：构建子级项目，继承父pom值
+1. 常用命令
+   1. `mvn archetype` // 创建maven项目
+   1. `mvn compile` // 编译源代码
+   1. `mvn test-compile` // 编译测试源代码
+   1. `mvn pachage` // 打包项目生成jar
+   1. `mvn clean` // 清除项目的结果   
+   1. `mvn clean package -Dmaven.test.skip=true` // 清除以前的包后重新打包，跳过测试类
+   1. `mvn install` // 在本地Repository中安装jar   
+   1. `mvn deploy` // 发布项目   
+   1. `mvn site` // 生成项目相关信息的网站
+   1. `mvn test` // 运行单元测试
+   1. `mvnjetty:run` // 启动jetty服务
+   1. `mvntomcat:run` // 启动tomcat
+   1. `mvn eclipse:eclipse ` // 生成eclipse项目文件
+1. 附
+   - java发布过程：源代码——生成项目文档——编译——打包——安装jar/war/zip包到服务器
+   - Maven与Ant
+     1. Maven：声明式的方式，指定做什么，而不是怎么做
+     1. Ant：命令式的方式
