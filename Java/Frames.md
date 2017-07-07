@@ -142,12 +142,27 @@
      1. `<s:select label="" name="" value="%{''}" list="%{#{'':''}}">`
 ### Spring
 1. 认识：用于构建轻量级、健壮的J2EE应用程序，为了解决开发的复杂性。为应用程序提供基础设施。容器类框架
-1. 理解：Spring的功能可以用在任何J2EE服务器中。通过启用POJO编程模型，不需要使用EJB容器产品
 1. 特点
-   1. 分层架构，灵活选用其中的组件
-   1. AOP，面向方面编程
-   1. IOC，控制反转容器
-   1. 提供一致的事务管理，可以变成本地事务、全局事务
+   1. 方便解耦，简化开发。IOC分层架构，灵活选用组件
+   1. AOP支持，面向方面编程
+   1. 声明式事务支持
+   1. 降低java ee API的使用难度
+   1. 方便程序测试、方便集成各种框架，可以用在任何J2EE服务器中。通过启用POJO编程模型，不需要使用EJB容器产品
+1. 组成
+   - IOC：Bean、Context、表达式语言
+     1. 和AOP组成spring的核心
+     1. 将类之间的依赖从代码中脱离出来，用配置的方式描述。由IOC容器负责依赖类之间的管理
+     1. BeanFactory是核心接口
+     1. Context模块构建于核心模块之上，添加i18n、Bean生命周期控制、框架事件体系、资源加载透明化等功能。
+     1. 表达式语言是统一表达式语言(Unified EL)的扩展，用于查询和管理运行期的对象，方便的通过表达式和Ioc交互
+   - AOP：Spring AOP、Aspects、Instrument
+     1. 横切逻辑编程
+     1. 整合了AspectJAOP语言级的框架，
+   - 数据访问和集成：JDBC、ORM、OXM、JMS、事务管理
+     1. 包含表、XML、消息等和其不同的访问方法
+     1. spring建立了和数据形式/访问技术无关的统一DAO层
+   - web及远程操作：MVC、Web Service、WebSocket、Portlet
+     1. 整合其他框架
 1. 架构
    - Spring Core：主要组件BeanFactory，使用IOC将配置、依赖规范和应用程序分开
    - Spring Context：Spring的上下文是个配置文件，包括企业服务，有JNDI、EJB、mail、i18n、校验
@@ -156,3 +171,8 @@
    - Spring DAO：提供异常层次结构，来管理异常和不同数据库的错误信息，简化了错误处理，
    - Spring Web：为基于Web的应用程度提供上下文，支持与Struts的集成，简化了参数绑定到对象的工作
    - Spring Web MVC：是全功能构建Web的MVC框架，包括了JSP、Velocity等
+1. 使用
+   - 业务分层
+     1. 持久层：JDBC
+     1. 业务层：声明式事务
+     1. 展现层：Spring MVC
