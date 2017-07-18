@@ -300,7 +300,7 @@
      1. 使用：实现Interceptor类/继承EmptyInterceptor类
 ### POJO编程模型、轻量级容器
 1. POJO
-   - 理解：简单java对象(Plain Old Java Objects)
+   - 理解：实体类，简单java对象(Plain Old Java Objects)
    - 特点
      1. 编写应用程序类快速和简单
      1. 使用面向对象的角度写代码
@@ -323,15 +323,15 @@
 ### Maven
 1. 理解：项目对象模型(POM)，用一小段描述来管理项目的构建、报告和文档的项目管理工具
 1. 标签：项目构建工具
-1. 功能
-   1. 构建
-   1. 文档生成
-   1. 报告
-   1. 依赖
-   1. SCMs
-   1. 发布
-   1. 分发
-   1. 邮件列表
+1. 功能：构建、文档生成、报告、依赖、SCMs、发布、分发、邮件列表
+1. 概念
+   - Project：目标项目
+   - POM：如何工作的元数据
+   - GroupId：工程名
+   - Artifact：构件，存在于仓库中。由GroupId和ArtifactId唯一确定
+   - Repository：仓库，有中央/公共/私有/本地仓库
+   - Dependency：依赖包
+   - Plug-in：插件
 1. 特点
    - 简化了构建过程，将其标准化。无缝衔接编译、发布、文档生成、团队合作等
    - 约定优于配置，
