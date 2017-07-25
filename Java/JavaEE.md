@@ -1,3 +1,15 @@
+### JavaEE
+1. JavaEE规范
+   - 分类
+     1. Servlet规范
+1. JavaEE容器
+   - 理解：要运行JavaEE程序，需要JavaEE容器。Tomcat和Jetty不是JavaEE容器，无法运行EJB或JMS技术
+   - 包含：GlassFish、JBoss、Oracle Weblogic、IBM WebSphere
+1. EJB：JavaEE服务器端组件模型，用于部署分布式应用程序
+1. JMS：Java消息服务
+### Web服务器
+1. Tomcat
+1. Jetty
 ### Servlet
 1. 认识：为创建基于web的java应用程序，可以访问所有java API。是运行在web服务器上的，作为来自http请求和数据库之间的中间层。可以搜集表单等浏览器的东西和创建动态网页
 1. 特点：Servlet在web服务器的地址空间执行，不会一个客户端一个进程，性能好。独立于平台，安全性好

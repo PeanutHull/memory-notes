@@ -1,3 +1,13 @@
+### Java体系结构
+1. 组成
+   - JVM：java虚拟机
+   - API：java应用编程接口，提供了独立于平台的标准接口
+   - 语法
+   - 文件格式
+1. Java体系
+   - Java SE：java平台标准版
+   - Java EE：java平台企业版
+   - Java ME：java平台微型版
 ### 认识
 1. 认识
    - 多平台运行，强类型
@@ -241,6 +251,47 @@
         break;
         continue;
         ```
+1. Java类库，常见的包
+   - jsva.lang：语言包
+     1. 数据类型包装类
+     1. 字符处理
+        - String类
+        - StringBuffer类
+     1. Math：数学类
+     1. Object：类
+     1. 操作类
+        - Class类
+        - ClassLoader类
+     1. 错误和异常处理类
+        - Trowable
+        - Exception
+        - Error
+     1. 线程类
+        - Thread类
+        - TreadDeath
+        - Runnable类
+     1. Process：过程类
+     1. 系统和运行类
+        - System类
+        - Runtime类
+   - java.util：实用包
+     1. 数据结构类
+        - LinkedList：链表类
+        - Vector：向量类
+        - Stack：栈类
+        - HashTable：散列表类
+     1. Random：随机数类
+     1. 日期类
+        - Date类
+        - Calendar类
+        - GregorianCalendar类
+   - java.io：输入输出包
+     1. InputStream
+     1. OutputStream
+   - java.net
+   - java.sql
+   - java.awt/swing：窗口工具包
+   - applet
 1. 时间和日期
    - 理解：属于java.util包。
    - 示例
