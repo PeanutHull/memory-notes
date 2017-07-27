@@ -35,10 +35,16 @@
      1. 业务逻辑
 ### Web服务器
 1. Tomcat
+   - 理解：是Web服务器，也是servlet、jsp的运行环境/容器，最新的servlet和jsp规范总是能在Tomcat中得到体现
+   - 特点：技术先进、性能稳定、免费开源
+   - 响应http过程：web浏览器——Tomcat——Web服务器——Servlet容器——Servlet实例1/Servlet实例2
+   - 版本支持
+     1. Tomcat 6：支持Servlet 2.5、JSP 2.1规范
+   - 不足：静态html能力不如apache，可以集成使用，Apache作为HTTP Web服务器，Tomcat作为Web容器。
 1. Jetty
 ### Servlet
-1. 认识：为创建基于web的java应用程序，可以访问所有java API。是运行在web服务器上的，作为来自http请求和数据库之间的中间层。可以搜集表单等浏览器的东西和创建动态网页
-1. 特点：Servlet在web服务器的地址空间执行，不会一个客户端一个进程，性能好。独立于平台，安全性好
+1. 认识：为创建基于web的java应用程序，可以访问所有java API。是运行在web服务器上的，可以搜集表单等浏览器的东西和创建动态网页
+1. 特点：Servlet在web服务器的地址空间执行，不会一个客户端一个进程，只起一个线程，性能好。独立于平台，安全性好
 1. Servlet项目结构
    - src：源码目录
    - web：用于存放web资源，WEB-INF是java web应用固定的存放配置和类库的目录，web.xml是配置文件，也叫部署描述符
@@ -367,16 +373,26 @@
      1. `String getISO3Language()` // 语言的3个字母缩写
 
 ### JSP
-1. 理解：`Java Server Pages` 动态生成html、xml的web网页的标准。为java提供接口服务于http协议，跨平台。使用JSP标签在html中插入java代码，通常<% %>包裹。主要用于实现界面
+1. 理解：`Java Server Pages` 是简化的servlet设计，动态生成html、xml的web网页的标准。在html中插入java代码(Scriptlet)和jsp标记(tag)，实现了html中的Java扩展(通常用<% %>包裹)。主要用于实现界面
 1. 特点
    - jsp已经是编译好的，不需要预先载入解释器和目标脚本
-   - JSP基于Java API
-   - 与纯Servlet比较，方便编写html，而不用大量的println
+   - jsp基于Java API
+   - 与纯Servlet比较，方便编写html，而不用大量的println来一句一句的输出，servlet是老的cgi的方式
 1. 生命周期
    - 编译阶段：解析jsp转成Servlet，编译Servlet文件，生成servlet类
    - 初始化阶段：加载Servlet类，创建实例，调用初始化方法——jspInit()
    - 执行阶段：调用Servlet服务方法：_jspService(HttpServletRequest request,HttpServletResponse response)
    - 销毁阶段：销毁Servlet实例:jspDestroy()
+1. 组成
+   - request
+   - response
+   - session
+   - application
+   - out
+   - page
+   - config
+   - exception
+   - pageContext
 1. 语法：就是一些含有意义的标签
    - 注释
      1. `<%-- 不会被编译不会--%>`
@@ -511,8 +527,8 @@
      1. `&&||!` // 与或非
      1. `empty` // 是否为空
    - EL中的函数：${ns:func(param1, param2)}，这些函数必须被定义在自定义标签库中
-1. 标准标签库
-   - 理解：JSTL，是JSP标签集合，封装了JSP应用的通用核心功能。支持迭代、判断、xml操作、sql标签、自定义标签
+1. JSTL标准标签库
+   - 理解：JSTL，JSP Standard Tag Library，是JSP标签集合，封装了JSP应用的通用核心功能。支持迭代、判断、xml操作、sql标签、自定义标签
    - 分类
      1. 核心标签
      1. 格式化标签

@@ -45,10 +45,32 @@
    1. 基础
       - Java8 = Java SE 8 = java se：1.8.0 = JDK 8
       - Java EE 7：ee是一个大型的养猪场，而se自是个黑白花猪
-
+   1. Java EE
+      - Servlet 3.1
+      - JSP：
    1. 工具
-      - tomcat：9.0.0
-      - maven：3.3.9
+      - Tomcat：9.0.0
+      - Maven：3.3.9
       - 
    1. 框架
 1. Servlet版本历史
+   - 4.0——草案——HTTP/2支持
+   - 3.1——2013年——JavaEE 7——Non-blocking I/O
+   - `3.0`——2009年——JavaEE 6, JavaSE 6——简易开发、异步servlet、新的注解使web.xml部署描述文件开始不再是必选、插件支持
+   - `2.5`——2005年——JavaEE 5, JavaSE 5——支持注释
+   - `2.4`——2003年——J2EE 1.4, J2SE 1.3——web.xml
+   - `2.3`——2001年——J2EE 1.3, J2SE 1.2——增加Filter
+   - 2.2——1999年——J2EE 1.2, J2SE 1.2
+   - 2.1——1998年————添加请求转发
+   - 2.0————JDK 1.1
+   - 1.0——1997年
+1. JSP版本特性
+   - 2.0：加入了EL表达式语言
+1. Tomcat版本对servlet/jsp的支持
+   - 9.X——Java8——servlet4.0——jsp2.4
+   - 8.X——Java7——servlet3.1——jsp2.3
+   - 7.X——Java6——servlet3.0——jsp2.2
+   - 6.X——Java5——servlet2.5——jsp2.1
+   - 5.5——Java5——servlet2.4——jsp2.0
+   - 4.1——Java5——servlet2.3——jsp1.2
+   - 3.3——Java5——servlet2.2——jsp1.1

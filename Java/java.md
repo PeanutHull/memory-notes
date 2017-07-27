@@ -8,7 +8,47 @@
    - Java SE：java平台标准版
    - Java EE：java平台企业版
    - Java ME：java平台微型版
-   - JavaFx
+   - JavaFx/Swing
+1. Java知识点
+   - 基础
+     1. 语言基础
+     1. 流程控制
+     1. 常用类
+   - 面向对象
+     1. 对象与类
+     1. 多态
+     1. 接口与抽象类
+   - 高级
+     1. 异常处理
+     1. I/O、JavaBean
+     1. 反射
+     1. 多线程
+     1. 泛型/Java集合类
+     1. 网络编程
+   - 框架
+     1. Spring、SpringMVC、Structs、Hibernate、MyBatis
+   - 大数据
+     1. Hadoop
+        - 基础
+          1. Hadoop1介绍
+          1. Hadoop1架构
+          1. Hadoop2架构
+          1. HDFS操作
+          1. yarn操作
+        - 应用
+          1. Hive数据仓库
+          1. zk服务
+          1. HBase非关心型数据库
+          1. Sqoop数据库抽取工具
+          1. Flume日志抽取工具
+     1. Spark
+        - 基础
+          1. Spark介绍
+          1. RDD弹性分布式数据集
+          1. Scala编程
+        - 应用
+          1. Spark-SQL组件
+          1. DataFrame组件
 ### 认识
 1. 认识
    - 多平台运行，强类型
