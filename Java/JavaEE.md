@@ -1,17 +1,43 @@
 ### JavaEE
+1. JavaEE理解：是一种语言，也是一个平台。构建于Java SE之上，提供API和运行环境，来运行大规模、可扩展多层次的网络应用。运行环境指的应该是servlet和jsp之类的
 1. JavaEE规范
    - 分类
-     1. Servlet规范
+     1. Servlet：用Java写的一个服务器端小程序，可以处理用户的HTTP请求
+     1. JSP：一种基于HTML处理之后能够生成静态内容和脚本的技术
+        - 包括
+          1. JSTL：jsp标准标签库，JavaServer Page Standard Tag Library。
+          1. JSF：包含JSF标签的JSP页面
+             1. Facelets：是jsf MVC的视图部分，利用数据将模板转为html
+     1. EJB：JavaEE服务器端组件模型，Enterprise Java Beans，用于部署分布式应用程序，是一个逻辑概念，与传统的bean无关，用来压缩事务逻辑。EJB3.0从早期版本已分离出来
+        - EJB组件：在IDE中被可视化处理的可重用组件，像搭积木一样建立面向对象的分布式应用
+        - EJB容器：是EJB组件的运行环境，为部署EJB组件提供服务，包括事务、安全、远程客户端的网络发布、资源管理等
+        - EJB服务器：管理EJB容器的高端进程或应用程序，并提供对系统服务的访问
+          1. EJB客户端：Servlet/JSP/Java Application/Web Service/Applet/EJB
+          1. EJB服务器：Enterprise Bean
+     1. JMS：Java消息服务，实现异步的消息传递。支持点对点/发布订阅，可实现事务型/一致性/持久性消息传递
+     1. JTA：Java事务处理API，Java Transaction API，保证了用户操作ACID（即原子、一致、隔离、持久）属性，跨数据源必须使用全局事务JTA，提供了分布式事务服务，实现了透明的事务管理方式，划清数据库中上行和下行的通信界限
+     1. JTS：Java事务服务，Java Transaction Service，是一个组件事务监视器，为应用服务器/资源管理器/独立应用/通信资源管理器提供事务服务
+     1. RMI：远程方法调用，Remote Method Invoke。像调用本地一样调用另一个java虚拟机上的方法，stub/skeleton层提供客户端和服务端交互接口
+     1. IDL/CORBA：接口定义语言/公用对象请求代理程序体系结构
+     1. JNDI:Java的命名和目录接口，Java Naming and Directory Interfaces。使Java能够无缝地获取任何可目录化的企业信息，独立于目录协议，可以访问LDAP、NDS
+     1. JDBC
+     1. XML
+     1. JavaMail API
+     1. JAF：JavaBean Activation Framewor，利用JAF来处理MIME编码的邮件附件
 1. JavaEE容器
-   - 理解：要运行JavaEE程序，需要JavaEE容器。Tomcat和Jetty不是JavaEE容器，无法运行EJB或JMS技术
+   - 理解：要运行JavaEE程序，需要JavaEE容器，包括servlet和jsp、ejb。Tomcat和Jetty不是JavaEE容器，无法运行EJB或JMS技术
    - 包含：GlassFish、JBoss、Oracle Weblogic、IBM WebSphere
-1. EJB：JavaEE服务器端组件模型，用于部署分布式应用程序
-1. JMS：Java消息服务
+1. 基于JavaEE的MVC
+   - View
+   - Controller：和Model层通过JavaBean交流数据
+   - Model
+     1. 数据模型：即DAO，不处理业务逻辑，只为业务层提供辅助，完成获取原始数据或持久层数据等
+     1. 业务逻辑
 ### Web服务器
 1. Tomcat
 1. Jetty
 ### Servlet
-1. 认识：为创建基于web的java应用程序，可以访问所有java API。是运行在web服务器上的，作为来自http请求和数据库之间的中间层。可以搜集表单等浏览器的东西和创建动态网页
+1. 认识：为创建基于web的java应用程序，可以访问所有java API。是运行在web服务器上的，作为来自http请求和数据库之间的中间层。可以搜集表单等浏览器的东西和创建动态网页
 1. 特点：Servlet在web服务器的地址空间执行，不会一个客户端一个进程，性能好。独立于平台，安全性好
 1. Servlet项目结构
    - src：源码目录

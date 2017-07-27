@@ -298,6 +298,8 @@
         - `onSave()` // 被保存前
         - `preFlush` // flush前
      1. 使用：实现Interceptor类/继承EmptyInterceptor类
+### DAO
+1. 理解：Data Access Object，用来封装访问数据库的代码
 ### POJO编程模型、轻量级容器
 1. POJO
    - 理解：实体类，简单java对象(Plain Old Java Objects)
