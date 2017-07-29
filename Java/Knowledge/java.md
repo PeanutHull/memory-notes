@@ -49,6 +49,24 @@
         - 应用
           1. Spark-SQL组件
           1. DataFrame组件
+1. 基础
+   - OOP概念
+   - 抽象类与接口
+   - 构造函数与initialization order（初始化顺序）
+   - 关键字：static、final、 volatile、synchronized、transient、this等等
+   - File I/O 和 序列化
+   - Collections：List、Map、Set
+   - 异常
+   - 泛型
+   - JVM和内存管理
+   - 多线程和同步
+   - 设计模式
+   - 反射机制
+1. Web
+   - JSP/Servlets
+   - SSM三大框架
+   - Tomcat
+   - 基本库：log4j
 ### 认识
 1. 认识
    - 多平台运行，强类型

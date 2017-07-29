@@ -1,23 +1,4 @@
-### 掌握知识点
-1. 基础
-   - OOP概念
-   - 抽象类与接口
-   - 构造函数与initialization order（初始化顺序）
-   - 关键字：static、final、 volatile、synchronized、transient、this等等
-   - File I/O 和 序列化
-   - Collections：List、Map、Set
-   - 异常
-   - 泛型
-   - JVM和内存管理
-   - 多线程和同步
-   - 设计模式
-   - 反射机制
-1. Web
-   - JSP/Servlets
-   - SSM三大框架
-   - Tomcat
-   - 基本库：log4j
-### Java知识点
+### Java小程序
 1. Applet
    - 理解：java编写的小应用程序，包含在html页中，产生于浏览器出现不久，还只能支持静态页面，用于创建RIAs，用于提供丰富互联网服务，如动画、动态内容、与服务器通讯、富客户端应用
    - 特点
@@ -40,10 +21,35 @@
    - 另：RIA三大技术：Flash、Silverlight、JavaFX
 1. Swing
 1. JNI：提供了若干的API实现了Java和其他语言的通信（主要是C&C++）
+### Java知识点
+1. Groovy
+   - 理解：Groovy是JVM衍生的与JAVA语法高度兼容的动态强类型语言
+1. POJO
+   - 理解：实体类，简单java对象(Plain Old Java Objects)
+   - 特点
+     1. 编写应用程序类快速和简单
+     1. 使用面向对象的角度写代码
+1. 轻量级容器
+   - 理解：提供了可插拔的体系结构
+   - 容器提供的服务
+     1. 声明周期管理
+     1. 依赖解析
+     1. 组件查找
+     1. 应用程序配置
+     1. 事物管理
+     1. 安全性
+     1. 线程管理
+     1. 对象和资源池
+     1. 对组件的远程访问
+     1. 通过JMX之类的API管理组件
+     1. 容器的扩展和定制
+   - 控制反转
+     1. 分类：依赖查找、依赖注入
 ### 各知识点版本
 1. 最新版本
    1. 基础
-      - Java8 = Java SE 8 = java se：1.8.0 = JDK 8
+      - Java8 = Java SE 8 = java se 1.8 = JDK 8
+      - J2EE 1.5 = Java EE 5
       - Java EE 7：ee是一个大型的养猪场，而se自是个黑白花猪
    1. Java EE
       - Servlet 3.1
@@ -53,6 +59,11 @@
       - Maven：3.3.9
       - 
    1. 框架
+1. Java EE版本历史
+   - J2EE 1————1999年
+   - J2EE 1.4————EJB2.0————2002年
+   - JavaEE 5————EJB3.0————2006年————简化开发、引入注释、更新的web服务、加强的持久化模型
+   - JavaEE 7————提高生产力：带注释的POJO————html5：WebSockets、json、Servlet3.1 NIO、REST————企业需求：批量处理实现不间断OLTP性能、简化多线程并发任务的定义提高可扩展性、简化JMS具有选择性和灵活性
 1. Servlet版本历史
    - 4.0——草案——HTTP/2支持
    - 3.1——2013年——JavaEE 7——Non-blocking I/O
