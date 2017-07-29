@@ -1,5 +1,11 @@
 ### JavaEE
-1. JavaEE理解：是一种语言，也是一个平台。构建于Java SE之上，提供API和运行环境，来运行大规模、可扩展多层次的网络应用。运行环境指的应该是servlet和jsp之类的
+1. JavaEE理解：是一种语言，也是一个平台，是企业级分布式应用开发标准。构建于Java SE之上，提供API和运行环境，来运行大规模、可扩展多层次的网络应用。运行环境指的应该是servlet和jsp之类的
+1. 特点
+   - 分布式
+   - 事务性
+   - 安全性
+   - 集成化
+   - 可扩展、可移植、易维护
 1. JavaEE规范
    - 分类
      1. Servlet：用Java写的一个服务器端小程序，可以处理用户的HTTP请求
@@ -25,14 +31,46 @@
      1. JavaMail API
      1. JAF：JavaBean Activation Framewor，利用JAF来处理MIME编码的邮件附件
 1. JavaEE容器
-   - 理解：要运行JavaEE程序，需要JavaEE容器，包括servlet和jsp、ejb。Tomcat和Jetty不是JavaEE容器，无法运行EJB或JMS技术
-   - 包含：GlassFish、JBoss、Oracle Weblogic、IBM WebSphere
+   - 理解：就是运行环境
+   - 分类
+     1. web容器
+     1. ejb容器
+        - 理解：要运行JavaEE程序，需要JavaEE容器，包括servlet和jsp、ejb。Tomcat和Jetty不是JavaEE容器，无法运行EJB或JMS技术
+        - 包含：GlassFish、JBoss、Oracle Weblogic、IBM WebSphere
+   - 提供的服务
+     1. 事务
+     1. 状态管理
+     1. 多线程
+     1. 资源池
+     1. 其他底层细节
 1. 基于JavaEE的MVC
    - View
    - Controller：和Model层通过JavaBean交流数据
    - Model
      1. 数据模型：即DAO，不处理业务逻辑，只为业务层提供辅助，完成获取原始数据或持久层数据等
      1. 业务逻辑
+1. JavaEE架构
+   - 多层架构：浏览器/客户端————表示层(servlet、jsp)————逻辑层(会话bean、实体bean、消息bean)————数据层
+1. JavaBean
+   - 理解：在编程环境中能够被可视化处理的可重用组件
+   - 特点：可以说是遵循了JavaBean技术规范的类
+     1. 必须为公共类，并且可序列化，即实现java.io.Serializable接口
+     1. 若有构造参数，必须是无参的，类中不能出现main函数
+     1. 所有属性必须通过get、set、isXxx方法来操作，并且是私有的
+     1. 包含必要的事件处理方法
+   - 分类
+     1. 属性
+        - Simple属性：具有setter、getter方法对的属性
+        - Indexed属性：表示数据值，针对数据的simple属性
+        - Bound属性：属性值发生变化时，会触发其他JavaBean
+        - Constrained属性：属性值将要发生变化时，与该属性建立关系的其他java对象可以否决其改变
+     1. 方法
+     1. 事件：是事件发起者，也是接收者
+1. RMI
+   - 理解：Java Remote method invocation，java方法远程调用，基于socket方式方式的远程调用，是java分布式的基础。
+   - 原理：服务端编写interface和其实现，客户端远程调用
+     1. 先定义RMI能够提供的服务，即interface，生成调用入口，编写实现类
+     1. 编写RMI注册机制
 ### Web服务器
 1. Tomcat
    - 理解：是Web服务器，也是servlet、jsp的运行环境/容器，最新的servlet和jsp规范总是能在Tomcat中得到体现
