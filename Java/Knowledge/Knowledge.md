@@ -50,15 +50,21 @@
    1. 基础
       - Java8 = Java SE 8 = java se 1.8 = JDK 8
       - J2EE 1.5 = Java EE 5
-      - Java EE 7：ee是一个大型的养猪场，而se自是个黑白花猪
    1. Java EE
       - Servlet 3.1
-      - JSP：
+      - JSP 2.3
+      - EJB 3.0
    1. 工具
-      - Tomcat：9.0.0
-      - Maven：3.3.9
-      - 
+      - Tomcat 9.0.0
+      - Jetty 9.4.6
+      - Jboss 7.1
+      - Maven 3.3.9
+      - Junit 4.12
+      - Log4j 1.2.17
    1. 框架
+      - Spring 5.0/4.3
+      - Hibernate 5.2.x
+      - Mybatis 3.4
 1. Java EE版本历史
    - J2EE 1————1999年
    - J2EE 1.4————EJB2.0————2002年

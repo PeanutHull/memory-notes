@@ -42,6 +42,7 @@
      1. Tomcat 6：支持Servlet 2.5、JSP 2.1规范
    - 不足：静态html能力不如apache，可以集成使用，Apache作为HTTP Web服务器，Tomcat作为Web容器。
 1. Jetty
+   - 理解：为JSP和servlet提供运行环境的用Java语言编写的的web容器
 ### Servlet
 1. 认识：为创建基于web的java应用程序，可以访问所有java API。是运行在web服务器上的，可以搜集表单等浏览器的东西和创建动态网页
 1. 特点：Servlet在web服务器的地址空间执行，不会一个客户端一个进程，只起一个线程，性能好。独立于平台，安全性好
