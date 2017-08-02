@@ -9,17 +9,8 @@
 1. JavaEE规范
    - 分类
      1. Servlet：用Java写的一个服务器端小程序，可以处理用户的HTTP请求
-     1. JSP：一种基于HTML处理之后能够生成静态内容和脚本的技术
-        - 包括
-          1. JSTL：jsp标准标签库，JavaServer Page Standard Tag Library。
-          1. JSF：包含JSF标签的JSP页面
-             1. Facelets：是jsf MVC的视图部分，利用数据将模板转为html
-     1. EJB：JavaEE服务器端组件模型，Enterprise Java Beans，用于部署分布式应用程序，是一个逻辑概念，与传统的bean无关，用来压缩事务逻辑。EJB3.0从早期版本已分离出来
-        - EJB组件：在IDE中被可视化处理的可重用组件，像搭积木一样建立面向对象的分布式应用
-        - EJB容器：是EJB组件的运行环境，为部署EJB组件提供服务，包括事务、安全、远程客户端的网络发布、资源管理等
-        - EJB服务器：管理EJB容器的高端进程或应用程序，并提供对系统服务的访问
-          1. EJB客户端：Servlet/JSP/Java Application/Web Service/Applet/EJB
-          1. EJB服务器：Enterprise Bean
+     1. JSP
+     1. EJB
      1. JMS：Java消息服务，实现异步的消息传递。支持点对点/发布订阅，可实现事务型/一致性/持久性消息传递
      1. JTA：Java事务处理API，Java Transaction API，保证了用户操作ACID（即原子、一致、隔离、持久）属性，跨数据源必须使用全局事务JTA，提供了分布式事务服务，实现了透明的事务管理方式，划清数据库中上行和下行的通信界限
      1. JTS：Java事务服务，Java Transaction Service，是一个组件事务监视器，为应用服务器/资源管理器/独立应用/通信资源管理器提供事务服务
@@ -29,20 +20,82 @@
      1. JDBC
      1. XML
      1. JavaMail API
-     1. JAF：JavaBean Activation Framewor，利用JAF来处理MIME编码的邮件附件
+     1. JAF：JavaBean Activation Framewor，提供统一处理不同数据格式的方法
 1. JavaEE容器
    - 理解：就是运行环境
    - 分类
      1. web容器
+        - Tomcat
+          - 理解：是Web服务器，也是servlet、jsp的运行环境/容器，最新的servlet和jsp规范总是能在Tomcat中得到体现
+          - 特点：技术先进、性能稳定、免费开源
+          - 响应http过程：web浏览器——Tomcat——Web服务器——Servlet容器——Servlet实例1/Servlet实例2
+          - 不足：静态html能力不如apache，可以集成使用，Apache作为HTTP Web服务器，Tomcat作为Web容器。
+        - Jetty
+          - 理解：为JSP和servlet提供运行环境的用Java语言编写的的web容器
      1. ejb容器
-        - 理解：要运行JavaEE程序，需要JavaEE容器，包括servlet和jsp、ejb。Tomcat和Jetty不是JavaEE容器，无法运行EJB或JMS技术
+        - 理解：ejb容器无最大访问量一说，本身就是分布式/可伸缩的，只需增加机器就可实现同时计算，Tomcat和Jetty不是JavaEE容器，无法运行EJB或JMS技术
         - 包含：GlassFish、JBoss、Oracle Weblogic、IBM WebSphere
+          1. Jboss
+          - 理解：开源的管理EJB的容器和服务器，不支持Servlet/JSP，一般与Tomcat/Jetty配合使用
+          - 特点
+            1. JMX微内核作为总线结构
+            1. 面向服务架构(SOP，Service-Oriented Architecture)
+            1. 具有统一的类装载器，实现应用热部署和热卸载能力
+            1. 高度模块化和松耦合
+            1. 支持集群
    - 提供的服务
      1. 事务
      1. 状态管理
      1. 多线程
      1. 资源池
      1. 其他底层细节
+1. Bean
+   - 理解：在编程环境中能够被可视化处理的可重用组件。JavaBean最初是为Java GUI的可视化编程实现的.你拖动IDE构建工具创建一个GUI 组件（如多选框）,其实是工具给你创建java类,并提供将类的属性暴露出来给你修改调整,将事件监听器暴露出来.
+   - 优点
+     1. Bean可以控制它的属性、事件和方法是否暴露给其他程序
+     1. Bean可以接收来自其他对象的事件，也可以产生事件给其他对象
+     1. Bean的属性可以被序列化，以供日后重用
+   - 特点：是遵循了JavaBean技术规范的类
+     1. 必须为公共类，并且可序列化，即实现java.io.Serializable接口
+     1. 若有构造参数，必须是无参的，类中不能出现main函数
+     1. 所有属性必须通过public的get、set、isXxx方法来操作，并且是私有的
+     1. 包含必要的事件处理方法
+   - JavaBean技术规范：getXxx、setXxx、isXxx、addXxxListener、XxxEvent等，遵守上述约定的类可以用于若干工具或库
+   - 组成
+     1. 属性
+        - Simple属性：具有setter、getter方法对的属性
+        - Indexed属性：表示数据值，针对数据的simple属性
+        - Bound属性：属性值发生变化时，会触发其他JavaBean
+        - Constrained属性：属性值将要发生变化时，与该属性建立关系的其他java对象可以否决其改变
+     1. 方法
+     1. 事件：是事件发起者，也是接收者
+1. EJB
+   - 理解：JavaEE服务器端组件模型，Enterprise Java Beans，用于部署分布式应用程序，是一个逻辑概念，与传统的bean无关，就是将一个业务逻辑类放在服务器上部署，供客户端调用，依赖RMI通信，EJB3.0从早期版本已分离出来
+   - 关键字：服务集群、企业开发
+   - 组成
+     1. JPA：Java Persistence API，中文名Java持久层API。是JDK 5.0注解或XML描述对象关系表的映射关系，并将运行期的实体对象持久化到数据库中，提供了一种标准的OR映射解决方案
+   - EJB容器：是EJB组件的运行环境，为部署EJB组件提供服务，包括事务、安全、远程客户端的网络发布、资源管理等
+   - EJB服务器：管理EJB容器的高端进程或应用程序，并提供对系统服务的访问
+     1. EJB客户端：Servlet/JSP/Java Application/Web Service/Applet/EJB
+     1. EJB服务器：Enterprise Bean
+   - EJB架构：ejb客户端————RMI/JNDI————remote/home接口————ejb服务器————ejb容器————BEAN代理————对象池————ejb实例————ejb部署描述
+1. POJO
+   - 理解：实体类，简单java对象(Plain Old Java Objects)
+   - 特点
+     1. 编写应用程序类快速和简单
+     1. 使用面向对象的角度写代码
+1. Bean和EJB和POJO
+   - 历史
+     1. 在java1996年发布,当年12月即发布了java bean1.00-A,有什么用呢?通过统一的规范可以设置对象的值(get,set方法),这是最初的java bean;
+     1. 在实际企业开发中,需要实现事务,安全,分布式,javabean就不好用了.sun公司就开始往上面堆功能,这里java bean就复杂为EJB;
+     1. EJB功能强大,但是太重了.此时出现DI(依赖注入),AOP(面向切面)技术,通过简单的java bean也能完成EJB的事情,这里的java bean简化为POJO;
+     1. Spring诞生了;
+1. RMI
+   - 理解：Java Remote method invocation，java方法远程调用，基于socket方式方式的远程调用，是java分布式的基础，将对象序列化在网络上传输
+   - 原理：服务端编写interface和其实现，客户端远程调用
+     1. 先定义RMI能够提供的服务，即interface，生成调用入口，编写实现类
+     1. 编写RMI注册机制，并启动
+     1. 客户端就可以访问了
 1. 基于JavaEE的MVC
    - View
    - Controller：和Model层通过JavaBean交流数据
@@ -51,39 +104,9 @@
      1. 业务逻辑
 1. JavaEE架构
    - 多层架构：浏览器/客户端————表示层(servlet、jsp)————逻辑层(会话bean、实体bean、消息bean)————数据层
-1. JavaBean
-   - 理解：在编程环境中能够被可视化处理的可重用组件
-   - 特点：可以说是遵循了JavaBean技术规范的类
-     1. 必须为公共类，并且可序列化，即实现java.io.Serializable接口
-     1. 若有构造参数，必须是无参的，类中不能出现main函数
-     1. 所有属性必须通过get、set、isXxx方法来操作，并且是私有的
-     1. 包含必要的事件处理方法
-   - 分类
-     1. 属性
-        - Simple属性：具有setter、getter方法对的属性
-        - Indexed属性：表示数据值，针对数据的simple属性
-        - Bound属性：属性值发生变化时，会触发其他JavaBean
-        - Constrained属性：属性值将要发生变化时，与该属性建立关系的其他java对象可以否决其改变
-     1. 方法
-     1. 事件：是事件发起者，也是接收者
-1. RMI
-   - 理解：Java Remote method invocation，java方法远程调用，基于socket方式方式的远程调用，是java分布式的基础。
-   - 原理：服务端编写interface和其实现，客户端远程调用
-     1. 先定义RMI能够提供的服务，即interface，生成调用入口，编写实现类
-     1. 编写RMI注册机制
-### Web服务器
-1. Tomcat
-   - 理解：是Web服务器，也是servlet、jsp的运行环境/容器，最新的servlet和jsp规范总是能在Tomcat中得到体现
-   - 特点：技术先进、性能稳定、免费开源
-   - 响应http过程：web浏览器——Tomcat——Web服务器——Servlet容器——Servlet实例1/Servlet实例2
-   - 版本支持
-     1. Tomcat 6：支持Servlet 2.5、JSP 2.1规范
-   - 不足：静态html能力不如apache，可以集成使用，Apache作为HTTP Web服务器，Tomcat作为Web容器。
-1. Jetty
-   - 理解：为JSP和servlet提供运行环境的用Java语言编写的的web容器
 ### Servlet
-1. 认识：为创建基于web的java应用程序，可以访问所有java API。是运行在web服务器上的，可以搜集表单等浏览器的东西和创建动态网页
-1. 特点：Servlet在web服务器的地址空间执行，不会一个客户端一个进程，只起一个线程，性能好。独立于平台，安全性好
+1. 认识：为创建基于web的java应用程序，可以访问所有java API。是部署在web服务器上的组件，可以搜集表单等浏览器的东西和创建动态网页
+1. 特点：Servlet在web服务器的地址空间执行，一个请求一个线程，性能好。独立于平台，安全性好
 1. Servlet项目结构
    - src：源码目录
    - web：用于存放web资源，WEB-INF是java web应用固定的存放配置和类库的目录，web.xml是配置文件，也叫部署描述符
@@ -91,6 +114,7 @@
 1. Servlet的生命周期
    - init()
    - service()：Servlet容器即web浏览器，服务器收到的每一个请求会创建新的线程并单一调用service()方法，service()方法检查请求类型，适当的调用doGet、doPost、doPut、doDelete等方法
+     1. 请求处理过程的三个概念：Http请求对象、Http响应对象、Http会话
    - doGet、doPost
    - destory()：只被调用一次
 1. 参数
@@ -412,7 +436,11 @@
      1. `String getISO3Language()` // 语言的3个字母缩写
 
 ### JSP
-1. 理解：`Java Server Pages` 是简化的servlet设计，动态生成html、xml的web网页的标准。在html中插入java代码(Scriptlet)和jsp标记(tag)，实现了html中的Java扩展(通常用<% %>包裹)。主要用于实现界面
+1. 理解：`Java Server Pages` 是简化的servlet设计，动态生成html、xml的web网页的一种标准。在html中插入java代码(Scriptlet)和jsp标记(tag)，实现了html中的Java扩展(通常用<% %>包裹)。主要用于实现界面
+1. 组成
+   - JSTL：jsp标准标签库，JavaServer Page Standard Tag Library。
+   - JSF：包含JSF标签的JSP页面
+     1. Facelets：是jsf MVC的视图部分，利用数据将模板转为html
 1. 特点
    - jsp已经是编译好的，不需要预先载入解释器和目标脚本
    - jsp基于Java API
