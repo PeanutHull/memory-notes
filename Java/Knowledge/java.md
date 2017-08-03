@@ -25,6 +25,8 @@
      1. 多线程
      1. 泛型/Java集合类
      1. 网络编程
+     1. JVM
+     1. 设计模式
    - 框架
      1. Spring、SpringMVC、Structs、Hibernate、MyBatis
    - 大数据
@@ -49,24 +51,6 @@
         - 应用
           1. Spark-SQL组件
           1. DataFrame组件
-1. 基础
-   - OOP概念
-   - 抽象类与接口
-   - 构造函数与initialization order（初始化顺序）
-   - 关键字：static、final、 volatile、synchronized、transient、this等等
-   - File I/O 和 序列化
-   - Collections：List、Map、Set
-   - 异常
-   - 泛型
-   - JVM和内存管理
-   - 多线程和同步
-   - 设计模式
-   - 反射机制
-1. Web
-   - JSP/Servlets
-   - SSM三大框架
-   - Tomcat
-   - 基本库：log4j
 ### 认识
 1. 认识
    - 多平台运行，强类型
@@ -759,7 +743,7 @@
        // 接口的每个属性都被指定为public static final变量，只有这一种
        ```
    - 标记接口：没有任何属性和方法的接口，仅表明它的类属于一个特定的类型
-1. Bean：由一些包含私有属性的Java类组成，对外提供get和set方法。
+1. Bean：遵循JavaBean技术规范的拥有getXxx、setXxx、isXxx、addXxxListener、XxxEvent等的类
 1. 包
    - 作用：解决文件名冲突，对类和接口分类，方便查找和使用。
    - 组成：类、接口、枚举和注释
@@ -787,8 +771,9 @@
    1. 内部类
       - 定义：就是一个类中定义的类，对应的是外部类
       - 作用：更好的封装
-### 类的解释
+### 常用Java类
 1. System：系统类
+1. Class：反射类
 1. 包装类
    - 定义：将内置数据类型作为当做对象使用。都是抽象类Number的子类，属于java.lang包
    - 分类：Byte、Integer、Short、Long、Float、Double
@@ -831,6 +816,7 @@
      1. round()：返回最接近的int、long值
      1. min、max()：两个参数得最大小值
      1. random()：返回随机值，0到1之间，无参数
+1. Date类
 1. Character类
    - 定义：对单个字符进行操作，包装一个char类型的对象
    - 示例：
@@ -951,15 +937,12 @@
         fileIn.close();
         ```
 ### 使用
-1. Applet基础：是java的一种应用程序，要求浏览器支持JVM，作用类似flash，嵌入在html中，现在基本没人用
 1. 开发
  - Eclipse开发java：创建java项目——创建程序包——编写java源程序——运行java
  - Eclipse开发java web： 安装Java/Eclipse/Tomcat——Eclipse配置JRE——集成Tomcat——创建项目——部署(发布)到tomcat——启动tomcat
  - Intellij开发java web：安装Java/Intellij/Tomcat——配置JRE/Tomcat——创建项目——部署(发布)到tomcat——启动tomcat
  - Mac启动tomcat：进入bin目录——sudo chmod 755 \*.sh——sudo sh startup.sh。关闭：sudo sh shutdown.sh。部署项目后需要重启
- - java web项目组成
-     1. index.jsp
-     1. WEB-INF:classes放字节码文件，lib放jar包
+
 ### WIKI
 1. java程序特点
      1. 源文件名：必须和类名相同

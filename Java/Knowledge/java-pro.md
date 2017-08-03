@@ -377,6 +377,9 @@
         // 只接受Number及其子类型
         public static void getUperNumber(List<? extends Number> data)
         ```
+1. 反射
+   - 理解：就是看清楚类的存在与否和类的结构，并加以使用
+   - Class类的使用
 ### 网络编程
 1. 理解：java.net包中，有接口和类提供低层次的通信细节。
 1. Socket编程
@@ -472,7 +475,12 @@
      1. `public OutputStream getOutputStream() throws IOException` // 返回输出流，用于写入
      1. `public URL getURL()` // 返回url
 ### 多线程
-1. 理解：阻塞当前进程，让出cpu。是并发执行的，线程多了因为上下文的切换反而效率下降，使用更小资源开销，轮候使用cpu，存在等待。
+1. 理解：阻塞当前进程，让出cpu。是并发执行的，线程多了因为上下文的切换反而效率下降，使用更小资源开销，轮候使用cpu，存在等待
+1. 重难点
+   - ThreadPoolExecutor
+   - J.U.C
+   - Atomic*
+   - Fork/Join
 1. 状态
    - 新建：new或者Thread类及其子类建立线程对象后
    - 就绪：线程对象调用start()后，等待JVM调度器的调度
@@ -522,14 +530,8 @@
         ```
    - 比较：使用Runnable、Callable还可以继承其他类，使用Thread，直接使用this获得当前线程
 1. 概念：线程同步、线程间通信、线程死锁、线程控制(挂起/停止/恢复)
-### 版本
-1. Java 8：即jdk1.8，14年3月发布
-   - 新特性
-     1. Lambda 表达式：Lambda允许函数作为参数传递
-     1. 方法引用：可以直接引用已有对象/类的方法，使语言结构更简洁紧凑
-     1. 实现方法：就是类在接口里有个实现的方法
-     1. 新工具：如新的编译工具，Nashorn引擎jjs、类依赖分析器jdeps
-     1. Stream API：即java.util.stream，把真正的函数式编程引入java中
-     1. DateTime API：加强日期和时间的处理
-     1. Optional 类：解决空指针异常
-     1. Nashorn JavaScript 引擎：允许在JVM上运行javascript应用
+### IO/NIO
+1. 重难点
+   - Stream
+   - Buffer
+   - java.io.\*/java.nio.*

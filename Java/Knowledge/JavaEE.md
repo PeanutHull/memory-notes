@@ -49,6 +49,13 @@
      1. 多线程
      1. 资源池
      1. 其他底层细节
+1. 基于JavaEE的MVC
+   - View
+   - Controller：和Model层通过JavaBean交流数据
+   - Model
+     1. 数据模型：即DAO，不处理业务逻辑，只为业务层提供辅助，完成获取原始数据或持久层数据等
+     1. 业务逻辑
+1. JavaEE架构多层架构：浏览器/客户端————表示层(servlet、jsp)————逻辑层(会话bean、实体bean、消息bean)————数据层
 1. Bean
    - 理解：在编程环境中能够被可视化处理的可重用组件。JavaBean最初是为Java GUI的可视化编程实现的.你拖动IDE构建工具创建一个GUI 组件（如多选框）,其实是工具给你创建java类,并提供将类的属性暴露出来给你修改调整,将事件监听器暴露出来.
    - 优点
@@ -72,8 +79,22 @@
 1. EJB
    - 理解：JavaEE服务器端组件模型，Enterprise Java Beans，用于部署分布式应用程序，是一个逻辑概念，与传统的bean无关，就是将一个业务逻辑类放在服务器上部署，供客户端调用，依赖RMI通信，EJB3.0从早期版本已分离出来
    - 关键字：服务集群、企业开发
+   - 特点
+     1. 数据持久化
+     1. 事务处理
+     1. 并发控制
+     1. 基于JMS的事件驱动
+     1. 基于JNDI的名字和空间管理
+     1. 基于JCE和JAAS的安全管理
+     1. 应用服务器端的软件组件部署
+     1. 使用RMI-IIOP协议的远程过程调用
+     1. 将业务方法暴露为Web服务
    - 组成
      1. JPA：Java Persistence API，中文名Java持久层API。是JDK 5.0注解或XML描述对象关系表的映射关系，并将运行期的实体对象持久化到数据库中，提供了一种标准的OR映射解决方案
+   - 分类
+     1. 会话Bean
+     1. 实体Bean：和数据库打交道
+     1. 消息驱动Bean
    - EJB容器：是EJB组件的运行环境，为部署EJB组件提供服务，包括事务、安全、远程客户端的网络发布、资源管理等
    - EJB服务器：管理EJB容器的高端进程或应用程序，并提供对系统服务的访问
      1. EJB客户端：Servlet/JSP/Java Application/Web Service/Applet/EJB
@@ -91,19 +112,11 @@
      1. EJB功能强大,但是太重了.此时出现DI(依赖注入),AOP(面向切面)技术,通过简单的java bean也能完成EJB的事情,这里的java bean简化为POJO;
      1. Spring诞生了;
 1. RMI
-   - 理解：Java Remote method invocation，java方法远程调用，基于socket方式方式的远程调用，是java分布式的基础，将对象序列化在网络上传输
+   - 理解：Java Remote method invocation，java方法远程调用，基于socket方式的远程调用，是java分布式的基础，将对象序列化在网络上传输
    - 原理：服务端编写interface和其实现，客户端远程调用
      1. 先定义RMI能够提供的服务，即interface，生成调用入口，编写实现类
      1. 编写RMI注册机制，并启动
      1. 客户端就可以访问了
-1. 基于JavaEE的MVC
-   - View
-   - Controller：和Model层通过JavaBean交流数据
-   - Model
-     1. 数据模型：即DAO，不处理业务逻辑，只为业务层提供辅助，完成获取原始数据或持久层数据等
-     1. 业务逻辑
-1. JavaEE架构
-   - 多层架构：浏览器/客户端————表示层(servlet、jsp)————逻辑层(会话bean、实体bean、消息bean)————数据层
 ### Servlet
 1. 认识：为创建基于web的java应用程序，可以访问所有java API。是部署在web服务器上的组件，可以搜集表单等浏览器的东西和创建动态网页
 1. 特点：Servlet在web服务器的地址空间执行，一个请求一个线程，性能好。独立于平台，安全性好

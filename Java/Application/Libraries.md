@@ -1,3 +1,5 @@
+### DAO
+1. 理解：Data Access Object，用来封装访问数据库的代码
 ### Hibernate
 1. JDBC
    - 理解：Java Database Connectivity。执行sql语句的API
@@ -298,5 +300,10 @@
         - `onSave()` // 被保存前
         - `preFlush` // flush前
      1. 使用：实现Interceptor类/继承EmptyInterceptor类
-### DAO
-1. 理解：Data Access Object，用来封装访问数据库的代码
+### MyBatis
+1. 重难点
+   - SQL Maps
+   - 数据关联、动态映射
+   - 事务关联
+### Hession
+1. 理解：Hessian是一个轻量级的remoting onhttp工具，使用简单的方法提供了RMI的功能
