@@ -120,6 +120,11 @@
 ### Servlet
 1. 认识：为创建基于web的java应用程序，可以访问所有java API。是部署在web服务器上的组件，可以搜集表单等浏览器的东西和创建动态网页
 1. 特点：Servlet在web服务器的地址空间执行，一个请求一个线程，性能好。独立于平台，安全性好
+1. 重难点
+   - Servlet容器，Servlet处理机制，Servlet生命周期
+   - 部署Servlet
+   - ServletContext, ServletConfig
+   - Filter, Event Listener
 1. Servlet项目结构
    - src：源码目录
    - web：用于存放web资源，WEB-INF是java web应用固定的存放配置和类库的目录，web.xml是配置文件，也叫部署描述符
@@ -450,6 +455,10 @@
 
 ### JSP
 1. 理解：`Java Server Pages` 是简化的servlet设计，动态生成html、xml的web网页的一种标准。在html中插入java代码(Scriptlet)和jsp标记(tag)，实现了html中的Java扩展(通常用<% %>包裹)。主要用于实现界面
+1. 重难点
+   - 两种表达式，scriptlet, declaration
+   - jsp中访问java类
+   - jsp内置对象
 1. 组成
    - JSTL：jsp标准标签库，JavaServer Page Standard Tag Library。
    - JSF：包含JSF标签的JSP页面

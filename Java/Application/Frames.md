@@ -141,10 +141,13 @@
      1. `<s:radio label="" name="" list="{'',''}" />`
      1. `<s:select label="" name="" value="%{''}" list="%{#{'':''}}">`
 ### Spring
-1. 认识：用于构建轻量级、健壮的J2EE应用程序，为了解决开发的复杂性。为应用程序提供基础设施。容器类框架
+1. 认识：用于构建轻量级、健壮的J2EE应用程序，为了解决开发的复杂性。为应用程序提供基础设施。容器类框架。是Java系的全栈开发框架
 1. 重难点
    - 依赖注入
    - 控制反转
+   - Bean声明周期
+   - AOP
+   - 注解
    - 代理
    - 事务管理
    - ApplicationContext，Bean实例化
@@ -177,10 +180,47 @@
    - Spring DAO：提供异常层次结构，来管理异常和不同数据库的错误信息，简化了错误处理，
    - Spring Web：为基于Web的应用程度提供上下文，支持与Struts的集成，简化了参数绑定到对象的工作
    - Spring Web MVC：是全功能构建Web的MVC框架，包括了JSP、Velocity等
+1. 依赖注入
+   - 如何实现
+   - 优点
+   - 使用
+     1. 基于XML的装配方式
+     1. 基于Java Configuration的装配方式
+     1. 自动装配
+     1. 多种装配方式的混用
+     1. 处理装配的歧义
+     1. 如何注入属性值
+1. Spring Bean
+   - 作用域
+     1. Singleton
+     1. Prototype
+     1. Request
+     1. Session
+     1. Global
+1. AOP
+   - 切面、目标对象、切点、通知、织入等基本概念
+   - 如何定义切点：定义切点的aspectJ语法
+   - 定义通知
+     1. 前置通知（Before)
+     1. 后置通知（AfterReturning）
+     1. 异常通知（AfterThrowing）
+     1. 最终通知（After）
+     1. 环绕通知（Around）
+     1. 如何给切面传参
 1. 使用
    - 业务分层
      1. 持久层：JDBC
      1. 业务层：声明式事务
      1. 展现层：Spring MVC
+### Spring MVC
+1. 理解：能够利用Spring本身的诸多好处来容易开发web应用
+1. 重难点
+   - handlerMapping
+   - RequestMapping
+   - 适配器
+   - 拦截器
+   - 视图和模型
+   - Struts2和Spring MVC的区别
+### Spring Boot
 ### Netty
 1. 理解：Netty是由JBOSS提供的一个java开源框架。Netty提供异步的、事件驱动的网络应用程序框架和工具

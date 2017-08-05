@@ -535,3 +535,11 @@
    - Stream
    - Buffer
    - java.io.\*/java.nio.*
+### JVM
+1. 重难点
+   - 编译、加载、执行原理过程
+   - 内存管理
+   - GC
+### 函数式编程
+1. 分类
+   - Guava

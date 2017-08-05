@@ -302,6 +302,11 @@
      1. 使用：实现Interceptor类/继承EmptyInterceptor类
 ### MyBatis
 1. 重难点
+   - 基本增删改查
+   - 注解方式
+   - 动态SQL
+   - 参数传递
+   - 一对一、一对多、多对多
    - SQL Maps
    - 数据关联、动态映射
    - 事务关联
