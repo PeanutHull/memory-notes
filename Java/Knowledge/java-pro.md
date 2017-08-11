@@ -311,11 +311,106 @@
         ```
    - 比较器：用来精确定义排序规则，以不同方式排序集合。使用Comparator
 1. 特点：对基本集合(动态数组/链表/树/哈希表)的实现是高性能的，允许不同类型的集合以类似的方式工作，对集合的扩展和适应是简单的。重点是ArrayList、HashSet、HashMap
+### 注解
+1. 理解：Java5.0引入，是一种应用于类、方法、参数、变量、构造器及包声明中的特殊修饰符。是描述数据的数据，也叫元数据。和具体业务逻辑无关
+1. 价值：功能声明。XML的描述功能维护非常困难，只适用于设置很多参数，耦合代码并且声明作用需要简单直接的方法
+1. 原理
+   - 编写自定义注解
+     1. 元注解
+        - @Documented 注解是否将包含在JavaDoc中
+        - @Retention 什么时候使用该注解
+          1. RetentionPolicy.SOURCE 编译阶段丢弃
+          1. RetentionPolicy.CLASS 类加载时丢弃
+          1. RetentionPolicy.RUNTIME 始终不会丢弃
+        - @Target 注解用于什么地方
+        - @Inherited –是否允许子类继承该注解
+          1. ElementType.TYPE:用于描述类、接口或enum声明
+          1. ElementType.FIELD:用于描述实例变量
+          1. ElementType.METHOD
+          1. ElementType.PARAMETER
+          1. ElementType.CONSTRUCTOR
+     1. 反射方法
+        - `getAnnotations()` 返回该元素的所有注解
+        - `isAnnotationPresent(annotation)` 检查传入的注解是否存在于当前元素
+        - `getAnnotation(class)` 按照传入的参数获取指定类型的注解
+     1. 例子
+        ```Java
+        // 定义注解
+        @Target(ElementType.METHOD)
+        @Retention(RetentionPolicy.RUNTIME)
+        @interface Todo {
+            public enum Priority {LOW, MEDIUM, HIGH}
+            public enum Status {STARTED, NOT_STARTED}
+            String author() default "peanut";
+
+            Priority priority() default Priority.LOW;
+            Status status() default Status.NOT_STARTED;
+        }
+        // 使用注解
+        @Todo(priority=Todo.Priority.MEDIUM, author="aaa", status=Todo.Status.STARTED)
+        public void incompleteMethod() {}
+        // 使用反射得到注解后的类信息
+        Class businessLogicClass = BusinessLogic.class;
+        for(Method method : businessLogicClass.getMethods()) {
+            Todo todoAnnotation = (Todo)method.getAnnotation(Todo.class);
+            if(todoAnnotation != null) {
+                System.out.println(" Method Name : " + method.getName());
+                System.out.println(" Author : " + todoAnnotation.author());
+                System.out.println(" Priority : " + todoAnnotation.priority());
+                System.out.println(" Status : " + todoAnnotation.status());
+            }
+        }
+        ```
+1. 使用
+   - 分类
+     1. Java SE5内置三种标准注解
+        - @Override 覆盖超类方法
+        - @Deprecated 表示弃用的代码
+        - @SuppressWarnings 关闭不当编译器警告信息
+     1. Servlet3.0新增
+        - `WebInitParam` 声明Servlet/过滤器的初始化参数
+        - `WebServlet` 声明一个Servlet的配置
+        - `WebFilter` 声明一个Server过滤器
+        - `WebListener` 事件声明监听器
+        - `HandlesTypes` 表示一组传递给ServletContainerInitializer的应用类
+        - `HttpConstraint`  该注解代表所有HTTP方法的应用请求的安全约束
 ### 泛型
 1. 泛型
    - 理解：JDK5引入的新特性，提供编译时的类型检测。即参数的类型
    - 特点
-     1. 泛型集合中的限定类型，不能使用基本数据类型，非要使用就通过包装类限定存入的类型。如int就用Integer，long就用Long。int的包装类就是Integer
+     1. 泛型集合中的限定类型，不能使用基本数据类型，非要使用就通过包装类限定存入的类型。如int就用Integer，long就用Long
+   - 泛型变量
+        ```Java
+        // 普通定义方式
+        List list = new ArrayList();
+        // 泛型变量定义方式
+        List<String> list = new ArrayList<String>();
+        ```
+   - 泛型成员变量
+        ```Java
+        // Course是一个对象
+        public List<Course> course; // 带有泛型的变量
+        course = new ArrayList<Course>(); // 赋值带有泛型的变量
+        ```
+   - 泛型方法：根据参数类型，泛型方法适当处理每一个方法调用
+     1. 特点：都有尖括号分隔的类型参数声明部分，这个部分包含n个类型的参数，称为类型变量。类型参数能被用来声明返回值类型，也能作为泛型方法的得到实参的占位符，即引用类型，不是原始类型。接口、类和方法也都可以使用泛型去定义
+     1. 举例
+        ```Java
+        // 泛型方法 printArray                         
+        public static < E > void printArray( E[] inputArray ){
+            // 输出数组元素            
+            for ( E element : inputArray ){        
+                System.out.printf( "%s ", element );
+            }
+        }
+        // 可以传入不同类型
+        Integer[] intArray = { 1, 2, 3, 4, 5 };
+        Double[] doubleArray = { 1.1, 2.2, 3.3, 4.4 };
+        printArray( intArray  ); // 传递一个整型数组
+        printArray( doubleArray ); // 传递一个双精度型数组
+        // 有界的类型参数
+        public static <T extends Comparable<T>> T maximum(T x, T y, T z)
+        ```
    - 泛型类：类后面加类型参数声明部分，包含n个类型参数
      1. 定义
         ```Java
@@ -340,38 +435,7 @@
             }
         }
         ```
-   - 泛型方法：根据参数类型，泛型方法适当处理每一个方法调用
-     1. 特点：都有尖括号分隔的类型参数声明部分，这个部分包含n个类型的参数，称为类型变量。类型参数能被用来声明返回值类型，也能作为泛型方法的得到实参的占位符，即引用类型，不是原始类型。接口、类和方法也都可以使用泛型去定义
-     1. 举例
-        ```Java
-        // 泛型方法 printArray                         
-        public static < E > void printArray( E[] inputArray ){
-            // 输出数组元素            
-            for ( E element : inputArray ){        
-                System.out.printf( "%s ", element );
-            }
-        }
-        // 可以传入不同类型
-        Integer[] intArray = { 1, 2, 3, 4, 5 };
-        Double[] doubleArray = { 1.1, 2.2, 3.3, 4.4 };
-        printArray( intArray  ); // 传递一个整型数组
-        printArray( doubleArray ); // 传递一个双精度型数组
-        // 有界的类型参数
-        public static <T extends Comparable<T>> T maximum(T x, T y, T z)
-        ```
-   - 泛型成员变量
-        ```Java
-        // Course是一个对象
-        public List<Course> course; // 带有泛型的变量
-        this.course = new ArrayList<Course>(); // 赋值带有泛型的变量
-        ```
-   - 泛型变量
-        ```Java
-        List list = new ArrayList(); // 普通定义方式
-        List<String> list = new ArrayList<String>(); // 泛型定义方式
-        list.add("qq");
-        ```
-   - 类型通配符:用?代替具体的类型参数，如List<?>可以代表List<String>,List<Integer>等
+   - 类型通配符:用?代替具体的类型参数，如List<?>可以代表List\<String>,List\<Integer>等
         ```Java
         public static void getData(List<?> data) {}
         // 只接受Number及其子类型
@@ -380,6 +444,62 @@
 1. 反射
    - 理解：就是看清楚类的存在与否和类的结构，并加以使用
    - Class类的使用
+### 多线程
+1. 理解：阻塞当前进程，让出cpu。是并发执行的，线程多了因为上下文的切换反而效率下降，使用更小资源开销，轮候使用cpu，存在等待
+1. 重难点
+   - ThreadPoolExecutor
+   - J.U.C
+   - Atomic*
+   - Fork/Join
+1. 状态
+   - 新建：new或者Thread类及其子类建立线程对象后
+   - 就绪：线程对象调用start()后，等待JVM调度器的调度
+   - 运行：获取cpu资源，可以执行run()，可以变为就绪、阻塞、死亡状态
+   - 阻塞：三种阻塞类型
+     1. 等待阻塞：运行中的线程执行wait()方法
+     1. 同步阻塞：线程获取synchronized同步锁失败
+     1. 其他阻塞：调用sleep()或join()发出io请求时，当这些结束时，线程重新进入就绪状态
+   - 死亡：完成任务或者终止条件发生时
+1. 优先级：整数，范围1~10，默认5，但是不能保证线程执行的顺序，非常依赖于平台
+1. 创建
+   - 实现Runnable接口
+        ```Java
+        class RunnableDemo implements Runnable {}
+        ```
+   - 继承Thread类
+     1. 实例
+        ```Java
+        class ThreadDemo extends Thread {}
+        ```
+     1. 普通方法
+          1. `public void start()` // 线程开始执行，JVM调用run方法
+          1. `public void run()` // 
+          1. `public void interrupt()` // 中断线程
+          1. `public final boolean isAlive()` // 检测是否处于活动状态
+          1. `public final void setName(String name)/setPriority(int priority)` // 设置名字、优先级
+          1. `public final void setDaemon(boolean on)` // 设为守护线程或用户线程
+          1. `public final void join(long millisec)` // 设置等待该线程的最长时间
+     1. 静态方法
+          1. `public static void yield()` // 暂停当前进程，执行其他进程
+          1. `public static void sleep(long millisec)` // 毫秒数休眠
+          1. `public static boolean holdsLock(Object x)` // 当且仅当当前线程在指定的对象上保持监视器锁时，才返回 true
+          1. `public static Thread currentThread()` // 返回对当前正在执行的线程对象的引用
+          1. `public static void dumpStack()` // 将当前线程的堆栈跟踪打印至标准错误流
+   - 通过Callable和Future
+        ```Java
+        public class CallableThreadTest implements Callable<Integer> {
+            public static void main(String[] args)  {
+                CallableThreadTest ctt = new CallableThreadTest();
+                FutureTask<Integer> ft = new FutureTask<>(ctt);
+            }
+        }
+        @Override
+        public Integer call() throws Exception  {
+            Thread.currentThread().getName();
+        }
+        ```
+   - 比较：使用Runnable、Callable还可以继承其他类，使用Thread，直接使用this获得当前线程
+1. 概念：线程同步、线程间通信、线程死锁、线程控制(挂起/停止/恢复)
 ### 网络编程
 1. 理解：java.net包中，有接口和类提供低层次的通信细节。
 1. Socket编程
@@ -474,72 +594,12 @@
      1. `public InputStream getInputStream() throws IOException` // 返回输入流，用于读取
      1. `public OutputStream getOutputStream() throws IOException` // 返回输出流，用于写入
      1. `public URL getURL()` // 返回url
-### 多线程
-1. 理解：阻塞当前进程，让出cpu。是并发执行的，线程多了因为上下文的切换反而效率下降，使用更小资源开销，轮候使用cpu，存在等待
-1. 重难点
-   - ThreadPoolExecutor
-   - J.U.C
-   - Atomic*
-   - Fork/Join
-1. 状态
-   - 新建：new或者Thread类及其子类建立线程对象后
-   - 就绪：线程对象调用start()后，等待JVM调度器的调度
-   - 运行：获取cpu资源，可以执行run()，可以变为就绪、阻塞、死亡状态
-   - 阻塞：三种阻塞类型
-     1. 等待阻塞：运行中的线程执行wait()方法
-     1. 同步阻塞：线程获取synchronized同步锁失败
-     1. 其他阻塞：调用sleep()或join()发出io请求时，当这些结束时，线程重新进入就绪状态
-   - 死亡：完成任务或者终止条件发生时
-1. 优先级：整数，范围1~10，默认5，但是不能保证线程执行的顺序，非常依赖于平台
-1. 创建
-   - 实现Runnable接口
-        ```Java
-        class RunnableDemo implements Runnable {}
-        ```
-   - 继承Thread类
-     1. 实例
-        ```Java
-        class ThreadDemo extends Thread {}
-        ```
-     1. 普通方法
-          1. `public void start()` // 线程开始执行，JVM调用run方法
-          1. `public void run()` // 
-          1. `public void interrupt()` // 中断线程
-          1. `public final boolean isAlive()` // 检测是否处于活动状态
-          1. `public final void setName(String name)/setPriority(int priority)` // 设置名字、优先级
-          1. `public final void setDaemon(boolean on)` // 设为守护线程或用户线程
-          1. `public final void join(long millisec)` // 设置等待该线程的最长时间
-     1. 静态方法
-          1. `public static void yield()` // 暂停当前进程，执行其他进程
-          1. `public static void sleep(long millisec)` // 毫秒数休眠
-          1. `public static boolean holdsLock(Object x)` // 当且仅当当前线程在指定的对象上保持监视器锁时，才返回 true
-          1. `public static Thread currentThread()` // 返回对当前正在执行的线程对象的引用
-          1. `public static void dumpStack()` // 将当前线程的堆栈跟踪打印至标准错误流
-   - 通过Callable和Future
-        ```Java
-        public class CallableThreadTest implements Callable<Integer> {
-            public static void main(String[] args)  {
-                CallableThreadTest ctt = new CallableThreadTest();
-                FutureTask<Integer> ft = new FutureTask<>(ctt);
-            }
-        }
-        @Override
-        public Integer call() throws Exception  {
-            Thread.currentThread().getName();
-        }
-        ```
-   - 比较：使用Runnable、Callable还可以继承其他类，使用Thread，直接使用this获得当前线程
-1. 概念：线程同步、线程间通信、线程死锁、线程控制(挂起/停止/恢复)
 ### IO/NIO
 1. 重难点
    - Stream
    - Buffer
    - java.io.\*/java.nio.*
-### JVM
-1. 重难点
-   - 编译、加载、执行原理过程
-   - 内存管理
-   - GC
-### 函数式编程
-1. 分类
-   - Guava
+### Lambda表达式
+1. 理解：Java 8中用来实现匿名方法，可在某些场景作为匿名类的替代方案
+### Bean
+1. 理解：遵循JavaBean技术规范的拥有getXxx、setXxx、isXxx、addXxxListener、XxxEvent等的类

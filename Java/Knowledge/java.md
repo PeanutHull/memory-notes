@@ -58,16 +58,16 @@
    - 传承于C++，在企业，互联网，嵌入式都有广泛的应用
 1. 知识体系
    - 组成：
-     1. JDK： Java Development Kit，java开发工具包，包含编译器和调试器，运行环境
-     1. JRE：java运行环境，java虚拟机JVM(包含解释器)和其他工具
-     1. JVM：java虚拟机。光JVM还不能运行，没有lib类库，JRE包含编译时的lib类库
+     1. JDK：Java Development Kit，java开发工具包，包含编译器和调试器，运行环境
+     1. JRE：java运行环境，包括JVM(包含解释器)和其他工具
+     1. JVM：java虚拟机。光JVM还不能运行，因为没有lib类库，JRE编译时的会载入lib类库
    - 基础
-     1. 基础, 基本类型, 操作符, 运算符, 表达式
-     1. 面向对象, 类, 继承, 多态, 重写, 重载
-     1. String, Object, Array, Enum
-     1. 集合, List, ArrayList, Set, HashSet, Map, HashMap, HashTable
-     1. File, IO, NIO, InputStream, OutputStream, Reader, Writer, Selector
-     1. 多线程, 并发, Thread, Runnable, Future
+     1. 基础,：基本类型, 操作符, 运算符, 表达式
+     1. 面向对象,：类, 继承, 多态, 重写, 重载
+     1. 常用类：String, Object, Array, Enum
+     1. 集合框架, List, ArrayList, Set, HashSet, Map, HashMap, HashTable
+     1. I/O：File, IO, NIO, InputStream, OutputStream, Reader, Writer, Selector
+     1. 多线程：并发, Thread, Runnable, Future
      1. 注解
      1. 反射
      1. JDBC
@@ -86,23 +86,23 @@
      1. Java EE： java企业版，类库最多的，针对服务器、web应用。本身是一个规范
         - 多出了Package包，Java容器( Tomcat、 GlassFish、IBM WebSphere )
         - Java EE的子集Servlet/JSP/EJB/服务
-        - JCP委员会制定 Java EE 规范，各种实现： sun的 GlassFish， IBM的 Webspher，开源界的tomcat， jetty， jboss。tomcat是用java进行开发的web软件
+        - JCP委员会制定Java EE规范，各种实现：sun的GlassFish， IBM的Webspher，开源界的tomcat，jetty，jboss。tomcat是用java进行开发的web软件
      1. Java ME： 嵌入式开发，进一步缩减，减少整个环境的占用空间，针对性能不高的游戏/移动/通信等设备
    - 开始
         ```Java
         public class HelloWorld {
             /* 第一个Java程序
             */
-            public static void main(String []args) {
+            public static void main(String[] args) {
                 System.out.println("Hello World");
             }
         }
         ```
 1. 特点：
-   - 语法简单：类似C++，不使用指针而是引用，提供垃圾回收
+   - 语法简单：类似C++，不使用指针而是引用，提供自动垃圾回收
    - 面向对象：提供类/接口/继承等，只支持类的单继承，但支持接口间的多继承，全面支持动态绑定，纯的面向对象的语言
    - 健壮性：强类型机制，异常处理，垃圾自动回收，丢弃指针。由于 安全检查机制，命名空间等，还有安全性
-   - 体系结构中立的：java程序在java平台编译为体系结构中立的字节码格式.class，到处运行。严格要求数据类型的长度，就具有了较强移植性
+   - 体系结构中立：java程序在java平台编译为体系结构中立的字节码格式.class，到处运行。严格要求数据类型的长度，就具有了较强移植性
    - 解释性语言：java程序先编译为字节码格式，java解释器对字节码解释执行，执行中需要的类在联接中载入
    - 高性能：速度越来越接近C++，是多线程的，线程是特殊的对象， 必须由Thread类或其子（孙）类来创建
    - 是动态的
@@ -114,14 +114,16 @@
 1. 数据类型
    - 分类：基本类型、引用类型
    - 基本数据类型
-     1. 数值型：整数：byte、short、int、long；浮点数：float、double
+     1. 数值型：
+        - 整数：byte、short、int、long
+        - 浮点数：float、double
      1. 字符型：char
      1. 布尔型：boolean
    - 基本类型详解：
      1. byte：8位有符号二进制补码形式的整数。-128~127——2的7次方。默认0。
      1. short：16位有符号二进制补码形式的整数。-32768~32767——2的15次方。默认0。
-     1. int：32位有符号二进制补码形式的整数。4字节。2的31次方范围。默认0。
-     1. long：64位有符号二进制补码形式的整数。2的63次方范围。默认0L。如 Long b = -200000L。
+     1. int：32位有符号二进制补码形式的整数。4字节。2的31次方范围(-2147483648~2147483647十亿级)。默认0。
+     1. long：64位有符号二进制补码形式的整数。2的63次方范围(百亿亿级)。默认0L。表示形式为 Long b = -200000L。
      1. float：32位单精度浮点型，不能用于货币。默认0.0f。如 float point = 15.1f;
      1. double：64位双精度浮点型，不能用于货币。默认0.0d。如 double d1 = 123.4。
      1. char：单一16位Unicode字符，如：char name = 'A';最小值是’\u0000’（即为0）
@@ -160,15 +162,17 @@
      1. 特点：大小写敏感、类首字母大写/驼峰法
 1. 修饰符： 修饰类、方法和变量
      1. 访问修饰符：可以不使用，默认为default
-        - private：同类可见。类和接口不能声明为private，一旦声明私有只能通过getter和setter被外部操作。作用：隐藏类的实现细节和保护类的数据。
-        - default：同包可见
-        - protected：同包和子类可见。类和接口不能声明为protected，方法和全局变量可以，接口的不行。
+        - private：本类可见。类和接口不能声明为private，一旦声明私有只能通过getter和setter被外部操作。作用：隐藏类的实现细节和保护类的数据
+        - default：其他类和子类不可见
+        - protected：其他类不可见。类和接口不能声明为protected，类的方法和全局变量可以，接口的方法和全局变量不行
         - public：所有类可见。main必须是public的，否则解释器不能运行此类
      1. 访问修饰符的继承：只能往上改，public必须为public，protected为protected或public
      1. 其他修饰符：
         - final：修饰的类不能被继承，修饰的方法不能被重载，修饰的变量为常量不能修改
         - static：创建类变量和类方法
         - abstract：创建抽象类和抽象方法
+        - transient：即对象变量持久化跳过修饰符，只修饰变量，不修饰方法和类。被修饰的变量和静态变量不能被序列化。`public transient int limit = 55;`
+        - strictfp：浮点数使用严格规则
         - synchronized：同一时间只能被一个线程访问 `public synchronized void showDetails(){}`
         - volatile：每次被线程访问，强制从共享内存中重新读取该成员变量的值。当成员变量改变时强制线程将变化值写回内存。保证不同线程看到同一变量的值
             ```Java
@@ -185,17 +189,17 @@
                 }
             }
             ```
-        - transient：JVM跳过`public transient int limit = 55; // 不会持久化`
-        - strictfp：浮点数使用严格规则
 1. 运算符
    - 分类
-     1. 算术： 加减乘除    %取余    ++自增    --自减
-     1. 赋值： =    +=    -=    \*=    /=    %=
-     1. 比较： > < >= <= == != <<= >>= ^=
+     1. 位：&    |    ~(非)    ^(异或)    ~(逐位取反)    <<(按位左移固定位数)    >>    >>>("无符号"右移运算)
      1. 逻辑： && || !
+     1. 算术： 加减乘除    -取反    %取余    ++自增    --自减
+     1. 比较： > < >= <= == !=
+     1. 赋值： =    +=    -=    \*=    /=    %=    <<=(x=x<<y)    >>=    >>>=    &=(x=x&y)    |=    ^=
+     1. 字符串连接：+
+     1. 转型：(强转类型)
      1. 条件： ? :
-     1. 位：&    |    ^(非)    ~(按位补)    <<(按位左移固定位数)    >>    >>>(按位右移补零)
-     1. instanceof：检查对象是否是类类型、接口类型
+     1. instanceof：检查对象是否是类/接口类型
         ```Java
         String name = "James";
         boolean result = name instanceof String; // 由于 name 是 String 类型，所以返回真
@@ -207,29 +211,25 @@
      1. 自增/减只能用于变量，位置前后作用不同
      1. 只有==和!=两个比较运算符两边可以是引用类型，其他的两边都是数值型
      1. ^ 异或：有且仅有一个才行。java有短路作用，即只执行一部分
-1. 引号：单引号是char类型的只能引一个字符，双引号是String类型的
-1. 注释和说明
-    1. 特点：注释和空行都会被java编译器忽略
-    1. 分类：// 单行注释、/\* \*/文档注释、/\* \* \*/多行注释
-    1. 注释标签
+1. 引号：单引号是char类型只能是一个字符或Unicode字符，双引号是String类型
+1. 注释和javadoc
+   - 注释
+     1. 特点：注释和空行都会被java编译器忽略
+     1. 分类：// 单行注释、/\* \*/文档注释、/\* \* \*/多行注释
+   - javadoc标签
+     1. 举例
         ```Java
         @author
         @version
         @param
-        @serial
+        @serial 说明序列化属性
         @exception 对可能的异常的说明
-        @link
+        @link 链接指示
         @see 参考转向
         @return
-        // 例子
-        /**
-        * This method inputs a number from the user.
-        * @return The value input as a double.
-        * @exception IOException On input error.
-        * @see IOException
-        */
         ```
-    1. 提取Java注释：javadoc -d doc hello.java
+     1. 提取Java注释：`javadoc -d doc hello.java`
+   - 注解：Annotation
 1. 常量
    - 理解：程序运行时，不会修改的量。一旦定义，不许修改。通常大写
    - 定义：
@@ -239,7 +239,7 @@
     ```
    - 好处：可提高程序可维护性。即避免命名不规范等导致的问题
 1. 变量
-   - 理解：使用前必须先声明。
+   - 理解：使用前必须先声明
    - 定义:
     ```Java
     // 声明并赋值
@@ -249,17 +249,22 @@
     z= 11;
     ```
    - 分类：
-        - 全局变量：即成员变量，类中共享的变量，float int
-        - 局部变量：方法中定义的变量。一个方法中局部变量不能重名，局部比全局的优先级高，java会给全局定义初始值(定义不赋值)，不会给局部定
-        - 类变量：即静态变量。在构造方法和语句块之外。属于类，所有下边的对象共享只有一份。
-            ```Java
-            // 声明静态变量
-            protected static String name = 'haha';
-            // 声明静态常量
-            public static final String A = "666";
-            // 使用
-            类名.name;
-            ```
+        - 全局变量：即成员变量，或者叫实例变量，类中共享的变量
+        - 局部变量：方法中定义的变量。一个方法中局部变量不能重名，局部比全局的优先级高，java会给全局变量定义初始值(定义不赋值)，不会给局部定义
+        ```Java
+        // 使用
+        int age = 0;
+        System.out.println(age);
+        ```
+        - 类变量：即静态变量。在构造方法和语句块之外。属于类，所有下边的对象共享只有一份
+        ```Java
+        // 声明静态变量
+        protected static String name = 'haha';
+        // 声明静态常量
+        public static final String A = "666";
+        // 使用
+        类名.name;(类中)/name;(类外)
+        ```
 1. 流程控制
    - 判断
         ```Java
@@ -271,7 +276,7 @@
         // switch类型
         switch() {
                 case value1:
-                // 执行; break;
+                // 执行;break;
                 default:
                 // 执行
         }
@@ -294,47 +299,6 @@
         break;
         continue;
         ```
-1. Java类库，常见的包
-   - jsva.lang：语言包
-     1. 数据类型包装类
-     1. 字符处理
-        - String类
-        - StringBuffer类
-     1. Math：数学类
-     1. Object：类
-     1. 操作类
-        - Class类
-        - ClassLoader类
-     1. 错误和异常处理类
-        - Trowable
-        - Exception
-        - Error
-     1. 线程类
-        - Thread类
-        - TreadDeath
-        - Runnable类
-     1. Process：过程类
-     1. 系统和运行类
-        - System类
-        - Runtime类
-   - java.util：实用包
-     1. 数据结构类
-        - LinkedList：链表类
-        - Vector：向量类
-        - Stack：栈类
-        - HashTable：散列表类
-     1. Random：随机数类
-     1. 日期类
-        - Date类
-        - Calendar类
-        - GregorianCalendar类
-   - java.io：输入输出包
-     1. InputStream
-     1. OutputStream
-   - java.net
-   - java.sql
-   - java.awt/swing：窗口工具包
-   - applet
 1. 时间和日期
    - 理解：属于java.util包。
    - 示例
@@ -390,29 +354,30 @@
         String str = br.readLine(); // 读取字符串
         Scanner类 // jdk5之后可用获得输入
         ```
-    - 控制台输入——Scanner类
-      1. 理解：Java5的新特性，获取用户输入
-      1. 使用
-            ```Java
-            Scanner s = new Scanner(System.in);
-            if(scan.hasNext()){
-                String str1 = scan.next();
-                System.out.println("输入的数据为："+str1);
-            }
-            // 或者
-            if(scan.hasNextLine()){
-                String str2 = scan.nextLine();
-                System.out.println("输入的数据为："+str2);
-            }
-            // 区别：
-            next：一定读取到有效字符才结束输入，自动去掉之前空白，有效符后面的空白作为分隔符和结束符，所有不能输入空格
-            nextLine：回车为结束符
-            ```
-    - 控制台输出：print()和println()完成，由类PrintStream定义，System.out是该类的一个引用。PrintStream 继承了 OutputStream类，实现了方法write()，可以写入控制台
+   - 控制台输入——Scanner类
+     1. 理解：Java5的新特性，获取用户输入
+     1. 使用
+        ```Java
+        Scanner s = new Scanner(System.in);
+        if(scan.hasNext()){
+            String str1 = scan.next();
+            System.out.println("输入的数据为："+str1);
+        }
+        // 或者
+        if(scan.hasNextLine()){
+            String str2 = scan.nextLine();
+            System.out.println("输入的数据为："+str2);
+        }
+        // 区别：
+        next：一定读取到有效字符才结束输入，自动去掉之前空白，有效符后面的空白作为分隔符和结束符，所有不能输入空格
+        nextLine：回车为结束符
+        ```
+   - 控制台输出：print()和println()完成，由类PrintStream定义，System.out是该类的一个引用。PrintStream 继承了 OutputStream类，实现了方法write()，可以写入控制台
         ```Java
         int b = 'A';
         System.out.write(b);
         ```
+   - Stream
 1. File
    - 读取文件
      1. 创建
@@ -472,7 +437,6 @@
             currentFile.delete();
         }
         ```
-1. Stream
 1. 正则表达式
    - 理解：定义了字符串的模式。Java的和Perl类似。存于java.util.regex包
    - 主要的类
@@ -531,6 +495,189 @@
         // 声明异常类
         class MyException extends Exception/RuntimeException{}
         ```
+1. Java类库，常见的包
+   - jsva.lang：语言包
+     1. 数据类型包装类
+     1. 字符处理
+        - String类
+        - StringBuffer类
+     1. Math：数学类
+     1. Object：类
+     1. 操作类
+        - Class类
+        - ClassLoader类
+     1. 错误和异常处理类
+        - Trowable
+        - Exception
+        - Error
+     1. 线程类
+        - Thread类
+        - TreadDeath
+        - Runnable类
+     1. Process：过程类
+     1. 系统和运行类
+        - System类
+        - Runtime类
+   - java.util：实用包
+     1. 数据结构类
+        - LinkedList：链表类
+        - Vector：向量类
+        - Stack：栈类
+        - HashTable：散列表类
+     1. Random：随机数类
+     1. 日期类
+        - Date类
+        - Calendar类
+        - GregorianCalendar类
+   - java.io：输入输出包
+     1. InputStream
+     1. OutputStream
+   - java.net
+   - java.sql
+   - java.awt/swing：窗口工具包
+   - applet
+### 常用Java类
+1. System：系统类
+1. Class：反射类
+1. 包装类
+   - 定义：将内置数据类型作为当做对象使用。都是抽象类Number的子类，属于java.lang包
+   - 分类：Byte、Integer、Short、Long、Float、Double
+   - 示例
+        ```Java
+        // 内置数据类型
+        int a = 5000;
+        // 包装类
+        Integer x = 5;
+        ```
+1. Math类
+   - 定义：提供了基本数学运算的属性和方法。如初等函数、对数、平方根和三角函数，都是静态函数
+   - 示例
+        ```Java
+        Math.sin(Math.PI/2) // 90 度的正弦值
+        ```
+   - 常用方法：
+     1. x.byteValue()：将Number对象转换为xx数据类型。如short/int/long/float/double、Value();
+        ```Java
+        Integer x = 5;
+        x.byteValue()
+        ```
+     1. equals(param)：number对象是否和参数相等
+        ```Java
+        Integer x = 5;
+        Integer y = 5;
+        System.out.println(x.equals(y));
+        ```
+     1. compareTo(param)：将number对象和参数比较。同类型数据比较，返回值：0相等、小于参数-1、大于1
+     1. valueOf()：返回参数的原生Number对象值。参数为原生数据类型、String。
+        ```
+        static Integer valueOf(int i) //
+        static Integer valueOf(String s)
+        static Integer valueOf(String s, int radix)
+        ```
+     1. toString()：以字符串形式返回
+     1. parselnt()：将字符串解析为int类型
+     1. abs()：绝对值
+     1. ceil、floor、rint()：对整形变量向左、右取整、最接近的整数，返回double类型
+     1. round()：返回最接近的int、long值
+     1. min、max()：两个参数得最大小值
+     1. random()：返回随机值，0到1之间，无参数
+1. Date类
+1. Character类
+   - 定义：对单个字符进行操作，包装一个char类型的对象
+   - 示例：
+    ```Java
+    char ch = 'a';
+    char uniChar = '\u039A'; // unicode形式
+    char[] charArray ={ 'a', 'b', 'c', 'd', 'e' }; // 字符数组
+    // CHaracter类对象
+    Character ch = new Character('a');
+    ```
+   - 特点：当char作为Character类的参数时，自动将char转为Character类型。称为装箱，反之为拆箱
+   - 常用方法：
+     1. isLetter()：是否一字母
+     1. isDigit()：是否一数字字符
+     1. isWhitespace()：是否空格
+     1. isUpperCase、LowerCase()：是否大、小写字母
+     1. toUpperCase、toLowerCase()：设置大、小写
+     1. toString()：返回字符的字符串形式
+1. String：不是8种基本类型，是特殊的对象。对象默认值是null，String有其他对象没有的特性
+   - 理解：java中字符串属于对象，java使用String类来创建和操作字符串
+   - 特点
+     1. 有11个构造方法
+     1. 一旦创建不可改变，如果有很多修改，使用StringBuffer和StringBuilder类
+   - 方法：
+     1. int length()：长度`int length()`
+        ```Java
+        String site = "www.runoob.com";
+        int len = site.length();
+        ```
+      1. concat()：连接`String concat(String str)`
+            ```Java
+            "我的名字".concat("Runoob");
+            // 更常用+号连接
+            "Hello," + " runoob"
+            ```
+     1. charAt()：指定位置的值，返回的值可以为char`char charAt(int index)`
+     1. copyValueOf()：返回数组中指定的偏移和长度的字符串。`public static String copyValueOf(char[] data, int offset, int count)`
+     1. indexOf()：字符在此字符串第一次出现的索引，二参为开始搜索位置`int indexOf(String/int, int ch)`
+     1. lastIndexOf()：字符串最后一次出现的索引`int lastIndexOf(int ch, int fromIndex)`
+     1. equals()：与String对象进行比较，返回布尔值`boolean equals(Obj obj)`
+     1. equalsIgnoreCase()：与String对象进行比较忽略大小写，返回布尔值`boolean equalsIgnoreCase (String str/String str)`
+     1. compareTo()：与String对象进行比较，相等返回int0，小于为负数，大于为正数`int compareTo(Obj obj)`
+     1. compareToIgnoreCase()：与String对象进行比较，比较时忽略大小写`int compareToIgnoreCase (String str)`
+     1. contentEquals()：将此字符串与StringBuffer比较是否相同`boolean contentEquals(StringBuffer sb)`
+        ```Java
+        String str1 = "String1";
+        String str2 = "String2";
+        StringBuffer str3 = new StringBuffer( "String1");
+        boolean result = str1.contentEquals( str3 ); // true
+        result = str1.contentEquals( str3 ); // false
+        ```
+     1. trim()：去掉前后空白`String trim()`
+     1. replace()
+     1. replaceAll()
+     1. replaceFirst()
+     1. split()：正则拆分字符串`String[] split(String regex, [int limit])`
+     1. substring()：返回新子字符串`String substring(int beginIndex)`
+     1. matches()：是否匹配给定的正则`boolean matches(String regex)`
+     1. regionMatches()
+     1. intern()：String 返回字符串的规范化表示形式`String intern()`
+     1. hashCode()：int hashCode()，哈希值`Int hashCode()`
+     1. startsWith()：是否以指定的后缀结束`boolean startsWith(String str)`
+     1. endsWith()：是否以指定的后缀结束`boolean endsWith(String str)`
+     1. getBytes()：使用字符集将字符串编码为byte序列`byte[] getBytes()`
+        ```Java
+        byte[] Str2 = Str1.getBytes();
+        Str2 = Str1.getBytes( "UTF-8" );
+        Str2 = Str1.getBytes( "ISO-8859-1" );
+        ```
+     1. getChars()：将字符串复制到字符数组`void getChars(int srcBegin, int srcEnd, char[] dst, int dstBegin)`
+     1. toCharArray()：转为字符串数组`char[] toCharArray()`
+     1. toLowerCase()：所有转为小写`String toLowerCase([Locale locale])`
+     1. toUpperCase()：所有转为小写`String toUpperCase([Locale locale])`
+     1. format()：格式化字符串
+        ```Java
+        System.out.printf("浮点型变量的的值为 " +"%f, 整型变量的值为 " + " %d, 字符串变量的值为 " + "is %s", floatVar, intVar, stringVar);
+        String fs; fs = String.format("浮点型变量的的值为 " + "%f, 整型变量的值为 " + " %d, 字符串变量的值为 " + " %s", floatVar, intVar, stringVar);
+        ```
+   - 示例：
+        ```Java
+        // 创建字符串
+        String greeting = "菜鸟教程";
+        // 提供一个字符数组参数
+        char[] helloArray = { 'r', 'u', 'n', 'o', 'o', 'b'};
+        String helloString = new String(helloArray); // 输出runoob
+        ```
+1. StringBuffer
+   - 理解：对字符串进行修改时用到，能够被修改并且不产生新对象。如果要求线程安全，则必须使用StringBuffer
+   - 方法
+     1. append()：追加字符串`StringBuffer append(String str)`
+     1. reverse()：以反转形式取代`StringBuffer reverse(StringBuffer sb)`
+     1. delete()：删除字符串中某些`StringBuffer delete(int start, int end)`
+     1. insert()：插入`StringBuffer insert(int offset, int )`
+     1. replace
+1. StringBuilder
+   - 理解：同StringBuffer，但不是线程安全的，即不能同步访问。更快，建议使用
 ### 面向对象
 1. 封装/继承/多态
    - 封装：将类的实现信息隐藏起来，不能让外部直接访问，而是通过类提供的方法来访问
@@ -659,16 +806,42 @@
    - 复制
      1. 浅表复制：自带，指的是同一个对象
      1. 深表复制：另起一个对象
+   - 对象序列化
+     1. 理解：JVM独立的，可进行可序列化和反序列化
+     1. 对象被序列化成功的条件：
+        - 必须实现java.io.Serializable对象
+        - 类的所有属性必须是可序列化的，即不被transient修饰或者不是静态变量
+     1. 操作
+        - 序列化
+            ```Java
+            // 准备类
+            Employee e = new Employee();
+            // 将序列化的类写入文件
+            FileOutputStream fileOut = new FileOutputStream("/tmp/employee.ser");
+            ObjectOutputStream out = new ObjectOutputStream(fileOut);
+            out.writeObject(e);
+            out.close();
+            fileOut.close();
+            ```
+        - 反序列化
+            ```Java
+            FileInputStream fileIn = new FileInputStream("/tmp/employee.ser");
+            ObjectInputStream in = new ObjectInputStream(fileIn);
+            e = (Employee) in.readObject();
+            in.close();
+            fileIn.close();
+            ```
+     1. 相关类：Externalizable，表示没有任何东西可以自动序列化，需要在writeExternal方法中进行手工指定
 1. 类：由方法和属性组成
-     1. 定义
+   - 定义
     ```Java
     package com.imooc // 包名
     public/protected/private function 类名{
             float score;
     }
     ```
-     1. 访问修饰符
-     1. 初始化块
+   - 访问修饰符
+   - 初始化块
         - 作用：顺序执行其中的代码，包括为变量赋值
     ```Java
     public class 类{
@@ -679,7 +852,7 @@
     }
     // 特点：可以用静态修饰，由于普通的属性/方法，只能实例化后使用，所以静态初始化块只能给静态变量赋值
     ```
-     1. 构造方法
+   - 构造方法
         - 解释：没有显式定义类的构造方法，java编译器会为该类提供默认构造方法。创建对象至少调用一个构造方法，构造方法必须和类同名，一个类可以有多个构造方法
     ```Java
     public class Puppy{
@@ -690,7 +863,11 @@
         }
      }
     ```
-     1. this关键字：this.属性，this.方法
+   - this关键字：this.属性，this.方法
+   - 其他类
+     1. 内部类
+        - 定义：就是一个类中定义的类，对应的是外部类
+        - 作用：更好的封装
 1. 抽象类
    - 理解：为了将来对类进行扩充。除了不能被实例化，其他功能都存在。属性、方法、构造器和权限访问都一样。必须继承使用，表示一种继承关系，一个类只能继承一个抽象类，但可以实现多个接口
    - 定义和继承使用
@@ -743,7 +920,6 @@
        // 接口的每个属性都被指定为public static final变量，只有这一种
        ```
    - 标记接口：没有任何属性和方法的接口，仅表明它的类属于一个特定的类型
-1. Bean：遵循JavaBean技术规范的拥有getXxx、setXxx、isXxx、addXxxListener、XxxEvent等的类
 1. 包
    - 作用：解决文件名冲突，对类和接口分类，方便查找和使用。
    - 组成：类、接口、枚举和注释
@@ -767,175 +943,6 @@
      1. 包采用了树形目录的存储方式，不同包中的类名可以相同，加上包名区别不同包中的类。
      com.runoob.test的目录结构为`CLASSPATH\com\runoob\test\类名`
      1. 包也限定了访问权限，有包的权限才能访问包中的类
-1. 其他特点
-   1. 内部类
-      - 定义：就是一个类中定义的类，对应的是外部类
-      - 作用：更好的封装
-### 常用Java类
-1. System：系统类
-1. Class：反射类
-1. 包装类
-   - 定义：将内置数据类型作为当做对象使用。都是抽象类Number的子类，属于java.lang包
-   - 分类：Byte、Integer、Short、Long、Float、Double
-   - 示例
-        ```Java
-        // 内置数据类型
-        int a = 5000;
-        // 包装类
-        Integer x = 5;
-        ```
-1. Math类
-   - 定义：提供了基本数学运算的属性和方法。如初等函数、对数、平方根和三角函数，都是静态函数
-   - 示例
-        ```Java
-        Math.sin(Math.PI/2) // 90 度的正弦值
-        ```
-   - 常用方法：
-     1. x.byteValue()：将Number对象转换为xx数据类型。如short/int/long/float/double、Value();
-        ```Java
-        Integer x = 5;
-        x.byteValue()
-        ```
-     1. equals(param)：number对象是否和参数相等
-        ```Java
-        Integer x = 5;
-        Integer y = 5;
-        System.out.println(x.equals(y));
-        ```
-     1. compareTo(param)：将number对象和参数比较。同类型数据比较，返回值：0相等、小于参数-1、大于1
-     1. valueOf()：返回参数的原生Number对象值。参数为原生数据类型、String。
-        ```
-        static Integer valueOf(int i) //
-        static Integer valueOf(String s)
-        static Integer valueOf(String s, int radix)
-        ```
-     1. toString()：以字符串形式返回
-     1. parselnt()：将字符串解析为int类型
-     1. abs()：绝对值
-     1. ceil、floor、rint()：对整形变量向左、右取整、最接近的整数，返回double类型
-     1. round()：返回最接近的int、long值
-     1. min、max()：两个参数得最大小值
-     1. random()：返回随机值，0到1之间，无参数
-1. Date类
-1. Character类
-   - 定义：对单个字符进行操作，包装一个char类型的对象
-   - 示例：
-    ```Java
-    char ch = 'a';
-    char uniChar = '\u039A'; // unicode形式
-    char[] charArray ={ 'a', 'b', 'c', 'd', 'e' }; // 字符数组
-    // CHaracter类对象
-    Character ch = new Character('a');
-    ```
-   - 特点：当char作为Character类的参数时，自动将char转为Character类型。称为装箱，反之为拆箱
-   - 常用方法：
-     1. isLetter()：是否一字母
-     1. isDigit()：是否一数字字符
-     1. isWhitespace()：是否空格
-     1. isUpperCase、LowerCase()：是否大、小写字母
-     1. toUpperCase、toLowerCase()：设置大、小写
-     1. toString()：返回字符的字符串形式
-1. String：不是8种基本类型，是特殊的对象。对象默认值是null，String有其他对象没有的特性
-   - 理解：java中字符串属于对象，java使用String类来创建和操作字符串
-   - 特点
-     1. 有11个构造方法
-     1. 一旦创建不可改变，如果有很多修改，使用StringBuffer和StringBuilder类
-   - 方法：
-     1. int length()：长度`int length()`
-        ```Java
-        String site = "www.runoob.com";
-        int len = site.length();
-        ```
-      1. concat()：连接`String concat(String str)`
-            ```Java
-            "我的名字".concat("Runoob");
-            // 更常用+号连接
-            "Hello," + " runoob"
-            ```
-     1. charAt()：指定位置的值，返回的值可以为char`char charAt(int index)`
-     1. copyValueOf()：返回数组中指定的偏移和长度的字符串。`public static String copyValueOf(char[] data, int offset, int count)`
-     1. indexOf()：字符在此字符串第一次出现的索引，二参为开始搜索位置`int indexOf(String/int, int ch)`
-     1. lastIndexOf()：字符串最后一次出现的索引`int lastIndexOf(int ch, int fromIndex)`
-     1. equals()：与String对象进行比较，返回布尔值`boolean equals(Obj obj)`
-     1. equalsIgnoreCase()：与String对象进行比较忽略大小写，返回布尔值`boolean equalsIgnoreCase (String str/String str)`
-     1. compareTo()：与String对象进行比较，相等返回int0，小于为负数，大于为正数`int compareTo(Obj obj)`
-     1. compareToIgnoreCase()：与String对象进行比较，比较时忽略大小写`int compareToIgnoreCase (String str)`
-     1. contentEquals()：将此字符串与StringBuffer比较是否相同`boolean contentEquals(StringBuffer sb)`
-        ```Java
-        String str1 = "String1";
-        String str2 = "String2";
-        StringBuffer str3 = new StringBuffer( "String1");
-        boolean result = str1.contentEquals( str3 ); // true
-        result = str1.contentEquals( str3 ); // false
-        ```
-     1. trim()：去掉前后空白`String trim()`
-     1. replace()
-     1. replaceAll()
-     1. replaceFirst()
-     1. split()：正则拆分字符串`String[] split(String regex, [int limit])`
-     1. substring()：返回新子字符串`String substring(int beginIndex)`
-     1. matches()：是否匹配给定的正则`boolean matches(String regex)`
-     1. regionMatches()
-     1. intern()：String 返回字符串的规范化表示形式`String intern()`
-     1. hashCode()：int hashCode()，哈希值`Int hashCode()`
-     1. startsWith()：是否以指定的后缀结束`boolean startsWith(String str)`
-     1. endsWith()：是否以指定的后缀结束`boolean endsWith(String str)`
-     1.
-     1. getBytes()：使用字符集将字符串编码为byte序列`byte[] getBytes()`
-        ```Java
-        byte[] Str2 = Str1.getBytes();
-        Str2 = Str1.getBytes( "UTF-8" );
-        Str2 = Str1.getBytes( "ISO-8859-1" );
-        ```
-     1. getChars()：将字符串复制到字符数组`void getChars(int srcBegin, int srcEnd, char[] dst, int dstBegin)`
-     1. toCharArray()：转为字符串数组`char[] toCharArray()`
-     1. toLowerCase()：所有转为小写`String toLowerCase([Locale locale])`
-     1. toUpperCase()：所有转为小写`String toUpperCase([Locale locale])`
-     1. format()：格式化字符串
-        ```Java
-        System.out.printf("浮点型变量的的值为 " +"%f, 整型变量的值为 " + " %d, 字符串变量的值为 " + "is %s", floatVar, intVar, stringVar);
-        String fs; fs = String.format("浮点型变量的的值为 " + "%f, 整型变量的值为 " + " %d, 字符串变量的值为 " + " %s", floatVar, intVar, stringVar);
-        ```
-   - 示例：
-        ```Java
-        // 创建字符串
-        String greeting = "菜鸟教程";
-        // 提供一个字符数组参数
-        char[] helloArray = { 'r', 'u', 'n', 'o', 'o', 'b'};
-        String helloString = new String(helloArray); // 输出runoob
-        ```
-1. StringBuffer
-   - 理解：对字符串进行修改时用到，能够被修改并且不产生新对象。如果要求线程安全，则必须使用StringBuffer
-   - 方法
-     1. append()：追加字符串`StringBuffer append(String str)`
-     1. reverse()：以反转形式取代`StringBuffer reverse(StringBuffer sb)`
-     1. delete()：删除字符串中某些`StringBuffer delete(int start, int end)`
-     1. insert()：插入`StringBuffer insert(int offset, int )`
-     1. replace
-1. StringBuilder
-   - 理解：同StringBuffer，但不是线程安全的，即不能同步访问。更快，建议使用
-1. 对象序列化
-   - 理解：JVM独立的，可进行可序列化和反序列化
-   - 被序列化成功的条件：必须实现java.io.Serializable对象，类的所有属性必须是可序列化的。通过文档查看类是否实现Serializable接口即可知道是否可序列化
-   - 序列化
-        ```Java
-        // 准备类
-        Employee e = new Employee();
-        // 将序列化的类写入文件
-        FileOutputStream fileOut = new FileOutputStream("/tmp/employee.ser");
-        ObjectOutputStream out = new ObjectOutputStream(fileOut);
-        out.writeObject(e);
-        out.close();
-        fileOut.close();
-        ```
-   - 反序列化
-        ```Java
-        FileInputStream fileIn = new FileInputStream("/tmp/employee.ser");
-        ObjectInputStream in = new ObjectInputStream(fileIn);
-        e = (Employee) in.readObject();
-        in.close();
-        fileIn.close();
-        ```
 ### 使用
 1. 开发
  - Eclipse开发java：创建java项目——创建程序包——编写java源程序——运行java
