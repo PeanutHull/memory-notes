@@ -295,6 +295,15 @@
         for(int i=1,j=1;i <= 1000 && j != -1000;i++,j--) {
             i++;
         }
+        // foreach类型
+        List<String> list = new ArrayList<String>(); // 数组类
+        for(String item : list){
+            System.out.println("循环元素：" + item);
+        }
+        Map<String, String> map = new HashMap<String, String>(); // 非数组类
+        for(Entry<String, String> item : map.entrySet()){
+            System.out.println("循环元素 key:" + item.getKey() + " value:" + item.getValue());
+        }
         // 循环控制
         break;
         continue;
@@ -539,6 +548,7 @@
 ### 常用Java类
 1. System：系统类
 1. Class：反射类
+1. Object：java.lang.Object，所有类都继承，唯一没有父类的类
 1. 包装类
    - 定义：将内置数据类型作为当做对象使用。都是抽象类Number的子类，属于java.lang包
    - 分类：Byte、Integer、Short、Long、Float、Double

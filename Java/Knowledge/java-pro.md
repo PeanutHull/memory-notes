@@ -441,9 +441,135 @@
         // 只接受Number及其子类型
         public static void getUperNumber(List<? extends Number> data)
         ```
-1. 反射
+### 反射
    - 理解：就是看清楚类的存在与否和类的结构，并加以使用
    - Class类的使用
+### 代理模式
+1. 理解：代理是一种设计模式，提供了对目标对象另外的访问方式，即通过代理对象访问目标对象。
+   - 三方角色：用户、代理对象、目标对象。代理对象是对目标对象的扩展
+   - 分类
+     1. 静态代理
+        - 理解：静态代理在使用时,需要定义接口或者父类,被代理对象与代理对象一起实现相同的接口或者是继承相同父类。就是把目标对象传入代理对象实例化，然后调用相同方法，代理对象中多加了一些方法，适当时候调用目标对象的方法。就是套了一层，然后执行
+        - 示例
+        ```Java
+        public interface IUserDao {void save();} // 接口
+        public class UserDao implements IUserDao { public void save() {}} // 目标对象
+        public class UserDaoProxy implements IUserDao{ // 代理对象
+            private IUserDao target;
+            public UserDaoProxy(IUserDao target){
+                this.target=target;
+            }
+
+            public void save() {
+                // 执行其他逻辑
+                target.save();//执行目标对象的方法
+                // 其他逻辑                
+            }
+        } // 代理对象
+        // 测试类
+        public static void main(String[] args) {
+            // 目标对象
+            UserDao target = new UserDao();
+            // 代理对象,把目标对象传给代理对象,建立代理关系
+            UserDaoProxy proxy = new UserDaoProxy(target);
+            // 执行代理方法
+            proxy.save();
+        }
+        ```
+        - 特点
+          1. 可以在不修改目标代理前提下，实现功能拓展
+          1. 会产生很多代理类，要维护两份类
+     1. 动态代理
+        - 理解：利用API在内存中构建代理对象，也叫JDK代理,接口代理
+        - 使用
+        ```Java
+        代理类所在包：java.lang.reflect.Proxy
+        实现方法：static Object newProxyInstance(ClassLoader loader, Class<?>[] interfaces,InvocationHandler h )
+        参数：
+        `ClassLoader loader` 指定当前目标对象使用类加载器
+        `Class<?>[] interfaces` 目标对象实现的接口的类型
+        `InvocationHandler h` 把当前执行目标对象的方法作为参数传入
+        ```
+        - 特点：代理对象不需要实现接口,但是目标对象一定要实现接口
+        - 示例
+        ```Java
+        public class ProxyFactory{ // 代理类
+            // 维护一个目标对象
+            private Object target;
+            public ProxyFactory(Object target){
+                this.target=target;
+            }
+
+            // 给目标对象生成代理对象
+            public Object getProxyInstance(){
+                return Proxy.newProxyInstance(
+                        target.getClass().getClassLoader(),
+                        target.getClass().getInterfaces(),
+                        new InvocationHandler() {
+                            // 代理的方法
+                            @Override
+                            public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+                                // 其他逻辑
+                                // 执行目标对象方法
+                                Object returnValue = method.invoke(target, args);
+                                // 其他逻辑
+                                return returnValue;
+                            }
+                        }
+                );
+            }
+        }
+        // 测试类
+        IUserDao target = new UserDao();
+        // 给目标对象，创建代理对象
+        IUserDao proxy = (IUserDao) new ProxyFactory(target).getProxyInstance();
+        // class $Proxy0   内存中动态生成的代理对象
+        // 执行方法   【代理对象】
+        proxy.save();
+        ```
+      1. Cglib代理
+        - 理解：以目标对象子类的方式在内存中构建子类实现代理，也叫子类代理
+        - 价值：适用于目标对象没有实现接口的情况，可以在运行期扩展java类和实现java接口，被spring aop使用来提供interception(拦截)
+        - 原理：Cglib包的底层是通过使用一个小而块的字节码处理框架ASM来转换字节码并生成新的类
+        - 举例
+        ```Java
+        public class ProxyFactory implements MethodInterceptor{
+            //维护目标对象
+            private Object target;
+            public ProxyFactory(Object target) {this.target = target;}
+
+            //给目标对象创建一个代理对象
+            public Object getProxyInstance(){
+                //1.工具类
+                Enhancer en = new Enhancer();
+                //2.设置父类
+                en.setSuperclass(target.getClass());
+                //3.设置回调函数
+                en.setCallback(this);
+                //4.创建子类(代理对象)
+                return en.create();
+            }
+
+            @Override
+            public Object intercept(Object obj, Method method, Object[] args, MethodProxy proxy) throws Throwable {
+                // 其他逻辑
+                //执行目标对象的方法
+                Object returnValue = method.invoke(target, args);
+                // 其他逻辑
+                return returnValue;
+            }
+        }
+        // 测试方法
+        //目标对象
+        UserDao target = new UserDao();
+        //代理对象
+        UserDao proxy = (UserDao)new ProxyFactory(target).getProxyInstance();
+        //执行代理对象的方法
+        proxy.save();
+        ```
+1. 价值：可以在实现目标对象的基础上,增强额外的功能操作和功能扩展。不要随意修改已经写好的代码，如需修改使用代理的方式扩展该方法
+1. 原理
+1. 使用
 ### 多线程
 1. 理解：阻塞当前进程，让出cpu。是并发执行的，线程多了因为上下文的切换反而效率下降，使用更小资源开销，轮候使用cpu，存在等待
 1. 重难点

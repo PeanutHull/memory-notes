@@ -37,6 +37,8 @@
    - Clojure
      1. 理解：是一种运行在Java平台上的Lisp方言
 1. JNI：提供了若干的API实现了Java和其他语言的通信（主要是C&C++）
+1. Guava
+   - 理解：一种基于开源的Java库，提供了用于集合，缓存，支持原语，并发性，常见注解，字符串处理，I/O和验证的实用扩展方法
 1. 关键字
    - 基础关键字
      1. 注解
@@ -103,7 +105,7 @@
       - Mybatis 3.4
 1. Java 8：即jdk1.8，14年3月发布
    - 新特性
-     1. Lambda 表达式：Lambda允许函数作为参数传递
+     1. Lambda表达式：Lambda允许函数作为参数传递
      1. 方法引用：可以直接引用已有对象/类的方法，使语言结构更简洁紧凑
      1. 实现方法：就是类在接口里有个实现的方法
      1. 新工具：如新的编译工具，Nashorn引擎jjs、类依赖分析器jdeps
@@ -111,6 +113,36 @@
      1. DateTime API：加强日期和时间的处理
      1. Optional 类：解决空指针异常
      1. Nashorn JavaScript 引擎：允许在JVM上运行javascript应用
+   - foreach和Lambda
+     1. 遍历Map
+      ```Java
+      Map<String, Integer> items = new HashMap<>();
+      items.put("A", 10);
+
+      items.forEach((k,v)->{
+          System.out.println("Item : " + k + " Count : " + v);
+      });
+      ```
+     1. 遍历List
+      ```Java
+      List<String> items = new ArrayList<>();
+      items.add("A");
+
+      items.forEach(item->{
+          System.out.println(item);
+      });
+
+      //method reference
+      //Output : A,B,C,D,E
+      items.forEach(System.out::println);
+
+      //Stream and filter
+      //Output : B
+      items.stream()
+          .filter(s->s.contains("B"))
+          .forEach(System.out::println);
+      复制代码
+      ```
 1. Java EE版本历史
    - java技术————1995年
    - J2EE 1————1999年
