@@ -56,3 +56,7 @@
 1. 理解：集编译、测试、部署的自动化打包部署工具
 ### Gradle
 1. 理解：基于Groovy抛弃基于XML的构建工具
+### Inteill Idea
+1. Live Template
+   - psvm 主入口
+   - sout 打印输出

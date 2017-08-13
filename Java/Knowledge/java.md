@@ -559,6 +559,34 @@
         // 包装类
         Integer x = 5;
         ```
+1. UUID
+   - 理解：算法的核心思想是结合机器的网卡、当地时间、一个随即数来生成GUID，从理论上讲，如果一台机器每秒产生10000000个GUID，则可以保证（概率意义上）3240年不重复。java 5新增
+   - 使用
+   ```Java
+   import java.util.UUID;
+   UUID.randomUUID().toString();
+   ```
+1. Java工具类
+   - Apache Commons包
+     1. commons-lang3-3.1.jar
+        - 理解：对JDK中java.lang包的补充，提供了很多Utilities工具类
+        - 使用
+          1. `StringUtils.isEmpty()` 字符串的空判断
+          1. `StringUtils.trim` 
+          1. `StringUtils.split` 字符串的分割
+          1. `StringUtils.join` 字符串的连接
+          1. `StringEscapeUtils.escapeCsv/escapeHtml4/escapeJava/escapeEcmaScript/escapeXml` 字符串的转义
+          1. `RandomStringUtils.random/randomAlphabetic/randomAlphanumeric/randomAscii` 随机数
+          1. `ArrayUtils.add/remove/subarray/clone/contains/indexOf/lastIndexOf/toMap/isEmpty/isNotEmpty/isSameLength/toPrimitive/toObject` 数组
+          1. `DateFormatUtils.format` 日期
+          1. `DateUtils.parseDate/addDays/addMonths/isSameDay/` 日期
+     1. commons-beanutils-1.8.3.jar
+        - 理解：用于操作Bean
+          1. `BeanUtils.getProperty/setProperty/cloneBean/describe/populate/getArrayProperty/getIndexedProperty/getMappedProperty/getProperty/getNestedProperty` Bean
+          1. `url.getProtocol/getHost/getPath`
+          1. `ConvertUtils.register(converter, Date.class/String.class);`
+   - Base64.java
+   - StringHelper
 1. Math类
    - 定义：提供了基本数学运算的属性和方法。如初等函数、对数、平方根和三角函数，都是静态函数
    - 示例

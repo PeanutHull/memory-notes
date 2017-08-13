@@ -41,7 +41,7 @@
      1. 比较：equals：`boolean equals(long[] a, long[] a2)`
      1. 填充
      1. Arrays.toString(数组);
-1. 枚举：（Enumeration）枚举接口java5.0引入，限制变量只能是预先设定好的值，使用枚举可以减少代码中bug。已经被迭代器取代，很少使用。本质是类，取代定义很多的变量`public static final`
+1. 枚举：（Enumeration）枚举接口java5.0引入，限制变量只能是预先设定好的值，使用枚举可以减少代码中bug。已经被迭代器取代，很少使用。本质是类，取代定义很多的变量`public static final`，父类`java.lang.Enum<E>`
    - 包含：变量、方法、构造函数
    - 特点：可以在任何地方声明枚举
    - 定义
@@ -66,7 +66,7 @@
             RED("红色", 1), GREEN("绿色", 2), BLANK("白色", 3), YELLO("黄色", 4);
             private String name ;
             private int index ;
-            private Color( String name , int index ){
+            private Color( String name, int index ){
                 this.name = name ;
                 this.index = index ;
             }
