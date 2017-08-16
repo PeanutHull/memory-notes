@@ -212,6 +212,10 @@
      1. 持久层：JDBC
      1. 业务层：声明式事务
      1. 展现层：Spring MVC
+   - 实践注意点
+     1. 当使用`Set<Object>`，即自定义对象的Set集合，要在pojo中重写equals和hashCode方法，因为要保证这两个方法针对的对象属性相同，才能保证输出的bool结果的一致
+     1. 自动载入用`@Autowired`或者`@Resource`，后者更好，不出红线
+     1. 返回值为List的写法提醒`ServerResponse<List<Category>>`
 ### Spring MVC
 1. 理解：能够利用Spring本身的诸多好处来容易开发web应用
 1. 重难点
