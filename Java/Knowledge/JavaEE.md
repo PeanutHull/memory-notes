@@ -24,7 +24,7 @@
 1. JavaEE容器
    - 理解：就是运行环境
    - 分类
-     1. web容器
+     1. Web容器
         - Tomcat
           - 理解：是Web服务器，也是servlet、jsp的运行环境/容器，最新的servlet和jsp规范总是能在Tomcat中得到体现
           - 特点：技术先进、性能稳定、免费开源
@@ -32,7 +32,7 @@
           - 不足：静态html能力不如apache，可以集成使用，Apache作为HTTP Web服务器，Tomcat作为Web容器。
         - Jetty
           - 理解：为JSP和servlet提供运行环境的用Java语言编写的的web容器
-     1. ejb容器
+     1. Java EE应用容器
         - 理解：ejb容器无最大访问量一说，本身就是分布式/可伸缩的，只需增加机器就可实现同时计算，Tomcat和Jetty不是JavaEE容器，无法运行EJB或JMS技术
         - 包含：GlassFish、JBoss、Oracle Weblogic、IBM WebSphere
           1. Jboss
