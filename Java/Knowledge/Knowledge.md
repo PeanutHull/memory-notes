@@ -52,14 +52,16 @@
      1. 反射
    - 高级关键字
      1. quartz
-     1. java ee
      1. 事务管理
      1. 连接池
-     1. bean
      1. dubbo
      1. 分布式
      1. Netty
      1. CDN
+     1. solr
+     1. 负载均衡
+     1. mysql集群
+     1. JVM性能调优
      1. 负载均衡
 1. 关键功能具备
    - 异步任务
@@ -103,46 +105,6 @@
       - Spring 5.0/4.3
       - Hibernate 5.2.x
       - Mybatis 3.4
-1. Java 8：即jdk1.8，14年3月发布
-   - 新特性
-     1. Lambda表达式：Lambda允许函数作为参数传递
-     1. 方法引用：可以直接引用已有对象/类的方法，使语言结构更简洁紧凑
-     1. 实现方法：就是类在接口里有个实现的方法
-     1. 新工具：如新的编译工具，Nashorn引擎jjs、类依赖分析器jdeps
-     1. Stream API：即java.util.stream，把真正的函数式编程引入java中
-     1. DateTime API：加强日期和时间的处理
-     1. Optional 类：解决空指针异常
-     1. Nashorn JavaScript 引擎：允许在JVM上运行javascript应用
-   - foreach和Lambda
-     1. 遍历Map
-      ```Java
-      Map<String, Integer> items = new HashMap<>();
-      items.put("A", 10);
-
-      items.forEach((k,v)->{
-          System.out.println("Item : " + k + " Count : " + v);
-      });
-      ```
-     1. 遍历List
-      ```Java
-      List<String> items = new ArrayList<>();
-      items.add("A");
-
-      items.forEach(item->{
-          System.out.println(item);
-      });
-
-      //method reference
-      //Output : A,B,C,D,E
-      items.forEach(System.out::println);
-
-      //Stream and filter
-      //Output : B
-      items.stream()
-          .filter(s->s.contains("B"))
-          .forEach(System.out::println);
-      复制代码
-      ```
 1. Java EE版本历史
    - java技术————1995年
    - J2EE 1————1999年

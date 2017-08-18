@@ -830,15 +830,17 @@
      1. 同步代码块：表示同一时间只能有一个线程进入到该方法块中，是一种多线程保护机制。多线程环境下，对共享数据进行读写操作是需要互斥进行的，否则会导致数据的不一致性。冗长的方法中，其实只有一小段代码需要访问共享资源，这时使用同步块，就只将这小段代码裹在synchronized  block，既能够实现同步访问，也能够减少同步引入的开销
         ```Java
         public class className{
-            synchronized(obj) {
-                System.out.println("构造代码块");
+            public void methodName() {
+                synchronized(obj) {
+                    System.out.println("构造代码块");
+                }
             }
         }
-            ```
+        ```
    - 特点
      1. 执行顺序：静态代码块>mian方法>构造代码块>构造方法
      1. 构造代码块每次创建对象时执行
-     1. 静态代码块在编译时只执行一次，不能存在于任何方法体内，不能直接访问静态实例变量和实例方法，需要通过类的实例对象来访问
+     1. 静态代码块在编译时只执行一次，不能存在于任何方法体内，不能直接访问静态实例变量和实例方法，需要通过类的实例对象来访问，静态初始化块只能给静态变量赋值
      1. 同步代码块须写在方法中
 1. 对象
    - 访问属性和方法：对象名.变量; 对象名.方法();
@@ -875,36 +877,20 @@
    - 定义
     ```Java
     package com.imooc // 包名
-    public/protected/private function 类名{
+    public/protected/private class 类名{
             float score;
     }
     ```
-   - 访问修饰符
-   - 初始化块
-        - 作用：顺序执行其中的代码，包括为变量赋值
-    ```Java
-    public class 类{
-    String name;
-            {
-                name = "haha";
-            }
-    }
-    // 特点：可以用静态修饰，由于普通的属性/方法，只能实例化后使用，所以静态初始化块只能给静态变量赋值
-    ```
-   - 构造方法
-        - 解释：没有显式定义类的构造方法，java编译器会为该类提供默认构造方法。创建对象至少调用一个构造方法，构造方法必须和类同名，一个类可以有多个构造方法
-    ```Java
-    public class Puppy{
-        public Puppy(){
+   - 访问修饰符：`public/protected/private`
+   - 构造方法：没有显式定义类的构造方法，java编译器会为该类提供默认构造方法。创建对象至少调用一个构造方法，构造方法必须和类同名，一个类可以有多个构造方法
+        ```Java
+        public class Puppy{
+            public Puppy(){}
+            public Puppy(String name){} // 构造器
         }
-        public Puppy(String name){
-        // 构造器
-        }
-     }
-    ```
+        ```
    - this关键字：this.属性，this.方法
-   - 其他类
-     1. 内部类
+   - 内部类
         - 定义：就是一个类中定义的类，对应的是外部类
         - 作用：更好的封装
 1. 抽象类
@@ -914,8 +900,7 @@
         // 定义
         abstract class Animal{
             private double leng;
-            public abstract void work(
-            );
+            public abstract void work();
         }
         // 继承
         public class Cat extends Animal{} // 继承了父类的成员变量和成员方法
@@ -952,15 +937,15 @@
        ```
    - 特点
      1. 本身：不能被实例化，没有构造方法。一个类只能继承一个类，可以实现多接口继承。接口可以多继承，所有参与继承的方法都要实现。
-     1. 属性：不能包含成员变量，除了static和final变量。
-     1. 方法：接口中所有方法必须是public的抽象方法，接口中不能实现方法，只能在实现类中实现。除非是抽象类，否则子类必须全部实现接口里的所有方法。
+     1. 属性：不能包含成员变量，即除了static和final变量
+     1. 方法：接口中所有方法必须是public的抽象方法，接口中不能实现方法，只能在实现类中实现。除非是抽象类，否则子类必须全部实现接口里的所有方法
        ```Java
        // 接口的每个方法都是隐式抽象的，即：public abstract，只能是public，否则报错，只有这一种
        // 接口的每个属性都被指定为public static final变量，只有这一种
        ```
    - 标记接口：没有任何属性和方法的接口，仅表明它的类属于一个特定的类型
 1. 包
-   - 作用：解决文件名冲突，对类和接口分类，方便查找和使用。
+   - 作用：解决文件名冲突，对类和接口归类，方便查找和使用
    - 组成：类、接口、枚举和注释
    - 声明
         ```Java
@@ -969,26 +954,17 @@
         // 路径为：com.imooc.myClass/Something
         ```
    - 使用 `import com.imooc.*`
-   - 系统中的包
-        ```Java
-        java.功能.类
-        java.lang. 语言基础类
-        java.util. 工具类
-        java.io. 输入输出相关类
-        ```
    - 特点：
      1. 默认引入lang包，不需要import引入
-     1. 开发者可以定义自己的包，
-     1. 包采用了树形目录的存储方式，不同包中的类名可以相同，加上包名区别不同包中的类。
-     com.runoob.test的目录结构为`CLASSPATH\com\runoob\test\类名`
+     1. 开发者可以定义自己的包
+     1. 包采用了树形目录的存储方式，不同包中的类名可以相同。com.runoob.test的目录结构为`CLASSPATH\com\runoob\test\类名`
      1. 包也限定了访问权限，有包的权限才能访问包中的类
-### 使用
+### 实际经验
 1. 开发
  - Eclipse开发java：创建java项目——创建程序包——编写java源程序——运行java
  - Eclipse开发java web： 安装Java/Eclipse/Tomcat——Eclipse配置JRE——集成Tomcat——创建项目——部署(发布)到tomcat——启动tomcat
  - Intellij开发java web：安装Java/Intellij/Tomcat——配置JRE/Tomcat——创建项目——部署(发布)到tomcat——启动tomcat
  - Mac启动tomcat：进入bin目录——sudo chmod 755 \*.sh——sudo sh startup.sh。关闭：sudo sh shutdown.sh。部署项目后需要重启
-
 ### WIKI
 1. java程序特点
      1. 源文件名：必须和类名相同
@@ -996,48 +972,47 @@
 1. 知识点
  - 环知识点：基础，web开发，常用框架，工程与设计模式，数据库和网络，数据结构和算法
  - 扩展知识点：多线程 io jvm 分布式 mysql spring redis mq 微服务
-1. 关键字： 不能用于标识符的使用
+1. 关键字：不能用于标识符的使用
      1. 面向对象
          - 包： package
-
-         - 类的操作： import 、 abstract 、 super
+         - 修饰符： private、protected、public、 static、 transient
          - 接口： interface、implements
-
+         - 抽象类： abstract
          - 类： class
          - 继承： extends、final
-
-         - 修饰符： private、protected、public、 static
-         - 实例化： new
+         - 类的操作： import、super
+         - 实例化： new、this
      1. 数据类型
          - byte、short、int、long
-         - float、double、strictfp
-         - char、transient
+         - float、double
+         - char
          - boolean、enum
      1. 流程控制
-         - switch、case、default、break、continue
-         - for，do、while，
          - if、else
+         - switch、case、default
+         - for，do、while
+         - break、continue
          - return、void
      1. 异常
          - try、catch、 finally 、 throw、throws
-     1. 其他
-         - this
-         - native、 volatile、 synchronized
+     1. 修饰符
+         - vstrictf
+         - native
+         - volatile、synchronized
      1. 判断
          - assert、instanceof
      1. 未使用
          - goto，const
      1. 解释
-         -  package： 相关类组成一个包
+         - package： 相关类组成一个包
 
-         -  import： 导入类； abstract： 定义抽象类； super： 基类； class： 定义类
-         -  interface：一种抽象类型，定义接口，仅有方法和常量的定义； implements： 一个类实现接口
+         - import： 导入类； abstract： 定义抽象类； super： 基类； class： 定义类
+         - interface：一种抽象类型，定义接口，仅有方法和常量的定义； implements： 一个类实现接口
 
-         -  extends：继承； final：值初始化后不能被改变/方法不能被重写/类不能再有子类
-         -  public： 共有属性或方法； static： 类级别定义，所有实例共享
-         -  new：分配新的类实例
-         -  byte：8-bit 有符号数据类型；
-         - short：16位数字；int：32位整数； long：64位整数；
+         - extends：继承； final：值初始化后不能被改变/方法不能被重写/类不能再有子类
+         - public： 共有属性或方法； static： 类级别定义，所有实例共享
+         - new：分配新的类实例
+         - byte：8-bit 有符号数据类型；short：16位数字；int：32位整数； long：64位整数；
 
          - float：32-bit 单精度浮点数； double：64-bit 双精度浮点数； strictfp：严格规则浮点数
 

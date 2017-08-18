@@ -52,10 +52,10 @@
    - Maven与Ant
      1. Maven：声明式的方式，指定做什么，而不是怎么做
      1. Ant：命令式的方式
+### Gradle
+1. 理解：基于Groovy和XML的构建工具
 ### Ant
 1. 理解：集编译、测试、部署的自动化打包部署工具
-### Gradle
-1. 理解：基于Groovy抛弃基于XML的构建工具
 ### Inteill Idea
 1. Live Template
    - psvm 主入口

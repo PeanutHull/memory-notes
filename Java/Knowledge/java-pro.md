@@ -13,7 +13,7 @@
         // 赋值
         myList[1] = 1;
         // 长度
-        array.length()
+        array.length();
         ```
    - 处理：
         ```Java
@@ -41,58 +41,15 @@
      1. 比较：equals：`boolean equals(long[] a, long[] a2)`
      1. 填充
      1. Arrays.toString(数组);
-1. 枚举：（Enumeration）枚举接口java5.0引入，限制变量只能是预先设定好的值，使用枚举可以减少代码中bug。已经被迭代器取代，很少使用。本质是类，取代定义很多的变量`public static final`，父类`java.lang.Enum<E>`
-   - 包含：变量、方法、构造函数
-   - 特点：可以在任何地方声明枚举
-   - 定义
-        ```Java
-        // 定义枚举
-        package com;
-        public enum Color {
-            RED, GREEN, BLANK, YELLOW 
-        }
-        // 使用
-        Color.RED
-        static boolean isRed( Color color ){
-            if(Color.RED.equals(color)) {
-                return true ;
-            }
-            return false ;
-        }
-        ```
-   - 自定义函数：
-        ```Java
-        public enum Color {
-            RED("红色", 1), GREEN("绿色", 2), BLANK("白色", 3), YELLO("黄色", 4);
-            private String name ;
-            private int index ;
-            private Color( String name, int index ){
-                this.name = name ;
-                this.index = index ;
-            }
-            public String getName/getIndex() {
-                return name;
-            }
-            public void setName/setIndex(String name) {
-                this.name = name;
-            }
-        }
-        // 使用
-        System.out.println( Color.RED.getName() ); // 红色
-        ```           
-1. 位集合：（BitSet）位集合类实现了一组可以单独设置和清除的位或标志。该类处理一组布尔值的时候很有用。创建一种特殊类型的数组来保存值，数组大小随需要增加。
+1. 位集合：（BitSet）位集合类实现了一组可以单独设置和清除的位或标志。该类处理一组布尔值的时候很有用。创建一种特殊类型的数组来保存值，数组大小随需要增加
    - 定义：
         ```Java
         BitSet bits1 = new BitSet(16);
-        
         // 有两个构造方法
         BitSet(); // 创建一个默认对象
         BitSet(int size); // 允许用户指定初始大小，默认0
         ```
-   - 使用
-        ```Java
-        bits1.set(i);
-        ```
+   - 使用：`bits1.set(i);`
    - 方法：实现了Cloneable接口中定义的方法
      1. `void and(BitSet set)` // 逻辑与操作
      1. `void andNot(BitSet set)` // 清除此BitSet中所有的位
@@ -113,11 +70,11 @@
         Vector v = new Vector(3, 2);
         v.size();
         v.addElement(new Integer(1));
-
         // 转换为枚举
         Enumeration vEnum = v.elements();
-        while(vEnum.hasMoreElements())
-            System.out.print(vEnum.nextElement() + " ");
+        while(vEnum.hasMoreElements()) {
+            vEnum.nextElement() + " ");
+        }
         ```
    - 方法
      1. `void add(int index, Object element)` // 添加元素
@@ -128,12 +85,9 @@
 1. 栈：（Stack）实现了先进后出的数据结构。是Vector的子类
    - 定义
         ```Java
-        Stack()
         // 示例
         Stack st = new Stack();
-        static void showpush(Stack st, int a) {
-            st.push(new Integer(a));
-        }
+        st.push(new Integer(1));
         ```
    - 方法
      1. `boolean empty()` // 是否为空
@@ -141,6 +95,39 @@
      1. `Object pop( )` // 返回顶部并移除
      1. `Object push(Object element)` // 把元素压入顶部
      1. `int search(Object element)` // 对象在堆栈的位置，1为基数
+1. 枚举：（Enumeration）枚举接口java5.0引入，限制变量只能是预先设定好的值，使用枚举可以减少代码中bug。已经被迭代器取代，很少使用。本质是类，取代定义很多的变量`public static final`，父类`java.lang.Enum<E>`
+   - 包含：变量、方法、构造函数
+   - 特点：可以在任何地方声明枚举
+   - 定义
+        ```Java
+        // 定义枚举
+        public enum Color {
+            RED, GREEN, BLANK, YELLOW 
+        }
+        // 使用
+        Color.RED
+        Color.RED.equals(color);
+        ```
+   - 自定义函数：
+        ```Java
+        public enum Color {
+            RED("红色", 1), GREEN("绿色", 2), BLANK("白色", 3), YELLO("黄色", 4);
+            private String name ;
+            private int index ;
+            private Color( String name, int index ){
+                this.name = name ;
+                this.index = index ;
+            }
+            public String getName/getIndex() {
+                return name;
+            }
+            public void setName/setIndex(String name) {
+                this.name = name;
+            }
+        }
+        // 使用
+        Color.RED.getName();
+        ```
 1. 字典：（Dictionary）字典类是抽象类，定义键映射到值的数据结构。通过键而不是整数索引来访问数据时使用。因为是抽象类，所以只提供数据结构，没有提供具体实现。存储键/值对，作用和Map类相似
    - 定义
    - 方法
@@ -224,7 +211,7 @@
    - 比较：
      1. List查询效率高，插入和删除低，因为改起其他元素改变；Set查询效率低，插入和删除效率高
      1. Set没有List的get方法，只能通过foreach和iterator方法遍历，而且每次迭代的结果都不一样。Set中不论添加多少次，因为不能重复，所以只能有一个
-   - Java.util.Collections：工具类，
+   - Java.util.Collections：工具类
 1. Map：(映射) 用来存储键值对。可以通过key查找value。内部以映射存储数据，就是Entry(键值对)类的实例，key和value可以是任意的对象。key不可重复，value可以。组成有Map自己是个接口、众多子接口和实现类。支持泛型：`Map<k,v>`
    - 特点
      1. 访问的值不存在，抛出NoSuchElementException异常
@@ -270,7 +257,7 @@
         - `HashMap`：是一个散列表，是键值对的映射。根据键的哈希值存储数据，访问速度很快。线程不同步，即任意时刻可有多个线程同时写HashMap，可能导致数据不一致，使用synchronizedMap方法具有同步的能力。键最多一个null。WeakHashMap：弱秘钥的哈希表；LinkedHashMap：按自然顺序对元素排序；IdentityHashMap：比较文档时使用引用相等
         - `TreeMap`：使用一棵树
      1. 集合算法：被定义为集合类的静态方法，定义了三个静态变量：EMPTY\_SET，EMPTY\_LIST，EMPTY_MAP，不可改变
-   - 迭代器：用来遍历集合中的元素，类似for和增强for，继承自Iterator接口或继承自ListIterator
+   - 迭代器：Iterator，用来遍历集合中的元素，类似for和增强for，继承自Iterator接口或继承自ListIterator
      1. 遍历ArrayList
         ```Java
         // for循环
@@ -309,7 +296,7 @@
             tmpValue = v;
         }
         ```
-   - 比较器：用来精确定义排序规则，以不同方式排序集合。使用Comparator
+   - 比较器：Comparator，用来精确定义排序规则，以不同方式排序集合
 1. 特点：对基本集合(动态数组/链表/树/哈希表)的实现是高性能的，允许不同类型的集合以类似的方式工作，对集合的扩展和适应是简单的。重点是ArrayList、HashSet、HashMap
 ### 注解
 1. 理解：Java5.0引入，是一种应用于类、方法、参数、变量、构造器及包声明中的特殊修饰符。是描述数据的数据，也叫元数据。和具体业务逻辑无关
@@ -378,7 +365,7 @@
 1. 泛型
    - 理解：JDK5引入的新特性，提供编译时的类型检测。即参数的类型
    - 特点
-     1. 泛型集合中的限定类型，不能使用基本数据类型，非要使用就通过包装类限定存入的类型。如int就用Integer，long就用Long
+     1. 泛型集合中的限定类型，不能使用基本数据类型，非要使用就通过包装类限定存入的类型。如int就用Integer
    - 泛型变量
         ```Java
         // 普通定义方式
@@ -459,13 +446,12 @@
             public UserDaoProxy(IUserDao target){
                 this.target=target;
             }
-
             public void save() {
                 // 执行其他逻辑
                 target.save();//执行目标对象的方法
                 // 其他逻辑                
             }
-        } // 代理对象
+        }
         // 测试类
         public static void main(String[] args) {
             // 目标对象
@@ -499,7 +485,6 @@
             public ProxyFactory(Object target){
                 this.target=target;
             }
-
             // 给目标对象生成代理对象
             public Object getProxyInstance(){
                 return Proxy.newProxyInstance(
@@ -568,8 +553,6 @@
         proxy.save();
         ```
 1. 价值：可以在实现目标对象的基础上,增强额外的功能操作和功能扩展。不要随意修改已经写好的代码，如需修改使用代理的方式扩展该方法
-1. 原理
-1. 使用
 ### 多线程
 1. 理解：阻塞当前进程，让出cpu。是并发执行的，线程多了因为上下文的切换反而效率下降，使用更小资源开销，轮候使用cpu，存在等待
 1. 重难点
@@ -727,5 +710,44 @@
    - java.io.\*/java.nio.*
 ### Lambda表达式
 1. 理解：Java 8中用来实现匿名方法，可在某些场景作为匿名类的替代方案
-### Bean
-1. 理解：遵循JavaBean技术规范的拥有getXxx、setXxx、isXxx、addXxxListener、XxxEvent等的类
+### Java 8
+1. 即jdk1.8，14年3月发布
+   - 新特性
+     1. Lambda表达式：Lambda允许函数作为参数传递
+     1. 方法引用：可以直接引用已有对象/类的方法，使语言结构更简洁紧凑
+     1. 实现方法：就是类在接口里有个实现的方法
+     1. 新工具：如新的编译工具，Nashorn引擎jjs、类依赖分析器jdeps
+     1. Stream API：即java.util.stream，把真正的函数式编程引入java中
+     1. DateTime API：加强日期和时间的处理
+     1. Optional 类：解决空指针异常
+     1. Nashorn JavaScript 引擎：允许在JVM上运行javascript应用
+   - foreach和Lambda
+     1. 遍历Map
+      ```Java
+      Map<String, Integer> items = new HashMap<>();
+      items.put("A", 10);
+
+      items.forEach((k,v)->{
+          System.out.println("Item : " + k + " Count : " + v);
+      });
+      ```
+     1. 遍历List
+      ```Java
+      List<String> items = new ArrayList<>();
+      items.add("A");
+
+      items.forEach(item->{
+          System.out.println(item);
+      });
+
+      //method reference
+      //Output : A,B,C,D,E
+      items.forEach(System.out::println);
+
+      //Stream and filter
+      //Output : B
+      items.stream()
+          .filter(s->s.contains("B"))
+          .forEach(System.out::println);
+      复制代码
+      ```

@@ -1,5 +1,5 @@
 ### JavaEE
-1. JavaEE理解：是一种语言，也是一个平台，是企业级分布式应用开发标准。构建于Java SE之上，提供API和运行环境，来运行大规模、可扩展多层次的网络应用。运行环境指的应该是servlet和jsp之类的
+1. JavaEE理解：是一种语言，也是一个平台，是企业级分布式应用开发标准。构建于Java SE之上，提供API和运行环境，来运行大规模、可扩展的多层次的网络应用
 1. 特点
    - 分布式
    - 事务性
@@ -8,7 +8,7 @@
    - 可扩展、可移植、易维护
 1. JavaEE规范
    - 分类
-     1. Servlet：用Java写的一个服务器端小程序，可以处理用户的HTTP请求
+     1. Servlet
      1. JSP
      1. EJB
      1. JMS：Java消息服务，实现异步的消息传递。支持点对点/发布订阅，可实现事务型/一致性/持久性消息传递
@@ -49,25 +49,17 @@
      1. 多线程
      1. 资源池
      1. 其他底层细节
-1. 基于JavaEE的MVC
-   - View
-   - Controller：和Model层通过JavaBean交流数据
-   - Model
-     1. 数据模型：即DAO，不处理业务逻辑，只为业务层提供辅助，完成获取原始数据或持久层数据等
-     1. 业务逻辑
-1. JavaEE架构多层架构：浏览器/客户端————表示层(servlet、jsp)————逻辑层(会话bean、实体bean、消息bean)————数据层
 1. Bean
-   - 理解：在编程环境中能够被可视化处理的可重用组件。JavaBean最初是为Java GUI的可视化编程实现的.你拖动IDE构建工具创建一个GUI 组件（如多选框）,其实是工具给你创建java类,并提供将类的属性暴露出来给你修改调整,将事件监听器暴露出来.
+   - 理解：是遵循了JavaBean技术规范的类或者称为可重用组件。遵循JavaBean技术规范的拥有getXxx、setXxx、isXxx、addXxxListener、XxxEvent等的类。JavaBean最初是为Java GUI的可视化编程实现的.你拖动IDE构建工具创建一个GUI 组件（如多选框）,其实是工具给你创建java类,并提供将类的属性暴露出来给你修改调整,将事件监听器暴露出来
    - 优点
      1. Bean可以控制它的属性、事件和方法是否暴露给其他程序
      1. Bean可以接收来自其他对象的事件，也可以产生事件给其他对象
      1. Bean的属性可以被序列化，以供日后重用
-   - 特点：是遵循了JavaBean技术规范的类
+   - 特点
      1. 必须为公共类，并且可序列化，即实现java.io.Serializable接口
      1. 若有构造参数，必须是无参的，类中不能出现main函数
      1. 所有属性必须通过public的get、set、isXxx方法来操作，并且是私有的
      1. 包含必要的事件处理方法
-   - JavaBean技术规范：getXxx、setXxx、isXxx、addXxxListener、XxxEvent等，遵守上述约定的类可以用于若干工具或库
    - 组成
      1. 属性
         - Simple属性：具有setter、getter方法对的属性
@@ -77,7 +69,7 @@
      1. 方法
      1. 事件：是事件发起者，也是接收者
 1. EJB
-   - 理解：JavaEE服务器端组件模型，Enterprise Java Beans，用于部署分布式应用程序，是一个逻辑概念，与传统的bean无关，就是将一个业务逻辑类放在服务器上部署，供客户端调用，依赖RMI通信，EJB3.0从早期版本已分离出来
+   - 理解：JavaEE服务器端组件模型，Enterprise Java Beans，用于部署分布式应用程序，是一个逻辑概念，与传统的bean无关，就是将一个业务逻辑类放在服务器上部署，供客户端调用，依赖RMI通信，EJB3.0从早期版本已分离出来。用于部署分布式的程序，非常重量级，配置复杂，没有spring轻量，目前使用比较少。容器类框架
    - 关键字：服务集群、企业开发
    - 特点
      1. 数据持久化
@@ -118,7 +110,7 @@
      1. 编写RMI注册机制，并启动
      1. 客户端就可以访问了
 ### Servlet
-1. 认识：为创建基于web的java应用程序，可以访问所有java API。是部署在web服务器上的组件，可以搜集表单等浏览器的东西和创建动态网页，是一个Java程序
+1. 认识：用Java写的一个服务器端小程序，为创建基于web的java应用程序，可以访问所有java API。是部署在web服务器上的组件，可以搜集表单等浏览器的东西和创建动态网页，是一个Java程序
 1. 特点：Servlet应用无法独立运行，必须运行在Servlet容器中，Servlet在web服务器的地址空间执行，一个请求一个线程，性能好。独立于平台，安全性好
 1. 重难点
    - Servlet容器，Servlet处理机制，Servlet生命周期
@@ -127,11 +119,11 @@
    - Filter, Event Listener
 1. Servlet项目结构
    - src：源码目录
-   - web：用于存放web资源，WEB-INF是java web应用固定的存放配置和类库的目录，web.xml是配置文件，也叫部署描述符
-   - xx.iml是IntelliJ的项目文件
+   - web：用于存放web资源，WEB-INF是java web应用固定的存放配置和类库的目录
+   - web.xml是配置文件，也叫部署描述符
 1. Servlet的生命周期
    - init()
-   - service()：Servlet容器即web浏览器，服务器收到的每一个请求会创建新的线程并单一调用service()方法，service()方法检查请求类型，适当的调用doGet、doPost、doPut、doDelete等方法
+   - service()：服务器收到的每一个请求会创建新的线程并单一调用service()方法，service()方法检查请求类型，适当的调用doGet、doPost、doPut、doDelete等方法
      1. 请求处理过程的三个概念：Http请求对象、Http响应对象、Http会话
    - doGet、doPost
    - destory()：只被调用一次
@@ -149,9 +141,9 @@
         String name =new String(request.getParameter("name").getBytes("ISO8859-1"),"UTF-8");
         // 获得多个参数        
         Enumeration paramNames = request.getParameterNames();
-            while(paramNames.hasMoreElements()) {
-          String paramName = (String)paramNames.nextElement();
-          request.getParameterValues(paramName);
+        while(paramNames.hasMoreElements()) {
+            String paramName = (String)paramNames.nextElement();
+            request.getParameterValues(paramName);
         }
         ```
       1. 方法补充
@@ -168,18 +160,15 @@
          - `String getRemoteAddr()` // 获取请求者ip
    - response：响应，是javax.servlet.http.HttpServletResponse类的实例
      1. 方法
-        ```Java
-        setContentType()
-        getWriter()        
-        ```
+        - setContentType()
+        - getWriter()        
      1. 例子
         ```Java
         // 定义消息头部
         response.setContentType("text/html;charset=UTF-8");
         // 输出文字
         PrintWriter out = response.getWriter();
-        out.println("<html>");
-        out.println("</html>");
+        out.println("<html></html>");
         ```
      1. 方法补充
          - `void setStatus(int sc)` // 设置状态码
@@ -200,6 +189,11 @@
           response.setStatus(response.SC\_MOVED_TEMPORARILY);
           response.setHeader("Location", site);
           ```
+1. 中文处理
+     ```Java
+     String str = java.net.URLEncoder.encode("中文"，"UTF-8");
+     String str = java.net.URLDecoder.decode("编码后的字符串","UTF-8");
+     ```
 1. Cookie
    - 设置cookie
      ```Java
@@ -225,11 +219,6 @@
         response.addCookie(cookie);
       }
       ```
-   - 中文处理
-     ```Java
-     String str = java.net.URLEncoder.encode("中文"，"UTF-8");
-     String str = java.net.URLDecoder.decode("编码后的字符串","UTF-8");
-     ```
    - 方法
      1. `public String getName()` // 返回cookie的名称
      1. `public String getValue()`
@@ -243,7 +232,9 @@
      ```Java
      // 创建
      HttpSession session = request.getSession(true); // 无则创建
-     // 删除：invalidate()/setMaxInactiveInterval(0)/logout
+     // 删除
+     session.invalidate();
+     session.setMaxInactiveInterval(0);
      ```
    - 方法
      1. `public void setMaxInactiveInterval(int interval)/getMaxInactiveInterval()`
@@ -351,8 +342,7 @@
       os.close();
       ```
 1. 过滤器
-   - 理解：对请求或者响应动作之前进行动态拦截、改变数据。就是在web.xml中定义访问请求和过滤类的对应关系，在访问时起作用
-   - 特点：n个过滤器对应；都在之前，即请求拦截，响应处理
+   - 理解：对请求或者响应动作之前进行拦截。web.xml中定义访问请求和过滤类的对应关系
    - 分类
      1. 身份验证：Authentication Filters
      1. 数据压缩：Data compression Filters
@@ -364,11 +354,10 @@
      1. 标计划：Tokenizing Filters
      1. XSL/T：XSL/T Filters，转换XML内容
    - 使用：在web.xml中的声明标签，然后映射到Servlet或Url
-     1. web.xml
-        - filter：表示一个过滤器，可以用于多个Servlet、Servlet组、jsp、html
-        - filter-mapping：表示过滤器的绑定范围
-        - filter-mapping：决定过滤器使用范围
-        - dispatcher：REQUEST、INCLUDE、FORWARD、ERROR
+     1. filter：表示一个过滤器，可以用于多个Servlet、Servlet组、jsp、html
+     1. filter-mapping：表示过滤器的绑定范围
+     1. filter-mapping：决定过滤器使用范围
+     1. dispatcher：REQUEST、INCLUDE、FORWARD、ERROR
    - 方法：实现了 javax.servlet.Filter类
      1. `public void doFilter (ServletRequest, ServletResponse, FilterChain)` // 具体的过滤操作在这，请求或响应符合标签声明时，访问这个方法，FilterChain指出后续过滤器
      1. `public void init(FilterConfig filterConfig)` // web应用程序启动——web服务器创建Filter实例对象——调用init——读取web.xml——完成对象的初始化
@@ -404,7 +393,6 @@
             System.out.println("网站名称: " + site); 
           }
           public void  doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws java.io.IOException, ServletException {
-            
             chain.doFilter(request,response); // 把请求传回过滤链
           }
           public void destroy( ){
@@ -436,8 +424,6 @@
             <location>/ErrorHandler</location>
         </error-page>
         ```
-1. 包
- - 理解：其他类文件，固定的存放在`/WEB-INF/classes/`中
 1. 调试：`System.out.println()`，输出的信息会记录在web服务器日志里
 1. 国际化
    - 概念
@@ -460,7 +446,7 @@
    - jsp中访问java类
    - jsp内置对象
 1. 组成
-   - JSTL：jsp标准标签库，JavaServer Page Standard Tag Library。
+   - JSTL
    - JSF：包含JSF标签的JSP页面
      1. Facelets：是jsf MVC的视图部分，利用数据将模板转为html
 1. 特点
@@ -472,16 +458,6 @@
    - 初始化阶段：加载Servlet类，创建实例，调用初始化方法——jspInit()
    - 执行阶段：调用Servlet服务方法：_jspService(HttpServletRequest request,HttpServletResponse response)
    - 销毁阶段：销毁Servlet实例:jspDestroy()
-1. 组成
-   - request
-   - response
-   - session
-   - application
-   - out
-   - page
-   - config
-   - exception
-   - pageContext
 1. 语法：就是一些含有意义的标签
    - 注释
      1. `<%-- 不会被编译不会--%>`
@@ -589,18 +565,17 @@
         - 理解：只能包含文本和EL表达式
 1. 隐含对象
    - 组成
-     1. `page` // 类似this关键字，整个页面的代表
-     1. `config` // ServletConfig类的实例
-     1. `pageContext` // PageContext类的实例，提供对JSP页面所有对象和命名空间的访问
-     1. `application` // ServletContext类的实例，与应用上下文有关
      1. `request` // HttpServletRequest类的实例
      1. `response` // HttpServletResponse类的实例
      1. `session` // HttpSession类的实例
+     1. `page` // 类似this关键字，整个页面的代表
+     1. `config` // ServletConfig类的实例
+     1. `pageContext` // PageContext类的实例，提供对JSP页面所有对象和命名空间的访问
+        - 理解：包含request/response/application/config/session/out对象，也包含指令信息，如缓冲信息/页面scop/错误页面地址，还有一些字段：PAGE\_SCOPE/REQUEST\_SCOPE/SESSION_SCOPE等
+     1. `application` // ServletContext类的实例，与应用上下文有关
      1. `out` // PrintWriter类的实例，用于输出结果
-     1. `Exception` // Exception类的对象，代表JSP页面中的异常对象
-   - 解释
-     1. pageContext：包含request/response/application/config/session/out对象，也包含指令信息，如缓冲信息/页面scop/错误页面地址，还有一些字段：PAGE\_SCOPE/REQUEST\_SCOPE/SESSION_SCOPE等
-     1. out：print/println的打印方法，flush()刷新输出流
+        - 理解：print/println的打印方法，flush()刷新输出流
+     1. `exception` // Exception类的对象，代表JSP页面中的异常对象
 1. EL表达式语言
    - 理解：可使用各种类型的数据来创建算术/逻辑表达式
    - 使用：${expr}，不使用`<%@ page isELIgnored ="true|false" %>`
@@ -617,7 +592,7 @@
      1. `empty` // 是否为空
    - EL中的函数：${ns:func(param1, param2)}，这些函数必须被定义在自定义标签库中
 1. JSTL标准标签库
-   - 理解：JSTL，JSP Standard Tag Library，是JSP标签集合，封装了JSP应用的通用核心功能。支持迭代、判断、xml操作、sql标签、自定义标签
+   - 理解：JSP Standard Tag Library，是JSP标签集合，封装了JSP应用的通用核心功能。支持迭代、判断、xml操作、sql标签、自定义标签
    - 分类
      1. 核心标签
      1. 格式化标签
