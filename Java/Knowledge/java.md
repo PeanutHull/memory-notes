@@ -152,7 +152,9 @@
         ```Java
         // 举例
         double num = 6.66;
-        int avg = (int)num;
+        int avg = (int) num;
+        // 使用instanceof判断是否能够强制转换
+        if(animal instanceof Cat) {}
         ```
 1. 标识符：就是所有定义的东西的名字。有类名/变量名/方法名
      1. 开头：字母、$、下划线
@@ -554,7 +556,7 @@
         // 包装类
         Integer x = 5;
         ```
-     1. Character类
+     1. Character、Boolean
         - 定义：是char的包装类，对单个字符进行操作，包装了一个char类型的对象
         - 示例：
             ```Java
@@ -573,24 +575,32 @@
    - 特点：包装类和基本类型可以自动转换，叫做自动封箱和自动解封
         ```Java
         // 内置数据类型
-        int a = 5000; 
+        int a = 5000;
         // 包装类
         Integer x = 5; //自动封箱
         int x1 = x; //自动解封
         ```
-1. String：不是8种基本类型，是特殊的对象。对象默认值是null，String有其他对象没有的特性
-   - 理解：java中字符串属于对象，java使用String类来创建和操作字符串
+1. String
+   - 理解：java使用String类来创建和操作字符串，不是8种基本类型，是特殊的对象，默认值是null
    - 特点
      1. 有11个构造方法
-     1. 一旦创建不可改变，如果有很多修改，使用StringBuffer和StringBuilder类
-   - 方法：
-     1. int length()：长度`int length()`
-     1. concat()：连接`String concat(String str)`
-            ```Java
-            "我的名字".concat("Runoob");
-            // 更常用+号连接
-            "Hello," + " runoob"
-            ```
+     1. 字符串的不变性：String对象创建后不可修改，所谓的修改就是创建了新的对象，指向了不同的空间
+     1. 一旦创建不可改变，如果有很多修改，使用StringBuffer和StringBuilder
+   - 创建
+        ```Java
+        String s1 = "aaa";
+        String s2 = new Stirng();
+        String s3 = new String("aaa");
+        // 提供一个字符数组参数
+        char[] helloArray = { 'r', 'u', 'n', 'o', 'o', 'b'};
+        String helloString = new String(helloArray); // 输出runoob
+        // 字符串的比较
+        s1 == s2 // false
+        s1.equqls(s2); // true
+        ```
+   - 方法
+     1. int length()：长度
+     1. concat()：连接
      1. charAt()：指定位置的值，返回的值可以为char`char charAt(int index)`
      1. copyValueOf()：返回数组中指定的偏移和长度的字符串。`public static String copyValueOf(char[] data, int offset, int count)`
      1. indexOf()：字符在此字符串第一次出现的索引，二参为开始搜索位置`int indexOf(String/int, int ch)`
@@ -630,14 +640,13 @@
      1. toLowerCase()：所有转为小写`String toLowerCase([Locale locale])`
      1. toUpperCase()：所有转为小写`String toUpperCase([Locale locale])`
      1. format()：格式化字符串
-   - 示例：
-        ```Java
-        // 创建字符串
-        String greeting = "菜鸟教程";
-        // 提供一个字符数组参数
-        char[] helloArray = { 'r', 'u', 'n', 'o', 'o', 'b'};
-        String helloString = new String(helloArray); // 输出runoob
-        ```
+1. StringBuilder
+   - 理解：同StringBuffer，但不是线程安全的，即不能同步访问。更快，建议使用
+   - 方法
+     1. append
+     1. insert
+     1. toString
+     1. length
 1. StringBuffer
    - 理解：对字符串进行修改时用到，能够被修改并且不产生新对象。如果要求线程安全，则必须使用StringBuffer
    - 方法
@@ -646,8 +655,6 @@
      1. delete()：删除字符串中某些`StringBuffer delete(int start, int end)`
      1. insert()：插入`StringBuffer insert(int offset, int )`
      1. replace
-1. StringBuilder
-   - 理解：同StringBuffer，但不是线程安全的，即不能同步访问。更快，建议使用
 1. Math类
    - 定义：提供了基本数学运算的属性和方法。如初等函数、对数、平方根和三角函数，都是静态函数
    - 示例
@@ -713,45 +720,75 @@
    - 封装：将类的实现信息隐藏起来，不能让外部直接访问，而是通过类提供的方法来访问
      1. 封装的好处：安全、保护屏障，隐藏类实现细节，适当的封装更容易修改和实现
      1. 封装的步骤：修改可见性添加修饰符——创建getter/setter方法——getter/setter设置控制语句
-     1. 示例
-        ```Java
-        private float num;
-        public float getNum() {
-                return num;
-        }
-        public void setNum(float num) {
-                this.num = num;
-        }
-        ```
-   - 继承：可以重用父类的方法和属性，超类——子类
-     - 使用：对象名.属性/方法()。默认继承Object类
+     1. 内部类
+        - 定义：就是一个类中定义的类，对应的是外部类
+        - 作用
+          1. 提供了更好的封装，不允许其他类访问该类
+          1. 内部类可以访问外部类的所有数据，包括私有数据，不受访问修饰符影响
+        - 分类
+          1. 成员内部类
+          ```Java
+          // 即普通内部类
+          Inner i= o.new Inner(); // 调用方法，o为外部类，不能直接实例化内部类
+          Outer.this.method(); // 内部类调用外部类方法，外部类不能直接调用内部类的对象，需要实例化内部类
+          ```
+          1. 静态内部类
+             - 静态内部类可以直接访问外部类的静态成员和静态方法
+             - 可以直接访问/调用与内部类静态成员名/方法名不相同的外部类成员/方法，相同需要加上类名
+             - 可以直接创建静态内部类的实例
+          1. 方法内部类
+             - 即定义在外部类方法中的内部类，不能在当前方法之外的地方使用，因此方法内部类不能使用访问控制符和static修饰符
+          1. 匿名内部类
+             - 价值：经常配合接口使用，关注实现而不关注名称
+             - 使用：直接new一个接口，实现其方法
+             ```Java
+             new myInterface(){
+                 public void method() {}
+             }.method();
+             ```
+   - 继承：extends，可以重用父类的方法和属性，超类——子类
      - 特点：拥有父类非private的属性、方法，可以对父类扩展，也可以覆写父类方法。只支持类的单继承，但支持接口间的多继承
-     - 关于构造方法：子类不能继承构造器(构造方法、构造函数)。父类构造器带参数得，要用super方法显式调用并匹配相应参数`super(params)`，父类构造器不带参数的，没有super系统自动调用
+     - 继承的初始化顺序：父类属性初始化——父类构造方法——子类属性初始化——子类构造方法
+     - 关于构造方法：子类不能继承父类的构造器，必须调用父类的构造方法，有默认和显式调用两种。父类构造器带参数得，要用super方法显式调用并匹配相应参数、并且在子类构造方法的第一行，父类的默认构造器(没有任何参数)系统自动调用，都没有的报错
      - 关键字
-         1. extends：`public class B extends A`
-         1. implements：用于实现接口
+       1. extends：`public class B extends A`
+       1. implements：用于实现接口
             ```Java
             public interface A {}
             public interface B {}
             public class C implements A,B {}
             ```
-         1. abstract：声明抽象类
+       1. abstract：声明抽象类
             ```Java
             abstract class A{}
             class B extends A{}
             ```
-         1. super和this：super实现对父类成员的访问，表示当前对象的父类，this是自己的引用
+       1. super和this：super实现对父类成员的访问代表父类，表示当前对象的父类，this是自己的引用
             ```Java
-            super.move(); // 调用父级方法            
+            super.move(); // 调用父级方法   
+            this.name;
+            this.move();
             ```                        
-         1. final
+       1. final
             ```Java
             // 修饰属性：不能被修改
             // 修饰方法：不能被重写
             // 修饰类：不能被继承
             ```
-   - 多态：同一个行为具有多个不同表现形式或形态的能力。就是同一个接口，使用不同实例而执行不同操作
+       1. Object：所有类默认继承Object类
+          - 方法
+            1. toString，返回对象hash(对象地址字符串)
+            1. equals，比较对象的引用是否指向同一块内存地址
+   - 多态：对象的多种形态。就是同一个接口，使用不同实例而执行不同操作
      - 存在条件：继承、重写、父类引用指向子类对象
+     - 分类
+       1. 引用多态
+        ```Java
+        Animal obj1 = new Animal(); // 指向本类
+        Animal obj2 = new Dog(); // 指向子类
+        Dog obj3 = new Animal(); // 这是错误的
+        ```
+       1. 方法多态：能使用子类或者本类的方法
      - 多态的实现
        1. 重写
        1. 接口
@@ -771,7 +808,7 @@
          1. 访问权限不能更低，异常的子类可以
          1. 声明为static的方法不能被重写，但是可以被再次声明
          1. 声明为final的方法不能被重写
-     - overload重载：在一个类中，方法名字相同，参数不同。建立多个同名方法，定义不同类型参数。Java根据参数确定调用相应方法。最常用于构造器的重载
+     - overload重载：在类中存在方法名字相同，参数个数或类型不同的多个方法叫重载。Java可以根据参数确定调用相应的方法。常用于构造器的重载
        1. 重载的规则：参数不一样、顺序和类型都生效，返回类型和修饰符可不一样，检查异常可扩展，类中和子类中都可重载
 1. 属性
    - 全局变量：即成员变量
@@ -877,24 +914,23 @@
    - 定义
     ```Java
     package com.imooc // 包名
-    public/protected/private class 类名{
+    public/protected/private class 类名{ // 访问修饰符
             float score;
     }
     ```
-   - 访问修饰符：`public/protected/private`
-   - 构造方法：没有显式定义类的构造方法，java编译器会为该类提供默认构造方法。创建对象至少调用一个构造方法，构造方法必须和类同名，一个类可以有多个构造方法
+   - 构造方法：也就是构造函数，没有返回类型，也不能定义为void/方法类型，方法名和类名相同。只要作用是完成类的初始化工作。创建对象至少调用一个构造方法，如果没有显式定义类的构造方法，java编译器会为该类提供默认构造方法。一个类可以有多个构造方法，只是参数不同
         ```Java
         public class Puppy{
             public Puppy(){}
             public Puppy(String name){} // 构造器
         }
         ```
-   - this关键字：this.属性，this.方法
-   - 内部类
-        - 定义：就是一个类中定义的类，对应的是外部类
-        - 作用：更好的封装
 1. 抽象类
-   - 理解：为了将来对类进行扩充。除了不能被实例化，其他功能都存在。属性、方法、构造器和权限访问都一样。必须继承使用，表示一种继承关系，一个类只能继承一个抽象类，但可以实现多个接口
+   - 理解：为了对类进行扩充，除了不能被实例化，属性、方法、构造器和权限访问和类都一样。必须继承使用，一个类只能继承一个父类，但可以实现多个接口
+   - 价值
+     1. 父类约束子类应该有哪些方法，但是不知道如何实现
+     1. 抽象出来，避免子类设计的随意性
+   - 特点：有抽象方法的一定是抽象类，抽象类中不一定包含抽象方法。子类必须重写全部抽象方法，或者声明自己为抽象类，否则不能被实例化。构造方法和类方法(static)不能申明为抽象方法
    - 定义和继承使用
         ```Java
         // 定义
@@ -914,34 +950,25 @@
             public abstract double computePay();
         }
        ```
-     1. 特点：有抽象方法的一定是抽象类，抽象类中不一定包含抽象方法。子类必须重写抽象方法，或者声明自己为抽象类，否则不能被实例化，即实例化就报错。构造方法和类方法(static)不能申明为抽象方法
-   - 特点：
-     1. 可以包含抽象方法和非抽象方法。有抽象方法必须为抽象类，抽象类可以没有抽象方法。抽象方法决定抽象类
-     1. 抽象方法没有任何实现，由子类具体实现。不能由final和static修饰
-     1. 子类必须实现父类所有抽象方法，除非子类也是抽象类
-1. 接口：抽象方法的集合，子类通过实现接口来实现所有的抽象方法。接口类和方法都是隐式抽象的，可以不用abstract。接口不是类，但是编写方式和类很像，接口不是被类继承，而是被实现。可理解为对象间通信的协议
+1. 接口：全局变量和抽象方法的集合，规定了子类必须提供某些方法。子类通过实现接口来实现所有的抽象方法。接口不是类，但是编写方式和类很像，接口不是被类继承，而是被实现。可理解为对象间通信的协议
+   - 特点
+     1. 本身：不能被实例化，没有构造方法。一个类只能继承一个类，可以实现多接口继承。接口可以多继承，所有参与继承的方法都要实现。
+     1. 属性：每个属性都被指定为public static final
+     1. 方法：接口类和方法都是隐式抽象的，只能是public，接口中不能实现方法，只能在实现类中实现。除非是抽象类，否则子类必须全部实现接口里的所有方法
+     1. extends要在implements前边
+     1. 可以不用abstract，默认接口和方法都会加上
    - 声明：interface
        ```Java
-        [可见度] interface 接口名称 [extends 其他的类名] {
-            // 声明变量
+        [访问修饰符] interface 接口名称 [extends 父接口1，父接口2] {
+            // 多个变量
             // 抽象方法
         }
-        // 接口的多继承
-        public interface Hockey extends Sports, Event{}
        ```
    - 实现：implements
        ```Java
        public class MammalInt implements Animal{}
        // 实现接口方法时，不能抛出强制性异常，只能在接口或继承接口的抽象类中抛出
        // 重写方法时保持一致的方法名，相同或兼容的返回值
-       ```
-   - 特点
-     1. 本身：不能被实例化，没有构造方法。一个类只能继承一个类，可以实现多接口继承。接口可以多继承，所有参与继承的方法都要实现。
-     1. 属性：不能包含成员变量，即除了static和final变量
-     1. 方法：接口中所有方法必须是public的抽象方法，接口中不能实现方法，只能在实现类中实现。除非是抽象类，否则子类必须全部实现接口里的所有方法
-       ```Java
-       // 接口的每个方法都是隐式抽象的，即：public abstract，只能是public，否则报错，只有这一种
-       // 接口的每个属性都被指定为public static final变量，只有这一种
        ```
    - 标记接口：没有任何属性和方法的接口，仅表明它的类属于一个特定的类型
 1. 包

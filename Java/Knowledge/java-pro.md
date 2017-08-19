@@ -1,37 +1,40 @@
 ### 数据结构
-1. 数组：（Array）存储在堆上的对象，长度是固定的，用来存储固定数量的多个同类型变量
-   - 定义：`数据类型 数组名[] 或者 数据类型[] 数组名`
-   - 声明
+1. 数组：Array，存储在堆上的对象，长度是固定的，用来存储固定数量的多个同类型变量
+   - 定义
         ```Java
-        // 声明
-        dataType[] myList = new dataType(size);
-        dataType[] myList;
-        dataType[] myList = {78,93};
-        dataType myList[] = {78,93};
-        // 访问
-        myList[1];
-        // 赋值
-        myList[1] = 1;
-        // 长度
-        array.length();
+        数据类型 数组名[] // 或者 数据类型[] 数组名
+        // 举例
+        int[] myArray; // 声明
+        myArray = new int[size]; // 指定数组长度
+        int[] myArray = new int[size]; // 声明并指定长度
+        int[] myArray = {78,93}; // 声明并填充内容
+        int myArray[] = {78,93}; // 声明并填充内容
+        int[] myArray = new int(){78,93}; // 声明并填充内容
         ```
    - 处理：
         ```Java
-        for (int i = 0; i < myList.length; i++) {} // 内循环处理
-        for (double element: myList) {} // foreach处理
+        // 访问
+        myArray[1];
+        // 赋值
+        myArray[1] = 1;
+        // 长度
+        myArray.length();
+        // 遍历
+        for (int i = 0; i < myArray.length; i++) {} // 内循环处理
+        for (double element: myArray) {} // foreach处理
+        public static void printArray(int[] myArray) {} // 作为参数传递
         ```
-   - 作为参数传递：`public static void printArray(int[] array) {}`
    - 二维数组
      1. 声明：`int 数组名[][] = new int[行数][列数]`
         ```Java
-        // 定义每个列数可以不同的方法
+        // 每个数组内容的列数可以不同
         int num[][] = new int[2][];
         num[0] = new int[2];
         num[1] = new int[3];
         // 访问
         num[0][0]
         ```
-   - Arrays类：java提供的工具类，在java.util包中java.util.Arrays ，包含排序、搜索等方法
+   - Arrays类：java提供的工具类，包为java.util.Arrays ，包含排序、搜索等方法
      1. 排序
         ```Java
         import java.util.Arrays;
@@ -39,8 +42,7 @@
         ```
      1. 查找：binarySearch：`int binarySearch(Obj[] a, Obj key)`
      1. 比较：equals：`boolean equals(long[] a, long[] a2)`
-     1. 填充
-     1. Arrays.toString(数组);
+     1. Arrays.toString(Array);
 1. 位集合：（BitSet）位集合类实现了一组可以单独设置和清除的位或标志。该类处理一组布尔值的时候很有用。创建一种特殊类型的数组来保存值，数组大小随需要增加
    - 定义：
         ```Java
@@ -192,17 +194,18 @@
      1. `void store(OutputStream streamOut, String description)`
 ### 集合框架
 1. 简介：Java2引入，是用来代表/操作集合的统一架构，集合框架围绕一组标准接口而设计，可以直接使用接口的标准实现，如LinkedList、HashSet、TreeSet，也可以通过接口实现自己的集合。提供了预先包装的数据结构供使用
-1. 理解：具有共同属性的数据集合。对数据进行组织和大数量的操作，是盛装其他对象的容器
+1. 理解：是一种工具类，具有共同属性的数据集合。对数据进行组织和大数量的操作，是盛装其他对象的容器
+1. 价值：和数组对比，容量是可以动态变的，不仅仅使用整形的下标访问元素
 1. 分类
-   - Collection：内部都是一个个的对象
-     1. List：(序列)排列有序可重复
-        - ArrayList：(数组序列)
-     1. Queue：(队列)排列有序可重复
-        - LinkedList：(链表)，同时也是List的实现类
-     1. Set：(集)无序不可重复
-        - HashSet：(哈希集)
-   - Map：有众多子接口
-     1. HashMap：(哈希表)
+   - Collection：内部存储的都是一个个的对象，单个的
+     1. List：序列，排列有序可重复
+        - ArrayList：数组序列，底层由数组实现
+     1. Queue：队列，排列有序可重复
+        - LinkedList：链表，同时也是List的实现类
+     1. Set：集，无序不可重复
+        - HashSet：哈希集
+   - Map：包含了很多的映射，一对的，有众多子接口
+     1. HashMap：哈希map，基于hash表实现
    - 工具接口和类
      1. Collections：工具类，最常用sort方法
      1. Comparable接口：默认比较规则
@@ -210,9 +213,9 @@
 1. Collection
    - 比较：
      1. List查询效率高，插入和删除低，因为改起其他元素改变；Set查询效率低，插入和删除效率高
-     1. Set没有List的get方法，只能通过foreach和iterator方法遍历，而且每次迭代的结果都不一样。Set中不论添加多少次，因为不能重复，所以只能有一个
+     1. Set没有List的get方法，想要访问只能通过foreach和iterator方法遍历，而且每次迭代的结果都不一样。Set中不论添加多少次，因为不能重复，所以只能有一个
    - Java.util.Collections：工具类
-1. Map：(映射) 用来存储键值对。可以通过key查找value。内部以映射存储数据，就是Entry(键值对)类的实例，key和value可以是任意的对象。key不可重复，value可以。组成有Map自己是个接口、众多子接口和实现类。支持泛型：`Map<k,v>`
+1. Map：映射，用来存储键值对。可以通过key查找value。内部以映射存储数据，就是Entry(键值对)类的实例，key和value可以是任意的对象。key不可重复，value可以。支持泛型：`Map<k,v>`
    - 特点
      1. 访问的值不存在，抛出NoSuchElementException异常
      1. 对象类型和Map的元素类型不兼容时，抛出ClassCastException
