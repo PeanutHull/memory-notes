@@ -239,6 +239,10 @@
      1. `Set entrySet( )` // 返回映射关系的Set视图
      1. 
      1. `int hashCode()` // 返回映射的哈希码值
+   - 实例
+    ```Java
+    Map map = Maps.newHashMap();
+    ```
 1. 内部组成
    - 组成：接口、实现类(集合类)、算法（如搜索和排序）
      1. 接口

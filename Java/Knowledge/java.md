@@ -647,6 +647,10 @@
      1. insert
      1. toString
      1. length
+   - 例子
+    ```Java
+    productName = new StringBuilder().append("%").append(productName).append("%").toString();
+    ```
 1. StringBuffer
    - 理解：对字符串进行修改时用到，能够被修改并且不产生新对象。如果要求线程安全，则必须使用StringBuffer
    - 方法
@@ -687,6 +691,26 @@
      1. round()：返回最接近的int、long值
      1. min、max()：两个参数得最大小值
      1. random()：返回随机值，0到1之间，无参数
+1. Properties
+   - 理解：用于读取配置文件，配置文件有很多是经常改变的，方便脱离程序去修改变量配置。在Java.util包中
+   - 方法
+     1. `load(InputStream inStream)` // 装载配置文件
+     1. `getProperty(String key)` // 读取键值对的值
+     1. `setProperty(String key, String value)`
+     1. `store(OutputStream out, String comments)` // 输出配置
+     1. `clear()` // 清楚装载的配置
+   - 实例
+    ```Java
+    try {
+        InputStream in = new BufferedInputStream(new FileInputStream(new File(basePath)));
+        Properties prop = new Properties();
+        prop.load(in);
+        prop.getProperty("path");
+    } catch (FileNotFoundException e) {
+        System.out.println("properties文件路径书写有误，请检查！");
+    } catch (IOException e) {}
+    return path;
+    ```
 1. UUID
    - 理解：算法的核心思想是结合机器的网卡、当地时间、一个随即数来生成GUID，从理论上讲，如果一台机器每秒产生10000000个GUID，则可以保证（概率意义上）3240年不重复。java 5新增
    - 使用
@@ -856,7 +880,7 @@
             }
         }
         ```
-     1. 静态代码块：使用`static`修饰的代码块，用于静态属性初始化
+     1. 静态代码块：使用`static`修饰的代码块，用于初始化静态属性
         ```Java
         public class className{
             static {

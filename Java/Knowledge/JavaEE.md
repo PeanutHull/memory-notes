@@ -29,7 +29,8 @@
           - 理解：是Web服务器，也是servlet、jsp的运行环境/容器，最新的servlet和jsp规范总是能在Tomcat中得到体现
           - 特点：技术先进、性能稳定、免费开源
           - 响应http过程：web浏览器——Tomcat——Web服务器——Servlet容器——Servlet实例1/Servlet实例2
-          - 不足：静态html能力不如apache，可以集成使用，Apache作为HTTP Web服务器，Tomcat作为Web容器。
+          - 不足：静态html能力不如apache，可以集成使用，Apache作为HTTP Web服务器，Tomcat作为Web容器
+          - 组成：Container容器——Engine——HOST——Servlet
         - Jetty
           - 理解：为JSP和servlet提供运行环境的用Java语言编写的的web容器
      1. Java EE应用容器
@@ -110,11 +111,43 @@
      1. 编写RMI注册机制，并启动
      1. 客户端就可以访问了
 ### Servlet
-1. 认识：用Java写的一个服务器端小程序，为创建基于web的java应用程序，可以访问所有java API。是部署在web服务器上的组件，可以搜集表单等浏览器的东西和创建动态网页，是一个Java程序
-1. 特点：Servlet应用无法独立运行，必须运行在Servlet容器中，Servlet在web服务器的地址空间执行，一个请求一个线程，性能好。独立于平台，安全性好
-1. 重难点
-   - Servlet容器，Servlet处理机制，Servlet生命周期
-   - 部署Servlet
+1. 认识：用Java写的一个服务器端小程序，是部署在web服务器上的组件，可以访问所有java API，可以搜集表单等浏览器的东西和创建动态网页，为创建基于web的java应用程序
+1. 特点：Servlet应用无法独立运行，必须运行在Servlet容器中，Servlet在web服务器的地址空间执行，一个请求一个线程，性能好。独立于平台，安全性好。html的链接/开头的表示相对目录，没有的表示绝对目录
+1. 编写
+	```Java
+	// 继承HttpServlet，自定义setvlet——HttpServlet类(实现了http协议)——GenericServlet类(与协议无关)——Servlet接口(方法：Init/service/destory)
+	// 重写doGet()或者doPost()
+	// 在web.xml中注册Servlet
+	public class Xxx extends HttpServlet{
+		@Override
+		protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {}
+		protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {}
+		// 输出html
+		PrintWriter out = response.getWriter();
+		response.setContentType("text/html;charset=utf-8");
+		out.println("<p>你好</p>";
+	}
+	<servlet>
+		<servlet-name>Xxx</servlet-name>
+		<servlet-class>com.package.Xxx</servlet-class>
+	</servlet>
+	<servlet-mapping> // 指向对应的servlet，即servlet-name要对应
+		<servlet-name>Xxx</servlet-name>
+		<url-pattern>/url</servlet-pattern> // 必须以/开头
+	</servlet-mapping>
+	```
+1. 九大内置对象
+   - request
+   - session：request.getSession();
+   - response
+   - out：response.getWriter();
+   - application：getServletContext();整个web应用
+   - exception：Throwable
+   - page：this
+   - pageContext：pageContext
+   - Config：getServletConfig
+1. 重点
+   - 请求处理过程：Http请求对象、Http响应对象、Http会话
    - ServletContext, ServletConfig
    - Filter, Event Listener
 1. Servlet项目结构
@@ -124,11 +157,10 @@
 1. Servlet的生命周期
    - init()
    - service()：服务器收到的每一个请求会创建新的线程并单一调用service()方法，service()方法检查请求类型，适当的调用doGet、doPost、doPut、doDelete等方法
-     1. 请求处理过程的三个概念：Http请求对象、Http响应对象、Http会话
-   - doGet、doPost
+   - doGet/doPost
    - destory()：只被调用一次
 1. 参数
-   - request：请求，是javax.servlet.http.HttpServletRequest类的实例
+   - request：请求，javax.servlet.http.HttpServletRequest类的实例
      1. 方法
         ```Java
         getParameter()：单个参数
@@ -160,8 +192,8 @@
          - `String getRemoteAddr()` // 获取请求者ip
    - response：响应，是javax.servlet.http.HttpServletResponse类的实例
      1. 方法
+        - getWriter()
         - setContentType()
-        - getWriter()        
      1. 例子
         ```Java
         // 定义消息头部
@@ -183,17 +215,12 @@
       1. 状态码：发送错误码，会出现tomcat原生的错误页面
          - `public void setStatus(int statusCode)`
          - `public void sendError(int code, String message)`
-         - `public void sendRedirect(String url)` // 302，带一个location头
+         - `public void sendRedirect(String url)` // 302跳转，带一个location头
       1. 重定向
           ```Java
           response.setStatus(response.SC\_MOVED_TEMPORARILY);
           response.setHeader("Location", site);
           ```
-1. 中文处理
-     ```Java
-     String str = java.net.URLEncoder.encode("中文"，"UTF-8");
-     String str = java.net.URLDecoder.decode("编码后的字符串","UTF-8");
-     ```
 1. Cookie
    - 设置cookie
      ```Java
@@ -253,6 +280,138 @@
         <session-timeout>15</session-timeout>
      </session-config>
      ```
+1. 过滤器
+   - 理解：对请求或者响应动作之前进行拦截
+   - 特点：能改变用户请求的路径，不能只能返回数据
+   - 生命周期
+     1. web.xml：实例化一次
+	 1. init：初始化
+	 1. 开始过滤：doFilter();
+	 1. 销毁：destory();
+   - 实例
+     1. web.xml配置
+        ```XML
+        <filter>
+            <filter-name>LogFilter</filter-name>
+            <filter-class>com.runoob.test.LogFilter</filter-class>
+            <init-param>
+              <param-name>Site</param-name>
+              <param-value>菜鸟教程</param-value>
+            </init-param>
+          </filter>
+          <filter-mapping>
+            <filter-name>LogFilter</filter-name>
+            <url-pattern>/*</url-pattern>
+			<dispatcher></dispatcher> // 过滤类型请求，dispatcher：REQUEST、INCLUDE、FORWARD、ERROR，默认REQUEST
+          </filter-mapping>
+        ```
+     1. 过滤器类
+		```Java
+		public class LogFilter implements Filter{
+			public void  init(FilterConfig config) throws ServletException {
+				// 运行流程为web应用程序启动——web服务器创建Filter实例对象——调用init——读取web.xml——完成对象的初始化
+				// 获取初始化参数
+				String site = config.getInitParameter("Site");
+			}
+			public void  doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws java.io.IOException, ServletException {
+				// 完成具体的过滤操作，FilterChain指出后续过滤器
+				chain.doFilter(request,response); // 把请求传回过滤链
+			}
+			public void destroy( ){
+				// 在Filter实例被 Web容器从服务移除之前调用
+			}
+		}
+		```
+   - 过滤器链：按照web.xml中定义的顺序，filter1请求传回过滤链前->filter2请求传回过滤链前->service->filter1请求传回过滤链后->filter2请求传回过滤链后
+   - 分类
+     1. Servlet2.5
+	    - REQUEST：用户直接访问页面时调用
+		- FORWARD：转发时调用，即通过RequestDispatcher的forward访问
+		- INCLUDE：被包含的请求时调用，即通过RequestDispatcher的include访问		
+		- ERROR：通过声明式异常处理机制时调用
+	 1. Servlet3.0
+	    - ASYNC：支持异步处理，即先返回结果，后台一直执行直到结束。@WebFilter注解将一个类声明为过滤器
+		```Java
+		AsyncContext context = request.startAsync(); // 在doGet方法中，同时开启web.xml和Filter类的异步开关
+		```
+1. 监听器
+   - 理解：针对其他对象发生的事件/状态改变，进行监听和处理的对象。是servlet规范定义的一种特殊类，用于监听ServletContext/HttpSession/ServletRequest域对象的创建/销毁/属性修改的事件，可以在事件发生前、发生后做出相应
+   - 特点
+     1. 启动顺序为web.xml中定义的顺序
+	 1. 优先级：监听器->过滤器->Servlet
+   - 分类
+     1. 按照监听对象
+	    - ServletContext：应用程序环境对象
+		- HttpSession：用户会话对象
+		- ServletRequest：请求消息对象
+     1. 按照监听的事件
+	    - 域对象的创建/销毁
+		- 域对象的属性增加/删除
+		- 绑定到HttpSession域中的某个对象的状态
+   - 创建
+	```Java
+	// 创建实现监听器接口的类
+	// 针对ServletContext	
+	// TODO 其余两种监听类
+	public class XxxListener implements ServletContextListener{
+		public void contextInitialized(ServletContextEvent servletcontextecent) {}
+		public void contextDestoryed(ServletContextEvent servletcontextecent) {}
+	}
+	// 在web.xml注册
+	<listener>
+		<listener-class>com.package.XxxListener</listener-class>
+	</listener>
+	```
+1. 实际使用
+   - 调试：`System.out.println()`，输出的信息会记录在web服务器日志里
+   - 跳转
+	```Java
+	// /表示根目录
+	response.sendRedirect(request.getContextPath + "/要跳转的页面相对地址"); // 重定向，地址改变
+	request.getRequestDispatcher("/要跳转的页面相对地址").forward(request, response); // 转发请求，地址不变
+	```
+1. 异常：web.xml匹配异常类型
+   - 使用：error-page元素决定，状态码或者异常
+   - 错误相关的属性
+     1. status_code：`Integer`，即`java.lang.Integer`
+     1. exception_type：`Class`，异常类型
+     1. message：`String`
+     1. request_uri：`String`
+     1. exception：`Throwable`
+     1. servlet_name：`String`
+   - 使用
+     1. web.xml
+        ```XML
+        // 全部
+        <error-page>
+            <error-code>403</error-code> // 或者
+            <location>/ErrorHandler</location>
+        </error-page>
+        <error-page>
+            <exception-type>
+              javax.servlet.ServletException/java.io.IOException/java.lang.Throwable(全部)
+            </exception-type >
+            <location>/ErrorHandler</location>
+        </error-page>
+        ```
+1. 国际化
+   - 概念
+     1. i18n：国际化      
+     1. l10n：本地化
+     1. locale：区域设置，如en_US
+   - 使用：Locale对象提供
+   - 中文处理
+     ```Java
+     String str = java.net.URLEncoder.encode("中文"，"UTF-8");
+     String str = java.net.URLDecoder.decode("编码后的字符串","UTF-8");
+     ```
+   - 方法
+     1. `String getCountry()` // 两个大写字母形式的ISO 3166格式国家代码
+     1. `String getDisplayCountry()` // 国家名称
+     1. `String getLanguage()` // 小写字母的 ISO 639格式语言代码
+     1. `String getDisplayLanguage()` // 语言名称
+     1. `String getISO3Country()` // 国家的3个字母缩写
+     1. `String getISO3Language()` // 语言的3个字母缩写
 1. 文件上传和下载
    - 上传
       ```Java
@@ -341,104 +500,6 @@
       is.close();
       os.close();
       ```
-1. 过滤器
-   - 理解：对请求或者响应动作之前进行拦截。web.xml中定义访问请求和过滤类的对应关系
-   - 分类
-     1. 身份验证：Authentication Filters
-     1. 数据压缩：Data compression Filters
-     1. 加密：Encryption Filters
-     1. 图像转换：Image Conversion Filters
-     1. 日志记录和审核：Logging and Auditing Filters
-     1. 资源访问事件
-     1. MIME-TYPE链：MIME-TYPE Chain Filters
-     1. 标计划：Tokenizing Filters
-     1. XSL/T：XSL/T Filters，转换XML内容
-   - 使用：在web.xml中的声明标签，然后映射到Servlet或Url
-     1. filter：表示一个过滤器，可以用于多个Servlet、Servlet组、jsp、html
-     1. filter-mapping：表示过滤器的绑定范围
-     1. filter-mapping：决定过滤器使用范围
-     1. dispatcher：REQUEST、INCLUDE、FORWARD、ERROR
-   - 方法：实现了 javax.servlet.Filter类
-     1. `public void doFilter (ServletRequest, ServletResponse, FilterChain)` // 具体的过滤操作在这，请求或响应符合标签声明时，访问这个方法，FilterChain指出后续过滤器
-     1. `public void init(FilterConfig filterConfig)` // web应用程序启动——web服务器创建Filter实例对象——调用init——读取web.xml——完成对象的初始化
-     1. `public void destroy()` // 析构方法
-   - 实例
-     1. web.xml配置
-        ```XML
-        // filter-class：指定使用的过滤类
-        // init-param：FilterConfig对象的初始化参数，可在init中获取
-        <filter>
-            <filter-name>LogFilter</filter-name>
-            <filter-class>com.runoob.test.LogFilter</filter-class>
-            <init-param>
-              <param-name>Site</param-name>
-              <param-value>菜鸟教程</param-value>
-            </init-param>
-          </filter>
-
-          <filter-mapping>
-            <filter-name>LogFilter</filter-name>
-            <url-pattern>/*</url-pattern>
-          </filter-mapping>
-        ```
-     1. 过滤器类
-        ```Java
-        import javax.servlet.*;
-        import java.util.*;
-
-        public class LogFilter implements Filter{
-          public void  init(FilterConfig config) throws ServletException {
-            // 获取初始化参数
-            String site = config.getInitParameter("Site"); 
-            System.out.println("网站名称: " + site); 
-          }
-          public void  doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws java.io.IOException, ServletException {
-            chain.doFilter(request,response); // 把请求传回过滤链
-          }
-          public void destroy( ){
-            /* 在 Filter 实例被 Web 容器从服务移除之前调用 */
-          }
-        }
-        ```
-1. 异常：web.xml匹配异常类型
-   - 使用：error-page元素决定，状态码或者异常
-   - 错误相关的属性
-     1. status_code：`Integer`，即`java.lang.Integer`
-     1. exception_type：`Class`，异常类型
-     1. message：`String`
-     1. request_uri：`String`
-     1. exception：`Throwable`
-     1. servlet_name：`String`
-   - 使用
-     1. web.xml
-        ```XML
-        // 全部
-        <error-page>
-            <error-code>403</error-code> // 或者
-            <location>/ErrorHandler</location>
-        </error-page>
-        <error-page>
-            <exception-type>
-              javax.servlet.ServletException/java.io.IOException/java.lang.Throwable(全部)
-            </exception-type >
-            <location>/ErrorHandler</location>
-        </error-page>
-        ```
-1. 调试：`System.out.println()`，输出的信息会记录在web服务器日志里
-1. 国际化
-   - 概念
-     1. i18n：国际化      
-     1. l10n：本地化
-     1. locale：区域设置，如en_US
-   - 使用：Locale对象提供
-   - 方法
-     1. `String getCountry()` // 两个大写字母形式的ISO 3166格式国家代码
-     1. `String getDisplayCountry()` // 国家名称
-     1. `String getLanguage()` // 小写字母的 ISO 639格式语言代码
-     1. `String getDisplayLanguage()` // 语言名称
-     1. `String getISO3Country()` // 国家的3个字母缩写
-     1. `String getISO3Language()` // 语言的3个字母缩写
-
 ### JSP
 1. 理解：`Java Server Pages` 是简化的servlet设计，动态生成html、xml的web网页的一种标准。在html中插入java代码(Scriptlet)和jsp标记(tag)，实现了html中的Java扩展(通常用<% %>包裹)。主要用于实现界面
 1. 重难点
@@ -576,11 +637,12 @@
      1. `out` // PrintWriter类的实例，用于输出结果
         - 理解：print/println的打印方法，flush()刷新输出流
      1. `exception` // Exception类的对象，代表JSP页面中的异常对象
-1. EL表达式语言
-   - 理解：可使用各种类型的数据来创建算术/逻辑表达式
-   - 使用：${expr}，不使用`<%@ page isELIgnored ="true|false" %>`
+1. EL
+   - 理解：Expression Language，即表达式语言，可使用各种类型的数据来创建算术/逻辑表达式
+   - 使用：${expr}
    - 举例
      ```Java
+     <%@ page isELIgnored ="true|false" %>
      ${2*box.width+2*box.height}
      ```
    - 基础操作符
@@ -591,8 +653,8 @@
      1. `&&||!` // 与或非
      1. `empty` // 是否为空
    - EL中的函数：${ns:func(param1, param2)}，这些函数必须被定义在自定义标签库中
-1. JSTL标准标签库
-   - 理解：JSP Standard Tag Library，是JSP标签集合，封装了JSP应用的通用核心功能。支持迭代、判断、xml操作、sql标签、自定义标签
+1. JSTL
+   - 理解：JSP Standard Tag Library，即JSP标准标签库，是JSP标签集合，封装了JSP应用的通用核心功能。支持迭代、判断、xml操作、sql标签、自定义标签
    - 分类
      1. 核心标签
      1. 格式化标签
