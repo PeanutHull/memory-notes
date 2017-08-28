@@ -132,3 +132,9 @@
    - 5.5——Java5——servlet2.4——jsp2.0
    - 4.1——Java5——servlet2.3——jsp1.2
    - 3.3——Java5——servlet2.2——jsp1.1
+### 实际项目经验
+1. Java 从零打造企业级电商实战 - 服务端
+   - MyBatis
+     1. 返回新增的主键：mapper.xml文件中insert标签加入属性：`useGeneratedKeys="true" keyProperty="id"`
+     1. 数据绑定更新对应数据：mapper.xml文件中update指定parameterType的类地址：`parameterType="com.mall.pojo.Xxx"`
+     1. 批量插入：对应于子订单的批量插入
