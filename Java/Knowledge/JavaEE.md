@@ -292,18 +292,18 @@
      1. web.xml配置
         ```XML
         <filter>
-            <filter-name>LogFilter</filter-name>
-            <filter-class>com.runoob.test.LogFilter</filter-class>
-            <init-param>
-              <param-name>Site</param-name>
-              <param-value>菜鸟教程</param-value>
-            </init-param>
-          </filter>
-          <filter-mapping>
-            <filter-name>LogFilter</filter-name>
-            <url-pattern>/*</url-pattern>
-			<dispatcher></dispatcher> // 过滤类型请求，dispatcher：REQUEST、INCLUDE、FORWARD、ERROR，默认REQUEST
-          </filter-mapping>
+          <filter-name>LogFilter</filter-name>
+          <filter-class>com.runoob.test.LogFilter</filter-class>
+          <init-param>
+            <param-name>Site</param-name>
+            <param-value>菜鸟教程</param-value>
+          </init-param>
+        </filter>
+        <filter-mapping>
+          <filter-name>LogFilter</filter-name>
+          <url-pattern>/*</url-pattern>
+          <dispatcher></dispatcher> // 过滤类型请求，dispatcher：REQUEST、INCLUDE、FORWARD、ERROR，默认REQUEST
+        </filter-mapping>
         ```
      1. 过滤器类
 		```Java
@@ -349,19 +349,19 @@
 		- 域对象的属性增加/删除
 		- 绑定到HttpSession域中的某个对象的状态
    - 创建
-	```Java
-	// 创建实现监听器接口的类
-	// 针对ServletContext	
-	// TODO 其余两种监听类
-	public class XxxListener implements ServletContextListener{
-		public void contextInitialized(ServletContextEvent servletcontextecent) {}
-		public void contextDestoryed(ServletContextEvent servletcontextecent) {}
-	}
-	// 在web.xml注册
-	<listener>
-		<listener-class>com.package.XxxListener</listener-class>
-	</listener>
-	```
+    ```Java
+    // 创建实现监听器接口的类
+    // 针对ServletContext	
+    // TODO 其余两种监听类
+    public class XxxListener implements ServletContextListener{
+      public void contextInitialized(ServletContextEvent servletcontextecent) {}
+      public void contextDestoryed(ServletContextEvent servletcontextecent) {}
+    }
+    // 在web.xml注册
+    <listener>
+      <listener-class>com.package.XxxListener</listener-class>
+    </listener>
+    ```
 1. 实际使用
    - 调试：`System.out.println()`，输出的信息会记录在web服务器日志里
    - 跳转

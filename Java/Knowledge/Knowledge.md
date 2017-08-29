@@ -58,6 +58,7 @@
      1. 分布式
      1. Netty
      1. CDN
+     1. Elasticsearch
      1. solr
      1. 负载均衡
      1. mysql集群
