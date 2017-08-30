@@ -60,3 +60,25 @@
 1. Live Template
    - psvm 主入口
    - sout 打印输出
+1. 没有web目录，创建web目录并且启动tomcat的方法
+   1. edit Configurations————添加tomcat server————local
+   1. 添加Artifacts————Web Application：Exploded————From Modules
+   1. 添加Facets————Web————选择Modules
+1. 添加额外依赖的jar包
+   1. 将包放置在webapp的lib目录中
+   1. Project Structure————Modules————Dependencies————+号
+   1. 添加maven的编辑插件，将本地的jar包也包含进去，目录指向lib目录
+      ```xml
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <source>1.8</source>
+          <target>1.8</target>
+          <encoding>UTF-8</encoding>
+          <compilerArguments>
+            <extdirs>${project.basedir}/src/main/webapp/WEB-INF/lib</extdirs>
+          </compilerArguments>
+        </configuration>
+      </plugin>
+      ```
