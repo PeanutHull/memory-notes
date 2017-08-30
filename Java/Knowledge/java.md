@@ -1010,12 +1010,6 @@
      1. 开发者可以定义自己的包
      1. 包采用了树形目录的存储方式，不同包中的类名可以相同。com.runoob.test的目录结构为`CLASSPATH\com\runoob\test\类名`
      1. 包也限定了访问权限，有包的权限才能访问包中的类
-### 实际经验
-1. 开发
- - Eclipse开发java：创建java项目——创建程序包——编写java源程序——运行java
- - Eclipse开发java web： 安装Java/Eclipse/Tomcat——Eclipse配置JRE——集成Tomcat——创建项目——部署(发布)到tomcat——启动tomcat
- - Intellij开发java web：安装Java/Intellij/Tomcat——配置JRE/Tomcat——创建项目——部署(发布)到tomcat——启动tomcat
- - Mac启动tomcat：进入bin目录——sudo chmod 755 \*.sh——sudo sh startup.sh。关闭：sudo sh shutdown.sh。部署项目后需要重启
 ### WIKI
 1. java程序特点
      1. 源文件名：必须和类名相同

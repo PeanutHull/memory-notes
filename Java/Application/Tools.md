@@ -57,6 +57,14 @@
 ### Ant
 1. 理解：集编译、测试、部署的自动化打包部署工具
 ### Inteill Idea
+1. 添加Problems(实时编译)功能：设置————compiler————打钩make project automatically
+1. IDEA报错功能：设置————inspections————修改报错信息
+1. 搭建空白项目
+   - IDEA配置SDK、Maven、Tomcat
+   - 新建项目————Maven————maven-archetype-webapp————配置项目信息
+   - src/main文件夹中创建java文件夹————并置为sources Root
+   - src/main文件夹中创建test文件夹————并置为test
+   - 添加Tomcat Server————local————Deployment————添加Aritfact————xx.war选项
 1. Live Template
    - psvm 主入口
    - sout 打印输出
