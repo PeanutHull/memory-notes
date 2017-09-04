@@ -145,7 +145,70 @@
      1. 关闭：sudo sh shutdown.sh(部署项目后需要重启)
 1. 经验与心得
    - 实际的项目要找到官方的配置，根据官方的配置去写项目的配置
-### 高并发、高可用、分布式的实现
-1. Tomcat集群
-1. Redis分布式缓存
-1. Elasticssearch
+1. Java运行环境搭建
+   - JDK
+     1. rpm安装
+     1. 编辑环境变量
+      ```java
+      vim /etc/prifile
+      // 最下边添加
+      export JAVA_HOME=/usr/java/jdk1.7.0_80
+      export CLASSPATH=.:$JAVA_HOME/jre/lib/rt.jar:$JAVA_HOME/lib/dt.jar:$JAVA_HOME/lib/tools.jar
+      export MAVEN_HOME=/developer/apache-maven-3.0.5
+      export CATALINA_HOME=/developer/apache-tomcat-7.0.73
+      export PATH=$PATH:$JAVA_HOME/bin:$CATALINA_HOME/bin:$MAVEN_HOME/bin:$NODE_HOME/bin:/usr/local/bin:$RUBY_HOME/bin
+      // 配置生效
+      source /etc/profile
+      // 检验
+      java -version
+      ```
+   - Tomcat
+      ```java
+      // 解压压缩包
+      tar -zxvf tomcat.tar.gz
+      // 编辑配置文件
+      vim conf/server.xml
+      <Connector ... URIEncoding="UTF-8">
+      // 启动tomcat
+      cd bin;
+      ./startup.sh
+      ```
+   - Maven
+   - Nginx
+      ```java
+      // 安装nginx依赖
+      yum -y install gcc zlib zlib-devel pcre-devel openssl openssl-devel 
+      // 下载nginx安装包并解压、编译
+      ./configure;make;make install;
+      // 启动
+      cd sbin;
+      ./nginx;
+      ```
+   - Mysql
+      ```java
+      yum -y install mysql-server // 安装
+      vim /etc/my.cnf // 设置字符集
+      character-set-server=utf8 // [mysqld]下添加
+      default-character-set=utf8
+      ```
+   - 部署脚本
+      ```java
+      echo "======更新代码======="    
+      cd /developer/git-repository/mmall
+      git fetch
+      git pull
+      echo "======编译并跳过单元测试======="
+      mvn clean package -Dmaven.test.skip=true
+      echo "======转移war包======="
+      rm /developer/apache-tomcat-7.0.73/webapps/ROOT.war    
+      cp /developer/mmall.war  /developer/apache-tomcat-7.0.73/webapps/ROOT.war
+      rm -rf /developer/apache-tomcat-7.0.73/webapps/ROOT
+      echo "======启动tomcat======="
+      /developer/apache-tomcat-7.0.73/bin/shutdown.sh
+      for i in {1..10}
+      do
+        echo $i"s"
+        sleep 1s
+      done
+      /developer/apache-tomcat-7.0.73/bin/startup.sh
+      ```

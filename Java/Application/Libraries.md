@@ -314,6 +314,8 @@
    - MyBatis-generator：右侧Maven按钮————Plugins————执行MyBatis-generator
    - MyBatis-plugin：IDEA的插件，安装这个可以提示方法
    - MyBatis-pagehelper————分页插件
+### JPA
+1. 理解：采用Spring Data JPA实现
 ### 消息中间件
 1. 中间件：非底层操作系统软件，非业务应用软件，不是给终端用户使用的，称为中间件
 1. 消息中间件：专注于数据的发送和接收，利用高效可靠的`异步`消息传递机制，集成`分布式`系统
