@@ -204,7 +204,7 @@
      1. 类变量：即静态变量。在构造方法和语句块之外。属于类，所有实现的对象共享只有一份
         ```Java
         // 声明静态变量
-        protected static String name = 'haha';
+        protected static String name = "haha";
         // 声明静态常量
         public static final String A = "666";
         // 使用
@@ -298,7 +298,10 @@
       1. GregorianCalendar类：实现公历日历，是Calendar的一个实现
 1. IO
    - 理解：Java.io包几乎包含所有操作输入/输出的类。流可以理解为一个数据的序列
-   - 控制台输入：System.in和Scanner类
+   - Stream
+   - 控制台输入/输出：
+     1. System.in、Scanner类：输入
+       - 方法一
         ```Java
         // 由System.in完成，在BufferedReader对象中创建字符流
         BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
@@ -308,6 +311,9 @@
             System.out.println(c);
         } while(c != 'q');
         String str = br.readLine(); // 读取字符串
+        ```
+       - 方法二
+        ```Java
         // Scanner类，jdk5之后可用获得输入
         Scanner s = new Scanner(System.in);
         if(scan.hasNext()){
@@ -323,12 +329,7 @@
         next：一定读取到有效字符才结束输入，自动去掉之前空白，有效符后面的空白作为分隔符和结束符，所有不能输入空格
         nextLine：回车为结束符
         ```
-   - 控制台输出：print()和println()完成，由类PrintStream定义，System.out是该类的一个引用。PrintStream 继承了 OutputStream类，实现了方法write()，可以写入控制台
-        ```Java
-        int b = 'A';
-        System.out.write(b);
-        ```
-   - Stream
+     1. `System.out.write(b);`：输出
 1. File
    - 读取文件
      1. 创建
