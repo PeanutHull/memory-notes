@@ -1,4 +1,9 @@
 ### 数据结构
+1. 总结
+   - 枚举Enum：只能是预先设置好的值
+   - 数组Array————位集合BitSet：长度不能改变
+   - 向量Vector————栈Stack：长度可以改变
+   - 字典Dictionary————哈希表Hashtable————属性Properties：键映射到值的数据结构，一个抽象类，一个实现了Map接口
 1. 数组：Array，存储在堆上的对象，长度是固定的，用来存储固定数量的多个同类型变量
    - 定义
         ```Java
@@ -140,7 +145,7 @@
      1. `Object remove(Object key)` // 删除
      1. `Enumeration keys()` // 返回字典中键的枚举
      1. `Enumeration elements()` // 返回字典中值的枚举
-1. 哈希表：（Hashtable）Hashtable类提供了用户定义键结构的组织数据的手段，哈希表的键的具体含义取决于使用场景和包含的数据。是原始的java.util的一部分，是Dictionary的具体实现，是其子类。Java 2的Hashtable实现了Map接口，所以现在集成到了集合框架中。和HashMap类似，但是支持同步。哈希表的键经过哈希处理得到的散列码用作值的索引
+1. 哈希表：（Hashtable）Hashtable类提供了用户定义键结构的组织数据的手段，哈希表的键的具体含义取决于使用场景和包含的数据。是原始的java.util的一部分，是Dictionary的具体实现，是其子类。Java 2的Hashtable实现了Map接口，所以现在集成到了集合框架中，和HashMap类似，但是支持同步。哈希表的键经过哈希处理得到的散列码用作值的索引
    - 定义：
         ```Java
         Hashtable()
@@ -183,15 +188,21 @@
         ```Java
         Properties capitals = new Properties();
         capitals.put("aa", "11");
+        // 读取配置
+        InputStream in = new BufferedInputStream(new FileInputStream(new File(basePath)));
+        Properties prop = new Properties();
+        prop.load(in);
+        prop.getProperty("path");
         ```
    - 方法
-     1. `String getProperty(String key)` // 搜索属性
-     1. `String getProperty(String key, String defaultProperty)` // 搜索属性
-     1. `void list(PrintStream streamOut/PrintWriter streamOut)` // 属性列表输出流
-     1. `void load(InputStream streamIn) throws IOException` // 从输入流中读取属性列表
-     1. `Enumeration propertyNames( )` // 按简单的面向行的格式从输入字符流中读取属性列表
-     1. `Object setProperty(String key, String value)` // 调用Hashtable的put方法
-     1. `void store(OutputStream streamOut, String description)`
+     1. `load(InputStream streamIn)` // 从输入流中读取属性列表
+     1. `propertyNames( )` // 按简单的面向行的格式从输入字符流中读取属性列表
+     1. `list(PrintStream streamOut/PrintWriter streamOut)` // 属性列表输出流
+     1. `getProperty(String key)` // 搜索属性
+     1. `getProperty(String key, String defaultProperty)` // 搜索属性
+     1. `setProperty(String key, String value)` // 调用Hashtable的put方法
+     1. `store(OutputStream streamOut, String description)` // 输出配置
+     1. `clear()` // 清楚装载的配置
 ### 集合框架
 1. 简介：Java2引入，是用来代表/操作集合的统一架构，集合框架围绕一组标准接口而设计，可以直接使用接口的标准实现，如LinkedList、HashSet、TreeSet，也可以通过接口实现自己的集合。提供了预先包装的数据结构供使用
 1. 理解：是一种工具类，具有共同属性的数据集合。对数据进行组织和大数量的操作，是盛装其他对象的容器

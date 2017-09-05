@@ -298,7 +298,6 @@
       1. GregorianCalendar类：实现公历日历，是Calendar的一个实现
 1. IO
    - 理解：Java.io包几乎包含所有操作输入/输出的类。流可以理解为一个序列的数据
-   - Stream
    - 字节流：FileInputStream/FileOutputStream
    - 字符流：FileReader/FileWriter，一般读写两个字节
    - 标准流：
@@ -396,21 +395,7 @@
         currentFile.delete();
     }
     ```
-1. 正则表达式
-   - 理解：定义了字符串的模式。Java的和Perl类似。存于java.util.regex包
-   - 主要类
-     1. Patten：patten对象是一个正则表达式的编译表示。无公共构造方法，首先调用公共静态编译方法，获得Patten对象，接受一个正则表达式为一参
-     1. Matcher：matcher对象是对输入的字符串进行解释和匹配操作的引擎。无公共构造方法，用Patten的matcher方法获得Matcher对象。
-     1. PattenSyntaxException：非强制异常类，表示正则表达式模式的语法错误
-   - 示例
-      ```Java
-      import java.util.regex.*;
-      String content = "aaa";
-      String pattern = ".\*bbb.\*";
-      boolean isMatch = Pattern.matches(pattern, content); // 返回结果
-      ```
-   - 捕获组：将多个字符当一个独立单元处理的方法。调用matcher对象的groupCount方法统计组数
-1. 错误和异常
+1. 错误和异常
    - 认识：错误和异常是不同的，Throwable是老祖宗，有两个子类：Exception和Error。所有异常类都是Exception的子类
    - 错误： `java.lang.Error`
    - 异常
@@ -456,6 +441,20 @@
         // 声明异常类
         class MyException extends Exception/RuntimeException{}
         ```
+1. 正则表达式
+   - 理解：定义了字符串的模式。Java的和Perl类似。存于java.util.regex包
+   - 主要类
+     1. Patten：patten对象是一个正则表达式的编译表示。无公共构造方法，首先调用公共静态编译方法，获得Patten对象，接受一个正则表达式为一参
+     1. Matcher：matcher对象是对输入的字符串进行解释和匹配操作的引擎。无公共构造方法，用Patten的matcher方法获得Matcher对象。
+     1. PattenSyntaxException：非强制异常类，表示正则表达式模式的语法错误
+   - 示例
+      ```Java
+      import java.util.regex.*;
+      String content = "aaa";
+      String pattern = ".\*bbb.\*";
+      boolean isMatch = Pattern.matches(pattern, content); // 返回结果
+      ```
+   - 捕获组：将多个字符当一个独立单元处理的方法。调用matcher对象的groupCount方法统计组数
 ### Java类库
 1. Java类库，常见的包
    - java.lang：语言包
@@ -463,11 +462,11 @@
      1. 字符处理类
         - String类
         - StringBuffer类
-     1. Math/Character/Date：数学类
-     1. Object：类，`java.lang.Object`，所有类都继承，唯一没有父类的类
+     1. Math/Character/Date：数学日期类
+     1. Object：类，所有类都继承，唯一没有父类的类
      1. 操作类
-        - Class类 (反射类)
-        - ClassLoader类
+        - Class类(反射类)
+        - ClassLoader类
      1. Process：过程类
      1. 系统和运行类
         - System类
@@ -481,12 +480,12 @@
         - TreadDeath
         - Runnable类
    - java.util：实用包
-     1. Random/UUID：随机数/UUID类
+     1. Random/UUID：随机数/UUID类
      1. 数据结构类
-        - LinkedList：链表类
         - Vector：向量类
         - Stack：栈类
         - HashTable：散列表类
+        - LinkedList：链表类
      1. 日期类
         - Date类
         - Calendar类
@@ -515,7 +514,7 @@
             char ch = 'a'; // char数据类型
             char uniChar = '\u039A'; // unicode形式的char数据类型
             char[] charArray ={ 'a', 'b', 'c', 'd', 'e' }; // 字符数组
-            Character ch = new Character('a'); //Character类对象
+            Character a = new Character('a'); //Character类对象
             ```
         - 常用方法：
            1. isLetter()：是否一字母
@@ -643,26 +642,6 @@
      1. round()：返回最接近的int、long值
      1. min、max()：两个参数得最大小值
      1. random()：返回随机值，0到1之间，无参数
-1. Properties
-   - 理解：用于读取配置文件，配置文件有很多是经常改变的，方便脱离程序去修改变量配置。在Java.util包中
-   - 方法
-     1. `load(InputStream inStream)` // 装载配置文件
-     1. `getProperty(String key)` // 读取键值对的值
-     1. `setProperty(String key, String value)`
-     1. `store(OutputStream out, String comments)` // 输出配置
-     1. `clear()` // 清楚装载的配置
-   - 实例
-    ```Java
-    try {
-        InputStream in = new BufferedInputStream(new FileInputStream(new File(basePath)));
-        Properties prop = new Properties();
-        prop.load(in);
-        prop.getProperty("path");
-    } catch (FileNotFoundException e) {
-        System.out.println("properties文件路径书写有误，请检查！");
-    } catch (IOException e) {}
-    return path;
-    ```
 1. UUID
    - 理解：算法的核心思想是结合机器的网卡、当地时间、一个随即数来生成GUID，从理论上讲，如果一台机器每秒产生10000000个GUID，则可以保证（概率意义上）3240年不重复。java 5新增
    - 使用
@@ -674,23 +653,20 @@
    - commons-lang3-3.1.jar
      1. 理解：对JDK中java.lang包的补充，提供了很多Utilities工具类
      1. 使用
-        - `StringUtils.isEmpty()` 字符串的空判断
-        - `StringUtils.trim` 
-        - `StringUtils.split` 字符串的分割
-        - `StringUtils.join` 字符串的连接
+        - `StringUtils.isEmpty()/trim()/split()/join()` 字符串操作
         - `StringEscapeUtils.escapeCsv/escapeHtml4/escapeJava/escapeEcmaScript/escapeXml` 字符串的转义
         - `RandomStringUtils.random/randomAlphabetic/randomAlphanumeric/randomAscii` 随机数
         - `ArrayUtils.add/remove/subarray/clone/contains/indexOf/lastIndexOf/toMap/isEmpty/isNotEmpty/isSameLength/toPrimitive/toObject` 数组
-        - `DateFormatUtils.format` 日期
         - `DateUtils.parseDate/addDays/addMonths/isSameDay/` 日期
+        - `DateFormatUtils.format` 日期
    - commons-beanutils-1.8.3.jar
-     1. 理解：用于操作Bean、url、D
+     1. 理解：用于操作Bean、url、Date
      1. 使用
         - `BeanUtils.getProperty/setProperty/cloneBean/describe/populate/getArrayProperty/getIndexedProperty/getMappedProperty/getProperty/getNestedProperty` Bean
-   - url：`url.getProtocol/getHost/getPath`
-   - ConvertUtils：`ConvertUtils.register(converter, Date.class/String.class);`
-   - Base64
-   - StringHelper
+        - `url.getProtocol/getHost/getPath` url
+        - `ConvertUtils.register(converter, Date.class/String.class);` ConvertUtils
+        - Base64
+        - StringHelper
 ### 面向对象
 1. 封装/继承/多态
    - 封装：将类的实现信息隐藏起来，不能让外部直接访问，而是通过类提供的方法来访问
