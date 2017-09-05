@@ -1,55 +1,8 @@
 ### Java体系结构
-1. 组成
-   - JVM：java虚拟机
-   - API：java应用编程接口，提供了独立于平台的标准接口
-   - 语法
-   - 文件格式
 1. Java体系
-   - Java SE：java平台标准版
-   - Java EE：java平台企业版
+   - Java SE：java平台标准版。包含最普遍的类库，针对普通的java程序
+   - Java EE：java平台企业版。是类库最多、针对web应用的一个规范
    - Java ME：java平台微型版
-1. Java知识点
-   - 基础
-     1. 语言基础
-     1. 流程控制
-     1. 常用类
-   - 面向对象
-     1. 对象与类
-     1. 多态
-     1. 接口与抽象类
-   - 高级
-     1. 异常处理
-     1. I/O、JavaBean
-     1. 反射
-     1. 多线程
-     1. 泛型/Java集合类
-     1. 网络编程
-     1. JVM
-     1. 设计模式
-   - 框架
-     1. Spring、SpringMVC、Structs、Hibernate、MyBatis
-   - 大数据
-     1. Hadoop
-        - 基础
-          1. Hadoop1介绍
-          1. Hadoop1架构
-          1. Hadoop2架构
-          1. HDFS操作
-          1. yarn操作
-        - 应用
-          1. Hive数据仓库
-          1. zk服务
-          1. HBase非关心型数据库
-          1. Sqoop数据库抽取工具
-          1. Flume日志抽取工具
-     1. Spark
-        - 基础
-          1. Spark介绍
-          1. RDD弹性分布式数据集
-          1. Scala编程
-        - 应用
-          1. Spark-SQL组件
-          1. DataFrame组件
 1. 知识体系
    - 组成：
      1. JDK：Java Development Kit，java开发工具包，包含编译器和调试器，运行环境
@@ -59,39 +12,31 @@
      1. 基础：基本类型, 操作符, 运算符, 表达式
      1. 面向对象：类, 继承, 多态, 重写, 重载
      1. 常用类：String, Object, Array, Enum
-     1. 集合框架, List, ArrayList, Set, HashSet, Map, HashMap, HashTable
+     1. 集合类, List, ArrayList, Set, HashSet, Map, HashMap, HashTable
      1. I/O：File, IO, NIO, InputStream, OutputStream, Reader, Writer, Selector
      1. 多线程：并发, Thread, Runnable, Future
-     1. 注解
-     1. 反射
-     1. JDBC
-     1. IOC依赖注入, AOP 面向切面编程
-   - JavaEE
-     1. Servlet
-     1. JSP：JSTL, EL
-     1. Tomcat
+     1. 反射、注解、泛型
+     1. 异常处理
+     1. 多线程
+     1. JDBC、网络编程
+     1. 设计模式、IOC依赖注入, AOP面向切面编程
+     1. JVM
+   - JavaEE：Servlet、JSP等12项规范
    - 框架和库
      1. Spring
-     1. Hibernate,IBatis
+     1. Hibernate,MyBatis
      1. SpringMVC, Struts
      1. Quartz、Ehcache、Apache commons
-   - 版本： 主要区别为基础类库的不同
-     1. Java SE： java标准版，包含最普遍的类库，针对普通的java程序。有面向对象/API/JVM..
-     1. Java EE： java企业版，类库最多的，针对服务器、web应用。本身是一个规范
-        - 多出了Package包，Java容器( Tomcat、 GlassFish、IBM WebSphere )
-        - Java EE的子集Servlet/JSP/EJB/服务
-        - JCP委员会制定Java EE规范，各种实现：sun的GlassFish， IBM的Webspher，开源界的tomcat，jetty，jboss。tomcat是用java进行开发的web软件
-     1. Java ME： 嵌入式开发，进一步缩减，减少整个环境的占用空间，针对性能不高的游戏/移动/通信等设备
-   - 开始
-        ```Java
-        public class HelloWorld {
-            /* 第一个Java程序
-            */
-            public static void main(String[] args) {
-                System.out.println("Hello World");
-            }
+1. 开始
+    ```Java
+    public class HelloWorld {
+        /* 第一个Java程序
+        */
+        public static void main(String[] args) {
+            System.out.println("Hello World");
         }
-        ```
+    }
+    ```
 ### 认识
 1. 认识
    - 多平台运行，强类型
