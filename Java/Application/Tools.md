@@ -65,9 +65,6 @@
    - src/main文件夹中创建java文件夹————并置为sources Root
    - src/main文件夹中创建test文件夹————并置为test
    - 添加Tomcat Server————local————Deployment————添加Aritfact————xx.war选项
-1. Live Template
-   - psvm 主入口
-   - sout 打印输出
 1. 没有web目录，创建web目录并且启动tomcat的方法
    1. edit Configurations————添加tomcat server————local
    1. 添加Artifacts————Web Application：Exploded————From Modules
@@ -90,3 +87,56 @@
         </configuration>
       </plugin>
       ```
+1. 添加词库：Settings————Spelling
+1. Live Template
+   - psvm 主入口
+   - sout 打印输出
+1. 快捷键
+   - 代码操作
+     1. `Control + Enter`：智能辅助输入、getter和setter方法、生成接口类/接口实现类、生成单元测试类
+     1. `Command + N`：getter和setter、构造函数、hashCode/equals,toString
+     1. `Command + D`：复制当前行
+     1. `Command + Delete`：删除当前行
+     1. `Command + Option + T`：包围选中代码，有if、try、for等
+     1. `Command + Shift + Enter`：自动结束代码
+     1. `Command + Option + L`：格式化代码
+   - 选择操作
+     1. `Command + Shift + 上/下`：移动当前行上下
+     1. `Shift + Enter`：开始新一行
+     1. `Control + g`：向下选择相同的
+     1. `Option + Shift + 左键双击`：多选
+     1. `Option + 上/下`：渐进/渐退选择代码
+     1. `Option + 左/右`：左右单词跳转
+     1. `Option + Shift + 左/右`：左右选择单词代码
+     1. `Option + Delete`：删除到单词的开头
+     1. `Option + Fn + Delete`：删除到单词的末尾
+   - 书签
+     1. `Control + Shift + 1`：快速添加书签
+     1. `Control + 1`：快速跳转到书签
+   - 调试
+     1. `F7`：下一步，进入方法
+     1. `F8`：下一步，不进入方法
+     1. `Shift + F8`：跳出
+     1. `Option + F9`：如果光标前有其他断点会进入到该断点
+     1. `Command + F8`：取消/添加当前行断点
+     1. `Command + Option + R`：恢复程序运行，如果该断点下面代码还有断点则停在下一个断点上
+     1. `Command + Shift + F8`：查看断点信息
+   - 查询
+     1. `Double Shift`：查询任何东西
+     1. `Command + Shift + F`：全局查找
+     1. `Command + G`：查找模式下，向下查找
+     1. `Command + Shift + G`：查找模式下，向上查找
+   - 导航
+     1. `Control + 左/右`：标签页切换
+     1. `Command + O`：快捷查找类文件
+     1. `Command + L`：跳转行号
+     1. `Command + B`：跳转到定义的方法
+   - 文件
+     1. `F5`：复制文件
+     1. `F6`：移动文件
+     1. `Shift + F6`：重命名
+   - 其他
+     1. `Control + 上/下`：方法间跳转
+     1. `Command + Shift + U`：大小写切换
+     1. `Command + .`：收缩/放开方法
+     1. `Command + P`：显示方法的参数信息  

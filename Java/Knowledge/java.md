@@ -297,11 +297,17 @@
       1. 字段类型：Calendar.YEAR/MOUTH/DATE/DAY\_OF\_MOUTH/HOUR/HOUR\_OF_DAY/MINUTE/SECOND/DAY\_OF\_WEEK
       1. GregorianCalendar类：实现公历日历，是Calendar的一个实现
 1. IO
-   - 理解：Java.io包几乎包含所有操作输入/输出的类。流可以理解为一个数据的序列
+   - 理解：Java.io包几乎包含所有操作输入/输出的类。流可以理解为一个序列的数据
    - Stream
+   - 字节流：FileInputStream/FileOutputStream
+   - 字符流：FileReader/FileWriter，一般读写两个字节
+   - 标准流：
+     1. Standard Input：System.in
+     1. Standard Output：System.out
+     1. Standard Error：System.err
    - 控制台输入/输出：
      1. System.in、Scanner类：输入
-       - 方法一
+        - 方法一
         ```Java
         // 由System.in完成，在BufferedReader对象中创建字符流
         BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
@@ -312,7 +318,7 @@
         } while(c != 'q');
         String str = br.readLine(); // 读取字符串
         ```
-       - 方法二
+        - 方法二
         ```Java
         // Scanner类，jdk5之后可用获得输入
         Scanner s = new Scanner(System.in);
@@ -329,9 +335,9 @@
         next：一定读取到有效字符才结束输入，自动去掉之前空白，有效符后面的空白作为分隔符和结束符，所有不能输入空格
         nextLine：回车为结束符
         ```
-     1. `System.out.write(b);`：输出
+     1. System.out.write()：输出
 1. File
-   - 读取文件
+   - 读取文件：File类、FileInputStream类
      1. 创建
         ```Java
         // 创建输入流对象
@@ -349,7 +355,7 @@
      1. 其他输入流
         - ByteArrayInputStream
         - DataInputStream
-   - 写入文件
+   - 写入文件：FileOutputStream类
      1. 创建
         ```Java
         // 创建输出流对象
@@ -364,32 +370,32 @@
         - public void write(byte[] w)
         - public void close() throws IOException{}
      1. 其他输出流：ByteArrayOutputStream、DataOutputStream
-   - 目录
-     1. 读取：一个目录即一个对象，
-        ```Java
-        File d = new File(dirname);
-        d.isDirectory(); // 是否是目录
-        d.list(); // 列出文件和文件夹列表
-        ```
-     1. 创建
-        ```Java
-        bool mkdir() // 返回false表明已存在或父级目录不存在
-        bool mkdirs() // 递归创建文件夹
-        // java自动识别win和unit系统的分隔符
-        // 例子
-        String dirname = "/tmp/user/java/bin";
-        File d = new File(dirname);
-        d.mkdirs();
-        ```
-     1. 删除文件/目录
-        ```Java
-        File folder = new File("/tmp/java/test");
-        String[] entries = folder.list();
-        for(String s: entries){
-            File currentFile = new File(folder.getPath(),s);
-            currentFile.delete();
-        }
-        ```
+1. 目录
+   - 读取：一个目录即一个对象
+    ```Java
+    File d = new File(dirname);
+    d.isDirectory(); // 是否是目录
+    d.list(); // 列出文件和文件夹列表
+    ```
+   - 创建：mkdir()/mkdirs()
+    ```Java
+    bool mkdir() // 返回false表明已存在或父级目录不存在
+    bool mkdirs() // 递归创建文件夹
+    // java自动识别win和unit系统的分隔符
+    // 例子
+    String dirname = "/tmp/user/java/bin";
+    File d = new File(dirname);
+    d.mkdirs();
+    ```
+   - 删除文件/目录：delete()
+    ```Java
+    File folder = new File("/tmp/java/test");
+    String[] entries = folder.list();
+    for(String s: entries){
+        File currentFile = new File(folder.getPath(),s);
+        currentFile.delete();
+    }
+    ```
 1. 正则表达式
    - 理解：定义了字符串的模式。Java的和Perl类似。存于java.util.regex包
    - 主要类
