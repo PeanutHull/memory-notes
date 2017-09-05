@@ -53,6 +53,70 @@
      1. 容器的扩展和定制
    - 控制反转
      1. 分类：依赖查找、依赖注入
+1. java程序特点
+     1. 源文件名：必须和类名相同
+     1. 主方法入口：所有java程序由public static void main(String[] args)开始执行
+1. 知识点
+ - 环知识点：基础，web开发，常用框架，工程与设计模式，数据库和网络，数据结构和算法
+ - 扩展知识点：多线程 io jvm 分布式 mysql spring redis mq 微服务
+1. 关键字：不能用于标识符的使用
+     1. 面向对象
+         - 包： package
+         - 修饰符： private、protected、public、 static、 transient
+         - 接口： interface、implements
+         - 抽象类： abstract
+         - 类： class
+         - 继承： extends、final
+         - 类的操作： import、super
+         - 实例化： new、this
+     1. 数据类型
+         - byte、short、int、long
+         - float、double
+         - char
+         - boolean、enum
+     1. 流程控制
+         - if、else
+         - switch、case、default
+         - for，do、while
+         - break、continue
+         - return、void
+     1. 异常
+         - try、catch、 finally 、 throw、throws
+     1. 修饰符
+         - vstrictf
+         - native
+         - volatile、synchronized
+     1. 判断
+         - assert、instanceof
+     1. 未使用
+         - goto，const
+     1. 解释
+         - package： 相关类组成一个包
+
+         - import： 导入类； abstract： 定义抽象类； super： 基类； class： 定义类
+         - interface：一种抽象类型，定义接口，仅有方法和常量的定义； implements： 一个类实现接口
+
+         - extends：继承； final：值初始化后不能被改变/方法不能被重写/类不能再有子类
+         - public： 共有属性或方法； static： 类级别定义，所有实例共享
+         - new：分配新的类实例
+         - byte：8-bit 有符号数据类型；short：16位数字；int：32位整数； long：64位整数；
+
+         - float：32-bit 单精度浮点数； double：64-bit 双精度浮点数； strictfp：严格规则浮点数
+
+         -  char：16-bit Unicode字符数据类型； transient：修饰不要序列化的字段；
+
+         -  void：标记方法不返回任何值
+
+         -  throws：定义方法可能抛出的异常
+
+         -  this：表示当前实例/调用另一个构造函数；
+
+         -  native：表示方法用非java代码实现
+
+         -  synchronized：表示同一时间只能由一个线程访问的代码块
+         -  volatile：标记字段可能被多个线程同时访问而不做同步
+         -  assert：判断条件是否满足 ？
+         -  instanceof：检测对象是否是一个类实例
 ### Java小程序
 1. Applet
    - 理解：java编写的小应用程序，可以包含在html页中，内嵌于浏览器执行。产生于浏览器出现不久还只能支持静态页面的时候，用于创建RIAs，用于提供丰富互联网服务，如动画、动态内容、与服务器通讯、富客户端应用。是java的一种应用程序，要求浏览器支持JVM，作用类似flash，嵌入在html中，现在基本没人用

@@ -449,6 +449,62 @@
 ### 反射
    - 理解：就是看清楚类的存在与否和类的结构，并加以使用
    - Class类的使用
+### 多线程
+1. 理解：阻塞当前进程，让出cpu。是并发执行的，线程多了因为上下文的切换反而效率下降，使用更小资源开销，轮候使用cpu，存在等待
+1. 重难点
+   - ThreadPoolExecutor
+   - J.U.C
+   - Atomic*
+   - Fork/Join
+1. 状态
+   - 新建：new或者Thread类及其子类建立线程对象后
+   - 就绪：线程对象调用start()后，等待JVM调度器的调度
+   - 运行：获取cpu资源，可以执行run()，可以变为就绪、阻塞、死亡状态
+   - 阻塞：三种阻塞类型
+     1. 等待阻塞：运行中的线程执行wait()方法
+     1. 同步阻塞：线程获取synchronized同步锁失败
+     1. 其他阻塞：调用sleep()或join()发出io请求时，当这些结束时，线程重新进入就绪状态
+   - 死亡：完成任务或者终止条件发生时
+1. 优先级：整数，范围1~10，默认5，但是不能保证线程执行的顺序，非常依赖于平台
+1. 创建
+   - 实现Runnable接口
+        ```Java
+        class RunnableDemo implements Runnable {}
+        ```
+   - 继承Thread类
+     1. 实例
+        ```Java
+        class ThreadDemo extends Thread {}
+        ```
+     1. 普通方法
+          1. `public void start()` // 线程开始执行，JVM调用run方法
+          1. `public void run()` // 
+          1. `public void interrupt()` // 中断线程
+          1. `public final boolean isAlive()` // 检测是否处于活动状态
+          1. `public final void setName(String name)/setPriority(int priority)` // 设置名字、优先级
+          1. `public final void setDaemon(boolean on)` // 设为守护线程或用户线程
+          1. `public final void join(long millisec)` // 设置等待该线程的最长时间
+     1. 静态方法
+          1. `public static void yield()` // 暂停当前进程，执行其他进程
+          1. `public static void sleep(long millisec)` // 毫秒数休眠
+          1. `public static boolean holdsLock(Object x)` // 当且仅当当前线程在指定的对象上保持监视器锁时，才返回 true
+          1. `public static Thread currentThread()` // 返回对当前正在执行的线程对象的引用
+          1. `public static void dumpStack()` // 将当前线程的堆栈跟踪打印至标准错误流
+   - 通过Callable和Future
+        ```Java
+        public class CallableThreadTest implements Callable<Integer> {
+            public static void main(String[] args)  {
+                CallableThreadTest ctt = new CallableThreadTest();
+                FutureTask<Integer> ft = new FutureTask<>(ctt);
+            }
+        }
+        @Override
+        public Integer call() throws Exception  {
+            Thread.currentThread().getName();
+        }
+        ```
+   - 比较：使用Runnable、Callable还可以继承其他类，使用Thread，直接使用this获得当前线程
+1. 概念：线程同步、线程间通信、线程死锁、线程控制(挂起/停止/恢复)
 ### 代理模式
 1. 理解：代理是一种设计模式，提供了对目标对象另外的访问方式，即通过代理对象访问目标对象。
    - 三方角色：用户、代理对象、目标对象。代理对象是对目标对象的扩展
@@ -571,62 +627,6 @@
         proxy.save();
         ```
 1. 价值：可以在实现目标对象的基础上,增强额外的功能操作和功能扩展。不要随意修改已经写好的代码，如需修改使用代理的方式扩展该方法
-### 多线程
-1. 理解：阻塞当前进程，让出cpu。是并发执行的，线程多了因为上下文的切换反而效率下降，使用更小资源开销，轮候使用cpu，存在等待
-1. 重难点
-   - ThreadPoolExecutor
-   - J.U.C
-   - Atomic*
-   - Fork/Join
-1. 状态
-   - 新建：new或者Thread类及其子类建立线程对象后
-   - 就绪：线程对象调用start()后，等待JVM调度器的调度
-   - 运行：获取cpu资源，可以执行run()，可以变为就绪、阻塞、死亡状态
-   - 阻塞：三种阻塞类型
-     1. 等待阻塞：运行中的线程执行wait()方法
-     1. 同步阻塞：线程获取synchronized同步锁失败
-     1. 其他阻塞：调用sleep()或join()发出io请求时，当这些结束时，线程重新进入就绪状态
-   - 死亡：完成任务或者终止条件发生时
-1. 优先级：整数，范围1~10，默认5，但是不能保证线程执行的顺序，非常依赖于平台
-1. 创建
-   - 实现Runnable接口
-        ```Java
-        class RunnableDemo implements Runnable {}
-        ```
-   - 继承Thread类
-     1. 实例
-        ```Java
-        class ThreadDemo extends Thread {}
-        ```
-     1. 普通方法
-          1. `public void start()` // 线程开始执行，JVM调用run方法
-          1. `public void run()` // 
-          1. `public void interrupt()` // 中断线程
-          1. `public final boolean isAlive()` // 检测是否处于活动状态
-          1. `public final void setName(String name)/setPriority(int priority)` // 设置名字、优先级
-          1. `public final void setDaemon(boolean on)` // 设为守护线程或用户线程
-          1. `public final void join(long millisec)` // 设置等待该线程的最长时间
-     1. 静态方法
-          1. `public static void yield()` // 暂停当前进程，执行其他进程
-          1. `public static void sleep(long millisec)` // 毫秒数休眠
-          1. `public static boolean holdsLock(Object x)` // 当且仅当当前线程在指定的对象上保持监视器锁时，才返回 true
-          1. `public static Thread currentThread()` // 返回对当前正在执行的线程对象的引用
-          1. `public static void dumpStack()` // 将当前线程的堆栈跟踪打印至标准错误流
-   - 通过Callable和Future
-        ```Java
-        public class CallableThreadTest implements Callable<Integer> {
-            public static void main(String[] args)  {
-                CallableThreadTest ctt = new CallableThreadTest();
-                FutureTask<Integer> ft = new FutureTask<>(ctt);
-            }
-        }
-        @Override
-        public Integer call() throws Exception  {
-            Thread.currentThread().getName();
-        }
-        ```
-   - 比较：使用Runnable、Callable还可以继承其他类，使用Thread，直接使用this获得当前线程
-1. 概念：线程同步、线程间通信、线程死锁、线程控制(挂起/停止/恢复)
 ### 网络编程
 1. 理解：java.net包中，有接口和类提供低层次的通信细节。
 1. Socket编程
