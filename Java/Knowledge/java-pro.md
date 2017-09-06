@@ -204,10 +204,12 @@
      1. `store(OutputStream streamOut, String description)` // 输出配置
      1. `clear()` // 清楚装载的配置
 ### 集合框架
-1. 简介：Java2引入，是用来代表/操作集合的统一架构，集合框架围绕一组标准接口而设计，可以直接使用接口的标准实现，如LinkedList、HashSet、TreeSet，也可以通过接口实现自己的集合。提供了预先包装的数据结构供使用
-1. 理解：是一种工具类，具有共同属性的数据集合。对数据进行组织和大数量的操作，是盛装其他对象的容器
-1. 价值：和数组对比，容量是可以动态变的，不仅仅使用整形的下标访问元素
-1. 分类
+1. 总结
+   - ArrayList 排列有序可重复
+   - HashMap 键值对
+   - HashSet 排列无序不可重复
+1. 简介：是一种工具类，具有共同属性的数据集合，是盛装其他对象的容器，Java2引入，是用来代表/操作集合的统一架构，集合框架围绕一组标准接口而设计，可以直接使用接口的标准实现，常用有ArrayList、HashMap，HashSet不常用。
+1. 组成
    - Collection：内部存储的都是一个个的对象，单个的
      1. List：序列，排列有序可重复
         - ArrayList：数组序列，底层由数组实现
@@ -222,61 +224,48 @@
      1. Comparable接口：默认比较规则
      1. Comparator接口：临时比较规则
 1. Collection
-   - 比较：
-     1. List查询效率高，插入和删除低，因为改起其他元素改变；Set查询效率低，插入和删除效率高
-     1. Set没有List的get方法，想要访问只能通过foreach和iterator方法遍历，而且每次迭代的结果都不一样。Set中不论添加多少次，因为不能重复，所以只能有一个
-   - Java.util.Collections：工具类
-1. Map：映射，用来存储键值对。可以通过key查找value。内部以映射存储数据，就是Entry(键值对)类的实例，key和value可以是任意的对象。key不可重复，value可以。支持泛型：`Map<k,v>`
-   - 特点
-     1. 访问的值不存在，抛出NoSuchElementException异常
-     1. 对象类型和Map的元素类型不兼容时，抛出ClassCastException
-     1. 不允许使用Null对象的Map中使用Null，抛出NullPointerException
-     1. 修改只读Map时，抛出UnsupportedOperationException
+   - List：查询效率高，插入和删除低，因为引起其他元素改变。Set查询效率低，插入和删除效率高
+     1. `AbstractList`：继承于AbstractCollection，实现了大部分List接口。子类AbstractSequentialList提供对数据元素的链式访问，不是随机访问
+     1. `ArrayList`：实现可变大小的数组，线程不同步
+     1. `LinkedList`：实现了List接口，允许null存在。用于创建链表数据结构，查找效率低。没有同步方法，多线程需要自己实现访问同步，解决方案：创建List时候构造一个同步的List。
+   - Set：没有get方法，想要访问只能通过foreach和iterator方法遍历，而且每次迭代的结果都不一样。Set中不论添加多少次，因为不能重复，所以只能有一个
+     1. `AbstractSet`：继承于AbstractCollection，实现大部分Set接口
+     1. `HashSet`：不允许元素重复，不保证元素顺序，最多有一个null值
+     1. `LinkedHashSet`：可预知迭代顺序的Set接口的哈希表和链接列表实现
+     1. `TreeSet`：实现Set接口，实现排序等功能
+1. Map：映射，用来存储键值对
+   - 特点：通过key查找value。内部以映射存储数据，就是Entry(键值对)类的实例，key和value可以是任意的对象。key不可重复，value可以。支持泛型：`Map<k,v>`
+   - 组成
+     1. `AbstractMap`：实现大部分Map接口
+     1. `HashMap`：是一个散列表，访问速度很快，线程不同步，键最多一个null
+        - `WeakHashMap`：弱秘钥的哈希表
+        - `LinkedHashMap`：按自然顺序对元素排序
+        - `IdentityHashMap`：比较文档时使用引用相等
+     1. `TreeMap`：使用一棵树
+     1. `synchronizedMap`：具有线程同步的能力
    - 方法
      1. `Object get(Object k)` // 通过键返回值，不存在为null
      1. `Object put(Object k, Object v)` // 更新或添加
      1. `Object remove(Object k)` // 通过键删除
      1. `void putAll(Map m)` // 一个映射复制到另一个映射
-     1. 
      1. `boolean equals(Object obj)` // 比价指定的对象和此映射是否相同
      1. `boolean containsKey(Object k)` // 是否存在指定键
      1. `boolean containsValue(Object v)` // 是否存在指定值
      1. `int size( )` // 返回关系数量
      1. `boolean isEmpty()` // 是否为空
      1. `void clear( )` // 删除所有映射关系
-     1. 
      1. `Set keySet( )` // 返回键的Set视图
      1. `Collection values( )` // 返回值的Collection视图
      1. `Set entrySet( )` // 返回映射关系的Set视图
-     1. 
      1. `int hashCode()` // 返回映射的哈希码值
    - 实例
     ```Java
     Map map = Maps.newHashMap();
     ```
-1. 内部组成
-   - 组成：接口、实现类(集合类)、算法（如搜索和排序）
-     1. 接口
-        - `Collection`：最基本集合接口，java不提供直接继承自Collection的类来使用，只提供继承Collection的子接口，如List和Set
-        - `List`：是有序的，精确控制每个元素的位置。通过索引(类似数组的小标)访问其中的元素，允许有相同元素
-        - `Set`：无序的，与Collection完全一样，但是行为上不同。不能有相同元素，访问集合中的元素只能根据元素本身来访问。子接口SortedSet接口保存有序集合
-        - `Map`：唯一键映射到值。Map.Entry描述Map中的键值对，是Map的内部类。子接口SortedMap，使key保持升序
-        - `Enumeration`：一个传统的接口和数据定义方法，已被迭代器取代
-     1. 集合类：具体类可以直接使用，抽象类提供了接口的部分实现
-        - `AbstractCollection`：实现了大部分的集合接口
-        - `AbstractList`：继承于AbstractCollection，实现了大部分List接口。子类AbstractSequentialList提供对数据元素的链式访问，不是随机访问
-        - `ArrayList`：实现可变大小的数组，非同步        
-        - `LinkedList`：实现了List接口，允许null存在。用于创建链表数据结构，查找效率低。没有同步方法，多线程需要自己实现访问同步，解决方案：创建List时候构造一个同步的List。
-        - `AbstractSet`：继承于AbstractCollection，实现大部分Set接口
-        - `HashSet`：不允许元素重复，不保证元素顺序，最多有一个null值
-        - `LinkedHashSet`：可预知迭代顺序的Set接口的哈希表和链接列表实现
-        - `TreeSet`：实现Set接口，实现排序等功能
-        - `AbstractMap`：实现大部分Map接口
-        - `HashMap`：是一个散列表，是键值对的映射。根据键的哈希值存储数据，访问速度很快。线程不同步，即任意时刻可有多个线程同时写HashMap，可能导致数据不一致，使用synchronizedMap方法具有同步的能力。键最多一个null。WeakHashMap：弱秘钥的哈希表；LinkedHashMap：按自然顺序对元素排序；IdentityHashMap：比较文档时使用引用相等
-        - `TreeMap`：使用一棵树
-     1. 集合算法：被定义为集合类的静态方法，定义了三个静态变量：EMPTY\_SET，EMPTY\_LIST，EMPTY_MAP，不可改变
-   - 迭代器：Iterator，用来遍历集合中的元素，类似for和增强for，继承自Iterator接口或继承自ListIterator
-     1. 遍历ArrayList
+1. 工具类
+   - Java.util.Collections
+1. 迭代器：Iterator，用来遍历集合中的元素，类似for和增强for，继承自Iterator接口或继承自ListIterator
+   - 遍历ArrayList
         ```Java
         // for循环
         for(int i=0;i<list.size();i++) {}
@@ -290,12 +279,16 @@
         Iterator<String> ite=list.iterator();
         while(ite.hasNext()) {}
         ```
-     1. 遍历Map
+   - 遍历Map
         ```Java
         // 通过Map.keySet遍历
         for (String key : map.keySet()) {
             tmpKey = key
             tmpValue = map.get(key));
+        }
+        // 通过Map.values()遍历所有的value，但不能遍历key
+        for (String v : map.values()) {
+            tmpValue = v;
         }
         // 通过Map.entrySet使用iterator遍历
         Iterator<Map.Entry<String, String>> it = map.entrySet().iterator();
@@ -309,36 +302,53 @@
             tmpKey = entry.getKey();
             tmpValue = entry.getValue();
         }
-        // 通过Map.values()遍历所有的value，但不能遍历key
-        for (String v : map.values()) {
-            tmpValue = v;
-        }
         ```
-   - 比较器：Comparator，用来精确定义排序规则，以不同方式排序集合
-1. 特点：对基本集合(动态数组/链表/树/哈希表)的实现是高性能的，允许不同类型的集合以类似的方式工作，对集合的扩展和适应是简单的。重点是ArrayList、HashSet、HashMap
+1. 比较器：Comparator，用来精确定义排序规则，以不同方式排序集合
+1. 内部组成
+     1. 接口
+        - `Collection`：最基本集合接口，java不提供直接继承自Collection的类来使用，只提供继承Collection的子接口，如List和Set
+        - `List`：是有序的，精确控制每个元素的位置。通过索引(类似数组的小标)访问其中的元素，允许有相同元素
+        - `Set`：无序的，与Collection完全一样，但是行为上不同。不能有相同元素，访问集合中的元素只能根据元素本身来访问。子接口SortedSet接口保存有序集合
+        - `Map`：唯一键映射到值。Map.Entry描述Map中的键值对，是Map的内部类。子接口SortedMap，使key保持升序
+        - `Enumeration`：一个传统的接口和数据定义方法，已被迭代器取代
+     1. 集合类：即接口的实现类
+        - `AbstractCollection`：实现了大部分的集合接口
+        - 其他具体的：ArrayList、HashMap、HashSet等
+     1. 集合算法：用于搜索和排序，被定义为集合类的静态方法，定义了三个静态变量：EMPTY\_SET，EMPTY\_LIST，EMPTY_MAP，不可改变
 ### 注解
 1. 理解：Java5.0引入，是一种应用于类、方法、参数、变量、构造器及包声明中的特殊修饰符。是描述数据的数据，也叫元数据。和具体业务逻辑无关
 1. 价值：功能声明。XML的描述功能维护非常困难，只适用于设置很多参数，耦合代码并且声明作用需要简单直接的方法
-1. 原理
-   - 编写自定义注解
-     1. 元注解
-        - @Documented 注解是否将包含在JavaDoc中
-        - @Retention 什么时候使用该注解
-          1. RetentionPolicy.SOURCE 编译阶段丢弃
-          1. RetentionPolicy.CLASS 类加载时丢弃
-          1. RetentionPolicy.RUNTIME 始终不会丢弃
-        - @Target 注解用于什么地方
-        - @Inherited –是否允许子类继承该注解
-          1. ElementType.TYPE:用于描述类、接口或enum声明
-          1. ElementType.FIELD:用于描述实例变量
-          1. ElementType.METHOD
-          1. ElementType.PARAMETER
-          1. ElementType.CONSTRUCTOR
-     1. 反射方法
-        - `getAnnotations()` 返回该元素的所有注解
-        - `isAnnotationPresent(annotation)` 检查传入的注解是否存在于当前元素
-        - `getAnnotation(class)` 按照传入的参数获取指定类型的注解
-     1. 例子
+1. 分类
+   - Java SE5内置三种标准注解
+     1. @Override 覆盖超类方法
+     1. @Deprecated 表示弃用的代码
+     1. @SuppressWarnings 关闭不当编译器警告信息
+   - Servlet3.0新增
+     1. `WebInitParam` 声明Servlet/过滤器的初始化参数
+     1. `WebServlet` 声明一个Servlet的配置
+     1. `WebFilter` 声明一个Server过滤器
+     1. `WebListener` 事件声明监听器
+     1. `HandlesTypes` 表示一组传递给ServletContainerInitializer的应用类
+     1. `HttpConstraint`  该注解代表所有HTTP方法的应用请求的安全约束
+1. 编写自定义注解
+   - 元注解
+     1. @Documented 注解是否将包含在JavaDoc中
+     1. @Retention 什么时候使用该注解
+        - RetentionPolicy.SOURCE 编译阶段丢弃
+        - RetentionPolicy.CLASS 类加载时丢弃
+        - RetentionPolicy.RUNTIME 始终不会丢弃
+     1. @Target 注解用于什么地方
+     1. @Inherited –是否允许子类继承该注解
+        - ElementType.TYPE:用于描述类、接口或enum声明
+        - ElementType.FIELD:用于描述实例变量
+        - ElementType.METHOD
+        - ElementType.PARAMETER
+        - ElementType.CONSTRUCTOR
+   - 反射方法
+     1. `getAnnotations()` 返回该元素的所有注解
+     1. `isAnnotationPresent(annotation)` 检查传入的注解是否存在于当前元素
+     1. `getAnnotation(class)` 按照传入的参数获取指定类型的注解
+   - 例子
         ```Java
         // 定义注解
         @Target(ElementType.METHOD)
@@ -347,7 +357,6 @@
             public enum Priority {LOW, MEDIUM, HIGH}
             public enum Status {STARTED, NOT_STARTED}
             String author() default "peanut";
-
             Priority priority() default Priority.LOW;
             Status status() default Status.NOT_STARTED;
         }
@@ -366,24 +375,10 @@
             }
         }
         ```
-1. 使用
-   - 分类
-     1. Java SE5内置三种标准注解
-        - @Override 覆盖超类方法
-        - @Deprecated 表示弃用的代码
-        - @SuppressWarnings 关闭不当编译器警告信息
-     1. Servlet3.0新增
-        - `WebInitParam` 声明Servlet/过滤器的初始化参数
-        - `WebServlet` 声明一个Servlet的配置
-        - `WebFilter` 声明一个Server过滤器
-        - `WebListener` 事件声明监听器
-        - `HandlesTypes` 表示一组传递给ServletContainerInitializer的应用类
-        - `HttpConstraint`  该注解代表所有HTTP方法的应用请求的安全约束
 ### 泛型
 1. 泛型
-   - 理解：JDK5引入的新特性，提供编译时的类型检测。即参数的类型
-   - 特点
-     1. 泛型集合中的限定类型，不能使用基本数据类型，非要使用就通过包装类限定存入的类型。如int就用Integer
+   - 理解：为了参数化类型，JDK5引入的新特性，提供编译时的参数类型检测
+   - 特点：泛型集合中的限定类型，不能使用基本数据类型，必须使用包装类
    - 泛型变量
         ```Java
         // 普通定义方式
@@ -397,69 +392,64 @@
         public List<Course> course; // 带有泛型的变量
         course = new ArrayList<Course>(); // 赋值带有泛型的变量
         ```
-   - 泛型方法：根据参数类型，泛型方法适当处理每一个方法调用
-     1. 特点：都有尖括号分隔的类型参数声明部分，这个部分包含n个类型的参数，称为类型变量。类型参数能被用来声明返回值类型，也能作为泛型方法的得到实参的占位符，即引用类型，不是原始类型。接口、类和方法也都可以使用泛型去定义
-     1. 举例
+   - 泛型方法：在调用方法的时候指明泛型的具体类型，根据参数类型，泛型方法适当处理每一个方法调用
+     1. 特点
+        - <T>声明此方法为泛型方法，才能使用T作为返回值
+        - T可以随便写为任意标识，如T、E、K、V等
+     1. 定义
         ```Java
-        // 泛型方法 printArray                         
-        public static < E > void printArray( E[] inputArray ){
-            // 输出数组元素            
-            for ( E element : inputArray ){        
-                System.out.printf( "%s ", element );
-            }
+        public static <T> T genericMethod(Class<T> tClass) throws InstantiationException, IllegalAccessException{
+            T instance = tClass.newInstance();
+            return instance;
         }
-        // 可以传入不同类型
-        Integer[] intArray = { 1, 2, 3, 4, 5 };
-        Double[] doubleArray = { 1.1, 2.2, 3.3, 4.4 };
-        printArray( intArray  ); // 传递一个整型数组
-        printArray( doubleArray ); // 传递一个双精度型数组
-        // 有界的类型参数
-        public static <T extends Comparable<T>> T maximum(T x, T y, T z)
         ```
-   - 泛型类：类后面加类型参数声明部分，包含n个类型参数
+     1. 泛型方法和可变参数
+        ```java
+        public <T> void printMsg(T... args){
+            for(T t : args){}
+        }
+        ```
+   - 泛型类：类后面加类型参数声明部分，在实例化该类时，必须指明泛型T的具体类型
      1. 定义
         ```Java
         public class Box<T> {
             private T t;
-            public void add(T t) {
-                this.t = t;
-            }
-            public T get() {
-                return t;
-            }
-            // 使用
-            public static void main(String[] args) {
-                Box<Integer> integerBox = new Box<Integer>();
-                Box<String> stringBox = new Box<String>();
-
-                integerBox.add(new Integer(10));
-                stringBox.add(new String("菜鸟教程"));
-
-                // integerBox.get()
-                // stringBox.get()
-            }
         }
         ```
-   - 类型通配符:用?代替具体的类型参数，如List<?>可以代表List\<String>,List\<Integer>等
+   - 泛型接口
+        ```java
+        public interface Generator<T> {}
+        ```
+   - 类型通配符:用?代替具体的类型参数，此处?是类型实参，而不是类型形参，?也是一种实际的类型，看成所有类型的父类
         ```Java
         public static void getData(List<?> data) {}
+        ```
+   - 有界的类型参数
+        ```java
+        public static <T extends Comparable<T>> T maximum(T x, T y, T z)
         // 只接受Number及其子类型
         public static void getUperNumber(List<? extends Number> data)
         ```
+   - 泛型数组
+        ```java
+        List<String>[] ls = new ArrayList[10];
+        List<?>[] ls = new ArrayList<?>[10]; // 最后取出数据要做显式的类型转换
+        List<String>[] ls = new ArrayList<String>[10]; // 这样不可以
+        ```
 ### 反射
-   - 理解：就是看清楚类的存在与否和类的结构，并加以使用
+   - 理解：获取类的名称、变量、方法等信息
    - Class类的使用
 ### 多线程
-1. 理解：阻塞当前进程，让出cpu。是并发执行的，线程多了因为上下文的切换反而效率下降，使用更小资源开销，轮候使用cpu，存在等待
+1. 理解：使用更小资源开销，轮候使用cpu，存在等待，线程多了因为上下文切换反而效率下降
 1. 重难点
    - ThreadPoolExecutor
    - J.U.C
    - Atomic*
    - Fork/Join
 1. 状态
-   - 新建：new或者Thread类及其子类建立线程对象后
+   - 新建：Thread类及其子类建立线程对象后
    - 就绪：线程对象调用start()后，等待JVM调度器的调度
-   - 运行：获取cpu资源，可以执行run()，可以变为就绪、阻塞、死亡状态
+   - 运行：获取cpu资源，可以执行run方法，可以变为就绪、阻塞、死亡状态
    - 阻塞：三种阻塞类型
      1. 等待阻塞：运行中的线程执行wait()方法
      1. 同步阻塞：线程获取synchronized同步锁失败
@@ -504,14 +494,22 @@
         }
         ```
    - 比较：使用Runnable、Callable还可以继承其他类，使用Thread，直接使用this获得当前线程
-1. 概念：线程同步、线程间通信、线程死锁、线程控制(挂起/停止/恢复)
+1. 概念
+   - 线程控制(挂起/停止/恢复)
+   - 线程同步：即任意时刻只能有一个线程同时写，可以保证数据一致
+   - 线程死锁
+   - 线程间通信
 ### 代理模式
-1. 理解：代理是一种设计模式，提供了对目标对象另外的访问方式，即通过代理对象访问目标对象。
+1. 理解：代理是一种设计模式，提供了对目标对象另外的访问方式，即通过代理对象访问目标对象
    - 三方角色：用户、代理对象、目标对象。代理对象是对目标对象的扩展
-   - 分类
-     1. 静态代理
-        - 理解：静态代理在使用时,需要定义接口或者父类,被代理对象与代理对象一起实现相同的接口或者是继承相同父类。就是把目标对象传入代理对象实例化，然后调用相同方法，代理对象中多加了一些方法，适当时候调用目标对象的方法。就是套了一层，然后执行
-        - 示例
+1. 价值：可以在实现目标对象的基础上,增强额外的功能操作和功能扩展。不要随意修改已经写好的代码，如需修改使用代理的方式扩展该方法   
+1. 分类
+   - 静态代理
+     1. 理解：静态代理在使用时,需要定义接口或者父类,被代理对象与代理对象一起实现相同的接口或者是继承相同父类。就是把目标对象传入代理对象实例化，然后调用相同方法，代理对象中多加了一些方法，适当时候调用目标对象的方法。就是套了一层，然后执行
+     1. 特点
+        - 可以在不修改目标代理前提下，实现功能拓展
+        - 会产生很多代理类，要维护两份类
+     1. 示例
         ```Java
         public interface IUserDao {void save();} // 接口
         public class UserDao implements IUserDao { public void save() {}} // 目标对象
@@ -536,22 +534,19 @@
             proxy.save();
         }
         ```
-        - 特点
-          1. 可以在不修改目标代理前提下，实现功能拓展
-          1. 会产生很多代理类，要维护两份类
-     1. 动态代理
-        - 理解：利用API在内存中构建代理对象，也叫JDK代理,接口代理
-        - 使用
+   - 动态代理
+     1. 理解：利用API在内存中构建代理对象，也叫JDK代理,接口代理
+     1. 使用
         ```Java
-        代理类所在包：java.lang.reflect.Proxy
+        代理类所在包：java.lang.reflect.Proxy
         实现方法：static Object newProxyInstance(ClassLoader loader, Class<?>[] interfaces,InvocationHandler h )
         参数：
         `ClassLoader loader` 指定当前目标对象使用类加载器
         `Class<?>[] interfaces` 目标对象实现的接口的类型
         `InvocationHandler h` 把当前执行目标对象的方法作为参数传入
         ```
-        - 特点：代理对象不需要实现接口,但是目标对象一定要实现接口
-        - 示例
+     1. 特点：代理对象不需要实现接口,但是目标对象一定要实现接口
+     1. 示例
         ```Java
         public class ProxyFactory{ // 代理类
             // 维护一个目标对象
@@ -586,17 +581,16 @@
         // 执行方法   【代理对象】
         proxy.save();
         ```
-      1. Cglib代理
-        - 理解：以目标对象子类的方式在内存中构建子类实现代理，也叫子类代理
-        - 价值：适用于目标对象没有实现接口的情况，可以在运行期扩展java类和实现java接口，被spring aop使用来提供interception(拦截)
-        - 原理：Cglib包的底层是通过使用一个小而块的字节码处理框架ASM来转换字节码并生成新的类
-        - 举例
+   - Cglib代理
+     1. 理解：以目标对象子类的方式在内存中构建子类实现代理，也叫子类代理
+     1. 价值：适用于目标对象没有实现接口的情况，可以在运行期扩展java类和实现java接口，被spring aop使用来提供interception(拦截)
+     1. 原理：Cglib包的底层是通过使用一个小而块的字节码处理框架ASM来转换字节码并生成新的类
+     1. 举例
         ```Java
         public class ProxyFactory implements MethodInterceptor{
             //维护目标对象
             private Object target;
             public ProxyFactory(Object target) {this.target = target;}
-
             //给目标对象创建一个代理对象
             public Object getProxyInstance(){
                 //1.工具类
@@ -608,7 +602,6 @@
                 //4.创建子类(代理对象)
                 return en.create();
             }
-
             @Override
             public Object intercept(Object obj, Method method, Object[] args, MethodProxy proxy) throws Throwable {
                 // 其他逻辑
@@ -626,7 +619,6 @@
         //执行代理对象的方法
         proxy.save();
         ```
-1. 价值：可以在实现目标对象的基础上,增强额外的功能操作和功能扩展。不要随意修改已经写好的代码，如需修改使用代理的方式扩展该方法
 ### 网络编程
 1. 理解：java.net包中，有接口和类提供低层次的通信细节。
 1. Socket编程

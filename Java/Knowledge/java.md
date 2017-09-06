@@ -771,6 +771,7 @@
    - 特点
      1. 返回值类型为void的不能有return
      1. 参数：参数类型和参数名组成，空格隔开
+     1. 定义方法时有形参，调用方法时传递实参
    - 定义：以字母、下划线、美元符开头，可包括数字
     ```Java
     public String show(String str) { return str; }
