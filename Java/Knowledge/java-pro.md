@@ -437,8 +437,61 @@
         List<String>[] ls = new ArrayList<String>[10]; // 这样不可以
         ```
 ### 反射
-   - 理解：获取类的名称、变量、方法等信息
-   - Class类的使用
+1. 总结
+   - 获得类类型：Foo.class/foo.getClass()/Class.forName()
+   - 获得实例对象：c1.newInstance()
+   - 方法反射的操作：m.invoke()
+1. 理解：获取类的名称、变量、方法等信息。java中只有基本数据类型和静态成员不是对象，其他都是对象。类是java.lang.Class类的对象
+1. Class类的使用
+   - 获得类或者实例对象
+     1. Class的实例对象的获取，即得到类类型
+        - `CLass c1 = Foo.class` 通过类本身的隐含静态成员变量获取类类型
+        - `Class c2 = foo.getClass()` 通过实例化后的对象获取类类型，c1等于c2的，
+        - `Class c3 = Class.forName('com.imooc.reflect.foo')` 通过Class类的方法
+     1. 通过类类型获取实例对象
+        - `Foo foo = (Foo) c1.newInstance()` 要做强制类型转换
+   - 获取类的基本信息
+     1. 方法
+        - `c.getName()` 类名
+        - `c.getSimpleName()` 不包含包名
+     1. 实例
+        ```java
+        Class c1 = double.class;
+        Class c2 = Double.class;
+        Class c3 = void.class;
+        ```
+   - 获取成员变量的信息：成员变量也是对象，继承java.lang.reflect.Field
+     1. `c.getFields()` 获取所有public的成员变量的信息
+     1. `c.getDeclaredFields()` 获取自己声明的所有变量
+     1. `field.getName` 成员变量的名称
+     1. `field.getType()` 成员变量的类型的类类型
+   - 获取方法的信息
+     1. `c.getMethods()` 获取所有public的方法，包含继承来的
+     1. `c.getDeclaredMethods()` 获取该类所有的自己声明的方法，忽略访问权限
+     1. `method.getName()` 获取方法名
+     1. `method.getReturnType()` 方法的返回值类类型
+     1. `method.getParameterTypes()` 方法的参数类类型 
+   - 获取构造函数的信息：构造函数继承java.lang.Constructor
+     1. `c.getConstructtor()` 获取所有public的构造方法，包含继承来的
+     1. `c.getDeclaredConstructtor()` 获取自己定义的所有的构造方法
+     1. `constructor.getName()`
+     1. `constructor.getParameterTypes()`
+1. 动态加载类
+   - 理解：区分编译和运行。编译时刻加载类是静态加载类，运行时加载类是动态加载类
+   - 实现：将需要被加载的类都实现同一接口，用`Class.forName()`获取类类型和`newInstance()`实例化对象来动态加载类
+   - 实例
+    ```java
+    Class c = Class.ForName(className);
+    interfaceName obj = (interfaceName) c.newInstance();
+    obj.method();
+    ```
+1. 方法的反射
+   - 方法反射的操作：invoke
+    ```java
+    Class c = a.getClass();
+    Method m = c.getMethod("methodName", Int.class, Double.class); // 跟参数类型，没有这里和下一句就不写
+    m.invoke(a, 1, 1,1);
+    ```
 ### 多线程
 1. 理解：使用更小资源开销，轮候使用cpu，存在等待，线程多了因为上下文切换反而效率下降
 1. 重难点

@@ -805,6 +805,8 @@
                 sum += paramName[i];
             }
         }
+        // 或者写成数组形式
+        public static void printMax(new Class[]int.class, int.class{}) {}
         ```
      1. 特点
         - 只能出现在参数列表的最后
