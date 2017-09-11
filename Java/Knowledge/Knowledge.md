@@ -147,6 +147,10 @@
      1. 可以直接调用java API
      1. JDK支持三大操作系统
      1. css定义外观，有WebView、3D图形、富文本、多点触控
+### JSF
+1. 理解：Java Server Faces，Java EE中构建web页面的，基于事件绑定，基本没人用
+1. 组成
+   - Facelets：是jsf MVC的视图部分，利用数据将模板转为html
 ### 大数据
 1. Hadoop
    - 基础
