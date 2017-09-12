@@ -147,7 +147,7 @@
    - exception：Throwable
 1. Servlet项目结构
    - src：源码目录
-   - webapp：用于存放web资源，WEB-INF是java web应用固定的存放配置和类库的目录
+   - webapp：用于存放web资源，WEB-INF是java web应用固定的存放配置和类库的目录，是安全目录，只有服务端能访问
    - web.xml是配置文件，也叫部署描述符
 1. Servlet的生命周期
    - init()
@@ -482,7 +482,7 @@
 	request.getRequestDispatcher("/要跳转的页面相对地址").forward(request, response); // 转发请求，地址不变
 	```
 ### JSP
-1. 理解：`Java Server Pages` 是简化的servlet设计，在html中插入java代码(Scriptlet)和jsp标记(tag)，实现了html中的Java扩展(通常用<% %>包裹)。主要用于实现界面。是动态生成web网页的一种标准
+1. 理解：`Java Server Pages` 是简化的servlet设计，在html中插入java代码(Scriptlet)和jsp标记(tag)，实现了html中的Java扩展(通常用<% %>包裹)。是动态生成web网页的一种标准
 1. 特点
    - jsp已经是编译好的，不需要预先载入解释器和目标脚本
    - jsp基于Java API
