@@ -485,31 +485,45 @@
 1. 理解：`Java Server Pages` 是简化的servlet设计，在html中插入java代码(Scriptlet)和jsp标记(tag)，实现了html中的Java扩展(通常用<% %>包裹)。是动态生成web网页的一种标准
 1. 特点
    - jsp已经是编译好的，不需要预先载入解释器和目标脚本
-   - jsp基于Java API
    - 与纯Servlet比较，方便编写html，而不用大量的println来一句一句的输出，servlet是老的cgi的方式
-1. 生命周期
-   - 编译阶段：解析jsp转成Servlet，编译Servlet文件，生成servlet类
-   - 初始化阶段：加载Servlet类，创建实例，调用初始化方法——jspInit()
-   - 执行阶段：调用Servlet服务方法：_jspService(HttpServletRequest request,HttpServletResponse response)
-   - 销毁阶段：销毁Servlet实例:jspDestroy()
-1. 语法：就是一些含有意义的标签
-   - 脚本程序
-     1. `<% 代码片段 %>`
-     1. `<jsp:scriptlet> 代码片段 </jsp:scriptlet>`
-   - 声明变量/方法
-     1. `<%! declaration; [ declaration; ] +... %>`
-     1. `<jsp:declaration> 代码片段 </jsp:declaration>`
-   - 表达式：单语句，不能有分号，转为String后插入页面
-     1. `<%= 表达式 %>`
-     1. `<jsp:expression> 表达式 </jsp:expression>`
-   - 流程控制
+   - 基于Java API
+1. 组成
+   - 指令：用`<%!@%>`表示
+     1. `<%@ page name="value" %>`：声明页面属性
+        - 属性
+           1. `language` 指定页面的脚本语言，默认java
+           1. `import` 指定使用的类
+           1. `contentType` MIME和字符编码
+           1. `extends` 指定Servlet继承
+           1. `info` 页面的描述信息
+           1. `session` 是否使用session
+           1. `errorPage` 发生错误转向的错误页面
+           1. `isErrorPage` 表示本页面是否可作为错误页面
+           1. `buffer` out对象使用缓冲区的大小
+           1. `autoFlush` 控制out对象的缓冲区
+           1. `isELIgnored` 是否执行EL表达式
+           1. `isScriptingEnabled` 脚本元素是否能被使用
+           1. `isThreadSafe` 指定对页面的访问是否为线程安全
+        - 举例：`<%@ page language="java" import="java.util.*" contentType="text/html; charset="utf-8"%>`
+     1. `<%@ include file="" %>` 包含其他文件，如jsp、html、文本文件。<%@ include等价于jsp:directive.include
+     1. `<%@ taglib uri="" prefix="" %>` 引入标签库或者自定义标签
+   - 声明：JSP页面定义变量或方法，用`<%!%>`表示，或者`<jsp:declaration></jsp:declaration>`
+   - 表达式：用来直接输出结果的简便方式，用`<%=%>`表示，不以分号结束，和`out.println()`相同。或者`<jsp:expression></jsp:expression>`
+     1. 举例
+        ```java
+        <%!
+        String s = "你好";
+        %>
+        <%=s %>
+        ```
+   - 脚本：JSP页面执行的java代码，用`<%%>`表示，或者`<jsp:scriptlet></jsp:scriptlet>`
      1. if判断
         ```Java
         <% if (day == 1 | day == 7) { %>
         <% } else { %>
         <% } %>
         ```
-      1. switch
+     1. switch
          ```Java
          <%
          switch(day) {
@@ -519,33 +533,37 @@
          }
          %>
          ```
-       1. for循环
+      1. for循环
           ```Java
           <%for ( i = 1; data <= 3; i++){ %>
           <%}%>
           ```
    - 注释
-     1. `<%-- 不会被编译--%>`
-     1. `<!-- 网页源代码可见 -->`
-     1. `<\% %\> \' \"`：转义
-1. 指令
-   - `<%@ page ... %>`：页面依赖属性：如脚本语言、error页面、缓存需求等
-     1. 属性
-        - `import` 导入的类
-        - `extends` 指定Servlet从哪儿继承
-        - `contentType` MIME和字符编码
-        - `info` 页面的描述信息
-        - `language` 指定页面的脚本语言，默认java
-        - `session` 是否使用session
-        - `errorPage` 发生错误转向的错误页面
-        - `isErrorPage` 表示本页面是否可作为错误页面
-        - `buffer` out对象使用缓冲区的大小
-        - `autoFlush` 控制out对象的缓冲区
-        - `isELIgnored` 是否执行EL表达式
-        - `isScriptingEnabled` 脚本元素是否能被使用
-        - `isThreadSafe` 指定对页面的访问是否为线程安全
-   - `<%@ include file="" %>` 包含其他文件，如jsp、html、文本文件。<%@ include等价于jsp:directive.include
-   - `<%@ taglib uri="" prefix="" %>` 引入标签库或者自定义标签
+     1. `<%----%>`：JSP注释，不会被编译
+     1. `<!---->`：HTML注释
+     1. `//和/**/`：脚本注释
+1. 内置对象
+   - 理解：是Web容器创建的一组对象，可以不new直接使用的内置对象
+   - 组成
+     1. `request` HttpServletRequest类的实例
+     1. `response` HttpServletResponse类的实例
+     1. `out` PrintWriter类的实例，用于输出结果
+        - 缓冲区：Buffer，内存的一块区域用来保存临时的数据，用于加速数据输出，好比一颗颗和一碗碗吃米饭
+        - 方法
+          1. println：向客户端打印，`out.println("你好");`
+          1. getBufferSize：缓冲区字节数
+          1. flush：将缓冲区内容输出到客户端
+          1. clear：清除缓冲区内容，flush之后调用会抛异常
+          1. clearBuffer：清除缓冲区内容，flush之后调用不会抛异常
+          1. close：关闭缓冲区
+     1. `session` HttpSession类的实例
+     1. `application` ServletContext类的实例，与应用上下文有关
+     1. `page` 类似this关键字，整个页面的代表
+     1. `pageContext` PageContext类的实例，提供对JSP页面所有对象和命名空间的访问
+        - 理解：包含request/response/application/config/session/out对象，也包含指令信息，如缓冲信息/页面scop/错误页面地址，还有一些字段：PAGE\_SCOPE/REQUEST\_SCOPE/SESSION_SCOPE等
+     1. `exception` Exception类的对象，代表JSP页面中的异常对象
+     1. `config` ServletConfig类的实例
+   - 作用域范围
 1. 行为：使用XML动态插入文件/Html、重用JavaBean组件等
    - 形式：<\jsp:action_name attribute="value" />
    - 属性
@@ -595,18 +613,6 @@
      1. 跳转：向另一个文件传递request对象。`<jsp:forward page="" />`
      1. 文本模板：`jsp:text`
         - 理解：只能包含文本和EL表达式
-1. 隐含对象
-   - 组成
-     1. `page` // 类似this关键字，整个页面的代表
-     1. `pageContext` // PageContext类的实例，提供对JSP页面所有对象和命名空间的访问
-        - 理解：包含request/response/application/config/session/out对象，也包含指令信息，如缓冲信息/页面scop/错误页面地址，还有一些字段：PAGE\_SCOPE/REQUEST\_SCOPE/SESSION_SCOPE等
-     1. `out` // PrintWriter类的实例，用于输出结果
-     1. `session` // HttpSession类的实例
-     1. `application` // ServletContext类的实例，与应用上下文有关
-     1. `config` // ServletConfig类的实例
-     1. `exception` // Exception类的对象，代表JSP页面中的异常对象
-     1. `request` // HttpServletRequest类的实例
-     1. `response` // HttpServletResponse类的实例
 1. EL
    - 理解：Expression Language，即表达式语言，可使用各种类型的数据来创建算术/逻辑表达式
    - 基础操作符
@@ -749,3 +755,8 @@
       <x:parse xml="${bookInfo}" var="output"/>
       <x:out select="$output/books/book[1]/name" />
       ```
+1. 生命周期
+   - 编译阶段：解析jsp转成Servlet，编译Servlet文件，生成servlet类
+   - 初始化阶段：加载Servlet类，创建实例，调用初始化方法——jspInit()
+   - 执行阶段：_jspService(HttpServletRequest request,HttpServletResponse response)
+   - 销毁阶段:jspDestroy()
