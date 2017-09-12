@@ -767,10 +767,182 @@
      1. `public OutputStream getOutputStream() throws IOException` // 返回输出流，用于写入
      1. `public URL getURL()` // 返回url
 ### IO/NIO
+1. 理解：java 1.4新出的io接口，标准的IO编程接口是面向字节流和字符流的，而NIO是面向通道和缓冲区的，针对数据流有了新的操作方式
+   - 通道和缓冲区：Channels/Buffers，数据总是从通道中读到buffer内，或者从buffer写入到通道中
+   - 异步io：单线程通过通道读/写数据到buffer，同时可以继续做别的事情，当数据读取到buffer中后，线程再继续处理数据
+   - 选择器：Selectors，可以检测多个通道的事件状态，如链接打开，数据到达；允许单线程操作多个通道，用于有大量的链接，同时每个链接的IO带宽不高的情况，如聊天服务器
+1. 组成
+   - Channels：所有io操作从Channel开始，类似流
+     1. 分类
+        - FileChannel
+        - DatagramChannel：用于UDP的数据读写
+        - SocketChannel：用于TCP的数据读写
+        - ServerSocketChannel：监听TCP连接请求
+     1. transferFrom/transferTo
+        - transferFrom：把数据从channel到FileChannel
+        - transferTo：把FileChannel数据传输到另一个channel
+        - 示例
+            ```java
+            RandomAccessFile fromFile = new RandomAccessFile("fromFile.txt", "rw");
+            FileChannel fromChannel = fromFile.getChannel();
+            RandomAccessFile toFile = new RandomAccessFile("toFile.txt", "rw");
+            FileChannel toChannel = toFile.getChannel();
+            // 定义属性
+            long position = 0;
+            long count = fromChannel.size(); // 数量
+
+            toChannel.transferFrom(fromChannel, position, count);
+            fromChannel.transferTo(position, count, toChannel);
+            ```
+     1. 示例
+        ```java
+        RandomAccessFile aFile = new RandomAccessFile("data/nio-data.txt", "rw");
+        FileChannel inChannel = aFile.getChannel();
+        // create buffer with capacity of 48 bytes
+        ByteBuffer buf = ByteBuffer.allocate(48);
+        // 写入buffer
+        int bytesRead = inChannel.read(buf);
+        while (bytesRead != -1) {
+            System.out.println("Read " + bytesRead);
+            // 转换为读模式
+            buf.flip();
+            while(buf.hasRemaining()){
+                System.out.print((char) buf.get()); // read 1 byte at a time
+            }
+            buf.clear(); // 改为写模式
+            bytesRead = inChannel.read(buf);
+        }
+        aFile.close();
+        ```
+   - Buffers
+     1. 理解：本质是一块内存区，被NIO Buffer包裹提供了读写方便开发的接口
+     1. 实现类
+        - Byte/Short/Int/LongBuffer：MappedBytesBuffer，一般用于和内存映射的文件
+        - Float/DoubleBuffer
+        - CharBuffer
+     1. 属性
+        - capacity：容量，最多只能写入容量的字节
+        - position：位置，写入/读取数据的开始位置，最大为capacity-1。写转读时，position归零
+        - limit：上限，写模式表示能写入最大数据量，等于capacity；读模式为能读取的最大数据量
+     1. 方法
+        - allocate：创建，即分配内存，值为字节。`CharBuffer buf = CharBuffer.allocate(1024)`
+        - 写入数据
+          1. 从channel写入：` int bytesRead = inChannel.read(buf)`
+          1. put方法：`buf.put(127)`，可以指定位置等其他参数
+        - 读取数据
+          1. 从channel读取：`int bytesWritten = inChannel.write(buf)`
+          1. get方法：`byte aByte = buf.get()`，get有很多版本
+        - flip：将写模式改为读模式，会将position归零，将limit设为之前position，即将limit指向最大
+        - rewind：将position置为0，可以重复读取buffer中的值
+        - clear：改为写模式，清空整个buffer。重置position为0，limit为capacity。实际上Buffer中数据并没有清空
+        - compact：改为写模式，只清空已读取的数据，未被读取的数据会被移动到buffer的开始位置，写入位置则近跟着未读数据之后
+        - mark/reset：标记/回复当前position。应该是暂存postion的位置，操作后再写回去
+        - equals/compareTo：比较两个buffer
+          1. equals：类型相同、buffer中剩余字节数相同、所有剩余字节相等
+          1. compareTo：比较buffer中的剩余元素，适用于比较排序
+     1. Scatter/Gather：
+        - Scatter：代表数据从一个channel到多个buffer
+        - Gather：从多个buffer把数据写入一个channel
+        - 示例
+            ```java
+            ByteBuffer header = ByteBuffer.allocate(128);
+            ByteBuffer body   = ByteBuffer.allocate(1024);
+            // 定义并写入
+            ByteBuffer[] bufferArray = { header, body };
+            channel.read(bufferArray);
+            channel.write(bufferArray);            
+            ```
+     1. 读写数据的步骤
+        - 数据写入buffer
+        - 调用flip
+        - buffer中读取数据
+        - 调用buffer.clear()/compact()
+   - Selectors
+     1. 理解：Channel必须是非阻塞的，FileChannel不能切换为非阻塞模式不适用
+     1. 关注集合：代表我们关注的channel状态，有四种基础类型可供监听
+        - Connect：连接就绪，用常量表示即SelectionKey.OP_CONNECT
+        - Accept：可连接就绪，即server channel接收请求连接时
+        - Read：读就绪，即有数据可读时
+        - Write：写就绪，即有数据可写时
+        - 多事件：`int interestSet = SelectionKey.OP_READ | SelectionKey.OP_WRITE;`
+     1. 选择channel
+        - int select()：返回所有处于就绪状态的channel数，就自上一次select后有多少channel进入就绪状态，不会累计。select()方法在返回channel之前处于阻塞状态
+        - int select(long timeout)：阻塞有超时限制
+        - int selectNow()：不会阻塞，根据当前状态立刻返回合适的channel
+     1. SelectionKeys对象
+        - interestSet：我们希望处理的事件的集合
+            ```java
+            // 按位与将事件取出来
+            int interestSet = selectionKey.interestOps();
+            boolean isInterestedInAccept  = interestSet & SelectionKey.OP_ACCEPT;
+            boolean isInterestedInConnect = interestSet & SelectionKey.OP_CONNECT;
+            boolean isInterestedInRead    = interestSet & SelectionKey.OP_READ;
+            boolean isInterestedInWrite   = interestSet & SelectionKey.OP_WRITE;
+            ```
+        - readySet：就绪集合
+            ```java
+            int readySet = selectionKey.readyOps();
+            // 更简单方法
+            selectionKey.isAcceptable();
+            selectionKey.isConnectable();
+            selectionKey.isReadable();
+            selectionKey.isWritable();
+            ```
+        - 操作Channel和Selector
+            ```java
+            Channel channel = selectionKey.channel(); // 需要强转为实际使用的channel类型，如：ServerSocketChannel/SocketChannel
+            Selector selector = selectionKey.selector();
+            ```
+        - 添加Object：增加channel的附加信息
+            ```java
+            selectionKey.attach(Object);
+            Object attachedObj = selectionKey.attachment();
+            // 注册时添加对象
+            SelectionKey key = channel.register(selector, SelectionKey.OP_READ, theObject);
+            ```
+        - remove：Selector本身并不会移除SelectionKey对象
+     1. wakeUp：由于调用select而被阻塞的线程可以在另一个线程中调用wakeup，就会立刻返回channel
+     1. close：操作Selector完毕后，需要调用close方法。会关闭Selector并使相关SelectionKey都失效，channel本身不被关闭
+     1. 使用
+        ```java
+        Selector selector = Selector.open();
+        channel.configureBlocking(false);
+        SelectionKey key = channel.register(selector, SelectionKey.OP_READ);
+
+        while(true) {
+            // 获取channels
+            int readyChannels = selector.select();
+            if(readyChannels == 0) continue;
+
+            Set<SelectionKey> selectedKeys = selector.selectedKeys();
+
+            Iterator<SelectionKey> keyIterator = selectedKeys.iterator();
+
+            while(keyIterator.hasNext()) {
+
+                SelectionKey key = keyIterator.next();
+
+                if(key.isAcceptable()) {
+                    // a connection was accepted by a ServerSocketChannel.
+                } else if (key.isConnectable()) {
+                    // a connection was established with a remote server.
+                } else if (key.isReadable()) {
+                    // a channel is ready for reading
+                } else if (key.isWritable()) {
+                    // a channel is ready for writing
+                }
+
+                keyIterator.remove();
+            }
+        }
+        selector.close();
+        ```
 1. 重难点
    - Stream
    - Buffer
    - java.io.\*/java.nio.*
+1. BIO
+1. AIO
 ### Lambda表达式
 1. 理解：Java 8中用来实现匿名方法，可在某些场景作为匿名类的替代方案
 ### Java 8

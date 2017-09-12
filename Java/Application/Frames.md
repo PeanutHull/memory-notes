@@ -225,7 +225,7 @@
      1. 自动载入用`@Autowired`或者`@Resource`，后者更好，不出红线
      1. 返回值为List的写法提醒`ServerResponse<List<Category>>`
 ### Spring MVC
-1. 理解：能够利用Spring本身的诸多好处来容易开发web应用
+1. 理解：能够利用Spring本身的诸多好处来方便开发web应用
 1. 重难点
    - handlerMapping
    - RequestMapping
