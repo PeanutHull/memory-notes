@@ -482,11 +482,7 @@
 	request.getRequestDispatcher("/要跳转的页面相对地址").forward(request, response); // 转发请求，地址不变
 	```
 ### JSP
-1. 理解：`Java Server Pages` 是简化的servlet设计，在html中插入java代码(Scriptlet)和jsp标记(tag)，实现了html中的Java扩展(通常用<% %>包裹)。是动态生成web网页的一种标准
-1. 特点
-   - jsp已经是编译好的，不需要预先载入解释器和目标脚本
-   - 与纯Servlet比较，方便编写html，而不用大量的println来一句一句的输出，servlet是老的cgi的方式
-   - 基于Java API
+1. 理解：`Java Server Pages` 是简化的servlet设计，在html中插入java代码(Scriptlet)和jsp标记(tag)，实现了html中的Java扩展(通常用<% %>包裹)，基于Java API。是动态生成web网页的一种标准。与纯Servlet比较，方便编写html，而不用大量的println来一句一句的输出，servlet是老的cgi的方式
 1. 组成
    - 指令：用`<%!@%>`表示
      1. `<%@ page name="value" %>`：声明页面属性
@@ -545,8 +541,8 @@
 1. 内置对象
    - 理解：是Web容器创建的一组对象，可以不new直接使用的内置对象
    - 组成
-     1. `request` HttpServletRequest类的实例
-     1. `response` HttpServletResponse类的实例
+     1. `request` HttpServletRequest的实例
+     1. `response` HttpServletResponse的实例
      1. `out` PrintWriter类的实例，用于输出结果
         - 缓冲区：Buffer，内存的一块区域用来保存临时的数据，用于加速数据输出，好比一颗颗和一碗碗吃米饭
         - 方法
@@ -556,8 +552,8 @@
           1. clear：清除缓冲区内容，flush之后调用会抛异常
           1. clearBuffer：清除缓冲区内容，flush之后调用不会抛异常
           1. close：关闭缓冲区
-     1. `session` HttpSession类的实例
-     1. `application` ServletContext类的实例，与应用上下文有关
+     1. `session` HttpSession的实例
+     1. `application` ServletContext的实例，与应用上下文有关
      1. `page` 类似this关键字，整个页面的代表
      1. `pageContext` PageContext类的实例，提供对JSP页面所有对象和命名空间的访问
         - 理解：包含request/response/application/config/session/out对象，也包含指令信息，如缓冲信息/页面scop/错误页面地址，还有一些字段：PAGE\_SCOPE/REQUEST\_SCOPE/SESSION_SCOPE等
