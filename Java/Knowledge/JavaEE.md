@@ -579,7 +579,7 @@
         - 方法：getMessage/toString/printStackTrace(显示异常栈轨迹)/FillInStackTrace(重写异常执行栈轨迹)
    - 作用域范围
 1. 行为：使用XML动态插入文件/Html、重用JavaBean组件等
-   - 形式：<\jsp:action_name attribute="value" />
+   - 形式：<\jsp:action_name attribute="value"/>
    - 属性
      1. id：行为元素的唯一标识，通过PageContext调用
      1. scope：识别行为元素的生命周期，四个值：page、request、session、application
@@ -598,10 +598,10 @@
                 </jsp:body>
             </jsp:element>
             ```
-     1. 使用JavaBean
+     1. 使用JavaBean组件
         - 标签     
-          1. `jsp:useBean`：使用JavaBean组件，java组件重用
-          1. `jsp:getProperty/setProperty`：JavaBean组件的值
+          1. `jsp:useBean`
+          1. `jsp:getProperty/setProperty`
         - 属性
           1. `name` // 指定适用的Bean
           1. `property` // 属性名
