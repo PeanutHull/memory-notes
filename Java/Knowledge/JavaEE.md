@@ -483,7 +483,46 @@
 	```
 ### JSP
 1. 理解：`Java Server Pages` 是简化的servlet设计，在html中插入java代码(Scriptlet)和jsp标记(tag)，实现了html中的Java扩展(通常用<% %>包裹)，基于Java API。是动态生成web网页的一种标准。与纯Servlet比较，方便编写html，而不用大量的println来一句一句的输出，servlet是老的cgi的方式
-1. 组成
+1. 内置对象
+   - 理解：是Web容器创建的一组对象，可以不new直接使用的内置对象
+   - 组成
+     1. `request`
+        - 理解：HttpServletRequest的实例，页面返回前都有效
+        - 方法：setCharacterEncoding("utf-8")/getParameter/getParameterValues(获得一个属性的多个值)/getAttribute/setAttribute(存储请求属性)/getContentType/getProtocol(协议类型和版本号)/getServerName/getRequestDispatcher().forward(req,res)
+     1. `response`
+        - 理解：HttpServletResponse的实例，只对当前页面有效
+        - 方法：setCharacterEncoding("utf-8")/setContentType/getWriter(这个输出流对象和out内置输出流输出位置有区别)/sendRedirect(重定向，即跳转)
+     1. `out`
+        - 理解：PrintWriter类的实例，用于输出结果
+        - 方法
+          1. println：向客户端打印，`out.println("你好");`
+          1. getBufferSize：缓冲区字节数
+          1. flush：将缓冲区内容输出到客户端
+          1. clear：清除缓冲区内容，flush之后调用会抛异常
+          1. clearBuffer：清除缓冲区内容，flush之后调用不会抛异常
+          1. close：关闭缓冲区
+        - 缓冲区：Buffer，内存的一块区域用来保存临时的数据，用于加速数据输出，好比一颗颗和一碗碗吃米饭
+     1. `session`
+        - 理解：HttpSession的实例
+        - 方法：getCreationTime(创建时间)/getId/getAttribute/setAttribute/getValueNames/setMaxInactiveInterval(过期时间)/invalidate(销毁)
+        - 生命周期：通过超链接打开的属于同一次会话
+     1. `application`
+        - 理解：ServletContext的实例，实现用户数据共享，可存放全局变量。始于服务器启动终于服务器关闭
+        - 方法：setAttribute/getAttribute/getAttributeNames/getServerInfo(返回jsp引擎)
+     1. `page`
+        - 理解：指当前JSP页面，类似this。是Object类的实例
+        - 方法：getClass/hashCode/equals/copy/clone/toString/notify/notifyAll/wait/wait
+     1. `pageContext`
+        - 理解：PageContext类的实例，提供对JSP页面所有对象和命名空间的访问，相当于所有功能的集大成者。包含request/response/application/config/session/out对象，也包含指令信息，如缓冲信息/页面scop/错误页面地址
+        - 方法：getOut/getSession/getPage/getRequest/getResponse/setAttribute/getAttribute/getAttributeScope/forward/include(包含另一文件)
+     1. `config`
+        - 理解：ServletConfig类的实例，是Servlet初始化时，jsp引擎向其传输数据用
+        - 方法：getServletContext/getInitParameter/getInitParameterNames
+     1. `exception`
+        - 理解：Exception类的对象，代表JSP页面中的异常对象，一旦产生异常就产生了这个对象
+        - 方法：getMessage/toString/printStackTrace(显示异常栈轨迹)/FillInStackTrace(重写异常执行栈轨迹)
+   - 作用域范围
+1. 基本语法
    - 指令：用`<%!@%>`表示
      1. `<%@ page name="value" %>`：声明页面属性
         - 属性
@@ -501,7 +540,7 @@
            1. `isScriptingEnabled` 脚本元素是否能被使用
            1. `isThreadSafe` 指定对页面的访问是否为线程安全
         - 举例：`<%@ page language="java" import="java.util.*" contentType="text/html; charset="utf-8"%>`
-     1. `<%@ include file="" %>` 包含其他文件，如jsp、html、文本文件。<%@ include等价于jsp:directive.include
+     1. `<%@ include file="url" %>` 包含其他文件，如jsp、html、文本文件。等价于jsp:directive.include
      1. `<%@ taglib uri="" prefix="" %>` 引入标签库或者自定义标签
    - 声明：JSP页面定义变量或方法，用`<%!%>`表示，或者`<jsp:declaration></jsp:declaration>`
    - 表达式：用来直接输出结果的简便方式，用`<%=%>`表示，不以分号结束，和`out.println()`相同。或者`<jsp:expression></jsp:expression>`
@@ -538,85 +577,26 @@
      1. `<%----%>`：JSP注释，不会被编译
      1. `<!---->`：HTML注释
      1. `//和/**/`：脚本注释
-1. 内置对象
-   - 理解：是Web容器创建的一组对象，可以不new直接使用的内置对象
-   - 组成
-     1. `request`
-        - 理解：HttpServletRequest的实例，页面返回前都有效
-        - 方法：setCharacterEncoding("utf-8")/getParameter/getParameterValues(获得一个属性的多个值)/getAttribute/setAttribute(存储请求属性)/getContentType/getProtocol(协议类型和版本号)/getServerName/getRequestDispatcher().forward(req,res)
-     1. `response`
-        - 理解：HttpServletResponse的实例，只对当前页面有效
-        - 方法：setCharacterEncoding("utf-8")/setContentType/getWriter(这个输出流对象和out内置输出流输出位置有区别)/sendRedirect(重定向，即跳转)
-     1. `out`
-        - 理解：PrintWriter类的实例，用于输出结果
-        - 方法
-          1. println：向客户端打印，`out.println("你好");`
-          1. getBufferSize：缓冲区字节数
-          1. flush：将缓冲区内容输出到客户端
-          1. clear：清除缓冲区内容，flush之后调用会抛异常
-          1. clearBuffer：清除缓冲区内容，flush之后调用不会抛异常
-          1. close：关闭缓冲区
-        - 缓冲区：Buffer，内存的一块区域用来保存临时的数据，用于加速数据输出，好比一颗颗和一碗碗吃米饭
-     1. `session`
-        - 理解：HttpSession的实例
-        - 方法：getCreationTime(创建时间)/getId/getAttribute/setAttribute/getValueNames/setMaxInactiveInterval(过期时间)/invalidate(销毁)
-        - web.xml：<\session-config><\session-timeout>10<\/session-timeout><\/session-config>
-        - 生命周期：通过超链接打开的属于同一次会话
-     1. `application`
-        - 理解：ServletContext的实例，实现用户数据共享，可存放全局变量。始于服务器启动终于服务器关闭
-        - 方法：setAttribute/getAttribute/getAttributeNames/getServerInfo(返回jsp引擎)
-     1. `page`
-        - 理解：指当前JSP页面，类似this。是Object类的实例
-        - 方法：getClass/hashCode/equals/copy/clone/toString/notify/notifyAll/wait/wait
-     1. `pageContext`
-        - 理解：PageContext类的实例，提供对JSP页面所有对象和命名空间的访问，相当于所有功能的集大成者。包含request/response/application/config/session/out对象，也包含指令信息，如缓冲信息/页面scop/错误页面地址
-        - 方法：getOut/getSession/getPage/getRequest/getResponse/setAttribute/getAttribute/getAttributeScope/forward/include(包含另一文件)
-     1. `config`
-        - 理解：ServletConfig类的实例，是Servlet初始化时，jsp引擎向其传输数据用
-        - 方法：getServletContext/getInitParameter/getInitParameterNames
-     1. `exception`
-        - 理解：Exception类的对象，代表JSP页面中的异常对象，一旦产生异常就产生了这个对象
-        - 方法：getMessage/toString/printStackTrace(显示异常栈轨迹)/FillInStackTrace(重写异常执行栈轨迹)
-   - 作用域范围
-1. 行为：使用XML动态插入文件/Html、重用JavaBean组件等
-   - 形式：<\jsp:action_name attribute="value"/>
+1. 动作标签/动作元素
    - 属性
-     1. id：行为元素的唯一标识，通过PageContext调用
-     1. scope：识别行为元素的生命周期，四个值：page、request、session、application
+     1. id：行为元素的唯一标识，可以通过PageContext调用
+     1. scope：page(当前页面有效)、request、session、application
    - 组成
-     1. 创建XML元素
-        - 标签
-          1. `jsp:element`：动态创建XML元素
-          1. `jsp:attribute`：定义XML元素的属性
-          1. `jsp:body`：定义XML元素的主体
-        - 使用
-            ```Java
-            <jsp:element name="xmlElement">
-                <jsp:attribute name="xmlElementAttr">
-                </jsp:attribute>
-                <jsp:body>
-                </jsp:body>
-            </jsp:element>
-            ```
-     1. 使用JavaBean组件
-        - 标签     
-          1. `jsp:useBean`
+     1. useBean
+        - 标签：`<jsp:useBeans>`
           1. `jsp:getProperty/setProperty`
-        - 属性
-          1. `name` // 指定适用的Bean
-          1. `property` // 属性名
-          1. `value` // 属性值
-          1. `param` // 默认值
         - 使用
             ```Java
-            <jsp:useBean id="" >
-                <jsp:setProperty name="" property=""/>
+            <jsp:useBean id="标识符" class="类名" scope="作用范围">
+                <jsp:setProperty name="id名" property="属性名" value="设置值" param="url参数值"/>
                 <jsp:getProperty name="" property=""/>
             </jsp:useBean>
             ```
-     1. 引入页面
-        - 使用：`<jsp:include page="" flush="true" />`，flush表示引入前是否刷新缓冲区
-        - 使用：`jsp:plugin`：用于包含Applet和JavaBean对象
+     1. include/forward/param/params/plugin/fallback：jsp1.2就存在的基本元素
+        - include动作：<jsp:include page="url" flush="bool">，flush表示引入前是否刷新缓冲区
+        - forward动作：<jsp:forward page="url">，等同于request.getRequestDispatcher("/url").forward(request, response);
+        - param动作：<jsp:param name="" value="">，作为forward的子标签
+        - plugin动作：用于包含Applet和JavaBean
             ```Java
             <jsp:plugin type="applet" codebase="dirname" code="MyApplet.class" width="60" height="80">
                 <jsp:param name="fontcolor" value="red" />
@@ -624,24 +604,18 @@
                 <jsp:fallback></jsp:fallback>
             </jsp:plugin>
             ```
-     1. 跳转：向另一个文件传递request对象。`<jsp:forward page="" />`
-     1. 文本模板：`jsp:text`
-        - 理解：只能包含文本和EL表达式
-1. EL
-   - 理解：Expression Language，即表达式语言，可使用各种类型的数据来创建算术/逻辑表达式
-   - 基础操作符
-     1. `.` // 访问一个bean属性或者映射条目
-     1. `[]` // 数组或者链表的元素
-     1. `+-*/%` // 加减乘除取余
-     1. `==!=><` // 各种等于不等于
-     1. `&&||!` // 与或非
-     1. `empty` // 是否为空
-   - EL中的函数：${ns:func(param1, param2)}，这些函数必须被定义在自定义标签库中
-   - 举例
-     ```Java
-     <%@ page isELIgnored ="true|false" %>
-     ${2*box.width+2*box.height}
-     ```
+     1. root/declaration/scriptlet/expression/text/output：jsp2.0新增，和文档有关
+        - text：文本模板，只能包含文本和EL表达式
+     1. element/body/attribute：jsp2.0新增，用于XML动态生成，分别表示父标签、主体、属性
+        ```Java
+        <jsp:element name="xmlElement">
+            <jsp:attribute name="xmlElementAttr">
+            </jsp:attribute>
+            <jsp:body>
+            </jsp:body>
+        </jsp:element>
+        ```
+     1. invoke/dobody：jsp2.0新增，用在Tag File中
 1. JSTL
    - 理解：JSP Standard Tag Library，即JSP标准标签库，封装了JSP应用的通用核心功能。支持迭代、判断、xml操作、sql标签、自定义标签
    - 分类
@@ -659,6 +633,17 @@
        </taglib>
      </jsp-config>
      ```
+   - EL
+     1. 理解：Expression Language，表达式语言，创建表达式并输出结果。可使用各种类型的数据来创建算术/逻辑表达式
+     1. 表示：${expr}
+     1. 基础操作符
+        - `.` // 访问一个bean属性或者映射条目
+        - `[]` // 数组或者链表的元素
+        - `+-*/%` // 加减乘除取余
+        - `==!=><` // 各种等于不等于
+        - `&&||!` // 与或非
+        - `empty` // 是否为空
+     1. 函数：${ns:func(param1, param2)}，这些函数必须被定义在自定义标签库中
    - 使用
      1. 核心标签：先引用`<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>`
         ```Java
@@ -748,9 +733,8 @@
         - `fn:startsWith()` // 是否以指定开头开始
         - `fn:endsWith()` // 是否以指定后缀结尾
         - `fn:escapeXml()` // 跳过可以作为XML标记的字符
-1. 自定义标签
-   - 方法
-     1. 创建自定义标签类
+1. 创建自定义标签类
+   - 定义类
       ```Java
       import javax.servlet.jsp.tagext.*;
       public class HelloTag extends SimpleTagSupport {
@@ -760,7 +744,7 @@
         }
       }
       ```
-      1. 建立标签配置文件：ROOT\WEB-INF\xxx.tld
+   - 建立标签配置文件：ROOT\WEB-INF\xxx.tld
 1. 处理xml文档
    - 发送xml：修改页面头`<%@ page contentType="text/xml" %>`
    - 展示xml
