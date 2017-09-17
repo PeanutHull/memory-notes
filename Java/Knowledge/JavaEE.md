@@ -617,35 +617,40 @@
         ```
      1. invoke/dobody：jsp2.0新增，用在Tag File中
 1. JSTL
-   - 理解：JSP Standard Tag Library，即JSP标准标签库，封装了JSP应用的通用核心功能。支持迭代、判断、xml操作、sql标签、自定义标签
+   - 理解：JSP Standard Tag Library，即JSP标准标签库。实现代码复用、可读性增强，简化开发
    - 分类
      1. 核心标签
      1. 格式化标签
      1. sql标签
      1. xml标签
      1. JSTL函数
-   - 安装：将官方jar包放到`/WEB-INF/lib/`下，web.xml添加配置
+   - 安装：将官方jsp的jar包放到`/WEB-INF/lib/`下
      ```XML
+     // web.xml添加配置
      <jsp-config>
        <taglib>
          <taglib-uri>http://java.sun.com/jstl/fmt</taglib-uri>
          <taglib-location>/WEB-INF/fmt.tld</taglib-location>
        </taglib>
      </jsp-config>
+     // jsp页面中导入核心标签库
+     <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
      ```
    - EL
-     1. 理解：Expression Language，表达式语言，创建表达式并输出结果。可使用各种类型的数据来创建算术/逻辑表达式
+     1. 理解：Expression Language，表达式语言，创建表达式并输出结果。和<%=\%>作用相同
      1. 表示：${expr}
      1. 基础操作符
-        - `.` // 访问一个bean属性或者映射条目
-        - `[]` // 数组或者链表的元素
+        - `.` // 访问一个bean属性或者映射条目，不能用于键名包含-符号和为变量时不适用
+        - `[]` // 数组或者链表的元素，如${booklist[0].price}
         - `+-*/%` // 加减乘除取余
         - `==!=><` // 各种等于不等于
         - `&&||!` // 与或非
         - `empty` // 是否为空
+     1. 变量：环境变量，或称为隐式对象，部分有：PageScope/RequestScope/SessionScope/ApplicationScope
      1. 函数：${ns:func(param1, param2)}，这些函数必须被定义在自定义标签库中
+     1. 举例：`<%=session.getValue("name")%>`等同于`<c:out value="${sessionScope.name}">`
    - 使用
-     1. 核心标签：先引用`<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>`
+     1. 核心标签
         ```Java
         <c:out value="${salary}"/> // 在JSP中显示数据
         <c:set var="salary" scope="session" value="${2000*2}"/> // 保存数据，设置变量值和对象属性，类似<jsp:setProperty>
@@ -733,28 +738,29 @@
         - `fn:startsWith()` // 是否以指定开头开始
         - `fn:endsWith()` // 是否以指定后缀结尾
         - `fn:escapeXml()` // 跳过可以作为XML标记的字符
-1. 创建自定义标签类
-   - 定义类
-      ```Java
-      import javax.servlet.jsp.tagext.*;
-      public class HelloTag extends SimpleTagSupport {
+1. 其他
+   - 创建自定义标签类
+     1. 定义类
+        ```Java
+        import javax.servlet.jsp.tagext.*;
+        public class HelloTag extends SimpleTagSupport {
         public void doTag() throws JspException, IOException {
-          JspWriter out = getJspContext().getOut();
-          out.println("Hello Custom Tag!");
+            JspWriter out = getJspContext().getOut();
+            out.println("Hello Custom Tag!");
         }
-      }
-      ```
-   - 建立标签配置文件：ROOT\WEB-INF\xxx.tld
-1. 处理xml文档
-   - 发送xml：修改页面头`<%@ page contentType="text/xml" %>`
-   - 展示xml
+        }
+        ```
+     1. 建立标签配置文件：ROOT\WEB-INF\xxx.tld
+   - 处理xml文档
+     1. 发送xml：修改页面头`<%@ page contentType="text/xml" %>`
+     1. 展示xml
       ```Java
       <c:import var="bookInfo" url="http://localhost:8080/books.xml"/> // 载入xml文档
       <x:parse xml="${bookInfo}" var="output"/>
       <x:out select="$output/books/book[1]/name" />
       ```
-1. 生命周期
-   - 编译阶段：解析jsp转成Servlet，编译Servlet文件，生成servlet类
-   - 初始化阶段：加载Servlet类，创建实例，调用初始化方法——jspInit()
-   - 执行阶段：_jspService(HttpServletRequest request,HttpServletResponse response)
-   - 销毁阶段:jspDestroy()
+   - 生命周期
+     1. 编译阶段：解析jsp转成Servlet，编译Servlet文件，生成servlet类
+     1. 初始化阶段：加载Servlet类，创建实例，调用初始化方法——jspInit()
+     1. 执行阶段：_jspService(HttpServletRequest request,HttpServletResponse response)
+     1. 销毁阶段:jspDestroy()
