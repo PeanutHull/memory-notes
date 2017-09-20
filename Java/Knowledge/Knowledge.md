@@ -307,3 +307,5 @@
      1. Freemaker模板引擎
      1. 单点登录、session共享
      1. Quartz任务调度：定时器
+   - 架构组成
+     1. taotao-common：项目中用到的通用工具类和pojo
