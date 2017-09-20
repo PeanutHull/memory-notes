@@ -481,6 +481,9 @@
 	response.sendRedirect(request.getContextPath + "/要跳转的页面相对地址"); // 重定向，地址改变
 	request.getRequestDispatcher("/要跳转的页面相对地址").forward(request, response); // 转发请求，地址不变
 	```
+1. 打包和部署
+   - 打包时，依赖的jar包要么在tomcat的lib目录下，要么声明在path中；如果用IDE就设置好就行
+   - 部署时，需放在tomcat的webapp下，或者由IDE启动，或者由maven的plugin启动
 ### JSP
 1. 理解：`Java Server Pages` 是简化的servlet设计，在html中插入java代码(Scriptlet)和jsp标记(tag)，实现了html中的Java扩展(通常用<% %>包裹)，基于Java API。是动态生成web网页的一种标准。与纯Servlet比较，方便编写html，而不用大量的println来一句一句的输出，servlet是老的cgi的方式
 1. 内置对象
@@ -764,3 +767,11 @@
      1. 初始化阶段：加载Servlet类，创建实例，调用初始化方法——jspInit()
      1. 执行阶段：_jspService(HttpServletRequest request,HttpServletResponse response)
      1. 销毁阶段:jspDestroy()
+   - IDEA创建空白Servlet项目
+     1. 项目设置：File--New--Project--Java--Java EE--Web Application--下一步--项目名称
+     1. 工程设置
+        - WEB-INF目录--新建classes和lib目录
+        - 编译目录：Project Structure--Modules--Paths选项卡--将Output path和Test output path设置为classes目录
+        - 依赖目录：Project Structure--Modules--Dependencies选项卡--新增Export--JARs or directories--选择lib目录--Jar Directory
+        - 打包方式：Artifacts--fix--add classes...
+        - 配置tomcat
