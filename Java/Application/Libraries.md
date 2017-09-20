@@ -1,5 +1,5 @@
 ### DAO
-1. 理解：Data Access Object，用来封装访问数据库的代码
+1. 理解：Data Access Object，用来封装访问数据库的代码，即持久层
 ### Hibernate
 1. JDBC
    - 理解：Java Database Connectivity。执行sql语句的API
@@ -314,6 +314,12 @@
    - MyBatis-generator：右侧Maven按钮————Plugins————执行MyBatis-generator
    - MyBatis-plugin：IDEA的插件，安装这个可以提示方法
    - MyBatis-pagehelper————分页插件
+1. 数据库连接池框架
+   - DBCP：apache上的一个java项目，是tomcat使用的li连接池组件
+   - C3P0：Hibernate使用的连接池，C3P0稳定性较高
+1. 分布式事务管理器
+   - Atomikos
+     1. 特点：重启恢复、兼容JTA API、嵌套事务支持、为XA和非XA提供内置JDBC适配器
 ### JPA
 1. 理解：采用Spring Data JPA实现
 ### 消息中间件
