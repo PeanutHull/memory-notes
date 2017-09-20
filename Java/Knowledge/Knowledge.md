@@ -222,16 +222,6 @@
    - 4.1——Java5——servlet2.3——jsp1.2
    - 3.3——Java5——servlet2.2——jsp1.1
 ### 实际项目经验
-1. Java 从零打造企业级电商实战 - 服务端
-   - MyBatis
-     1. 返回新增的主键：mapper.xml文件中insert标签加入属性：`useGeneratedKeys="true" keyProperty="id"`
-     1. 数据绑定更新对应数据：mapper.xml文件中update指定parameterType的类地址：`parameterType="com.mall.pojo.Xxx"`
-     1. 批量插入：对应于子订单的批量插入
-1. 零碎
-   - 获得当前运行的文件夹目录：`request.getSession().getServletContext().getRealPath('upload');`
-   - Mac启动tomcat
-     1. 启动：进入bin目录————sudo chmod 755 \*.sh————sudo sh startup.sh
-     1. 关闭：sudo sh shutdown.sh(部署项目后需要重启)
 1. 经验与心得
    - 实际的项目要找到官方的配置，根据官方的配置去写项目的配置
 1. Java运行环境搭建
@@ -301,3 +291,19 @@
       done
       /developer/apache-tomcat-7.0.73/bin/startup.sh
       ```
+1. Java 从零打造企业级电商实战 - 服务端
+   - MyBatis
+     1. 返回新增的主键：mapper.xml文件中insert标签加入属性：`useGeneratedKeys="true" keyProperty="id"`
+     1. 数据绑定更新对应数据：mapper.xml文件中update指定parameterType的类地址：`parameterType="com.mall.pojo.Xxx"`
+     1. 批量插入：对应于子订单的批量插入
+   - 获得当前运行的文件夹目录：`request.getSession().getServletContext().getRealPath('upload');`
+1. 淘淘商城
+   - 技术点
+     1. Nginx反向代理
+     1. Druid数据率连接池
+     1. FastDFS：分布式文件系统
+     1. Redis集群缓存
+     1. Solr集群搜索
+     1. Freemaker模板引擎
+     1. 单点登录、session共享
+     1. Quartz任务调度：定时器
