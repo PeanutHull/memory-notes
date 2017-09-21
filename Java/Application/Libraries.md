@@ -315,11 +315,26 @@
    - MyBatis-plugin：IDEA的插件，安装这个可以提示方法
    - MyBatis-pagehelper————分页插件
 1. 数据库连接池框架
+   - Druid：java最好的数据库连接池，提供强大的监控和扩展功能
    - DBCP：apache上的一个java项目，是tomcat使用的li连接池组件
    - C3P0：Hibernate使用的连接池，C3P0稳定性较高
 1. 分布式事务管理器
-   - Atomikos
-     1. 特点：重启恢复、兼容JTA API、嵌套事务支持、为XA和非XA提供内置JDBC适配器
+   - 理解：用于多数据源的事务管理，类似的有JTA
+     1. 普通事务：commit--修改过的数据块写入事务文件--一次性地写入数据库文件--如果commit挂掉--重启--再次执行事务文件--删除事务文件
+     1. XA事务：基于二阶段提交(Two-phase Commit)实现，事务管理者和资源管理器两种角色，事务管理器负责管理所有的资源管理器，操作他们的状态，让他们预备、就绪、提交、回滚等操作配合完成分布式事务
+   - XA
+     1. 理解：是数据库与事务管理器的接口标准，采用两阶段提交方式来管理分布式事务，包括以xa_/ax_开头的两套函数
+     1. 函数
+        - xa\_open/xa_close 建立/关闭与资源管理器的连接
+        - xa\_start/xa_end 开始/结束本地事务
+        - xa\_prepare/xa\_commit/xa_rollback 预提交、提交、回滚本地事务
+        - xa_recover 回滚预提交的事务
+        - ax\_reg/ax\_unreg 允许资源管理器在TMS(TRANSACTION MANAGER SERVER)动态注册/取消注册。ax_开头的函数使资源管理器可以动态地在事务管理器中进行注册，并可以对XID(TRANSACTION IDS)进行操作
+   - 分类
+     1. Atomikos
+        - 特点：崩溃/重启恢复、兼容JTA API、嵌套事务支持、为XA和非XA提供内置JDBC适配器、内置JMS适配器(也就是队列连接器)XA-capable
+        - 使用：添加数据源--配置数据源--配置jta事务管理
+     1. Bitronix：实现了JTA API、支持XA事务管理
 ### JPA
 1. 理解：采用Spring Data JPA实现
 ### 消息中间件
@@ -338,7 +353,6 @@
    - 对比
      1. JMS是一个java API，AMQP是传输层的线协议
      1. AMQP就是为了跨语言，JMS只有java
-     
 1. 中间件
    - ActiveMQ
      1. 概述：Apache出品，是最流行的开源消息总线。完全支持JMS1.1和J2EE1.4规范的JMS provider实现
