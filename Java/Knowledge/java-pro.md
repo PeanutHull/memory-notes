@@ -440,13 +440,13 @@
 1. 总结
    - 获得类类型：Foo.class/foo.getClass()/Class.forName()
    - 获得实例对象：c1.newInstance()
-   - 方法反射的操作：m.invoke()
-1. 理解：获取类的名称、变量、方法等信息。java中只有基本数据类型和静态成员不是对象，其他都是对象。类是java.lang.Class类的对象
-1. Class类的使用
-   - 获得类或者实例对象
-     1. Class的实例对象的获取，即得到类类型
+   - 反射执行方法：m.invoke()
+1. 理解：Java允许程序化的方式间接对Class进行操作。可以获取类的名称、变量、方法等信息
+1. 类的信息获取
+   - 获得类、实例对象
+     1. Class类的实例对象的获取，即得到类类型
         - `CLass c1 = Foo.class` 通过类本身的隐含静态成员变量获取类类型
-        - `Class c2 = foo.getClass()` 通过实例化后的对象获取类类型，c1等于c2的，
+        - `Class c2 = foo.getClass()` 通过实例化后的对象获取类类型，c1等于c2的
         - `Class c3 = Class.forName('com.imooc.reflect.foo')` 通过Class类的方法
      1. 通过类类型获取实例对象
         - `Foo foo = (Foo) c1.newInstance()` 要做强制类型转换
@@ -465,33 +465,47 @@
      1. `c.getDeclaredFields()` 获取自己声明的所有变量
      1. `field.getName` 成员变量的名称
      1. `field.getType()` 成员变量的类型的类类型
+   - 获取构造函数的信息：构造函数继承java.lang.Constructor
+     1. `c.getConstructtor()` 获取所有public的构造方法，包含继承来的
+     1. `c.getDeclaredConstructtor()` 获取自己定义的所有的构造方法
+     1. `constructor.getName()`
+     1. `constructor.getParameterTypes()`
    - 获取方法的信息
      1. `c.getMethods()` 获取所有public的方法，包含继承来的
      1. `c.getDeclaredMethods()` 获取该类所有的自己声明的方法，忽略访问权限
      1. `method.getName()` 获取方法名
      1. `method.getReturnType()` 方法的返回值类类型
      1. `method.getParameterTypes()` 方法的参数类类型 
-   - 获取构造函数的信息：构造函数继承java.lang.Constructor
-     1. `c.getConstructtor()` 获取所有public的构造方法，包含继承来的
-     1. `c.getDeclaredConstructtor()` 获取自己定义的所有的构造方法
-     1. `constructor.getName()`
-     1. `constructor.getParameterTypes()`
-1. 动态加载类
-   - 理解：区分编译和运行。编译时刻加载类是静态加载类，运行时加载类是动态加载类
-   - 实现：将需要被加载的类都实现同一接口，用`Class.forName()`获取类类型和`newInstance()`实例化对象来动态加载类
+1. 反射加载类
+   - 理解：编译和运行，编译时加载类是静态加载，运行时加载类是动态加载
    - 实例
-    ```java
-    Class c = Class.ForName(className);
-    interfaceName obj = (interfaceName) c.newInstance();
-    obj.method();
-    ```
-1. 方法的反射
-   - 方法反射的操作：invoke
+     1. 通过类装载器：ClassLoader/Class/Constructor/Method
+        ```java
+        // 通过类装载器获取Car类
+        ClassLoader loader = Thread.currentThread().getContextClassLoader();
+        class clazz = loader.loadClass("com.smart.reflect.Car");
+        // 获取类的默认构造对象并通过它实例化Car
+        Constructor cons = Clazz.getDeclaredConstructor((Class[])null);
+        Car car = (Car) cons.newInstance();
+        // 通过反射方法设置属性
+        Method setColor = clazz.getMethod(“setColor”, String.class);
+        setColor.invoke(car, “黑色”);
+        // 执行对象的其他方法
+        car.introduce();
+        ```
+     1. 实现同一接口
+        ```java
+        Class c = Class.ForName(className);
+        interfaceName obj = (interfaceName) c.newInstance();
+        obj.method();
+        ```
+1. 反射执行方法：invoke，即通过反射执行方法
     ```java
     Class c = a.getClass();
-    Method m = c.getMethod("methodName", Int.class, Double.class); // 跟参数类型，没有这里和下一句就不写
-    m.invoke(a, 1, 1,1);
+    Method m = c.getMethod("methodName", Int.class, Double.class); // 跟两个参数类型，没有这里，下一句就不写
+    m.invoke(a, 1, 1.1);
     ```
+1. 对象和类：java中只有基本数据类型和静态成员不是对象，其他都是对象。类是java.lang.Class类的对象
 ### 多线程
 1. 理解：使用更小资源开销，轮候使用cpu，存在等待，线程多了因为上下文切换反而效率下降
 1. 重难点
