@@ -146,10 +146,10 @@
 ### Spring
 1. 认识：用于构建轻量级/健壮的J2EE应用程序、解决开发的复杂性，是全栈的容器类框架
 1. 特点
-   1. Ioc分层架构，灵活选用组件，方便集成各种框架，简化开发
+   1. IoC分层架构，灵活选用组件，方便集成各种框架，简化开发
    1. AOP支持，面向方面编程
    1. 声明式事务支持
-   1. 使用Pojo编程模型
+   1. 使用pojo编程模型
 1. 组成
    - 组件
      1. Spring Core：主要组件BeanFactory，使用IOC将配置、依赖规范和应用程序分开
@@ -159,23 +159,8 @@
      1. Spring DAO：提供异常层次结构，来管理异常和不同数据库的错误信息，简化了错误处理，
      1. Spring Web：为基于Web的应用程度提供上下文，支持与Struts的集成，简化了参数绑定到对象的工作
      1. Spring Web MVC：是全功能构建Web的MVC框架，包括了JSP、Velocity等
-   - 分类
-     1. IOC：Bean、Context、表达式语言
-        - 和AOP组成spring的核心
-        - 将类之间的依赖从代码中脱离出来，用配置的方式描述。由IOC容器负责依赖类之间的管理
-        - BeanFactory是核心接口
-        - Context模块构建于核心模块之上，添加i18n、Bean生命周期控制、框架事件体系、资源加载透明化等功能。
-        - 表达式语言是统一表达式语言(Unified EL)的扩展，用于查询和管理运行期的对象，方便的通过表达式和Ioc交互
-     1. AOP：Spring AOP、Aspects、Instrument
-        - 横切逻辑编程
-        - 整合了AspectJAOP语言级的框架，
-     1. 数据访问和集成：JDBC、ORM、OXM、JMS、事务管理
-        - 包含表、XML、消息等和其不同的访问方法
-        - spring建立了和数据形式/访问技术无关的统一DAO层
-     1. web及远程操作：MVC、Web Service、WebSocket、Portlet
-        - 整合其他框架
 1. IoC：控制反转，Inversion of Control
-   - 理解：是Spring容器的内核，是AOP、声明式事务等的基础。
+   - 理解：将类之间的依赖从代码中脱离出来，用配置的方式描述，由IOC容器负责依赖类之间的管理。和AOP组成spring的核心/基础。Context模块构建于核心模块之上，添加i18n、Bean生命周期控制、框架事件体系、资源加载透明化等功能。BeanFactory是核心接口
    - 设计思想：用DI(Dependency Injection)依赖注入的概念来代替IoC而便于理解，让调用类对某接口实现类(被依赖类)的依赖关系由第三方(容器或者协作类)注入，以移除调用类对某接口实现类的直接依赖。角色有调用类(主体逻辑实现类)，接口实现类(被依赖类)，第三方装配类(将前二者组合起来)
    - IoC分类
      1. 构造函数注入：通过构造函数将接口实现类当做变量注入，适用于调用类全局依赖接口实现类
@@ -184,9 +169,6 @@
    - 实现原理：反射是实现依赖注入的基础，第三方装配类将决定依赖的关系交给用户，由用户定义
    - Spring基础接口：
    - Bean生命周期：
-
-
-
    - 使用
      1. 基于XML的装配方式
      1. 基于Java Configuration的装配方式
@@ -195,7 +177,7 @@
      1. 处理装配的歧义
      1. 如何注入属性值
 1. AOP
-   - 切面、目标对象、切点、通知、织入等基本概念
+   - 切面、目标对象、切点、通知、织入等基本概念，横切逻辑编程，整合了AspectJAOP语言级的框架，
    - 如何定义切点：定义切点的aspectJ语法
    - 定义通知
      1. 前置通知（Before)
@@ -261,24 +243,13 @@
      1. @Component：通用注解，用于无法确定类属于的层，不建议使用
 1. 使用
    - 业务分层
-     1. 持久层：JDBC
-     1. 业务层：声明式事务
+     1. 持久层：JDBC、MyBatis
+     1. 业务层：Service、声明式事务
      1. 展现层：Spring MVC
-   - 重难点
-     1. 依赖注入、控制反转
-     1. AOP
-     1. 注解
-     1. 代理
-     1. 事务管理
-     1. ApplicationContext
    - 官方参考项目
      1. spring-mvc-showcase：参考控制器、配置等写法
      1. greenhouse：也有很多配置和项目
      1. spring-petclinic：用spring boot启动，有很多官方的小例子
-   - 实践注意点
-     1. 当使用`Set<Object>`，即自定义对象的Set集合，要在pojo中重写equals和hashCode方法，因为要保证这两个方法针对的对象属性相同，才能保证输出的bool结果的一致
-     1. 自动载入用`@Autowired`或者`@Resource`，后者更好，不出红线
-     1. 返回值为List的写法提醒`ServerResponse<List<Category>>`
 ### Spring Boot
 1. 理解：旨在简化创建产品级的 Spring 应用和服务，提供了命令行工具，是封装了spring再面向用户的
 ### 微服务

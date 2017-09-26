@@ -297,6 +297,8 @@
      1. 数据绑定更新对应数据：mapper.xml文件中update指定parameterType的类地址：`parameterType="com.mall.pojo.Xxx"`
      1. 批量插入：对应于子订单的批量插入
    - 获得当前运行的文件夹目录：`request.getSession().getServletContext().getRealPath('upload');`
+   - 当使用`Set<Object>`，即自定义对象的Set集合，要在pojo中重写equals和hashCode方法，因为要保证这两个方法针对的对象属性相同，才能保证输出的bool结果的一致
+   - 返回值为List的写法提醒`ServerResponse<List<Category>>`
 1. 淘淘商城
    - 技术点
      1. Nginx反向代理
