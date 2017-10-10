@@ -49,6 +49,9 @@
      1. -p：-p 8080:80，端口映射，容器中的80映射到8080
      1. -d：将所运行的容器当做守护进程，即一直运行
      1. -v：挂载指向的本地目录
+     1. -i：保持shell持续运行
+     1. -t：创建虚拟tty
+     1. --privileged：docker中的root具有真正的root权限
    - docker stop # 停止容器运行，发送信号SIGTERM
    - docker start # 启动一个停止状态的容器
    - docker restart # 重启一个容器
