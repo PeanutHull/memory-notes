@@ -115,3 +115,36 @@
 	}
 	return lim
     ```
+   - switch
+    ```go
+    switch os := runtime.GOOS; os {
+	case "darwin":
+        // 匹配则跳过剩下的case
+	case "linux":
+	default:
+	}
+    // 没有条件的switch，代替冗长的if-then-else
+    switch {
+	case t.Hour() < 12:
+	case t.Hour() < 17:
+	default:
+	}
+    ```
+   - defer
+    ```go
+    // defer语句会延迟函数的执行直到上层函数返回。特点是所有的defer会压入栈中，并且先入后出
+    defer fmt.Println("world")
+	fmt.Println("hello")
+    ```
+1. \* 指针
+   - 理解：指针保留了变量的内存地址，类型*T是指向类型T的值的指针，其零值是nil。与C不同go没有指针运算
+   - 实例
+    ```go
+    var p *int      // 定义一个指针
+    i := 42
+    p = &i          // &生成指向其对象的指针
+    fmt.Println(*p) // 通过指针p读取i
+    *p = 21         // 通过指针p设置i
+    ```
+1. struct 结构体
+   
