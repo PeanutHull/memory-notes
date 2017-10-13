@@ -278,6 +278,50 @@
     ```
    - error
 ### 并发
+1. goroutine：是go的轻量级线程
+   - 使用
+        ```go
+        go say("world")
+        ```
+   - select：可以使线程等待
+        ```go
+        for {
+            select {
+            case c <- x:
+            case <-quit:
+            default:
+            }
+        }
+        ```
+1. channel：有类型的管道，可以用<-对其发送或者接收值，用来在线程间通信
+   - 使用
+        ```go
+        ch := make(chan int)        // 使用前必须创建
+        ch <- v                     // 将v送入channel ch
+        v := <-ch                   // 从ch接收，并且赋值给v
+        ```
+   - 缓冲channel：向缓冲channel发送数据的时，只有缓冲区满时才会阻塞，当缓冲区为空的时候接收操作会阻塞
+        ```go
+        ch := make(chan int, 100)
+        ```
+   - 关闭：
+        ```go
+        c := make(chan int, 10)
+        // 发送者可以close一个channel来表示再没有值会被发送
+        close(c)
+        // 接收者可以通过赋值语句的第二参数来测试channel是否被关闭，ok为false表示已经关闭
+        v, ok := <-ch
+        // 不断从channel接收值，直到它被关闭
+        for i := range c {
+            fmt.Println(i)
+        }
+        ```
+1. sync.Mutex：保证同时只有一个goroutine能访问一个共享的变量从而避免冲突
+    ```go
+    c.mux.Lock()
+	c.v[key]++      // Lock 之后同一时刻只有一个goroutine能访问 c.v
+	c.mux.Unlock()
+    ```
 ### 其他
 1. IO包
    - Reader接口：go标准库包括了文件、网络连接、压缩、加密等实现
