@@ -82,9 +82,13 @@
         ['a'] * 4
         # 检查是否存在，返回True
         3 in [1, 2, 3]
-        # 迭代
+        # 遍历
         for x in [1, 2, 3]:
             print(x, end=" ")
+        # 同时遍历更多序列
+        num = ['1', '2', '3']
+        word = ['a', 'b', 'c']
+        for n, w in zip(num, word):
         # 多维
         list = [ [0 for i in range(5)] for i in range(5)]
         listp[0][0]
@@ -95,7 +99,35 @@
         - pop()
         - index()
         - max/min()
-   - Tuple：元组，元素不能被改变的列表，用括号表示，可以嵌套包含列表等数据类型。只有一个元素需要后边加逗号。如`tuple = ('abcd', 786, 70.2)`。string、list和tuple都属于sequence序列
+     1. 列表推导式：提供了从序列创建列表的简单途径，通过计算、判断得出新的列表
+        ```python
+        vec = [2, 4, 6]
+        [3*x for x in vec]          # 将元素都乘以3，[6, 12, 18]
+        [[x, x**2] for x in vec]    # 得出二维列表，[[2, 4], [4, 16], [6, 36]]
+        [3*x for x in vec if x > 3] # 判断，[12, 18]
+
+        word = ['  a', '  b ', 'c  ']
+        x.strip() for x in freshfruit   # 调用方法处理
+        ```
+     1. 列表嵌套
+        ```python
+        matrix = [                                          # 3x4矩阵
+            [1, 2, 3, 4],
+            [5, 6, 7, 8],
+            [9, 10, 11, 12],
+        ]
+        [[row[i] for row in matrix] for i in range(4)]      # 转换为4x3矩阵
+        ```
+   - Tuple
+     1. 理解：元组，元素不能被改变的列表，用括号表示，可以嵌套包含列表等数据类型。只有一个元素需要后边加逗号。string、list和tuple都属于sequence序列
+     1. 定义
+        ```python
+        # 定义
+        tuple = ('abcd', 786, 70.2)
+        # 定义
+        t = 12345, 54321, 'hello!'
+        u = t, (1, 2, 3, 4, 5)
+        ```
    - Sets：集合
      1. 理解：是无序不重复元素的序列，用于成员关系测试和删除重复元素。用{}或set()函数创建集合，必须用set()创建空集合 
      1. 实例
@@ -134,9 +166,13 @@
         dict['one'] = "1"
         dict[2]     = "2"
         # 定义
-        tinydict = {'name': 'runoob','code':1, 'site': 'www.runoob.com'}
+        dict = {'name': 'runoob','code': 1}
+        dict = dict([('name', 'runoob'), ('code', 1)])
+        dict = dict(sape=4139, guido=4127, jack=4098)
         # 输出
         dict['one']
+        # 遍历
+        for k, v in knights.items():
         ```
    - 类型转换
      1. int/long/float/complex()
@@ -146,7 +182,7 @@
 1. 变量
    - 理解：不需要声明，使用前必须赋值，赋值之后变量才会被创建。变量的类型由赋予它的值来决定，以值为基准，一个值一个内存地址，多个变量可以指向一个内存地址，变量没有类型，仅仅是一个对象的引用
    - 操作
-     1. del：删除对象引用，如`del a, b`
+     1. del：删除对象引用，如`del a, b`，如删除多个 `del a[2:4]/a[:]`
      1. *：重复
      1. in：是否存在
      1. for x in：迭代
@@ -309,6 +345,6 @@
    - class，from，import，return，
    - if，elif，else，for，while，continue，break，finally，pass，
    - None，False，True
-   - del，in，is，and，or，not，def，lambda，yield，
+   - del，in，is，and，or，not，global，nonlocal，def，lambda，yield，
    - try，except，
-   - as，assert，global，nonlocal，raise，with，
+   - as，assert，raise，with，
