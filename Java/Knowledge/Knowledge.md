@@ -311,3 +311,4 @@
      1. Quartz任务调度：定时器
    - 架构组成
      1. taotao-common：项目中用到的通用工具类和pojo
+   - maven的tomcat7插件启动纯jsp项目：manager项目————右键————run as————第二个maven build————clean tomcat7:run
