@@ -53,10 +53,16 @@
         prid INTEGER)
         ''')
         ```
-     1. 格式化：支持格式化输出字符串，就是将值插入到有格式符%s的字符串中，和c的sprintf一样的语法，如`print("我叫 %s 今年 %d 岁!" % ('小明', 10)`
-        - 格式化符号：%c符合和ACS||，%s字符串，%d整数，%u无符号整数，%o八进制，%x十六进制，%X十六进制(大写)...
-        - 辅助指令：*定义宽度或小数点精度，-左对齐，(var)映射变量...
+     1. 格式化：
+        - 新版：`print('{1} 和 {0}, 和 {other}, 和 {0:.3f} 和 {1:10d}, 和 {5[a]:d} 和{a:d}'.format('a', 'b', other='c', math.pi, '1.2345', dict, **dict))`
+        - 旧版格式化：支持格式化输出字符串，就是将值插入到有格式符%s的字符串中，和c的sprintf一样的语法，如`print("我叫 %s 今年 %d 岁!" % ('小明', 10)`
+          1. 格式化符号：%c符合和ACS||，%s字符串，%d整数，%u无符号整数，%o八进制，%x十六进制，%X十六进制(大写)...
+          1. 辅助指令：*定义宽度或小数点精度，-左对齐，(var)映射变量...
      1. 函数：len(string)、lower()、count(str, beg= 0,end=len(string))、encode/decode(encoding='UTF-8',errors='strict')、
+     1. 方法
+        - str.rjust/center/zfill/format
+        - str()：以用户易读的方式输出
+        - repr(`：解释器易读的形式输出
      1. 实例
         ```python
         str = 'abcde'
@@ -258,35 +264,6 @@
     a = b = c = 1          # 多个变量赋值，三个变量被分配到相同的内存空间上
     a, b, c = 1, 2, "abc"  # 多个变量赋多个值
     ```
-1. 流程控制
-   - 判断
-    ```python
-    if 表达式1:
-        语句
-    elif 表达式4:
-        语句
-    else:
-        语句
-    ```
-   - 循环
-    ```python
-    # for
-    for x in y:
-        语句
-    else:
-        语句
-    # while
-    while 判断条件：
-        语句
-    else:
-        语句
-    while 判断条件：语句
-    # 遍历数字
-    for i in range(5):
-        语句
-    # 跳出循环，continue，break，但是不用执行else里的语句
-    ```
-   - pass：空/占位语句，为了保持程序结构完整，无意义
 1. 函数
    - 定义：def
     ```python
@@ -327,24 +304,161 @@
      1. 数学常量：pi圆周率、e自然常数
    - id()：获取对象内存地址
    - enumerate()
-1. 导入
-   - 整个模块导入：`import somemodule`
-   - 模块的某个函数：`from somemodule import firstfunc, secondfunc`
-   - 模块的全部函数：`from somemodule import *`
+1. 流程控制
+   - 判断
+    ```python
+    if 表达式1:
+        语句
+    elif 表达式4:
+        语句
+    else:
+        语句
+    ```
+   - 循环
+    ```python
+    # for
+    for x in y:
+        语句
+    else:
+        语句
+    # while
+    while 判断条件：
+        语句
+    else:
+        语句
+    while 判断条件：语句
+    # 遍历数字
+    for i in range(5):
+        语句
+    # 跳出循环，continue，break，但是不用执行else里的语句
+    ```
+   - pass：空/占位语句，为了保持程序结构完整，无意义
+1. 模块
+   - 特点
+     1. 模块名为py文件的文件名
+     1. 不管import多少次，都只会引入一次
+     1. 搜索目录：文件只要存在于sys.path输出的目录下即可，结果第一个表示当前脚本目录
+   - 组成
+     1. `__name__`：当值为'\_\_main__'时，模块为自身运行，否则被引入执行，
+   - 使用
+     1. 使用
+        - `module.func()`：直接执行模块中方法
+        - `mod = module.func`：将模块的函数写入变量，再执行
+        - `dir(module)`：显示模块中定义的所有名称
+     1. 导入
+        - `import modules.child`：导入模块，使用时需要带上全路径
+        - `from modules import child`：导入子模块
+        - `from module import firstfunc, secondfunc`：导入模块的某个函数，`from module import *`：导入模块的全部函数
+   - 标准模块
+     1. sys：sys.argv 包含了命令行参数，sys.path python安装路径
+     1. os：目录模块
+     1. pickle：序列化/反序列化对象
+     1. pprint
+1. IO
+   - 文件
+     1. 理解
+        - 对待方式：文件指针默认在文件头部
+          1. r：只读
+          1. w：只用于写入
+          1. +：读写
+          1. a：用于追加，文件指针在结尾
+          1. b：二进制格式
+     1. 方法：对象为file.xxx
+        - read(size)：限定大小，无则全部
+        - readline()：读取一行，换行符为\n
+        - next()：返回文件下一行
+        - write()：返回写入的字符数
+        - tell()：指针位置
+        - seek(offset, from)：参一字符数，参二0开头，1当前，2结尾
+        - close()：关闭文件释放资源
+        - flush()：刷新缓冲，缓冲区数据立即写入
+        - fileno()：返回文件描述符，用在os模块等底层操作上
+     1. 实例
+        ```python
+        f = open("/tmp/foo.txt", "wb+")           # 二进制方式读写，默认r
+        f.write( "你好! \n" )
+        value = ('a', 1)                          # 先转换
+        s = str(value)
+        f.write(s)
+        f.close()
+        ```
+   - 目录
+     1. `os.getcwd()`：当前目录，如`os.getcwd()`
+     1. `os.chdir()`
+     1. `os.mkdir()`
+     1. `os.rmdir()`
+     1. `os.chroot()`：改变当前进程根目录
+     1. `os.access(path, mode)`：检测权限，mode包括os.F\_OK存在/R\_OK读/W\_OK写/X_OK执行
+     1. `os.chmod(path, mode)`
+     1. `os.chown()`
+     1. `os.open(path)`：打开文件
+     1. `os.remove(path)`：删除文件
+     1. `os.mkfifo(path[, mode])`：创建命名管道，默认0666
+     1. `os.symlink(src, dst)`：软链接
+     1. `os.link(src, dst)`：硬链接
+   - 序列化/反序列化
+     1. 理解：用于对象信息的保存
+     1. 序列化
+        ```python
+        output = open('data.pkl', 'wb')
+        pickle.dump(data1, output)
+        pickle.dump(data2, output, -1)          # 结尾添加
+        output.close()
+        ```
+     1. 反序列化
+        ```python
+        pkl_file = open('data.pkl', 'rb')
+        data1 = pickle.load(pkl_file)
+        pprint.pprint(data1)
+        pkl_file.close()
+        ```
+   - 输入输出
+     1. 标准输出文件：`sys.stdout`
+     1. 键盘输入：python的默认标准输入为键盘
+        ```python
+        str = input("请输入：");
+        print("你输入的内容是: ", str)
+        ```
+   - 打印：`print(x)`，不换行和连接符`print(x, end="", sep='&')`
+1. 错误和异常
+   - 异常处理：try/except
+    ```python
+    try:
+    except OSError as err:
+        print("OS error: {0}".format(err))
+    except ValueError:
+    except (RuntimeError, TypeError, NameError):
+    except:                                         # 最后一个作为通配使用
+    else:                                           # 放在except之后，没有异常会执行这里  
+    finally:                                        # 无论如何都会执行。如果有异常，没有except接住的话，会再抛一次
+    ```
+   - 抛出异常：raise
+    ```python
+    raise                           # 抛出一个异常
+    raise NameError('HiThere')      # 抛出指定异常，参数必须为异常的实例或者异常的类(即Exception的子类)
+    ```
+   - 自定义异常
+    ```python
+    class Error(Exception):             # 定义一个基础的类，通过继承扩展异常类型
+        pass
+    class InputError(Error):
+
+    class TransitionError(Error):
+    ```
 1. 命令行：python3 -h
 1. 交互式编辑模式：输入python3进入
    - help(max)：打印文档，:q退出说明文档
    - 等待用户输入：`input("按下 enter 键后退出")`
    - 构造函数：dict([('a', 1), ('b', 2), ('c', 3)])
 1. 脚本式模式：指定Shell脚本的解释器，作为脚本执行
-    - 添加：#! /usr/bin/env python3
-    - 执行命令：./hello.py
-1. 输出：`print(x)`，不换行连接符`print(x, end="", sep='&')`
+   - 添加：#! /usr/bin/env python3
+   - 执行命令：./hello.py
+1. 输出：
 ### WIKI
 1. 保留字
    - class，from，import，return，
    - if，elif，else，for，while，continue，break，finally，pass，
    - None，False，True
    - del，in，is，and，or，not，global，nonlocal，def，lambda，yield，
-   - try，except，
-   - as，assert，raise，with， 
+   - try，except，raise，
+   - as，assert，with， 
