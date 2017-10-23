@@ -1,16 +1,21 @@
-### 认识
+# python
+
+## 认识
+
 1. 理解：是一种解释性、动态数据类型、面向对象的高级编程语言，1989年发明。Python3不向下兼容
 1. 特点
    - 易于理解、学习
    - 拥有广泛的标准库，广泛用于爬虫、数学分析
 1. 举例
    - vim hello.py
-    ```python
-    #!/usr/bin/python3
-    print("Hello, World!");
-    ```
+        ```python
+        #!/usr/bin/python3
+        print("Hello, World!");
+        ```
    - python3 hello.py
-### 语法
+
+## 语法
+
 1. 基础
    - 编码：默认utf8编码，可以指定不同编码：`# -*- coding: cp-1252 -*-`\
    - 标识符：不能以数字开头，对大小写敏感
@@ -23,7 +28,7 @@
         - int：整数，可以表示长整型，没有python2的long类型
         - float：浮点数，如1.23、1E-2
         - complex：复数，如1 + 2j
-     1.  运算符
+     1. 运算符
         - 算术运算符：+-*/%，a**b次幂，//取整除
         - 比较运算符：== != > < >= <=，==比较的是值，is比较引用对象
         - 赋值运算符：= += -= *= /= %= **= //=
@@ -135,10 +140,10 @@
         u = t, (1, 2, 3, 4, 5)
         ```
    - Sets：集合
-     1. 理解：是无序不重复元素的序列，用于成员关系测试和删除重复元素。用{}或set()函数创建集合，必须用set()创建空集合 
+     1. 理解：是无序不重复元素的序列，用于成员关系测试和删除重复元素。用{}或set()函数创建集合，必须用set()创建空集合
      1. 实例
         ```python
-        student = {'Tom', 'Jim', 'Mary', 'Tom', 'Jack', 'Rose'} 
+        student = {'Tom', 'Jim', 'Mary', 'Tom', 'Jack', 'Rose'}
 
         # 输出集合，重复的元素被自动去掉
         print(student)
@@ -148,11 +153,10 @@
             print('Rose 在集合中')
         else :
             print('Rose 不在集合中')
-        
-        # set可以进行集合运算
+        # set进行集合运算
         a = set('abracadabra')
         b = set('alacazam')
-        
+        # 显示结果
         print(a - b)     # a和b的差集
         print(a | b)     # a和b的并集
         print(a & b)     # a和b的交集
@@ -244,13 +248,13 @@
         def fibonacci(n):                   # 生成器函数 - 斐波那契
             a, b, counter = 0, 1, 0
             while True:
-                if (counter > n): 
+                if (counter > n):
                     return
                 yield a
                 a, b = b, a + b
                 counter += 1
         f = fibonacci(10)                   # f 是一个迭代器，由生成器返回生成，已经执行了一次，停在了yield处
-        
+        # 执行具体代码
         while True:
             try:
                 print (next(f), end=" ")    # 调用next函数，开始执行第二以及更多次
@@ -350,10 +354,48 @@
         - `from modules import child`：导入子模块
         - `from module import firstfunc, secondfunc`：导入模块的某个函数，`from module import *`：导入模块的全部函数
    - 标准模块
-     1. sys：sys.argv 包含了命令行参数，sys.path python安装路径
-     1. os：目录模块
+     1. sys：
+        - `sys.argv` 输出命令行参数
+        - `sys.path` python安装路径
+        - `sys.stderr.write('Warning')` 错误输出重定向
+     1. os：目录接口
+     1. glob：从目录通配符搜索中生成文件列表，如`glob.glob('*.py')`
+     1. datetime：提供了很多日期和时间的方法，date.today()
+     1. re：正则匹配
      1. pickle：序列化/反序列化对象
+     1. zlib：打包和压缩，zlib.compress/decompress/crc32(s)
+     1. timeit：性能度量工具，如`Timer('a,b = b,a', 'a=1; b=2').timeit()`
+     1. doctest/unittest：
+     1. urllib/smtplib：网络和邮件
+     1. math
      1. pprint
+1. 面向对象
+   - 理解：尽量不增加新的语法和语义，
+   - 特点
+     1. 私有属性：以两个下划线开头，不能在类外部访问和直接访问
+     1. 私有方法：以两个下划线开头
+     1. 方法访问：直接向上的、从左至右的查找
+     1. 方法重写：子类直接覆盖方法名重写
+   - 类的专有方法
+     1. \_\_init__
+     1. \_\_del__：析构
+     1. \_\_repr__：打印，转换
+     1. \_\_call__：函数调用
+     1. \_\_setitem/getitem/len/cmp/add/sub/mul/div/mod/pow__：各种运算类的时候用
+   - 实例
+    ```python
+    class MyClass(BaseClass1, BaseClass2):      # 继承，子类没有方法，从左至右的父级中查找
+        def \__init__(self, realpart):
+            self.r = realpart
+        i = 12345
+        def f(self):                            # 类的方法与普通的函数只有一个区别就是有一个额外的第一参数，惯例为self
+            this = self.class                   # 指向类
+            j = self.i                          # 访问类变量
+            return 'hello world'
+    x = MyClass(3306)                           # 实例化类
+    x.i                                         # 访问类属性
+    x.f()                                       # 访问类方法
+    ```
 1. IO
    - 文件
      1. 理解
@@ -383,6 +425,7 @@
         f.close()
         ```
    - 目录
+     1. `os.system('')`：执行系统命令
      1. `os.getcwd()`：当前目录，如`os.getcwd()`
      1. `os.chdir()`
      1. `os.mkdir()`
@@ -420,6 +463,55 @@
         print("你输入的内容是: ", str)
         ```
    - 打印：`print(x)`，不换行和连接符`print(x, end="", sep='&')`
+1. 多线程
+   - 多线程的特点
+     1. 并行提高处理速度，充分利用多核优势
+     1. 可将耗时长的任务后台处理
+     1. 显示进度条
+     1. 每个线程都有一组cpu寄存器，如指令指针、堆栈指针
+     1. 线程可以被抢占(中断)、搁置(睡眠)
+     1. 分为：内核线程、用户线程
+   - 分类
+     1. \_thread：thread被废弃，p3叫_thread，提供低级别的、原始的线程以及一个简单的锁，功能有限
+        ```python
+        # 为线程定义一个函数
+        def print_time( threadName, delay):
+            count = 0
+            while count < 5:
+                time.sleep(delay)
+                count += 1
+                print ("%s: %s" % ( threadName, time.ctime(time.time())))
+        # 创建线程
+        \_thread.start\_new\_thread(print_time, ("Thread-1", 2,))
+        ```
+     1. threading：使用threading代替
+        - 方法
+          1. threading.currentThread()：返回当前的线程变量
+          1. threading.enumerate(): 返回一个包含正在运行的线程的list
+          1. threading.activeCount(): 返回正在运行的线程数量
+        - Thread的方法
+          1. run()：执行线程的地方
+          1. start()：启动线程
+          1. join([time])：等待至线程终止
+          1. exit()：终止线程
+          1. getName()：返回线程名
+          1. setName()：设置线程名
+        - 实例
+            ```python
+            class myThread (threading.Thread):
+                def \_\_init__(self):
+                    threading.Thread.\_\_init__(self)
+                def run(self):
+                    print ("开始线程：" + self.name)
+                    print ("退出线程：" + self.name)
+            # 创建新线程
+            thread1 = myThread()
+            # 开始运行
+            thread1.start()
+            thread1.join()
+            ```
+   - 线程同步
+     1. 理解：即线程锁，
 1. 错误和异常
    - 异常处理：try/except
     ```python
@@ -429,7 +521,7 @@
     except ValueError:
     except (RuntimeError, TypeError, NameError):
     except:                                         # 最后一个作为通配使用
-    else:                                           # 放在except之后，没有异常会执行这里  
+    else:                                           # 放在except之后，没有异常会执行这里
     finally:                                        # 无论如何都会执行。如果有异常，没有except接住的话，会再抛一次
     ```
    - 抛出异常：raise
@@ -442,23 +534,137 @@
     class Error(Exception):             # 定义一个基础的类，通过继承扩展异常类型
         pass
     class InputError(Error):
-
     class TransitionError(Error):
     ```
-1. 命令行：python3 -h
-1. 交互式编辑模式：输入python3进入
-   - help(max)：打印文档，:q退出说明文档
-   - 等待用户输入：`input("按下 enter 键后退出")`
-   - 构造函数：dict([('a', 1), ('b', 2), ('c', 3)])
-1. 脚本式模式：指定Shell脚本的解释器，作为脚本执行
-   - 添加：#! /usr/bin/env python3
-   - 执行命令：./hello.py
-1. 输出：
-### WIKI
+1. 正则
+   - 理解：自1.5增加re模块，提供Perl风格的正则模式
+   - 函数
+     1. match：只从起始位置匹配，否则返回None，成功返回对象
+        ```python
+        matchObj = re.match('www', 'www.a.com').span()      # 在起始位置匹配
+        matchObj.group(num=0)                               # 包含对应组的值
+        matchObj.groups()                                   # 包含所有小组字符串的元组
+        ```
+     1. search：查找，用法同match
+     1. sub：替换
+        ```python
+        # 被替换者可以是个函数
+        def double(matched):
+            value = int(matched.group('value'))
+            return str(value * 2)
+
+        s = 'A23G4HFD567'
+        print(re.sub('(?P<value>\d+)', double, s))          # 输出A46G8HFD1134
+        ```
+   - 修饰符
+     1. re.I 大小写
+     1. re.L 本地化识别匹配
+     1. re.M 多行
+     1. re.S 匹配所有字符
+     1. re.U 根据Unicode字符集解析字符，影响\w/W/b/B
+     1. re.X 给允更灵活的方式
+1. 使用方式
+   - 脚本式模式：指定Shell脚本的解释器，作为脚本文件执行
+     1. 添加：#! /usr/bin/env python3
+     1. 执行命令：./hello.pf
+   - 命令行：python3 -h
+   - 交互式编辑模式：输入python3进入
+     1. help(max)：打印文档，:q退出说明文档
+     1. 等待用户输入：`input("按下 enter 键后退出")`
+     1. 构造函数：dict([('a', 1), ('b', 2), ('c', 3)])
+
+## 使用
+
+1. CGI编程
+   - 示例
+    ```python
+    import cgi, cgitb
+    # 实例化cgi
+    form = cgi.FieldStorage()
+    # 获取数据
+    form.getvalue('name')
+    # 获取环境变量
+    for key in os.environ.keys():
+        pass
+    os.environ.get('HTTP_COOKIE')
+    # 上传文件
+    fileitem = form['filename']
+    fn = os.path.basename(fileitem.filename)                # 设置文件路径
+    open('/tmp/' + fn, 'wb').write(fileitem.file.read())
+    # 返回数据
+    print ("Content-type:text/html")
+    print ()                                                # 空行，告诉服务器结束头部
+    print ('<html></html>')
+    ```
+1. 连接MySQL
+   - 理解：p3使用PyMySQL，p2使用mysqldb
+   - 方法
+     1. 查询：fetchall()全部结果/fetchone下一条结果
+   - 示例
+    ```python
+    import pymysql
+    db = pymysql.connect("localhost","user","test","test" )             # 打开数据库连接
+    cursor = db.cursor()                                                # 创建游标对象
+    try:
+        cursor.execute("DROP TABLE IF EXISTS USER")                     # 执行sql语句
+        db.commit()
+    except:
+        db.rollback()
+    db.close()
+    ```
+1. 网络编程
+   - 分类
+     1. 低级别：提供了标准的BSD Sockets API，可以访问底层操作系统Socket接口的全部方法
+     1. SocketServer：简化网络服务开发
+   - 定义
+    ```python
+    import socket
+    # 参一套接字家族，为AF\_UNIX或者AF_INET
+    # 参二，套接字类型，SOCK\_STREAM或SOCK_DGRAM
+    serversocket = socket.socket(socket.AF\_INET, socket.SOCK\_STREAM)
+    ```
+   - 方法
+     1. 服务端：bind()/listen()/accept()
+     1. 客户端：connect()/connect_ex()
+     1. 公共
+        - send()：发送tcp数据
+        - recv(size)：接受tcp数据，指定最大接收量
+        - sendto()：发送UDP数据
+        - recvform()：接收UDP数据
+        - settimeout()：超时期
+   - 网络模块
+     1. HTTP
+     1. NNTP：帖子
+     1. FTP
+     1. Telnet：命令行
+     1. Gopher：信息查找
+     1. SMTP/POP3/IMAP4
+   - 服务端实例
+    ```python
+    serversocket = socket.socket(socket.AF\_INET, socket.SOCK\_STREAM)
+    serversocket.bind((socket.gethostname(), 9999))
+    serversocket.listen(5)                              # 最大连接数，超过后排队
+    # 阻塞监听
+    while True:
+        clientsocket,addr = serversocket.accept()       # 建立客户端连接
+        msg='你好'+ "\r\n"
+        clientsocket.send(msg.encode('utf-8'))
+        clientsocket.close()
+    ```
+   - 客户端实例
+    ```python
+    s = socket.socket(socket.AF\_INET, socket.SOCK_STREAM)
+    s.connect((socket.gethostname(), 9999))
+    msg = s.recv(1024)                  # 接收小于1024字节的数据
+    s.close()
+    ```
+
+## WIKI
+
 1. 保留字
    - class，from，import，return，
    - if，elif，else，for，while，continue，break，finally，pass，
    - None，False，True
    - del，in，is，and，or，not，global，nonlocal，def，lambda，yield，
    - try，except，raise，
-   - as，assert，with， 
+   - as，assert，with，
