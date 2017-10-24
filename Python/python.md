@@ -510,8 +510,108 @@
             thread1.start()
             thread1.join()
             ```
-   - 线程同步
-     1. 理解：即线程锁，
+   - 线程同步：即线程锁，使用Thread对象的Lock/Rlock，具体为acquire/release方法
+        ```python
+        class myThread (threading.Thread):
+            def \_\_init__(self):
+                threading.Thread.\_\_init__(self)
+            def run(self):
+                threadLock.acquire()        # 获取锁，用于线程同步
+                threadLock.release()        # 释放锁，开启下一个线程
+
+        threadLock = threading.Lock()
+        threads = []
+
+        # 创建新线程
+        thread1 = myThread()
+
+        # 开启新线程
+        thread1.start()
+
+        # 等待所有线程完成
+        threads.join()
+        ```
+   - 优先级队列
+     1. 理解：Queue模块提供了同步的、线程安全的队列类，实现了锁原语，可以使用队列实现线程间的同步、
+     1. 分类
+        - Queue：先入先出，FIFO
+        - LifoQueue：后入先出，LIFO
+        - PriorityQueue：优先级队列
+     1. 方法
+        - Queue.qsize()/empty()/full()/maxsize()
+        - Queue.get([block[, timeout])/get\_nowait()：获取队列，get_nowait和get(false)相同
+        - Queue.put(item)/put\_nowait()：写入队列，put_nowait()相当于put(item, False)
+        - Queue.task_done()：完成一项工作后，向已完成的队列发送一个信号
+        - Queue.join()：等到队列为空，再执行别的操作
+     1. 实例
+        ```python
+        import queue
+        import threading
+        import time
+
+        exitFlag = 0
+
+        class myThread (threading.Thread):
+            def \_\_init__(self, threadID, name, q):
+                threading.Thread.\_\_init__(self)
+                self.threadID = threadID
+                self.name = name
+                self.q = q
+            def run(self):
+                print ("开启线程：" + self.name)
+                process_data(self.name, self.q)
+                print ("退出线程：" + self.name)
+
+        def process_data(threadName, q):
+            while not exitFlag:
+                queueLock.acquire()
+                if not workQueue.empty():
+                    data = q.get()
+                    queueLock.release()
+                    print ("%s processing %s" % (threadName, data))
+                else:
+                    queueLock.release()
+                time.sleep(1)
+
+        threadList = ["Thread-1", "Thread-2", "Thread-3"]
+        nameList = ["One", "Two", "Three", "Four", "Five"]
+        queueLock = threading.Lock()
+        workQueue = queue.Queue(10)
+        threads = []
+        threadID = 1
+
+        # 创建新线程
+        for tName in threadList:
+            thread = myThread(threadID, tName, workQueue)
+            thread.start()
+            threads.append(thread)
+            threadID += 1
+
+        # 填充队列
+        queueLock.acquire()
+        for word in nameList:
+            workQueue.put(word)
+        queueLock.release()
+
+        # 等待队列清空
+        while not workQueue.empty():
+            pass
+
+        # 通知线程是时候退出
+        exitFlag = 1
+
+        # 等待所有线程完成
+        for t in threads:
+            t.join()
+        print ("退出主线程")
+        ```
+1. 时间和日期
+   - time
+     1. time.time()：时间戳
+     1. time.asctime(time.localtime(time.time()))：格式化时间，Thu Apr  7 10:29:13 2016
+     1. time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())：格式化时间，2016-03-20 11:45:39
+   - calendar
+     1. calendar.month(2016, 1)：输出日历
 1. 错误和异常
    - 异常处理：try/except
     ```python
@@ -658,6 +758,51 @@
     msg = s.recv(1024)                  # 接收小于1024字节的数据
     s.close()
     ```
+1. json解析：json.dumps()，编码。json.loads()，解码
+    ```python
+    import json
+    data = {
+        'no' : 1,
+        'name' : 'Runoob',
+    }
+
+    json_str = json.dumps(data)
+    print ("Python 原始数据：", repr(data))
+    print ("JSON 对象：", json_str)
+    ```
+1. XML解析
+   - XML理解：可扩展标记语言，通用标记语言的子集
+   - 方案
+     1. SAX：Simple API for XML，采用事件驱动模型，包含解析器和事件处理器，python标准库包含SAX解析器
+        ```python
+        # 创建一个 XMLReader
+        parser = xml.sax.make_parser()
+        parser.setFeature(xml.sax.handler.feature_namespaces, 0)        # turn off namepsaces
+        Handler = MovieHandler()                                        # 重写 ContextHandler
+        parser.setContentHandler(Handler)
+        parser.parse("movies.xml")
+
+        class MovieHandler( xml.sax.ContentHandler ):
+            def \_\_init__(self):
+            # 元素开始调用
+            def startElement(self, tag, attributes):
+            # 元素结束调用
+            def endElement(self, tag):
+            # 读取字符时调用
+            def characters(self, content):
+        ```
+     1. DOM：Document Object Model，将xml数据在内存中解析为一个树
+        ```python
+        from xml.dom.minidom import parse
+        import xml.dom.minidom
+
+        # 使用minidom解析器打开 XML 文档
+        DOMTree = xml.dom.minidom.parse("movies.xml")
+        collection = DOMTree.documentElement
+        collection.hasAttribute("shelf")
+        collection.getAttribute("shelf")
+        collection.getElementsByTagName("movie")
+        ```
 
 ## WIKI
 

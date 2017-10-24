@@ -14,4 +14,4 @@
    - siteName目录
      1. setting.py：配置文件
      1. urls.py：路由
-     1. wsgi.py：程序为web服务器服务的配置文件
+     1. wsgi.py：和web服务器的接口
