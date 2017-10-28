@@ -299,17 +299,45 @@
    - 获得当前运行的文件夹目录：`request.getSession().getServletContext().getRealPath('upload');`
    - 当使用`Set<Object>`，即自定义对象的Set集合，要在pojo中重写equals和hashCode方法，因为要保证这两个方法针对的对象属性相同，才能保证输出的bool结果的一致
    - 返回值为List的写法提醒`ServerResponse<List<Category>>`
-1. 淘淘商城
-   - 技术点
-     1. Nginx反向代理
-     1. Druid数据率连接池
-     1. FastDFS：分布式文件系统
-     1. Redis集群缓存
-     1. Solr集群搜索
-     1. Freemaker模板引擎
-     1. 单点登录、session共享
-     1. Quartz任务调度：定时器
-   - 架构组成
-     1. taotao-common：项目中用到的通用工具类和pojo
-   - maven的tomcat7插件启动纯jsp项目：manager项目————右键————run as————第二个maven build————clean tomcat7:run
+### 淘淘商城
+1. 技术点
+   - Nginx反向代理
+   - Druid数据率连接池
+   - FastDFS：分布式文件系统
+   - Redis集群缓存
+   - Solr集群搜索
+   - Freemaker模板引擎
+   - 单点登录、session共享
+   - Quartz任务调度：定时器
+1. 架构组成
+   - taotao-common：项目中用到的通用工具类和pojo
+1. 功能点
+   - maven的tomcat7插件启动项目：manager项目————右键————run as————第二个maven build————clean tomcat7:run
    - 静态资源映射：`<mvc:resources location="/WEB-INF/js/" mapping="/js/**"/>`，指定到WEB-INF目录下
+   - 分页插件的使用
+     1. 添加pagehelper的依赖
+     1. myBatis配置文件中加入分页插件
+        ```xml
+        <plugins>
+            <plugin interceptor="com.github.pagehelper.PageHelper">
+            <!-- 指定使用的数据库是什么 -->
+            <property name="dialect" value="mysql" />
+            </plugin>
+        </plugins>
+        ```
+     1. 书写分页代码
+        ```java
+        // 分页处理
+		PageHelper.startPage(page, rows);
+		// 执行查询
+		TbItemExample example = new TbItemExample();
+		List<TbItem> list = itemMapper.selectByExample(example);
+		// 取分页信息
+		PageInfo<TbItem> pageinfo = new PageInfo<>(list);
+		// 返回结果
+		EasyUIDataGridResult result = new EasyUIDataGridResult();
+		result.setTotal(pageinfo.getTotal());
+		result.setRows(list);
+        return result;
+        ```
+   - 图片服务器
