@@ -312,3 +312,4 @@
    - 架构组成
      1. taotao-common：项目中用到的通用工具类和pojo
    - maven的tomcat7插件启动纯jsp项目：manager项目————右键————run as————第二个maven build————clean tomcat7:run
+   - 静态资源映射：`<mvc:resources location="/WEB-INF/js/" mapping="/js/**"/>`，指定到WEB-INF目录下

@@ -40,7 +40,7 @@
    1. `mvn pachage` // 打包项目生成jar
    1. `mvn clean` // 清除项目的结果   
    1. `mvn clean package -Dmaven.test.skip=true` // 清除以前的包后重新打包，跳过测试类
-   1. `mvn install` // 在本地Repository中安装jar   
+   1. `mvn install` // 在本地Repository中安装jar
    1. `mvn deploy` // 发布项目   
    1. `mvn site` // 生成项目相关信息的网站
    1. `mvn test` // 运行单元测试
@@ -49,6 +49,12 @@
    1. `mvn eclipse:eclipse ` // 生成eclipse项目文件
 1. 附
    - java发布过程：源代码——生成项目文档——编译——打包——安装jar/war/zip包到服务器
+   - 本地jar/项目安装到本地仓库
+     1. 本地jar：mvn install:install-file -Dfile=name.jar -DgroupId= -DartifactId= -Dversion= -Dpackaging=jar
+     1. 本地项目
+        - `mvn clean package`
+        - `mvn clean install`
+        - 将本目录下的对应路径的依赖复制到本地仓库地址中
    - Maven与Ant
      1. Maven：声明式的方式，指定做什么，而不是怎么做
      1. Ant：命令式的方式
