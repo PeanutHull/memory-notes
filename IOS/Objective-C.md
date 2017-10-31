@@ -84,6 +84,17 @@
      1. 左值：可能在左边或右边被赋值
      1. 右值：只能出现在右边
 1. 函数
+   - 定义：指定返回值类型
+    ```c
+    # C语言形式的函数
+    int countNum(int a, int b) {
+      int s = a + b;
+      return s;
+    }
+    void show() {
+      NSLog(@"hello");
+    }
+    ```
    - sizeof：返回对象/类型的字节为单位的存储大小，`sizeof(int)`
 1. 打印：`NSLog(@"Storage size for int : %d", sizeof(int));`
 ### 面向对象
