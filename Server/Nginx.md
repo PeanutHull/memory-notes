@@ -29,6 +29,9 @@
     kill -TERM MasterProcessNumber      # 快速停止
     kill -9 nginx                       # 强制停止
     ```
+1. 初始配置文件
+    ```
+    ```
 1. 多域名配置
    - nginx.conf引入文件：bmp.local.conf
    - 写入bmp.local.conf如下内容，并修改域名
@@ -75,6 +78,22 @@
         }
     }
     ```
+   - 最简单域名配置
+    ```
+    server {
+        listen       80;
+        server_name  test3.taotao.com;
+
+        #charset koi8-r;
+
+        #access_log  logs/host.access.log  main;
+
+        location / {
+            root   html;                            # 根目录，相对于nginx的安装目录？？？
+            index  index.html index.htm;
+        }
+    }
+    ```
 1. 重定向文件
     ```
     location ~* .(gif|png|jpg|jpeg|zip|apk)$ {
@@ -83,7 +102,7 @@
         access_log off;
     }
     ```
-1. 反向代理，转向其他端口
+1. 反向代理，即请求转发，可以转向其他端口或地址
     ```
     server {
         listen 80;
