@@ -1,5 +1,5 @@
 ### 认识
-1. 理解：通用的、面向对象的语言，用于开发iOS和Mac OS X操作系统和其应用。最初由NeXT为NeXTSTEP操作系统开发
+1. 理解：通用的、面向对象的语言，用于开发iOS和Mac OS X操作系统和其应用，支持c和c++语言语法，是对c语言面向对象的扩展。最初由NeXT为NeXTSTEP操作系统开发，.h是头文件，.m是实现文件
 1. 组成：预处理命令，变量，方法，语句和表达式，接口，实现，注释
 1. 实例
     ```c
@@ -21,15 +21,19 @@
    - 注释：单行//，多行/**/
 1. 数据类型
    - 基本
-     1. 整形
-        - short：2bytes，-32768~32767；unsigned short：翻倍
-        - int：2/4bytes，-32768~32767/20多亿；unsigned int：翻倍
-        - long：4bytes，20多亿；unsigned long：翻倍
-        - char：1bytes，-128~127/0~255；unsigned char；signed char
-     1. 浮点型
+     1. 基本类型
+        - int：2/4bytes，-32768~32767/20多亿
         - float：4bytes，1.2E-38 to 3.4E+38，精确到6个小数点
         - double：8bytes，2.3E-308 to 1.7E+308，15个小数点
-        - long double：10byte，3.4E-4932 to 1.1E+4932，19个小数点
+        - char：1bytes，-128~127/0~255
+        - NSString :@"hello world"
+        - "hello world"
+     1. 限定词
+        - short：2bytes，-32768~32767；unsigned short：翻倍        
+        - long：4bytes，20多亿；unsigned long：翻倍；long double：10byte，3.4E-4932 to 1.1E+4932，19个小数点
+        - long long
+        - unsigned：unsigned int；unsigned char
+        - signed：signed char
    - void：函数无返回值，没有参数的函数可以接受一个void参数
    - 枚举
    - 派生
@@ -102,7 +106,11 @@
    - 定义和实现
         ```c
         @interface SampleClass:NSObject                             # 继承 NSObject
+        @property NSString *name                                    # 类的属性声明
+        @property int num                                           # 类的属性声明
         - (void)sampleMethod;
+        - (void)sampleMethodWithValue:(SomeType)value;
+        + (id)stringWithString:(NSString *)aString;
         @end
 
         @implementation SampleClass                                 # 实现
@@ -114,6 +122,10 @@
         SampleClass *sampleClass = [[SampleClass alloc]init];       # 调用
         [sampleClass sampleMethod];
         ```
+1. 方法
+   - 分类
+     1. 减号方法：即普通方法/对象方法
+     1. 加号方法：即类方法/静态方法
 1. Foundation框架
    - 特点
      1. 包括NSArray，NSDictionary中的NSSet等扩展数据类型
