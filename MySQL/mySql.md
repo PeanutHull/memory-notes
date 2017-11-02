@@ -3,9 +3,40 @@
 1. 应用
 1. 性能
 1. 原理
-1. 周边
 1. WIKI
 ### 认识
+1. 理解
+   - 数据库：是按照数据结构来组织、存储和管理数据的仓库，会提供API进行数据的操作。因为文件中读写数据不方便、速度也慢
+   - 关系型数据库：建立在关系模型基础上，由行、表、库等组成
+   - MySQL：瑞典的属于Oracle公司的开源数据库，使用标准sql语句，支持多种语言如c、php等，32位最大表文件4GB，64的8TB
+1. 数据类型
+   - 数字
+     1. bit：默认1，长度1~64，如bit(6)
+     1. tinyint：-128~127
+     1. int：范围前后21亿，int中m仅用于显示，不影响存储范围，如int(5)，显示为00001
+     1. bigint：前后9亿亿亿，19位，2E64，
+     1. decimal：精确小数值，m是数字总个数，d是小数点后个数，m最大值为65，d最大值为30，能够存储精确值的原因在于其内部按照字符串存储
+     1. FLOAT：前后38次方，数值越大，越不准确
+     1. DOUBLE：前后308次方，数值越大，越不准确
+   - 字符串
+     1. char：定长字符串，0~255，m表示长度，即使数据小于m，也占用m长度，处理速度更快，甚至快过varchar50%
+     1. varchar：变长字符串，0~255，m表示最大保存长度
+     1. text：大字符串，0~65535，2E16
+     1. mediumtext：1600万，2E24
+     1. longtext：42亿长度或4GB字符，
+   - 其他
+     1. enum：枚举，0~65535，如`enum('','')`
+     1. set：集合，0~64，可以存一个集合，如`set('','')`
+     1. json：
+   - 时间
+     1. DATETIME：YYYY-MM-DD HH:MM:SS (1000-01-01 00:00:00/9999-12-31 23:59:59)
+     1. TIMESTAMP：YYYY-MM-DD HH:MM:SS (1970-01-01 00:00:00/2037)，只是时间戳表示的范围
+     1. DATE：YYYY-MM-DD (1000-01-01/9999-12-31)
+     1. TIME：HH:MM:SS ('-838:59:59'/'838:59:59')
+     1. YEAR：YYYY (1901/2155)
+   - 修饰符
+     1. unsigned
+     1. zerofill
 1. sql基本操作
    - SQL操作语言的分类
      1. DCL：对数据库的操作：mysql、use、set、show
@@ -22,11 +53,13 @@
         // show
         show databases/tables;                          # 查看数据库或表
         show create database/table baseName/tableName;  # 输出标准sql语句
+        show columns/index from tabel;                  # 查看列/索引信息
+        show table status from baseName like \G;        # 显示匹配的表信息
         use database;                                   # 选择库
         desc tables;                                    # 查看表结构
         set baseName utf8/gbk;                          # 设置库编码
         // create
-        create database xxx default character set = utf8mb4;                              # 创建库
+        create database xxx default character set = utf8mb4 COLLATE utf8mb4_general_ci;   # 创建库
         create table table_name(                                                          # 创建表
             id int unsigned primary key auto_increment,
             username char(25) unique not null default '',
@@ -38,10 +71,10 @@
         alter table tableName rename newName;                                             # rename，修改表名
         alter table tableName add columnName int unsigned not null default 0;             # add，追加字段
         alter table tableName add primary key(sid);                                       # add，增加主键
+        alter table tableName change new_column column char(20) not null default '';      # change，列名，类型
+        alter table tableName modify name char(20) after sex;                             # modify，只修改类型，显示顺序放到sex字段后
         alter table tableName drop columnName;                                            # drop，删除字段
         alter table tableName drop primary key;                                           # drop，删除主键，先删除自增，再删字段
-        alter table tableName change new_column column char(20) not null default '';      # change，修改字段名或者字段类型
-        alter table tableName modify name char(20) after sex;                             # modify，只修改字段类型，显示顺序放到sex字段后
         // drop
         drop database/table if exists baseName/tableName;                                 # 删除库/表
         // lock
@@ -52,16 +85,19 @@
         ```
         // 查询语句组合
         select */,/count()/min()/max()/sum()/avg()/distinct()/concat(XX,XX)               # 选择字段，distinct去重可能要全表扫描，concat字符串连接
-        from table/as n from table/from table1 as x,table2 as x/                          # 选择表
-        left join table2 as x2 on x1.x=x2.x                                               # 无论右边有没有数据，左边有的信息都显示
+        from table/from table1 as x,table2 as x/                                          # 选择表
+        inner/left/right join table2 as x2 on x1.x=x2.x                                   # 连表查询
+        union select * from table2                                                        # 组合查询
         select xx from table as x1 join table as x2 on x1.xx=x2.xx                        # 自关联        
-        where x.x/=/<=/like/in(,,)/and/or/between and                                     # 条件
+        where x.x/=/</>/<=/!=/like/in(,,)/not in                                          # 条件
+        and/or/between and                                                                # 逻辑
         XX=(select x from table2 where xx=xx);                                            # 子查询，把另一个查询语句的结果做数据来源
         group by having XX                                                                # 分类筛选
-        order by XX desc/asc/rand()                                                       # 排序
-        limit x offset x                                                                  # 限制条数
+        order by xx1 desc/asc/rand() xx2 asc                                              # 排序，多个排序规则
+        limit x/limit x offset x/limit x.x                                                # 限制条数/从x行开始的x行
         // 插入数据
         insert into table set XX=xx/(,,) values (,);                                      # 插入数据
+        insert into table1 select ,, from table2
         // 更新数据
         updata table set XX=xx;                                                           # 会更新所有数据
         replace into table (,,) values (,,);                                              # 替换，命中主键修改，未命中添加
@@ -70,52 +106,56 @@
         delete from table;                                                                # 只删除数据
         truncate table;                                                                   # 数据清空，主键归0
         ```
-1. 索引
-1. 事务
-   - 理解：全部执行才能完成，要有回滚
-   - 特点
-     1. 事务只能在单个数据库上起作用，对于主从延迟，可用事务抓住主库进行读写，不存在数据差异的问题了
-   - 隔离机制：在一个客户端执行事务未完成，所修改的数据对其他客户端是不可见的，是原来的数据
-1. 隔离级别
-    ```
-    - READ UNCOMMITTED     最低级别，会导致数据完整性的严重问题
-    - READ COMMITTED       
-    - REPEATABLE READ      默认，一个事务开始后其他session对数据库的修改在本事务中不可见，直到本事务commit或rollback
-    - SERIALIZABLE         最高级别，性能问题并增加死锁的机率
-    ```
-1. 视图
-1. 约束
-1. 关联表：通过外键约束来保证表与表之间的数据的完整性和准确性，可以进行级联操作，由于对业务的强一致性要求，现在都由成宿控制，不使用外键关联
-1. 触发器：triggers
-1. 存储过程
-1. 存储引擎
-   - MyISAM
-     1. 特点：
-        - 用于只读提高性能
-        - 不支持事务
-   - InnoDB
-     1. MVCC: Multi-Version Concurrency Control 多版本并发控制，多种行锁机制组合
-     1. 特点：
-        - 支持事务
-        - 行级锁
-        - 并发
-        - 实现sql标准的4种隔离级别
-        - 插入缓存(insert buffer)
-        - 二次写(double write)
-        - 自适应哈西索引(adaptive hash index)
-        - 预读(read ahead)
-1. 函数
-    - rand/replace
-    - UNIX_TIMESTAMP：时间转换为时间戳
+1. mysql服务操作
+   - 查看：`ps -ef | grep mysqld`
+   - 启动：`mysqld_safe &`
+   - 关闭：`mysqladmin -u -p shutdown`
+1. 数据库操作
+   - 备份库
+   - 恢复库
+1. 数据表操作
+   - 结构设计
+     1. auto_increment：自增，必须是索引列(index/primary key)，而且只能有一个自增列，可以设置起始值和步长
+     1. primary key：主键，特殊的唯一索引，不允许有空值，如为单列需唯一，多列需组合唯一。如`primary key(id,name)`
+     1. foreign key：外键，保证表之间数据完整性和准确性，体现表之间关系，可以进行级联操作，由于对业务的强一致性要求，现在都由程序控制，不使用外键关联
+        - 基本形式：`CONSTRAINT foreignKeyName foreign key(self_id) references foreign_table(foreign_table_id)`，这时被连接的表中被连接的数据不能被删除
+        - 级联限制：`CONSTRAINT foreignKeyName foreign key(self_id) references foreign_table(foreign_table_id) on delete/update cascade;`，删除被连接数据自己也被删除
+   - 约束：对表做出限制，保证数据的完整性、唯一性
+     1. primary key：主键约束，作为一行的标识符，通过其来定位，要求不能重复、不能为空。存在复合主键
+     1. unique：唯一约束，保证列数据的唯一性
+     1. not null
+     1. default
+     1. foreign key：外键约束
+   - 表间关系
+     1. 一对一
+     1. 一对多
+     1. 多对多
+   - 分表
+1. 数据操作
+   - 查
+     1. 精确查询：select
+     1. 模糊查询：like、in、not in
+     1. 聚集函数：count()/sum()/min()/max()/avg()/median()/rank()/first()/last()/distinct()/concat(XX,XX)
+     1. 分组查询
+        - group by：必须在where之后order by之前
+        - having
+     1. 多表查询
+        - 连表
+          1. inner join：无关系不显示
+          1. left join：左有右无不显示，已右作为有无判断
+          1. right join：反过来
+        - 组合
+          1. union：自动处理重合
+          1. union all：不处理重合
 1. 用户和权限管理
    - user
     ```
     select * from mysql.user\G;                                      # 查看用户
     update mysql.user set password=password('') where user='';       # 修改用户密码
     
-    create user userName@'::1' IDENTIFIED by 'password';             # 创建用户 
+    create user userName@'::1' identified by 'password';             # 创建用户 
     rename user oldName to newName;                                  # 重命名
-    set password for userName@'%' =password('');                     # 修改用户密码
+    set password for userName@'%' = password('');                    # 修改用户密码
     drop user username;                                              # 删除用户
     ```
    - 权限
@@ -127,33 +167,62 @@
         grant all privileges on *.* to userName@'' WITH GRANT OPTION;   # 具有管理权限，也就是管理员
         revoke select on *.* from userName;                             # 回收权限
         revoke grant option on *.* from userName;                       # 回收管理权限，需要显示指定
-        FLUSH PRIVILEGES;                                               # 刷新权限
+        FLUSH PRIVILEGES;                                               # 刷新权限，更改了都要刷新
         ```
-     1. 一些权限的意义
-        - INDEX：创建/删除索引
-        - PROCESS：查看/杀死线程
-        - RELOAD：重载授权表、清空日志/主机缓存/表缓存
-        - SHUTDOWN：关闭服务器
-        - ALL：所有；ALL PRIVILEGES同义词
-        - USAGE：特殊的“无权限”权限
      1. user表中host列的值的意义
         - %：匹配所有主机
         - localhost：localhost不会被解析成IP地址，直接通过UNIXsocket连接
         - 127.0.0.1：会通过TCP/IP协议连接，并且只能在本机访问；
         - ::1：兼容支持ipv6的，表示同ipv4的127.0.0.1
-1. 数据传输
-    ```
-    // 只导出结构
-    mysqldump -u -p -d [databaseName or tableName] > data.sql
-    // 导出结构和数据
-    不加 -d
-    ```
+     1. 一些权限的意义
+        - usage：无权限
+        - select：查询
+        - select,insert：查询，插入
+        - INDEX：创建/删除索引
+        - PROCESS：查看/杀死线程
+        - RELOAD：重载授权表、清空日志/主机缓存/表缓存
+        - SHUTDOWN：关闭服务器
+        - ALL：所有；ALL PRIVILEGES同义词，除grant外
+1. 索引：对数据列进行排序的一种结构，类似于目录
+1. 事务
+   - 理解：全部执行才能完成，要有回滚
+   - 特点
+     1. 事务只能在单个数据库上起作用，对于主从延迟，可用事务抓住主库进行读写，不存在数据差异的问题了
+   - 隔离机制：在一个客户端执行事务未完成，所修改的数据对其他客户端是不可见的，是原来的数据
+   - 隔离级别
+     1. READ UNCOMMITTED     最低级别，会导致数据完整性的严重问题
+     1. READ COMMITTED       
+     1. REPEATABLE READ      默认，一个事务开始后其他session对数据库的修改在本事务中不可见，直到本事务commit或rollback
+     1. SERIALIZABLE         最高级别，性能问题并增加死锁的机率
+1. 视图
+1. 触发器：triggers
+1. 存储过程
+1. 存储引擎
+   - MyISAM
+     1. 用于只读提高性能
+     1. 不支持事务
+     1. 不支持外键
+   - InnoDB
+     1. MVCC: Multi-Version Concurrency Control 多版本并发控制，多种行锁机制组合
+     1. 特点：
+        - 事务
+        - 行级锁
+        - 并发
+        - 实现sql标准的4种隔离级别
+        - 插入缓存(insert buffer)
+        - 二次写(double write)
+        - 自适应hash索引(adaptive hash index)
+        - 预读(read ahead)
+1. 函数
+    - rand/replace
+    - password
+    - UNIX_TIMESTAMP：时间转换为时间戳
 ### 应用
 1. 悲观锁————Pessimistic Locking
    - 理解：读取的时候为后面的更新加锁，之后再来的读操作都会等待。这种是数据库锁
-   - 意义：数据修改的排他性。高并发下，数据可以正确写入。但是带来数据库性能的大量开销，影响并发访问性，其他修改操作就需要等待。特别是长事务，无法承受会超时。一般不能用。
+   - 意义：数据修改的排他性。高并发下，数据可以正确写入。但是带来数据库性能的大量开销，影响并发访问性，其他修改操作就需要等待。特别是长事务，无法承受会超时。一般不能用
    - 分类
-     1. Row-Level Lock，InnoDB默认
+     1. 行级锁：Row-Level Lock，InnoDB默认
      1. Table Lock
    - 举例
         ```
@@ -211,7 +280,7 @@
      1. 数据长度：越短越好，更少存储/内存空间
      1. 索引：
         - 否则：读取全表扫描，修改全表记录锁
-        - innDB行锁基于索引
+        - innoDB行锁基于索引
         - 优先多列联合索引，少单列索引，字符型的用部分索引
      1. sql语句：
         - 无select *，提高利用覆盖索引的几率，避免sql注入，用PREPARE预处理，用SQL_MODE做限制，sql中无计算，where中无函数
@@ -221,8 +290,6 @@
         - 关键业务上线前EXPLAIN确认执行计划
  - 运维
 ### 原理
-### 周边
-1. mycat：开源分布式数据库中间件
 ### WIKI
 1. 一些操作
    - 插入不重复的数据行，MySQL特有的，不是标准sql语法：`INSERT token(udid) values ('{$udid}') ON DUPLICATE KEY UPDATE activetime ='{$time}'`
@@ -231,12 +298,25 @@
    - 查询两张表中是否有相同的数据：`select * from admin wherer uid IN(select uid from temp);`
 1. 各个版本的特性
 1. 默认数据库的含义
-   - mysql：用户/权限相关
+   - mysql：用户/权限相关，user表存储了用户和权限
    - information_schema：自身架构相关
    - performance_schema
    - sys
+1. 配置文件
+   - 运行和错误日志
+1. 严格模式
+1. mycat：开源分布式数据库中间件
+1. 导入和导出
+    ```
+    // mysqldump
+    // -d 只导出结构
+    // -t 只导出数据
+    mysqldump -u -p [databaseName or tableName] > data.sql
+    // 导入
+    source xx.sql
+    mysql -u -p [databaseName]< data.sql
+    ```
 ### 问题
 1. group by什么概念
 1. having什么概念
 1. between and什么概念
-1. mysql的不等于是什么？
