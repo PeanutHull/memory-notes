@@ -4,6 +4,7 @@
 1. 性能
 1. 原理
 1. WIKI
+### 路线：基础知识（操作、配置、历史）——优化方式、方法、注意点——各种技术方案——原理
 ### 认识
 1. 理解
    - 数据库：是按照数据结构来组织、存储和管理数据的仓库，会提供API进行数据的操作。因为文件中读写数据不方便、速度也慢
@@ -12,28 +13,28 @@
 1. 数据类型
    - 数字
      1. bit：默认1，长度1~64，如bit(6)
-     1. tinyint：-128~127
+     1. tinyint：-128~127，smallint：前后3万2，mediumint：前后8.3千万
      1. int：范围前后21亿，int中m仅用于显示，不影响存储范围，如int(5)，显示为00001
      1. bigint：前后9亿亿亿，19位，2E64，
      1. decimal：精确小数值，m是数字总个数，d是小数点后个数，m最大值为65，d最大值为30，能够存储精确值的原因在于其内部按照字符串存储
-     1. FLOAT：前后38次方，数值越大，越不准确
-     1. DOUBLE：前后308次方，数值越大，越不准确
+     1. float：前后38次方，数值越大，越不准确
+     1. double：前后308次方，数值越大，越不准确
    - 字符串
-     1. char：定长字符串，0~255，m表示长度，即使数据小于m，也占用m长度，处理速度更快，甚至快过varchar50%
-     1. varchar：变长字符串，0~255，m表示最大保存长度
-     1. text：大字符串，0~65535，2E16
-     1. mediumtext：1600万，2E24
-     1. longtext：42亿长度或4GB字符，
+     1. char：定长字符串，0~255字节，m表示长度，即使数据小于m，也占用m长度，处理速度更快，甚至快过varchar50%
+     1. varchar：变长字符串，0~255字节，m表示最大保存长度
+     1. binary：二进制形式的字符串，即包含字节字符串，不包含字符字符串，没有字符集
+     1. text：大字符串，0~65535字节，2E16，mediumtext：1600万，2E24，longtext：42亿长度或4GB字符，tinytext
+     1. blob：二进制形式的长文本数据，0~65535字节，tiny/medium/longblob，可变长度
    - 其他
      1. enum：枚举，0~65535，如`enum('','')`
      1. set：集合，0~64，可以存一个集合，如`set('','')`
      1. json：
    - 时间
-     1. DATETIME：YYYY-MM-DD HH:MM:SS (1000-01-01 00:00:00/9999-12-31 23:59:59)
-     1. TIMESTAMP：YYYY-MM-DD HH:MM:SS (1970-01-01 00:00:00/2037)，只是时间戳表示的范围
-     1. DATE：YYYY-MM-DD (1000-01-01/9999-12-31)
-     1. TIME：HH:MM:SS ('-838:59:59'/'838:59:59')
-     1. YEAR：YYYY (1901/2155)
+     1. DATETIME：YYYY-MM-DD HH:MM:SS (1000-01-01 00:00:00/9999-12-31 23:59:59)，日期和时间
+     1. TIMESTAMP：YYYY-MM-DD HH:MM:SS (1970-01-01 00:00:00/2038 格林尼治时间/北京时间)，日期和时间/时间戳，只是时间戳表示的范围，可以有自动更新机制
+     1. DATE：YYYY-MM-DD (1000-01-01/9999-12-31)，日期
+     1. TIME：HH:MM:SS ('-838:59:59'/'838:59:59')，时间或持续时间
+     1. YEAR：YYYY (1901/2155)，年份
    - 修饰符
      1. unsigned
      1. zerofill
@@ -47,6 +48,8 @@
         mysql -h地址(不写-h默认localhost) -u账号 -p密码          # 连接
         quit/exit                                             # 断开
         status 包含版本、连接的账号                              # 状态
+        select version()/database()/user();                   # 查看
+        show status                                           # 服务器状态
         ```
    - DCL和DDL
         ```
@@ -71,12 +74,16 @@
         alter table tableName rename newName;                                             # rename，修改表名
         alter table tableName add columnName int unsigned not null default 0;             # add，追加字段
         alter table tableName add primary key(sid);                                       # add，增加主键
+        alter table tableName add index/unique/key indexName(xx);                         # add，增加索引
         alter table tableName change new_column column char(20) not null default '';      # change，列名，类型
-        alter table tableName modify name char(20) after sex;                             # modify，只修改类型，显示顺序放到sex字段后
+        alter table tableName modify name char(20) first/after sex;                       # modify，只修改类型，显示顺序调整
+        alter table tableName engine=mysiam                                               # 修改引擎
         alter table tableName drop columnName;                                            # drop，删除字段
         alter table tableName drop primary key;                                           # drop，删除主键，先删除自增，再删字段
+        alter table tableName drop index indexName;                                       # drop，删除索引
         // drop
         drop database/table if exists baseName/tableName;                                 # 删除库/表
+        drop index indexName on table                                                     # 删除索引，各种类型的索引都用这个删除
         // lock
         lock tables `user` write;                                                         # 锁表
         unlock tables;
@@ -85,27 +92,97 @@
         ```
         // 查询语句组合
         select */,/count()/min()/max()/sum()/avg()/distinct()/concat(XX,XX)               # 选择字段，distinct去重可能要全表扫描，concat字符串连接
-        from table/from table1 as x,table2 as x/                                          # 选择表
+        from table/from table1 as x,table2 as x/from(select * from table2)derivedName     # 选择表
         inner/left/right join table2 as x2 on x1.x=x2.x                                   # 连表查询
         union select * from table2                                                        # 组合查询
         select xx from table as x1 join table as x2 on x1.xx=x2.xx                        # 自关联        
-        where x.x/=/</>/<=/!=/like/in(,,)/not in                                          # 条件
-        and/or/between and                                                                # 逻辑
-        XX=(select x from table2 where xx=xx);                                            # 子查询，把另一个查询语句的结果做数据来源
-        group by having XX                                                                # 分类筛选
+        where x.x/=/</>/<=/!=/<>/is null/is not null/like/in(,,)/not in/REGEXP '^$'       # 条件
+        and/or/between xx and xx                                                          # 逻辑
+        XX=exists/not exists(select x from table2 where xx=xx);                           # 子查询，把另一个查询语句的结果做数据来源，加上exists则返回布尔值
+        group by having condition1 and condition2                                         # 分类筛选
         order by xx1 desc/asc/rand() xx2 asc                                              # 排序，多个排序规则
         limit x/limit x offset x/limit x.x                                                # 限制条数/从x行开始的x行
         // 插入数据
         insert into table set XX=xx/(,,) values (,);                                      # 插入数据
-        insert into table1 select ,, from table2
+        insert into table1 select ,, from table2                                          # 复制表
         // 更新数据
-        updata table set XX=xx;                                                           # 会更新所有数据
+        updata table set XX1=xx1, XX2=xx;                                                 # 会更新所有数据
         replace into table (,,) values (,,);                                              # 替换，命中主键修改，未命中添加
         // 删除数据
         delete from table where XX=xx;                                                    # 删除
-        delete from table;                                                                # 只删除数据
+        delete from table;                                                                # 删除所有数据
         truncate table;                                                                   # 数据清空，主键归0
         ```
+1. 数据操作
+   - 查询
+     1. 精确：is null、is not null、regexp ''
+     1. 模糊：like、in、not in
+     1. 聚集函数：count()/sum()/min()/max()/avg()/median()/rank()/first()/last()/distinct()/concat(XX,XX)
+     1. 分组
+        - group by：用列的值进行分组/计算，必须在where之后order by之前，select的字段除了被group的其他要么被统计，要么没有
+        - having：筛选成组后的数据，作用于组，如`having sum(age) > 10`
+     1. 多表
+        - 连表
+          1. inner join：无关系不显示，同join
+          1. left join：获取左表所有记录，即使右表没有
+          1. right join：反过来
+          1. cross join：在mysql中和inner join相同，标准sql中不同，产生笛卡尔集，即M*N，
+        - 组合
+          1. union：自动处理重合
+          1. union all：不处理重合
+1. 数据表操作
+   - 结构设计
+     1. auto_increment：自增，必须是索引列(index/primary key)，而且只能有一个自增列，可以设置起始值和步长
+     1. primary key：主键约束，作为一行的标识符，通过其来定位，不能重复不能为空，特殊的唯一索引，复合主键也唯一如`primary key(id,name)`
+     1. foreign key：外键约束，保证表之间数据完整性和准确性，体现表之间关系，可以进行级联操作，由于对业务的强一致性要求，现在都由程序控制，不使用外键关联
+        - 基本形式：`constraint foreignKeyName foreign key(self_id) references foreign_table(foreign_table_id)`，这时被连接的表中被连接的数据不能被删除
+        - 级联限制：`constraint foreignKeyName foreign key(self_id) references foreign_table(foreign_table_id) on delete/update cascade;`，删除被连接数据自己也被删除，连带删除
+     1. unique：唯一约束，保证列数据的唯一性
+     1. not null
+     1. default
+   - 索引
+     1. 对数据列进行排序的一种结构，类似于目录 
+     1. 分类
+        - index
+        - unique：唯一索引，可以有空值，可以创建组合索引
+        - key
+        - fulltext：用于文本搜索的特殊索引
+   - 事务
+     1. 理解：保证所有操作全部执行，用于数据量大、复杂的操作
+     1. 特性：ACID
+        - 原子性：一个事务是一个整体，要么全部成功，要么全部失败
+        - 稳定性：有非法数据(外键约束等)，事务撤回
+        - 隔离性：在一个客户端执行事务未完成，所修改的数据对其他客户端是不可见的，是原来的数据
+        - 可靠性
+     1. 隔离级别
+        - READ UNCOMMITTED     最低级别，会导致数据完整性的严重问题
+        - READ COMMITTED       
+        - REPEATABLE READ      默认，一个事务开始后其他session对数据库的修改在本事务中不可见，直到本事务commit或rollback
+        - SERIALIZABLE         最高级别，性能问题并增加死锁的机率
+     1. 示例
+        ```
+        set autocommit=0/1;                 # 禁止/开启自动提交
+        set transaction;                    # 设置隔离级别
+        
+        begin;/start transaction;
+        commit;
+        rollback;
+
+        savepoint xx;                       # 创建标记点
+        release savepoint xx;               # 删除标记点
+        rollback to xx;                     # 回滚到标记点
+        ```
+   - 表间关系
+     1. 一对一
+     1. 一对多
+     1. 多对多
+   - 临时表
+     1. 理解：只在当前连接可见，关闭连接自动删除
+     1. 实例：`create temporary table tableName ();`，show tables看不到该表
+   - 派生表：是select返回的虚拟表，即from使用的独立子查询，可以和子查询互换使用。如`from(select * from table2)derivedTableName`
+1. 视图
+1. 触发器：triggers
+1. 存储过程
 1. mysql服务操作
    - 查看：`ps -ef | grep mysqld`
    - 启动：`mysqld_safe &`
@@ -113,90 +190,6 @@
 1. 数据库操作
    - 备份库
    - 恢复库
-1. 数据表操作
-   - 结构设计
-     1. auto_increment：自增，必须是索引列(index/primary key)，而且只能有一个自增列，可以设置起始值和步长
-     1. primary key：主键，特殊的唯一索引，不允许有空值，如为单列需唯一，多列需组合唯一。如`primary key(id,name)`
-     1. foreign key：外键，保证表之间数据完整性和准确性，体现表之间关系，可以进行级联操作，由于对业务的强一致性要求，现在都由程序控制，不使用外键关联
-        - 基本形式：`CONSTRAINT foreignKeyName foreign key(self_id) references foreign_table(foreign_table_id)`，这时被连接的表中被连接的数据不能被删除
-        - 级联限制：`CONSTRAINT foreignKeyName foreign key(self_id) references foreign_table(foreign_table_id) on delete/update cascade;`，删除被连接数据自己也被删除
-   - 约束：对表做出限制，保证数据的完整性、唯一性
-     1. primary key：主键约束，作为一行的标识符，通过其来定位，要求不能重复、不能为空。存在复合主键
-     1. unique：唯一约束，保证列数据的唯一性
-     1. not null
-     1. default
-     1. foreign key：外键约束
-   - 表间关系
-     1. 一对一
-     1. 一对多
-     1. 多对多
-   - 分表
-1. 数据操作
-   - 查
-     1. 精确查询：select
-     1. 模糊查询：like、in、not in
-     1. 聚集函数：count()/sum()/min()/max()/avg()/median()/rank()/first()/last()/distinct()/concat(XX,XX)
-     1. 分组查询
-        - group by：必须在where之后order by之前
-        - having
-     1. 多表查询
-        - 连表
-          1. inner join：无关系不显示
-          1. left join：左有右无不显示，已右作为有无判断
-          1. right join：反过来
-        - 组合
-          1. union：自动处理重合
-          1. union all：不处理重合
-1. 用户和权限管理
-   - user
-    ```
-    select * from mysql.user\G;                                      # 查看用户
-    update mysql.user set password=password('') where user='';       # 修改用户密码
-    
-    create user userName@'::1' identified by 'password';             # 创建用户 
-    rename user oldName to newName;                                  # 重命名
-    set password for userName@'%' = password('');                    # 修改用户密码
-    drop user username;                                              # 删除用户
-    ```
-   - 权限
-     1. 指令
-        ```
-        show grants (for userName);                                     # 查看用户权限
-        grant select,update on *.* to userName@'%';                     # 赋予权限
-        grant all privileges on *.* to userName@"";                     # 所有权限，不包括管理权限
-        grant all privileges on *.* to userName@'' WITH GRANT OPTION;   # 具有管理权限，也就是管理员
-        revoke select on *.* from userName;                             # 回收权限
-        revoke grant option on *.* from userName;                       # 回收管理权限，需要显示指定
-        FLUSH PRIVILEGES;                                               # 刷新权限，更改了都要刷新
-        ```
-     1. user表中host列的值的意义
-        - %：匹配所有主机
-        - localhost：localhost不会被解析成IP地址，直接通过UNIXsocket连接
-        - 127.0.0.1：会通过TCP/IP协议连接，并且只能在本机访问；
-        - ::1：兼容支持ipv6的，表示同ipv4的127.0.0.1
-     1. 一些权限的意义
-        - usage：无权限
-        - select：查询
-        - select,insert：查询，插入
-        - INDEX：创建/删除索引
-        - PROCESS：查看/杀死线程
-        - RELOAD：重载授权表、清空日志/主机缓存/表缓存
-        - SHUTDOWN：关闭服务器
-        - ALL：所有；ALL PRIVILEGES同义词，除grant外
-1. 索引：对数据列进行排序的一种结构，类似于目录
-1. 事务
-   - 理解：全部执行才能完成，要有回滚
-   - 特点
-     1. 事务只能在单个数据库上起作用，对于主从延迟，可用事务抓住主库进行读写，不存在数据差异的问题了
-   - 隔离机制：在一个客户端执行事务未完成，所修改的数据对其他客户端是不可见的，是原来的数据
-   - 隔离级别
-     1. READ UNCOMMITTED     最低级别，会导致数据完整性的严重问题
-     1. READ COMMITTED       
-     1. REPEATABLE READ      默认，一个事务开始后其他session对数据库的修改在本事务中不可见，直到本事务commit或rollback
-     1. SERIALIZABLE         最高级别，性能问题并增加死锁的机率
-1. 视图
-1. 触发器：triggers
-1. 存储过程
 1. 存储引擎
    - MyISAM
      1. 用于只读提高性能
@@ -213,10 +206,6 @@
         - 二次写(double write)
         - 自适应hash索引(adaptive hash index)
         - 预读(read ahead)
-1. 函数
-    - rand/replace
-    - password
-    - UNIX_TIMESTAMP：时间转换为时间戳
 ### 应用
 1. 悲观锁————Pessimistic Locking
    - 理解：读取的时候为后面的更新加锁，之后再来的读操作都会等待。这种是数据库锁
@@ -268,6 +257,16 @@
     // Thinkphp的乐观锁
     继承高级模型，加上lock_version字段，定义optimLock属性
     ```
+1. 分布式事务
+1. 分表
+1. sql注入
+   - 类型：like注入，使用php的addcslashes
+   - 安全措施
+     1. 不要相信用户输入
+     1. 不要动态拼接sql，使用参数化sql或存储过程
+     1. 异常信息尽量少给出提示
+   - 工具
+     1. jsky：漏洞扫描工具
 ### 性能
 1. 优化
    - 硬件：主频高处理快高吞吐低时延，L1/2/3的cache大速度快，内存大磁盘读写少TPS高，固态快机械配阵列卡，网卡好低时延，文件系统用xfs/ext4坚决不用ext3，
@@ -288,7 +287,10 @@
         - like查询%不做最左前导否则索引失效
         - 尽量inner join让优化器自动选择驱动表
         - 关键业务上线前EXPLAIN确认执行计划
- - 运维
+   - 运维
+1. 配置调优
+   - 运行和错误日志
+   - 软、硬件崩溃后，InnoDB数据表驱动会利用日志文件重构修改。可靠性和高速度不可兼得，innodb_flush_log_at_trx_commit 选项 决定什么时候吧事务保存到日志里
 ### 原理
 ### WIKI
 1. 一些操作
@@ -296,27 +298,72 @@
    - 原所有id增加5万，必须倒叙操作：`update user SET uid=uid+50000 order by uid desc;`
    - 查询这个数据是否存在，存在则存到另一张表里：`create table temp as select * from admin a where exists (select uid from user u where a.userName = u.account);`
    - 查询两张表中是否有相同的数据：`select * from admin wherer uid IN(select uid from temp);`
+   - 求差集：`SELECT * FROM A LEFT JOIN B ON A.xx = B.xx WHERE B.id IS NULL union SELECT * FROM A RIGHT JOIN B ON A.xx = B.xx WHERE A.id IS NULL;`
+   - 求全集：`SELECT * FROM A LEFT JOIN B ON A.xx = B.xx union SELECT * FROM A RIGHT JOIN B ON A.xx = B.xx;`
 1. 各个版本的特性
 1. 默认数据库的含义
    - mysql：用户/权限相关，user表存储了用户和权限
    - information_schema：自身架构相关
    - performance_schema
    - sys
-1. 配置文件
-   - 运行和错误日志
+1. 函数
+    - 数学：format()/round()/pow()/abs()/sin()/cos()/tan()/bit_and()/
+    - 字符串：char()/concat()/length()  
+    - 常用
+      1. cast：类型转换，如`cast(1 as signed)`
+      1. rand
+      1. replace
+    - password
+    - UNIX_TIMESTAMP：时间转换为时间戳
 1. 严格模式
 1. mycat：开源分布式数据库中间件
+1. NULL与任何其它值的比较永远返回false，即使NULL=NULL也返回false
 1. 导入和导出
+   - 导出
     ```
-    // mysqldump
-    // -d 只导出结构
-    // -t 只导出数据
-    mysqldump -u -p [databaseName or tableName] > data.sql
-    // 导入
+    mysqldump -u -p [databaseName or tableName] > data.sql                  # -d 只导出结构，-t 只导出数据
+    select * into outfile 'data.txt' fields terminated by ',' optionally enclosed by '"' lines terminated by '\n' from table;
+    ```
+   - 导入
+    ```
+    mysqlimport -u -p --local databaseName dump.sql
     source xx.sql
-    mysql -u -p [databaseName]< data.sql
+    mysql -u -p [databaseName] < data.sql
+    load data local infile 'data.txt' into table tableName;
     ```
-### 问题
-1. group by什么概念
-1. having什么概念
-1. between and什么概念
+1. 用户和权限管理
+   - user
+    ```
+    select * from mysql.user\G;                                      # 查看用户
+    update mysql.user set password=password('') where user='';       # 修改用户密码
+    
+    create user userName@'::1' identified by 'password';             # 创建用户 
+    rename user oldName to newName;                                  # 重命名
+    set password for userName@'%' = password('');                    # 修改用户密码
+    drop user username;                                              # 删除用户
+    ```
+   - 权限
+     1. 指令
+        ```
+        show grants (for userName);                                     # 查看用户权限
+        grant select,update on *.* to userName@'%';                     # 赋予权限
+        grant all privileges on *.* to userName@"";                     # 所有权限，不包括管理权限
+        grant all privileges on *.* to userName@'' WITH GRANT OPTION;   # 具有管理权限，也就是管理员
+        revoke select on *.* from userName;                             # 回收权限
+        revoke grant option on *.* from userName;                       # 回收管理权限，需要显示指定
+        FLUSH PRIVILEGES;                                               # 刷新权限，更改了都要刷新
+        ```
+     1. user表中host列的值的意义
+        - %：匹配所有主机
+        - localhost：localhost不会被解析成IP地址，直接通过UNIXsocket连接
+        - 127.0.0.1：会通过TCP/IP协议连接，并且只能在本机访问；
+        - ::1：兼容支持ipv6的，表示同ipv4的127.0.0.1
+     1. 一些权限的意义
+        - usage：无权限
+        - select：查询
+        - select,insert：查询，插入
+        - INDEX：创建/删除索引
+        - PROCESS：查看/杀死线程
+        - RELOAD：重载授权表、清空日志/主机缓存/表缓存
+        - SHUTDOWN：关闭服务器
+        - ALL：所有；ALL PRIVILEGES同义词，除grant外
