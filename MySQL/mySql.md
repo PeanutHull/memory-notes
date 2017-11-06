@@ -5,6 +5,7 @@
 1. 原理
 1. WIKI
 ### 路线：基础知识（操作、配置、历史）——优化方式、方法、注意点——各种技术方案——原理
+### 提升：集群部署--中间件实施--备份设计监控--日志处理--授权
 ### 认识
 1. 理解
    - 数据库：是按照数据结构来组织、存储和管理数据的仓库，会提供API进行数据的操作。因为文件中读写数据不方便、速度也慢
@@ -14,7 +15,7 @@
    - 数字
      1. bit：默认1，长度1~64，如bit(6)
      1. tinyint：-128~127，smallint：前后3万2，mediumint：前后8.3千万
-     1. int：范围前后21亿，int中m仅用于显示，不影响存储范围，如int(5)，显示为00001
+     1. int：范围前后21亿，int中m仅用于显示，不影响存储范围，如int(5)，显示为00001，和INTEGER相同
      1. bigint：前后9亿亿亿，19位，2E64，
      1. decimal：精确小数值，m是数字总个数，d是小数点后个数，m最大值为65，d最大值为30，能够存储精确值的原因在于其内部按照字符串存储
      1. float：前后38次方，数值越大，越不准确
@@ -28,7 +29,7 @@
    - 其他
      1. enum：枚举，0~65535，如`enum('','')`
      1. set：集合，0~64，可以存一个集合，如`set('','')`
-     1. json：
+     1. json：5.7.8支持，与longtext大小差不多，不能有默认值，不能直接被编为索引，可以在虚拟列上创建
    - 时间
      1. DATETIME：YYYY-MM-DD HH:MM:SS (1000-01-01 00:00:00/9999-12-31 23:59:59)，日期和时间
      1. TIMESTAMP：YYYY-MM-DD HH:MM:SS (1970-01-01 00:00:00/2038 格林尼治时间/北京时间)，日期和时间/时间戳，只是时间戳表示的范围，可以有自动更新机制
@@ -70,11 +71,12 @@
         create table tableName1 like tableName;                                           # 复制表结构
         insert into tableName1 select * from tableName;                                   # 复制表数据
         create table tableName1 select * from tableName;                                  # 复制表结构和数据
+        create unique/fulltext/spatial index indexName using btree/hash/rtree             # 创建索引
         // alter
         alter table tableName rename newName;                                             # rename，修改表名
         alter table tableName add columnName int unsigned not null default 0;             # add，追加字段
         alter table tableName add primary key(sid);                                       # add，增加主键
-        alter table tableName add index/unique/key indexName(xx);                         # add，增加索引
+        alter table tableName add index/unique/key/fulltext/spatial indexName(xx);        # add，增加索引
         alter table tableName change new_column column char(20) not null default '';      # change，列名，类型
         alter table tableName modify name char(20) first/after sex;                       # modify，只修改类型，显示顺序调整
         alter table tableName engine=mysiam                                               # 修改引擎
@@ -85,7 +87,7 @@
         drop database/table if exists baseName/tableName;                                 # 删除库/表
         drop index indexName on table                                                     # 删除索引，各种类型的索引都用这个删除
         // lock
-        lock tables `user` write;                                                         # 锁表
+        lock tables `user` write/read;                                                    # 锁表
         unlock tables;
         ```
    - DML
@@ -104,15 +106,19 @@
         limit x/limit x offset x/limit x.x                                                # 限制条数/从x行开始的x行
         // 插入数据
         insert into table set XX=xx/(,,) values (,);                                      # 插入数据
+        replace into table (,,) values (,,);                                              # 插入或更新指定数据，未指定恢复默认值，命中主键修改，未命中添加
         insert into table1 select ,, from table2                                          # 复制表
         // 更新数据
         updata table set XX1=xx1, XX2=xx;                                                 # 会更新所有数据
-        replace into table (,,) values (,,);                                              # 替换，命中主键修改，未命中添加
+        update t1,t2 set t1.xx=xx,t2.xx=xx                                                # 多表更新
+        update t1 join t2 on t1.xx=t2.xx set t1.xx=xx                                     # 多表更新,join
         // 删除数据
         delete from table where XX=xx;                                                    # 删除
+        delete t1,t2 from t1 join t2 on t1.xx=t2.xx;                                      # 多表数据删除
         delete from table;                                                                # 删除所有数据
         truncate table;                                                                   # 数据清空，主键归0
         ```
+1. 变量：基于会话，用户变量不区分大小写。定义 `set @a:=/=1`
 1. 数据操作
    - 查询
      1. 精确：is null、is not null、regexp ''
@@ -128,8 +134,12 @@
           1. right join：反过来
           1. cross join：在mysql中和inner join相同，标准sql中不同，产生笛卡尔集，即M*N，
         - 组合
-          1. union：自动处理重合
-          1. union all：不处理重合
+          1. union：自动处理重合，即去掉重复的数据，以第一个取出的为准
+          1. union all：不处理重合，相反
+   - 更新
+     1. replace
+        - 认识：是标准sql的mysql扩展，使用primary key/unique key确定是否插入新行，注意！！！会抹掉其他未指定数据，这个应作为插入数据使用，而不是更新
+        - 原理：将数据插入，成功则结束；否则引发重复键错误，先删除原有记录，然后更新
 1. 数据表操作
    - 结构设计
      1. auto_increment：自增，必须是索引列(index/primary key)，而且只能有一个自增列，可以设置起始值和步长
@@ -140,13 +150,44 @@
      1. unique：唯一约束，保证列数据的唯一性
      1. not null
      1. default
+   - 存储引擎
+     1. MyISAM：5.5之前的默认引擎，用于只读提高性能、不支持事务、不支持外键，最大256TB，可以压缩为只读表
+     1. InnoDB
+        - MVCC: Multi-Version Concurrency Control 多版本并发控制，多种行锁机制组合
+        - 特点：
+          1. 事务
+          1. 行级锁
+          1. 并发
+          1. 实现sql标准的4种隔离级别
+          1. 插入缓存(insert buffer)
+          1. 二次写(double write)
+          1. 自适应hash索引(adaptive hash index)
+          1. 预读(read ahead)
+          1. 索引是其表空间的组成部分
+     1. merge：将具有相似结构的多个MyISAM表组合到一个表中的虚拟表
+     1. memory；内存表存储在内存中，并使用散列索引，使其比MyISAM表格快，服务器停止数据丢失
    - 索引
-     1. 对数据列进行排序的一种结构，类似于目录 
+     1. 特点
+        - 对数据列进行排序的一种结构，类似于目录，是一种特殊的文件，包含所有记录的引用指针
+        - 在查询数据时先检查索引是否存在，然后精确到对应行，而不是扫描整表
+        - 数据库必须构建、维护索引表，太多的索引影响更新和插入的速度。加快查询速度，减慢修改速度
+        - 查询时只能使用一个索引，会选择限制最严格的索引
+        - 最左前缀：组合索引只会从左边开始按照索引搜索，如果检索条件没有最左的，那么就不会使用到索引
+        - key和index：相同，mysql为了兼容其他系统，key多了一层约束层
      1. 分类
-        - index
-        - unique：唯一索引，可以有空值，可以创建组合索引
-        - key
-        - fulltext：用于文本搜索的特殊索引
+        - 普通索引：key、index，只用于加快访问速度
+        - 唯一索引：unique、unique key，唯一值，可以组合索引。除了BDB外，都允许重复的NULL值
+        - 主键索引：primary key，不能重复，不能为null，隐式声明不能为null
+        - 外键索引：foreign key
+        - 全文索引：fulltext，用于文本搜索，仅MySIAM支持，仅作用于char/varchar/text
+        - spatial：空间列，值不能为null
+     1. 类型分类
+        - 聚簇索引：按数据存放的物理位置为顺序，提高多行的检索速度
+        - 非聚簇索引：单行检索快
+     1. 类型引擎支持情况
+        - InnoDB：btree
+        - InnoDB：btree、rtree
+        - memory/heap：hash、btree
    - 事务
      1. 理解：保证所有操作全部执行，用于数据量大、复杂的操作
      1. 特性：ACID
@@ -172,40 +213,58 @@
         release savepoint xx;               # 删除标记点
         rollback to xx;                     # 回滚到标记点
         ```
+   - 临时表
+     1. 临时表：只在当前连接可见，关闭连接自动删除，如`create temporary table tableName ();`，show tables看不到该表
+     1. 派生表：是select返回的虚拟表，即from使用的独立子查询，可以和子查询互换使用。如`from(select * from table2)derivedTableName`
+     1. 公共表表达式：CTE，是一个命名的临时结果集，仅在单个SQL语句的执行范围内存在，比派生表更易读，性能更高 
    - 表间关系
      1. 一对一
      1. 一对多
      1. 多对多
-   - 临时表
-     1. 理解：只在当前连接可见，关闭连接自动删除
-     1. 实例：`create temporary table tableName ();`，show tables看不到该表
-   - 派生表：是select返回的虚拟表，即from使用的独立子查询，可以和子查询互换使用。如`from(select * from table2)derivedTableName`
-1. 视图
-1. 触发器：triggers
-1. 存储过程
-1. mysql服务操作
-   - 查看：`ps -ef | grep mysqld`
-   - 启动：`mysqld_safe &`
-   - 关闭：`mysqladmin -u -p shutdown`
+1. mysql操作
+   - mysql服务
+     1. 查看：`ps -ef | grep mysqld`
+     1. 启动：`mysqld_safe &`
+     1. 关闭：`mysqladmin -u -p shutdown`
+   - 视图
+     1. 理解：即虚拟表，可以对视图进行操作，作用有简化查询，限制用户访问和权限。不支持物理视图，可以进行查询和更改，表改变不会联动视图改变    
+     1. 创建：`create view viewName as select * from table`，分辨视图 `show full tables;`
+   - 触发器
+     1. 理解：triggers，自动执行响应事件的存储程序
+     1. 分类
+        - before/after insert/update/delete
+     1. 实例
+        ```
+        create trigger triName
+            before update on table
+            for each row
+        begin
+            # some sql
+        end;
+        ```
+   - 预解析
+     1. 理解：使用占位符预先准备查询语句，不用解析语句，查询速度更快，防止注入。步骤有：prepare、execute、deallocate prepare(发布)
+     1. 实例
+        ```
+        PREPARE stmt1 FROM 'select ... ?';          # 准备占位符
+
+        SET @a = '1';
+        EXECUTE stmt1 USING @a;
+
+        DEALLOCATE PREPARE stmt1;
+        ```
+   - 存储过程
+     1. 理解：在mysql中存储了sql语句，预先缓存编译结果、执行速度快，传输数据少。耗内存，不灵活
+     1. 实例
+        ```
+        CREATE PROCEDURE procedureName()
+        BEGIN
+            SELECT * FROM user;
+        END
+        ```
 1. 数据库操作
    - 备份库
    - 恢复库
-1. 存储引擎
-   - MyISAM
-     1. 用于只读提高性能
-     1. 不支持事务
-     1. 不支持外键
-   - InnoDB
-     1. MVCC: Multi-Version Concurrency Control 多版本并发控制，多种行锁机制组合
-     1. 特点：
-        - 事务
-        - 行级锁
-        - 并发
-        - 实现sql标准的4种隔离级别
-        - 插入缓存(insert buffer)
-        - 二次写(double write)
-        - 自适应hash索引(adaptive hash index)
-        - 预读(read ahead)
 ### 应用
 1. 悲观锁————Pessimistic Locking
    - 理解：读取的时候为后面的更新加锁，之后再来的读操作都会等待。这种是数据库锁
@@ -258,7 +317,12 @@
     继承高级模型，加上lock_version字段，定义optimLock属性
     ```
 1. 分布式事务
+1. 主从，amoeba，故障切换
+1. 读写分离
+1. 数据库中间件，故障切换
+1. 监控系统
 1. 分表
+1. 物理备份、逻辑备份、binlog增量恢复
 1. sql注入
    - 类型：like注入，使用php的addcslashes
    - 安全措施
@@ -291,7 +355,10 @@
 1. 配置调优
    - 运行和错误日志
    - 软、硬件崩溃后，InnoDB数据表驱动会利用日志文件重构修改。可靠性和高速度不可兼得，innodb_flush_log_at_trx_commit 选项 决定什么时候吧事务保存到日志里
+1. 索引优化和命中
+1. 锁
 ### 原理
+1. 语法分析器：优化查询
 ### WIKI
 1. 一些操作
    - 插入不重复的数据行，MySQL特有的，不是标准sql语法：`INSERT token(udid) values ('{$udid}') ON DUPLICATE KEY UPDATE activetime ='{$time}'`
@@ -315,9 +382,12 @@
       1. replace
     - password
     - UNIX_TIMESTAMP：时间转换为时间戳
+    - match：全文搜索
+    - uuid()：aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
 1. 严格模式
 1. mycat：开源分布式数据库中间件
 1. NULL与任何其它值的比较永远返回false，即使NULL=NULL也返回false
+1. 注释 ：--、#、/**/
 1. 导入和导出
    - 导出
     ```
