@@ -3,3 +3,5 @@
    - /.bash_profile：个人环境变量
    - souurce /.bash_profile：使生效
    - export PATH=：书写格式
+1. 进程后台运行：processName &
+1. 查看运行的进程：ps aux | grep xxx

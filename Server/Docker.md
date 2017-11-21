@@ -14,6 +14,11 @@
 1. 镜像和容器：运行时镜像就是容器，保存时容器就是镜像
 1. 对容器的修改默认不会被保存，镜像是分层的
 ### 命令
+1. 镜像仓库(registry)操作
+   - docker login # 登录到一个registry
+   - docker search # 从registry仓库搜索镜像
+   - docker pull # 从仓库下载镜像到本地
+   - docker push # 将一个镜像push到registry仓库中
 1. 镜像操作
    - docker images # 显示本地所有的镜像列表
    - docker import # 从一个tar包创建一个镜像
@@ -27,11 +32,6 @@
    - docker save # 将一个镜像保存为一个tar包，带layers和tag信息
    - docker history # 显示生成一个镜像的历史命令
    - docker tag # 为镜像起一个别名
-1. 镜像仓库(registry)操作
-   - docker login # 登录到一个registry
-   - docker search # 从registry仓库搜索镜像
-   - docker pull # 从仓库下载镜像到本地
-   - docker push # 将一个镜像push到registry仓库中
 1. 容器相关信息
    - docker version
    - docker info # 本机安装的镜像等信息
@@ -104,7 +104,7 @@
 1. 运行容器
     ```
     docker load -i okayAdmin.tar
-    #启动 /xdfapp/apps/centos 改成okayAdmin的本地路径
-    docker run -t -i --privileged -p 8050:8050/tcp -d --name xdfokayAdmin -v /xdfapp/apps/centos:/xdfapp/ubuntuxdf /bin/bash
+    #启动 /xdfapp/apps/centos改成okayAdmin的本地路径
+    docker run -t -i -d --privileged -p 8050:8050/tcp -v /xdfapp/apps/centos:/xdfapp/ubuntuxdf --name xdfokayAdmin /bin/bash
     docker attach xdfokayAdmin
     ```
