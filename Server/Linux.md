@@ -5,3 +5,4 @@
    - export PATH=：书写格式
 1. 进程后台运行：processName &
 1. 查看运行的进程：ps aux | grep xxx
+1. 查看centos版本：cat /etc/redhat-release

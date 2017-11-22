@@ -105,6 +105,18 @@
     ```
     docker load -i okayAdmin.tar
     #启动 /xdfapp/apps/centos改成okayAdmin的本地路径
-    docker run -t -i -d --privileged -p 8050:8050/tcp -v /xdfapp/apps/centos:/xdfapp/ubuntuxdf --name xdfokayAdmin /bin/bash
+    docker run -t -i -d --privileged -p 8050:8050/tcp -v /xdfapp/apps/centos:/xdfapp/ubuntuxdf --name containerName xdfokayAdmin /bin/bash
     docker attach xdfokayAdmin
     ```
+1. 通过ssh连接docker
+   - docker run -i -t -d -p 22:22/tcp --name centos1 centos /bin/bash
+   - docker attach centos1
+   - yum -y install openssh-server passwd
+   - /usr/sbin/sshd
+   - ssh-keygen -q -t rsa -b 2048 -f /etc/ssh/ssh_host_rsa_key -N ''
+   - ssh-keygen -q -t ecdsa -f /etc/ssh/ssh_host_ecdsa_key -N ''
+   - ssh-keygen -t dsa -f /etc/ssh/ssh_host_ed25519_key  -N ''
+   - /usr/sbin/sshd
+   - passwd
+   - docker commit -m '' hash image-name:tagName
+   - 启动新镜像并启动sshd
