@@ -1,6 +1,7 @@
 ### 认识
 1. 原理：基于事件驱动，轻量级、高性能的http/反向代理/负载均衡服务器。C语音编写，官方测试5万并发。windows系统不能发挥全部的性能
 1. 特点
+   - 资源消耗低，运行稳定，并发高
    - 分阶段资源分配技术，cpu/内存占用率低
    - 静态文件可开启索引和描述符缓冲
    - 简单的负载均衡
@@ -30,8 +31,6 @@
     kill -9 nginx                       # 强制停止
     ```
 1. 初始配置文件
-    ```
-    ```
 1. 多域名配置
    - nginx.conf引入文件：bmp.local.conf
    - 写入bmp.local.conf如下内容，并修改域名
@@ -128,3 +127,7 @@
     yum makecache
     yum install -y nginx
     ```
+1. 安装时的依赖
+   - PCRE：Perl Compatible Regular Expressions，是Perl库。nginx的http模块使用pcre来解析正则表达式
+   - zlib：库提供了很多种压缩和解压缩的方式。nginx使用zlib对http包的内容进行gzip
+   - openssl：
