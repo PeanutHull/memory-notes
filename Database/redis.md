@@ -36,24 +36,56 @@
      1. pfadd/pfcount/pfmerge
    - geospatial：地理空间，索引半径查找
 1. 使用
-   - pub/sub：发布订阅，一种消息通信模式，发送者(pub)发送消息，订阅者(sub)接收消息
-     1. 方法
-        - pubsub：查看订阅和发布系统状态
-        - subscribe：订阅一个或多个，unsubscribe退订，psubscribe订阅给定模式的频道，punsubscribe退订所有给定模式的
-        - publish：发布
-1. 事务
-   - 概念：一组命令在一个步骤里执行，具有原子性
-   - 用法
-    ```
-    MULTI
-    EXEC
-    ```
-1. 主从配置：master-slave，从机的配置文件中指定slaveof参数为主机的ip和port即可
-1. 哨兵机制：sentinel，做redis的存活性检测，提供高可用
-1. 自动分区：Cluster
-1. 管道传输
+   - 发布订阅：pub/sub，一种消息通信模式，发送者(pub)发送消息，订阅者(sub)接收消息
+     1. pubsub：查看订阅和发布系统状态
+     1. subscribe：订阅一个或多个，unsubscribe退订，psubscribe订阅给定模式的频道，punsubscribe退订所有给定模式的
+     1. publish：发布
+   - 事务：一组命令在一个步骤里执行，具有原子性
+     1. multi：开始
+     1. exec：执行
+     1. discard：取消
+     1. watch：监视一个多个key，值被改变则取消事务
+     1. unwatch：取消监视
+   - 管道
+     1. 理解：通常客户端请求都是socket阻塞的，管道是请求未响应时继续发送请求，然后一次性读取所有响应
+     1. 好处：减少了往返时延，提高了效率，提高了服务端的利用率
+     1. 使用：
+   - 分区
+     1. 理解：即分割数据到多个Redis实例的过程，每个实例只保存key的一个子集。
+     1. 优点：提高容量，扩展计算能力和带宽
+     1. 缺点
+        - 不支持多个key同时操作，事务中也不行
+        - 多实体数据库维护复杂，容量调整复杂，用presharding解决
+     1. 分区类型
+        - 范围分区：不同范围放到不同实例中，需要维护范围表
+        - hash分区：使用crc32将key转为数字，然后取模(模为实例数量)确定实例
+     1. 自动分区：Cluster
+   - 命令
+     1. 服务器命令
+        - info：服务器信息
+        - save：异步保存数据到硬盘
+        - bgsave：后台异步保存数据到磁盘
+        - client list：客户端列表
+        - dbsize：key的数量
+        - flushall：删除所有数据库的所有key
+        - flushdb：删除当前数据库的所有key
+        - debug segfault：让redis崩溃
+        - monitor：实时打印接收到的命令，调试用
+        - slowlog subcommand：管理慢日志
+        - sync：用于复制功能的内部
+     1. ping：查看是否运行
+     1. select index：切换数据库
+     1. auth password：验证密码
+     1. echo string：打印字符串
+   - 脚本：eval，执行lua脚本，内嵌lua环境
+     1. eval script numkeys key：使用解释器执行脚本
+     1. script load script：缓冲脚本
+     1. script exists script：脚本是否存在
+     1. evalsha sha1 numkeys key：根据给定sha1码执行缓从的脚本
+     1. script flush：移除缓冲脚本
+     1. script kill：杀死脚本
 1. 配置
-   - 操作配置：config get/set */configName configValue
+   - 操作配置：config get/set/rewrite/ */configName configValue
    - 配置分类
      1. 常规
         - port/bind/timeout：超时断掉连接，为0不断
@@ -83,6 +115,22 @@
      1. 主从配置
         - slaveof <masterip> <masterport>
         - masterauth <master-password>
+1. 主从配置：master-slave，从机的配置文件中指定slaveof参数为主机的ip和port即可
+1. 哨兵机制：sentinel，做redis的存活性检测，提供高可用
+1. 备份恢复
+   - 备份：save/bgsave，产生dump.rdb文件，即备份成功
+   - 恢复：将dump.rdb文件放到redis目录并启动即可，config get dir获得目录
+1. 安全
+   - 获得/设置密码：config get/set requirepass
+   - 检验密码是否正确：auth password
+1. 性能测试
+   - redis-benchmark [option] [option value]
+     1. -h/-p：地址端口
+     1. -s：指定socket
+     1. -c：并发连接数
+     1. -n：请求数
+     1. -d：字节形式指定set/get大小
+     1. -k：1=keep alive 0=reconnect
 #### 应用
 1. Redis集群
 #### 原理
@@ -90,6 +138,10 @@
 1. 磁盘中是紧凑追加方式存在，不存在随机io
 1. 达到最大内存后，Redis会先尝试清除已到期或即将到期的Key，当此方法处理后，仍然到达最大内存设置，将无法再进行写入操作，但仍然可以进行读取操作。Redis新的vm机制，会把Key存放内存，Value会存放在swap区
 1. 虚拟内存机制：VM机制将数据分页存放，由Redis将访问量较少的页即冷数据swap到磁盘上，访问多的页面由磁盘自动换出到内存中
+1. 连接原理：Redis通过监听一个TCP端口或者Unix socket的方式来接收来自客户端的连接，当一个连接建立后，Redis内部会进行以下一些操作
+   - 首先，客户端socket会被设置为非阻塞模式，因为Redis在网络事件处理上采用的是非阻塞多路复用模型
+   - 然后为这个socket设置TCP_NODELAY属性，禁用Nagle算法
+   - 然后创建一个可读的文件事件用于监听这个客户端socket的数据发送
 #### wiki
 1. 安装和启动
    - 启动server：`src/redis-server|redis-server.exe`
