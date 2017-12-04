@@ -10,6 +10,7 @@
 1. URI：通用资源标志符，唯一标识一个资源，一个字符串格式规范，并没有指定用途
 URL和URN都是一种URI,
 1. URL:统一资源定位符，即网址。URN:统一资源命名，用名字标识资源。文件 `url：file:// ftp.yesky.com/soft/file/robots.txt`
+1. RTT:Round Trip Time,往返时间,服务器和客户端传送信息的传输时间
 ####理解
 1. 网络
    - ISO/OSI模型：物理层、数据链路层、网络层、传输层、会话层、表示层、应用层

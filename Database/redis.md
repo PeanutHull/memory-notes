@@ -1,4 +1,4 @@
-#### Redis
+#### 认识和使用
 1. 理解：是开源使用ANSI C语言编写的，可基于内存亦可持久化的日志型、Key-Value数据库。对关系型数据库起到补充作用，多客户端支持。常用作缓存、数据库、消息中间件。端口6379
    - 速度快，性能高
    - 实现了多数据结构，发布/订阅模式，key过期
@@ -35,10 +35,15 @@
    - hyperloglogs：2.8.9新增，是做基数统计的算法，即快速计算基数(集中不重复元素数量)。输入元素的数量或者体积非常非常大时，计算基数所需的空间总是固定的、很小的。每个HyperLogLog键只需要花费12KB内存，就可以计算接近2^64个不同元素的基数
      1. pfadd/pfcount/pfmerge
    - geospatial：地理空间，索引半径查找
-1. 使用
+1. 其他功能
+   - 超时：expire，设置超时时间，超时后不删除，只有对值进行改变才会删除
+        ```
+        SET mykey "Hello"
+        EXPIRE mykey 10
+        ```
    - 发布订阅：pub/sub，一种消息通信模式，发送者(pub)发送消息，订阅者(sub)接收消息
      1. pubsub：查看订阅和发布系统状态
-     1. subscribe：订阅一个或多个，unsubscribe退订，psubscribe订阅给定模式的频道，punsubscribe退订所有给定模式的
+     1. subscribe：订阅一个或多个，unsubscribe退订。psubscribe/punsubscribe用于给定模式的频道，即使用通配符啥的
      1. publish：发布
    - 事务：一组命令在一个步骤里执行，具有原子性
      1. multi：开始
@@ -47,9 +52,14 @@
      1. watch：监视一个多个key，值被改变则取消事务
      1. unwatch：取消监视
    - 管道
-     1. 理解：通常客户端请求都是socket阻塞的，管道是请求未响应时继续发送请求，然后一次性读取所有响应
+     1. 理解：pipelining，通常客户端请求都是socket阻塞的，管道是请求未响应时继续发送请求，然后一次性读取所有响应，节省了多次的网络传输时间
      1. 好处：减少了往返时延，提高了效率，提高了服务端的利用率
-     1. 使用：
+     1. 使用
+        ```
+        # php，开始和结束
+        $redis->pipeline();
+        $redis->exec();
+        ```
    - 分区
      1. 理解：即分割数据到多个Redis实例的过程，每个实例只保存key的一个子集。
      1. 优点：提高容量，扩展计算能力和带宽
@@ -115,14 +125,6 @@
      1. 主从配置
         - slaveof <masterip> <masterport>
         - masterauth <master-password>
-1. 主从配置：master-slave，从机的配置文件中指定slaveof参数为主机的ip和port即可
-1. 哨兵机制：sentinel，做redis的存活性检测，提供高可用
-1. 备份恢复
-   - 备份：save/bgsave，产生dump.rdb文件，即备份成功
-   - 恢复：将dump.rdb文件放到redis目录并启动即可，config get dir获得目录
-1. 安全
-   - 获得/设置密码：config get/set requirepass
-   - 检验密码是否正确：auth password
 1. 性能测试
    - redis-benchmark [option] [option value]
      1. -h/-p：地址端口
@@ -132,7 +134,21 @@
      1. -d：字节形式指定set/get大小
      1. -k：1=keep alive 0=reconnect
 #### 应用
+1. 主从配置：master-slave，从机的配置文件中指定slaveof参数为主机的ip和port即可
 1. Redis集群
+#### 运维
+1. 安装和启动
+   - 启动server：`src/redis-server|redis-server.exe`
+   - 停止server：`src/redis-cli|redis-server.exe shutdown`
+   - 连接本地server：`src/redis-cli`
+   - 连接远程server：`src/redis-cli|redis-cli.exe -h host -p port -a password`
+1. 哨兵机制：sentinel，做redis的存活性检测，提供高可用
+1. 备份恢复
+   - 备份：save/bgsave，产生dump.rdb文件，即备份成功
+   - 恢复：将dump.rdb文件放到redis目录并启动即可，config get dir获得目录
+1. 安全
+   - 获得/设置密码：config get/set requirepass
+   - 检验密码是否正确：auth password
 #### 原理
 1. 复杂的数据结构在内存中操作非常简单，redis可以做很复杂的操作
 1. 磁盘中是紧凑追加方式存在，不存在随机io
@@ -143,11 +159,6 @@
    - 然后为这个socket设置TCP_NODELAY属性，禁用Nagle算法
    - 然后创建一个可读的文件事件用于监听这个客户端socket的数据发送
 #### wiki
-1. 安装和启动
-   - 启动server：`src/redis-server|redis-server.exe`
-   - 停止server：`src/redis-cli|redis-server.exe shutdown`
-   - 连接本地server：`src/redis-cli`
-   - 连接远程server：`src/redis-cli|redis-cli.exe -h host -p port -a password`
 1. php和redis
    - php扩展：PRedis、phpredis(c扩展)
    - windows下安装php的redis扩展
@@ -166,3 +177,26 @@
     $redis->lpush/lrange();                 # list
     $redis->subscribe/publish();            # 发布订阅
     ```
+1. 阿里云Redis集群版
+   - 表现
+     1. 突破百万QPS，最好性能512G内存、最大连载数320000、最大吞吐1536M
+     1. 功能支持：mset/mget、slots槽数
+   - 特点
+     1. 统一域名访问
+     1. 存储空间可扩展，容量大
+     1. 服务高可用
+     1. 专业监控和数据管理平台，包括：cpu、连接数、磁盘空间利用，可视化运维
+   - 组成
+     1. 代理服务器：多台代理服务器，负载均衡、故障转移
+     1. 分片服务器：多台分片服务器，双副本高可用架构，主动主备切换
+     1. 配置服务器：存储集群配置信息和分区策略，双副本高可用架构
+   - 整套解决方案
+     1. 客户端
+     1. slb负载均衡
+     1. 服务集群
+        - 代理服务器
+        - 分片服务器：主节点、备节点
+        - 配置服务器
+        - 运行/数据监控
+   - 疑问
+     1. 双机热备是指双副本吗？双副本是指两台备份机器吗？
