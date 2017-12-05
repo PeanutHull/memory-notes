@@ -133,7 +133,6 @@
      1. -n：请求数
      1. -d：字节形式指定set/get大小
      1. -k：1=keep alive 0=reconnect
-#### 应用
 1. 主从配置：master-slave，从机的配置文件中指定slaveof参数为主机的ip和port即可
 1. Redis集群
 #### 运维
@@ -143,6 +142,9 @@
    - 连接本地server：`src/redis-cli`
    - 连接远程server：`src/redis-cli|redis-cli.exe -h host -p port -a password`
 1. 哨兵机制：sentinel，做redis的存活性检测，提供高可用
+1. 持久化
+   - RDB
+   - AOF：fsync
 1. 备份恢复
    - 备份：save/bgsave，产生dump.rdb文件，即备份成功
    - 恢复：将dump.rdb文件放到redis目录并启动即可，config get dir获得目录
@@ -158,6 +160,14 @@
    - 首先，客户端socket会被设置为非阻塞模式，因为Redis在网络事件处理上采用的是非阻塞多路复用模型
    - 然后为这个socket设置TCP_NODELAY属性，禁用Nagle算法
    - 然后创建一个可读的文件事件用于监听这个客户端socket的数据发送
+1. redis协议：流言协议
+1. 主从同步原理：主准备所有的命令，利用redis协议，发送到从，执行并且放入到内存中
+1. 哨兵机制：通过多个sentinel的订阅和发布，实现对主的监视
+1. 探索方向：中文网的知识点梳理掌握（主要每个点都掌握，否则过不了关），各个文章的配置和讲解，云栖论坛的相关帖子搜索
+#### 应用
+1. 主从配置
+1. 集群配置
+1. 数据测试，定性处理指标
 #### wiki
 1. php和redis
    - php扩展：PRedis、phpredis(c扩展)
