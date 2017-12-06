@@ -107,3 +107,18 @@ URL和URN都是一种URI,
      1. `Last-Modified` // 文件最后修改时间
      1. `Location、Refresh、Retry-After`
      1. `Set-Cookie`
+1. tcp：三次握手建立连接，中间保持连接会发送心跳包两端回应，四次握手断开连接
+1. Socket：Socket是应用层与各种网络协议通信的中间软件抽象层，是一组接口/API/封装。用socket组织数据，以符合指定的协议
+1. WebSocket
+   - 特点
+     1. 鉴于传输中多次路由转发等的不稳定，ws会发送ping/pong心跳包检测连接活性
+   - 步骤：先期使用http建立一次连接，之后转换为websocket
+        ```
+        // 两个http头表示发起websocket请求
+        Upgrade: websocket
+        Connection: Upgrade
+        ```
+   - 头信息
+     1. Sec-WebSocket-Key 校验key，校验原理是什么？？？
+     1. Sec-WebSocket-Protocol 需要的服务名称
+     1. Sec-WebSocket-Version 版本号
