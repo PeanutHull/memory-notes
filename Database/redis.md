@@ -14,7 +14,8 @@
 1. 数据类型
    - string：字符串，键值对类型，二进制安全，意味着可以包含任意对象(比如一个图片的内容)，最大512MB
      1. set/get/del/exists/append/rename/expire/pexpire/ttl/pttl
-     1. 利用INCR命令簇（INCR, DECR, INCRBY）来把字符串当作原子计数器使用
+        - 2.6版本开始，set命令增加了键存在与否的判断和过期时间的设置
+     1. 利用INCR命令簇（INCR, DECR, INCRBY）来把字符串当作原子计数器使用，incr提供了原子操作
      1. 将字符串作为GETRANGE 和 SETRANGE的随机访问向量
      1. 在小空间里编码大量数据，或者使用 GETBIT 和 SETBIT创建一个Redis支持的Bloom过滤器
    - hash：哈希类型键值对的集合，用来表示对象，最多40亿对

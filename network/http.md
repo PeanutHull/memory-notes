@@ -122,3 +122,4 @@ URL和URN都是一种URI,
      1. Sec-WebSocket-Key 校验key，校验原理是什么？？？
      1. Sec-WebSocket-Protocol 需要的服务名称
      1. Sec-WebSocket-Version 版本号
+1. 断点续传：利用http请求头的Range确定传输的起点，响应头Content-Range返回大小。php使用fread/fseek确定读取文件的范围和小大从而实现功能
