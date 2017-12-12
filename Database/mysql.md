@@ -430,31 +430,8 @@
         - B+树的数据项是复合性数据结构，比如（name，age，gender）的时候，B+树是按照从左到右的顺序来建立搜索树的，比如当（小张，22，女）这样的数据来检索的时候，B+树会优先比较name来确定下一步的搜索方向，如果name相同再依次比较age和gender，最后得到检索的数据。但是，当（22，女）这样没有name的数据来的时候，B+树就不知道下一步该查哪个节点，因为建立搜索树的时候，name就是第一个比较因子，必须根据name来搜索才知道下一步去哪里查询。比如，当（小张，男）这样的数据来检索时，B+树就可以根据name来指定搜索方向，但下一字段age缺失，所以只能把名字是“小张”的所有数据都找到，然后再匹配性别是“男”的数据了。这个是非常重要的一条性质，即索引的最左匹配特性
    - 不同引擎的区别
      1. Innodb中，Leaf Nodes存放其他字段实际数据，还包含主键值，Secondary Index和普通b-tree相同，所以主键查询非常快，Secondary需要先找到Leaf再找主键值
-### WIKI
-1. 一些操作
-   - 插入不重复的数据行，MySQL特有的，不是标准sql语法：`INSERT token(udid) values ('{$udid}') ON DUPLICATE KEY UPDATE activetime ='{$time}'`
-   - 原所有id增加5万，必须倒叙操作：`update user SET uid=uid+50000 order by uid desc;`
-   - 查询这个数据是否存在，存在则存到另一张表里：`create table temp as select * from admin a where exists (select uid from user u where a.userName = u.account);`
-   - 查询两张表中是否有相同的数据：`select * from admin wherer uid IN(select uid from temp);`
-   - 求差集：`SELECT * FROM A LEFT JOIN B ON A.xx = B.xx WHERE B.id IS NULL union SELECT * FROM A RIGHT JOIN B ON A.xx = B.xx WHERE A.id IS NULL;`
-   - 求全集：`SELECT * FROM A LEFT JOIN B ON A.xx = B.xx union SELECT * FROM A RIGHT JOIN B ON A.xx = B.xx;`
-1. 默认数据库的含义
-   - mysql：用户/权限相关，user表存储了用户和权限
-   - information_schema：自身架构相关
-   - performance_schema
-   - sys
-1. 函数
-    - 数学：format()/round()/pow()/abs()/sin()/cos()/tan()/bit_and()/
-    - 字符串：char()/concat()/length()  
-    - 常用
-      1. cast：类型转换，如`cast(1 as signed)`
-      1. rand
-      1. replace
-    - password
-    - UNIX_TIMESTAMP：时间转换为时间戳
-    - match：全文搜索
-    - uuid()：aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
-1. 导入和导出
+### 运维
+1. 数据导入和导出
    - 导出
     ```
     mysqldump -u -p [databaseName or tableName] > data.sql                  # -d 只导出结构，-t 只导出数据
@@ -503,8 +480,69 @@
         - RELOAD：重载授权表、清空日志/主机缓存/表缓存
         - SHUTDOWN：关闭服务器
         - ALL：所有；ALL PRIVILEGES同义词，除grant外
+### WIKI
+1. 一些操作
+   - 插入不重复的数据行，MySQL特有的，不是标准sql语法：`INSERT token(udid) values ('{$udid}') ON DUPLICATE KEY UPDATE activetime ='{$time}'`
+   - 原所有id增加5万，必须倒叙操作：`update user SET uid=uid+50000 order by uid desc;`
+   - 查询这个数据是否存在，存在则存到另一张表里：`create table temp as select * from admin a where exists (select uid from user u where a.userName = u.account);`
+   - 查询两张表中是否有相同的数据：`select * from admin wherer uid IN(select uid from temp);`
+   - 求差集：`SELECT * FROM A LEFT JOIN B ON A.xx = B.xx WHERE B.id IS NULL union SELECT * FROM A RIGHT JOIN B ON A.xx = B.xx WHERE A.id IS NULL;`
+   - 求全集：`SELECT * FROM A LEFT JOIN B ON A.xx = B.xx union SELECT * FROM A RIGHT JOIN B ON A.xx = B.xx;`
+1. 默认数据库的含义
+   - mysql：用户/权限相关，user表存储了用户和权限
+   - information_schema：自身架构相关
+   - performance_schema
+   - sys
+1. 函数
+    - 数学：format()/round()/pow()/abs()/sin()/cos()/tan()/bit_and()/
+    - 字符串：char()/concat()/length()  
+    - 常用
+      1. cast：类型转换，如`cast(1 as signed)`
+      1. rand
+      1. replace
+    - password
+    - UNIX_TIMESTAMP：时间转换为时间戳
+    - match：全文搜索
+    - uuid()：aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
 1. 严格模式
 1. mycat：开源分布式数据库中间件
 1. NULL与任何其它值的比较永远返回false，即使NULL=NULL也返回false
 1. 注释 ：--、#、/**/
-1. 各个版本的特性
+1. 5.6版本的新特性
+   - server参数默认值设置的变化
+   - innodb增强
+     1. 支持online DDL
+     1. 新增参数innodb_page_size设置页大小
+     1. undo log可独立出系统表空间
+     1. redo log最大增至512G
+     1. 独立表空间的.ibd文件可以在建表时指定目录
+     1. 支持read-only事务
+     1. 支持全文本搜索
+     1. 导入和导出表空间，copy文件的方式比mysqldump快好多
+     1. 缓冲池flush算法增强
+     1. innodb内部性能增强：包括将flushing操作独立出主线程，减少核心互斥锁，可设置多个清除线程，减少大内存系统的资源争夺
+     1. 检测死锁算法增强。在非递归情况下死锁检测：死锁信息可以记录到 error 日志，方便分析
+     1. 优化器统计持续化：重启不丢失
+   - 复制和日志增强
+     1. 新增GTID复制
+     1. 新增binlog_row_image
+     1. master.info和relay-log.info支持存储在表中
+     1. mysqlbinlog命令支持binlog备份
+     1. 支持延时复制：MASTER_DELAY
+     1. 基于schema级别的多线程复制
+     1. binlog支持crash-safe
+   - 数据类型
+     1. datetime类型支持DEFAULT CURRENT_TIMESTAMP和ON UPDATE CURRENT_TIMESTAMP
+   - 分区增强
+     1. 最大分区个数增至8192，包括分区和子分区
+     1. 支持分区表的分区（或子分区）与非分区表交换：ALTER TABLE ... EXCHANGE PARTITION
+     1. 简化分区锁增强性能
+   - 优化器增强
+     1. limit/MRR/ICP/新增连接算法BKA/子查询优化：包括物化和半连接优化等特性/面向开发者的优化器追踪特性
+   - MySQL Performance Schema 增强
+     1. Statements/execution stages - 找出消耗资源热点SQL
+     1. Table and Index I/O ： 那些表和索引引起负载过高 ？
+     1. Table Locks ： 那些表引起竞争？
+     1. Users/Hosts/Accounts 级别资源消耗 ：找出消耗资源最多的Users/Hosts/Accounts
+     1. Network I/O ： 网络还是应用程序？ 会话闲置多久？
+     1. 通过 thread, user, host, account, object聚合总结

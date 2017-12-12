@@ -123,3 +123,6 @@ URL和URN都是一种URI,
      1. Sec-WebSocket-Protocol 需要的服务名称
      1. Sec-WebSocket-Version 版本号
 1. 断点续传：利用http请求头的Range确定传输的起点，响应头Content-Range返回大小。php使用fread/fseek确定读取文件的范围和小大从而实现功能
+1. tcp/ip
+   - 概述：信息流的分段传输，七层协议，分开自己的任务
+   - 最下边两个负责信息传输到目的的，即路由控制，路由协议，路由算法距离向量算法。链路状态算法。比较路由表决定去路，再上保证收的到，再上就是具体的应用，缓存路由，下一跳只记住下一个路由地址，缓冲mac地址，arp广播找mac地址，rarp反过来找，dns找ip
