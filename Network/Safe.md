@@ -1,11 +1,25 @@
+
+1. web攻击方式
+   - XSS：Cross Site Script，跨站请求攻击，链接中附加js代码，可以获取数据和cookies，修改页面内容
+   - XFS：iframe别人的页面，使用x-frame-options或者提前检测屏蔽防范
+   - CSRF：Cross-Site Request Forgeries，跨站点请求伪造，利用别人的认证id实现操作，使用同源策略防范
+   - http首部注入：在响应头部插入换行和其他头，实现cookie设置、重定向、修改主体。%0D%0A代表http报文的换行符
+    ```
+    Location: http://example.com/?cat=101（%0D%0A ：换行符）
+    Set-Cookie: SID=123456789
+    %0D%0A%0D%0A                                    # 两个换行符表示空行
+    任意主体
+    ```
+   - 透明点击
+   - sql注入、漏洞扫描
+   - os命令注入：在可以执行shell脚本的地方注入
+   - 目录遍历：对文件地址使用../等相对路径定位到/etc/passed等绝对路径，实现浏览、修改的目的
+   - 远程文件包含：网站会载入外部文件包含在代码里，上传恶意文件就可以执行任意脚本
+   - 密码破解：穷举、字典、彩虹表(hash和明文的对应表)
 1. 通信截取方式
    - 中间人攻击
      1. 开放wifi，使用tcpdump获取数据
    - 挂马
-1. web攻击方式
-   - XSS：Cross Site Script，跨站请求攻击，链接中附加js代码，可以获取数据和cookies
-   - XFS：iframe别人的页面，使用x-frame-options或者提前检测屏蔽防范
-   - CSRF：跨域请求，使用同源策略防范
 1. 网站信息获取
    - 网站指纹(独特网站信息)
    - 搜索网站指纹和关键词词法

@@ -1,5 +1,5 @@
 ###网络
-1. 理解：协议在计算机通信中的重要性，分层负责、对上封装/抽象，
+1. 理解：互相通信，协议在计算机通信中的重要性，分层负责、对上封装/抽象
 1. 网络
    - ISO/OSI模型：为统一不同计算机厂商的通信，国际标准化组织(ISO)制定了通信系统的标准，即开放式通信系统互联参考模型(OSI)。这个模型只是粗略的界定，对协议和接口没有详细定义
       ```
@@ -11,7 +11,7 @@
       数据链路层：帧，用MAC定位媒介、错误检验与修正(发现数据错误是可以要求重新传递包的)、负责信息的局域网里的准确传递，帧和比特流的转换
       物理层：比特流的传输、电气特性、物理接口(网卡)
       ```
-   - TCP/IP模型：OSI中的协议没有没有普及，但是其模型常被使用，但非国公共机构指定的标准(IETF)，由大学、计算机行业为中心力量推动的TCP/IP成为了业界标准，成为广泛使用的通信协议。前辈为全球互联网鼻祖(ARPANET，为可靠军用通信诞生)。由于其开放性和注重实用性，迅速流行和发展，笑谈先写程序，后定标准，TCP/IP广义上指所有目前用到的协议
+   - TCP/IP模型：OSI中的协议没有没有普及，但是其模型常被使用，但非国公共机构指定的标准(IETF)，由大学、计算机行业为中心力量推动的TCP/IP成为了业界标准，成为广泛使用的通信协议。前辈为全球互联网鼻祖(ARPANET)。由于其开放性和注重实用性，迅速流行和发展，笑谈先写程序，后定标准，TCP/IP广义上指所有目前用到的协议
       ```
       应用层：对应应用、表示、会话层，包括FTP、Telnet、DNS、SMIP
       传输层：对应传输层，包含TCP、UDP
@@ -37,8 +37,8 @@
      1. DNS：域名解析服务，本地域名服务器缓冲、一级级往上查询，最后是全球13台根DNS服务器
    - 会话层
    - 传输层
-     1. TCP：面向连接，可靠性高，可丢包重发，7次握手
-     1. UDP：无连接，不可靠，传输数据不先建立连接，不能确定是否送达
+     1. TCP：面向连接，可靠性的流协议，提供顺序控制/重发控制/流量控制/拥塞控制，7次握手，窗口发送数据，数据发送会有回执确认。用于需要可靠传输的情况
+     1. UDP：无连接，不可靠的数据报协议，传输数据不先建立连接，不能确定是否送达，可以保证收到的大小。用于需要高速传输和实时性较高的场景，如ip电话使用tcp重发的话，就不对了，用udp的话不会有声音大幅度延迟的情况，只是产生停顿或者混乱，通常不影响
      1. SCTP/DCCP
    - 网络层
      1. IP
@@ -55,10 +55,9 @@
      1. NAT：公私ip转换协议，NAPT端口转换协议
    - 数据链路层
      1. MAC：交换机负责维护单一层次的mac转发表，实现信息转发，可自学地址/环路检测(防止数据无休传输)
-     1. 非共享介质网络：依赖交换机，可以构建虚拟局域网(VLAN)，用于划分虚拟网段
      1. 各种数据链路(传输技术)：以太网、无线、ATM、FDDI、ADSL(话机到电信局交换机中传输高频数字信号，和低频信号隔离避免噪声干扰啊)
      1. PPP：纯的数据链路层，以太网和FDDI都定义了比特被定义为何种电子信号，还需要物理层实现通信，如ADSL/有线电视通过PPPoE(以太网数据加入PPP帧)实现接入
-     1. VPN：使用ip包中的标签确定用户以在多协议标签交换(MPLS)网中传输，或者使用IPsec技术对ip包进行验证和加密
+     1. VPN：依赖交换机，划分虚拟网段，使用ip包中的标签确定用户以在多协议标签交换(MPLS)网中传输，或者使用IPsec技术对ip包进行验证和加密
    - 物理层
      1. 分组交换
      1. 各种网络构成：接入层、边缘网络、骨干网
@@ -70,41 +69,53 @@
         - 路由器：网络层转发分组数据的设备
         - 交换机：传输层以上网络传输的设备
         - 网关：交换机是局域网在MAC上进行通信、要是跨ip就要用路由器了，网关就是负责通信的主要接收、分发
-1. 互联网：Internet，多个网络连接形成更大的网络，即网际网。由ARPANET发展而来，
+1. 互联网：Internet，多个网络连接形成更大的网络，即网际网。由ARPANET(为可靠军用通信诞生)发展而来
 ### HTTP
-1. 概念：超文本传输协议。99年1.1版本,15年HTTP2发布
-1. 请求和响应
+1. 概念：HyperText Transfer Protocol，超文本传输协议，是一种协议，web是建立在http协议上通信的。以字节为单位，90年诞生，96年1.0版本，97年1.1版本，15年HTTP2发布
+1. 请求
+   - 方法：get/post/put/delete/head/options/trace/connect
+   - 组成：
+     1. 请求行
+     1. 头信息
+     1. 空行：CR+LF，回车换行，0x0d0x0a
+     1. 主体
    - 请求头信息
+     1. `Host` // 主机和端口
      1. `Accept` // 指定客户端可接受的MIME类型，如 image/png
      1. `Accept-Charset` // 可接受的字符集，如ISO-8859-1
      1. `Accept-Encoding` // 编码类型，如gzip
      1. `Accept-Language` // 首选语言，如en、en-us、ru
-     1. `Host` // 主机和端口
      1. `Content-Length` // POST数据的大小，字节为单位
-     1. `Cookie` // 携带的服务器给的cookie
-     1. `Authorization` // 鉴权信息     
-     1. `User-Agent` // 客户端标识
      1. `Connection` // 是否处理持久Http连接，keep-alive为持久连接
+     1. `Cookie` // 携带的服务器给的cookie
      1. `If-Modified-Since` // 数据缓冲，否则服务器返回304
      1. `If-Unmodified-Since` // 数据缓冲
+     1. `User-Agent` // 客户端标识
+     1. `Authorization` // 鉴权信息
      1. `Referer` // 上一个页面的url
-   - HTTP响应组成：
-     1. 数字和文字的状态码
-     1. 响应头：服务器类型(UA)、日期时间、内容类型、长度
-     1. 响应正文
+   - 主体类型
+     1. multipart/form-data
+     1. multipart/byteranges
+   - 示例
+    ```
+    GET / HTTP/1.1
+    Host: xx.com
+    Accept: text/html
+    Cache-Control: no-cache
+    ```
    - 响应头信息
      1. `Allow` // 服务器支持的方法
-     1. `Cache-Control` // 表示此文档是否可安全缓冲，有public、private、no-cache，private表示只能存在私有缓冲中
-     1. `Connection` // 是否持久连接：close、keep-alive
-     1. `Content-Disposition` // 指定保存的文件名
+     1. `Content-Type` // MIME类型。网页编码，默认为text/html
+     1. `Content-Length` // keep-alive时不需要
      1. `Content-Encoding` // 内容编码方式
      1. `Content-Language` // 内容语言
-     1. `Content-Length` // keep-alive时不需要
-     1. `Content-Type` // MIME类型。网页编码，默认为text/html
+     1. `Content-Disposition` // 指定保存的文件名
+     1. `Connection` // 是否持久连接：close、keep-alive
+     1. `Set-Cookie`
+     1. `Cache-Control` // 表示此文档是否可安全缓冲，有public、private、no-cache，private表示只能存在私有缓冲中
      1. `Expires` // 过期时间，即缓冲删除时间
      1. `Last-Modified` // 文件最后修改时间
      1. `Location、Refresh、Retry-After`
-     1. `Set-Cookie`
 1. 表单提交
    - enctype属性：数据的编码方式，常用有
      1. `application/x-www-form-urlencoded`：名称/值，默认的编码方式
