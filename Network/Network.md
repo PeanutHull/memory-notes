@@ -71,7 +71,7 @@
         - 网关：交换机是局域网在MAC上进行通信、要是跨ip就要用路由器了，网关就是负责通信的主要接收、分发
 1. 互联网：Internet，多个网络连接形成更大的网络，即网际网。由ARPANET(为可靠军用通信诞生)发展而来
 ### HTTP
-1. 概念：HyperText Transfer Protocol，超文本传输协议，是一种协议，web是建立在http协议上通信的。以字节为单位，90年诞生，96年1.0版本，97年1.1版本，15年HTTP2发布
+1. 概念：HyperText Transfer Protocol，超文本传输协议，是一种协议，web是建立在http协议上通信的。以字节为单位，以ASCII码传输，90年诞生，96年1.0版本，97年1.1版本，15年HTTP2发布
 1. 请求
    - 方法：get/post/put/delete/head/options/trace/connect
    - 组成：
@@ -79,63 +79,91 @@
      1. 头信息
      1. 空行：CR+LF，回车换行，0x0d0x0a
      1. 主体
-   - 请求头信息
-     1. `Host` // 主机和端口
-     1. `Accept` // 指定客户端可接受的MIME类型，如 image/png
-     1. `Accept-Charset` // 可接受的字符集，如ISO-8859-1
-     1. `Accept-Encoding` // 编码类型，如gzip
-     1. `Accept-Language` // 首选语言，如en、en-us、ru
-     1. `Content-Length` // POST数据的大小，字节为单位
-     1. `Connection` // 是否处理持久Http连接，keep-alive为持久连接
-     1. `Cookie` // 携带的服务器给的cookie
-     1. `If-Modified-Since` // 数据缓冲，否则服务器返回304
-     1. `If-Unmodified-Since` // 数据缓冲
-     1. `User-Agent` // 客户端标识
-     1. `Authorization` // 鉴权信息
-     1. `Referer` // 上一个页面的url
-   - 主体类型
+   - 实体类型
      1. multipart/form-data
      1. multipart/byteranges
-   - 示例
-    ```
-    GET / HTTP/1.1
-    Host: xx.com
-    Accept: text/html
-    Cache-Control: no-cache
-    ```
-   - 响应头信息
-     1. `Allow` // 服务器支持的方法
-     1. `Content-Type` // MIME类型。网页编码，默认为text/html
-     1. `Content-Length` // keep-alive时不需要
-     1. `Content-Encoding` // 内容编码方式
-     1. `Content-Language` // 内容语言
-     1. `Content-Disposition` // 指定保存的文件名
-     1. `Connection` // 是否持久连接：close、keep-alive
-     1. `Set-Cookie`
-     1. `Cache-Control` // 表示此文档是否可安全缓冲，有public、private、no-cache，private表示只能存在私有缓冲中
-     1. `Expires` // 过期时间，即缓冲删除时间
-     1. `Last-Modified` // 文件最后修改时间
-     1. `Location、Refresh、Retry-After`
-1. 表单提交
-   - enctype属性：数据的编码方式，常用有
-     1. `application/x-www-form-urlencoded`：名称/值，默认的编码方式
-       - 当action为get：就用x-www-form-urlencoded方式转为字符串并加到url后面(url编码)
-       - 当action为post：浏览器把form数据封装到http body中发送
-     1. `multipart/form-data`：以二进制格式传输数据，一条消息，一个控件对应一个部分，同时比urlencoded传输更大数据。传输文件时使用
-     1. `text/plain`：窗体数据以纯文本形式进行编码，不含任何控件或格式字符
-1. post
-   - 特点：头信息每行一条，空行之后便是body
-   - post默认数据
+   - Get
+        ```
+        GET / HTTP/1.1
+        Host: xx.com
+        Accept: text/html
+        Cache-Control: no-cache
+        ```
+   - Post：头信息每行一条，空行之后便是body，普通的post实体是键值对
         ```HTTP
         POST / HTTP/1.1
-        Content-Type:application/x-www-form-urlencoded
+        Content-Type: application/x-www-form-urlencoded
         Accept-Encoding: gzip, deflate
         Host: w.sohu.com
         Content-Length: 21
         Connection: Keep-Alive
         Cache-Control: no-cache
         ```
-### WebSocket
+1. http头
+   - 通用
+     1. Cache-Control // 控制缓存的行为，有public、private、no-cache，private表示只能存在私有缓冲中
+     1. Connection // 逐跳首部、连接的管理，Close、Keep-Alive
+     1. Date // 创建报文的日期时间
+     1. Transfer-Encoding // 指定报文主体的传输编码方式
+     1. Pragma // 报文指令
+     1. Trailer // 报文末端的首部一览
+     1. Upgrade // 升级为其他协议
+     1. Via // 代理服务器的相关信息
+     1. Warning // 错误通知
+   - 请求头
+     1. Host // 请求资源所在服务器
+     1. Accept // 用户代理可处理的媒体类型
+     1. Accept-Charset // 优先的字符集
+     1. Accept-Encoding // 优先的内容编码
+     1. Accept-Language // 优先的语言（自然语言）
+     1. If-Match // 比较实体标记（ETag）
+     1. If-Modified-Since // 比较资源的更新时间
+     1. If-None-Match // 比较实体标记（与 If-Match 相反）
+     1. If-Range // 资源未更新时发送实体 Byte 的范围请求
+     1. If-Unmodified-Since // 比较资源的更新时间（与If-Modified-Since相反）
+     1. Range // 实体的字节范围请求
+     1. User-Agent HTTP // 客户端程序的信息
+     1. Authorization // Web认证信息
+     1. Proxy-Authorization // 代理服务器要求客户端的认证信息
+     1. Referer // 对请求中 URI 的原始获取方
+     1. Max-Forwards // 最大传输逐跳数
+     1. TE // 传输编码的优先级
+     1. Expect // 期待服务器的特定行为
+     1. From // 用户的电子邮箱地址
+   - 响应头
+     1. Server // HTTP服务器的安装信息
+     1. `Set-Cookie`
+     1. Accept-Ranges // 是否接受字节范围请求
+     1. ETag // 资源的匹配信息
+     1. Age // 推算资源创建经过时间
+     1. Retry-After // 对再次发起请求的时机要求
+     1. Location // 令客户端重定向至指定URI
+     1. Refresh
+     1. WWW-Authenticate // 服务器对客户端的认证信息
+     1. Proxy-Authenticate // 代理服务器对客户端的认证信息
+     1. Vary // 代理服务器缓存的管理信息
+   - 实体头
+     1. Allow // 服务器支持的HTTP方法
+     1. Content-Type // 实体主体的媒体类型，默认为text/html
+     1. Content-Length // 实体主体的大小（单位：字节），keep-alive时不需要
+     1. Content-Encoding // 实体主体适用的编码方式
+     1. Content-Language // 实体主体的自然语言
+     1. Content-Location // 替代对应资源的URI
+     1. Content-MD5 // 实体主体的报文摘要
+     1. Content-Range // 实体主体的位置范围
+     1. Expires // 实体主体过期的日期时间
+     1. Last-Modified // 资源的最后修改日期时间
+1. 表单提交
+   - enctype属性：表单数据的编码方式
+     1. `application/x-www-form-urlencoded`：名称/值，默认的编码方式
+        - 当action为get：就用x-www-form-urlencoded方式转为字符串并加到url后面(url编码)
+        - 当action为post：浏览器把form数据封装到http body中发送
+     1. `multipart/form-data`：以二进制格式传输数据，改造post方式而来，一个控件对应一个部分，比urlencoded传输更大数据，传输文件时使用
+        - 当action为get：url参数追加形式，没有被上传文件的实际数据
+        - 当action为post：Content-Type会追加boundary，其值作为请求体的文件数据分隔符，支持post的工具改变数据包装方式都能支持multipart/form-data
+     1. `text/plain`：以纯文本形式进行编码，空格转换为加号，不对特殊字符编码。不含任何控件或格式字符
+### 其他传输技术
+1. https：加密发生在应用层与传输层之间，调试工具可以看到的是应用层的数据，传输层传输的是加密后的密文，防止传输过程中被监听
 1. WebSocket
    - 特点
      1. 鉴于传输中多次路由转发等的不稳定，会发送ping/pong心跳包检测连接活性
@@ -149,13 +177,18 @@
      1. Sec-WebSocket-Key 校验key，校验原理是什么？？？
      1. Sec-WebSocket-Protocol 需要的服务名称
      1. Sec-WebSocket-Version 版本号
-### 其他传输技术
 1. Socket：Socket是应用层与各种网络协议通信的中间软件抽象层，是一组调用接口/API/封装。用socket组织数据，兼容多网络协议，负责程序通信，以符合指定的协议
 1. 断点续传：利用http请求头的Range确定传输的起点，响应头Content-Range返回大小。php使用fread/fseek确定读取文件的范围和小大从而实现功能
 ### wiki
 1. 优化传输
    - 减少http请求数：每个新的请求都需要3次握手，很费时间
    - 减少传输文件大小
+1. 状态码：负责表示HTTP请求的返回结果
+   - 1xx：
+   - 2xx：正常处理。200 ok，206 范围请求
+   - 3xx：重定向。301 永久重定向，302 临时重定向，304 未修改(未符合If-Match，If-None-Match，If-Modified-Since，If-Unmodified-Since、If-Range)
+   - 4xx：客户端错误。400 请求报文语法错误，401未认证，403 阻止，404 未找到
+   - 5xx：服务器错误。500 内部错误，503 服务不可用
 1. URI：通用资源标志符，唯一标识一个资源，一个字符串格式规范，并没有指定用途。包含URL和URN
    - URL:统一资源定位符，即网址
    - URN:统一资源命名，用名字标识资源。文件 `file://ftp.yesky.com/soft/file/robots.txt`
