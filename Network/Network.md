@@ -72,37 +72,12 @@
 1. 互联网：Internet，多个网络连接形成更大的网络，即网际网。由ARPANET(为可靠军用通信诞生)发展而来
 ### HTTP
 1. 概念：HyperText Transfer Protocol，超文本传输协议，是一种协议，web是建立在http协议上通信的。以字节为单位，以ASCII码传输，90年诞生，96年1.0版本，97年1.1版本，15年HTTP2发布
-1. 请求
-   - 方法：get/post/put/delete/head/options/trace/connect
-   - 组成：
-     1. 请求行
-     1. 头信息
-     1. 空行：CR+LF，回车换行，0x0d0x0a
-     1. 主体
-   - 实体类型
-     1. multipart/form-data
-     1. multipart/byteranges
-   - Get
-        ```
-        GET / HTTP/1.1
-        Host: xx.com
-        Accept: text/html
-        Cache-Control: no-cache
-        ```
-   - Post：头信息每行一条，空行之后便是body，普通的post实体是键值对
-        ```HTTP
-        POST / HTTP/1.1
-        Content-Type: application/x-www-form-urlencoded
-        Accept-Encoding: gzip, deflate
-        Host: w.sohu.com
-        Content-Length: 21
-        Connection: Keep-Alive
-        Cache-Control: no-cache
-        ```
 1. http头
    - 通用
-     1. Cache-Control // 控制缓存的行为，有public、private、no-cache，private表示只能存在私有缓冲中
-     1. Connection // 逐跳首部、连接的管理，Close、Keep-Alive
+     1. Cache-Control // 控制缓存的行为，如`Cache-Control: private, max-age=0, no-cache`
+        - 请求指令：no-cache 强制向源服务器再次验证，防止从缓存中返回过期的资源，no-store 不缓冲，max-age 秒 响应的最大Age值，
+        - 响应指令：public/private 其他人是否可使用缓存，
+     1. Connection // 逐跳首部、连接的管理，Close、Keep-Alive、Upgrade
      1. Date // 创建报文的日期时间
      1. Transfer-Encoding // 指定报文主体的传输编码方式
      1. Pragma // 报文指令
@@ -153,6 +128,33 @@
      1. Content-Range // 实体主体的位置范围
      1. Expires // 实体主体过期的日期时间
      1. Last-Modified // 资源的最后修改日期时间
+1. 请求
+   - 方法：get/post/put/delete/head/options/trace/connect
+   - 组成：
+     1. 请求行
+     1. 头信息
+     1. 空行：CR+LF，回车换行，0x0d0x0a
+     1. 主体
+   - 实体类型
+     1. multipart/form-data
+     1. multipart/byteranges
+   - Get
+        ```
+        GET / HTTP/1.1
+        Host: xx.com
+        Accept: text/html
+        Cache-Control: no-cache
+        ```
+   - Post：头信息每行一条，空行之后便是body，普通的post实体是键值对
+        ```HTTP
+        POST / HTTP/1.1
+        Content-Type: application/x-www-form-urlencoded
+        Accept-Encoding: gzip, deflate
+        Host: w.sohu.com
+        Content-Length: 21
+        Connection: Keep-Alive
+        Cache-Control: no-cache
+        ```
 1. 表单提交
    - enctype属性：表单数据的编码方式
      1. `application/x-www-form-urlencoded`：名称/值，默认的编码方式
@@ -162,8 +164,25 @@
         - 当action为get：url参数追加形式，没有被上传文件的实际数据
         - 当action为post：Content-Type会追加boundary，其值作为请求体的文件数据分隔符，支持post的工具改变数据包装方式都能支持multipart/form-data
      1. `text/plain`：以纯文本形式进行编码，空格转换为加号，不对特殊字符编码。不含任何控件或格式字符
+   - 示例
+    ```
+    <form action="" method="post" enctype="multipart/form-data">
+        <input type="text" name="name">
+        <input type="file" name="file">
+        <input type="submit">
+    </form>
+    ```
+1. http认证方式
+   - BASIC 基本认证，使用base64认证，直接传输账号密码
+   - DIGEST 摘要认证，接收服务端的质询码，计算后服务端验证
+   - SSL客户端认证、  
 ### 其他传输技术
-1. https：加密发生在应用层与传输层之间，调试工具可以看到的是应用层的数据，传输层传输的是加密后的密文，防止传输过程中被监听
+1. https：加密发生在应用层与传输层之间，调试工具可以看到的是应用层的数据，传输层传输的是加密后的密文，防止传输过程中被监听，在tcp和http中间加了ssl/tls
+   - SSL/TLS：TLS协议是继承了SSL协议并写入RFC，标准化后的产物，通常用SSL来指代SSL/TLS协议。SSL2.0和3.0不安全
+     1. 协议栈：握手、记录、修改密码规范、警报
+     1. 运作流程
+        - 握手阶段：客户端发送ClientHello、接收公钥并加密客户端生成的会话密钥，服务器确认会话密钥后，通知客户端开始用对称加密通信。其中两者还要商量协议版本和加密算法、两端随机数
+        - 应用数据传输阶段：按照SSL记录协议收发应用数据
 1. WebSocket
    - 特点
      1. 鉴于传输中多次路由转发等的不稳定，会发送ping/pong心跳包检测连接活性
