@@ -38,4 +38,16 @@
    - 路由器和电脑连接同一个hub，运行抓包软件
    - Cisco路由器：路由跟踪功能
    - 主流路由器固件有 dd-wrt,tomato,openwrt三类。现在市场上的商用路由器，价格上远低于一台主机电脑，然后网络功能齐全，且带有大容量的硬盘，只要刷成openwrt之后，就可以拥有自己的私有的git服务器或者文件服务器了
+1. 路由器数据抓取
+   - wifi密码破解：http://blog.csdn.net/zero9988/article/details/51866882
+     1. CDlinux.iso  ：一个Linux系统，集成了wifi密码的PIN码破解软件。
+     1. UltraISO：把CDlinux.iso写入U盘 
+     1. grub4dos：取出其中的grldr、grub.exe、menu.lst三个文件
+     1. grubinst_gui2：U盘启动引导安装
+     1. BOOTICE：U盘启动引导安装
+   - Mac地址修改器：修改自己的MAC地址，防止被封
+   - ettercap 0.8.0 (ettercap-graphical)  ： ARP欺骗工具
+   - wireshark：抓包工具
+   - driftnet：抓图片流工具
 1. DNS劫持：linux使用dnsmasq配置一台DNS应用服务器。https://www.cnblogs.com/beer/p/4932146.html#baidu-baike-openwrt
+1. 手机端路由器攻击软件：dsploit和busybox
