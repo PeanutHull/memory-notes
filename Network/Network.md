@@ -71,7 +71,7 @@
         - 网关：交换机是局域网在MAC上进行通信、要是跨ip就要用路由器了，网关就是负责通信的主要接收、分发
 1. 互联网：Internet，多个网络连接形成更大的网络，即网际网。由ARPANET(为可靠军用通信诞生)发展而来
 ### HTTP
-1. 概念：HyperText Transfer Protocol，超文本传输协议，是一种协议，web是建立在http协议上通信的。以字节为单位，以ASCII码传输，90年诞生，96年1.0版本，97年1.1版本，15年HTTP2发布
+1. 概念：HyperText Transfer Protocol，超文本传输协议，是一种协议，web是建立在http协议上通信的。以字节为单位，以ASCII码传输，90年诞生，96年1.0版本，97年1.1版本，15年HTTP2发布。Web使用HTTP协议作应用层协议，以封装HTTP文本信息，然后使用TCP/IP做传输层协议将它发到网络上
 1. http头
    - 通用
      1. Cache-Control // 控制缓存的行为，如`Cache-Control: private, max-age=0, no-cache`
@@ -155,6 +155,10 @@
         Connection: Keep-Alive
         Cache-Control: no-cache
         ```
+1. 响应
+  - 数字和文字的状态码
+  - 响应头：服务器类型(UA)、日期时间、内容类型和长度
+  - 响应正文
 1. 表单提交
    - enctype属性：表单数据的编码方式
      1. `application/x-www-form-urlencoded`：名称/值，默认的编码方式
@@ -172,6 +176,14 @@
         <input type="submit">
     </form>
     ```
+1. HTTP请求过程：
+  1. 建立TCP连接(基于TCP)
+  1. 浏览器发送请求
+  1. 浏览器发送头信息
+  1. 服务器应答
+  1. 服务器发送应答头信息
+  1. 服务器发送数据
+  1. 服务器关闭TCP连接
 1. http认证方式
    - BASIC 基本认证，使用base64认证，直接传输账号密码
    - DIGEST 摘要认证，接收服务端的质询码，计算后服务端验证

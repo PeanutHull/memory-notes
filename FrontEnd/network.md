@@ -6,6 +6,19 @@
         request.send();
         request.onreadystatechange = function() {}
         ```
+1. XMLHttpRequest方法：
+  - 发送：open/send/setRequestHeader
+  - 接收：status/statusText/getAllResponseHeader
+        ```
+        var request = new XMLHttpRequest;
+        request.open("GET", "get.php", true);
+        request.send();
+        request.onreadystatechange = function() {
+            if(request.readyState === 4 && request.status === 200) {
+                console.log('接收成功');
+            }
+        }
+        ```
 1. 浏览器实时通信解决方案
    - 轮询：循环间隔一定时间不断发送请求，服务端不需修改，服务端有结果立即返回并关闭连接
      1. 特点：简单粗暴，请求和处理资源大部分被浪费。固定的请求间隔要么消息延迟，要么只有最后一次有效。要求服务器处理速度很快
