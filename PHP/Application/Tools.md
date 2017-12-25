@@ -135,6 +135,7 @@
    - get_class();
    - get_class_methods();
    - interface_exist();
+   - instanceof
 1. 时间类
    - time
    - date
