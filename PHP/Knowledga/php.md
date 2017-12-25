@@ -206,6 +206,7 @@
         $obj = new MyClass();
         ```
    - 反射API：`$reflector = new ReflectionClass('A');`
+   - Closure类：闭包类，闭包都是Closure类的实例
    - 相关函数
      1. class_exists()
      1. get_class()
