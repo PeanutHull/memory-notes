@@ -59,7 +59,7 @@
      1. $_SESSION
    - 特殊保留变量
      1. $this
-     1. $_SERVICE
+     1. $_SERVER
 1. 常量
    - 理解：只能是标量，一旦定义不能修改/删除，可以不用$
    - 分类：用户常量/系统常量(预定义常量)：PHP_VERSION/PHP_O/PHP_EOL/true/false
@@ -258,6 +258,19 @@
      1. glob()查找文件、scandir()浏览目录
      1. 连续两次dirname(dirname(__FILE__))可获得当前文件目录的上上级目录
      1. mkdir(path, 0777, true) 递归创建文件夹
+1. 网络
+   - 相关变量
+     1. $_SERVER：php预定义变量，包含服务器信息的数组，包含请求头：ajax的['HTTP_X_REQUESTED_WITH']为'xmlhttprequest'、路径、脚本位置
+     1. $_POST只会包含application/x-www-form-urlencoded和multipart/form-data两种类型
+   - php页面跳转方法
+     1. header
+        ```PHP
+        header("HTTP/1.1 303 See Other");
+        header('Location:xxx');exit;
+        exit;                                   // 不然会继续执行
+        ```
+     1. `window.location.href`、`window.open`
+     1. echo各种标签跳转：META(HTTP-EQUIV)、script(window.location.href、window.open)
 1. curl：curl_getinfo可获取Content-Length参数
 1. cli模式和脚本
    - 运行命令
