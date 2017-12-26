@@ -38,7 +38,6 @@
      1. (unset) // 转化为NULL
      1. (binary)/b // 转为二进制字符串 V5.2
  - settype()
-1. 数组：php5.4+中，可以使用[]代替冗长的array()
 1. 变量
    - 普通变量
      1. 特点：区分大小写
@@ -250,18 +249,33 @@
      1. include()/include_once()：运行前引入、运行次数越多效率越高，如`include('route.php');`，需要PHP引擎去include_path中迭代查找所有名称为'include.php'才能查找到相应对象，要直接指明文件路径
      1. require()/require_once()：用到才引入
    - 获取文件信息
-     1. 内容：file_get_contents()，获取长度是正确的，但变量长度受到内存制约，读取超过php memory limit的文件触发PHP Fatal Error        
+     1. 内容：file_get_contents()，获取长度是正确的，但变量长度受到内存制约，读取超过php memory limit的文件触发PHP Fatal Error
      1. 类型：mime_content_type($filename)
      1. 大小：stat()/filesize()，在部分x86系统上读取大于2GB文件会报错
+   - 写入文件
+     1. file_put_content/file_get_content()
+     1. fopen(),fwrite(),fclose()
+        ```
+        $fp = fopen("/tmp/lock.txt", "w+");
+        if (flock($fp, LOCK_EX)) {                      // 进行排它型锁定
+            fwrite($fp, "Write something here\n");
+            flock($fp, LOCK_UN);                        // 释放锁定
+        } else {
+            echo "Couldn't lock the file !";
+        }
+        fclose($fp);
+        ```
    - 操作
      1. 判断文件和目录是否存在，is_file和is_dir的速度都比file_exists快，不论传入的是目录还是文件，只要存在就true
      1. glob()查找文件、scandir()浏览目录
      1. 连续两次dirname(dirname(__FILE__))可获得当前文件目录的上上级目录
      1. mkdir(path, 0777, true) 递归创建文件夹
+   - 杂项IO流：php://stdin/stdout/stderr/input/output/fd/filter
+     1. file_get_contents("php://input")：获取不同content-type下的post数据，当content-type为multipart/form-data时无效，由content-length决定长度
 1. 网络
    - 相关变量
      1. $_SERVER：php预定义变量，包含服务器信息的数组，包含请求头：ajax的['HTTP_X_REQUESTED_WITH']为'xmlhttprequest'、路径、脚本位置
-     1. $_POST只会包含application/x-www-form-urlencoded和multipart/form-data两种类型
+     1. $_POST：变量只会包含application/x-www-form-urlencoded和multipart/form-data两种类型的post数据
    - php页面跳转方法
      1. header
         ```PHP
@@ -271,20 +285,57 @@
         ```
      1. `window.location.href`、`window.open`
      1. echo各种标签跳转：META(HTTP-EQUIV)、script(window.location.href、window.open)
-1. curl：curl_getinfo可获取Content-Length参数
+   - 将图像输出到浏览器或者文件
+        ```
+        header('Content-type: image/png');
+        imagepng($im);
+        imagedestroy($im);
+        ```
+   - curl：curl_getinfo可获取Content-Length参数
+1. 异常
+   - 抛出异常：`throw new Exception();`
+   - try：`try {} catch (Exception $e) {}`
+1. 数学
+   - 随机数
+     1. mt_rand产生随机数的速度是旧的rand函数的4倍，衍生函数：
+     1. mt_getrandmax 显示随机数的最大可能值
+     1. mt_srand 播下更好的随机数种子
+     1. 计算指定范围随机浮点数：`return $min + mt_rand() / mt_getrandmax() * ($max - $min);`
 1. cli模式和脚本
-   - 运行命令
-        1. 设定脚本名：cli_set_process_title('ocstaskworker')
-        1. 执行脚本：shell_exec()
-        1. 检查是否有相同的脚本正在运行：$cmd = "ps aux | grep -i 'ocstaskworker' | grep -v grep | wc -l";
+   - 函数：fastcgi_finish_request、ignore_user_abort、register_shutdown_function、、set_time_limit
    - 参数
      1. php -h
      1. php -m // 查看安装了哪些扩展
+   - 运行命令：以web服务器的权限来执行
+     1. 设定脚本名：cli_set_process_title('ocstaskworker')
+     1. 执行脚本：shell_exec()、system()，exec()，passthru()，pcntl_exec()
+     1. 检查是否有相同的脚本正在运行：$cmd = "ps aux | grep -i 'ocstaskworker' | grep -v grep | wc -l";
 ### 运维
 1. PHP安装
 1. PHP配置：修改php.ini
    - php标签
    1. 只使用<?php，无结束符，防止输出空格。也可以用`<script language="php"></script>`
+1. php依赖：Composer，依赖管理工具
+   - 命令
+     1. composer create-project                         // 创建Composer项目
+     1. composer init                                   // 初始化项目依赖，自动生成json文件
+     1. composer install/update (foo/bar:1.0.0)         // 安装/更新所有/单个依赖
+   - 参数
+     1. --prefer-dist：用于install/update，强制下载源代码，在修改文件后更新文件会给出提示
+     1. --prefer-source
+     1. --lock：仅更新锁文件，用于update
+   - 功能
+     1. 自动加载：composer自动会生成一个vender/autoload.php，载入这个文件后，直接new，就会自动载入。在composer.json的autoload字段中增加自己的autoloader
+        ```
+        "autoload": {                       
+            "psr-4": {"Acme\\": "src/"}     // 注册一个PSR-4 autoloader到Acme命名空间
+        }
+        ```
+     1. 为生产环境做准备：`composer dump-autoload --optimize`
+   - 运维
+     1. composer/php composer.phar -V
+     1. composer self-update
+1. 考虑缓存，dist包优先？？？
 ### wiki
 1. 规范
    - 命名空间：解决重名的作用，有use、\
@@ -297,7 +348,7 @@
     $val = 10;
     echo "myfunc($val)=".myfunc($val); //输出结果为20myfunc(10)
     ```
-1. PHP工作模式
+1. PHP运行模式
    - CGI
      1. 理解：CGI，通用网关接口，即外部应用程序和web服务器之间的接口标准，CGI允许web服务器执行外部程序，并将输出发回web服务器。早期动态网页处理程序只能处理一个请求
      1. 原理
@@ -307,8 +358,6 @@
      1. 特点
         - 跨平台性极佳
         - 性能低下
-   - Module
-     1. 理解：将php集成到web服务器，以同一个进程运行。php作为apache的模块，预先生成多个进程副本驻留内存，一旦请求出现就立即响应，省去创建子进程的延迟，处理完成后不退出，等待下次请求。
    - FastCGI
      1. 理解：类似常驻型cgi，php使用PHP-FPM(FastCGI Process Manager)即进程管理器进行管理。CGI解释器保持在内存中并接受FastCGI的调度，类似线程池的技术特性
      1. 原理：
@@ -320,27 +369,25 @@
         - PHP死掉不会带死apache，而且会立即启动一个新的php进程
         - FastCGI是适用高并发场景的，对web服务器不挑可以自由更换
         - php5.3.29之后自带fpm，之前需要另外加载模块
+   - Module
+     1. 理解：将php集成到web服务器，以同一个进程运行。php作为apache的模块，预先生成多个进程副本驻留内存，一旦请求出现就立即响应，省去创建子进程的延迟，处理完成后不退出，等待下次请求
    - ISAPI
      1. 理解：微软提供的一套面向Internet服务的API接口，ISAPI的dll被请求激活后常驻内存，不停接受请求。dll和web服务器处于同一个进程中
      1. 特点
         - 微软的排他性，只能在windows运行
         - 效率高于CGI
         - 稳定性不好，php出错，apache也死掉
-   - Apache的工作模式
-     1. CGI模式
-        - 用法：`Action application/x-httpd-php "/php/php-cgi.exe"`
-        - 原理：apache调用php.exe去解释文件，再将结果以网页的形式返回给客户机
-     1. 模块模式：
-        - 用法：`LoadModule php5_module "c:/php/php5apache2.dll"`
-        - 原理：php和apache一起启动并运行
-     1. FastCGI模式：
-        - 用法：1. 下载fastcgi模块mod_fcgid.so/mod_fcgid.pd。2. 添加配置
-   - 流行的三种模式，后两种性能更高些
-     1. Apache+mod_php5
-     1. lighttp+spawn-fcgi
-     1. nginx+PHP-FPM
+   - Cli
+1. 流行的三种模式，后两种性能更高些
+   - Apache+mod_php5
+   - lighttp+spawn-fcgi
+   - nginx+PHP-FPM
 1. 内存中的体现
    - 栈空间段：存储占用相同空间长度并且占用空间小的数据类型，可直接存取，存对象名称
    - 堆空间段：不定长、体积大，不可直接存取，存对象。通过名称找对象
    - 代码段
    - 初使化静态段:存放静态属性和方法，类第一次被加载即放入，可被堆内存的对象所共享
+1. 版本历史
+   - 5.4
+     1. <?= 标签取代 echo
+     1. [] 代替 array()

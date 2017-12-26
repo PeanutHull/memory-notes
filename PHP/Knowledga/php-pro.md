@@ -6,6 +6,18 @@
     new static(); // 返回当前的类
     $class = new static($user); // 返回一个对象，可以使用当前类的方法了，同时类的成员包括$user中的数据
     ```
+1. 相关函数
+   - 方法
+     1. func_get_args
+   - 类
+     1. 获取
+        - get_class();
+        - get_class_methods();
+        - instanceof
+        - class_exists();
+        - interface_exist();
+     1. 调用
+        - call_user_func_array()
 ### Trait
 1. 理解：特质,是一种为类似PHP的单继承语言而准备的代码复用机制，使开发人员能够自由地在不同层次结构的独立的类中复用方法集。来避免传统多继承和混入类（Mixin）相关的典型问题，就是先定义trait，用use给类插入代码，代码复用，属于类与对象，5.4加上的
 1. 示例
@@ -47,7 +59,15 @@
     var_dump($myGen->current());
     var_dump($myGen->send("main send"));
     ```
-#### IoC、DI
+### 多线程
+1. pthreads
+### 消息队列
+1. gearman
+### 守护进程
+### socket
+1. 函数：fsockopen
+1. stream_socket_client实现多线程，多服务器异步访问
+### IoC、DI
 1. Ioc：Inversion of Control，控制反转，意味着将你设计好的对象交给容器控制，而不是传统的在你的对象内部直接控制。由外部负责其依赖需求的行为，我们可以称其为控制反转。容器控制应用程序，由容器反向的向应用程序注入应用程序所需要的外部资源
    - 为解决多个类之间的依赖
 1. DI：依赖注入，应用程序依赖容器创建并注入它所需要的外部资源
