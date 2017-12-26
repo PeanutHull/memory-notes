@@ -13,27 +13,47 @@
    - 反向代理/负载均衡
 ### 使用
 1. 基本操作
-   - 启动
+   - 启动：`usr/local/nginx/sbin/nginx`
+   - 热重启：`nginx -s reload`
+   - 关闭：`nginx -s stop`
+1. 最简单域名配置
     ```
-    cd usr/local/nginx/sbin
-    nginx
+    server {
+        listen       80;
+        server_name  test3.taotao.com;
+
+        charset koi8-r;
+        access_log  logs/host.access.log  main;
+
+        location / {
+            root   html;                            # 相对于nginx的安装目录？？？
+            index  index.html index.htm;
+        }
+    }
     ```
-   - 重启
+1. 重定向文件
     ```
-    nginx -s reload                     # 热重启，重新加载文件
+    location ~* .(gif|png|jpg|jpeg|zip|apk)$ {
+        root   /mnt/opt/wecook-base/uploads;
+        expires 7d;
+        access_log off;
+    }
     ```
-   - 关闭
+1. 反向代理，即请求转发，可以转向其他端口或地址
     ```
-    nginx -s stop
-    ps -ef/aux | grep nginx
-    kill -QUIT MasterProcessNumber      # 从容停止
-    kill -TERM MasterProcessNumber      # 快速停止
-    kill -9 nginx                       # 强制停止
+    server {
+        listen 80;
+        server_name 127.0.0.1;
+        location / {
+                proxy_pass http://localhost:99;
+            #   proxy_set_header Host $host;
+            #   proxy_set_header X-Real-IP $remote_addr;
+            #   proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            #   proxy_redirect off;
+        }
+    }
     ```
-1. 初始配置文件
 1. 多域名配置
-   - nginx.conf引入文件：bmp.local.conf
-   - 写入bmp.local.conf如下内容，并修改域名
     ```
     server {
         listen 80;
@@ -77,44 +97,8 @@
         }
     }
     ```
-   - 最简单域名配置
-    ```
-    server {
-        listen       80;
-        server_name  test3.taotao.com;
-
-        #charset koi8-r;
-
-        #access_log  logs/host.access.log  main;
-
-        location / {
-            root   html;                            # 根目录，相对于nginx的安装目录？？？
-            index  index.html index.htm;
-        }
-    }
-    ```
-1. 重定向文件
-    ```
-    location ~* .(gif|png|jpg|jpeg|zip|apk)$ {
-        root   /mnt/opt/wecook-base/uploads;
-        expires 7d;
-        access_log off;
-    }
-    ```
-1. 反向代理，即请求转发，可以转向其他端口或地址
-    ```
-    server {
-        listen 80;
-        server_name 127.0.0.1;
-        location / {
-                proxy_pass http://localhost:99;
-            #   proxy_set_header Host $host;
-            #   proxy_set_header X-Real-IP $remote_addr;
-            #   proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            #   proxy_redirect off;
-        }
-    }
-    ```
+### 运维
+1. 初始配置文件
 1. 更新nginx的yum源，官方提供的packages
     ```
     // 创建/etc/yum.repos.d/nginx.repo
@@ -127,7 +111,8 @@
     yum makecache
     yum install -y nginx
     ```
-1. 安装时的依赖
+### wiki
+1. nginx依赖
    - PCRE：Perl Compatible Regular Expressions，是Perl库。nginx的http模块使用pcre来解析正则表达式
-   - zlib：库提供了很多种压缩和解压缩的方式。nginx使用zlib对http包的内容进行gzip
-   - openssl：
+   - zlib：提供了多种压缩/解压缩的方式。nginx使用zlib对http包的内容进行gzip
+   - openssl
