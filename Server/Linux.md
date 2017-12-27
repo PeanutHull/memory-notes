@@ -46,4 +46,8 @@
      1. /opt：存放应用安装
      1. /usr：/usr/bin 存放应用程序，/usr/sbin 存放可执行文件，/usr/local 习惯安装应用程序
    - 其他目录
-     1. /home、/root、/tmp、/lost+fount、、、、、
+     1. /home、/root、/tmp、/lost+fount
+1. iptables
+   - 编辑：`vim /etc/sysconfig/iptables`
+   - 增加：`-A INPUT -m state –state NEW -m tcp -p tcp –dport 80 -j ACCEPT`
+   - 状态/重启/关闭：`/etc/init.d/iptables status/restart/stop`

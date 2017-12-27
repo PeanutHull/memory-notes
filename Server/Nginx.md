@@ -20,6 +20,7 @@
      1. error_log logs/error.log info：全局错误日志，位置和类型(debug|info|notice|warn|error|crit)
      1. pid logs/nginx.pid：进程文件
      1. worker_rlimit_nofile 65535：一个nginx进程打开的最多文件描述符数目，理论值是最多打开文件数与nginx进程数相除，但nginx分配请求并不均匀，所以建议与系统的值(ulimit -n)的值保持一致
+     1. include：载入其他配置文件
    - events：工作模式
      1. use epoll：kqueue|rtsig|epoll|/dev/poll|select|poll，epoll模型是Linux2.6以上内核的高性能网络I/O模型，如果跑在FreeBSD上用kqueue
      1. worker_connections 65535：单个进程最大连接数，最大连接数=连接数*进程数
@@ -32,8 +33,6 @@
      1. autoindex on：目录列表访问，默认关闭
      1. tcp_nopush/tcp_nodelay on：防止网络阻塞
      1. keepalive_timeout 120：长连接超时时间，单位是秒
-     1. ：
-     1. ：
 1. 虚拟host配置
    - 初始配置
         ```
