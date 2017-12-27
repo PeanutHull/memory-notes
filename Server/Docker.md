@@ -35,8 +35,7 @@
 1. 容器相关信息
    - docker version
    - docker info # 本机安装的镜像等信息
-   - docker ps # 默认查看正在运行的容器列表
-     1. -a：列出所有容器
+   - docker ps # 默认查看正在运行的容器列表，-a 列出所有容器
    - docker inspect imageId # 查看容器详细信息
    - docker logs # 查看容器的日志(stdout/stderr)
    - docker events # 得到docker服务器的实时的事件
@@ -109,7 +108,7 @@
     docker attach xdfokayAdmin
     ```
 1. 通过ssh连接docker
-   - docker run -i -t -d -p 22:22/tcp --name centos1 centos /bin/bash
+   - docker run -i -t -d -p 22:22/tcp -p 80:80/tcp --name centos1 centos /bin/bash
    - docker attach centos1
    - yum -y install openssh-server passwd
    - /usr/sbin/sshd

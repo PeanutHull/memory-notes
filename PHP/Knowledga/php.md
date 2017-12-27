@@ -306,16 +306,24 @@
    - 参数
      1. php -h
      1. php -m // 查看安装了哪些扩展
+     1. php -S 127.0.0.1:80 -t /www /www/index.php // 启动一个单线程http服务器，可以用于开发和测试
    - 运行命令：以web服务器的权限来执行
      1. 设定脚本名：cli_set_process_title('ocstaskworker')
      1. 执行脚本：shell_exec()、system()，exec()，passthru()，pcntl_exec()
      1. 检查是否有相同的脚本正在运行：$cmd = "ps aux | grep -i 'ocstaskworker' | grep -v grep | wc -l";
 ### 运维
 1. PHP安装
+   - linux
+     1. 源码安装
+        - 安装php：开启fpm等配置，`./configure --help > help.txt` 获取全部配置
+        - 启动fpm：复制fpm配置文件，修改用户和权限组，启动 `/usr/local/php/sbin/php-fpm`
+        - 安装nginx
+        - nginx配置fpm：添加fastcgi支持
+1. PHP扩展安装
 1. PHP配置：修改php.ini
    - php标签
-   1. 只使用<?php，无结束符，防止输出空格。也可以用`<script language="php"></script>`
-1. php依赖：Composer，依赖管理工具
+     1. 只使用<?php，无结束符，防止输出空格。也可以用`<script language="php"></script>`
+1. PHP依赖：Composer，依赖管理工具
    - 命令
      1. composer create-project                         // 创建Composer项目
      1. composer init                                   // 初始化项目依赖，自动生成json文件
@@ -335,7 +343,7 @@
    - 运维
      1. composer/php composer.phar -V
      1. composer self-update
-1. 考虑缓存，dist包优先？？？
+     1. 考虑缓存，dist包优先？？？
 ### wiki
 1. 规范
    - 命名空间：解决重名的作用，有use、\
@@ -350,7 +358,7 @@
     ```
 1. PHP运行模式
    - CGI
-     1. 理解：CGI，通用网关接口，即外部应用程序和web服务器之间的接口标准，CGI允许web服务器执行外部程序，并将输出发回web服务器。早期动态网页处理程序只能处理一个请求
+     1. 理解：通用网关接口，外部应用程序和web服务器之间的接口标准，cgi允许web服务器执行外部程序，并将输出发回web服务器。早期动态网页处理程序一次只能处理一个请求
      1. 原理
         - 遇到请求——创建子进程——处理，即fork-and-execute模式
         - 请求数=cgi子进程数，子进程的反复加载是cgi性能低下的原因，会大量占用cpu和内存
@@ -359,16 +367,17 @@
         - 跨平台性极佳
         - 性能低下
    - FastCGI
-     1. 理解：类似常驻型cgi，php使用PHP-FPM(FastCGI Process Manager)即进程管理器进行管理。CGI解释器保持在内存中并接受FastCGI的调度，类似线程池的技术特性
-     1. 原理：
-        - web服务器载入FastCGI进程管理器
-        - FastCGI自身初始化，启动多个cgi解释器进程等待调用
-        - 请求到达时，FastCGI选择并连接到一个cgi解释器
+     1. 理解：类似常驻型cgi，先启一个master，cgi解释器保持在内存中并接受fastcgi的调度，类似线程池的技术特性
+     1. 原理
+        - web服务器载入fastcgi进程管理器
+        - fastcgi自身初始化，启动多个cgi解释器进程等待调用
+        - 请求到达时，fastcgi选择并连接到一个cgi解释器
      1. 特点
         - 所有配置只在进程启动时加载一次
         - PHP死掉不会带死apache，而且会立即启动一个新的php进程
-        - FastCGI是适用高并发场景的，对web服务器不挑可以自由更换
+        - fastcgi是适用高并发场景的，对web服务器不挑可以自由更换
         - php5.3.29之后自带fpm，之前需要另外加载模块
+     1. PHP-FPM：fastcgi Process Manager，php的fastcgi进程管理器，有效控制内存、进程，平滑重载php配置，比spawn-fcgi更优秀，官方收录。fastcgi是一个协议，php-fpm实现了这个协议
    - Module
      1. 理解：将php集成到web服务器，以同一个进程运行。php作为apache的模块，预先生成多个进程副本驻留内存，一旦请求出现就立即响应，省去创建子进程的延迟，处理完成后不退出，等待下次请求
    - ISAPI
@@ -379,9 +388,10 @@
         - 稳定性不好，php出错，apache也死掉
    - Cli
 1. 流行的三种模式，后两种性能更高些
-   - Apache+mod_php5
-   - lighttp+spawn-fcgi
-   - nginx+PHP-FPM
+   - apache + mod_php5
+   - lighttp + spawn-fcgi
+   - nginx + php-fpm
+1. php-cli、nts
 1. 内存中的体现
    - 栈空间段：存储占用相同空间长度并且占用空间小的数据类型，可直接存取，存对象名称
    - 堆空间段：不定长、体积大，不可直接存取，存对象。通过名称找对象
