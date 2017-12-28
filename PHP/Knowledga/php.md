@@ -82,7 +82,15 @@
    - 三元表达式：表达式 ? 值1 : 值2
    - 字符串连接符：.
 1. 流程控制
-   - 顺序自上而下执行，选择if，循环while/for/switch-case，break离开循环，continue跳过本次循环进入下次
+   - 选择if，循环while/for/switch-case，break离开循环，continue跳过本次循环进入下次
+   - 代码执行顺序：自上而下，从左至右，从里到外
+        ```
+        function myfunc($a){
+            echo $a + 10;
+        }
+        $val = 10;
+        echo "myfunc($val)=".myfunc($val);              //输出结果为20myfunc(10)
+        ```
 1. 方法：
    - 闭包
      1. 理解：即匿名函数、闭包函数，最常用回调函数的参数，5.3之后使用use传递外面的值，使用传引用，将修改值生效，如`use($pro)`
@@ -205,6 +213,7 @@
         $obj = new MyClass();
         ```
    - 反射API：`$reflector = new ReflectionClass('A');`
+   - 命名空间：解决重名的作用，有use、\
    - Closure类：闭包类，闭包都是Closure类的实例
    - 相关函数
      1. class_exists()
@@ -319,10 +328,10 @@
         - 启动fpm：复制fpm配置文件，修改用户和权限组，启动 `/usr/local/php/sbin/php-fpm`
         - 安装nginx
         - nginx配置fpm：添加fastcgi支持
-1. PHP扩展安装
 1. PHP配置：修改php.ini
    - php标签
      1. 只使用<?php，无结束符，防止输出空格。也可以用`<script language="php"></script>`
+1. PHP扩展安装
 1. PHP依赖：Composer，依赖管理工具
    - 命令
      1. composer create-project                         // 创建Composer项目
@@ -345,17 +354,10 @@
      1. composer self-update
      1. 考虑缓存，dist包优先？？？
 ### wiki
-1. 规范
-   - 命名空间：解决重名的作用，有use、\
-   - psr
-1. 代码执行顺序：从左至右，从里到外
-    ```
-    function myfunc($a){
-        echo $a + 10;
-    }
-    $val = 10;
-    echo "myfunc($val)=".myfunc($val); //输出结果为20myfunc(10)
-    ```
+1. 流行的php三种使用模式
+   - nginx + php-fpm
+   - apache + mod_php5
+   - lighttp + spawn-fcgi
 1. PHP运行模式
    - CGI
      1. 理解：通用网关接口，外部应用程序和web服务器之间的接口标准，cgi允许web服务器执行外部程序，并将输出发回web服务器。早期动态网页处理程序一次只能处理一个请求
@@ -381,23 +383,19 @@
    - Module
      1. 理解：将php集成到web服务器，以同一个进程运行。php作为apache的模块，预先生成多个进程副本驻留内存，一旦请求出现就立即响应，省去创建子进程的延迟，处理完成后不退出，等待下次请求
    - ISAPI
-     1. 理解：微软提供的一套面向Internet服务的API接口，ISAPI的dll被请求激活后常驻内存，不停接受请求。dll和web服务器处于同一个进程中
-     1. 特点
-        - 微软的排他性，只能在windows运行
-        - 效率高于CGI
-        - 稳定性不好，php出错，apache也死掉
+     1. 理解：微软提供的一套面向Internet服务的API接口，ISAPI的dll被请求激活后常驻内存，不停接受请求。dll和web服务器处于同一个进程中，5.3开始舍弃
+     1. 特点：微软的排他性，只能在windows运行、效率高于CGI、稳定性不好，php出错，IIS或apache也死掉
    - Cli
-1. 流行的三种模式，后两种性能更高些
-   - apache + mod_php5
-   - lighttp + spawn-fcgi
-   - nginx + php-fpm
-1. php-cli、nts
-1. 内存中的体现
-   - 栈空间段：存储占用相同空间长度并且占用空间小的数据类型，可直接存取，存对象名称
-   - 堆空间段：不定长、体积大，不可直接存取，存对象。通过名称找对象
-   - 代码段
-   - 初使化静态段:存放静态属性和方法，类第一次被加载即放入，可被堆内存的对象所共享
+1. ts/nts
+   - 查看：phpinfo()————Thread Safety
+   - 分类   
+     1. Thread Safe：线程安全，执行时会进行线程安全检查，以防止有新要求就启动新线程的CGI执行方式耗尽系统资源
+        - ISAPI执行方式以DLL动态库的形式使用，在处理完一个用户请求后不会马上消失，需要进行线程安全检查
+     1. Non Thread Safe：非线程安全，执行时不进行线程安全检查
+        - FastCGI执行方式以单一线程来执行操作，不需要检查，而且效率更高，
 1. 版本历史
+   - 5.3
+     1. 增加命名空间
    - 5.4
      1. <?= 标签取代 echo
      1. [] 代替 array()
