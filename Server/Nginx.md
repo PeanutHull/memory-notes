@@ -107,6 +107,11 @@
             server 192.168.80.122:80 weight=2;
             server 192.168.80.123:80 weight=3;
         }
+        server {
+            location / {
+                proxy_pass http://somename
+            }
+        }
         ```
    - 错误页面
         ```

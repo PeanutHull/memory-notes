@@ -11,7 +11,8 @@
    - 从容停止：kill -QUIT MasterProcessNumber
    - 快速停止：kill -TERM MasterProcessNumber
    - 强制停止：kill -9 programName/nginx
-1. 查看centos版本：cat /etc/redhat-
+1. 查看centos版本：cat /etc/redhat-release
+1. 查看centos位数：getconf LONG_BIT
 1. 查看ip：ifconfig -a中的inet addr
 1. VirtualBox安装虚拟机以及调通网络
    - 安装：http://blog.csdn.net/risingsun001/article/details/37934975

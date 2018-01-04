@@ -227,6 +227,16 @@
 1. Java运行环境搭建
    - JDK
      1. rpm安装
+     1. centos手动安装
+        - oracle官网下载系统对应jdk，即java se
+        - tar -zxvf jdk-8-linux-x64.tar.gz
+        - mv jdk1.8.0 /usr/local
+        - vi /etc/profile
+        - 在末尾添加下面两行
+          1. export JAVA_HOME=/usr/java/jdk1.8.0
+          1. export PATH=$PATH:$JAVA_HOME/bin
+        - source /etc/profile
+        - java -version
      1. 编辑环境变量
       ```java
       vim /etc/prifile
@@ -251,6 +261,15 @@
       // 启动tomcat
       cd bin;
       ./startup.sh
+      ```
+   - 多个tomcat
+      ```
+      cp ~/tomcat-8 /usr/local/tomcats/tomcat1 -r
+      cp ~/tomcat-8 /usr/local/tomcats/tomcat2 -r
+      vim tomcat2/conf/server.xml
+      自增所有port对应的端口号
+      vim webapps/ROOT/index.jsp
+      tomcat1/bin/startup.sh
       ```
    - Maven
    - Nginx
@@ -341,7 +360,7 @@
         return result;
         ```
    - 图片服务器
-   - FastDFS：分布式的文件存储系统，可以实现主备，开源的国产
+   - FastDFS：开源国产的分布式文件存储系统，实现了冗余备份、负载均衡、线性扩容等机制，注重高可用、高性能，提供上传、下载功能。Tracker集群提供负载均衡等调度，Storage集群提供存储
 1. 知识点
    - 传参中使用Integer等包装类，起到缺少参数但是不报错的作用
    - log4j调试方法，怎么关闭运行时不停输出log信息
