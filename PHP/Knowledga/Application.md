@@ -87,21 +87,7 @@ function get_self_url($is_root=0) {
     elseif($c >= 192) $bits=2;
     else return false;
     ```
-### 其他
-1. 获得毫秒数
-```
-list($t1, $t2) = explode(' ', microtime());
-return (float)sprintf('%.0f',(floatval($t1)+floatval($t2))*1000);
-```
-1. LDAP：轻量级目录访问协议，Lightweight Directory Access Protocol，用于访问"目录服务器"的协议，发布目录信息到许多不同资源，是一种数据库，通常作为hierarchal数据库使用。类似电话薄，允许任何程序获得目录和其他信息。目录：指一种按照树状结构存储信息的数据库
-1. php阻止重复执行脚本
-    ```
-    cli_set_process_title('worker');                                // 设定脚本title
-    $cmd = "ps aux | grep -i 'worker' | grep -v grep | wc -l";      // 检查是否有相同的脚本正在运行
-    $rt = shell_exec($cmd);
-    return trim($rt) > 1 ? true : false;
-    ```
-##### xml处理
+### xml处理
 1. XML：半结构化的文件格式，类似html的标记型语言，主要用于描述/存放数据
    - 节点：xml的每个成分都是节点，有文档节点——元素节点——文本节点——属性节点——注释节点，2015不是元素节点的值，而是文本节点的值，元素节点包含了文本节点
    - 节点树：根元素、元素、属性、文本
@@ -162,7 +148,7 @@ return (float)sprintf('%.0f',(floatval($t1)+floatval($t2))*1000);
         echo $doc->saveXML();
         ```
      1. XMLWriter
-##### ssl处理
+### ssl处理
 1. 数据加密
     ```
     $res = openssl_get_privatekey(self::$ali_private_key);      // 获得私密
@@ -186,94 +172,17 @@ return (float)sprintf('%.0f',(floatval($t1)+floatval($t2))*1000);
     openssl_free_key($res);                                     // 释放资源
     return $result;                                             // 返回明文
     ```
-
-
-
-
-
-
-
-
-
-#####12.SPL——PHP标准库 Standard PHP Library
-1. 理解：用于解决典型问题的一组接口和类的集合
-1. 组成
- - 数据结构————对应数据的存储结构
-    1. 双向链表：SplQueue
-    1. 堆：SplStack
-    1. 阵列：SplFixedArray
-    1. 映射：SplObjectStorage
- - 迭代器————以不同的方式来遍历操作的对象，提供了需要的对应数据类型的迭代器
-   1. 举例：虽然更多的代码，但是高度重用且可测试，都可以尝试下spl的迭代器，或许能改变你编写传统代码的习惯
-```
-class RecursiveFileFilterIterator extends FilterIterator {
-    // 满足条件的扩展名
-    protected $ext = array('jpg','gif');
-
-    /**
-    * 提供 $path 并生成对应的目录迭代器
-    */
-    public function __construct($path) {
-        parent::__construct(new RecursiveIteratorIterator(new RecursiveDirectoryIterator($path)));
-    }
-
-    /**
-    * 检查文件扩展名是否满足条件
-    */
-    public function accept() {
-        $item = $this->getInnerIterator();
-        if ($item->isFile() && 
-            in_array(pathinfo($item->getFilename(), PATHINFO_EXTENSION), $this->ext)) {
-        return TRUE;
-        }
-    }
-}
-
-// 实例化
-foreach (new RecursiveFileFilterIterator('/path/to/something') as $item) {
-    echo $item . PHP_EOL;
-}
-```
- - SPL函数
-    1. 自动载入函数————适应php的管理要求
-```
-类载入的基本流程：当前文件找类————spl_autoload_register————__autoload函数找类————异常
-使用SPL分离 __autoload 的载入逻辑，可以使逻辑更加清晰。然后用spl函数重载它即可
-```
-```
-// 使用spl载入文件
-// 设置自动载入文件的后缀，多个逗号隔开，有前后顺序
-spl_autoload_extensions('.class.php', '.php');
-// 设置自动载入文件的目录，多个目录用PATH_SEPARATOR分割
-set_include_path(get_include_path() . PATH_SEPARATOR);
-// 注册
-spl_autoload_register()    ;
-new Test();
-
-// 使用__autoload载入文件
-// 找不到类就自动执行
-function __autoload($className) {
-            require_once('libs' . $className . '.php');
-}
-new Test();
-
-// 自定义函数装载类
-function classLoader($className) {
-            require_once('libs' . $className . '.php');
-}
-spl_autoload_register('classLoader');
-new Test();
-
-// 重新使用spl载入文件
-function classLoader($className) {
-            set_include_path('libs');
-            // 不使用require和include时，要使用spl的自动载入
-            spl_autoload($className);
-}
-spl_autoload_register('classLoader');
-new Test();
-```
- - 文件处理
- - 接口
- - 异常
- - 其他类和接口
+### 其他
+1. 获得毫秒数
+    ```
+    list($t1, $t2) = explode(' ', microtime());
+    return (float)sprintf('%.0f',(floatval($t1)+floatval($t2))*1000);
+    ```
+1. LDAP：轻量级目录访问协议，Lightweight Directory Access Protocol，用于访问"目录服务器"的协议，发布目录信息到许多不同资源，是一种数据库，通常作为hierarchal数据库使用。类似电话薄，允许任何程序获得目录和其他信息。目录：指一种按照树状结构存储信息的数据库
+1. php阻止重复执行脚本
+    ```
+    cli_set_process_title('worker');                                // 设定脚本title
+    $cmd = "ps aux | grep -i 'worker' | grep -v grep | wc -l";      // 检查是否有相同的脚本正在运行
+    $rt = shell_exec($cmd);
+    return trim($rt) > 1 ? true : false;
+    ```

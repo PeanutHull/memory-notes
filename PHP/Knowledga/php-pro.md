@@ -59,6 +59,65 @@
     var_dump($myGen->current());
     var_dump($myGen->send("main send"));
     ```
+#### SPL
+1. 理解：PHP标准库，Standard PHP Library，用于解决典型问题的一组接口和类的集合
+1. 数据结构：对应数据的存储结构
+   - 双向链表：SplQueue
+   - 堆：SplStack
+   - 阵列：SplFixedArray
+   - 映射：SplObjectStorage
+1. 迭代器：以不同的方式来遍历操作的对象，提供了对应数据类型的迭代器。虽然更多的代码，但是高度重用且可测试，都可以尝试下spl的迭代器，或许能改变你编写传统代码的习惯
+    ```
+    class RecursiveFileFilterIterator extends FilterIterator {
+
+        // 满足条件的扩展名
+        protected $ext = array('jpg','gif');
+        // 提供 $path 并生成对应的目录迭代器
+        public function __construct($path) {
+            parent::__construct(new RecursiveIteratorIterator(new RecursiveDirectoryIterator($path)));
+        }
+        // 检查文件扩展名是否满足条件
+        public function accept() {
+            $item = $this->getInnerIterator();
+            if ($item->isFile() && in_array(pathinfo($item->getFilename(), PATHINFO_EXTENSION), $this->ext)) {
+                return TRUE;
+            }
+        }
+    }
+
+    // 实例化
+    foreach (new RecursiveFileFilterIterator('/path/to/something') as $item) {
+        echo $item . PHP_EOL;
+    }
+    ```
+1. spl函数
+   - SPL自动载入函数：适应php的管理要求，使用spl分离__autoload的载入逻辑，可以使逻辑更加清晰，用spl函数重载即可
+     1. 类载入的基本流程：当前文件找类————spl_autoload_register————__autoload函数找类————异常
+     1. 使用spl载入文件
+        ```
+        spl_autoload_extensions('.class.php', '.php');           // 设置自动载入文件的后缀，多个逗号隔开，有前后顺序
+        set_include\_path(get_include_path() . PATH_SEPARATOR);  // 设置自动载入文件的目录，多个目录用PATH_SEPARATOR分割
+        spl_autoload_register();                                 // 注册
+        new Test();                                              // 使用
+
+        // 自定义函数装载类
+        function classLoader($className) {
+            require_once('libs' . $className . '.php');
+            // 或者使用spl方式载入文件
+            set_include_path('libs');
+            spl_autoload($className);                            // 不使用require和include时，要使用spl的自动载入
+        }
+        spl_autoload_register('classLoader');
+        new Test();
+        ```
+     1. 使用__autoload载入文件
+        ```
+        function __autoload($className) {
+            require_once('libs/' . $className . '.php');
+        }
+        new Test();
+        ```
+   - 其他spl函数：文件处理、接口、异常、类和接口
 ### 多线程
 1. pthreads
 ### 消息队列
