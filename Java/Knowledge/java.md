@@ -1,23 +1,22 @@
-### Java体系结构
+### 体系结构
 1. Java体系
    - Java SE：java平台标准版。包含最普遍的类库，针对普通的java程序
    - Java EE：java平台企业版。是类库最多、针对web应用的一个规范
    - Java ME：java平台微型版
 1. 知识体系
-   - 组成：
-     1. JDK：Java Development Kit，java开发工具包，包含编译器和调试器，运行环境
-     1. JRE：java运行环境，包括JVM(包含解释器)和其他工具
-     1. JVM：java虚拟机。光JVM还不能运行，因为没有lib类库，JRE编译时的会载入lib类库
+   - 组成：JDK—->JRE—->JVM
+     1. JDK：Java Development Kit，开发工具包，包含编译器和调试器，运行环境
+     1. JRE：Java Runtime Environment，运行环境，包括JVM(包含解释器)和其他工具
+     1. JVM：Java Virtual Machine，虚拟机，光JVM还不能运行，因为没有lib类库，JRE编译时的会载入lib类库
    - 基础
-     1. 基础：基本类型, 操作符, 运算符, 表达式
+     1. 基础：数据类型, 操作符, 运算符, 表达式
      1. 面向对象：类, 继承, 多态, 重写, 重载
      1. 常用类：String, Object, Array, Enum
      1. 集合类, List, ArrayList, Set, HashSet, Map, HashMap, HashTable
      1. I/O：File, IO, NIO, InputStream, OutputStream, Reader, Writer, Selector
-     1. 多线程：并发, Thread, Runnable, Future
+     1. 多线程：Thread, Runnable, Future
      1. 反射、注解、泛型
      1. 异常处理
-     1. 多线程
      1. JDBC、网络编程
      1. 设计模式、IOC依赖注入, AOP面向切面编程
      1. JVM
@@ -30,8 +29,7 @@
 1. 开始
     ```Java
     public class HelloWorld {
-        /* 第一个Java程序
-        */
+        /* 第一个Java程序 */
         public static void main(String[] args) {
             System.out.println("Hello World");
         }
@@ -43,15 +41,13 @@
    - 静态语言中优秀的面向对象特性
    - 传承于C++，在企业，互联网，嵌入式都有广泛的应用
 1. 特点：
-   - 语法简单：类似C++，不使用指针而是引用，提供自动垃圾回收
+   - 语法简单：类似C++，不使用指针而是引用
    - 面向对象：提供类/接口/继承等，只支持类的单继承，但支持接口间的多继承，全面支持动态绑定，纯的面向对象的语言
    - 健壮性：强类型机制，异常处理，垃圾自动回收，丢弃了指针。安全检查机制、命名空间等，还有安全性
-   - 体系结构中立：java程序在java平台编译为体系结构中立的字节码格式.class，到处运行。严格要求数据类型的长度，就具有了较强移植性
-   - 解释性语言：java程序先编译为字节码格式，java解释器对字节码解释执行，执行中需要的类在联接中载入
-   - 高性能：速度越来越接近C++，是多线程的，线程是特殊的对象， 必须由Thread类或其子（孙）类来创建
+   - 体系结构中立：java程序在java平台编译为字节码格式.class，到处运行。严格要求数据类型的长度，具有较强移植性
+   - 解释性语言：java程序先编译为字节码格式，java解释器对字节码解释执行，执行中需要的类在编译的联接中载入
+   - 高性能：速度越来越接近C++，是多线程的，线程是特殊的对象，必须由Thread类或其子类来创建
    - 是动态的
-1. 历史发展
-   - 从JDK 5.0开始，J2SE等全部改名，JDK5也称为Java5
 1. 运行流程：.java源文件———编译———.class字节码文件(与平台无关)———解释———完成
 ### 语法
 1. 数据类型

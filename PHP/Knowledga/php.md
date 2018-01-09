@@ -61,7 +61,26 @@
      1. $_SERVER
 1. 常量
    - 理解：只能是标量，一旦定义不能修改/删除，可以不用$
-   - 分类：用户常量/系统常量(预定义常量)：PHP_VERSION/PHP_O/PHP_EOL/true/false
+   - 分类
+     1. 用户常量
+     1. 系统常量(预定义常量)
+        - 整体
+          1. PHP_VERSION
+          1. PHP_OS
+          1. PHP_SAPI ———— 用来判断是使用命令行还是浏览器执行的，如果 PHP_SAPI=='cli' 表示是在命令行下执行
+          1. PHP_INT_MAX
+          1. PHP_INT_SIZE
+          1. TRUE
+          1. FALSE
+        - 错误
+          1. E_ERROR ———— 最近的错误处
+          1. E_WARNING
+          1. E_PARSE ———— 剖析语法有潜在问题处
+          1. E_NOTICE
+        - 符号
+          1. PHP_EOL ————   系统换行符，Windows是（\r\n），Linux是（/n），MAC是（\r）
+          1. DIRECTORY_SEPARATOR ———— 系统目录分隔符，Windows是反斜线（\），Linux是斜线（/）
+          1. PATH_SEPARATOR ———— 多路径间分隔符，Windows是反斜线（;），Linux是斜线（:）
    - 定义
      1. 全局变量：define('name', 'value');
         - 理解：任意地方定义和访问，不能在类中，大小写敏感，通常大写
@@ -129,7 +148,10 @@
    - implements
 1. 类
    - 魔术常量
-     1. __FILE__       文件完整路径和文件名
+     1. __FILE__       当前文件的完整路径和文件名
+     1. __DIR__
+     1. __NAMESPACE__
+     1. __TRAIT__      5.4新增，返回 trait 被定义时的名字
      1. __CLASS__      类名
      1. __LINE__    
      1. __METHOD__     方法名
@@ -213,7 +235,7 @@
         $obj = new MyClass();
         ```
    - 反射API：`$reflector = new ReflectionClass('A');`
-   - 命名空间：解决重名的作用，有use、\
+   - 命名空间：解决重名的作用，有use、\，进行名字空间引用的时候，如果名字空间的第一个字符不是斜杠(\)，那么就被自动识别为相对名字空间
    - Closure类：闭包类，闭包都是Closure类的实例
    - 相关函数
      1. class_exists()
@@ -279,8 +301,10 @@
      1. glob()查找文件、scandir()浏览目录
      1. 连续两次dirname(dirname(__FILE__))可获得当前文件目录的上上级目录
      1. mkdir(path, 0777, true) 递归创建文件夹
-   - 杂项IO流：php://stdin/stdout/stderr/input/output/fd/filter
+1. 其他IO流
+   - php协议：php://stdin/stdout/stderr/input/output/fd/filter
      1. file_get_contents("php://input")：获取不同content-type下的post数据，当content-type为multipart/form-data时无效，由content-length决定长度
+   - stream：流，用来补充对文件形式的其他数据源的处理能力，经常和socket联合使用。相关函数 fopen/fsockopen
 1. 网络
    - 相关变量
      1. $_SERVER：php预定义变量，包含服务器信息的数组，包含请求头：ajax的['HTTP_X_REQUESTED_WITH']为'xmlhttprequest'、路径、脚本位置
@@ -301,6 +325,15 @@
         imagedestroy($im);
         ```
    - curl：curl_getinfo可获取Content-Length参数
+        ```
+        $ch = curl_init();
+        curl_setopt($ch , CURLOPT_URL, $url);
+        curl_setopt($ch , CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($ch , CURLOPT_TIMEOUT, $timeout);
+        $result = curl_exec($ch);
+        curl_close($ch);
+        ```
+   - socket：Socket类遵循TCP/IP协议，封装大量的内部通讯方法，用于创建主机端与客户端的数据通讯，使得程序员工作量大大降低，Socket编程基本就是listen/accept/send/write等几个基本的操作，相关函数：fsockopen, stream_socket_server, stream_socket_client
 1. 异常
    - 抛出异常：`throw new Exception();`
    - try：`try {} catch (Exception $e) {}`
@@ -310,16 +343,51 @@
      1. mt_getrandmax 显示随机数的最大可能值
      1. mt_srand 播下更好的随机数种子
      1. 计算指定范围随机浮点数：`return $min + mt_rand() / mt_getrandmax() * ($max - $min);`
-1. cli模式和脚本
-   - 函数：fastcgi_finish_request、ignore_user_abort、register_shutdown_function、、set_time_limit
-   - 参数
-     1. php -h
-     1. php -m // 查看安装了哪些扩展
-     1. php -S 127.0.0.1:80 -t /www /www/index.php // 启动一个单线程http服务器，可以用于开发和测试
-   - 运行命令：以web服务器的权限来执行
-     1. 设定脚本名：cli_set_process_title('ocstaskworker')
-     1. 执行脚本：shell_exec()、system()，exec()，passthru()，pcntl_exec()
-     1. 检查是否有相同的脚本正在运行：$cmd = "ps aux | grep -i 'ocstaskworker' | grep -v grep | wc -l";
+1. php和脚本
+   - 理解：以web服务器的权限来执行
+   - 函数：
+     1. fastcgi_finish_request
+     1. ignore_user_abort
+     1. register_shutdown_function
+     1. set_time_limit
+     1. cli_set_process_title：设定脚本名
+     1. shell_exec、system，exec，passthru，pcntl_exec：执行脚本
+     1. memory_get_usage：当前内存，memory_get_peak_usage 峰值内存，
+     1. getrusage：CP信息，win不行
+1. 运行模式
+   - CGI
+     1. 理解：通用网关接口，外部应用程序和web服务器之间的接口标准，cgi允许web服务器执行外部程序，并将输出发回web服务器。早期动态网页处理程序一次只能处理一个请求
+     1. 原理
+        - 遇到请求——创建子进程——处理，即fork-and-execute模式
+        - 请求数=cgi子进程数，子进程的反复加载是cgi性能低下的原因，会大量占用cpu和内存
+        - 每个web请求都必须重新解析php.ini，重新载入全部扩展，初始化全部数据结构
+     1. 特点
+        - 跨平台性极佳
+        - 性能低下
+   - FastCGI
+     1. 理解：类似常驻型cgi，先启一个master，cgi解释器保持在内存中并接受fastcgi的调度，类似线程池的技术特性
+     1. 原理
+        - web服务器载入fastcgi进程管理器
+        - fastcgi自身初始化，启动多个cgi解释器进程等待调用
+        - 请求到达时，fastcgi选择并连接到一个cgi解释器
+     1. 特点
+        - 所有配置只在进程启动时加载一次
+        - PHP死掉不会带死apache，而且会立即启动一个新的php进程
+        - fastcgi是适用高并发场景的，对web服务器不挑可以自由更换
+        - php5.3.29之后自带fpm，之前需要另外加载模块
+     1. PHP-FPM：fastcgi Process Manager，php的fastcgi进程管理器，有效控制内存、进程，平滑重载php配置，比spawn-fcgi更优秀，官方收录。fastcgi是一个协议，php-fpm实现了这个协议
+   - Module
+     1. 理解：将php集成到web服务器，以同一个进程运行。php作为apache的模块，预先生成多个进程副本驻留内存，一旦请求出现就立即响应，省去创建子进程的延迟，处理完成后不退出，等待下次请求
+   - ISAPI
+     1. 理解：微软提供的一套面向Internet服务的API接口，ISAPI的dll被请求激活后常驻内存，不停接受请求。dll和web服务器处于同一个进程中，5.3开始舍弃
+     1. 特点：微软的排他性，只能在windows运行、效率高于CGI、稳定性不好，php出错，IIS或apache也死掉
+   - Cli
+     1. 函数
+        - php_sapi_name：运行环境检测
+     1. 参数
+        - php -h
+        - php -m // 查看安装了哪些扩展
+        - php -S 127.0.0.1:80 -t /www /www/index.php // 启动一个单线程http服务器，可以用于开发和测试
 ### 运维
 1. PHP安装
    - linux
@@ -358,34 +426,6 @@
    - nginx + php-fpm
    - apache + mod_php5
    - lighttp + spawn-fcgi
-1. PHP运行模式
-   - CGI
-     1. 理解：通用网关接口，外部应用程序和web服务器之间的接口标准，cgi允许web服务器执行外部程序，并将输出发回web服务器。早期动态网页处理程序一次只能处理一个请求
-     1. 原理
-        - 遇到请求——创建子进程——处理，即fork-and-execute模式
-        - 请求数=cgi子进程数，子进程的反复加载是cgi性能低下的原因，会大量占用cpu和内存
-        - 每个web请求都必须重新解析php.ini，重新载入全部扩展，初始化全部数据结构
-     1. 特点
-        - 跨平台性极佳
-        - 性能低下
-   - FastCGI
-     1. 理解：类似常驻型cgi，先启一个master，cgi解释器保持在内存中并接受fastcgi的调度，类似线程池的技术特性
-     1. 原理
-        - web服务器载入fastcgi进程管理器
-        - fastcgi自身初始化，启动多个cgi解释器进程等待调用
-        - 请求到达时，fastcgi选择并连接到一个cgi解释器
-     1. 特点
-        - 所有配置只在进程启动时加载一次
-        - PHP死掉不会带死apache，而且会立即启动一个新的php进程
-        - fastcgi是适用高并发场景的，对web服务器不挑可以自由更换
-        - php5.3.29之后自带fpm，之前需要另外加载模块
-     1. PHP-FPM：fastcgi Process Manager，php的fastcgi进程管理器，有效控制内存、进程，平滑重载php配置，比spawn-fcgi更优秀，官方收录。fastcgi是一个协议，php-fpm实现了这个协议
-   - Module
-     1. 理解：将php集成到web服务器，以同一个进程运行。php作为apache的模块，预先生成多个进程副本驻留内存，一旦请求出现就立即响应，省去创建子进程的延迟，处理完成后不退出，等待下次请求
-   - ISAPI
-     1. 理解：微软提供的一套面向Internet服务的API接口，ISAPI的dll被请求激活后常驻内存，不停接受请求。dll和web服务器处于同一个进程中，5.3开始舍弃
-     1. 特点：微软的排他性，只能在windows运行、效率高于CGI、稳定性不好，php出错，IIS或apache也死掉
-   - Cli
 1. ts/nts
    - 查看：phpinfo()————Thread Safety
    - 分类   

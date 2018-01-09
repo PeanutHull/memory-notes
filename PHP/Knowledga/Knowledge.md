@@ -1,3 +1,113 @@
+### PSR
+1. 解释：PHP Standards Recommendation，是PHP-FIG组织制定的php推荐书写标准
+1. 分类
+   - PSR-1：基本的代码风格
+     1. 标签   php代码必须在<?php ?>中
+     1. 编码   必须使用utf8，不能有字节顺序标记(BOM Byte Order Mark)
+     1. 常量   全部大写，可用下划线
+     1. 类名   必须驼峰
+     1. 方法名 小写开头+驼峰
+     1. 加载   命名空间和类必须遵守psr-4自动加载器标准
+     1. 目的   一个php文件，要么定义符号，要么执行操作，不能同时做
+   - PSR-2：严格的代码风格
+     1. 贯彻   首先遵守psr-1
+     1. 缩进   四个空格
+     1. 文件和代码行、关键字、命名空间、类、方法、可见性、控制结构
+   - PSR-3：日志记录器接口，不是指导，是一个接口
+   - PSR-4：自动加载，命名空间前缀和文件系统的目录对应起来，代替PSR-0(已弃用)
+   - PSR-7：http通信标准
+1. 注释书写参考
+   - @access
+   - @param  string|array
+   - @static
+   - @return  void|
+   - @desc
+   - @example
+   - @version
+### IoC、DI
+1. Ioc：Inversion of Control，控制反转，意味着将你设计好的对象交给容器控制，而不是传统的在你的对象内部直接控制。由外部负责其依赖需求的行为，我们可以称其为控制反转。容器控制应用程序，由容器反向的向应用程序注入应用程序所需要的外部资源
+   - 为解决多个类之间的依赖
+1. DI：依赖注入，应用程序依赖容器创建并注入它所需要的外部资源
+1. 区别：ioc从容器的角度，di从应用程序的角度，ioc是目的，di是手段。是同一件不同层面的解读
+1. 简单举例
+   - 工厂模式和依赖：类所依赖的外部事物的实例都可以被一、多个工厂创建的开发模式即"工厂模式"
+        ```
+        class SuperModuleFactory {                                          // 工厂方法，创建超人技能模块
+            public function makeModule($moduleName) {
+                switch ($moduleName) {
+                    case 'Fight': 
+                        return new Fight();
+                    case 'Shot': 
+                        return new Shot();
+                }
+            }
+        }
+        class Superman {                                                    // 超人类
+            protected $power;
+
+            public function __construct(array $modules) {
+                $factory = new SuperModuleFactory;                          // 初始化工厂
+
+                foreach ($modules as $moduleName) {                         // 通过工厂提供的方法制造需要的模块
+                    $this->power[] = $factory->makeModule($moduleName);
+                }
+            }
+        }
+        // 结果：轻松实例化不同超人，扩展的话增加或修改工厂方法即可        
+        ```
+   - 依赖注入：工厂模式的问题，只是由对多个外部类的依赖变成了对一个"工厂"的依赖。有了统一的接口实现(契约)，就可以动态注入依赖
+        ```
+        interface SuperModuleInterface {
+            public function activate();
+        }
+        class Superman {
+            protected $module;
+
+            public function __construct(SuperModuleInterface $module) {
+                $this->module = $module;
+            }
+        }
+        // 依赖注入典型示例
+        $superModule = new XPower;                                          // 实例化技能模块
+        $superMan = new Superman($superModule);                             // 注入技能模块依赖
+        ```
+   - IoC容器：工厂模式的升华，向工厂提交一个脚本，工厂通过指令自动化生产
+        ```
+        class Container {                                                   // 容器
+            protected $binds;
+            protected $instances;
+
+            public function bind($abstract, $concrete) {
+                if ($concrete instanceof Closure) {
+                    $this->binds[$abstract] = $concrete;
+                } else {
+                    $this->instances[$abstract] = $concrete;
+                }
+            }
+            public function make($abstract, $parameters) {
+                if (isset($this->instances[$abstract])) {
+                    return $this->instances[$abstract];
+                }
+                array_unshift($parameters, $this);
+
+                return call_user_func_array($this->binds[$abstract], $parameters);
+            }
+        }
+        $container = new Container;
+        $container->bind('superman', function($container, $moduleName) {    // 添加超人生产脚本
+            return new Superman($container->make($moduleName));
+        });
+        // 添加超能力模组的生产脚本
+        $container->bind('xpower', function($container) {
+            return new XPower;
+        });
+        // 开始启动生产
+        $superman_1 = $container->make('superman', 'xpower');
+        $superman_2 = $container->make('superman', 'ultrabomb');
+        // 结果：解决了类和外部类的依赖关系，容器类也没有和外部类有依赖。通过注册/绑定的方式向容器中添加可被执行的回调(匿名函数、函数、类的方法)作为类的实例的脚本，只有生产时才触发。真正的IoC容器会根据类的需求，自动注册/绑定符合需求的依赖，自动注入到构造函数中去，通过反射
+        ```
+   - 关键词：控制反转, 依赖注入, 工厂模式, 契约, IoC容器, 服务容器, 服务提供者，反射
+1. AOP：面向切面编程，剖开封装的对象内部，并将影响多个类的公共行为封装到一个模块。是OOP的补充完善
 ### 设计模式
 1. 理解
    - 是遇到问题的解决方案，是自下而上的，来源于实践，发现模式而不是发明模式
@@ -95,32 +205,6 @@
      1. 抽象工厂：有多条产品线，系统提供一个产品类的库，所有的产品以同样的接口出现，从而使客户端不依赖于实现。无论是简单工厂模式、工厂模式还是抽象工厂模式，它们本质上都是将不变的部分提取出来，将可变的部分留作接口，以达到最大程度上的复用
 1. 注册树模式
    - 意图：全局共享/交换对象
-### PSR
-1. 解释：PHP Standards Recommendation，是PHP-FIG组织制定的php推荐书写标准
-1. 分类
-   - PSR-1：基本的代码风格
-     1. 标签   php代码必须在<?php ?>中
-     1. 编码   必须使用utf8，不能有字节顺序标记(BOM Byte Order Mark)
-     1. 常量   全部大写，可用下划线
-     1. 类名   必须驼峰
-     1. 方法名 小写开头+驼峰
-     1. 加载   命名空间和类必须遵守psr-4自动加载器标准
-     1. 目的   一个php文件，要么定义符号，要么执行操作，不能同时做
-   - PSR-2：严格的代码风格
-     1. 贯彻   首先遵守psr-1
-     1. 缩进   四个空格
-     1. 文件和代码行、关键字、命名空间、类、方法、可见性、控制结构
-   - PSR-3：日志记录器接口，不是指导，是一个接口
-   - PSR-4：自动加载，命名空间前缀和文件系统的目录对应起来，代替PSR-0(已弃用)
-   - PSR-7：http通信标准
-1. 注释书写参考
-   - @access
-   - @param  string|array
-   - @static
-   - @return  void|
-   - @desc
-   - @example
-   - @version
 ### 函数大全
 1. 字符串类
    - serialize
@@ -280,6 +364,7 @@
    - getenv
    - putenv
    - shell_exec
+   - php_sapi_name
    - system
    - extract
    - var_export

@@ -174,6 +174,8 @@
      1. Spark-SQL组件
      1. DataFrame组件
 ### 各知识点版本
+1. 历史发展
+   - 从JDK 5.0开始，J2SE等全部改名，JDK5也称为Java5
 1. 最新版本
    1. 基础
       - Java8 = Java SE 8 = java se 1.8 = JDK 8
