@@ -7,8 +7,7 @@
    - Clojure
      1. 理解：是一种运行在Java平台上的Lisp方言
 1. JNI：提供了若干的API实现了Java和其他语言的通信（主要是C&C++）
-1. Guava
-   - 理解：一种基于开源的Java库，提供了用于集合，缓存，支持原语，并发性，常见注解，字符串处理，I/O和验证的实用扩展方法
+1. Guava：一种基于开源的Java库，提供了用于集合，缓存，支持原语，并发性，常见注解，字符串处理，I/O和验证的实用扩展方法
 1. 关键字
    - 基础关键字
      1. 注解
@@ -154,8 +153,7 @@
 ### 大数据
 1. Hadoop
    - 基础
-     1. Hadoop1介绍
-     1. Hadoop1架构
+     1. Hadoop介绍、架构
      1. Hadoop2架构
      1. HDFS操作
      1. yarn操作
@@ -274,23 +272,6 @@
       tomcat1/bin/startup.sh
       ```
    - Maven
-   - Nginx
-      ```java
-      // 安装nginx依赖
-      yum -y install gcc zlib zlib-devel pcre-devel openssl openssl-devel 
-      // 下载nginx安装包并解压、编译
-      ./configure;make;make install;
-      // 启动
-      cd sbin;
-      ./nginx;
-      ```
-   - Mysql
-      ```java
-      yum -y install mysql-server // 安装
-      vim /etc/my.cnf // 设置字符集
-      character-set-server=utf8 // [mysqld]下添加
-      default-character-set=utf8
-      ```
    - 部署脚本
       ```java
       echo "======更新代码======="    
@@ -332,6 +313,8 @@
    - Quartz任务调度：定时器
 1. 架构组成
    - taotao-common：项目中用到的通用工具类和pojo
+   - taotao-parent
+   - taotao-manage
 1. 功能点
    - maven的tomcat7插件启动项目：manager项目————右键————run as————第二个maven build————clean tomcat7:run
    - 静态资源映射：`<mvc:resources location="/WEB-INF/js/" mapping="/js/**"/>`，指定到WEB-INF目录下

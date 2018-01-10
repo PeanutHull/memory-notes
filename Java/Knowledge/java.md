@@ -52,10 +52,10 @@
 ### 语法
 1. 数据类型
    - 分类：基本类型、引用类型
-   - 基本数据类型
+   - 基本类型
      1. 数值型：
-        - 整数：byte、short、int、long
-        - 浮点数：float、double
+        - 整数：byte, short, int, long
+        - 浮点数：float, double
      1. 字符型：char
      1. 布尔型：boolean
    - 基本类型详解：
@@ -68,17 +68,16 @@
      1. char：单一16位Unicode字符，如：char name = 'A';最小值是’\u0000’（即为0）
      1. boolean：布尔型，1字节。默认false。
    - 引用数据类型
-     1. 理解：类似C/C++的指针， 其指向一个对象，指向对象的变量叫引用变量。这些变量声明时被指定为一个特定类型，一旦声明不能改变类型。默认null
-     1. 有：类(接口)、对象、数组
+     1. 理解：类似C/C++的指针， 其指向一个对象，指向对象的变量叫引用变量。这些变量声明时被指定为一个特定类型，一旦声明不能改变类型，默认null
+     1. 组成：类(接口)、对象、数组
         ```Java
-        // 举例
         Site site = new Site("Runoob")
         ```
    - 区别：基本数据类型变量存储的是数据本身，引用类型变量存储数据空间地址
    - 进制
      1. 0表示8进制，0x表示16进制，
      1. 整形都可以用十、八、十六进制表示。
-     1. 可以包含unicode字符：char a = '\u0001';
+     1. 字符型可以包含unicode字符：char a = '\u0001';
      1. 转义字符：\n换行，\r回车
    - 类型转换
      1. 类型转换
@@ -86,12 +85,11 @@
          - 低到高排列：byte,short,char—> int —> long—> float —> double
          - bool不能转换
          - 对象类型不能改为不相关类
-         - 容量大转小时必须使用强制转换。转换可能导致溢出或损失精度。
-         - int不能转char。
-     1. 自动类型转换：容量小的转大的。
-     1. 强制类型转换：数据截断后者溢出。转换条件是数据类型必须是兼容的
+         - 容量大转小时必须使用强制转换。转换可能导致溢出或损失精度
+         - int不能转char
+     1. 自动类型转换：容量小的转大的
+     1. 强制类型转换：数据截断后溢出，转换条件是数据类型必须是兼容的
         ```Java
-        // 举例
         double num = 6.66;
         int avg = (int) num;
         // 使用instanceof判断是否能够强制转换
@@ -101,20 +99,20 @@
      1. 开头：字母、$、下划线
      1. 组成：字母、$、下划线、数字
      1. 特点：大小写敏感、类首字母大写/驼峰法
-1. 修饰符： 修饰类、方法和变量
+1. 修饰符：修饰类、方法和变量
      1. 访问修饰符：可以不使用，默认为default
         - 分类
           1. private：本类可见。类和接口不能声明为private，一旦声明私有只能通过getter和setter被外部操作。作用：隐藏类的实现细节和保护类的数据
           1. default：其他类和子类不可见
-          1. protected：其他类不可见。类和接口不能声明为protected，类的方法和全局变量可以，接口的方法和全局变量不行
+          1. protected：其他类不可见。接口不能声明为protected，类的方法和全局变量可以，接口的方法和全局变量不行
           1. public：所有类可见。main必须是public的，否则解释器不能运行此类
-        - 继承：只能往上改，public必须为public，protected为protected或public
+        - 继承：只能往更宽泛的权限改
      1. 其他修饰符：
         - final：修饰的类不能被继承，修饰的方法不能被重载，修饰的变量为常量不能修改
         - static：创建类变量和类方法
         - interface：创建接口
         - abstract：创建抽象类和抽象方法
-        - transient：即对象变量持久化跳过修饰符，只修饰变量，不修饰方法和类。被修饰的变量和静态变量不能被序列化。`public transient int limit = 55;`
+        - transient：对象变量持久化跳过修饰符，只修饰变量，不修饰方法和类。被修饰的变量和静态变量不能被序列化。`public transient int limit = 1;`
         - strictfp：浮点数使用严格规则
         - synchronized：同一时间只能被一个线程访问 `public synchronized void showDetails(){}`
         - volatile：每次被线程访问，强制从共享内存中重新读取该成员变量的值。当成员变量改变时强制线程将变化值写回内存。保证不同线程看到同一变量的值
@@ -134,13 +132,13 @@
             ```
 1. 运算符
    - 分类
-     1. 位：&    |    ~(非)    ^(异或)    ~(逐位取反)    <<(按位左移固定位数)    >>    >>>("无符号"右移运算)    >>>
+     1. 位：&    |    ~(非)    ^(异或)    ~(逐位取反)    <<(按位左移固定位数)    >>    >>>("无符号"右移运算)    <<<
      1. 逻辑： && || !
      1. 算术： 加减乘除    -取反    %取余    ++自增    --自减
      1. 比较： > < >= <= == !=
      1. 赋值： =    +=    -=    \*=    /=    %=    <<=(x=x<<y)    >>=    >>>=    &=(x=x&y)    |=    ^=
      1. 字符串连接：+
-     1. 类型转换：(强转类型)
+     1. 类型转换：(强制转换)
      1. 条件： ? :
      1. instanceof：检查对象是否是类/接口类型
         ```Java
@@ -149,7 +147,7 @@
         Vehicle a = new Car();
         boolean result = a instanceof Car; // 兼容于右侧类型,该运算符仍然返回true
         ```
-   - 优先级：括号的最高
+   - 优先级：括号最高
    - 说明：
      1. 自增/减只能用于变量，位置前后作用不同
      1. 只有==和!=两个比较运算符两边可以是引用类型，其他的两边都是数值型
@@ -172,31 +170,27 @@
         @return
         ```
      1. 提取Java注释：`javadoc -d doc hello.java`
-   - 注解：Annotation
 1. 常量
-   - 理解：程序运行时，不会修改的量。一旦定义，不许修改。通常大写
+   - 理解：程序运行时，不能修改的量。一旦定义，不许修改。通常大写
    - 定义：
         ```Java
         // 使用final关键字定义
         final String LOVE = "imooc";
         ```
-   - 好处：可提高程序可维护性。即避免命名不规范等导致的问题
+   - 好处：可提高程序可维护性。避免命名不规范等导致的问题
 1. 变量
    - 理解：使用前必须先声明
    - 定义:
     ```Java
-    // 声明并赋值
-    int z= 0;
-    // 先声明，后赋值   
-    int z;
+    int z;              // 先声明，后赋值
+    int z= 0;           // 声明并赋值
     z= 11;
-    // 使用
-    int age = 0;
-    System.out.println(age);
+    
+    System.out.println(z);
     ```
    - 分类：
      1. 全局变量：即成员变量，或者叫实例变量，类中共享的变量
-     1. 局部变量：方法中定义的变量。一个方法中局部变量不能重名，局部比全局的优先级高，java会给全局变量定义初始值(定义不赋值)，不会给局部定义
+     1. 局部变量：方法中定义的变量，一个方法中局部变量不能重名，局部比全局的优先级高，java会给全局变量定义初始值(定义不赋值)，不会给局部定义
      1. 类变量：即静态变量。在构造方法和语句块之外。属于类，所有实现的对象共享只有一份
         ```Java
         // 声明静态变量
@@ -209,35 +203,32 @@
 1. 流程控制
    - 判断
         ```Java
-        // if类型
-        if() {
+        if() {                  // if
         }else if(){
         }else{
         }
-        // switch类型
-        switch() {
-                case value1:
-                // 执行;break;
-                default:
-                // 执行
+        switch() {  ·           // switch
+            case value1:
+            // 执行;break;
+            default:
+            // 执行
         }
         ```
     - 循环
         ```Java
-        // while类型
-        while(i <= 1000) {
+        while(i <= 1000) {                     // while
             i++;
         }
-        // do类型
-        do {
+
+        do {                                   // do
             i++;
         } while(i <= 1000);
-        // for类型
-        for(int i=1,j=1;i <= 1000 && j != -1000;i++,j--) {
+
+        for(int i=1,j=1;i <= 1000 && j != -1000;i++,j--) {              // for
             i++;
         }
-        // foreach类型
-        List<String> list = new ArrayList<String>(); // 数组类
+        
+        List<String> list = new ArrayList<String>(); // 数组类           // foreach
         for(String item : list){
             System.out.println("循环元素：" + item);
         }
@@ -290,7 +281,7 @@
             c.get(Calendar.YEAR); // 获得年份
             c.add(Calendar.DATE, 10); // 加10天
             ```
-      1. 字段类型：Calendar.YEAR/MOUTH/DATE/DAY\_OF\_MOUTH/HOUR/HOUR\_OF_DAY/MINUTE/SECOND/DAY\_OF\_WEEK
+      1. 字段类型：Calendar.YEAR/MOUTH/DATE/DAY_OF_MOUTH/HOUR/HOUR_OF_DAY/MINUTE/SECOND/DAY_OF_WEEK
       1. GregorianCalendar类：实现公历日历，是Calendar的一个实现
 1. IO
    - 理解：Java.io包几乎包含所有操作输入/输出的类。流可以理解为一个序列的数据
@@ -392,7 +383,7 @@
     }
     ```
 1. 错误和异常
-   - 认识：错误和异常是不同的，Throwable是老祖宗，有两个子类：Exception和Error。所有异常类都是Exception的子类
+   - 认识：错误和异常是不同的，Throwable是祖宗，有两个子类：Exception和Error。所有异常类都是Exception的子类
    - 错误： `java.lang.Error`
    - 异常
      1. 分类
@@ -401,9 +392,8 @@
      1. 捕获异常：catch语句包含异常的声明，定义捕获哪种类型的异常
         ```Java
         try{
-        }catch(ExceptionName e1) {
+        }catch(ExceptionName e) {
         }
-        // 例子
         try{
             int a[] = new int[2];
             System.out.println("Access element three :" + a[3]);
@@ -414,18 +404,14 @@
         try{
         }catch(异常类型1 异常的变量名1){
         }catch(异常类型2 异常的变量名2){
-        }finally{
-        // 此代码块总会被执行，适用善后性质的语句
-        }
+        }finally{}                                    // 此代码块总会被执行，适用善后性质的语句
         try{
             file = new FileInputStream(fileName);
             x = (byte) file.read();
         }catch(IOException i){
             i.printStackTrace();
-            return -1;
-        }catch(FileNotFoundException f) { //Not valid
+        }catch(FileNotFoundException f) {
             f.printStackTrace();
-            return -1;
         }
         ```
      1. 抛出异常：throw
@@ -438,7 +424,7 @@
         class MyException extends Exception/RuntimeException{}
         ```
 1. 正则表达式
-   - 理解：定义了字符串的模式。Java的和Perl类似。存于java.util.regex包
+   - 理解：和Perl类似，在java.util.regex
    - 主要类
      1. Patten：patten对象是一个正则表达式的编译表示。无公共构造方法，首先调用公共静态编译方法，获得Patten对象，接受一个正则表达式为一参
      1. Matcher：matcher对象是对输入的字符串进行解释和匹配操作的引擎。无公共构造方法，用Patten的matcher方法获得Matcher对象。
@@ -452,7 +438,7 @@
       ```
    - 捕获组：将多个字符当一个独立单元处理的方法。调用matcher对象的groupCount方法统计组数
 ### Java类库
-1. Java类库，常见的包
+1. Java常见类库、包
    - java.lang：语言包
      1. 数据类型包装类
      1. 字符处理类
@@ -475,7 +461,7 @@
         - Thread类
         - TreadDeath
         - Runnable类
-   - java.util：实用包
+   - java.util：工具包
      1. Random/UUID：随机数/UUID类
      1. 数据结构类
         - Vector：向量类
@@ -486,9 +472,7 @@
         - Date类
         - Calendar类
         - GregorianCalendar类
-   - java.io：输入输出包
-     1. InputStream
-     1. OutputStream
+   - java.io：输入输出包，InputStream/OutputStream
    - java.net
    - java.sql
    - java.awt/swing：窗口工具包
@@ -498,19 +482,16 @@
    - 分类
      1. Byte、Integer、Short、Long、Float、Double
         ```Java
-        // 内置数据类型
-        int a = 5000;
-        // 包装类
-        Integer x = 5;
+        int a = 1;          // 内置数据类型
+        Integer a = 1;      // 包装类
         ```
      1. Character、Boolean
         - 定义：是char的包装类，对单个字符进行操作，包装了一个char类型的对象
         - 示例：
             ```Java
-            char ch = 'a'; // char数据类型
-            char uniChar = '\u039A'; // unicode形式的char数据类型
-            char[] charArray ={ 'a', 'b', 'c', 'd', 'e' }; // 字符数组
-            Character a = new Character('a'); //Character类对象
+            char char = 'a';                        // char数据类型
+            char[] charArray ={'a', 'b'};           // 字符数组
+            Character char = new Character('a');    //Character类对象
             ```
         - 常用方法：
            1. isLetter()：是否一字母
@@ -521,11 +502,9 @@
            1. toString()：返回字符的字符串形式
    - 特点：包装类和基本类型可以自动转换，叫做自动封箱和自动解封
         ```Java
-        // 内置数据类型
-        int a = 5000;
-        // 包装类
-        Integer x = 5; //自动封箱
-        int x1 = x; //自动解封
+        int a = 1;          // 内置数据类型
+        Integer a = a;      //自动封箱
+        int a1 = a;         //自动解封
         ```
 1. String
    - 理解：java使用String类来创建和操作字符串，不是8种基本类型，是特殊的对象，默认值是null
@@ -539,7 +518,7 @@
         String s2 = new Stirng();
         String s3 = new String("aaa");
         // 提供一个字符数组参数
-        char[] helloArray = { 'r', 'u', 'n', 'o', 'o', 'b'};
+        char[] helloArray = {'r', 'u'};
         String helloString = new String(helloArray); // 输出runoob
         // 字符串的比较
         s1 == s2 // false
@@ -615,7 +594,7 @@
    - 常用方法：
      1. x.byteValue()：将Number对象转换为基本数据类型。如short/int/long/float/doubleValue();
         ```Java
-        Integer x = 5;
+        Integer x = 1;
         x.byteValue()
         ```
      1. toString()：以字符串形式返回
@@ -628,8 +607,8 @@
         ```
      1. equals(param)：number对象是否和参数相等
         ```Java
-        Integer x = 5;
-        Integer y = 5;
+        Integer x = 1;
+        Integer y = 1;
         System.out.println(x.equals(y));
         ```
      1. compareTo(param)：将number对象和参数比较。同类型数据比较，返回值：0相等、小于参数-1、大于1
@@ -942,3 +921,4 @@
      1. 包采用了树形目录的存储方式，不同包中的类名可以相同。com.runoob.test的目录结构为`CLASSPATH\com\runoob\test\类名`
      1. 包也限定了访问权限，有包的权限才能访问包中的类
      1. 可以定义自己的包
+### wiki

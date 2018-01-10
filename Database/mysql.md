@@ -431,6 +431,13 @@
    - 不同引擎的区别
      1. Innodb中，Leaf Nodes存放其他字段实际数据，还包含主键值，Secondary Index和普通b-tree相同，所以主键查询非常快，Secondary需要先找到Leaf再找主键值
 ### 运维
+1. 安装
+    ```java
+    yum -y install mysql-server // 安装
+    vim /etc/my.cnf // 设置字符集
+    character-set-server=utf8 // [mysqld]下添加
+    default-character-set=utf8
+    ```
 1. 数据导入和导出
    - 导出
     ```

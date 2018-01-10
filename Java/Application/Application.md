@@ -1,0 +1,44 @@
+### 架构演进、自主探索路线
+1. 面临的问题和技术手段：高并发、高可用、分布式
+   1. 高并发：tomcat集群，负载均衡，请求转发机双机热备，双向同步；session集群服务器；
+   1. 大负载/持久化：数据库集群(自己造数据，自己测试性能)、主从配置、读写分离；分布式文件系统
+   1. 缓存：redis分布式缓存
+   1. 队列：rabbitMQ原理并记录心得
+   1. 搜索：Elasticssearch
+1. 优化
+   1. mysql优化
+   1. nginx优化
+   1. tomcat优化
+   1. JVM调优
+1. 挑战词儿：高并发、高可用、大负载
+1. 解决词儿：弹性扩容、故障转移(双机热备)、负载均衡、主从配置
+### LB
+1. 即负载均衡，做双机热备
+1. 概念
+   - 轮询
+   - 随机
+   - 最小响应时间
+   - 最小并发数
+1. 调度策略
+   1. 轮询：实现简单、但是不考虑每台服务器的处理能力
+   1. 权重：考虑了服务器的处理能力
+   1. 地址散列：保证同一个用户访问同一台服务器
+     1. 原ip地址
+     1. 目标地址
+     1. 最小连接：让服务器负载更加均匀
+     1. 加权最小连接
+1. 实现
+   - 硬件
+     1. F5
+   - 软件
+     1. LVS
+     1. HAproxy
+     1. Nginx Upstream
+### 分布式缓存
+### 分布式事务
+   - 基于消息中间件的解决分布式事务框架：https://github.com/yu199195/myth
+   - 消息中间件支持：jms(activimq),amqp(rabbitmq),kafka,roceketmq。
+   - rpc框架支持 : dubbo,motan,springcloud。
+   - 本地事务日志存储支持 : redis,mogondb,zookeeper,file,mysql
+   - TCC：https://github.com/yu199195/happylifeplat-tcc
+   - 二阶段提交：https://github.com/yu199195/happylifeplat-transaction

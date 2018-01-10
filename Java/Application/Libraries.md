@@ -100,7 +100,7 @@
      1. Hibernat
      1. MyBatis
 1. 认识
-   - 理解：高性能的对象/关系型持久化存储和查询服务。用于和数据库交互，就是桥梁，是处理O/R映射机制和模式。需要理解Hibernate框架的API，是01年出的对象关系框架
+   - 理解：高性能的对象/关系型持久化存储和查询服务。用于和数据库交互，就是桥梁，是处理O/R映射机制和模式。需要理解Hibernate框架的API，01年出的对象关系框架
    - 特点
      1. XML文件映射类到数据库，抽象不熟悉的sql类型，提供熟悉的java对象
      1. 简单的数据访问
@@ -325,11 +325,11 @@
    - XA
      1. 理解：是数据库与事务管理器的接口标准，采用两阶段提交方式来管理分布式事务，包括以xa_/ax_开头的两套函数
      1. 函数
-        - xa\_open/xa_close 建立/关闭与资源管理器的连接
-        - xa\_start/xa_end 开始/结束本地事务
-        - xa\_prepare/xa\_commit/xa_rollback 预提交、提交、回滚本地事务
+        - xa_open/xa_close 建立/关闭与资源管理器的连接
+        - xa_start/xa_end 开始/结束本地事务
+        - xa_prepare/xa_commit/xa_rollback 预提交、提交、回滚本地事务
         - xa_recover 回滚预提交的事务
-        - ax\_reg/ax\_unreg 允许资源管理器在TMS(TRANSACTION MANAGER SERVER)动态注册/取消注册。ax_开头的函数使资源管理器可以动态地在事务管理器中进行注册，并可以对XID(TRANSACTION IDS)进行操作
+        - ax_reg/ax_unreg 允许资源管理器在TMS(TRANSACTION MANAGER SERVER)动态注册/取消注册。ax_开头的函数使资源管理器可以动态地在事务管理器中进行注册，并可以对XID(TRANSACTION IDS)进行操作
    - 分类
      1. Atomikos
         - 特点：崩溃/重启恢复、兼容JTA API、嵌套事务支持、为XA和非XA提供内置JDBC适配器、内置JMS适配器(也就是队列连接器)XA-capable
@@ -387,3 +387,12 @@
      1. RabbitMQ平台无关，剩下两个都偏Java
 ### Hession
 1. 理解：Hessian是一个轻量级的remoting onhttp工具，使用简单的方法提供了RMI的功能
+### Quartz
+1. 理解：任务调度、资源调度框架，执行定时任务用的，提供运行环境的持久化机制。涉及多线程并发、运行时间的制定解析、运行现场保持与恢复、线程池维护
+1. 组成
+   - Job：执行具体任务的接口
+   - JobDetail：任务的具体描述
+   - Trigger：触发器，包括SimpleTrigger、CronTrigger
+   - Scheduler：独立Quartz运行容器，将Trigger和JobDetail绑定
+   - ThreadPool：Scheduler运行任务的线程池
+   - Calendar：org.quartz.Calendar，是日历特定时间点的集合

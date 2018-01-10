@@ -63,6 +63,14 @@
 ### Ant
 1. 理解：集编译、测试、部署的自动化打包部署工具
 ### Inteill Idea
+1. IDEA创建空白Servlet项目
+   - 项目设置：File--New--Project--Java--Java EE--Web Application--下一步--项目名称
+   - 工程设置
+     1. WEB-INF目录--新建classes和lib目录
+     1. 编译目录：Project Structure--Modules--Paths选项卡--将Output path和Test output path设置为classes目录
+     1. 依赖目录：Project Structure--Modules--Dependencies选项卡--新增Export--JARs or directories--选择lib目录--Jar Directory
+     1. 打包方式：Artifacts--fix--add classes...
+     1. 配置tomcat
 1. 添加Problems(实时编译)功能：设置————compiler————打钩make project automatically
 1. IDEA报错功能：设置————inspections————修改报错信息
 1. 搭建空白项目

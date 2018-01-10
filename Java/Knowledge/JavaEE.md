@@ -1,5 +1,5 @@
 ### JavaEE
-1. JavaEE理解：是一种语言，也是一个平台，是企业级分布式应用开发标准。构建于Java SE之上，提供API和运行环境，来运行大规模、可扩展的多层次的网络应用
+1. JavaEE理解：是一个平台，是企业级分布式应用开发标准。构建于Java SE之上，提供API和运行环境，来运行大规模、可扩展的多层次的网络应用
 1. 特点
    - 分布式
    - 事务性
@@ -110,8 +110,8 @@
      1. EJB功能强大,但是太重了.此时出现DI(依赖注入),AOP(面向切面)技术,通过简单的java bean也能完成EJB的事情,这里的java bean简化为POJO;
      1. Spring诞生了;
 ### Servlet
-1. 认识：用Java写的一个服务器端小程序，是部署在web服务器上的组件，可以访问所有java API，可以搜集表单等浏览器的东西和创建动态网页，为创建基于web的java应用程序
-1. 特点：Servlet应用无法独立运行，必须运行在Servlet容器中，Servlet在web服务器的地址空间执行，一个请求一个线程，性能好。独立于平台，安全性好。html的链接/开头的表示相对目录，没有的表示绝对目录
+1. 认识：用Java写的服务器端小程序，是部署在web服务器上的组件，可以访问所有java API，可以搜集表单等浏览器的东西和创建动态网页，为创建基于web的java应用程序
+1. 特点：Servlet应用无法独立运行，必须运行在Servlet容器中，Servlet在web服务器的地址空间执行，一个请求一个线程，性能好。独立于平台，安全性好
 1. 编写
 	```Java
 	// 继承HttpServlet，类关系：自定义setvlet——HttpServlet类(实现了http协议)——GenericServlet类(与协议无关)——Servlet接口(方法：Init/service/destory)
@@ -767,11 +767,3 @@
      1. 初始化阶段：加载Servlet类，创建实例，调用初始化方法——jspInit()
      1. 执行阶段：_jspService(HttpServletRequest request,HttpServletResponse response)
      1. 销毁阶段:jspDestroy()
-   - IDEA创建空白Servlet项目
-     1. 项目设置：File--New--Project--Java--Java EE--Web Application--下一步--项目名称
-     1. 工程设置
-        - WEB-INF目录--新建classes和lib目录
-        - 编译目录：Project Structure--Modules--Paths选项卡--将Output path和Test output path设置为classes目录
-        - 依赖目录：Project Structure--Modules--Dependencies选项卡--新增Export--JARs or directories--选择lib目录--Jar Directory
-        - 打包方式：Artifacts--fix--add classes...
-        - 配置tomcat
