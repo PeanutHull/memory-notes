@@ -63,6 +63,14 @@
 ### Ant
 1. 理解：集编译、测试、部署的自动化打包部署工具
 ### Inteill Idea
+1. 单跑
+1. 单maven跑
+1. 单跑tomcat
+1. 单个maven跑tomcat
+1. idea单跑
+1. idea用maven跑
+1. idea跑web
+1. idea用maven跑web
 1. IDEA创建空白Servlet项目
    - 项目设置：File--New--Project--Java--Java EE--Web Application--下一步--项目名称
    - 工程设置

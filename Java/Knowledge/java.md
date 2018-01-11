@@ -1,4 +1,4 @@
-### 体系结构
+### Java
 1. Java体系
    - Java SE：java平台标准版。包含最普遍的类库，针对普通的java程序
    - Java EE：java平台企业版。是类库最多、针对web应用的一个规范
@@ -95,100 +95,15 @@
         // 使用instanceof判断是否能够强制转换
         if(animal instanceof Cat) {}
         ```
-1. 标识符：就是所有定义的东西的名字。有类名/变量名/方法名
-     1. 开头：字母、$、下划线
-     1. 组成：字母、$、下划线、数字
-     1. 特点：大小写敏感、类首字母大写/驼峰法
-1. 修饰符：修饰类、方法和变量
-     1. 访问修饰符：可以不使用，默认为default
-        - 分类
-          1. private：本类可见。类和接口不能声明为private，一旦声明私有只能通过getter和setter被外部操作。作用：隐藏类的实现细节和保护类的数据
-          1. default：其他类和子类不可见
-          1. protected：其他类不可见。接口不能声明为protected，类的方法和全局变量可以，接口的方法和全局变量不行
-          1. public：所有类可见。main必须是public的，否则解释器不能运行此类
-        - 继承：只能往更宽泛的权限改
-     1. 其他修饰符：
-        - final：修饰的类不能被继承，修饰的方法不能被重载，修饰的变量为常量不能修改
-        - static：创建类变量和类方法
-        - interface：创建接口
-        - abstract：创建抽象类和抽象方法
-        - transient：对象变量持久化跳过修饰符，只修饰变量，不修饰方法和类。被修饰的变量和静态变量不能被序列化。`public transient int limit = 1;`
-        - strictfp：浮点数使用严格规则
-        - synchronized：同一时间只能被一个线程访问 `public synchronized void showDetails(){}`
-        - volatile：每次被线程访问，强制从共享内存中重新读取该成员变量的值。当成员变量改变时强制线程将变化值写回内存。保证不同线程看到同一变量的值
-            ```Java
-            public class MyRunnable implements Runnable{
-                private volatile boolean active;
-                public void run(){
-                    active = true;
-                    while (active) { // 第一行
-                        // 代码
-                    }
-                }
-                public void stop(){
-                    active = false; // 第二行
-                }
-            }
-            ```
-1. 运算符
-   - 分类
-     1. 位：&    |    ~(非)    ^(异或)    ~(逐位取反)    <<(按位左移固定位数)    >>    >>>("无符号"右移运算)    <<<
-     1. 逻辑： && || !
-     1. 算术： 加减乘除    -取反    %取余    ++自增    --自减
-     1. 比较： > < >= <= == !=
-     1. 赋值： =    +=    -=    \*=    /=    %=    <<=(x=x<<y)    >>=    >>>=    &=(x=x&y)    |=    ^=
-     1. 字符串连接：+
-     1. 类型转换：(强制转换)
-     1. 条件： ? :
-     1. instanceof：检查对象是否是类/接口类型
-        ```Java
-        String name = "James";
-        boolean result = name instanceof String; // 由于 name 是 String 类型，所以返回真
-        Vehicle a = new Car();
-        boolean result = a instanceof Car; // 兼容于右侧类型,该运算符仍然返回true
-        ```
-   - 优先级：括号最高
-   - 说明：
-     1. 自增/减只能用于变量，位置前后作用不同
-     1. 只有==和!=两个比较运算符两边可以是引用类型，其他的两边都是数值型
-     1. ^ 异或：有且仅有一个才行。java有短路执行特性，即只执行一部分
-1. 引号：单引号是char类型只能是一个字符或Unicode字符，双引号是String类型
-1. 注释和javadoc、注解
-   - 注释
-     1. 特点：注释和空行都会被java编译器忽略
-     1. 分类：// 单行注释、/\* \*/文档注释、/\* \* \*/多行注释
-   - javadoc标签
-     1. 举例
-        ```Java
-        @author
-        @version
-        @param
-        @serial 说明序列化属性
-        @exception 对可能的异常的说明
-        @link 链接指示
-        @see 参考转向
-        @return
-        ```
-     1. 提取Java注释：`javadoc -d doc hello.java`
-1. 常量
-   - 理解：程序运行时，不能修改的量。一旦定义，不许修改。通常大写
-   - 定义：
-        ```Java
-        // 使用final关键字定义
-        final String LOVE = "imooc";
-        ```
-   - 好处：可提高程序可维护性。避免命名不规范等导致的问题
 1. 变量
    - 理解：使用前必须先声明
-   - 定义:
+   - 定义
     ```Java
-    int z;              // 先声明，后赋值
-    int z= 0;           // 声明并赋值
-    z= 11;
-    
-    System.out.println(z);
+    int a;          // 先声明，后赋值
+    a = 1;    
+    int a = 1;      // 声明并赋值
     ```
-   - 分类：
+   - 分类
      1. 全局变量：即成员变量，或者叫实例变量，类中共享的变量
      1. 局部变量：方法中定义的变量，一个方法中局部变量不能重名，局部比全局的优先级高，java会给全局变量定义初始值(定义不赋值)，不会给局部定义
      1. 类变量：即静态变量。在构造方法和语句块之外。属于类，所有实现的对象共享只有一份
@@ -200,452 +115,79 @@
         // 使用
         类名.name;(类中)/name;(类外)
         ```
+1. 常量：一旦定义，不能修改，通常大写，可提高程序可维护性，避免命名不规范等问题，使用final定义 `final String LOVE = "imooc";`
+1. 符号
+   - 运算符
+     1. 分类
+        - 算术：+-*/  -  %  ++  --
+        - 比较：>  <  ><=  ==  !=
+        - 逻辑：&&  ||  !
+        - 赋值：=  +-*/%=  &|^=  <<=(x=x<<y)  <<<=  <<=
+        - 字符串连接：+
+        - 条件： ? :
+        - 位：&   |   ~(非)   ^(异或)   ~(逐位取反)   <<(按位左移固定位数)   >>   >>>("无符号"右移运算)   <<<
+        - 强制类型转换：()
+     1. 特性
+        - 自增/减只能用于变量，位置前后作用不同
+        - 括号优先级最高
+        - 只有==和!=两个比较运算符两边可以是引用类型，其他的两边都是数值型
+        - ^异或：有且仅有一个才行。java有短路执行特性，即只执行一部分
+   - 修饰符
+     1. 访问：用于修饰类、方法和变量，可以没有，默认为default，只能往更宽泛的权限继承
+        - private：本类可见，类和接口不能声明为private，一旦声明私有只能通过getter和setter被外部操作
+        - default：其他类和子类不可见
+        - protected：其他类不可见，接口不能声明为protected，类的方法和全局变量可以，接口的方法和全局变量不行
+        - public：所有类可见，main必须是public的，否则解释器不能运行此类
+     1. 其他
+        - static：创建类变量和类方法
+        - interface：创建接口
+        - abstract：创建抽象类和抽象方法
+        - final：修饰的类不能被继承，修饰的方法不能被重载，修饰的变量为常量不能修改
+        - strictfp：浮点数使用严格规则
+        - transient：对象变量持久化跳过修饰符，只修饰变量，不修饰方法和类。被修饰的变量和静态变量不能被序列化。`public transient int limit = 1;`
+        - synchronized：同一时间只能被一个线程访问 `public synchronized void showDetails(){}`
+        - volatile：每次被线程访问，强制从共享内存中重新读取该成员变量的值。当成员变量改变时强制线程将变化值写回内存。保证不同线程看到同一变量的值
+   - 标识符：用于定义名字，大小写敏感，由字母/数字/下划线/$组成，数字不能开头，类首字母大写和驼峰法
+   - 注释：// 单行注释、/* */文档注释、/* * */多行注释
+     1. 注释标签：提取Java注释：`javadoc -d doc hello.java`
+        - 基本说明：@author、@version、@link、@see 参考
+        - 方法说明：@param、@serial 序列化属性、@exception、@return
 1. 流程控制
    - 判断
-        ```Java
-        if() {                  // if
-        }else if(){
-        }else{
-        }
-        switch() {  ·           // switch
-            case value1:
-            // 执行;break;
-            default:
-            // 执行
-        }
-        ```
-    - 循环
-        ```Java
-        while(i <= 1000) {                     // while
-            i++;
-        }
-
-        do {                                   // do
-            i++;
-        } while(i <= 1000);
-
-        for(int i=1,j=1;i <= 1000 && j != -1000;i++,j--) {              // for
-            i++;
-        }
-        
-        List<String> list = new ArrayList<String>(); // 数组类           // foreach
-        for(String item : list){
-            System.out.println("循环元素：" + item);
-        }
-        Map<String, String> map = new HashMap<String, String>(); // 非数组类
-        for(Entry<String, String> item : map.entrySet()){
-            item.getKey();
-            item.getValue());
-        }
-        // 循环控制
-        break;
-        continue;
-        ```
-1. 时间和日期
-   - 理解：属于java.util包。
-   - 示例
-        ```Java
-        // 实例化，可以传入1970年后的毫秒数
-        Date([long millsec])
-        // 获取当前时间
-        Date date = new Date();
-        System.out.println(date.toString());
-        ```
-   - Date的方法
-     1. alter()/before()：是否在日期之前/之后
-     1. clone()：返回副本
-     1. compareTo()：和日期对比。相同为0，在指定之前为负，之后为后
-     1. equals()：对比是否相同
-     1. getTime()：获得时间戳
-     1. hashCode()：此对象哈希值
-     1. setTime()：用时间戳设置时间
-     1. toString()：转换Date为String
-   - SimpleDateFormat类
-        ```Java   
-        // 格式化时期显示
-        Date dNow = new Date();
-        SimpleDateFormat ft = new SimpleDateFormat("E yyyy.MM.dd 'at' hh:mm:ss a zzz");
-        ft.format(dNow)
-        // 解析字符串为时间
-        SimpleDateFormat ft = new SimpleDateFormat("yyyy-MM-dd");
-        String input = "1818-11-11";
-        ft.parse(input);
-        ```
-    - Calendar类
-      1. 理解：获取日期的一部分，加减日期
-      1. 示例
-            ```Java
-            Calendar c = Calendar.getInstance(); // 创建，默认当前时区
-            Calendar c = Calendar.getInstance(); // 创建指定日期
-            c.set(2009, 6 - 1, 12);
-            c.get(Calendar.YEAR); // 获得年份
-            c.add(Calendar.DATE, 10); // 加10天
-            ```
-      1. 字段类型：Calendar.YEAR/MOUTH/DATE/DAY_OF_MOUTH/HOUR/HOUR_OF_DAY/MINUTE/SECOND/DAY_OF_WEEK
-      1. GregorianCalendar类：实现公历日历，是Calendar的一个实现
-1. IO
-   - 理解：Java.io包几乎包含所有操作输入/输出的类。流可以理解为一个序列的数据
-   - 字节流：FileInputStream/FileOutputStream
-   - 字符流：FileReader/FileWriter，一般读写两个字节
-   - 标准流：
-     1. Standard Input：System.in
-     1. Standard Output：System.out
-     1. Standard Error：System.err
-   - 控制台输入/输出：
-     1. System.in、Scanner类：输入
-        - 方法一
-        ```Java
-        // 由System.in完成，在BufferedReader对象中创建字符流
-        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-        //读取字符
-        do {
-            c = (char)br.read();
-            System.out.println(c);
-        } while(c != 'q');
-        String str = br.readLine(); // 读取字符串
-        ```
-        - 方法二
-        ```Java
-        // Scanner类，jdk5之后可用获得输入
-        Scanner s = new Scanner(System.in);
-        if(scan.hasNext()){
-            String str1 = scan.next();
-            System.out.println("输入的数据为："+str1);
-        }
-        //或者
-        if(scan.hasNextLine()){
-            String str2 = scan.nextLine();
-            System.out.println("输入的数据为："+str2);
-        }
-        //区别：
-        next：一定读取到有效字符才结束输入，自动去掉之前空白，有效符后面的空白作为分隔符和结束符，所有不能输入空格
-        nextLine：回车为结束符
-        ```
-     1. System.out.write()：输出
-1. File
-   - 读取文件：File类、FileInputStream类
-     1. 创建
-        ```Java
-        // 创建输入流对象
-        InputStream f = new FileInputStream("C:/java/hello");
-        // 创建使用文件对象创建输入流对象
-        File file = new File("C:/java/hello");
-        InputStream f = new FileInputStream(file);
-        ```
-     1. 方法
-        - public int available() throws IOException{}
-        - public int read(byte[] r) throws IOException{}
-        - public int read(int r)throws IOException{}
-        - protected void finalize()throws IOException {}
-        - public void close() throws IOException{}
-     1. 其他输入流
-        - ByteArrayInputStream
-        - DataInputStream
-   - 写入文件：FileOutputStream类
-     1. 创建
-        ```Java
-        // 创建输出流对象
-        OutputStream f = new FileOutputStream("C:/java/hello");
-        // 创建使用文件对象创建输出流对象
-        File file = new File("C:/java/hello");
-        OutputStream f = new FileOutputStream(file);
-        ```
-     1. 方法
-        - protected void finalize()throws IOException {}
-        - public void write(int w)throws IOException{}
-        - public void write(byte[] w)
-        - public void close() throws IOException{}
-     1. 其他输出流：ByteArrayOutputStream、DataOutputStream
-1. 目录
-   - 读取：一个目录即一个对象
     ```Java
-    File d = new File(dirname);
-    d.isDirectory(); // 是否是目录
-    d.list(); // 列出文件和文件夹列表
-    ```
-   - 创建：mkdir()/mkdirs()
-    ```Java
-    bool mkdir() // 返回false表明已存在或父级目录不存在
-    bool mkdirs() // 递归创建文件夹
-    // java自动识别win和unit系统的分隔符
-    // 例子
-    String dirname = "/tmp/user/java/bin";
-    File d = new File(dirname);
-    d.mkdirs();
-    ```
-   - 删除文件/目录：delete()
-    ```Java
-    File folder = new File("/tmp/java/test");
-    String[] entries = folder.list();
-    for(String s: entries){
-        File currentFile = new File(folder.getPath(),s);
-        currentFile.delete();
+    if() {               // if
+    }else if(){
+    }else{
+    }
+    switch() {  ·        // switch
+        case value1:
+        case value2:
+        default:
     }
     ```
-1. 错误和异常
-   - 认识：错误和异常是不同的，Throwable是祖宗，有两个子类：Exception和Error。所有异常类都是Exception的子类
-   - 错误： `java.lang.Error`
-   - 异常
-     1. 分类
-        - 检查性异常类：Exception
-        - 运行时异常类：RuntimeException
-     1. 捕获异常：catch语句包含异常的声明，定义捕获哪种类型的异常
-        ```Java
-        try{
-        }catch(ExceptionName e) {
-        }
-        try{
-            int a[] = new int[2];
-            System.out.println("Access element three :" + a[3]);
-        }catch(ArrayIndexOutOfBoundsException e){
-            System.out.println("Exception thrown  :" + e);
-        }
-        // 多重捕获
-        try{
-        }catch(异常类型1 异常的变量名1){
-        }catch(异常类型2 异常的变量名2){
-        }finally{}                                    // 此代码块总会被执行，适用善后性质的语句
-        try{
-            file = new FileInputStream(fileName);
-            x = (byte) file.read();
-        }catch(IOException i){
-            i.printStackTrace();
-        }catch(FileNotFoundException f) {
-            f.printStackTrace();
-        }
-        ```
-     1. 抛出异常：throw
-        ```Java
-        throw new RemoteException();
-        ```
-     1. 自定义异常
-        ```Java
-        // 声明异常类
-        class MyException extends Exception/RuntimeException{}
-        ```
-1. 正则表达式
-   - 理解：和Perl类似，在java.util.regex
-   - 主要类
-     1. Patten：patten对象是一个正则表达式的编译表示。无公共构造方法，首先调用公共静态编译方法，获得Patten对象，接受一个正则表达式为一参
-     1. Matcher：matcher对象是对输入的字符串进行解释和匹配操作的引擎。无公共构造方法，用Patten的matcher方法获得Matcher对象。
-     1. PattenSyntaxException：非强制异常类，表示正则表达式模式的语法错误
-   - 示例
-      ```Java
-      import java.util.regex.*;
-      String content = "aaa";
-      String pattern = ".\*bbb.\*";
-      boolean isMatch = Pattern.matches(pattern, content); // 返回结果
-      ```
-   - 捕获组：将多个字符当一个独立单元处理的方法。调用matcher对象的groupCount方法统计组数
-### Java类库
-1. Java常见类库、包
-   - java.lang：语言包
-     1. 数据类型包装类
-     1. 字符处理类
-        - String类
-        - StringBuffer类
-     1. Math/Character/Date：数学日期类
-     1. Object：类，所有类都继承，唯一没有父类的类
-     1. 操作类
-        - Class类(反射类)
-        - ClassLoader类
-     1. Process：过程类
-     1. 系统和运行类
-        - System类
-        - Runtime类
-     1. 错误和异常处理类
-        - Throwable
-        - Exception
-        - Error
-     1. 线程类
-        - Thread类
-        - TreadDeath
-        - Runnable类
-   - java.util：工具包
-     1. Random/UUID：随机数/UUID类
-     1. 数据结构类
-        - Vector：向量类
-        - Stack：栈类
-        - HashTable：散列表类
-        - LinkedList：链表类
-     1. 日期类
-        - Date类
-        - Calendar类
-        - GregorianCalendar类
-   - java.io：输入输出包，InputStream/OutputStream
-   - java.net
-   - java.sql
-   - java.awt/swing：窗口工具包
-   - applet
-1. 包装类
-   - 定义：将内置数据类型作为当做对象使用。都是抽象类Number的子类，属于java.lang包
-   - 分类
-     1. Byte、Integer、Short、Long、Float、Double
-        ```Java
-        int a = 1;          // 内置数据类型
-        Integer a = 1;      // 包装类
-        ```
-     1. Character、Boolean
-        - 定义：是char的包装类，对单个字符进行操作，包装了一个char类型的对象
-        - 示例：
-            ```Java
-            char char = 'a';                        // char数据类型
-            char[] charArray ={'a', 'b'};           // 字符数组
-            Character char = new Character('a');    //Character类对象
-            ```
-        - 常用方法：
-           1. isLetter()：是否一字母
-           1. isDigit()：是否一数字字符
-           1. isWhitespace()：是否空格
-           1. isUpperCase/LowerCase()：是否大、小写字母
-           1. toUpperCase/toLowerCase()：设置大、小写
-           1. toString()：返回字符的字符串形式
-   - 特点：包装类和基本类型可以自动转换，叫做自动封箱和自动解封
-        ```Java
-        int a = 1;          // 内置数据类型
-        Integer a = a;      //自动封箱
-        int a1 = a;         //自动解封
-        ```
-1. String
-   - 理解：java使用String类来创建和操作字符串，不是8种基本类型，是特殊的对象，默认值是null
-   - 特点
-     1. 有11个构造方法
-     1. 字符串的不变性：String对象创建后不可修改，所谓的修改就是创建了新的对象，指向了不同的空间
-     1. 一旦创建不可改变，如果有很多修改，使用StringBuffer和StringBuilder
-   - 创建
-        ```Java
-        String s1 = "aaa";
-        String s2 = new Stirng();
-        String s3 = new String("aaa");
-        // 提供一个字符数组参数
-        char[] helloArray = {'r', 'u'};
-        String helloString = new String(helloArray); // 输出runoob
-        // 字符串的比较
-        s1 == s2 // false
-        s1.equqls(s2); // true
-        ```
-   - 方法
-     1. int length()：长度
-     1. concat()：连接
-     1. charAt()：指定位置的值，返回的值可以为char`char charAt(int index)`
-     1. copyValueOf()：返回数组中指定的偏移和长度的字符串。`public static String copyValueOf(char[] data, int offset, int count)`
-     1. indexOf()：字符在此字符串第一次出现的索引，二参为开始搜索位置`int indexOf(String/int, int ch)`
-     1. lastIndexOf()：字符串最后一次出现的索引`int lastIndexOf(int ch, int fromIndex)`
-     1. equals()：与String对象进行比较，返回布尔值`boolean equals(Obj obj)`
-     1. equalsIgnoreCase()：与String对象进行比较忽略大小写，返回布尔值`boolean equalsIgnoreCase (String str/String str)`
-     1. compareTo()：与String对象进行比较，相等返回int0，小于为负数，大于为正数`int compareTo(Obj obj)`
-     1. compareToIgnoreCase()：与String对象进行比较，比较时忽略大小写`int compareToIgnoreCase (String str)`
-     1. contentEquals()：将此字符串与StringBuffer比较是否相同`boolean contentEquals(StringBuffer sb)`
-        ```Java
-        String str1 = "String1";
-        String str2 = "String2";
-        StringBuffer str3 = new StringBuffer( "String1");
-        boolean result = str1.contentEquals( str3 ); // true
-        result = str1.contentEquals( str3 ); // false
-        ```
-     1. trim()：去掉前后空白`String trim()`
-     1. replace()
-     1. replaceAll()
-     1. replaceFirst()
-     1. split()：正则拆分字符串`String[] split(String regex, [int limit])`
-     1. substring()：返回新子字符串`String substring(int beginIndex)`
-     1. matches()：是否匹配给定的正则`boolean matches(String regex)`
-     1. regionMatches()
-     1. intern()：String 返回字符串的规范化表示形式`String intern()`
-     1. hashCode()：int hashCode()，哈希值`Int hashCode()`
-     1. startsWith()：是否以指定的后缀结束`boolean startsWith(String str)`
-     1. endsWith()：是否以指定的后缀结束`boolean endsWith(String str)`
-     1. getBytes()：使用字符集将字符串编码为byte序列`byte[] getBytes()`
-        ```Java
-        byte[] Str2 = Str1.getBytes();
-        Str2 = Str1.getBytes( "UTF-8" );
-        Str2 = Str1.getBytes( "ISO-8859-1" );
-        ```
-     1. getChars()：将字符串复制到字符数组`void getChars(int srcBegin, int srcEnd, char[] dst, int dstBegin)`
-     1. toCharArray()：转为字符串数组`char[] toCharArray()`
-     1. toLowerCase()：所有转为小写`String toLowerCase([Locale locale])`
-     1. toUpperCase()：所有转为小写`String toUpperCase([Locale locale])`
-     1. format()：格式化字符串
-1. StringBuilder
-   - 理解：同StringBuffer，但不是线程安全的，即不能同步访问。更快，建议使用
-   - 方法
-     1. append
-     1. insert
-     1. toString
-     1. length
-   - 例子
+   - 循环
     ```Java
-    productName = new StringBuilder().append("%").append(productName).append("%").toString();
+    for(int i=1,j=1;i <= 1 && j != 0;i++,j--) {}    // for
+    while(i <= 1) {                                 // while
+        i++;
+    }
+    do {                                            // do
+        i++;
+    } while(i <= 1000);
+    break;continue;                                 // 流程控制
+    // foreach
+    List<String> list = new ArrayList<String>();                // 数组
+    for(String item : list){}
+    Map<String, String> map = new HashMap<String, String>();    // 非数组
+    for(Entry<String, String> item : map.entrySet()){
+        item.getKey();
+        item.getValue());
+    }
     ```
-1. StringBuffer
-   - 理解：对字符串进行修改时用到，能够被修改并且不产生新对象。如果要求线程安全，则必须使用StringBuffer
-   - 方法
-     1. append()：追加字符串`StringBuffer append(String str)`
-     1. reverse()：以反转形式取代`StringBuffer reverse(StringBuffer sb)`
-     1. delete()：删除字符串中某些`StringBuffer delete(int start, int end)`
-     1. insert()：插入`StringBuffer insert(int offset, int )`
-     1. replace
-1. Math类
-   - 定义：提供了基本数学运算的属性和方法。如初等函数、对数、平方根和三角函数，都是静态函数
-   - 示例
-        ```Java
-        Math.sin(Math.PI/2) // 90 度的正弦值
-        ```
-   - 常用方法：
-     1. x.byteValue()：将Number对象转换为基本数据类型。如short/int/long/float/doubleValue();
-        ```Java
-        Integer x = 1;
-        x.byteValue()
-        ```
-     1. toString()：以字符串形式返回
-     1. parseInt()：将字符串解析为int类型
-     1. valueOf()：返回参数的原生Number对象值。参数为原生数据类型、String。
-        ```
-        static Integer valueOf(int i)
-        static Integer valueOf(String s)
-        static Integer valueOf(String s, int radix)
-        ```
-     1. equals(param)：number对象是否和参数相等
-        ```Java
-        Integer x = 1;
-        Integer y = 1;
-        System.out.println(x.equals(y));
-        ```
-     1. compareTo(param)：将number对象和参数比较。同类型数据比较，返回值：0相等、小于参数-1、大于1
-     1. abs()：绝对值
-     1. ceil、floor、rint()：对整形变量向左、右取整、最接近的整数，返回double类型
-     1. round()：返回最接近的int、long值
-     1. min、max()：两个参数得最大小值
-     1. random()：返回随机值，0到1之间，无参数
-1. UUID
-   - 理解：算法的核心思想是结合机器的网卡、当地时间、一个随即数来生成GUID，从理论上讲，如果一台机器每秒产生10000000个GUID，则可以保证（概率意义上）3240年不重复。java 5新增
-   - 使用
-   ```Java
-   import java.util.UUID;
-   UUID.randomUUID().toString();
-   ```
-1. Apache Commons包
-   - commons-lang3-3.1.jar
-     1. 理解：对JDK中java.lang包的补充，提供了很多Utilities工具类
-     1. 使用
-        - `StringUtils.isEmpty()/trim()/split()/join()` 字符串操作
-        - `StringEscapeUtils.escapeCsv/escapeHtml4/escapeJava/escapeEcmaScript/escapeXml` 字符串的转义
-        - `RandomStringUtils.random/randomAlphabetic/randomAlphanumeric/randomAscii` 随机数
-        - `ArrayUtils.add/remove/subarray/clone/contains/indexOf/lastIndexOf/toMap/isEmpty/isNotEmpty/isSameLength/toPrimitive/toObject` 数组
-        - `DateUtils.parseDate/addDays/addMonths/isSameDay/` 日期
-        - `DateFormatUtils.format` 日期
-   - commons-beanutils-1.8.3.jar
-     1. 理解：用于操作Bean、url、Date
-     1. 使用
-        - `BeanUtils.getProperty/setProperty/cloneBean/describe/populate/getArrayProperty/getIndexedProperty/getMappedProperty/getProperty/getNestedProperty` Bean
-        - `url.getProtocol/getHost/getPath` url
-        - `ConvertUtils.register(converter, Date.class/String.class);` ConvertUtils
-        - Base64
-        - StringHelper
 ### 面向对象
 1. 封装/继承/多态
    - 封装：将类的实现信息隐藏起来，不能让外部直接访问，而是通过类提供的方法来访问
-     1. 封装的好处：安全、保护屏障，隐藏类实现细节，适当的封装更容易修改和实现
+     1. 封装的好处：安全、保护屏障，隐藏类的实现细节，保护类的数据，适当的封装更容易修改和实现
      1. 封装的步骤：修改可见性添加修饰符——创建getter/setter方法——getter/setter设置控制语句
      1. 内部类
         - 定义：就是一个类中定义的类，对应的是外部类
@@ -921,4 +463,1003 @@
      1. 包采用了树形目录的存储方式，不同包中的类名可以相同。com.runoob.test的目录结构为`CLASSPATH\com\runoob\test\类名`
      1. 包也限定了访问权限，有包的权限才能访问包中的类
      1. 可以定义自己的包
+### 常用类
+1. 包装类
+   - 定义：将内置数据类型作为当做对象使用。都是抽象类Number的子类，属于java.lang包
+   - 分类
+     1. Byte、Integer、Short、Long、Float、Double
+        ```Java
+        int a = 1;          // 内置数据类型
+        Integer a = 1;      // 包装类
+        ```
+     1. Character、Boolean
+        - 定义：是char的包装类，对单个字符进行操作，包装了一个char类型的对象
+        - 示例：
+            ```Java
+            char char = 'a';                        // char数据类型
+            char[] charArray ={'a', 'b'};           // 字符数组
+            Character char = new Character('a');    //Character类对象
+            ```
+        - 常用方法：
+           1. isLetter()：是否一字母
+           1. isDigit()：是否一数字字符
+           1. isWhitespace()：是否空格
+           1. isUpperCase/LowerCase()：是否大、小写字母
+           1. toUpperCase/toLowerCase()：设置大、小写
+           1. toString()：返回字符的字符串形式
+   - 特点：包装类和基本类型可以自动转换，叫做自动封箱和自动解封
+        ```Java
+        int a = 1;          // 内置数据类型
+        Integer a = a;      //自动封箱
+        int a1 = a;         //自动解封
+        ```
+1. String
+   - 理解：java使用String类来创建和操作字符串，不是8种基本类型，是特殊的对象，默认值是null
+   - 特点
+     1. 有11个构造方法
+     1. 字符串的不变性：String对象创建后不可修改，所谓的修改就是创建了新的对象，指向了不同的空间
+     1. 一旦创建不可改变，如果有很多修改，使用StringBuffer和StringBuilder
+   - 创建
+        ```Java
+        String s1 = "aaa";
+        String s2 = new Stirng();
+        String s3 = new String("aaa");
+        // 提供一个字符数组参数
+        char[] helloArray = {'r', 'u'};
+        String helloString = new String(helloArray); // 输出runoob
+        // 字符串的比较
+        s1 == s2 // false
+        s1.equqls(s2); // true
+        ```
+   - 方法
+     1. int length()：长度
+     1. concat()：连接
+     1. charAt()：指定位置的值，返回的值可以为char`char charAt(int index)`
+     1. copyValueOf()：返回数组中指定的偏移和长度的字符串。`public static String copyValueOf(char[] data, int offset, int count)`
+     1. indexOf()：字符在此字符串第一次出现的索引，二参为开始搜索位置`int indexOf(String/int, int ch)`
+     1. lastIndexOf()：字符串最后一次出现的索引`int lastIndexOf(int ch, int fromIndex)`
+     1. equals()：与String对象进行比较，返回布尔值`boolean equals(Obj obj)`
+     1. equalsIgnoreCase()：与String对象进行比较忽略大小写，返回布尔值`boolean equalsIgnoreCase (String str/String str)`
+     1. compareTo()：与String对象进行比较，相等返回int0，小于为负数，大于为正数`int compareTo(Obj obj)`
+     1. compareToIgnoreCase()：与String对象进行比较，比较时忽略大小写`int compareToIgnoreCase (String str)`
+     1. contentEquals()：将此字符串与StringBuffer比较是否相同`boolean contentEquals(StringBuffer sb)`
+        ```Java
+        String str1 = "String1";
+        String str2 = "String2";
+        StringBuffer str3 = new StringBuffer( "String1");
+        boolean result = str1.contentEquals( str3 ); // true
+        result = str1.contentEquals( str3 ); // false
+        ```
+     1. trim()：去掉前后空白`String trim()`
+     1. replace()
+     1. replaceAll()
+     1. replaceFirst()
+     1. split()：正则拆分字符串`String[] split(String regex, [int limit])`
+     1. substring()：返回新子字符串`String substring(int beginIndex)`
+     1. matches()：是否匹配给定的正则`boolean matches(String regex)`
+     1. regionMatches()
+     1. intern()：String 返回字符串的规范化表示形式`String intern()`
+     1. hashCode()：int hashCode()，哈希值`Int hashCode()`
+     1. startsWith()：是否以指定的后缀结束`boolean startsWith(String str)`
+     1. endsWith()：是否以指定的后缀结束`boolean endsWith(String str)`
+     1. getBytes()：使用字符集将字符串编码为byte序列`byte[] getBytes()`
+        ```Java
+        byte[] Str2 = Str1.getBytes();
+        Str2 = Str1.getBytes( "UTF-8" );
+        Str2 = Str1.getBytes( "ISO-8859-1" );
+        ```
+     1. getChars()：将字符串复制到字符数组`void getChars(int srcBegin, int srcEnd, char[] dst, int dstBegin)`
+     1. toCharArray()：转为字符串数组`char[] toCharArray()`
+     1. toLowerCase()：所有转为小写`String toLowerCase([Locale locale])`
+     1. toUpperCase()：所有转为小写`String toUpperCase([Locale locale])`
+     1. format()：格式化字符串
+1. StringBuilder
+   - 理解：同StringBuffer，但不是线程安全的，即不能同步访问。更快，建议使用
+   - 方法
+     1. append
+     1. insert
+     1. toString
+     1. length
+   - 例子
+    ```Java
+    productName = new StringBuilder().append("%").append(productName).append("%").toString();
+    ```
+1. StringBuffer
+   - 理解：对字符串进行修改时用到，能够被修改并且不产生新对象。如果要求线程安全，则必须使用StringBuffer
+   - 方法
+     1. append()：追加字符串`StringBuffer append(String str)`
+     1. reverse()：以反转形式取代`StringBuffer reverse(StringBuffer sb)`
+     1. delete()：删除字符串中某些`StringBuffer delete(int start, int end)`
+     1. insert()：插入`StringBuffer insert(int offset, int )`
+     1. replace
+### 数据结构
+1. 总结
+   - 枚举Enum：只能是预先设置好的值
+   - 数组Array————位集合BitSet
+   - 向量Vector————栈Stack：长度可以改变
+   - 字典Dictionary————哈希表Hashtable————属性Properties：键映射到值的数据结构，一个抽象类，一个实现了Map接口
+1. 数组：Array，存储在堆上的对象，长度是固定的，用来存储固定数量的多个同类型变量，是一种数据结构，是个容器
+   - 定义
+        ```Java
+        数据类型 数组名[] // 或者 数据类型[] 数组名
+        // 举例
+        int[] myArray; // 声明
+        myArray = new int[size]; // 指定数组长度
+        int[] myArray = new int[size]; // 声明并指定长度
+        int[] myArray = {78,93}; // 声明并填充内容
+        int myArray[] = {78,93}; // 声明并填充内容
+        int[] myArray = new int(){78,93}; // 声明并填充内容
+        ```
+   - 处理：
+        ```Java
+        // 访问
+        myArray[1];
+        // 赋值
+        myArray[1] = 1;
+        // 长度
+        myArray.length();
+        // 遍历
+        for (int i = 0; i < myArray.length; i++) {} // 内循环处理
+        for (double element: myArray) {} // foreach处理
+        public static void printArray(int[] myArray) {} // 作为参数传递
+        ```
+   - 二维数组
+     1. 声明：`int 数组名[][] = new int[行数][列数]`
+        ```Java
+        // 每个数组内容的列数可以不同
+        int num[][] = new int[2][];
+        num[0] = new int[2];
+        num[1] = new int[3];
+        // 访问
+        num[0][0]
+        ```
+   - Arrays类：java提供的工具类，包为java.util.Arrays ，包含排序、搜索等方法
+     1. 排序
+        ```Java
+        import java.util.Arrays;
+        Arrays.sort(scores);
+        ```
+     1. 查找：binarySearch：`int binarySearch(Obj[] a, Obj key)`
+     1. 比较：equals：`boolean equals(long[] a, long[] a2)`
+     1. Arrays.toString(Array);
+1. 位集合：（BitSet）位集合类实现了一组可以单独设置和清除的位或标志。该类处理一组布尔值的时候很有用。创建一种特殊类型的数组来保存值，数组大小随需要增加
+   - 定义：
+        ```Java
+        BitSet bits1 = new BitSet(16);
+        // 有两个构造方法
+        BitSet(); // 创建一个默认对象
+        BitSet(int size); // 允许用户指定初始大小，默认0
+        ```
+   - 使用：`bits1.set(i);`
+   - 方法：实现了Cloneable接口中定义的方法
+     1. `void and(BitSet set)` // 逻辑与操作
+     1. `void andNot(BitSet set)` // 清除此BitSet中所有的位
+     1. `int cardinality()` // 返回为true的位数
+     1. `void clear()` // 全部位置为false
+     1. `void clear(int index)` // 指定位置为false
+     1. `void clear(int startIndex, int endIndex)` // 指定位置为false
+     1. `boolean get(int index)` // 返回索引处位值
+     1. `BitSet get(int startIndex, int endIndex)` // 返回索引处位值
+1. 向量：（Vector）向量类和传统数组非常相似，Vector能根据需要动态变化。和数组一样元素能通过索引访问。最主要好处就是在创建对象时不必指定大小，会动态变化。适用在数组要动态变化的情况下
+   - 定义
+        ```Java
+        Vector()
+        Vector(int size) // 指定大小
+        Vector(int size,int incr) // 用incr确定向量每次增加的元素数目
+        Vector(Collection c) // 包含集合C的向量
+        // 示例
+        Vector v = new Vector(3, 2);
+        v.size();
+        v.addElement(new Integer(1));
+        // 转换为枚举
+        Enumeration vEnum = v.elements();
+        while(vEnum.hasMoreElements()) {
+            vEnum.nextElement() + " ");
+        }
+        ```
+   - 方法
+     1. `void add(int index, Object element)` // 添加元素
+     1. `boolean add(Object o)` // 添加到末尾
+     1. `boolean addAll(int index, Collection c)` // 指定位置插入集合中所有值
+     1. `int capacity()` // 返回当前容量
+   - 特点：是同步访问的，包含传统方法，和ArrayList类似，不属于集合框架
+1. 栈：（Stack）实现了先进后出的数据结构。是Vector的子类
+   - 定义
+        ```Java
+        // 示例
+        Stack st = new Stack();
+        st.push(new Integer(1));
+        ```
+   - 方法
+     1. `boolean empty()` // 是否为空
+     1. `Object peek()` // 查看顶部对象，不移除
+     1. `Object pop( )` // 返回顶部并移除
+     1. `Object push(Object element)` // 把元素压入顶部
+     1. `int search(Object element)` // 对象在堆栈的位置，1为基数
+1. 枚举：（Enumeration）枚举接口java5.0引入，限制变量只能是预先设定好的值，使用枚举可以减少代码中bug。已经被迭代器取代，很少使用。本质是类，取代定义很多的变量`public static final`，父类`java.lang.Enum<E>`
+   - 包含：变量、方法、构造函数
+   - 特点：可以在任何地方声明枚举
+   - 定义
+        ```Java
+        // 定义枚举
+        public enum Color {
+            RED, GREEN, BLANK, YELLOW 
+        }
+        // 使用
+        Color.RED
+        Color.RED.equals(color);
+        ```
+   - 自定义函数：
+        ```Java
+        public enum Color {
+            RED("红色", 1), GREEN("绿色", 2), BLANK("白色", 3), YELLO("黄色", 4);
+            private String name ;
+            private int index ;
+            private Color( String name, int index ){
+                this.name = name ;
+                this.index = index ;
+            }
+            public String getName/getIndex() {
+                return name;
+            }
+            public void setName/setIndex(String name) {
+                this.name = name;
+            }
+        }
+        // 使用
+        Color.RED.getName();
+        ```
+1. 字典：（Dictionary）字典类是抽象类，定义键映射到值的数据结构。通过键而不是整数索引来访问数据时使用。因为是抽象类，所以只提供数据结构，没有提供具体实现。存储键/值对，作用和Map类相似
+   - 定义
+   - 方法
+     1. `boolean isEmpty()` // 是否空字典
+     1. `int size()` // 数量
+     1. `Object get(Object key)` // 返回键对应的值
+     1. `Object put(Object key, Object value)` // 插入或更新
+     1. `Object remove(Object key)` // 删除
+     1. `Enumeration keys()` // 返回字典中键的枚举
+     1. `Enumeration elements()` // 返回字典中值的枚举
+1. 哈希表：（Hashtable）Hashtable类提供了用户定义键结构的组织数据的手段，哈希表的键的具体含义取决于使用场景和包含的数据。是原始的java.util的一部分，是Dictionary的具体实现，是其子类。Java 2的Hashtable实现了Map接口，所以现在集成到了集合框架中，和HashMap类似，但是支持同步。哈希表的键经过哈希处理得到的散列码用作值的索引
+   - 定义：
+        ```Java
+        Hashtable()
+        Hashtable(int size)
+        Hashtable(int size,float fillRatio) // fillRatio指定填充比例(0.0~1.0)，决定了重新调整大小的充满程度
+        Hashtable(Map m) // 以M中元素为初始化元素的哈希表，哈希表的容量被设置为M的两倍
+        ```
+   - 实例
+        ```Java
+        Hashtable balance = new Hashtable();
+        balance.put("Zara", new Double(3434.34));
+        ```
+   - 方法
+     1. `Object get(Object key)` // 返回值
+     1. `Object put(Object key, Object value)` // 添加或更新
+     1. `Object remove(Object key)` // 删除
+     1. 
+     1. `boolean contains(Object value)` // 此映射表中是否存在与指定值关联的键
+     1. `boolean containsKey(Object key)` // 是否存在键
+     1. `boolean containsValue(Object value)` // 是否存在值
+     1. `boolean isEmpty()` // 是否为空
+     1. `int size()` // 键的数量
+     1. 
+     1. `Enumeration keys()` // 返回键的枚举
+     1. `Enumeration elements()` // 返回值的枚举
+     1. `String toString()` // 返回哈希对象的字符串表示形式
+     1. 
+     1. `void clear( )` // 清空
+     1. `Object clone()` // 创建浅表副本
+     1. `void rehash()` // 增加此哈希表的容量并在内部对其进行重组，以便更有效地容纳和访问其元素
+1. 属性：（Properties）Properties类是Hashtable的子类，表示一个持久的属性集。属性列表中每个键和对应值都是字符串。获取环境变量时它作为System.getProperties()的返回值
+   - 定义
+        ```Java
+        Properties()
+        Properties(Properties propDefault)
+        // 定义如下实例变量，这个变量有Properties对象相关的默认属性列表
+        Properties defaults;
+        ```
+   - 实例
+        ```Java
+        Properties capitals = new Properties();
+        capitals.put("aa", "11");
+        // 读取配置
+        InputStream in = new BufferedInputStream(new FileInputStream(new File(basePath)));
+        Properties prop = new Properties();
+        prop.load(in);
+        prop.getProperty("path");
+        ```
+   - 方法
+     1. `load(InputStream streamIn)` // 从输入流中读取属性列表
+     1. `propertyNames( )` // 按简单的面向行的格式从输入字符流中读取属性列表
+     1. `list(PrintStream streamOut/PrintWriter streamOut)` // 属性列表输出流
+     1. `getProperty(String key)` // 搜索属性
+     1. `getProperty(String key, String defaultProperty)` // 搜索属性
+     1. `setProperty(String key, String value)` // 调用Hashtable的put方法
+     1. `store(OutputStream streamOut, String description)` // 输出配置
+     1. `clear()` // 清楚装载的配置
+### 集合
+1. 总结
+   - ArrayList 排列有序可重复
+   - HashMap 键值对
+   - HashSet 排列无序不可重复
+1. 简介：是一种工具类，具有共同属性的数据集合，是盛装其他对象的容器，Java2引入，是用来代表/操作集合的统一架构，集合围绕一组标准接口而设计，可以直接使用接口的标准实现，常用有ArrayList、HashMap，HashSet不常用
+1. 组成
+   - Collection：内部存储的都是一个个的对象，单个的
+     1. List：序列，排列有序可重复
+        - ArrayList：数组序列，底层由数组实现
+     1. Queue：队列，排列有序可重复
+        - LinkedList：链表，同时也是List的实现类
+     1. Set：集，无序不可重复
+        - HashSet：哈希集
+   - Map：包含了很多的映射，一对的，有众多子接口
+     1. HashMap：哈希map，基于hash表实现
+   - 工具接口和类
+     1. Collections：工具类，最常用sort方法
+     1. Comparable接口：默认比较规则
+     1. Comparator接口：临时比较规则
+1. Collection
+   - List：查询效率高，插入和删除低，因为引起其他元素改变。Set查询效率低，插入和删除效率高
+     1. `AbstractList`：继承于AbstractCollection，实现了大部分List接口。子类AbstractSequentialList提供对数据元素的链式访问，不是随机访问
+     1. `ArrayList`：实现可变大小的数组，线程不同步
+     1. `LinkedList`：实现了List接口，允许null存在。用于创建链表数据结构，查找效率低。没有同步方法，多线程需要自己实现访问同步，解决方案：创建List时候构造一个同步的List。
+   - Set：没有get方法，想要访问只能通过foreach和iterator方法遍历，而且每次迭代的结果都不一样。Set中不论添加多少次，因为不能重复，所以只能有一个
+     1. `AbstractSet`：继承于AbstractCollection，实现大部分Set接口
+     1. `HashSet`：不允许元素重复，不保证元素顺序，最多有一个null值
+     1. `LinkedHashSet`：可预知迭代顺序的Set接口的哈希表和链接列表实现
+     1. `TreeSet`：实现Set接口，实现排序等功能
+1. Map：映射，用来存储键值对
+   - 特点：通过key查找value。内部以映射存储数据，就是Entry(键值对)类的实例，key和value可以是任意的对象。key不可重复，value可以。支持泛型：`Map<k,v>`
+   - 组成
+     1. `AbstractMap`：实现大部分Map接口
+     1. `HashMap`：是一个散列表，访问速度很快，线程不同步，键最多一个null
+        - `WeakHashMap`：弱秘钥的哈希表
+        - `LinkedHashMap`：按自然顺序对元素排序
+        - `IdentityHashMap`：比较文档时使用引用相等
+     1. `TreeMap`：使用一棵树
+     1. `synchronizedMap`：具有线程同步的能力
+   - 方法
+     1. `Object get(Object k)` // 通过键返回值，不存在为null
+     1. `Object put(Object k, Object v)` // 更新或添加
+     1. `Object remove(Object k)` // 通过键删除
+     1. `void putAll(Map m)` // 一个映射复制到另一个映射
+     1. `boolean equals(Object obj)` // 比价指定的对象和此映射是否相同
+     1. `boolean containsKey(Object k)` // 是否存在指定键
+     1. `boolean containsValue(Object v)` // 是否存在指定值
+     1. `int size( )` // 返回关系数量
+     1. `boolean isEmpty()` // 是否为空
+     1. `void clear( )` // 删除所有映射关系
+     1. `Set keySet( )` // 返回键的Set视图
+     1. `Collection values( )` // 返回值的Collection视图
+     1. `Set entrySet( )` // 返回映射关系的Set视图
+     1. `int hashCode()` // 返回映射的哈希码值
+   - 实例
+    ```Java
+    Map map = Maps.newHashMap();
+    ```
+1. 工具类
+   - Java.util.Collections
+1. 迭代器：Iterator，用来遍历集合中的元素，类似for和增强for，继承自Iterator接口或继承自ListIterator
+   - 遍历ArrayList
+        ```Java
+        // for循环
+        for(int i=0;i<list.size();i++) {}
+        // foreach
+        for (String str : list) {}
+        // 链表转为数组遍历
+        String[] strArray=new String[list.size()];
+        list.toArray(strArray);
+        for(int i=0;i<strArray.length;i++) {}
+        // 迭代器遍历
+        Iterator<String> ite=list.iterator();
+        while(ite.hasNext()) {}
+        ```
+   - 遍历Map
+        ```Java
+        // 通过Map.keySet遍历
+        for (String key : map.keySet()) {
+            tmpKey = key
+            tmpValue = map.get(key));
+        }
+        // 通过Map.values()遍历所有的value，但不能遍历key
+        for (String v : map.values()) {
+            tmpValue = v;
+        }
+        // 通过Map.entrySet使用iterator遍历
+        Iterator<Map.Entry<String, String>> it = map.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry<String, String> entry = it.next();
+            tmpKey = entry.getKey();
+            tmpValue = entry.getValue();
+        }
+        // 推荐，尤其容量大时。通过Map.entrySet遍历
+        for (Map.Entry<String, String> entry : map.entrySet()) {
+            tmpKey = entry.getKey();
+            tmpValue = entry.getValue();
+        }
+        ```
+1. 比较器：Comparator，用来精确定义排序规则，以不同方式排序集合
+1. 内部组成
+     1. 接口
+        - `Collection`：最基本集合接口，java不提供直接继承自Collection的类来使用，只提供继承Collection的子接口，如List和Set
+        - `List`：是有序的，精确控制每个元素的位置。通过索引(类似数组的小标)访问其中的元素，允许有相同元素
+        - `Set`：无序的，与Collection完全一样，但是行为上不同。不能有相同元素，访问集合中的元素只能根据元素本身来访问。子接口SortedSet接口保存有序集合
+        - `Map`：唯一键映射到值。Map.Entry描述Map中的键值对，是Map的内部类。子接口SortedMap，使key保持升序
+        - `Enumeration`：一个传统的接口和数据定义方法，已被迭代器取代
+     1. 集合类：即接口的实现类
+        - `AbstractCollection`：实现了大部分的集合接口
+        - 其他具体的：ArrayList、HashMap、HashSet等
+     1. 集合算法：用于搜索和排序，被定义为集合类的静态方法，定义了三个静态变量：EMPTY\_SET，EMPTY\_LIST，EMPTY_MAP，不可改变
+### 应用
+1. 时间和日期
+   - 理解：属于java.util包。
+   - 示例
+        ```Java
+        // 实例化，可以传入1970年后的毫秒数
+        Date([long millsec])
+        // 获取当前时间
+        Date date = new Date();
+        System.out.println(date.toString());
+        ```
+   - Date的方法
+     1. alter()/before()：是否在日期之前/之后
+     1. clone()：返回副本
+     1. compareTo()：和日期对比。相同为0，在指定之前为负，之后为后
+     1. equals()：对比是否相同
+     1. getTime()：获得时间戳
+     1. hashCode()：此对象哈希值
+     1. setTime()：用时间戳设置时间
+     1. toString()：转换Date为String
+   - SimpleDateFormat类
+        ```Java   
+        // 格式化时期显示
+        Date dNow = new Date();
+        SimpleDateFormat ft = new SimpleDateFormat("E yyyy.MM.dd 'at' hh:mm:ss a zzz");
+        ft.format(dNow)
+        // 解析字符串为时间
+        SimpleDateFormat ft = new SimpleDateFormat("yyyy-MM-dd");
+        String input = "1818-11-11";
+        ft.parse(input);
+        ```
+    - Calendar类
+      1. 理解：获取日期的一部分，加减日期
+      1. 示例
+            ```Java
+            Calendar c = Calendar.getInstance(); // 创建，默认当前时区
+            Calendar c = Calendar.getInstance(); // 创建指定日期
+            c.set(2009, 6 - 1, 12);
+            c.get(Calendar.YEAR); // 获得年份
+            c.add(Calendar.DATE, 10); // 加10天
+            ```
+      1. 字段类型：Calendar.YEAR/MOUTH/DATE/DAY_OF_MOUTH/HOUR/HOUR_OF_DAY/MINUTE/SECOND/DAY_OF_WEEK
+      1. GregorianCalendar类：实现公历日历，是Calendar的一个实现
+1. IO
+   - 理解：Java.io包几乎包含所有操作输入/输出的类。流可以理解为一个序列的数据
+   - 字节流：FileInputStream/FileOutputStream
+   - 字符流：FileReader/FileWriter，一般读写两个字节
+   - 标准流：
+     1. Standard Input：System.in
+     1. Standard Output：System.out
+     1. Standard Error：System.err
+   - 控制台输入/输出：
+     1. System.in、Scanner类：输入
+        - 方法一
+        ```Java
+        // 由System.in完成，在BufferedReader对象中创建字符流
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        //读取字符
+        do {
+            c = (char)br.read();
+            System.out.println(c);
+        } while(c != 'q');
+        String str = br.readLine(); // 读取字符串
+        ```
+        - 方法二
+        ```Java
+        // Scanner类，jdk5之后可用获得输入
+        Scanner s = new Scanner(System.in);
+        if(scan.hasNext()){
+            String str1 = scan.next();
+            System.out.println("输入的数据为："+str1);
+        }
+        //或者
+        if(scan.hasNextLine()){
+            String str2 = scan.nextLine();
+            System.out.println("输入的数据为："+str2);
+        }
+        //区别：
+        next：一定读取到有效字符才结束输入，自动去掉之前空白，有效符后面的空白作为分隔符和结束符，所有不能输入空格
+        nextLine：回车为结束符
+        ```
+     1. System.out.write()：输出
+1. File
+   - 读取文件：File类、FileInputStream类
+     1. 创建
+        ```Java
+        // 创建输入流对象
+        InputStream f = new FileInputStream("C:/java/hello");
+        // 创建使用文件对象创建输入流对象
+        File file = new File("C:/java/hello");
+        InputStream f = new FileInputStream(file);
+        ```
+     1. 方法
+        - public int available() throws IOException{}
+        - public int read(byte[] r) throws IOException{}
+        - public int read(int r)throws IOException{}
+        - protected void finalize()throws IOException {}
+        - public void close() throws IOException{}
+     1. 其他输入流
+        - ByteArrayInputStream
+        - DataInputStream
+   - 写入文件：FileOutputStream类
+     1. 创建
+        ```Java
+        // 创建输出流对象
+        OutputStream f = new FileOutputStream("C:/java/hello");
+        // 创建使用文件对象创建输出流对象
+        File file = new File("C:/java/hello");
+        OutputStream f = new FileOutputStream(file);
+        ```
+     1. 方法
+        - protected void finalize()throws IOException {}
+        - public void write(int w)throws IOException{}
+        - public void write(byte[] w)
+        - public void close() throws IOException{}
+     1. 其他输出流：ByteArrayOutputStream、DataOutputStream
+1. 目录
+   - 读取：一个目录即一个对象
+    ```Java
+    File d = new File(dirname);
+    d.isDirectory(); // 是否是目录
+    d.list(); // 列出文件和文件夹列表
+    ```
+   - 创建：mkdir()/mkdirs()
+    ```Java
+    bool mkdir() // 返回false表明已存在或父级目录不存在
+    bool mkdirs() // 递归创建文件夹
+    // java自动识别win和unit系统的分隔符
+    // 例子
+    String dirname = "/tmp/user/java/bin";
+    File d = new File(dirname);
+    d.mkdirs();
+    ```
+   - 删除文件/目录：delete()
+    ```Java
+    File folder = new File("/tmp/java/test");
+    String[] entries = folder.list();
+    for(String s: entries){
+        File currentFile = new File(folder.getPath(),s);
+        currentFile.delete();
+    }
+    ```
+1. 错误和异常
+   - 认识：错误和异常是不同的，Throwable是祖宗，有两个子类：Exception和Error。所有异常类都是Exception的子类
+   - 错误： `java.lang.Error`
+   - 异常
+     1. 分类
+        - 检查性异常类：Exception
+        - 运行时异常类：RuntimeException
+     1. 捕获异常：catch语句包含异常的声明，定义捕获哪种类型的异常
+        ```Java
+        try{
+        }catch(ExceptionName e) {
+        }
+        try{
+            int a[] = new int[2];
+            System.out.println("Access element three :" + a[3]);
+        }catch(ArrayIndexOutOfBoundsException e){
+            System.out.println("Exception thrown  :" + e);
+        }
+        // 多重捕获
+        try{
+        }catch(异常类型1 异常的变量名1){
+        }catch(异常类型2 异常的变量名2){
+        }finally{}                                    // 此代码块总会被执行，适用善后性质的语句
+        try{
+            file = new FileInputStream(fileName);
+            x = (byte) file.read();
+        }catch(IOException i){
+            i.printStackTrace();
+        }catch(FileNotFoundException f) {
+            f.printStackTrace();
+        }
+        ```
+     1. 抛出异常：throw
+        ```Java
+        throw new RemoteException();
+        ```
+     1. 自定义异常
+        ```Java
+        // 声明异常类
+        class MyException extends Exception/RuntimeException{}
+        ```
+1. 正则表达式
+   - 理解：和Perl类似，在java.util.regex
+   - 主要类
+     1. Patten：patten对象是一个正则表达式的编译表示。无公共构造方法，首先调用公共静态编译方法，获得Patten对象，接受一个正则表达式为一参
+     1. Matcher：matcher对象是对输入的字符串进行解释和匹配操作的引擎。无公共构造方法，用Patten的matcher方法获得Matcher对象。
+     1. PattenSyntaxException：非强制异常类，表示正则表达式模式的语法错误
+   - 示例
+      ```Java
+      import java.util.regex.*;
+      String content = "aaa";
+      String pattern = ".\*bbb.\*";
+      boolean isMatch = Pattern.matches(pattern, content); // 返回结果
+      ```
+   - 捕获组：将多个字符当一个独立单元处理的方法。调用matcher对象的groupCount方法统计组数
+### 运维
+1. Java运行环境搭建
+   - JDK
+     1. rpm安装
+     1. centos手动安装
+        - oracle官网下载系统对应jdk，即java se
+        - tar -zxvf jdk-8-linux-x64.tar.gz
+        - mv jdk1.8.0 /usr/local
+        - vi /etc/profile
+        - 在末尾添加下面两行
+          1. export JAVA_HOME=/usr/java/jdk1.8.0
+          1. export PATH=$PATH:$JAVA_HOME/bin
+        - source /etc/profile
+        - java -version
+     1. 编辑环境变量
+      ```java
+      vim /etc/prifile
+      // 最下边添加
+      export JAVA_HOME=/usr/java/jdk1.7.0_80
+      export CLASSPATH=.:$JAVA_HOME/jre/lib/rt.jar:$JAVA_HOME/lib/dt.jar:$JAVA_HOME/lib/tools.jar
+      export MAVEN_HOME=/developer/apache-maven-3.0.5
+      export CATALINA_HOME=/developer/apache-tomcat-7.0.73
+      export PATH=$PATH:$JAVA_HOME/bin:$CATALINA_HOME/bin:$MAVEN_HOME/bin:$NODE_HOME/bin:/usr/local/bin:$RUBY_HOME/bin
+      // 配置生效
+      source /etc/profile
+      // 检验
+      java -version
+      ```
+   - Tomcat
+      ```java
+      // 解压压缩包
+      tar -zxvf tomcat.tar.gz
+      // 编辑配置文件
+      vim conf/server.xml
+      <Connector ... URIEncoding="UTF-8">
+      // 启动tomcat
+      cd bin;
+      ./startup.sh
+      ```
+   - 多个tomcat
+      ```
+      cp ~/tomcat-8 /usr/local/tomcats/tomcat1 -r
+      cp ~/tomcat-8 /usr/local/tomcats/tomcat2 -r
+      vim tomcat2/conf/server.xml
+      自增所有port对应的端口号
+      vim webapps/ROOT/index.jsp
+      tomcat1/bin/startup.sh
+      ```
 ### wiki
+1. Java常见包
+   - java.lang：语言包
+     1. 数据类型包装类
+     1. 字符处理类
+        - String类
+        - StringBuffer类
+     1. Math/Character/Date：数学日期类
+     1. Object：类，所有类都继承，唯一没有父类的类
+     1. 操作类
+        - Class类(反射类)
+        - ClassLoader类
+     1. Process：过程类
+     1. 系统和运行类
+        - System类
+        - Runtime类
+     1. 错误和异常处理类
+        - Throwable
+        - Exception
+        - Error
+     1. 线程类
+        - Thread类
+        - TreadDeath
+        - Runnable类
+   - java.util：工具包
+     1. Random/UUID：随机数/UUID类
+     1. 数据结构类
+        - Vector：向量类
+        - Stack：栈类
+        - HashTable：散列表类
+        - LinkedList：链表类
+     1. 日期类
+        - Date类
+        - Calendar类
+        - GregorianCalendar类
+   - java.io：输入输出包，InputStream/OutputStream
+   - java.net
+   - java.sql
+   - java.awt/swing：窗口工具包
+   - applet
+1. 常见第三方包
+   - Apache Commons包：commons-lang3-3.1.jar
+     1. 理解：对JDK中java.lang包的补充，提供了很多Utilities工具类
+     1. 使用
+        - `StringUtils.isEmpty()/trim()/split()/join()` 字符串操作
+        - `StringEscapeUtils.escapeCsv/escapeHtml4/escapeJava/escapeEcmaScript/escapeXml` 字符串的转义
+        - `RandomStringUtils.random/randomAlphabetic/randomAlphanumeric/randomAscii` 随机数
+        - `ArrayUtils.add/remove/subarray/clone/contains/indexOf/lastIndexOf/toMap/isEmpty/isNotEmpty/isSameLength/toPrimitive/toObject` 数组
+        - `DateUtils.parseDate/addDays/addMonths/isSameDay/` 日期
+        - `DateFormatUtils.format` 日期
+   - commons-beanutils-1.8.3.jar
+     1. 理解：用于操作Bean、url、Date
+     1. 使用
+        - `BeanUtils.getProperty/setProperty/cloneBean/describe/populate/getArrayProperty/getIndexedProperty/getMappedProperty/getProperty/getNestedProperty` Bean
+        - `url.getProtocol/getHost/getPath` url
+        - `ConvertUtils.register(converter, Date.class/String.class);` ConvertUtils
+        - Base64
+        - StringHelper
+### Java知识点
+1. Java衍生语言
+   - Groovy
+     1. 理解：Groovy是JVM衍生的与JAVA语法高度兼容的动态强类型语言，可以运行在JVM上
+   - Scala
+     1. 理解：是一门多范式的编程语言,设计初衷是要集成面向对象编程和函数式编程的各种特性，支持函数式编程的类LISP语言，可以运行在JVM上
+   - Clojure
+     1. 理解：是一种运行在Java平台上的Lisp方言
+### JSF
+1. 理解：Java Server Faces，Java EE中构建web页面的，基于事件绑定，基本没人用
+1. 组成
+   - Facelets：是jsf MVC的视图部分，利用数据将模板转为html
+1. JNI：提供了若干的API实现了Java和其他语言的通信（主要是C&C++）
+1. Guava：一种基于开源的Java库，提供了用于集合，缓存，支持原语，并发性，常见注解，字符串处理，I/O和验证的实用扩展方法
+1. 关键字
+   - 基础关键字
+     1. 注解
+     1. java虚拟机
+     1. IO、阻塞和非阻塞
+     1. NIO
+     1. 并发
+     1. 线程池
+     1. 同步容器和并发容器
+     1. 反射
+   - 高级关键字
+     1. quartz
+     1. 事务管理
+     1. 连接池
+     1. dubbo
+     1. 分布式
+     1. Netty
+     1. CDN
+     1. Elasticsearch
+     1. solr
+     1. 负载均衡
+     1. mysql集群
+     1. JVM性能调优
+     1. 负载均衡
+1. 关键功能具备
+   - 异步任务
+   - 缓存
+   - 日志
+1. 轻量级容器
+   - 理解：提供了可插拔的体系结构
+   - 容器提供的服务
+     1. 声明周期管理
+     1. 依赖解析
+     1. 组件查找
+     1. 应用程序配置
+     1. 事物管理
+     1. 安全性
+     1. 线程管理
+     1. 对象和资源池
+     1. 对组件的远程访问
+     1. 通过JMX之类的API管理组件
+     1. 容器的扩展和定制
+   - 控制反转
+     1. 分类：依赖查找、依赖注入
+1. java程序特点
+     1. 源文件名：必须和类名相同
+     1. 主方法入口：所有java程序由public static void main(String[] args)开始执行
+1. 知识点
+ - 环知识点：基础，web开发，常用框架，工程与设计模式，数据库和网络，数据结构和算法
+ - 扩展知识点：多线程 io jvm 分布式 mysql spring redis mq 微服务
+1. 关键字：不能用于标识符的使用
+     1. 面向对象
+         - 包： package
+         - 修饰符： private、protected、public、 static、 transient
+         - 接口： interface、implements
+         - 抽象类： abstract
+         - 类： class
+         - 继承： extends、final
+         - 类的操作： import、super
+         - 实例化： new、this
+     1. 数据类型
+         - byte、short、int、long
+         - float、double
+         - char
+         - boolean、enum
+     1. 流程控制
+         - if、else
+         - switch、case、default
+         - for，do、while
+         - break、continue
+         - return、void
+     1. 异常
+         - try、catch、 finally 、 throw、throws
+     1. 修饰符
+         - vstrictf
+         - native
+         - volatile、synchronized
+     1. 判断
+         - assert、instanceof
+     1. 未使用
+         - goto，const
+     1. 解释
+         - package： 相关类组成一个包
+
+         - import： 导入类； abstract： 定义抽象类； super： 基类； class： 定义类
+         - interface：一种抽象类型，定义接口，仅有方法和常量的定义； implements： 一个类实现接口
+
+         - extends：继承； final：值初始化后不能被改变/方法不能被重写/类不能再有子类
+         - public： 共有属性或方法； static： 类级别定义，所有实例共享
+         - new：分配新的类实例
+         - byte：8-bit 有符号数据类型；short：16位数字；int：32位整数； long：64位整数；
+
+         - float：32-bit 单精度浮点数； double：64-bit 双精度浮点数； strictfp：严格规则浮点数
+
+         -  char：16-bit Unicode字符数据类型； transient：修饰不要序列化的字段；
+
+         -  void：标记方法不返回任何值
+
+         -  throws：定义方法可能抛出的异常
+
+         -  this：表示当前实例/调用另一个构造函数；
+
+         -  native：表示方法用非java代码实现
+
+         -  synchronized：表示同一时间只能由一个线程访问的代码块
+         -  volatile：标记字段可能被多个线程同时访问而不做同步
+         -  assert：判断条件是否满足 ？
+         -  instanceof：检测对象是否是一个类实例
+### 各知识点版本
+1. 历史发展
+   - 从JDK 5.0开始，J2SE等全部改名，JDK5也称为Java5
+1. 最新版本
+   1. 基础
+      - Java8 = Java SE 8 = java se 1.8 = JDK 8
+      - J2EE 1.5 = Java EE 5
+   1. Java EE
+      - Servlet 3.1
+      - JSP 2.3
+      - EJB 3.0
+   1. 工具
+      - Tomcat 9.0.0
+      - Jetty 9.4.6
+      - Jboss 7.1/wildfly
+      - Maven 3.3.9
+      - Jekins 2.6
+      - Junit 4.12
+      - Log4j 1.2.17
+   1. 框架
+      - Spring 5.0/4.3
+      - Hibernate 5.2.x
+      - Mybatis 3.4
+1. Java EE版本历史
+   - java技术————1995年
+   - J2EE 1————1999年
+   - J2EE 1.4————EJB2.0————2002年
+   - JavaEE 5————EJB3.0————2006年————简化开发、引入注释、更新的web服务、加强的持久化模型
+   - JavaEE 7————提高生产力：带注释的POJO————html5：WebSockets、json、Servlet3.1 NIO、REST————企业需求：批量处理实现不间断OLTP性能、简化多线程并发任务的定义提高可扩展性、简化JMS具有选择性和灵活性
+1. Servlet版本历史
+   - 4.0——草案——HTTP/2支持
+   - 3.1——2013年——JavaEE 7——Non-blocking I/O
+   - `3.0`——2009年——JavaEE 6, JavaSE 6——简易开发、异步servlet、新的注解使web.xml部署描述文件开始不再是必选、插件支持
+   - `2.5`——2005年——JavaEE 5, JavaSE 5——支持注释
+   - `2.4`——2003年——J2EE 1.4, J2SE 1.3——web.xml
+   - `2.3`——2001年——J2EE 1.3, J2SE 1.2——增加Filter
+   - 2.2——1999年——J2EE 1.2, J2SE 1.2
+   - 2.1——1998年————添加请求转发
+   - 2.0————JDK 1.1
+   - 1.0——1997年
+1. JSP版本特性
+   - 2.0：加入了EL表达式语言
+1. Tomcat版本对servlet/jsp的支持
+   - 9.X——Java8——servlet4.0——jsp2.4
+   - 8.X——Java7——servlet3.1——jsp2.3
+   - 7.X——Java6——servlet3.0——jsp2.2
+   - 6.X——Java5——servlet2.5——jsp2.1
+   - 5.5——Java5——servlet2.4——jsp2.0
+   - 4.1——Java5——servlet2.3——jsp1.2
+   - 3.3——Java5——servlet2.2——jsp1.1
+1.  instanceof：检查对象是否是类/接口类型
+    ```Java
+    String name = "James";
+    boolean result = name instanceof String; // 由于 name 是 String 类型，所以返回真
+    Vehicle a = new Car();
+    boolean result = a instanceof Car; // 兼容于右侧类型,该运算符仍然返回true
+    ```
+### Java 8
+1. 即jdk1.8，14年3月发布
+   - 新特性
+     1. Lambda表达式：Lambda允许函数作为参数传递
+     1. 方法引用：可以直接引用已有对象/类的方法，使语言结构更简洁紧凑
+     1. 实现方法：就是类在接口里有个实现的方法
+     1. 新工具：如新的编译工具，Nashorn引擎jjs、类依赖分析器jdeps
+     1. Stream API：即java.util.stream，把真正的函数式编程引入java中
+     1. DateTime API：加强日期和时间的处理
+     1. Optional 类：解决空指针异常
+     1. Nashorn JavaScript 引擎：允许在JVM上运行javascript应用
+   - foreach和Lambda
+     1. 遍历Map
+      ```Java
+      Map<String, Integer> items = new HashMap<>();
+      items.put("A", 10);
+
+      items.forEach((k,v)->{
+          System.out.println("Item : " + k + " Count : " + v);
+      });
+      ```
+     1. 遍历List
+      ```Java
+      List<String> items = new ArrayList<>();
+      items.add("A");
+
+      items.forEach(item->{
+          System.out.println(item);
+      });
+
+      //method reference
+      //Output : A,B,C,D,E
+      items.forEach(System.out::println);
+
+      //Stream and filter
+      //Output : B
+      items.stream()
+          .filter(s->s.contains("B"))
+          .forEach(System.out::println);
+      复制代码
+      ```
+### Java小应用
+1. Applet
+   - 理解：java编写的小应用程序，可以包含在html页中，内嵌于浏览器执行。产生于浏览器出现不久还只能支持静态页面的时候，用于创建RIAs，用于提供丰富互联网服务，如动画、动态内容、与服务器通讯、富客户端应用。是java的一种应用程序，要求浏览器支持JVM，作用类似flash，嵌入在html中，现在基本没人用
+   - 特点
+     1. 可以实现图形、人机交互等多媒体表现
+     1. 提供了抽象窗口工具箱的窗口环境开发工具，用于建立标准的图形用户界面
+     1. 可以包含awt、swing的组件
+     1. Applet必须运行于某个特定的“容器”，这个容器可以是浏览器本身，也可以是通过各种外挂程式，或者包括支持Applet的移动设备在內的其他各种程序来运行。与一般的Java应用程序不同，Applet不是通过main方法來运行的。在运行时Applet通常会与用戶进行互动，显示动态的画面，并且还会遵循严格的安全检查，阻止潜在的不安全因素（例如根据安全策略，限制Applet对客戶端文件系统的访问）
+   - 使用：要求为支持java的浏览器在下载applet后在用户计算机上运行
+   - 历史
+     1. Flash出现后，Applet没有竞争力
+     1. 后来ajax出现了，浏览器可以和服务器通讯了
+     1. 后来Html5出现了，有音频、视频、2D图形(Canvas)，WebGL引入了3D图形
+   - 另：RIA三大技术：Flash、Silverlight、JavaFX
+1. Awt
+   - 理解：Abstract Window ToolKit 抽象窗口工具包。提供了一套与本地图形界面进行交互的接口，实际上是在利用操作系统所提供的图形库来构建界面
+   - 特点
+     1. 由于不同操作系统的图形库所提供的功能是不一样的，在一个平台上存在的功能在另外一个平台上则可能不存在。为了实现Java语言所宣称的"一次编译，到处运行"的概念，AWT 不得不通过牺牲功能来实现其平台无关性，也就是说，AWT 所提供的图形功能是各种通用型操作系统所提供的图形功能的交集
+     1. AWT 是基于本地方法的C/C++程序，其运行速度比较快
+1. Swing
+   - 理解：用于开发Java应用程序用户界面的开发工具包。开发出来的程序可以在java虚拟机里独立运行，为了解决awt的问题而推出，比awt有更好的屏幕显示元素。是在AWT的基础上构建的一套新的图形界面系统，拥有更多的界面库
+1. JavaFX
+   - 理解：是Java的下一代图形用户界面工具包，对标Flash，用于创建RIAs(Rich Internet application)，是一种跨平台的桌面技术，2008年发布正式版
+   - 组成
+     1. JavaFX脚本
+     1. JavaFX Mobile(一种移动操作系统)
+   - 特点
+     1. 可以直接调用java API
+     1. JDK支持三大操作系统
+     1. css定义外观，有WebView、3D图形、富文本、多点触控
+### 大数据知识网
+1. Hadoop
+   - 基础
+     1. Hadoop介绍、架构
+     1. Hadoop2架构
+     1. HDFS操作
+     1. yarn操作
+   - 应用
+     1. Hive数据仓库
+     1. zk服务
+     1. HBase非关心型数据库
+     1. Sqoop数据库抽取工具
+     1. Flume日志抽取工具
+   - Spark
+   - 基础
+     1. Spark介绍
+     1. RDD弹性分布式数据集
+     1. Scala编程
+   - 应用
+     1. Spark-SQL组件
+     1. DataFrame组件

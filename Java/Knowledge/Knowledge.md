@@ -1,351 +1,233 @@
-### Java知识点
-1. Java衍生语言
-   - Groovy
-     1. 理解：Groovy是JVM衍生的与JAVA语法高度兼容的动态强类型语言，可以运行在JVM上
-   - Scala
-     1. 理解：是一门多范式的编程语言,设计初衷是要集成面向对象编程和函数式编程的各种特性，支持函数式编程的类LISP语言，可以运行在JVM上
-   - Clojure
-     1. 理解：是一种运行在Java平台上的Lisp方言
-1. JNI：提供了若干的API实现了Java和其他语言的通信（主要是C&C++）
-1. Guava：一种基于开源的Java库，提供了用于集合，缓存，支持原语，并发性，常见注解，字符串处理，I/O和验证的实用扩展方法
-1. 关键字
-   - 基础关键字
-     1. 注解
-     1. java虚拟机
-     1. IO、阻塞和非阻塞
-     1. NIO
-     1. 并发
-     1. 线程池
-     1. 同步容器和并发容器
-     1. 反射
-   - 高级关键字
-     1. quartz
-     1. 事务管理
-     1. 连接池
-     1. dubbo
-     1. 分布式
-     1. Netty
-     1. CDN
-     1. Elasticsearch
-     1. solr
-     1. 负载均衡
-     1. mysql集群
-     1. JVM性能调优
-     1. 负载均衡
-1. 关键功能具备
-   - 异步任务
-   - 缓存
-   - 日志
-1. 轻量级容器
-   - 理解：提供了可插拔的体系结构
-   - 容器提供的服务
-     1. 声明周期管理
-     1. 依赖解析
-     1. 组件查找
-     1. 应用程序配置
-     1. 事物管理
-     1. 安全性
-     1. 线程管理
-     1. 对象和资源池
-     1. 对组件的远程访问
-     1. 通过JMX之类的API管理组件
-     1. 容器的扩展和定制
-   - 控制反转
-     1. 分类：依赖查找、依赖注入
-1. java程序特点
-     1. 源文件名：必须和类名相同
-     1. 主方法入口：所有java程序由public static void main(String[] args)开始执行
-1. 知识点
- - 环知识点：基础，web开发，常用框架，工程与设计模式，数据库和网络，数据结构和算法
- - 扩展知识点：多线程 io jvm 分布式 mysql spring redis mq 微服务
-1. 关键字：不能用于标识符的使用
-     1. 面向对象
-         - 包： package
-         - 修饰符： private、protected、public、 static、 transient
-         - 接口： interface、implements
-         - 抽象类： abstract
-         - 类： class
-         - 继承： extends、final
-         - 类的操作： import、super
-         - 实例化： new、this
-     1. 数据类型
-         - byte、short、int、long
-         - float、double
-         - char
-         - boolean、enum
-     1. 流程控制
-         - if、else
-         - switch、case、default
-         - for，do、while
-         - break、continue
-         - return、void
-     1. 异常
-         - try、catch、 finally 、 throw、throws
-     1. 修饰符
-         - vstrictf
-         - native
-         - volatile、synchronized
-     1. 判断
-         - assert、instanceof
-     1. 未使用
-         - goto，const
-     1. 解释
-         - package： 相关类组成一个包
-
-         - import： 导入类； abstract： 定义抽象类； super： 基类； class： 定义类
-         - interface：一种抽象类型，定义接口，仅有方法和常量的定义； implements： 一个类实现接口
-
-         - extends：继承； final：值初始化后不能被改变/方法不能被重写/类不能再有子类
-         - public： 共有属性或方法； static： 类级别定义，所有实例共享
-         - new：分配新的类实例
-         - byte：8-bit 有符号数据类型；short：16位数字；int：32位整数； long：64位整数；
-
-         - float：32-bit 单精度浮点数； double：64-bit 双精度浮点数； strictfp：严格规则浮点数
-
-         -  char：16-bit Unicode字符数据类型； transient：修饰不要序列化的字段；
-
-         -  void：标记方法不返回任何值
-
-         -  throws：定义方法可能抛出的异常
-
-         -  this：表示当前实例/调用另一个构造函数；
-
-         -  native：表示方法用非java代码实现
-
-         -  synchronized：表示同一时间只能由一个线程访问的代码块
-         -  volatile：标记字段可能被多个线程同时访问而不做同步
-         -  assert：判断条件是否满足 ？
-         -  instanceof：检测对象是否是一个类实例
-### Java小程序
-1. Applet
-   - 理解：java编写的小应用程序，可以包含在html页中，内嵌于浏览器执行。产生于浏览器出现不久还只能支持静态页面的时候，用于创建RIAs，用于提供丰富互联网服务，如动画、动态内容、与服务器通讯、富客户端应用。是java的一种应用程序，要求浏览器支持JVM，作用类似flash，嵌入在html中，现在基本没人用
-   - 特点
-     1. 可以实现图形、人机交互等多媒体表现
-     1. 提供了抽象窗口工具箱的窗口环境开发工具，用于建立标准的图形用户界面
-     1. 可以包含awt、swing的组件
-     1. Applet必须运行于某个特定的“容器”，这个容器可以是浏览器本身，也可以是通过各种外挂程式，或者包括支持Applet的移动设备在內的其他各种程序来运行。与一般的Java应用程序不同，Applet不是通过main方法來运行的。在运行时Applet通常会与用戶进行互动，显示动态的画面，并且还会遵循严格的安全检查，阻止潜在的不安全因素（例如根据安全策略，限制Applet对客戶端文件系统的访问）
-   - 使用：要求为支持java的浏览器在下载applet后在用户计算机上运行
-   - 历史
-     1. Flash出现后，Applet没有竞争力
-     1. 后来ajax出现了，浏览器可以和服务器通讯了
-     1. 后来Html5出现了，有音频、视频、2D图形(Canvas)，WebGL引入了3D图形
-   - 另：RIA三大技术：Flash、Silverlight、JavaFX
-1. Awt
-   - 理解：Abstract Window ToolKit 抽象窗口工具包。提供了一套与本地图形界面进行交互的接口，实际上是在利用操作系统所提供的图形库来构建界面
-   - 特点
-     1. 由于不同操作系统的图形库所提供的功能是不一样的，在一个平台上存在的功能在另外一个平台上则可能不存在。为了实现Java语言所宣称的"一次编译，到处运行"的概念，AWT 不得不通过牺牲功能来实现其平台无关性，也就是说，AWT 所提供的图形功能是各种通用型操作系统所提供的图形功能的交集
-     1. AWT 是基于本地方法的C/C++程序，其运行速度比较快
-1. Swing
-   - 理解：用于开发Java应用程序用户界面的开发工具包。开发出来的程序可以在java虚拟机里独立运行，为了解决awt的问题而推出，比awt有更好的屏幕显示元素。是在AWT的基础上构建的一套新的图形界面系统，拥有更多的界面库
-1. JavaFX
-   - 理解：是Java的下一代图形用户界面工具包，对标Flash，用于创建RIAs(Rich Internet application)，是一种跨平台的桌面技术，2008年发布正式版
-   - 组成
-     1. JavaFX脚本
-     1. JavaFX Mobile(一种移动操作系统)
-   - 特点
-     1. 可以直接调用java API
-     1. JDK支持三大操作系统
-     1. css定义外观，有WebView、3D图形、富文本、多点触控
-### JSF
-1. 理解：Java Server Faces，Java EE中构建web页面的，基于事件绑定，基本没人用
-1. 组成
-   - Facelets：是jsf MVC的视图部分，利用数据将模板转为html
-### 大数据
-1. Hadoop
-   - 基础
-     1. Hadoop介绍、架构
-     1. Hadoop2架构
-     1. HDFS操作
-     1. yarn操作
-   - 应用
-     1. Hive数据仓库
-     1. zk服务
-     1. HBase非关心型数据库
-     1. Sqoop数据库抽取工具
-     1. Flume日志抽取工具
-   - Spark
-   - 基础
-     1. Spark介绍
-     1. RDD弹性分布式数据集
-     1. Scala编程
-   - 应用
-     1. Spark-SQL组件
-     1. DataFrame组件
-### 各知识点版本
-1. 历史发展
-   - 从JDK 5.0开始，J2SE等全部改名，JDK5也称为Java5
-1. 最新版本
-   1. 基础
-      - Java8 = Java SE 8 = java se 1.8 = JDK 8
-      - J2EE 1.5 = Java EE 5
-   1. Java EE
-      - Servlet 3.1
-      - JSP 2.3
-      - EJB 3.0
-   1. 工具
-      - Tomcat 9.0.0
-      - Jetty 9.4.6
-      - Jboss 7.1/wildfly
-      - Maven 3.3.9
-      - Jekins 2.6
-      - Junit 4.12
-      - Log4j 1.2.17
-   1. 框架
-      - Spring 5.0/4.3
-      - Hibernate 5.2.x
-      - Mybatis 3.4
-1. Java EE版本历史
-   - java技术————1995年
-   - J2EE 1————1999年
-   - J2EE 1.4————EJB2.0————2002年
-   - JavaEE 5————EJB3.0————2006年————简化开发、引入注释、更新的web服务、加强的持久化模型
-   - JavaEE 7————提高生产力：带注释的POJO————html5：WebSockets、json、Servlet3.1 NIO、REST————企业需求：批量处理实现不间断OLTP性能、简化多线程并发任务的定义提高可扩展性、简化JMS具有选择性和灵活性
-1. Servlet版本历史
-   - 4.0——草案——HTTP/2支持
-   - 3.1——2013年——JavaEE 7——Non-blocking I/O
-   - `3.0`——2009年——JavaEE 6, JavaSE 6——简易开发、异步servlet、新的注解使web.xml部署描述文件开始不再是必选、插件支持
-   - `2.5`——2005年——JavaEE 5, JavaSE 5——支持注释
-   - `2.4`——2003年——J2EE 1.4, J2SE 1.3——web.xml
-   - `2.3`——2001年——J2EE 1.3, J2SE 1.2——增加Filter
-   - 2.2——1999年——J2EE 1.2, J2SE 1.2
-   - 2.1——1998年————添加请求转发
-   - 2.0————JDK 1.1
-   - 1.0——1997年
-1. JSP版本特性
-   - 2.0：加入了EL表达式语言
-1. Tomcat版本对servlet/jsp的支持
-   - 9.X——Java8——servlet4.0——jsp2.4
-   - 8.X——Java7——servlet3.1——jsp2.3
-   - 7.X——Java6——servlet3.0——jsp2.2
-   - 6.X——Java5——servlet2.5——jsp2.1
-   - 5.5——Java5——servlet2.4——jsp2.0
-   - 4.1——Java5——servlet2.3——jsp1.2
-   - 3.3——Java5——servlet2.2——jsp1.1
-### 实际项目经验
-1. 经验与心得
-   - 实际的项目要找到官方的配置，根据官方的配置去写项目的配置
-1. Java运行环境搭建
-   - JDK
-     1. rpm安装
-     1. centos手动安装
-        - oracle官网下载系统对应jdk，即java se
-        - tar -zxvf jdk-8-linux-x64.tar.gz
-        - mv jdk1.8.0 /usr/local
-        - vi /etc/profile
-        - 在末尾添加下面两行
-          1. export JAVA_HOME=/usr/java/jdk1.8.0
-          1. export PATH=$PATH:$JAVA_HOME/bin
-        - source /etc/profile
-        - java -version
-     1. 编辑环境变量
-      ```java
-      vim /etc/prifile
-      // 最下边添加
-      export JAVA_HOME=/usr/java/jdk1.7.0_80
-      export CLASSPATH=.:$JAVA_HOME/jre/lib/rt.jar:$JAVA_HOME/lib/dt.jar:$JAVA_HOME/lib/tools.jar
-      export MAVEN_HOME=/developer/apache-maven-3.0.5
-      export CATALINA_HOME=/developer/apache-tomcat-7.0.73
-      export PATH=$PATH:$JAVA_HOME/bin:$CATALINA_HOME/bin:$MAVEN_HOME/bin:$NODE_HOME/bin:/usr/local/bin:$RUBY_HOME/bin
-      // 配置生效
-      source /etc/profile
-      // 检验
-      java -version
-      ```
-   - Tomcat
-      ```java
-      // 解压压缩包
-      tar -zxvf tomcat.tar.gz
-      // 编辑配置文件
-      vim conf/server.xml
-      <Connector ... URIEncoding="UTF-8">
-      // 启动tomcat
-      cd bin;
-      ./startup.sh
-      ```
-   - 多个tomcat
-      ```
-      cp ~/tomcat-8 /usr/local/tomcats/tomcat1 -r
-      cp ~/tomcat-8 /usr/local/tomcats/tomcat2 -r
-      vim tomcat2/conf/server.xml
-      自增所有port对应的端口号
-      vim webapps/ROOT/index.jsp
-      tomcat1/bin/startup.sh
-      ```
-   - Maven
-   - 部署脚本
-      ```java
-      echo "======更新代码======="    
-      cd /developer/git-repository/mmall
-      git fetch
-      git pull
-      echo "======编译并跳过单元测试======="
-      mvn clean package -Dmaven.test.skip=true
-      echo "======转移war包======="
-      rm /developer/apache-tomcat-7.0.73/webapps/ROOT.war    
-      cp /developer/mmall.war  /developer/apache-tomcat-7.0.73/webapps/ROOT.war
-      rm -rf /developer/apache-tomcat-7.0.73/webapps/ROOT
-      echo "======启动tomcat======="
-      /developer/apache-tomcat-7.0.73/bin/shutdown.sh
-      for i in {1..10}
-      do
-        echo $i"s"
-        sleep 1s
-      done
-      /developer/apache-tomcat-7.0.73/bin/startup.sh
-      ```
-1. Java 从零打造企业级电商实战 - 服务端
-   - MyBatis
-     1. 返回新增的主键：mapper.xml文件中insert标签加入属性：`useGeneratedKeys="true" keyProperty="id"`
-     1. 数据绑定更新对应数据：mapper.xml文件中update指定parameterType的类地址：`parameterType="com.mall.pojo.Xxx"`
-     1. 批量插入：对应于子订单的批量插入
-   - 获得当前运行的文件夹目录：`request.getSession().getServletContext().getRealPath('upload');`
-   - 当使用`Set<Object>`，即自定义对象的Set集合，要在pojo中重写equals和hashCode方法，因为要保证这两个方法针对的对象属性相同，才能保证输出的bool结果的一致
-   - 返回值为List的写法提醒`ServerResponse<List<Category>>`
-### 淘淘商城
-1. 技术点
-   - Nginx反向代理
-   - Druid数据库连接池
-   - FastDFS：分布式文件系统
-   - Redis集群缓存
-   - Solr集群搜索
-   - Freemaker模板引擎
-   - 单点登录、session共享
-   - Quartz任务调度：定时器
-1. 架构组成
-   - taotao-common：项目中用到的通用工具类和pojo
-   - taotao-parent
-   - taotao-manage
-1. 功能点
-   - maven的tomcat7插件启动项目：manager项目————右键————run as————第二个maven build————clean tomcat7:run
-   - 静态资源映射：`<mvc:resources location="/WEB-INF/js/" mapping="/js/**"/>`，指定到WEB-INF目录下
-   - 分页插件的使用
-     1. 添加pagehelper的依赖
-     1. myBatis配置文件中加入分页插件
-        ```xml
-        <plugins>
-            <plugin interceptor="com.github.pagehelper.PageHelper">
-            <!-- 指定使用的数据库是什么 -->
-            <property name="dialect" value="mysql" />
-            </plugin>
-        </plugins>
+### 代理模式
+1. 理解：代理是一种设计模式，提供了对目标对象另外的访问方式，即通过代理对象访问目标对象
+   - 三方角色：用户、代理对象、目标对象。代理对象是对目标对象的扩展
+1. 价值：可以在实现目标对象的基础上,增强额外的功能操作和功能扩展。不要随意修改已经写好的代码，如需修改使用代理的方式扩展该方法   
+1. 分类
+   - 静态代理
+     1. 理解：静态代理在使用时,需要定义接口或者父类,被代理对象与代理对象一起实现相同的接口或者是继承相同父类。就是把目标对象传入代理对象实例化，然后调用相同方法，代理对象中多加了一些方法，适当时候调用目标对象的方法。就是套了一层，然后执行
+     1. 特点
+        - 可以在不修改目标代理前提下，实现功能拓展
+        - 会产生很多代理类，要维护两份类
+     1. 示例
+        ```Java
+        public interface IUserDao {void save();} // 接口
+        public class UserDao implements IUserDao { public void save() {}} // 目标对象
+        public class UserDaoProxy implements IUserDao{ // 代理对象
+            private IUserDao target;
+            public UserDaoProxy(IUserDao target){
+                this.target=target;
+            }
+            public void save() {
+                // 执行其他逻辑
+                target.save();//执行目标对象的方法
+                // 其他逻辑                
+            }
+        }
+        // 测试类
+        public static void main(String[] args) {
+            // 目标对象
+            UserDao target = new UserDao();
+            // 代理对象,把目标对象传给代理对象,建立代理关系
+            UserDaoProxy proxy = new UserDaoProxy(target);
+            // 执行代理方法
+            proxy.save();
+        }
         ```
-     1. 书写分页代码
+   - 动态代理
+     1. 理解：利用API在内存中构建代理对象，也叫JDK代理,接口代理
+     1. 使用
+        ```Java
+        代理类所在包：java.lang.reflect.Proxy
+        实现方法：static Object newProxyInstance(ClassLoader loader, Class<?>[] interfaces,InvocationHandler h )
+        参数：
+        `ClassLoader loader` 指定当前目标对象使用类加载器
+        `Class<?>[] interfaces` 目标对象实现的接口的类型
+        `InvocationHandler h` 把当前执行目标对象的方法作为参数传入
+        ```
+     1. 特点：代理对象不需要实现接口,但是目标对象一定要实现接口
+     1. 示例
+        ```Java
+        public class ProxyFactory{ // 代理类
+            // 维护一个目标对象
+            private Object target;
+            public ProxyFactory(Object target){
+                this.target=target;
+            }
+            // 给目标对象生成代理对象
+            public Object getProxyInstance(){
+                return Proxy.newProxyInstance(
+                        target.getClass().getClassLoader(),
+                        target.getClass().getInterfaces(),
+                        new InvocationHandler() {
+                            // 代理的方法
+                            @Override
+                            public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+                                // 其他逻辑
+                                // 执行目标对象方法
+                                Object returnValue = method.invoke(target, args);
+                                // 其他逻辑
+                                return returnValue;
+                            }
+                        }
+                );
+            }
+        }
+        // 测试类
+        IUserDao target = new UserDao();
+        // 给目标对象，创建代理对象
+        IUserDao proxy = (IUserDao) new ProxyFactory(target).getProxyInstance();
+        // class $Proxy0   内存中动态生成的代理对象
+        // 执行方法   【代理对象】
+        proxy.save();
+        ```
+   - Cglib代理
+     1. 理解：以目标对象子类的方式在内存中构建子类实现代理，也叫子类代理
+     1. 价值：适用于目标对象没有实现接口的情况，可以在运行期扩展java类和实现java接口，被spring aop使用来提供interception(拦截)
+     1. 原理：Cglib包的底层是通过使用一个小而块的字节码处理框架ASM来转换字节码并生成新的类
+     1. 举例
+        ```Java
+        public class ProxyFactory implements MethodInterceptor{
+            //维护目标对象
+            private Object target;
+            public ProxyFactory(Object target) {this.target = target;}
+            //给目标对象创建一个代理对象
+            public Object getProxyInstance(){
+                //1.工具类
+                Enhancer en = new Enhancer();
+                //2.设置父类
+                en.setSuperclass(target.getClass());
+                //3.设置回调函数
+                en.setCallback(this);
+                //4.创建子类(代理对象)
+                return en.create();
+            }
+            @Override
+            public Object intercept(Object obj, Method method, Object[] args, MethodProxy proxy) throws Throwable {
+                // 其他逻辑
+                //执行目标对象的方法
+                Object returnValue = method.invoke(target, args);
+                // 其他逻辑
+                return returnValue;
+            }
+        }
+        // 测试方法
+        //目标对象
+        UserDao target = new UserDao();
+        //代理对象
+        UserDao proxy = (UserDao)new ProxyFactory(target).getProxyInstance();
+        //执行代理对象的方法
+        proxy.save();
+        ```
+### 设计模式
+1. 建造者模式
+   - 理解：就是用一个建造类建造一个类让对象更方便建造
+   - 特点
+     1. 良好封装性，使用者可以不用了解内部组成就创建可使用的对象
+     1. 建造者独立，被建造类容易扩展
+   - 实例：建造几个王者荣耀英雄
+     1. 被建造类
         ```java
-        // 分页处理
-		PageHelper.startPage(page, rows);
-		// 执行查询
-		TbItemExample example = new TbItemExample();
-		List<TbItem> list = itemMapper.selectByExample(example);
-		// 取分页信息
-		PageInfo<TbItem> pageinfo = new PageInfo<>(list);
-		// 返回结果
-		EasyUIDataGridResult result = new EasyUIDataGridResult();
-		result.setTotal(pageinfo.getTotal());
-		result.setRows(list);
-        return result;
+        public class HeroConfig{
+            HeroBuilder mbuilder = null;
+            // 英雄的三个技能
+            private String firstSkill;
+            private String secondSkill;
+            private String thirdSkill;
+            private String TPeffect = "无回城特效";
+
+            public HeroConfig(HeroBuilder builder) {
+                mbuilder = builder;
+                init();
+            }
+            private void init() {
+                if(mbuilder.firstSkill != null) {
+                    firstSkill = mbuilder.firstSkill;
+                }
+                if(mbuilder.secondSkill != null) {
+                    secondSkill = mbuilder.secondSkill;
+                }
+                if(mbuilder.thirdSkill != null) {
+                    thirdSkill = mbuilder.thirdSkill;
+                }
+                if(mbuilder.TPeffect != null) {
+                    TPeffect = mbuilder.TPeffect;
+                }
+            }
+            @Override
+            public String toString() {
+                return "技能1-->" + firstSkill + " 技能2-->" + secondSkill + " 技能2-->" + thirdSkill + " 回城特效-->" + TPeffect;
+            }
+        }
         ```
-   - 图片服务器
-   - FastDFS：开源国产的分布式文件存储系统，实现了冗余备份、负载均衡、线性扩容等机制，注重高可用、高性能，提供上传、下载功能。Tracker集群提供负载均衡等调度，Storage集群提供存储
-1. 知识点
-   - 传参中使用Integer等包装类，起到缺少参数但是不报错的作用
-   - log4j调试方法，怎么关闭运行时不停输出log信息
+     1. 建造者(即建造执行者)
+        ```java
+        public static class HeroBuilder{
+            // 英雄的三个技能
+            private String firstSkill;
+            private String secondSkill;
+            private String thirdSkill;
+            private String TPeffect; // 回城效果
+
+            // 英雄的三个技能是必选的，回城的特效是可选的，所以构造方法只设置三个技能
+            public HeroBuilder(String firstSkill, String secondSkill, String thirdSkill) {
+                this.firstSkill = firstSkill;
+                this.secondSkill = secondSkill;
+                this.thirdSkill = thirdSkill;
+            }
+
+            public HeroConfig create() {
+                HeroConfig mHeroConfig = new HeroConfig(this);
+                return mHeroConfig;
+            }
+
+            public HeroBuilder builderTPeffect(String effect) {
+                this.TPeffect = effect;
+                return this; // 实现链式调用
+            }
+        }
+        ```
+     1. 使用，来建造类
+        ```java
+        HeroConfig.HeroBuilder("","","").BuilXX("").create();
+        HeroConfig 韩信 = new HeroConfig.HeroBuilder("无情冲锋","背水一战","国士无双").BuilTPeffect("金光闪闪").create();
+        ```
+### 常用类
+1. Math类
+   - 定义：提供了基本数学运算的属性和方法。如初等函数、对数、平方根和三角函数，都是静态函数
+   - 示例
+        ```Java
+        Math.sin(Math.PI/2) // 90 度的正弦值
+        ```
+   - 常用方法：
+     1. x.byteValue()：将Number对象转换为基本数据类型。如short/int/long/float/doubleValue();
+        ```Java
+        Integer x = 1;
+        x.byteValue()
+        ```
+     1. toString()：以字符串形式返回
+     1. parseInt()：将字符串解析为int类型
+     1. valueOf()：返回参数的原生Number对象值。参数为原生数据类型、String。
+        ```
+        static Integer valueOf(int i)
+        static Integer valueOf(String s)
+        static Integer valueOf(String s, int radix)
+        ```
+     1. equals(param)：number对象是否和参数相等
+        ```Java
+        Integer x = 1;
+        Integer y = 1;
+        System.out.println(x.equals(y));
+        ```
+     1. compareTo(param)：将number对象和参数比较。同类型数据比较，返回值：0相等、小于参数-1、大于1
+     1. abs()：绝对值
+     1. ceil、floor、rint()：对整形变量向左、右取整、最接近的整数，返回double类型
+     1. round()：返回最接近的int、long值
+     1. min、max()：两个参数得最大小值
+     1. random()：返回随机值，0到1之间，无参数
+1. UUID
+   - 理解：算法的核心思想是结合机器的网卡、当地时间、一个随即数来生成GUID，从理论上讲，如果一台机器每秒产生10000000个GUID，则可以保证（概率意义上）3240年不重复。java 5新增
+   - 使用
+   ```Java
+   import java.util.UUID;
+   UUID.randomUUID().toString();
+   ```

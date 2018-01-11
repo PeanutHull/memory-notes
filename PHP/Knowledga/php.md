@@ -37,7 +37,7 @@
      1. (object)
      1. (unset) // 转化为NULL
      1. (binary)/b // 转为二进制字符串 V5.2
- - settype()
+   - settype()
 1. 变量
    - 普通变量
      1. 特点：区分大小写
