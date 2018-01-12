@@ -1,79 +1,47 @@
 ### JavaEE
-1. JavaEE理解：是一个平台，是企业级分布式应用开发标准。构建于Java SE之上，提供API和运行环境，来运行大规模、可扩展的多层次的网络应用
-1. 特点
-   - 分布式
-   - 事务性
-   - 安全性
-   - 集成化
-   - 可扩展、可移植、易维护
-1. JavaEE规范
-   - 分类
-     1. Servlet
-     1. JSP
-     1. EJB
-     1. JMS：Java消息服务，实现异步的消息传递。支持点对点/发布订阅，可实现事务型/一致性/持久性消息传递
-     1. JTA：Java事务处理API，Java Transaction API，保证了用户操作ACID（即原子、一致、隔离、持久）属性，跨数据源必须使用全局事务JTA，提供了分布式事务服务，实现了透明的事务管理方式，划清数据库中上行和下行的通信界限
-     1. JTS：Java事务服务，Java Transaction Service，是一个组件事务监视器，为应用服务器/资源管理器/独立应用/通信资源管理器提供事务服务
-     1. RMI：远程方法调用，Remote Method Invoke。像调用本地一样调用另一个java虚拟机上的方法，stub/skeleton层提供客户端和服务端交互接口
-     1. IDL/CORBA：接口定义语言/公用对象请求代理程序体系结构
-     1. JNDI:Java的命名和目录接口，Java Naming and Directory Interfaces。使Java能够无缝地获取任何可目录化的企业信息，独立于目录协议，可以访问LDAP、NDS
-     1. JDBC
-     1. XML
-     1. JavaMail API
-     1. JAF：JavaBean Activation Framewor，提供统一处理不同数据格式的方法
+1. 理解：是一个平台，是企业级分布式应用开发标准。构建于Java SE之上，提供API和运行环境，来运行大规模、可扩展的多层次的网络应用
+1. 特点：分布式、事务性、安全性、集成化、可扩展、可移植、易维护
+1. 规范：13个
+   - Servlet
+   - JSP
+   - EJB
+   - JMS：Java消息服务，实现异步的消息传递。支持点对点/发布订阅，可实现事务型/一致性/持久性消息传递
+   - JTA：Java事务处理API，Java Transaction API，保证了用户操作ACID（即原子、一致、隔离、持久）属性，跨数据源必须使用全局事务JTA，提供了分布式事务服务，实现了透明的事务管理方式，划清数据库中上行和下行的通信界限
+   - JTS：Java事务服务，Java Transaction Service，是一个组件事务监视器，为应用服务器/资源管理器/独立应用/通信资源管理器提供事务服务
+   - RMI：远程方法调用，Remote Method Invoke。像调用本地一样调用另一个java虚拟机上的方法，stub/skeleton层提供客户端和服务端交互接口
+   - IDL/CORBA：接口定义语言/公用对象请求代理程序体系结构
+   - JNDI：Java的命名和目录接口，Java Naming and Directory Interfaces。使Java能够无缝地获取任何可目录化的企业信息，独立于目录协议，可以访问LDAP、NDS
+   - JDBC
+   - XML
+   - JavaMail API
+   - JAF：JavaBean Activation Framewor，提供统一处理不同数据格式的方法
 1. JavaEE容器
    - 理解：就是运行环境
-   - 分类
-     1. Web容器
-        - Tomcat
-          - 理解：是Web服务器，也是servlet、jsp的运行环境/容器，最新的servlet和jsp规范总是能在Tomcat中得到体现
-          - 特点：技术先进、性能稳定、免费开源
-          - 响应http过程：web浏览器——Tomcat——Web服务器——Servlet容器——Servlet实例1/Servlet实例2
-          - 不足：静态html能力不如apache，可以集成使用，Apache作为HTTP Web服务器，Tomcat作为Web容器
-          - 组成：Container容器——Engine——HOST——Servlet
-        - Jetty
-          - 理解：为JSP和servlet提供运行环境的用Java语言编写的的web容器
-     1. Java EE应用容器
-        - 理解：ejb容器无最大访问量一说，本身就是分布式/可伸缩的，只需增加机器就可实现同时计算，Tomcat和Jetty不是JavaEE容器，无法运行EJB或JMS技术
-        - 包含：GlassFish、JBoss、Oracle Weblogic、IBM WebSphere
-          1. Jboss
-          - 理解：开源的管理EJB的容器和服务器，不支持Servlet/JSP，一般与Tomcat/Jetty配合使用
-          - 特点
-            1. JMX微内核作为总线结构
-            1. 面向服务架构(SOA，Service-Oriented Architecture)
-            1. 具有统一的类装载器，实现应用热部署和热卸载能力
-            1. 高度模块化和松耦合
-            1. 支持集群
-   - 提供的服务
-     1. 事务
-     1. 状态管理
-     1. 多线程
-     1. 资源池
-     1. 其他底层细节
+   - Web容器
+     1. Tomcat
+        - 理解：是Web服务器，也是servlet、jsp的运行环境/容器，最新的servlet和jsp规范总是能在Tomcat中得到体现
+        - 特点：技术先进、性能稳定、免费开源
+        - 响应http过程：web浏览器——Tomcat——Web服务器——Servlet容器——Servlet实例1/Servlet实例2
+        - 不足：静态html能力不如apache，可以集成使用，Apache作为HTTP Web服务器，Tomcat作为Web容器
+        - 组成：Container容器——Engine——HOST——Servlet
+     1. Jetty：为JSP和servlet提供运行环境的用Java语言编写的的web容器
+   - 应用容器
+     1. 理解：ejb容器无最大访问量一说，本身就是分布式/可伸缩的，只需增加机器就可实现同时计算，Tomcat和Jetty不是应用容器，无法运行EJB或JMS技术
+     1. 组成：JBoss、GlassFish、Oracle Weblogic、IBM WebSphere
+        - Jboss
+          1. 理解：开源的管理EJB的容器和服务器，不支持Servlet/JSP，一般与Tomcat/Jetty配合使用
+          1. 特点
+             - JMX微内核作为总线结构
+             - 面向服务架构(SOA，Service-Oriented Architecture)
+             - 具有统一的类装载器，实现应用热部署和热卸载能力
+             - 高度模块化和松耦合
+             - 支持集群
 1. RMI
    - 理解：Java Remote method invocation，java方法远程调用，基于socket方式的远程调用，是java分布式的基础，将对象序列化在网络上传输
    - 原理：服务端编写interface和其实现，客户端远程调用
      1. 先定义RMI能够提供的服务，即interface，生成调用入口，编写实现类
      1. 编写RMI注册机制，并启动
      1. 客户端就可以访问了
-1. Bean
-   - 理解：是遵循了JavaBean技术规范的类或者称为可重用组件。遵循JavaBean技术规范的拥有getXxx、setXxx、isXxx、addXxxListener、XxxEvent等的类。JavaBean最初是为Java GUI的可视化编程实现的.你拖动IDE构建工具创建一个GUI 组件（如多选框）,其实是工具给你创建java类,并提供将类的属性暴露出来给你修改调整,将事件监听器暴露出来
-   - 优点
-     1. Bean可以控制它的属性、事件和方法是否暴露给其他程序
-     1. Bean可以接收来自其他对象的事件，也可以产生事件给其他对象
-   - 特点
-     1. 必须为公共类，并且可序列化，即实现java.io.Serializable接口
-     1. 若有构造参数，必须是无参的，类中不能出现main函数
-     1. 所有属性必须通过public的get、set、isXxx方法来操作，并且是私有的
-     1. 包含必要的事件处理方法
-   - 组成
-     1. 属性
-        - Simple属性：具有setter、getter方法对的属性
-        - Indexed属性：表示数据值，针对数据的simple属性
-        - Bound属性：属性值发生变化时，会触发其他JavaBean
-        - Constrained属性：属性值将要发生变化时，与该属性建立关系的其他java对象可以否决其改变
-     1. 方法
-     1. 事件：是事件发起者，也是接收者
 1. EJB
    - 理解：JavaEE服务器端组件模型，Enterprise Java Beans，用于部署分布式应用程序，是一个逻辑概念，与传统的bean无关，就是将一个业务逻辑类放在服务器上部署，供客户端调用，依赖RMI通信，EJB3.0从早期版本已分离出来。用于部署分布式的程序，非常重量级，配置复杂，没有spring轻量，目前使用比较少。容器类框架
    - 关键字：服务集群、企业开发
@@ -98,69 +66,34 @@
      1. EJB客户端：Servlet/JSP/Java Application/Web Service/Applet/EJB
      1. EJB服务器：Enterprise Bean
    - EJB架构：ejb客户端————RMI/JNDI————remote/home接口————ejb服务器————ejb容器————BEAN代理————对象池————ejb实例————ejb部署描述
-1. POJO
-   - 理解：实体类，简单java对象(Plain Old Java Objects)
-   - 特点
-     1. 编写应用程序类快速和简单
-     1. 使用面向对象的角度写代码
-1. Bean和EJB和POJO
-   - 历史
-     1. 在java1996年发布,当年12月即发布了java bean1.00-A,有什么用呢?通过统一的规范可以设置对象的值(get,set方法),这是最初的java bean;
-     1. 在实际企业开发中,需要实现事务,安全,分布式,javabean就不好用了.sun公司就开始往上面堆功能,这里java bean就复杂为EJB;
-     1. EJB功能强大,但是太重了.此时出现DI(依赖注入),AOP(面向切面)技术,通过简单的java bean也能完成EJB的事情,这里的java bean简化为POJO;
-     1. Spring诞生了;
+1. JSF：Java Server Faces，Java EE中构建web页面的，基于事件绑定，基本没人用。Facelets是jsf MVC的视图部分，利用数据将模板转为html
 ### Servlet
-1. 认识：用Java写的服务器端小程序，是部署在web服务器上的组件，可以访问所有java API，可以搜集表单等浏览器的东西和创建动态网页，为创建基于web的java应用程序
-1. 特点：Servlet应用无法独立运行，必须运行在Servlet容器中，Servlet在web服务器的地址空间执行，一个请求一个线程，性能好。独立于平台，安全性好
-1. 编写
-	```Java
-	// 继承HttpServlet，类关系：自定义setvlet——HttpServlet类(实现了http协议)——GenericServlet类(与协议无关)——Servlet接口(方法：Init/service/destory)
-	// 重写doGet()或者doPost()
-	// 在web.xml中注册Servlet
-	public class Xxx extends HttpServlet{
-		@Override
-		protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {}
-		protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {}
-		// 输出html
-		PrintWriter out = response.getWriter();
-		response.setContentType("text/html;charset=utf-8");
-		out.println("<p>你好</p>";
-	}
-	<servlet>
-		<servlet-name>Xxx</servlet-name>
-		<servlet-class>com.package.Xxx</servlet-class>
-	</servlet>
-	<servlet-mapping> // 指向对应的servlet，即servlet-name要对应
-		<servlet-name>Xxx</servlet-name>
-		<url-pattern>/url</servlet-pattern> // 必须以/开头
-	</servlet-mapping>
-	```
-1. 九大内置对象
-   - Config：getServletConfig
-   - application：getServletContext();整个web应用
-   - session：request.getSession();
-   - page：this
-   - pageContext：pageContext
+1. 认识：Java写的服务器端小程序，部署在web服务器上的组件，可以访问所有java API，用于创建基于java的动态网页，无法独立运行，必须运行在Servlet容器中，一个请求一个线程，性能好，独立于平台，安全性好
+1. 内置对象，9个，是Web容器创建的一组对象，可以不new直接使用的内置对象
+   - Config             getServletConfig
+   - application        getServletContext()，整个web应用
+   - session            request.getSession()
+   - page               this
+   - pageContext        pageContext
    - request
    - response
-   - out：response.getWriter();
-   - exception：Throwable
-1. Servlet项目结构
+   - out                response.getWriter();
+   - exception          Throwable
+1. 结构
    - src：源码目录
-   - webapp：用于存放web资源，WEB-INF是java web应用固定的存放配置和类库的目录，是安全目录，只有服务端能访问
-   - web.xml是配置文件，也叫部署描述符
-1. Servlet的生命周期
+   - webapp：存放web资源，WEB-INF存放配置和类库，是安全目录，只有服务端能访问
+   - web.xml：部署描述符，配置文件
+1. 生命周期
    - init()
-   - service()：服务器收到的每一个请求会创建新的线程并单一调用service()方法，service()方法检查请求类型，适当的调用doGet、doPost、doPut、doDelete等方法
+   - service()：服务器收到的每一个请求会创建新的线程并单一调用service()方法，检查请求类型选择doGet、doPost、doPut、doDelete
    - doGet/doPost
-   - destory()：只被调用一次
-1. request和response
-   - request：请求，javax.servlet.http.HttpServletRequest类的实例
-     1. 方法
-        - getParameter()：单个参数
-        - getParameterValues()：多个参数
-        - getParameterNames()：所有参数
-     1. 例子
+   - destory()：只调用一次
+1. request：请求，javax.servlet.http.HttpServletRequest的实例，页面返回前都有效
+   - 方法
+     1. getParameter()：单个参数
+     1. getParameterValues()：多个参数
+     1. getParameterNames()：所有参数
+   - 例子
         ```Java
         // 获得单个参数
         String name =new String(request.getParameter("name").getBytes("ISO8859-1"),"UTF-8");
@@ -171,71 +104,78 @@
             request.getParameterValues(paramName);
         }
         ```
-     1. 方法补充
-        - `Enumeration getHeaderNames()` // 返回所有头信息
-        - `Cookie[] getCookies()` //
-        - `HttpSession getSession()` // 获取session对话，无则创建
-        - `Object getAttribute(String name)` // 以对象形式返回属性，无则null
-        - `int getParameterMap()` // 以Map形式返回属性
-        - `String getAuthType()` // 如SSL、BASIC，无则null
-        - `String getMethod()` // GET、POST
-        - `String getHeader(String name)` // 字符串形式的头信息
-        - `String getQueryString()` // get参数
-        - `int getContentLength()` // post的长度，字节为单位，未知为-1
-        - `String getRemoteAddr()` // 获取请求者ip
-   - response：响应，是javax.servlet.http.HttpServletResponse类的实例
-     1. 方法
-        - getWriter()
-        - setContentType()
-     1. 例子
+   - 方法
+     1. `Enumeration getHeaderNames()` // 返回所有头信息
+     1. `Cookie[] getCookies()`
+     1. `HttpSession getSession()` // 获取session对话，无则创建
+     1. `Object getAttribute(String name)` // 以对象形式返回属性，无则null
+     1. `int getParameterMap()` // 以Map形式返回属性
+     1. `String getAuthType()` // 如SSL、BASIC，无则null
+     1. `String getMethod()` // GET、POST
+     1. `String getHeader(String name)` // 字符串形式的头信息
+     1. `String getQueryString()` // get参数
+     1. `int getContentLength()` // post的长度，字节为单位，未知为-1
+     1. `String getRemoteAddr()` // 获取请求者ip
+1. response：响应，javax.servlet.http.HttpServletResponse的实例，只对当前页面有效
+   - 方法
+     1. getWriter()
+     1. setContentType()
+   - 例子
         ```Java
-        // 定义消息头部
-        response.setContentType("text/html;charset=UTF-8");
-        // 输出文字
-        PrintWriter out = response.getWriter();
+        response.setContentType("text/html;charset=UTF-8");         // 定义消息头部
+        PrintWriter out = response.getWriter();                     // 输出
         out.println("<html></html>");
-        // 重定向
-        response.setStatus(response.SC\_MOVED_TEMPORARILY);
+        response.setStatus(response.SC_MOVED_TEMPORARILY);         // 重定向
         response.setHeader("Location", site);
         ```
-     1. 方法补充
-         - `void setStatus(int sc)` // 设置状态码
-         - `void addCookie(Cookie cookie)`
-         - `void addHeader(String name, String value)`
-         - `void setHeader(String name, String value)`
-         - `void setContentLength(int len)` // 
-         - `void setBufferSize(int size)` // 为响应主体设置首选缓冲大小
-         - `void flushBuffer()` // 缓冲写入客户端
-         - `void resetBuffer()` // 清除缓冲区内容，不清除状态码和头
-         - `void reset()` // 都清除
-         - `public void setStatus(int statusCode)`
-         - `public void sendError(int code, String message)` // 会出现tomcat原生的错误页面
-         - `public void sendRedirect(String url)` // 302跳转，带一个location头
+   - 方法：setCharacterEncoding("utf-8")/setContentType/getWriter(这个输出流对象和out内置输出流输出位置有区别)/sendRedirect(重定向，即跳转)
+   - 方法
+     1. `void setStatus(int sc)` // 设置状态码
+     1. `void addCookie(Cookie cookie)`
+     1. `void addHeader(String name, String value)`
+     1. `void setHeader(String name, String value)`
+     1. `void setContentLength(int len)` // 
+     1. `void setBufferSize(int size)` // 为响应主体设置首选缓冲大小
+     1. `void flushBuffer()` // 缓冲写入客户端
+     1. `void resetBuffer()` // 清除缓冲区内容，不清除状态码和头
+     1. `void reset()` // 都清除
+     1. `public void setStatus(int statusCode)`
+     1. `public void sendError(int code, String message)` // 会出现tomcat原生的错误页面
+     1. `public void sendRedirect(String url)` // 302跳转，带一个location头
+1. out
+   - 理解：PrintWriter类的实例，用于输出结果。缓冲区：Buffer，内存的一块区域用来保存临时的数据，用于加速数据输出，好比一颗颗和一碗碗吃米饭
+   - 方法
+     1. println：向客户端打印，`out.println();`
+     1. getBufferSize：缓冲区字节数
+     1. flush：将缓冲区内容输出到客户端
+     1. clear：清除缓冲区内容，flush之后调用会抛异常
+     1. clearBuffer：清除缓冲区内容，flush之后调用不会抛异常
+     1. close：关闭缓冲区
 1. Cookie
-   - 设置cookie
-     ```Java
-     Cookie cookie = new Cookie("key","value"); // 不能包含特殊字符
-     cookie.setMaxAge(60\*60*24);
-     response.addCookie(cookie);
-     ```
-   - 获取cookie
-      ```Java
-      Cookie cookies = request.getCookies();
-      for (int i = 0; i < cookies.length; i++){
+   - 设置
+    ```Java
+    Cookie cookie = new Cookie("key","value");
+    cookie.setMaxAge(60*60*24);
+    response.addCookie(cookie);
+    ```
+   - 获取
+    ```Java
+    Cookie cookies = request.getCookies();
+    for (int i = 0; i < cookies.length; i++){
         cookie = cookies[i];
         cookie.getName();
         cookie.getValue();
-      }
-      ```
-   - 删除cookie：设置有效期为0，然后加到头部
-      ```Java
-      Cookie cookies = request.getCookies();
-      for (int i = 0; i < cookies.length; i++){
+    }
+    ```
+   - 删除：设置有效期为0，然后加到头部
+    ```Java
+    Cookie cookies = request.getCookies();
+    for (int i = 0; i < cookies.length; i++){
         cookie = cookies[i];
         cookie.setMaxAge(0);
         response.addCookie(cookie);
-      }
-      ```
+    }
+    ```
    - 方法
      1. `public String getName()` // 返回cookie的名称
      1. `public String getValue()`
@@ -245,14 +185,13 @@
      1. `public void getMaxAge()/setMaxAge(int expiry)`
      1. `public void setSecure()/getComment()/setComment(String purpose)`
 1. Session
-   - 使用：HttpSession对象
+   - 使用：HttpSession类，通过超链接打开的属于同一次会话
      ```Java
-     // 创建
-     HttpSession session = request.getSession(true); // 无则创建
-     // 删除
-     session.invalidate();
+     HttpSession session = request.getSession(true);    // 无则创建
+     session.invalidate();                              // 删除
      session.setMaxInactiveInterval(0);
      ```
+   - 方法：getCreationTime(创建时间)/getId/getAttribute/setAttribute/getValueNames/setMaxInactiveInterval(过期时间)/invalidate(销毁)
    - 方法
      1. `public void setMaxInactiveInterval(int interval)/getMaxInactiveInterval()`
      1. `public void setAttribute(String name, Object value)/`
@@ -270,14 +209,36 @@
         <session-timeout>15</session-timeout>
      </session-config>
      ```
+1. pageContext
+   - 理解：PageContext类的实例，提供对JSP页面所有对象和命名空间的访问，相当于所有功能的集大成者。包含request/response/application/config/session/out对象，也包含指令信息，如缓冲信息/页面scop/错误页面地址
+   - 方法：getOut/getSession/getPage/getRequest/getResponse/setAttribute/getAttribute/getAttributeScope/forward/include(包含另一文件)
+1. application
+   - 理解：ServletContext的实例，实现用户数据共享，可存放全局变量。始于服务器启动终于服务器关闭
+   - 方法：setAttribute/getAttribute/getAttributeNames/getServerInfo(返回jsp引擎)
+1. page
+   - 理解：指当前JSP页面，类似this。是Object类的实例
+   - 方法：getClass/hashCode/equals/copy/clone/toString/notify/notifyAll/wait/wait
+1. config
+   - 理解：ServletConfig类的实例，是Servlet初始化时，jsp引擎向其传输数据用
+   - 方法：getServletContext/getInitParameter/getInitParameterNames
+1. exception
+   - 理解：Exception类的对象，代表JSP页面中的异常对象，一旦产生异常就产生了这个对象
+   - 方法：getMessage/toString/printStackTrace(显示异常栈轨迹)/FillInStackTrace(重写异常执行栈轨迹)
 1. 过滤器
-   - 理解：对请求或者响应动作之前进行拦截
-   - 特点：能改变用户请求的路径，不能改变返回数据
-   - 生命周期
+   - 理解：请求/响应动作之前进行拦截，能改变用户请求的路径，不能改变返回数据
+   - 生命周期：调用链，按照web.xml的定义顺序，filter1请求传回过滤链前->filter2请求传回过滤链前->service->filter1请求传回过滤链后->filter2请求传回过滤链后
      1. web.xml：实例化一次
 	 1. init：初始化
-	 1. 开始过滤：doFilter();
-	 1. 销毁：destory();
+	 1. doFilter()：开始过滤
+	 1. destory()：销毁
+   - 捕捉动作：Servlet2.5支持
+     1. REQUEST：用户直接访问页面时调用
+     1. ORWARD：转发时调用，即通过RequestDispatcher的forward访问
+     1. INCLUDE：被包含的请求时调用，即通过RequestDispatcher的include访问		
+     1. ERROR：通过声明式异常处理机制时调用
+   - Servlet3.0新功能
+     1. async：支持异步处理，先返回结果，后台一直执行直到结束，开启web.xml和Filter类的异步开关，`AsyncContext context = request.startAsync();`
+     1. @WebFilter：将一个类声明为过滤器
    - 实例
      1. web.xml配置
         ```XML
@@ -292,79 +253,50 @@
         <filter-mapping>
           <filter-name>LogFilter</filter-name>
           <url-pattern>/*</url-pattern>
-          <dispatcher></dispatcher> // 过滤类型请求，dispatcher：REQUEST、INCLUDE、FORWARD、ERROR，默认REQUEST
+          <dispatcher></dispatcher>                 // 过滤类型请求，dispatcher：REQUEST、INCLUDE、FORWARD、ERROR，默认REQUEST
         </filter-mapping>
         ```
      1. 过滤器类
 		```Java
 		public class LogFilter implements Filter{
 			public void  init(FilterConfig config) throws ServletException {
-				// 运行流程为web应用程序启动——web服务器创建Filter实例对象——调用init——读取web.xml——完成对象的初始化
-				// 获取初始化参数
-				String site = config.getInitParameter("Site");
+				String site = config.getInitParameter("Site");                  // 获取初始化参数
 			}
-			public void  doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws java.io.IOException, ServletException {
-				// 完成具体的过滤操作，FilterChain指出后续过滤器
-				chain.doFilter(request,response); // 把请求传回过滤链
+			public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws java.io.IOException, ServletException {
+				chain.doFilter(request,response);                               // 完成具体的过滤操作，FilterChain指出后续过滤器
 			}
-			public void destroy( ){
-				// 在Filter实例被 Web容器从服务移除之前调用
-			}
+			public void destroy(){}                                             // Filter实例被Web容器从服务移除之前调用
 		}
 		```
-   - 过滤器链：按照web.xml中定义的顺序，filter1请求传回过滤链前->filter2请求传回过滤链前->service->filter1请求传回过滤链后->filter2请求传回过滤链后
-   - 分类
-     1. Servlet2.5
-	    - REQUEST：用户直接访问页面时调用
-		- FORWARD：转发时调用，即通过RequestDispatcher的forward访问
-		- INCLUDE：被包含的请求时调用，即通过RequestDispatcher的include访问		
-		- ERROR：通过声明式异常处理机制时调用
-	 1. Servlet3.0
-	    - ASYNC：支持异步处理，即先返回结果，后台一直执行直到结束
-		```Java
-		AsyncContext context = request.startAsync(); // 在doGet方法中，同时开启web.xml和Filter类的异步开关
-		```
-        - @WebFilter注解将一个类声明为过滤器
 1. 监听器
-   - 理解：针对其他对象发生的事件/状态改变，进行监听和处理的对象。是servlet规范定义的一种特殊类，用于监听ServletContext/HttpSession/ServletRequest域对象的创建/销毁/属性修改的事件，可以在事件发生前、发生后做出相应
-   - 特点
-     1. 启动顺序为web.xml中定义的顺序
-	 1. 优先级：监听器->过滤器->Servlet
+   - 理解：针对其他对象发生的事件/状态改变，进行监听和处理的对象。是servlet规范定义的一种特殊类，用于监听ServletContext/HttpSession/ServletRequest域对象的创建/销毁/属性修改等事件，可以在事件发生前、发生后做出响应。优先级：监听器->过滤器->Servlet
    - 分类
      1. 按照监听对象
 	    - ServletContext：应用程序环境对象
-		- HttpSession：用户会话对象
 		- ServletRequest：请求消息对象
-     1. 按照监听的事件
-	    - 域对象的创建/销毁
-		- 域对象的属性增加/删除
-		- 绑定到HttpSession域中的某个对象的状态
-   - 创建
-    ```Java
-    // 创建实现监听器接口的类
-    // 针对ServletContext	
-    // TODO 其余两种监听类
-    public class XxxListener implements ServletContextListener{
-      public void contextInitialized(ServletContextEvent servletcontextecent) {}
-      public void contextDestoryed(ServletContextEvent servletcontextecent) {}
-    }
-    // 在web.xml注册
-    <listener>
-      <listener-class>com.package.XxxListener</listener-class>
-    </listener>
-    ```
-1. 异常：web.xml匹配异常类型
-   - 使用：error-page元素决定，状态码或者异常
-   - 错误相关的属性
-     1. status_code：`Integer`，即`java.lang.Integer`
+		- HttpSession：用户会话对象
+     1. 按照监听的事件：域对象的创建/销毁，属性增加/删除
+   - 实例
+        ```Java
+        public class XxxListener implements ServletContextListener{                     // 针对ServletContext	
+            public void contextInitialized(ServletContextEvent servletcontextecent) {}
+            public void contextDestoryed(ServletContextEvent servletcontextecent) {}
+        }
+        <listener>                                                                      // web.xml注册
+        <listener-class>com.package.XxxListener</listener-class>
+        </listener>
+        ```
+1. 异常
+   - 使用：web.xml匹配异常类型，error-page元素决定状态码/异常
+   - 相关属性
+     1. status_code：Integer
+     1. servlet_name：`String`
      1. exception_type：`Class`，异常类型
+     1. exception：`Throwable`
      1. message：`String`
      1. request_uri：`String`
-     1. exception：`Throwable`
-     1. servlet_name：`String`
-   - 使用
+   - 实例
         ```XML
-        // 全部
         <error-page>
             <error-code>403</error-code>
             <location>/ErrorHandler</location>
@@ -377,16 +309,7 @@
         </error-page>
         ```
 1. 国际化
-   - 概念
-     1. i18n：国际化      
-     1. l10n：本地化
-     1. locale：区域设置，如en_US
-   - 使用：Locale对象提供
-   - 中文处理
-     ```Java
-     String str = java.net.URLEncoder.encode("中文"，"UTF-8");
-     String str = java.net.URLDecoder.decode("编码后的字符串","UTF-8");
-     ```
+   - 理解：Locale对象提供，i18n 国际化、l10n 本地化、locale 区域设置如en_US
    - 方法
      1. `String getCountry()` // 两个大写字母形式的ISO 3166格式国家代码
      1. `String getDisplayCountry()` // 国家名称
@@ -394,139 +317,31 @@
      1. `String getDisplayLanguage()` // 语言名称
      1. `String getISO3Country()` // 国家的3个字母缩写
      1. `String getISO3Language()` // 语言的3个字母缩写
-1. 文件上传和下载
-   - 上传
-      ```Java
-      // 检测是否为多媒体上传
-      if (!ServletFileUpload.isMultipartContent(request)) {
-          // 如果不是则停止
-          PrintWriter writer = response.getWriter();
-          writer.println("Error: 表单必须包含 enctype=multipart/form-data");
-          writer.flush();
-          return;
-      }
-      // 上传配置
-      private static final String UPLOAD_DIRECTORY = "upload";      
-      private static final int MEMORY_THRESHOLD     = 1024 * 1024 * 3;  // 3MB
-      private static final int MAX\_FILE\_SIZE      = 1024 * 1024 * 40; // 40MB
-      private static final int MAX\_REQUEST\_SIZE   = 1024 * 1024 * 50; // 50MB
-      // 存储目录
-      String uploadPath = request.getServletContext().getRealPath("./") + File.separator + UPLOAD_DIRECTORY;
-      // 如果目录不存在则创建
-      File uploadDir = new File(uploadPath);
-      if (!uploadDir.exists()) {
-          uploadDir.mkdir();
-      }
-      // 设置内存临界值 - 超过后将产生临时文件并存储于临时目录中
-      DiskFileItemFactory factory = new DiskFileItemFactory();
-      factory.setSizeThreshold(MEMORY_THRESHOLD);
-      factory.setRepository(new File(System.getProperty("java.io.tmpdir"))); 
-      // 上传类
-      ServletFileUpload upload = new ServletFileUpload(factory);
-      upload.setFileSizeMax(MAX\_FILE_SIZE); // 设置最大文件上传值
-      upload.setSizeMax(MAX\_REQUEST_SIZE); // 设置最大请求值 (包含文件和表单数据)
-      upload.setHeaderEncoding("UTF-8"); // 中文处理
-      try {
-            // 解析请求的内容提取文件数据
-            @SuppressWarnings("unchecked")
-            List<FileItem> formItems = upload.parseRequest(request);
-            if (formItems != null && formItems.size() > 0) {
-                // 迭代表单数据
-                for (FileItem item : formItems) {
-                    // 处理不在表单中的字段
-                    if (!item.isFormField()) {
-                        // 提取文件
-                        String fileName = new File(item.getName()).getName();
-                        String filePath = uploadPath + File.separator + fileName;
-                        File storeFile = new File(filePath);
-                        // 保存文件到硬盘
-                        item.write(storeFile);
-                        request.setAttribute("message", "文件上传成功!");
-                    }
-                }
-            }
-        } catch (Exception ex) {
-            request.setAttribute("message", "错误信息: " + ex.getMessage());
-        }
-      ```
-   - 下载
-      ```Java
-      // 获取文件名
-      String filename = request.getParameter("name");
-      filename = new String(filename.getBytes("iso-8859-1"),"utf-8");
-      // 设置文件MIME类型  
-      response.setContentType(getServletContext().getMimeType(filename));  
-      // 设置Content-Disposition  
-      response.setHeader("Content-Disposition", "attachment;filename="+filename);
-      // 文件绝对路径
-      ServletContext context = this.getServletContext();
-      String fullFileName = context.getRealPath("/download/"+filename);
-      //输入流为项目文件，输出流指向浏览器
-      InputStream is=new FileInputStream(fullFileName);
-      ServletOutputStream os =response.getOutputStream();
-      int len=-1;
-      byte[] b=new byte[1024];
-      while((len=is.read(b))!=-1){
-          os.write(b,0,len);
-      }
-      //关闭流
-      is.close();
-      os.close();
-      ```
-1. 实际使用
-   - 调试：`System.out.println()`，输出的信息会记录在web服务器日志里
-   - 跳转
+1. 实例
 	```Java
-	// /表示根目录
-	response.sendRedirect(request.getContextPath + "/要跳转的页面相对地址"); // 重定向，地址改变
-	request.getRequestDispatcher("/要跳转的页面相对地址").forward(request, response); // 转发请求，地址不变
+	public class Xxx extends HttpServlet{
+		@Override
+		protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {}
+		protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {}
+		// 输出html
+		PrintWriter out = response.getWriter();
+		response.setContentType("text/html;charset=utf-8");
+		out.println("<p>你好</p>";
+	}
+	<servlet>                                                   // web.xml中注册Servlet
+		<servlet-name>Xxx</servlet-name>
+		<servlet-class>com.package.Xxx</servlet-class>
+	</servlet>
+	<servlet-mapping>                                           // 指向对应的servlet，servlet-name要对应
+		<servlet-name>Xxx</servlet-name>
+		<url-pattern>/url</servlet-pattern>                     // 必须为相对路径
+	</servlet-mapping>
 	```
-1. 打包和部署
-   - 打包时，依赖的jar包要么在tomcat的lib目录下，要么声明在path中；如果用IDE就设置好就行
-   - 部署时，需放在tomcat的webapp下，或者由IDE启动，或者由maven的plugin启动
+1. 类的继承关系：自定义servlet——HttpServlet类(实现了http协议)——GenericServlet类(与协议无关)——Servlet接口
 ### JSP
-1. 理解：`Java Server Pages` 是简化的servlet设计，在html中插入java代码(Scriptlet)和jsp标记(tag)，实现了html中的Java扩展(通常用<% %>包裹)，基于Java API。是动态生成web网页的一种标准。与纯Servlet比较，方便编写html，而不用大量的println来一句一句的输出，servlet是老的cgi的方式
-1. 内置对象
-   - 理解：是Web容器创建的一组对象，可以不new直接使用的内置对象
-   - 组成
-     1. `request`
-        - 理解：HttpServletRequest的实例，页面返回前都有效
-        - 方法：setCharacterEncoding("utf-8")/getParameter/getParameterValues(获得一个属性的多个值)/getAttribute/setAttribute(存储请求属性)/getContentType/getProtocol(协议类型和版本号)/getServerName/getRequestDispatcher().forward(req,res)
-     1. `response`
-        - 理解：HttpServletResponse的实例，只对当前页面有效
-        - 方法：setCharacterEncoding("utf-8")/setContentType/getWriter(这个输出流对象和out内置输出流输出位置有区别)/sendRedirect(重定向，即跳转)
-     1. `out`
-        - 理解：PrintWriter类的实例，用于输出结果
-        - 方法
-          1. println：向客户端打印，`out.println("你好");`
-          1. getBufferSize：缓冲区字节数
-          1. flush：将缓冲区内容输出到客户端
-          1. clear：清除缓冲区内容，flush之后调用会抛异常
-          1. clearBuffer：清除缓冲区内容，flush之后调用不会抛异常
-          1. close：关闭缓冲区
-        - 缓冲区：Buffer，内存的一块区域用来保存临时的数据，用于加速数据输出，好比一颗颗和一碗碗吃米饭
-     1. `session`
-        - 理解：HttpSession的实例
-        - 方法：getCreationTime(创建时间)/getId/getAttribute/setAttribute/getValueNames/setMaxInactiveInterval(过期时间)/invalidate(销毁)
-        - 生命周期：通过超链接打开的属于同一次会话
-     1. `application`
-        - 理解：ServletContext的实例，实现用户数据共享，可存放全局变量。始于服务器启动终于服务器关闭
-        - 方法：setAttribute/getAttribute/getAttributeNames/getServerInfo(返回jsp引擎)
-     1. `page`
-        - 理解：指当前JSP页面，类似this。是Object类的实例
-        - 方法：getClass/hashCode/equals/copy/clone/toString/notify/notifyAll/wait/wait
-     1. `pageContext`
-        - 理解：PageContext类的实例，提供对JSP页面所有对象和命名空间的访问，相当于所有功能的集大成者。包含request/response/application/config/session/out对象，也包含指令信息，如缓冲信息/页面scop/错误页面地址
-        - 方法：getOut/getSession/getPage/getRequest/getResponse/setAttribute/getAttribute/getAttributeScope/forward/include(包含另一文件)
-     1. `config`
-        - 理解：ServletConfig类的实例，是Servlet初始化时，jsp引擎向其传输数据用
-        - 方法：getServletContext/getInitParameter/getInitParameterNames
-     1. `exception`
-        - 理解：Exception类的对象，代表JSP页面中的异常对象，一旦产生异常就产生了这个对象
-        - 方法：getMessage/toString/printStackTrace(显示异常栈轨迹)/FillInStackTrace(重写异常执行栈轨迹)
-   - 作用域范围
-1. 基本语法
-   - 指令：用`<%!@%>`表示
+1. 理解：Java Server Pages，是简化的servlet设计，在html中插入java代码(Scriptlet)和jsp标记(tag)，实现了html中的Java扩展，与Servlet比较，方便编写html，不用大量的println一句句的输出，servlet是老的cgi的方式，内置对象和servlet相同
+1. 基本构成
+   - 指令
      1. `<%@ page name="value" %>`：声明页面属性
         - 属性
            1. `language` 指定页面的脚本语言，默认java
@@ -545,8 +360,8 @@
         - 举例：`<%@ page language="java" import="java.util.*" contentType="text/html; charset="utf-8"%>`
      1. `<%@ include file="url" %>` 包含其他文件，如jsp、html、文本文件。等价于jsp:directive.include
      1. `<%@ taglib uri="" prefix="" %>` 引入标签库或者自定义标签
-   - 声明：JSP页面定义变量或方法，用`<%!%>`表示，或者`<jsp:declaration></jsp:declaration>`
-   - 表达式：用来直接输出结果的简便方式，用`<%=%>`表示，不以分号结束，和`out.println()`相同。或者`<jsp:expression></jsp:expression>`
+   - 声明：定义变量或方法，用`<%! %>`表示，或者`<jsp:declaration></jsp:declaration>`
+   - 表达式：用来直接输出结果的简便方式，用`<%= %>`表示，不以分号结束，和`out.println()`相同。或者`<jsp:expression></jsp:expression>`
      1. 举例
         ```java
         <%!
@@ -554,8 +369,8 @@
         %>
         <%=s %>
         ```
-   - 脚本：JSP页面执行的java代码，用`<%%>`表示，或者`<jsp:scriptlet></jsp:scriptlet>`
-     1. if判断
+   - 脚本：`<%%>`表示，或者`<jsp:scriptlet></jsp:scriptlet>`
+     1. if
         ```Java
         <% if (day == 1 | day == 7) { %>
         <% } else { %>
@@ -571,7 +386,7 @@
          }
          %>
          ```
-      1. for循环
+      1. for
           ```Java
           <%for ( i = 1; data <= 3; i++){ %>
           <%}%>
@@ -579,27 +394,23 @@
    - 注释
      1. `<%----%>`：JSP注释，不会被编译
      1. `<!---->`：HTML注释
-     1. `//和/**/`：脚本注释
 1. 动作标签/动作元素
    - 属性
      1. id：行为元素的唯一标识，可以通过PageContext调用
      1. scope：page(当前页面有效)、request、session、application
    - 组成
      1. useBean
-        - 标签：`<jsp:useBeans>`
-          1. `jsp:getProperty/setProperty`
-        - 使用
-            ```Java
-            <jsp:useBean id="标识符" class="类名" scope="作用范围">
-                <jsp:setProperty name="id名" property="属性名" value="设置值" param="url参数值"/>
-                <jsp:getProperty name="" property=""/>
-            </jsp:useBean>
-            ```
+        ```Java
+        <jsp:useBean id="" class="" scope="">
+            <jsp:setProperty name="" property="" value="" param=""/>
+            <jsp:getProperty name="" property=""/>
+        </jsp:useBean>
+        ```
      1. include/forward/param/params/plugin/fallback：jsp1.2就存在的基本元素
-        - include动作：<jsp:include page="url" flush="bool">，flush表示引入前是否刷新缓冲区
-        - forward动作：<jsp:forward page="url">，等同于request.getRequestDispatcher("/url").forward(request, response);
-        - param动作：<jsp:param name="" value="">，作为forward的子标签
-        - plugin动作：用于包含Applet和JavaBean
+        - include：<jsp:include page="url" flush="bool">，flush表示引入前是否刷新缓冲区
+        - forward：<jsp:forward page="url">，等同于request.getRequestDispatcher("/url").forward(request, response);
+        - param：<jsp:param name="" value="">，作为forward的子标签
+        - plugin：用于包含Applet和JavaBean
             ```Java
             <jsp:plugin type="applet" codebase="dirname" code="MyApplet.class" width="60" height="80">
                 <jsp:param name="fontcolor" value="red" />
@@ -629,18 +440,16 @@
      1. JSTL函数
    - 安装：将官方jsp的jar包放到`/WEB-INF/lib/`下
      ```XML
-     // web.xml添加配置
-     <jsp-config>
-       <taglib>
-         <taglib-uri>http://java.sun.com/jstl/fmt</taglib-uri>
-         <taglib-location>/WEB-INF/fmt.tld</taglib-location>
-       </taglib>
+    <jsp-config>                                                        // web.xml配置
+        <taglib>
+                <taglib-uri>http://java.sun.com/jstl/fmt</taglib-uri>
+                <taglib-location>/WEB-INF/fmt.tld</taglib-location>
+        </taglib>
      </jsp-config>
-     // jsp页面中导入核心标签库
-     <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
+     <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>    // jsp页面中导入核心标签库
      ```
    - EL
-     1. 理解：Expression Language，表达式语言，创建表达式并输出结果。和<%=\%>作用相同
+     1. 理解：Expression Language，表达式语言，创建表达式并输出结果。和<%=%>作用相同
      1. 表示：${expr}
      1. 基础操作符
         - `.` // 访问一个bean属性或者映射条目，不能用于键名包含-符号和为变量时不适用
@@ -767,3 +576,31 @@
      1. 初始化阶段：加载Servlet类，创建实例，调用初始化方法——jspInit()
      1. 执行阶段：_jspService(HttpServletRequest request,HttpServletResponse response)
      1. 销毁阶段:jspDestroy()
+### wiki
+1. Servlet版本历史
+   - 4.0——草案——HTTP/2支持
+   - 3.1——2013年——JavaEE 7——NIO
+   - 3.0——2009年——JavaEE 6, JavaSE 6——简易开发，异步servlet、新注解使web.xml部署描述文件开始不再是必选、插件支持
+   - 2.5——2005年——JavaEE 5, JavaSE 5——支持注释
+   - 2.4——2003年——J2EE 1.4, J2SE 1.3——web.xml
+   - 2.3——2001年——J2EE 1.3, J2SE 1.2——增加Filter
+   - 2.2——1999年——J2EE 1.2, J2SE 1.2
+   - 2.1——1998年————添加请求转发
+   - 2.0——JDK 1.1
+   - 1.0——1997年
+1. JSP版本特性
+   - 2.0：加入了EL表达式语言
+1. Tomcat版本和servlet、jsp的支持
+   - 9.X——Java8——servlet4.0——jsp2.4
+   - 8.X——Java7——servlet3.1——jsp2.3
+   - 7.X——Java6——servlet3.0——jsp2.2
+   - 6.X——Java5——servlet2.5——jsp2.1
+   - 5.5——Java5——servlet2.4——jsp2.0
+   - 4.1——Java5——servlet2.3——jsp1.2
+   - 3.3——Java5——servlet2.2——jsp1.1
+1. Java EE版本历史
+   - Java：1995年
+   - J2ee 1：1999年
+   - J2ee 1.4：2002年，EJB2.0
+   - JavaEE 5：2006年，EJB3.0，简化开发、引入注释、更新的web服务、加强的持久化模型
+   - JavaEE 7：提高生产力，带注释的POJO————html5：WebSockets、json、Servlet3.1 NIO、REST————企业需求：批量处理实现不间断OLTP性能、简化多线程并发任务的定义提高可扩展性、简化JMS具有选择性和灵活性

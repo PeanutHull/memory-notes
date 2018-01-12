@@ -192,11 +192,16 @@
         HeroConfig 韩信 = new HeroConfig.HeroBuilder("无情冲锋","背水一战","国士无双").BuilTPeffect("金光闪闪").create();
         ```
 ### 常用类
+1. Arrays类：java提供的工具类，包为java.util.Arrays ，包含排序、搜索等方法
+   - 排序：`Arrays.sort();`
+   - 查找：binarySearch：`int binarySearch(Obj[] a, Obj key)`
+   - 比较：equals：`boolean equals(long[] a, long[] a2)`
+   - Arrays.toString(Array);
 1. Math类
    - 定义：提供了基本数学运算的属性和方法。如初等函数、对数、平方根和三角函数，都是静态函数
    - 示例
         ```Java
-        Math.sin(Math.PI/2) // 90 度的正弦值
+        Math.sin(Math.PI/2) // 90 度的正弦值 
         ```
    - 常用方法：
      1. x.byteValue()：将Number对象转换为基本数据类型。如short/int/long/float/doubleValue();
@@ -300,3 +305,143 @@
    - toLowerCase()：所有转为小写`String toLowerCase([Locale locale])`
    - toUpperCase()：所有转为小写`String toUpperCase([Locale locale])`
    - format()：格式化字符串
+1. 关键字
+   - 基础关键字
+     1. 注解
+     1. java虚拟机
+     1. IO、阻塞和非阻塞
+     1. NIO
+     1. 并发
+     1. 线程池
+     1. 同步容器和并发容器
+     1. 反射
+   - 高级关键字
+     1. quartz
+     1. 事务管理
+     1. 连接池
+     1. dubbo
+     1. 分布式
+     1. Netty
+     1. CDN
+     1. Elasticsearch
+     1. solr
+     1. 负载均衡
+     1. mysql集群
+     1. JVM性能调优
+     1. 负载均衡
+1. 关键功能具备
+   - 异步任务
+   - 缓存
+   - 日志
+1. 轻量级容器
+   - 理解：提供了可插拔的体系结构
+   - 容器提供的服务
+     1. 声明周期管理
+     1. 依赖解析
+     1. 组件查找
+     1. 应用程序配置
+     1. 事物管理
+     1. 安全性
+     1. 线程管理
+     1. 对象和资源池
+     1. 对组件的远程访问
+     1. 通过JMX之类的API管理组件
+     1. 容器的扩展和定制
+   - 控制反转
+1. 知识点
+   - 环知识点：基础，web开发，常用框架，工程与设计模式，数据库和网络，数据结构和算法
+   - 扩展知识点：多线程 io jvm 分布式 mysql spring redis mq 微服务
+1. 中文处理
+    ```Java
+    String str = java.net.URLEncoder.encode("中文"，"UTF-8");
+    String str = java.net.URLDecoder.decode("编码后的字符串","UTF-8");
+    ```
+1. 文件上传和下载
+   - 上传
+      ```Java
+      // 检测是否为多媒体上传
+      if (!ServletFileUpload.isMultipartContent(request)) {
+          // 如果不是则停止
+          PrintWriter writer = response.getWriter();
+          writer.println("Error: 表单必须包含 enctype=multipart/form-data");
+          writer.flush();
+          return;
+      }
+      // 上传配置
+      private static final String UPLOAD_DIRECTORY = "upload";      
+      private static final int MEMORY_THRESHOLD     = 1024 * 1024 * 3;  // 3MB
+      private static final int MAX\_FILE\_SIZE      = 1024 * 1024 * 40; // 40MB
+      private static final int MAX\_REQUEST\_SIZE   = 1024 * 1024 * 50; // 50MB
+      // 存储目录
+      String uploadPath = request.getServletContext().getRealPath("./") + File.separator + UPLOAD_DIRECTORY;
+      // 如果目录不存在则创建
+      File uploadDir = new File(uploadPath);
+      if (!uploadDir.exists()) {
+          uploadDir.mkdir();
+      }
+      // 设置内存临界值 - 超过后将产生临时文件并存储于临时目录中
+      DiskFileItemFactory factory = new DiskFileItemFactory();
+      factory.setSizeThreshold(MEMORY_THRESHOLD);
+      factory.setRepository(new File(System.getProperty("java.io.tmpdir"))); 
+      // 上传类
+      ServletFileUpload upload = new ServletFileUpload(factory);
+      upload.setFileSizeMax(MAX\_FILE_SIZE); // 设置最大文件上传值
+      upload.setSizeMax(MAX\_REQUEST_SIZE); // 设置最大请求值 (包含文件和表单数据)
+      upload.setHeaderEncoding("UTF-8"); // 中文处理
+      try {
+            // 解析请求的内容提取文件数据
+            @SuppressWarnings("unchecked")
+            List<FileItem> formItems = upload.parseRequest(request);
+            if (formItems != null && formItems.size() > 0) {
+                // 迭代表单数据
+                for (FileItem item : formItems) {
+                    // 处理不在表单中的字段
+                    if (!item.isFormField()) {
+                        // 提取文件
+                        String fileName = new File(item.getName()).getName();
+                        String filePath = uploadPath + File.separator + fileName;
+                        File storeFile = new File(filePath);
+                        // 保存文件到硬盘
+                        item.write(storeFile);
+                        request.setAttribute("message", "文件上传成功!");
+                    }
+                }
+            }
+        } catch (Exception ex) {
+            request.setAttribute("message", "错误信息: " + ex.getMessage());
+        }
+      ```
+   - 下载
+      ```Java
+      String filename = request.getParameter("name");                               // 获取文件名
+      filename = new String(filename.getBytes("iso-8859-1"),"utf-8");
+      // 设置文件MIME类型  
+      response.setContentType(getServletContext().getMimeType(filename));  
+      // 设置Content-Disposition  
+      response.setHeader("Content-Disposition", "attachment;filename="+filename);
+      // 文件绝对路径
+      ServletContext context = this.getServletContext();
+      String fullFileName = context.getRealPath("/download/"+filename);
+      //输入流为项目文件，输出流指向浏览器
+      InputStream is=new FileInputStream(fullFileName);
+      ServletOutputStream os =response.getOutputStream();
+      int len=-1;
+      byte[] b=new byte[1024];
+      while((len=is.read(b))!=-1){
+          os.write(b,0,len);
+      }
+      //关闭流
+      is.close();
+      os.close();
+      ```
+1. Servlet
+   - 调试：`System.out.println()`，输出的信息会记录在web服务器日志里
+   - 跳转
+	```Java
+	// /表示根目录
+	response.sendRedirect(request.getContextPath + "/要跳转的页面相对地址"); // 重定向，地址改变
+	request.getRequestDispatcher("/要跳转的页面相对地址").forward(request, response); // 转发请求，地址不变
+	```
+1. 打包和部署
+   - 打包时，依赖的jar包要么在tomcat的lib目录下，要么声明在path中；如果用IDE就设置好就行
+   - 部署时，需放在tomcat的webapp下，或者由IDE启动，或者由maven的plugin启动

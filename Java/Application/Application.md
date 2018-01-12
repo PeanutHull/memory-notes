@@ -1,9 +1,27 @@
-### 实际项目经验
-### MVC
 1. Controller：和Model层通过JavaBean交流数据
 1. Model
    - DAO：即数据模型，不处理业务逻辑，只为业务层提供辅助，完成获取原始数据或持久层数据等。被Service层调取执行数据操作，逻辑在service层写
    - Pojo：原始的数据Bean
+1. Bean
+   - 理解：遵循了JavaBean规范的类
+   - 特点
+     1. 必须为公共类，可序列化
+     1. 若有构造参数，必须是无参的，类中不能出现main函数
+     1. 所有属性是私有的，必须通过public的get/set/isXxx来操作
+     1. 包含必要的事件处理方法，如addXxxListener、XxxEvent
+   - 组成
+     1. 属性
+        - Simple属性：具有setter、getter方法对的属性
+        - Indexed属性：表示数据值，针对数据的simple属性
+        - Bound属性：属性值发生变化时，会触发其他JavaBean
+        - Constrained属性：属性值将要发生变化时，与该属性建立关系的其他java对象可以否决其改变
+     1. 事件：是事件发起者，也是接收者
+1. POJO：Plain Old Java Objects，简单java对象，使编写应用程序类快速和简单，使用面向对象的角度写代码
+1. Bean和EJB和POJO
+   - 在java1996年发布,当年12月即发布了java bean1.00-A,有什么用呢?通过统一的规范可以设置对象的值(get,set方法),这是最初的java bean
+   - 在实际企业开发中,需要实现事务,安全,分布式,javabean就不好用了.sun公司就开始往上面堆功能,这里java bean就复杂为EJB
+   - EJB功能强大,但是太重了，此时出现DI、AOP技术,通过简单的java bean也能完成EJB的事情,这里的java bean简化为POJO
+   - Spring诞生了
 ### DAO
 1. 理解：Data Access Object，用来封装访问数据库的代码，即持久层
 1. 部署脚本

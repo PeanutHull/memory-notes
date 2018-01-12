@@ -48,7 +48,10 @@
    - 解释性语言：java程序先编译为字节码格式，java解释器对字节码解释执行，执行中需要的类在编译的联接中载入
    - 高性能：速度越来越接近C++，是多线程的，线程是特殊的对象，必须由Thread类或其子类来创建
    - 是动态的
-1. 运行流程：.java源文件———编译———.class字节码文件(与平台无关)———解释———完成
+1. 运行
+   - 源文件名：必须和类名相同
+   - 主方法入口：所有java程序由public static void main(String[] args)开始执行
+   - 流程：.java源文件———编译———.class字节码文件(与平台无关)———解释———完成
 ### 语法
 1. 数据类型
    - 分类：基本类型、引用类型
@@ -147,6 +150,9 @@
         - transient：对象变量持久化跳过修饰符，只修饰变量，不修饰方法和类。被修饰的变量和静态变量不能被序列化。`public transient int limit = 1;`
         - synchronized：同一时间只能被一个线程访问 `public synchronized void showDetails(){}`
         - volatile：每次被线程访问，强制从共享内存中重新读取该成员变量的值。当成员变量改变时强制线程将变化值写回内存。保证不同线程看到同一变量的值
+        - native：表示方法用非java代码实现
+        - assert：判断条件是否满足 ？
+        - instanceof：检测对象是否是一个类实例
    - 标识符：用于定义名字，大小写敏感，由字母/数字/下划线/$组成，数字不能开头，类首字母大写和驼峰法
    - 注释：// 单行注释、/* */文档注释、/* * */多行注释
      1. 注释标签：提取Java注释：`javadoc -d doc hello.java`
@@ -183,6 +189,13 @@
         item.getKey();
         item.getValue());
     }
+    Map<String, Integer> items = new HashMap<>();           // 遍历Map，java8
+    items.put("A", 10);
+    items.forEach((k,v)->{});
+
+    List<String> items = new ArrayList<>();                 // 遍历List
+    items.add("A");
+    items.forEach(item->{});
     ```
 ### 面向对象
 1. 封装/继承/多态
@@ -454,55 +467,36 @@
         Color.RED.equals(color);
         ```
    - 数组：Array，存储在堆上的对象，长度是固定的，用来存储固定数量的多个同类型变量，是一种数据结构，是个容器
-     1. 定义
+     1. 定义：数据类型 数组名[] // 或者 数据类型[] 数组名
         ```Java
-        数据类型 数组名[] // 或者 数据类型[] 数组名
-        // 举例
-        int[] myArray; // 声明
-        myArray = new int[size]; // 指定数组长度
-        int[] myArray = new int[size]; // 声明并指定长度
-        int[] myArray = {78,93}; // 声明并填充内容
-        int myArray[] = {78,93}; // 声明并填充内容
-        int[] myArray = new int(){78,93}; // 声明并填充内容
+        int[] myArray = new int[size];    // 声明并指定长度
+        int[] myArray = new int(){78,93}; // 声明并填充内容        
+        int[] myArray = {78,93};          // 声明并填充内容
+        int myArray[] = {78,93};          // 声明并填充内容
         ```
      1. 处理：
         ```Java
-        // 访问
-        myArray[1];
-        // 赋值
-        myArray[1] = 1;
-        // 长度
-        myArray.length();
-        // 遍历
-        for (int i = 0; i < myArray.length; i++) {} // 内循环处理
-        for (double element: myArray) {} // foreach处理
-        public static void printArray(int[] myArray) {} // 作为参数传递
+        myArray[1];             // 访问
+        myArray[1] = 1;         // 赋值
+        myArray.length();       // 长度
+        for (int i = 0; i < myArray.length; i++) {}       // 循环
+        for (double element: myArray) {}                  // foreach
+        public static void printArray(int[] myArray) {}   // 作为参数传递
         ```
      1. 二维数组：`int 数组名[][] = new int[行数][列数]`
         ```Java
-        // 每个数组内容的列数可以不同
-        int num[][] = new int[2][];
+        int num[][] = new int[2][];     // 每个数组内容的列数可以不同
         num[0] = new int[2];
         num[1] = new int[3];
-        // 访问
-        num[0][0]
+        num[0][0]                       // 访问
         ```
-     1. Arrays类：java提供的工具类，包为java.util.Arrays ，包含排序、搜索等方法
-        - 排序
-        ```Java
-        import java.util.Arrays;
-        Arrays.sort(scores);
-        ```
-        - 查找：binarySearch：`int binarySearch(Obj[] a, Obj key)`
-        - 比较：equals：`boolean equals(long[] a, long[] a2)`
-        - Arrays.toString(Array);
-   - 位集合：（BitSet）位集合类实现了一组可以单独设置和清除的位或标志。该类处理一组布尔值的时候很有用。创建一种特殊类型的数组来保存值，数组大小随需要增加
+   - 位集合：BitSet，位集合类实现了一组可以单独设置和清除的位或标志。该类处理一组布尔值的时候很有用。创建一种特殊类型的数组来保存值，数组大小随需要增加
      1. 定义：
         ```Java
         BitSet bits1 = new BitSet(16);
         // 有两个构造方法
-        BitSet(); // 创建一个默认对象
-        BitSet(int size); // 允许用户指定初始大小，默认0
+        BitSet();               // 创建一个默认对象
+        BitSet(int size);       // 指定初始大小，默认0
         ```
      1. 使用：`bits1.set(i);`
      1. 方法：实现了Cloneable接口中定义的方法
@@ -514,13 +508,13 @@
         - `void clear(int startIndex, int endIndex)` // 指定位置为false
         - `boolean get(int index)` // 返回索引处位值
         - `BitSet get(int startIndex, int endIndex)` // 返回索引处位值
-   - 向量：（Vector）向量类和传统数组非常相似，Vector能根据需要动态变化。和数组一样元素能通过索引访问。最主要好处就是在创建对象时不必指定大小，会动态变化。适用在数组要动态变化的情况下
+   - 向量：Vector，向量类和传统数组非常相似，Vector能根据需要动态变化。和数组一样元素能通过索引访问。最主要好处就是在创建对象时不必指定大小，会动态变化。适用在数组要动态变化的情况下
      1. 定义
         ```Java
         Vector()
-        Vector(int size) // 指定大小
-        Vector(int size,int incr) // 用incr确定向量每次增加的元素数目
-        Vector(Collection c) // 包含集合C的向量
+        Vector(int size)                // 指定大小
+        Vector(int size,int incr)       // 用incr确定向量每次增加的元素数目
+        Vector(Collection c)            // 包含集合C的向量
         // 示例
         Vector v = new Vector(3, 2);
         v.size();
@@ -536,8 +530,8 @@
         - `boolean add(Object o)` // 添加到末尾
         - `boolean addAll(int index, Collection c)` // 指定位置插入集合中所有值
         - `int capacity()` // 返回当前容量
-     1. 特点：是同步访问的，包含传统方法，和ArrayList类似，不属于集合框架
-   - 栈：（Stack）实现了先进后出的数据结构。是Vector的子类
+     1. 特点：是同步访问=线程安全的，包含传统方法，和ArrayList类似，不属于集合框架
+   - 栈：Stack，实现了先进后出的数据结构，是Vector的子类
      1. 定义
         ```Java
         // 示例
@@ -547,11 +541,10 @@
      1. 方法
         - `boolean empty()` // 是否为空
         - `Object peek()` // 查看顶部对象，不移除
-        - `Object pop( )` // 返回顶部并移除
+        - `Object pop()` // 返回顶部并移除
         - `Object push(Object element)` // 把元素压入顶部
         - `int search(Object element)` // 对象在堆栈的位置，1为基数
-   - 字典：（Dictionary）字典类是抽象类，定义键映射到值的数据结构。通过键而不是整数索引来访问数据时使用。因为是抽象类，所以只提供数据结构，没有提供具体实现。存储键/值对，作用和Map类相似
-     1. 定义
+   - 字典：Dictionary，字典类是抽象类，定义键映射到值的数据结构。通过键而不是整数索引来访问数据时使用。因为是抽象类，所以只提供数据结构，没有提供具体实现。存储键/值对，作用和Map类相似
      1. 方法
         - `boolean isEmpty()` // 是否空字典
         - `int size()` // 数量
@@ -560,13 +553,13 @@
         - `Object remove(Object key)` // 删除
         - `Enumeration keys()` // 返回字典中键的枚举
         - `Enumeration elements()` // 返回字典中值的枚举
-   - 哈希表：（Hashtable）Hashtable类提供了用户定义键结构的组织数据的手段，哈希表的键的具体含义取决于使用场景和包含的数据。是原始的java.util的一部分，是Dictionary的具体实现，是其子类。Java 2的Hashtable实现了Map接口，所以现在集成到了集合框架中，和HashMap类似，但是支持同步。哈希表的键经过哈希处理得到的散列码用作值的索引
-     1. 定义：
+   - 哈希表：Hashtable，Hashtable类提供了用户定义键结构的组织数据的手段，哈希表的键的具体含义取决于使用场景和包含的数据。属于java.util，是字典的具体实现，Java 2的Hashtable实现了Map接口，所以现在集成到了集合框架中，和HashMap类似，但是支持同步。哈希表的键经过哈希处理得到的散列码用作值的索引
+     1. 定义
         ```Java
         Hashtable()
         Hashtable(int size)
-        Hashtable(int size,float fillRatio) // fillRatio指定填充比例(0.0~1.0)，决定了重新调整大小的充满程度
-        Hashtable(Map m) // 以M中元素为初始化元素的哈希表，哈希表的容量被设置为M的两倍
+        Hashtable(int size,float fillRatio)   // fillRatio指定填充比例(0.0~1.0)，决定了重新调整大小的充满程度
+        Hashtable(Map m)                      // 以M中元素为初始化元素的哈希表，哈希表的容量被设置为M的两倍
         ```
      1. 实例
         ```Java
@@ -591,17 +584,10 @@
         - `void clear( )` // 清空
         - `Object clone()` // 创建浅表副本
         - `void rehash()` // 增加此哈希表的容量并在内部对其进行重组，以便更有效地容纳和访问其元素
-   - 属性：（Properties）Properties类是Hashtable的子类，表示一个持久的属性集。属性列表中每个键和对应值都是字符串。获取环境变量时它作为System.getProperties()的返回值
-     1. 定义
-        ```Java
-        Properties()
-        Properties(Properties propDefault)
-        // 定义如下实例变量，这个变量有Properties对象相关的默认属性列表
-        Properties defaults;
-        ```
+   - 属性：Properties，是Hashtable的子类，表示持久属性集，键值都是字符串，获取环境变量时作为System.getProperties()的返回值
      1. 实例
         ```Java
-        Properties capitals = new Properties();
+        Properties capitals = new Properties();         // 定义
         capitals.put("aa", "11");
         // 读取配置
         InputStream in = new BufferedInputStream(new FileInputStream(new File(basePath)));
@@ -619,25 +605,33 @@
         - `store(OutputStream streamOut, String description)` // 输出配置
         - `clear()` // 清楚装载的配置
 ### 集合
-1. 总结
-   - ArrayList 排列有序可重复
-   - HashMap 键值对
-   - HashSet 排列无序不可重复
-1. 简介：是一种工具类，具有共同属性的数据集合，是盛装其他对象的容器，Java2引入，是用来代表/操作集合的统一架构，集合围绕一组标准接口而设计，可以直接使用接口的标准实现，常用有ArrayList、HashMap，HashSet不常用
-1. 组成
-   - Collection：内部存储的都是一个个的对象，单个的
-     1. List：序列，排列有序可重复
-        - ArrayList：数组序列，底层由数组实现
-     1. Queue：队列，排列有序可重复
-        - LinkedList：链表，同时也是List的实现类
-     1. Set：集，无序不可重复
-        - HashSet：哈希集
-   - Map：包含了很多的映射，一对的，有众多子接口
-     1. HashMap：哈希map，基于hash表实现
+1. 集合：是一种工具类，是具有共同属性的数据集合，是盛装其他对象的容器，Java2引入，围绕一组标准接口而设计，是用来代表/操作集合的统一架构，可以直接使用接口的标准实现
+   - 特点
+     1. ArrayList 排列有序可重复
+     1. HashMap 键值对
+     1. HashSet 排列无序不可重复
+   - 组成
+     1. Collection：内部存储的都是一个个对象
+        - List：序列，排列有序可重复
+          1. ArrayList：数组序列，底层由数组实现
+        - Queue：队列，排列有序可重复
+          1. LinkedList：链表，同时也是List的实现类
+        - Set：集，无序不可重复
+          1. HashSet：哈希集
+     1. Map：键值对，有众多子接口
+        - HashMap：基于hash表实现
+     1. 接口
+        - `Collection`：最基本集合接口，java不提供直接继承自Collection的类来使用，只提供继承Collection的子接口，如List和Set
+        - `List`：是有序的，精确控制每个元素的位置。通过索引(类似数组的小标)访问其中的元素，允许有相同元素
+        - `Set`：无序的，与Collection完全一样，行为上不同。不能有相同元素，访问集合中的元素只能根据元素本身来访问。子接口SortedSet接口保存有序集合
+        - `Map`：唯一键映射到值。Map.Entry描述Map中的键值对，是Map的内部类。子接口SortedMap，使key保持升序
+        - `Enumeration`
+        - `AbstractCollection`：实现了大部分的集合接口
+     1. 集合算法：用于搜索和排序，被定义为集合类的静态方法，定义了三个静态变量：EMPTY\_SET，EMPTY\_LIST，EMPTY_MAP，不可改变
    - 工具接口和类
-     1. Collections：工具类，最常用sort方法
-     1. Comparable接口：默认比较规则
-     1. Comparator接口：临时比较规则
+        - Collections：工具类，最常用sort方法，`Java.util.Collections`
+        - Comparable接口：默认比较规则
+        - Comparator接口：临时比较规则
 1. Collection
    - List：查询效率高，插入和删除低，因为引起其他元素改变。Set查询效率低，插入和删除效率高
      1. `AbstractList`：继承于AbstractCollection，实现了大部分List接口。子类AbstractSequentialList提供对数据元素的链式访问，不是随机访问
@@ -648,8 +642,8 @@
      1. `HashSet`：不允许元素重复，不保证元素顺序，最多有一个null值
      1. `LinkedHashSet`：可预知迭代顺序的Set接口的哈希表和链接列表实现
      1. `TreeSet`：实现Set接口，实现排序等功能
-1. Map：映射，用来存储键值对
-   - 特点：通过key查找value。内部以映射存储数据，就是Entry(键值对)类的实例，key和value可以是任意的对象。key不可重复，value可以。支持泛型：`Map<k,v>`
+1. Map：存储键值对
+   - 特点：通过key查找value。内部以映射存储数据，就是Entry(键值对)类的实例，key和value可以是任意的对象。key不可重复，value可以
    - 组成
      1. `AbstractMap`：实现大部分Map接口
      1. `HashMap`：是一个散列表，访问速度很快，线程不同步，键最多一个null
@@ -673,36 +667,23 @@
      1. `Collection values( )` // 返回值的Collection视图
      1. `Set entrySet( )` // 返回映射关系的Set视图
      1. `int hashCode()` // 返回映射的哈希码值
-   - 实例
-    ```Java
-    Map map = Maps.newHashMap();
-    ```
-1. 工具类
-   - Java.util.Collections
-1. 迭代器：Iterator，用来遍历集合中的元素，类似for和增强for，继承自Iterator接口或继承自ListIterator
+1. 迭代器：Iterator，用来遍历集合中的元素，继承自Iterator接口或继承自ListIterator
    - 遍历ArrayList
         ```Java
-        // for循环
-        for(int i=0;i<list.size();i++) {}
-        // foreach
-        for (String str : list) {}
-        // 链表转为数组遍历
-        String[] strArray=new String[list.size()];
+        String[] strArray=new String[list.size()];    // 链表转为数组遍历
         list.toArray(strArray);
         for(int i=0;i<strArray.length;i++) {}
-        // 迭代器遍历
-        Iterator<String> ite=list.iterator();
+        
+        Iterator<String> ite=list.iterator();         // 迭代器遍历
         while(ite.hasNext()) {}
         ```
    - 遍历Map
         ```Java
-        // 通过Map.keySet遍历
-        for (String key : map.keySet()) {
+        for (String key : map.keySet()) {       // foreach
             tmpKey = key
             tmpValue = map.get(key));
         }
-        // 通过Map.values()遍历所有的value，但不能遍历key
-        for (String v : map.values()) {
+        for (String v : map.values()) {         // 遍历values
             tmpValue = v;
         }
         // 通过Map.entrySet使用iterator遍历
@@ -719,162 +700,90 @@
         }
         ```
 1. 比较器：Comparator，用来精确定义排序规则，以不同方式排序集合
-1. 内部组成
-     1. 接口
-        - `Collection`：最基本集合接口，java不提供直接继承自Collection的类来使用，只提供继承Collection的子接口，如List和Set
-        - `List`：是有序的，精确控制每个元素的位置。通过索引(类似数组的小标)访问其中的元素，允许有相同元素
-        - `Set`：无序的，与Collection完全一样，但是行为上不同。不能有相同元素，访问集合中的元素只能根据元素本身来访问。子接口SortedSet接口保存有序集合
-        - `Map`：唯一键映射到值。Map.Entry描述Map中的键值对，是Map的内部类。子接口SortedMap，使key保持升序
-        - `Enumeration`：一个传统的接口和数据定义方法，已被迭代器取代
-     1. 集合类：即接口的实现类
-        - `AbstractCollection`：实现了大部分的集合接口
-        - 其他具体的：ArrayList、HashMap、HashSet等
-     1. 集合算法：用于搜索和排序，被定义为集合类的静态方法，定义了三个静态变量：EMPTY\_SET，EMPTY\_LIST，EMPTY_MAP，不可改变
 ### 应用
-1. 时间和日期
-   - 理解：属于java.util包。
-   - 示例
+1. 时间和日期：属于java.util
+   - Date类
         ```Java
-        // 实例化，可以传入1970年后的毫秒数
-        Date([long millsec])
-        // 获取当前时间
-        Date date = new Date();
-        System.out.println(date.toString());
+        Date([long millsec]);       // 可以传入1970年后的毫秒数
+        Date date = new Date();     // 获取当前时间
         ```
-   - Date的方法
-     1. alter()/before()：是否在日期之前/之后
-     1. clone()：返回副本
-     1. compareTo()：和日期对比。相同为0，在指定之前为负，之后为后
-     1. equals()：对比是否相同
-     1. getTime()：获得时间戳
-     1. hashCode()：此对象哈希值
-     1. setTime()：用时间戳设置时间
-     1. toString()：转换Date为String
+     1. 方法
+        - alter()/before()：是否在日期之前/之后
+        - clone()：返回副本
+        - compareTo()：和日期对比。相同为0，在指定之前为负，之后为后
+        - equals()：对比是否相同
+        - getTime()：获得时间戳
+        - hashCode()：此对象哈希值
+        - setTime()：用时间戳设置时间
+        - toString()：转换Date为String
    - SimpleDateFormat类
         ```Java   
-        // 格式化时期显示
-        Date dNow = new Date();
         SimpleDateFormat ft = new SimpleDateFormat("E yyyy.MM.dd 'at' hh:mm:ss a zzz");
+        Date dNow = new Date();                 // 格式化时期显示
         ft.format(dNow)
-        // 解析字符串为时间
-        SimpleDateFormat ft = new SimpleDateFormat("yyyy-MM-dd");
-        String input = "1818-11-11";
+        String input = "1818-11-11";            // 解析字符串为时间
         ft.parse(input);
         ```
     - Calendar类
-      1. 理解：获取日期的一部分，加减日期
+      1. 理解：获取日期的一部分，加减日期，GregorianCalendar类：实现公历日历，是Calendar的一个实现
       1. 示例
             ```Java
-            Calendar c = Calendar.getInstance(); // 创建，默认当前时区
-            Calendar c = Calendar.getInstance(); // 创建指定日期
+            Calendar c = Calendar.getInstance();    // 创建，默认当前时区
             c.set(2009, 6 - 1, 12);
-            c.get(Calendar.YEAR); // 获得年份
-            c.add(Calendar.DATE, 10); // 加10天
+            c.get(Calendar.YEAR);                   // 获得年份
+            c.add(Calendar.DATE, 10);               // 加10天
             ```
       1. 字段类型：Calendar.YEAR/MOUTH/DATE/DAY_OF_MOUTH/HOUR/HOUR_OF_DAY/MINUTE/SECOND/DAY_OF_WEEK
-      1. GregorianCalendar类：实现公历日历，是Calendar的一个实现
 1. IO
    - 理解：Java.io包几乎包含所有操作输入/输出的类。流可以理解为一个序列的数据
-   - 字节流：FileInputStream/FileOutputStream
-   - 字符流：FileReader/FileWriter，一般读写两个字节
-   - 标准流：
-     1. Standard Input：System.in
-     1. Standard Output：System.out
-     1. Standard Error：System.err
-   - 控制台输入/输出：
-     1. System.in、Scanner类：输入
-        - 方法一
-        ```Java
-        // 由System.in完成，在BufferedReader对象中创建字符流
-        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-        //读取字符
-        do {
-            c = (char)br.read();
-            System.out.println(c);
-        } while(c != 'q');
-        String str = br.readLine(); // 读取字符串
-        ```
-        - 方法二
-        ```Java
-        // Scanner类，jdk5之后可用获得输入
-        Scanner s = new Scanner(System.in);
-        if(scan.hasNext()){
-            String str1 = scan.next();
-            System.out.println("输入的数据为："+str1);
-        }
-        //或者
-        if(scan.hasNextLine()){
-            String str2 = scan.nextLine();
-            System.out.println("输入的数据为："+str2);
-        }
-        //区别：
-        next：一定读取到有效字符才结束输入，自动去掉之前空白，有效符后面的空白作为分隔符和结束符，所有不能输入空格
-        nextLine：回车为结束符
-        ```
-     1. System.out.write()：输出
-1. File
-   - 读取文件：File类、FileInputStream类
+     1. 字节流：FileInputStream/FileOutputStream
+     1. 字符流：FileReader/FileWriter，一般读写两个字节
+     1. 标准流：
+        - Standard Input：System.in
+        - Standard Output：System.out
+        - Standard Error：System.err
+   - 输入流：FileInputStream、ByteArrayInputStream、DataInputStream
      1. 创建
         ```Java
-        // 创建输入流对象
-        InputStream f = new FileInputStream("C:/java/hello");
-        // 创建使用文件对象创建输入流对象
+        InputStream f = new FileInputStream("C:/java/hello");   // 创建输入流对象
         File file = new File("C:/java/hello");
-        InputStream f = new FileInputStream(file);
+        InputStream f = new FileInputStream(file);              // 使用文件对象创建输入流对象
         ```
      1. 方法
-        - public int available() throws IOException{}
-        - public int read(byte[] r) throws IOException{}
-        - public int read(int r)throws IOException{}
-        - protected void finalize()throws IOException {}
-        - public void close() throws IOException{}
-     1. 其他输入流
-        - ByteArrayInputStream
-        - DataInputStream
-   - 写入文件：FileOutputStream类
+        - public int available()
+        - public int read(byte[] r)
+        - public int read(int r)
+        - protected void finalize()
+        - public void close()
+   - 输出流：FileOutputStream、ByteArrayOutputStream、DataOutputStream
      1. 创建
         ```Java
-        // 创建输出流对象
-        OutputStream f = new FileOutputStream("C:/java/hello");
-        // 创建使用文件对象创建输出流对象
+        OutputStream f = new FileOutputStream("C:/java/hello");     // 创建输出流对象
         File file = new File("C:/java/hello");
-        OutputStream f = new FileOutputStream(file);
+        OutputStream f = new FileOutputStream(file);                // 创建使用文件对象创建输出流对象
         ```
      1. 方法
-        - protected void finalize()throws IOException {}
-        - public void write(int w)throws IOException{}
+        - protected void finalize()
+        - public void write(int w)
         - public void write(byte[] w)
-        - public void close() throws IOException{}
-     1. 其他输出流：ByteArrayOutputStream、DataOutputStream
-1. 目录
-   - 读取：一个目录即一个对象
+        - public void close()
+1. 文件和目录
+   - 文件：File类
+   - 读取：目录即对象
     ```Java
     File d = new File(dirname);
     d.isDirectory(); // 是否是目录
     d.list(); // 列出文件和文件夹列表
     ```
    - 创建：mkdir()/mkdirs()
-    ```Java
-    bool mkdir() // 返回false表明已存在或父级目录不存在
-    bool mkdirs() // 递归创建文件夹
-    // java自动识别win和unit系统的分隔符
-    // 例子
-    String dirname = "/tmp/user/java/bin";
-    File d = new File(dirname);
-    d.mkdirs();
-    ```
    - 删除文件/目录：delete()
     ```Java
-    File folder = new File("/tmp/java/test");
-    String[] entries = folder.list();
-    for(String s: entries){
-        File currentFile = new File(folder.getPath(),s);
-        currentFile.delete();
-    }
+    File currentFile = new File(folder.getPath());
+    currentFile.delete();
     ```
 1. 错误和异常
-   - 认识：错误和异常是不同的，Throwable是祖宗，有两个子类：Exception和Error。所有异常类都是Exception的子类
-   - 错误： `java.lang.Error`
+   - 理解：错误和异常是不同的，Throwable是祖宗，有两个子类：Exception和Error。所有异常类都是Exception的子类
+   - 错误：`java.lang.Error`
    - 异常
      1. 分类
         - 检查性异常类：Exception
@@ -882,14 +791,11 @@
      1. 捕获异常：catch语句包含异常的声明，定义捕获哪种类型的异常
         ```Java
         try{
-        }catch(ExceptionName e) {
-        }
+        }catch(ExceptionName e) {}
         try{
             int a[] = new int[2];
             System.out.println("Access element three :" + a[3]);
-        }catch(ArrayIndexOutOfBoundsException e){
-            System.out.println("Exception thrown  :" + e);
-        }
+        }catch(ArrayIndexOutOfBoundsException e){}
         // 多重捕获
         try{
         }catch(异常类型1 异常的变量名1){
@@ -904,13 +810,11 @@
             f.printStackTrace();
         }
         ```
-     1. 抛出异常：throw
+     1. 抛出异常
+        - throw，方法体中，`throw new RemoteException();`
+        - throws，在用声明方法时
+     1. 自定义异常：声明异常类
         ```Java
-        throw new RemoteException();
-        ```
-     1. 自定义异常
-        ```Java
-        // 声明异常类
         class MyException extends Exception/RuntimeException{}
         ```
 1. 正则表达式
@@ -924,297 +828,84 @@
       import java.util.regex.*;
       String content = "aaa";
       String pattern = ".\*bbb.\*";
-      boolean isMatch = Pattern.matches(pattern, content); // 返回结果
+      boolean isMatch = Pattern.matches(pattern, content);      // 返回结果
       ```
    - 捕获组：将多个字符当一个独立单元处理的方法。调用matcher对象的groupCount方法统计组数
 ### 运维
-1. Java运行环境搭建
+1. java安装
    - JDK
      1. rpm安装
      1. centos手动安装
-        - oracle官网下载系统对应jdk，即java se
+        - 官网下载jdk，即java se
         - tar -zxvf jdk-8-linux-x64.tar.gz
         - mv jdk1.8.0 /usr/local
         - vi /etc/profile
-        - 在末尾添加下面两行
-          1. export JAVA_HOME=/usr/java/jdk1.8.0
-          1. export PATH=$PATH:$JAVA_HOME/bin
+        - 末尾添加
+          1. export JAVA_HOME=/usr/java/jdk1.7.0_80
+          1. export CLASSPATH=.:$JAVA_HOME/jre/lib/rt.jar:$JAVA_HOME/lib/dt.jar:$JAVA_HOME/lib/tools.jar
+          1. export MAVEN_HOME=/developer/apache-maven-3.0.5
+          1. export CATALINA_HOME=/developer/apache-tomcat-7.0.73
+          1. export PATH=$PATH:$JAVA_HOME/bin:$CATALINA_HOME/bin:$MAVEN_HOME/bin:$NODE_HOME/bin:/usr/local/bin:$RUBY_HOME/bin
         - source /etc/profile
         - java -version
-     1. 编辑环境变量
-      ```java
-      vim /etc/prifile
-      // 最下边添加
-      export JAVA_HOME=/usr/java/jdk1.7.0_80
-      export CLASSPATH=.:$JAVA_HOME/jre/lib/rt.jar:$JAVA_HOME/lib/dt.jar:$JAVA_HOME/lib/tools.jar
-      export MAVEN_HOME=/developer/apache-maven-3.0.5
-      export CATALINA_HOME=/developer/apache-tomcat-7.0.73
-      export PATH=$PATH:$JAVA_HOME/bin:$CATALINA_HOME/bin:$MAVEN_HOME/bin:$NODE_HOME/bin:/usr/local/bin:$RUBY_HOME/bin
-      // 配置生效
-      source /etc/profile
-      // 检验
-      java -version
-      ```
    - Tomcat
       ```java
-      // 解压压缩包
       tar -zxvf tomcat.tar.gz
-      // 编辑配置文件
-      vim conf/server.xml
-      <Connector ... URIEncoding="UTF-8">
-      // 启动tomcat
-      cd bin;
-      ./startup.sh
+      vim conf/server.xml                   // 编辑配置文件，<Connector ... URIEncoding="UTF-8">等
+      ./bin/startup.sh                      // 启动
       ```
    - 多个tomcat
       ```
       cp ~/tomcat-8 /usr/local/tomcats/tomcat1 -r
       cp ~/tomcat-8 /usr/local/tomcats/tomcat2 -r
-      vim tomcat2/conf/server.xml
-      自增所有port对应的端口号
-      vim webapps/ROOT/index.jsp
-      tomcat1/bin/startup.sh
+      vim tomcat1/conf/server.xml           // 自增端口号等
+      tomcat1/bin/startup.sh                // 启动
       ```
 ### wiki
-1. Java常见包
-   - java.lang：语言包
-     1. 数据类型包装类
-     1. 字符处理类
-        - String类
-        - StringBuffer类
-     1. Math/Character/Date：数学日期类
-     1. Object：类，所有类都继承，唯一没有父类的类
-     1. 操作类
-        - Class类(反射类)
-        - ClassLoader类
-     1. Process：过程类
-     1. 系统和运行类
-        - System类
-        - Runtime类
-     1. 错误和异常处理类
-        - Throwable
-        - Exception
-        - Error
-     1. 线程类
-        - Thread类
-        - TreadDeath
-        - Runnable类
-   - java.util：工具包
-     1. Random/UUID：随机数/UUID类
-     1. 数据结构类
-        - Vector：向量类
-        - Stack：栈类
-        - HashTable：散列表类
-        - LinkedList：链表类
-     1. 日期类
-        - Date类
-        - Calendar类
-        - GregorianCalendar类
-   - java.io：输入输出包，InputStream/OutputStream
-   - java.net
-   - java.sql
-   - java.awt/swing：窗口工具包
-   - applet
-1. 常见第三方包
-   - Apache Commons包：commons-lang3-3.1.jar
-     1. 理解：对JDK中java.lang包的补充，提供了很多Utilities工具类
-     1. 使用
-        - `StringUtils.isEmpty()/trim()/split()/join()` 字符串操作
-        - `StringEscapeUtils.escapeCsv/escapeHtml4/escapeJava/escapeEcmaScript/escapeXml` 字符串的转义
-        - `RandomStringUtils.random/randomAlphabetic/randomAlphanumeric/randomAscii` 随机数
-        - `ArrayUtils.add/remove/subarray/clone/contains/indexOf/lastIndexOf/toMap/isEmpty/isNotEmpty/isSameLength/toPrimitive/toObject` 数组
-        - `DateUtils.parseDate/addDays/addMonths/isSameDay/` 日期
-        - `DateFormatUtils.format` 日期
-   - commons-beanutils-1.8.3.jar
-     1. 理解：用于操作Bean、url、Date
-     1. 使用
-        - `BeanUtils.getProperty/setProperty/cloneBean/describe/populate/getArrayProperty/getIndexedProperty/getMappedProperty/getProperty/getNestedProperty` Bean
-        - `url.getProtocol/getHost/getPath` url
-        - `ConvertUtils.register(converter, Date.class/String.class);` ConvertUtils
-        - Base64
-        - StringHelper
-### Java知识点
-1. Java衍生语言
-   - Groovy
-     1. 理解：Groovy是JVM衍生的与JAVA语法高度兼容的动态强类型语言，可以运行在JVM上
-   - Scala
-     1. 理解：是一门多范式的编程语言,设计初衷是要集成面向对象编程和函数式编程的各种特性，支持函数式编程的类LISP语言，可以运行在JVM上
-   - Clojure
-     1. 理解：是一种运行在Java平台上的Lisp方言
-### JSF
-1. 理解：Java Server Faces，Java EE中构建web页面的，基于事件绑定，基本没人用
-1. 组成
-   - Facelets：是jsf MVC的视图部分，利用数据将模板转为html
-1. JNI：提供了若干的API实现了Java和其他语言的通信（主要是C&C++）
-1. Guava：一种基于开源的Java库，提供了用于集合，缓存，支持原语，并发性，常见注解，字符串处理，I/O和验证的实用扩展方法
+1. 常见包
+   - java.lang：语言包，Number/Character/Boolean、String、Math、Object、Class、Thread、Process、Throwable
+   - java.util：工具包，Array/Vector/Dictionary/Collection/map、Date、Random/UUID
+   - java.io/net/sql/text/awt/swing
+   - apache.commons.lang/beanutils
+   - google.guava
+   - 
+1. 常用类库
+   - 日志：apache-log4j、Logback、slf4j-api
+   - Json：Jackson、Gson
+   - XML：jdom、dom4j、xercesImpl
+   - 日期：joda.time
+   - 其他：Jsoup：分析html，Lomobok：消除冗长代码
 1. 关键字
-   - 基础关键字
-     1. 注解
-     1. java虚拟机
-     1. IO、阻塞和非阻塞
-     1. NIO
-     1. 并发
-     1. 线程池
-     1. 同步容器和并发容器
-     1. 反射
-   - 高级关键字
-     1. quartz
-     1. 事务管理
-     1. 连接池
-     1. dubbo
-     1. 分布式
-     1. Netty
-     1. CDN
-     1. Elasticsearch
-     1. solr
-     1. 负载均衡
-     1. mysql集群
-     1. JVM性能调优
-     1. 负载均衡
-1. 关键功能具备
-   - 异步任务
-   - 缓存
-   - 日志
-1. 轻量级容器
-   - 理解：提供了可插拔的体系结构
-   - 容器提供的服务
-     1. 声明周期管理
-     1. 依赖解析
-     1. 组件查找
-     1. 应用程序配置
-     1. 事物管理
-     1. 安全性
-     1. 线程管理
-     1. 对象和资源池
-     1. 对组件的远程访问
-     1. 通过JMX之类的API管理组件
-     1. 容器的扩展和定制
-   - 控制反转
-     1. 分类：依赖查找、依赖注入
-1. java程序特点
-     1. 源文件名：必须和类名相同
-     1. 主方法入口：所有java程序由public static void main(String[] args)开始执行
-1. 知识点
- - 环知识点：基础，web开发，常用框架，工程与设计模式，数据库和网络，数据结构和算法
- - 扩展知识点：多线程 io jvm 分布式 mysql spring redis mq 微服务
-1. 关键字：不能用于标识符的使用
-     1. 面向对象
-         - 包： package
-         - 修饰符： private、protected、public、 static、 transient
-         - 接口： interface、implements
-         - 抽象类： abstract
-         - 类： class
-         - 继承： extends、final
-         - 类的操作： import、super
-         - 实例化： new、this
-     1. 数据类型
-         - byte、short、int、long
-         - float、double
-         - char
-         - boolean、enum
-     1. 流程控制
-         - if、else
-         - switch、case、default
-         - for，do、while
-         - break、continue
-         - return、void
-     1. 异常
-         - try、catch、 finally 、 throw、throws
-     1. 修饰符
-         - vstrictf
-         - native
-         - volatile、synchronized
-     1. 判断
-         - assert、instanceof
-     1. 未使用
-         - goto，const
-     1. 解释
-         - package： 相关类组成一个包
-
-         - import： 导入类； abstract： 定义抽象类； super： 基类； class： 定义类
-         - interface：一种抽象类型，定义接口，仅有方法和常量的定义； implements： 一个类实现接口
-
-         - extends：继承； final：值初始化后不能被改变/方法不能被重写/类不能再有子类
-         - public： 共有属性或方法； static： 类级别定义，所有实例共享
-         - new：分配新的类实例
-         - byte：8-bit 有符号数据类型；short：16位数字；int：32位整数； long：64位整数；
-
-         - float：32-bit 单精度浮点数； double：64-bit 双精度浮点数； strictfp：严格规则浮点数
-
-         - char：16-bit Unicode字符数据类型； transient：修饰不要序列化的字段；
-
-         - void：标记方法不返回任何值
-
-         - throws：定义方法可能抛出的异常
-
-         - this：表示当前实例/调用另一个构造函数；
-
-         - native：表示方法用非java代码实现
-
-         - synchronized：表示同一时间只能由一个线程访问的代码块
-         - volatile：标记字段可能被多个线程同时访问而不做同步
-         - assert：判断条件是否满足 ？
-         - instanceof：检测对象是否是一个类实例
-### 各知识点版本
-1. 历史发展
-   - 从JDK 5.0开始，J2SE等全部改名，JDK5也称为Java5
-1. 最新版本
-   1. 基础
-      - Java8 = Java SE 8 = java se 1.8 = JDK 8
-      - J2EE 1.5 = Java EE 5
-   1. Java EE
-      - Servlet 3.1
-      - JSP 2.3
-      - EJB 3.0
-   1. 工具
-      - Tomcat 9.0.0
-      - Jetty 9.4.6
-      - Jboss 7.1/wildfly
-      - Maven 3.3.9
-      - Jekins 2.6
-      - Junit 4.12
-      - Log4j 1.2.17
-   1. 框架
-      - Spring 5.0/4.3
-      - Hibernate 5.2.x
-      - Mybatis 3.4
-1. Java EE版本历史
-   - java技术————1995年
-   - J2EE 1————1999年
-   - J2EE 1.4————EJB2.0————2002年
-   - JavaEE 5————EJB3.0————2006年————简化开发、引入注释、更新的web服务、加强的持久化模型
-   - JavaEE 7————提高生产力：带注释的POJO————html5：WebSockets、json、Servlet3.1 NIO、REST————企业需求：批量处理实现不间断OLTP性能、简化多线程并发任务的定义提高可扩展性、简化JMS具有选择性和灵活性
-1. Servlet版本历史
-   - 4.0——草案——HTTP/2支持
-   - 3.1——2013年——JavaEE 7——Non-blocking I/O
-   - `3.0`——2009年——JavaEE 6, JavaSE 6——简易开发、异步servlet、新的注解使web.xml部署描述文件开始不再是必选、插件支持
-   - `2.5`——2005年——JavaEE 5, JavaSE 5——支持注释
-   - `2.4`——2003年——J2EE 1.4, J2SE 1.3——web.xml
-   - `2.3`——2001年——J2EE 1.3, J2SE 1.2——增加Filter
-   - 2.2——1999年——J2EE 1.2, J2SE 1.2
-   - 2.1——1998年————添加请求转发
-   - 2.0————JDK 1.1
-   - 1.0——1997年
-1. JSP版本特性
-   - 2.0：加入了EL表达式语言
-1. Tomcat版本对servlet/jsp的支持
-   - 9.X——Java8——servlet4.0——jsp2.4
-   - 8.X——Java7——servlet3.1——jsp2.3
-   - 7.X——Java6——servlet3.0——jsp2.2
-   - 6.X——Java5——servlet2.5——jsp2.1
-   - 5.5——Java5——servlet2.4——jsp2.0
-   - 4.1——Java5——servlet2.3——jsp1.2
-   - 3.3——Java5——servlet2.2——jsp1.1
-1.  instanceof：检查对象是否是类/接口类型
-    ```Java
-    String name = "James";
-    boolean result = name instanceof String; // 由于 name 是 String 类型，所以返回真
-    Vehicle a = new Car();
-    boolean result = a instanceof Car; // 兼容于右侧类型,该运算符仍然返回true
-    ```
-### Java 8
-1. 即jdk1.8，14年3月发布
-   - 新特性
+   - 数据类型：byte、short、int、long、float、double、char、boolean
+   - 流程控制
+     1. if、else、switch、case、default
+     1. for、do、while、break、continue
+     1. return、void
+   - 异常：try、catch、finally、throw、throws
+   - 修饰符：vstrictf、native、volatile、synchronized、transient
+   - 判断：assert、instanceof
+   - 面向对象
+     1. 包： package、import
+     1. 接口： interface、implements
+     1. 抽象类： abstract、extends
+     1. 类： class、new、this、super
+     1. 修饰符： private/protected/public、static、final
+   - 预留关键字：goto，const
+1. 版本发展
+   - 历史：JDK5开始，Java8=JDK 8=JavaSE8=JavaSE1.8，不再使用J2SE等
+   - 框架
+     1. Spring 5.0/4.3
+     1. Hibernate 5.2.x
+     1. Mybatis 3.4
+   - 工具
+     1. Tomcat 9.0.0
+     1. Jetty 9.4.6
+     1. Jboss 7.1/wildfly
+     1. Maven 3.3.9
+     1. Jekins 2.6
+     1. Junit 4.12
+     1. Log4j 1.2.17
+   - Java8：jdk1.8，14年3月发布
      1. Lambda表达式：Lambda允许函数作为参数传递
      1. 方法引用：可以直接引用已有对象/类的方法，使语言结构更简洁紧凑
      1. 实现方法：就是类在接口里有个实现的方法
@@ -1223,67 +914,41 @@
      1. DateTime API：加强日期和时间的处理
      1. Optional 类：解决空指针异常
      1. Nashorn JavaScript 引擎：允许在JVM上运行javascript应用
-   - foreach和Lambda
-     1. 遍历Map
-      ```Java
-      Map<String, Integer> items = new HashMap<>();
-      items.put("A", 10);
-
-      items.forEach((k,v)->{
-          System.out.println("Item : " + k + " Count : " + v);
-      });
-      ```
-     1. 遍历List
-      ```Java
-      List<String> items = new ArrayList<>();
-      items.add("A");
-
-      items.forEach(item->{
-          System.out.println(item);
-      });
-
-      //method reference
-      //Output : A,B,C,D,E
-      items.forEach(System.out::println);
-
-      //Stream and filter
-      //Output : B
-      items.stream()
-          .filter(s->s.contains("B"))
-          .forEach(System.out::println);
-      复制代码
-      ```
-### Java小应用
-1. Applet
-   - 理解：java编写的小应用程序，可以包含在html页中，内嵌于浏览器执行。产生于浏览器出现不久还只能支持静态页面的时候，用于创建RIAs，用于提供丰富互联网服务，如动画、动态内容、与服务器通讯、富客户端应用。是java的一种应用程序，要求浏览器支持JVM，作用类似flash，嵌入在html中，现在基本没人用
-   - 特点
-     1. 可以实现图形、人机交互等多媒体表现
-     1. 提供了抽象窗口工具箱的窗口环境开发工具，用于建立标准的图形用户界面
-     1. 可以包含awt、swing的组件
-     1. Applet必须运行于某个特定的“容器”，这个容器可以是浏览器本身，也可以是通过各种外挂程式，或者包括支持Applet的移动设备在內的其他各种程序来运行。与一般的Java应用程序不同，Applet不是通过main方法來运行的。在运行时Applet通常会与用戶进行互动，显示动态的画面，并且还会遵循严格的安全检查，阻止潜在的不安全因素（例如根据安全策略，限制Applet对客戶端文件系统的访问）
-   - 使用：要求为支持java的浏览器在下载applet后在用户计算机上运行
-   - 历史
-     1. Flash出现后，Applet没有竞争力
-     1. 后来ajax出现了，浏览器可以和服务器通讯了
-     1. 后来Html5出现了，有音频、视频、2D图形(Canvas)，WebGL引入了3D图形
-   - 另：RIA三大技术：Flash、Silverlight、JavaFX
-1. Awt
-   - 理解：Abstract Window ToolKit 抽象窗口工具包。提供了一套与本地图形界面进行交互的接口，实际上是在利用操作系统所提供的图形库来构建界面
-   - 特点
-     1. 由于不同操作系统的图形库所提供的功能是不一样的，在一个平台上存在的功能在另外一个平台上则可能不存在。为了实现Java语言所宣称的"一次编译，到处运行"的概念，AWT 不得不通过牺牲功能来实现其平台无关性，也就是说，AWT 所提供的图形功能是各种通用型操作系统所提供的图形功能的交集
-     1. AWT 是基于本地方法的C/C++程序，其运行速度比较快
-1. Swing
-   - 理解：用于开发Java应用程序用户界面的开发工具包。开发出来的程序可以在java虚拟机里独立运行，为了解决awt的问题而推出，比awt有更好的屏幕显示元素。是在AWT的基础上构建的一套新的图形界面系统，拥有更多的界面库
-1. JavaFX
-   - 理解：是Java的下一代图形用户界面工具包，对标Flash，用于创建RIAs(Rich Internet application)，是一种跨平台的桌面技术，2008年发布正式版
-   - 组成
-     1. JavaFX脚本
-     1. JavaFX Mobile(一种移动操作系统)
-   - 特点
-     1. 可以直接调用java API
-     1. JDK支持三大操作系统
-     1. css定义外观，有WebView、3D图形、富文本、多点触控
-### 大数据知识网
+1. Java周边
+   - Groovy：Groovy是JVM衍生的与JAVA语法高度兼容的动态强类型语言，可以运行在JVM上
+   - Scala：是一门多范式的编程语言,设计初衷是要集成面向对象编程和函数式编程的各种特性，支持函数式编程的类LISP语言，可以运行在JVM上
+   - Clojure：是一种运行在Java平台上的Lisp方言
+   - Guava：开源Java库，提供了用于集合，缓存，支持原语，并发性，常见注解，字符串处理，I/O和验证的实用扩展方法
+   - JNI：提供了若干的API实现了Java和其他语言的通信（主要是C&C++）
+   - Applet
+     1. 理解：java编写的小应用程序，可以包含在html页中，内嵌于浏览器执行。产生于浏览器出现不久还只能支持静态页面的时候，用于创建RIAs，用于提供丰富互联网服务，如动画、动态内容、与服务器通讯、富客户端应用。是java的一种应用程序，要求浏览器支持JVM，作用类似flash，嵌入在html中，现在基本没人用
+     1. 特点
+        - 可以实现图形、人机交互等多媒体表现
+        - 提供了抽象窗口工具箱的窗口环境开发工具，用于建立标准的图形用户界面
+        - 可以包含awt、swing的组件
+        - Applet必须运行于某个特定的“容器”，这个容器可以是浏览器本身，也可以是通过各种外挂程式，或者包括支持Applet的移动设备在內的其他各种程序来运行。与一般的Java应用程序不同，Applet不是通过main方法來运行的。在运行时Applet通常会与用戶进行互动，显示动态的画面，并且还会遵循严格的安全检查，阻止潜在的不安全因素（例如根据安全策略，限制Applet对客戶端文件系统的访问）
+     1. 使用：要求为支持java的浏览器在下载applet后在用户计算机上运行
+     1. 历史
+        - Flash出现后，Applet没有竞争力
+        - 后来ajax出现了，浏览器可以和服务器通讯了
+        - 后来Html5出现了，有音频、视频、2D图形(Canvas)，WebGL引入了3D图形
+     1. RIA三大技术：Flash、Silverlight、JavaFX
+   - Awt
+     1. 理解：Abstract Window ToolKit 抽象窗口工具包。提供了一套与本地图形界面进行交互的接口，实际上是在利用操作系统所提供的图形库来构建界面
+     1. 特点
+        - 由于不同操作系统的图形库所提供的功能是不一样的，在一个平台上存在的功能在另外一个平台上则可能不存在。为了实现Java语言所宣称的"一次编译，到处运行"的概念，AWT 不得不通过牺牲功能来实现其平台无关性，也就是说，AWT 所提供的图形功能是各种通用型操作系统所提供的图形功能的交集
+        - AWT 是基于本地方法的C/C++程序，其运行速度比较快
+   - Swing
+     1. 理解：用于开发Java应用程序用户界面的开发工具包。开发出来的程序可以在java虚拟机里独立运行，为了解决awt的问题而推出，比awt有更好的屏幕显示元素。是在AWT的基础上构建的一套新的图形界面系统，拥有更多的界面库
+   - JavaFX
+     1. 理解：是Java的下一代图形用户界面工具包，对标Flash，用于创建RIAs(Rich Internet application)，是一种跨平台的桌面技术，2008年发布正式版
+     1. 组成
+        - JavaFX脚本
+        - JavaFX Mobile(一种移动操作系统)
+     1. 特点
+        - 可以直接调用java API
+        - JDK支持三大操作系统
+        - css定义外观，有WebView、3D图形、富文本、多点触控
 1. Hadoop
    - 基础
      1. Hadoop介绍、架构
@@ -1304,3 +969,34 @@
    - 应用
      1. Spark-SQL组件
      1. DataFrame组件
+1. 控制台输入/输出：
+   - System.in、Scanner类：输入
+     1. 方法一
+        ```Java
+        // 由System.in完成，在BufferedReader对象中创建字符流
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        //读取字符
+        do {
+            c = (char)br.read();
+            System.out.println(c);
+        } while(c != 'q');
+        String str = br.readLine(); // 读取字符串
+        ```
+     1. 方法二
+        ```Java
+        // Scanner类，jdk5之后可用获得输入
+        Scanner s = new Scanner(System.in);
+        if(scan.hasNext()){
+            String str1 = scan.next();
+            System.out.println("输入的数据为："+str1);
+        }
+        //或者
+        if(scan.hasNextLine()){
+            String str2 = scan.nextLine();
+            System.out.println("输入的数据为："+str2);
+        }
+        //区别：
+        next：一定读取到有效字符才结束输入，自动去掉之前空白，有效符后面的空白作为分隔符和结束符，所有不能输入空格
+        nextLine：回车为结束符
+        ```
+   - System.out.write()：输出

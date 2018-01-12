@@ -2,26 +2,37 @@
 1. 泛型
    - 理解：为了参数化类型，JDK5引入的新特性，提供编译时的参数类型检测
    - 特点：泛型集合中的限定类型，不能使用基本数据类型，必须使用包装类
+   - 类型通配符:用?代替具体的类型参数，此处?是类型实参，而不是类型形参，?也是一种实际的类型，看成所有类型的父类
+        ```Java
+        public static void getData(List<?> data) {}
+        ```
+   - 有界的类型参数
+        ```java
+        public static <T extends Comparable<T>> T methodName(T x, T y, T z)
+        // 只接受Number及其子类型
+        public static void getUperNumber(List<? extends Number> data)
+        ```
+   - 泛型数组
+        ```java
+        List<String>[] ls = new ArrayList[10];
+        List<?>[] ls = new ArrayList<?>[10]; // 最后取出数据要做显式的类型转换
+        List<String>[] ls = new ArrayList<String>[10]; // 这样不可以
+        ```
    - 泛型变量
         ```Java
-        // 普通定义方式
-        List list = new ArrayList();
-        // 泛型变量定义方式
-        List<String> list = new ArrayList<String>();
+        List list = new ArrayList();                    // 普通定义方式
+        List<String> list = new ArrayList<String>();    // 泛型变量定义方式
         ```
    - 泛型成员变量
         ```Java
-        // Course是一个对象
-        public List<Course> course; // 带有泛型的变量
-        course = new ArrayList<Course>(); // 赋值带有泛型的变量
+        public List<Course> course;             // 带有泛型的变量
+        course = new ArrayList<Course>();       // 赋值带有泛型的变量
         ```
    - 泛型方法：在调用方法的时候指明泛型的具体类型，根据参数类型，泛型方法适当处理每一个方法调用
-     1. 特点
-        - <T>声明此方法为泛型方法，才能使用T作为返回值
-        - T可以随便写为任意标识，如T、E、K、V等
+     1. 特点：<T>声明此方法为泛型方法，才能使用T作为返回值，T可以随便写为任意标识，如T、E、K、V等
      1. 定义
         ```Java
-        public static <T> T genericMethod(Class<T> tClass) throws InstantiationException, IllegalAccessException{
+        public static <T> T genericMethod(Class<T> tClass) {
             T instance = tClass.newInstance();
             return instance;
         }
@@ -39,26 +50,7 @@
             private T t;
         }
         ```
-   - 泛型接口
-        ```java
-        public interface Generator<T> {}
-        ```
-   - 类型通配符:用?代替具体的类型参数，此处?是类型实参，而不是类型形参，?也是一种实际的类型，看成所有类型的父类
-        ```Java
-        public static void getData(List<?> data) {}
-        ```
-   - 有界的类型参数
-        ```java
-        public static <T extends Comparable<T>> T maximum(T x, T y, T z)
-        // 只接受Number及其子类型
-        public static void getUperNumber(List<? extends Number> data)
-        ```
-   - 泛型数组
-        ```java
-        List<String>[] ls = new ArrayList[10];
-        List<?>[] ls = new ArrayList<?>[10]; // 最后取出数据要做显式的类型转换
-        List<String>[] ls = new ArrayList<String>[10]; // 这样不可以
-        ```
+   - 泛型接口：`public interface Generator<T> {}`
 ### 注解
 1. 理解：Annotation，Java5.0引入，是一种应用于类、方法、参数、变量、构造器及包声明中的特殊修饰符。是描述数据的数据，也叫元数据。和具体业务逻辑无关
 1. 价值：功能声明。XML的描述功能维护非常困难，只适用于设置很多参数，耦合代码并且声明作用需要简单直接的方法
