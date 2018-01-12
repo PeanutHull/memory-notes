@@ -231,3 +231,72 @@
    import java.util.UUID;
    UUID.randomUUID().toString();
    ```
+### 其他
+1. 对象序列化
+   - 理解：JVM独立的，可进行可序列化和反序列化
+   - 对象被序列化成功的条件：
+     1. 必须实现java.io.Serializable对象
+     1. 类的所有属性必须是可序列化的，即不被transient修饰或者不是静态变量
+   - 操作
+     1. 序列化
+        ```Java
+        // 准备类
+        Employee e = new Employee();
+        // 将序列化的类写入文件
+        FileOutputStream fileOut = new FileOutputStream("/tmp/employee.ser");
+        ObjectOutputStream out = new ObjectOutputStream(fileOut);
+        out.writeObject(e);
+        out.close();
+        fileOut.close();
+        ```
+     1. 反序列化
+        ```Java
+        FileInputStream fileIn = new FileInputStream("/tmp/employee.ser");
+        ObjectInputStream in = new ObjectInputStream(fileIn);
+        e = (Employee) in.readObject();
+        in.close();
+        fileIn.close();
+        ```
+   - 相关类：Externalizable，表示没有任何东西可以自动序列化，需要在writeExternal方法中进行手工指定
+1. String类的方法
+   - int length()：长度
+   - concat()：连接
+   - charAt()：指定位置的值，返回的值可以为char`char charAt(int index)`
+   - copyValueOf()：返回数组中指定的偏移和长度的字符串。`public static String copyValueOf(char[] data, int offset, int count)`
+   - indexOf()：字符在此字符串第一次出现的索引，二参为开始搜索位置`int indexOf(String/int, int ch)`
+   - lastIndexOf()：字符串最后一次出现的索引`int lastIndexOf(int ch, int fromIndex)`
+   - equals()：与String对象进行比较，返回布尔值`boolean equals(Obj obj)`
+   - equalsIgnoreCase()：与String对象进行比较忽略大小写，返回布尔值`boolean equalsIgnoreCase (String str/String str)`
+   - compareTo()：与String对象进行比较，相等返回int0，小于为负数，大于为正数`int compareTo(Obj obj)`
+   - compareToIgnoreCase()：与String对象进行比较，比较时忽略大小写`int compareToIgnoreCase (String str)`
+   - contentEquals()：将此字符串与StringBuffer比较是否相同`boolean contentEquals(StringBuffer sb)`
+        ```Java
+        String str1 = "String1";
+        String str2 = "String2";
+        StringBuffer str3 = new StringBuffer( "String1");
+        boolean result = str1.contentEquals( str3 ); // true
+        result = str1.contentEquals( str3 ); // false
+        ```
+   - trim()：去掉前后空白`String trim()`
+   - replace()
+   - replaceAll()
+   - replaceFirst()
+   - split()：正则拆分字符串`String[] split(String regex, [int limit])`
+   - substring()：返回新子字符串`String substring(int beginIndex)`
+   - matches()：是否匹配给定的正则`boolean matches(String regex)`
+   - regionMatches()
+   - intern()：String 返回字符串的规范化表示形式`String intern()`
+   - hashCode()：int hashCode()，哈希值`Int hashCode()`
+   - startsWith()：是否以指定的后缀结束`boolean startsWith(String str)`
+   - endsWith()：是否以指定的后缀结束`boolean endsWith(String str)`
+   - getBytes()：使用字符集将字符串编码为byte序列`byte[] getBytes()`
+        ```Java
+        byte[] Str2 = Str1.getBytes();
+        Str2 = Str1.getBytes( "UTF-8" );
+        Str2 = Str1.getBytes( "ISO-8859-1" );
+        ```
+   - getChars()：将字符串复制到字符数组`void getChars(int srcBegin, int srcEnd, char[] dst, int dstBegin)`
+   - toCharArray()：转为字符串数组`char[] toCharArray()`
+   - toLowerCase()：所有转为小写`String toLowerCase([Locale locale])`
+   - toUpperCase()：所有转为小写`String toUpperCase([Locale locale])`
+   - format()：格式化字符串
