@@ -62,15 +62,18 @@
 1. 理解：基于Groovy和XML的构建工具
 ### Ant
 1. 理解：集编译、测试、部署的自动化打包部署工具
+### Tomcat
+1. 理解：是Web服务器，也是servlet、jsp的运行环境/容器，最新的servlet和jsp规范总是能在Tomcat中得到体现，技术先进、性能稳定、免费开源。静态html能力不如apache，可以集成使用，Apache作为HTTP Web服务器，Tomcat作为Web容器。响应http过程：web浏览器——Tomcat——Web服务器——Servlet容器——Servlet实例1/Servlet实例2
+1. 组成：Container容器——Engine——HOST——Servlet
+1. 运维
+   - 手动部署war
+     1. 删除webapp目录下的warName.war文件和warName文件夹，并放置新的war包
+     1. 删除webapp同级文件夹work的Catalina
+     1. 重启tomcat
+   - 热部署war
+     1. server.xml编辑 `<Context path="war路径" docBase="war名" reloadable="true"/>`
+   - idea部署war
 ### Inteill Idea
-1. 单跑
-1. 单maven跑
-1. 单跑tomcat
-1. 单个maven跑tomcat
-1. idea单跑
-1. idea用maven跑
-1. idea跑web
-1. idea用maven跑web
 1. IDEA创建空白Servlet项目
    - 项目设置：File--New--Project--Java--Java EE--Web Application--下一步--项目名称
    - 工程设置
@@ -79,18 +82,12 @@
      1. 依赖目录：Project Structure--Modules--Dependencies选项卡--新增Export--JARs or directories--选择lib目录--Jar Directory
      1. 打包方式：Artifacts--fix--add classes...
      1. 配置tomcat
-1. 添加Problems(实时编译)功能：设置————compiler————打钩make project automatically
-1. IDEA报错功能：设置————inspections————修改报错信息
 1. 搭建空白项目
    - IDEA配置SDK、Maven、Tomcat
    - 新建项目————Maven————maven-archetype-webapp————配置项目信息
    - src/main文件夹中创建java文件夹————并置为sources Root
    - src/main文件夹中创建test文件夹————并置为test
    - 添加Tomcat Server————local————Deployment————添加Aritfact————xx.war选项
-1. 没有web目录，创建web目录并且启动tomcat的方法
-   1. edit Configurations————添加tomcat server————local
-   1. 添加Artifacts————Web Application：Exploded————From Modules
-   1. 添加Facets————Web————选择Modules
 1. 添加额外依赖的jar包
    1. 将包放置在webapp的lib目录中
    1. Project Structure————Modules————Dependencies————+号
@@ -109,6 +106,12 @@
         </configuration>
       </plugin>
       ```
+1. 没有web目录，创建web目录并且启动tomcat的方法
+   1. edit Configurations————添加tomcat server————local
+   1. 添加Artifacts————Web Application：Exploded————From Modules
+   1. 添加Facets————Web————选择Modules
+1. 添加Problems(实时编译)功能：设置————compiler————打钩make project automatically
+1. IDEA报错功能：设置————inspections————修改报错信息
 1. 添加词库：Settings————Spelling
 1. Live Template
    - psvm 主入口

@@ -19,11 +19,6 @@
    - 理解：就是运行环境
    - Web容器
      1. Tomcat
-        - 理解：是Web服务器，也是servlet、jsp的运行环境/容器，最新的servlet和jsp规范总是能在Tomcat中得到体现
-        - 特点：技术先进、性能稳定、免费开源
-        - 响应http过程：web浏览器——Tomcat——Web服务器——Servlet容器——Servlet实例1/Servlet实例2
-        - 不足：静态html能力不如apache，可以集成使用，Apache作为HTTP Web服务器，Tomcat作为Web容器
-        - 组成：Container容器——Engine——HOST——Servlet
      1. Jetty：为JSP和servlet提供运行环境的用Java语言编写的的web容器
    - 应用容器
      1. 理解：ejb容器无最大访问量一说，本身就是分布式/可伸缩的，只需增加机器就可实现同时计算，Tomcat和Jetty不是应用容器，无法运行EJB或JMS技术

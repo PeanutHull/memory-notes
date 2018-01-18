@@ -832,6 +832,49 @@
       ```
    - 捕获组：将多个字符当一个独立单元处理的方法。调用matcher对象的groupCount方法统计组数
 ### 运维
+1. 命令行
+   - javac
+     1. cp：指定jar包位置，包的位置Linux是.:开头，window是.;开头
+     1. -D：指定调用的类
+     1. -d：要生成的目录
+     1. -encoding：utf-8
+   - java
+     1. -jar：运行jar包，环境变量CLASSPATH和在命令行中指定的所有类路径都被JVM所忽略
+     1. -classpath：设定要搜索的类路径
+   - jar
+     1. c：生成jar包，需要先编译
+     1. f：指定包名
+   - 控制台输入/输出
+     1. System.in、Scanner类：输入
+        - 方法一
+        ```Java
+        // 由System.in完成，在BufferedReader对象中创建字符流
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        //读取字符
+        do {
+            c = (char)br.read();
+            System.out.println(c);
+        } while(c != 'q');
+        String str = br.readLine(); // 读取字符串
+        ```
+        - 方法二
+        ```Java
+        // Scanner类，jdk5之后可用获得输入
+        Scanner s = new Scanner(System.in);
+        if(scan.hasNext()){
+            String str1 = scan.next();
+            System.out.println("输入的数据为："+str1);
+        }
+        //或者
+        if(scan.hasNextLine()){
+            String str2 = scan.nextLine();
+            System.out.println("输入的数据为："+str2);
+        }
+        //区别：
+        next：一定读取到有效字符才结束输入，自动去掉之前空白，有效符后面的空白作为分隔符和结束符，所有不能输入空格
+        nextLine：回车为结束符
+        ```
+        - System.out.write()：输出
 1. java安装
    - JDK
      1. rpm安装
@@ -861,14 +904,29 @@
       vim tomcat1/conf/server.xml           // 自增端口号等
       tomcat1/bin/startup.sh                // 启动
       ```
+1. java运行
+   - 单跑：安装JDK，添加path，javac编译，java运行
+   - 单跑，依赖其他类：默认同级目录和CLASSPATH引入，使用import按照包名查找对应目录下的类，如`import tool.MyDate`，可以添加CLASSPATH的引用目录
+   - 单跑，依赖其他jar包：还是用import引入类，编译时，添加-cp参数指定jar位置
+   - 最简单的web项目组成，一个servlet输出页面，一个jsp输出页面
+   - 单跑tomcat，依赖其他类和资源文件
+   - 单跑tomcat，依赖其他jar包
+   - idea单跑
+   - idea单跑，依赖其他类
+   - idea单跑，依赖其他jar包
+   - idea跑web
+   - idea用maven跑
+   - idea用maven跑web
+   - 单maven跑
+   - 单maven跑tomcat
 ### wiki
 1. 常见包
    - java.lang：语言包，Number/Character/Boolean、String、Math、Object、Class、Thread、Process、Throwable
    - java.util：工具包，Array/Vector/Dictionary/Collection/map、Date、Random/UUID
-   - java.io/net/sql/text/awt/swing
+   - java.text：处理文本、日期、数字和消息的类和接口
+   - java.io/net/sql/awt/swing
    - apache.commons.lang/beanutils
    - google.guava
-   - 
 1. 常用类库
    - 日志：apache-log4j、Logback、slf4j-api
    - Json：Jackson、Gson
@@ -969,34 +1027,3 @@
    - 应用
      1. Spark-SQL组件
      1. DataFrame组件
-1. 控制台输入/输出：
-   - System.in、Scanner类：输入
-     1. 方法一
-        ```Java
-        // 由System.in完成，在BufferedReader对象中创建字符流
-        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-        //读取字符
-        do {
-            c = (char)br.read();
-            System.out.println(c);
-        } while(c != 'q');
-        String str = br.readLine(); // 读取字符串
-        ```
-     1. 方法二
-        ```Java
-        // Scanner类，jdk5之后可用获得输入
-        Scanner s = new Scanner(System.in);
-        if(scan.hasNext()){
-            String str1 = scan.next();
-            System.out.println("输入的数据为："+str1);
-        }
-        //或者
-        if(scan.hasNextLine()){
-            String str2 = scan.nextLine();
-            System.out.println("输入的数据为："+str2);
-        }
-        //区别：
-        next：一定读取到有效字符才结束输入，自动去掉之前空白，有效符后面的空白作为分隔符和结束符，所有不能输入空格
-        nextLine：回车为结束符
-        ```
-   - System.out.write()：输出

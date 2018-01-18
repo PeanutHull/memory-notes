@@ -442,6 +442,26 @@
 	response.sendRedirect(request.getContextPath + "/要跳转的页面相对地址"); // 重定向，地址改变
 	request.getRequestDispatcher("/要跳转的页面相对地址").forward(request, response); // 转发请求，地址不变
 	```
+1. 部署
+   - Jar包
+     1. 理解：Java Application Archive，java归档文件，是与平台无关的文件格式，允许将许多文件组合成一个压缩文件，是文件封装的最小单元。包含 META-INF 目录：存储配置数据，xxx.SF 签名文件等
+     1. 特点
+        - 以zip文件格式为基础，提供压缩/部署/封装库，可被像编译器和jvm直接使用，无需事先提取文件或设置类路径
+        - 包含特殊的文件，如manifests和部署描述符，用来指示工具如何处理特定的jar
+     1. 创建
+        - 所有代码放到一个目录中
+        - 某个位置创建manifest文件，写入主类`Main-Class: HelloWorld`
+        - 编译 `javac HelloWorld.java`
+        - 打包 `jar cmf manifest jarName.jar ./`
+     1. 使用 `java -jar jarName.jar`
+   - War包
+     1. 理解：Web Application Archive，web应用归档文件，一个Web应用程序被定义为单独的一组文件/类/资源，可以对jar封装作为小型服务程序(servlet)来访问，包含了全部Web应用程序，包括jsp/图片等文件，用于封装web模块。放在tomcat/webapp下，启动就会生成源代码
+     1. 打包
+        - 压缩，改后缀名
+        - 手动打包：`jar cmf warName.war ./`？？？
+        - maven打包
+        - idea打包
+   - Ear：Enterprise Application Archive，企业应用归档文件，一个企业应用程序被定义为多个jar文件/资源/类、Web应用程序、ejb的集合，即jar、war、ejb
 1. 打包和部署
    - 打包时，依赖的jar包要么在tomcat的lib目录下，要么声明在path中；如果用IDE就设置好就行
    - 部署时，需放在tomcat的webapp下，或者由IDE启动，或者由maven的plugin启动
