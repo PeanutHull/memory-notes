@@ -63,8 +63,11 @@
 ### Ant
 1. 理解：集编译、测试、部署的自动化打包部署工具
 ### Tomcat
-1. 理解：是Web服务器，也是servlet、jsp的运行环境/容器，最新的servlet和jsp规范总是能在Tomcat中得到体现，技术先进、性能稳定、免费开源。静态html能力不如apache，可以集成使用，Apache作为HTTP Web服务器，Tomcat作为Web容器。响应http过程：web浏览器——Tomcat——Web服务器——Servlet容器——Servlet实例1/Servlet实例2
-1. 组成：Container容器——Engine——HOST——Servlet
+1. 理解：web服务器，也是servlet/jsp的运行环境/容器，最新servlet/jsp规范总能得到体现，技术先进、性能稳定、免费开源。静态html能力不如apache，可作为辅助web容器。组成：Container容器——Engine——HOST——Servlet。响应http过程：浏览器——tomcat——servlet容器——servlet实例...
+1. 特点
+   - web项目放在webapps下，默认访问ROOT目录
+   - WEB-INF下的classes存放编译文件，容器利用web.xml中定义的路径可以找到多层目录下的编译文件
+   - 自带docs/examples/manager/host-manager等工具文档
 1. 运维
    - 手动部署war
      1. 删除webapp目录下的warName.war文件和warName文件夹，并放置新的war包
@@ -73,49 +76,52 @@
    - 热部署war
      1. server.xml编辑 `<Context path="war路径" docBase="war名" reloadable="true"/>`
    - idea部署war
-### Inteill Idea
-1. IDEA创建空白Servlet项目
-   - 项目设置：File--New--Project--Java--Java EE--Web Application--下一步--项目名称
-   - 工程设置
-     1. WEB-INF目录--新建classes和lib目录
-     1. 编译目录：Project Structure--Modules--Paths选项卡--将Output path和Test output path设置为classes目录
-     1. 依赖目录：Project Structure--Modules--Dependencies选项卡--新增Export--JARs or directories--选择lib目录--Jar Directory
-     1. 打包方式：Artifacts--fix--add classes...
-     1. 配置tomcat
-1. 搭建空白项目
-   - IDEA配置SDK、Maven、Tomcat
-   - 新建项目————Maven————maven-archetype-webapp————配置项目信息
-   - src/main文件夹中创建java文件夹————并置为sources Root
-   - src/main文件夹中创建test文件夹————并置为test
-   - 添加Tomcat Server————local————Deployment————添加Aritfact————xx.war选项
-1. 添加额外依赖的jar包
-   1. 将包放置在webapp的lib目录中
-   1. Project Structure————Modules————Dependencies————+号
-   1. 添加maven的编辑插件，将本地的jar包也包含进去，目录指向lib目录
-      ```xml
-      <plugin>
+### Intellij Idea
+1. 建立项目
+   - 空白java：new--java--完成
+   - 空白web
+     1. 项目设置：File--New--Project--Java--Java EE--Web Application--下一步--项目名称
+     1. 工程设置
+        - WEB-INF目录--新建classes和lib目录
+        - 编译目录：Project Structure--Modules--Paths选项卡--将Output path和Test output path设置为classes目录
+        - 依赖目录：Project Structure--Modules--Dependencies选项卡--新增Export--JARs or directories--选择lib目录--Jar Directory
+        - 打包方式：Artifacts--fix--add classes...
+        - 配置tomcat
+   - 空白maven项目
+     1. 配置SDK、maven、tomcat
+     1. 新建项目————maven————maven-archetype-webapp————配置项目信息
+     1. src/main文件夹中创建java文件夹————并置为sources Root
+     1. src/main文件夹中创建test文件夹————并置为test
+     1. 添加tomcat server————local————Deployment————添加Aritfact————xx.war选项
+1. 使用
+   - 添加Problems(实时编译)功能：设置————compiler————打钩make project automatically
+   - idea报错功能：设置————inspections————修改报错信息
+   - 添加词库：Settings————Spelling
+   - Live Template
+     1. psvm 主入口
+     1. sout 打印输出
+   - 没有web目录，创建web目录并且启动tomcat的方法
+     1. edit Configurations————添加tomcat server————local
+     1. 添加Artifacts————Web Application：Exploded————From Modules
+     1. 添加Facets————Web————选择Modules
+   - 添加额外依赖的jar包
+     1. 将包放置在webapp的lib目录中
+     1. Project Structure————Modules————Dependencies————+号
+     1. 添加maven的编辑插件，将本地的jar包也包含进去，目录指向lib目录
+        ```xml
+        <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
         <configuration>
-          <source>1.8</source>
-          <target>1.8</target>
-          <encoding>UTF-8</encoding>
-          <compilerArguments>
+            <source>1.8</source>
+            <target>1.8</target>
+            <encoding>UTF-8</encoding>
+            <compilerArguments>
             <extdirs>${project.basedir}/src/main/webapp/WEB-INF/lib</extdirs>
-          </compilerArguments>
+            </compilerArguments>
         </configuration>
-      </plugin>
-      ```
-1. 没有web目录，创建web目录并且启动tomcat的方法
-   1. edit Configurations————添加tomcat server————local
-   1. 添加Artifacts————Web Application：Exploded————From Modules
-   1. 添加Facets————Web————选择Modules
-1. 添加Problems(实时编译)功能：设置————compiler————打钩make project automatically
-1. IDEA报错功能：设置————inspections————修改报错信息
-1. 添加词库：Settings————Spelling
-1. Live Template
-   - psvm 主入口
-   - sout 打印输出
+        </plugin>
+        ```
 1. 快捷键
    - 代码操作
      1. `Control + Enter`：智能辅助输入、getter和setter方法、生成接口类/接口实现类、生成单元测试类

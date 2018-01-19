@@ -1,67 +1,3 @@
-### JavaEE
-1. 理解：是一个平台，是企业级分布式应用开发标准。构建于Java SE之上，提供API和运行环境，来运行大规模、可扩展的多层次的网络应用
-1. 特点：分布式、事务性、安全性、集成化、可扩展、可移植、易维护
-1. 规范：13个
-   - Servlet
-   - JSP
-   - EJB
-   - JMS：Java消息服务，实现异步的消息传递。支持点对点/发布订阅，可实现事务型/一致性/持久性消息传递
-   - JTA：Java事务处理API，Java Transaction API，保证了用户操作ACID（即原子、一致、隔离、持久）属性，跨数据源必须使用全局事务JTA，提供了分布式事务服务，实现了透明的事务管理方式，划清数据库中上行和下行的通信界限
-   - JTS：Java事务服务，Java Transaction Service，是一个组件事务监视器，为应用服务器/资源管理器/独立应用/通信资源管理器提供事务服务
-   - RMI：远程方法调用，Remote Method Invoke。像调用本地一样调用另一个java虚拟机上的方法，stub/skeleton层提供客户端和服务端交互接口
-   - IDL/CORBA：接口定义语言/公用对象请求代理程序体系结构
-   - JNDI：Java的命名和目录接口，Java Naming and Directory Interfaces。使Java能够无缝地获取任何可目录化的企业信息，独立于目录协议，可以访问LDAP、NDS
-   - JDBC
-   - XML
-   - JavaMail API
-   - JAF：JavaBean Activation Framewor，提供统一处理不同数据格式的方法
-1. JavaEE容器
-   - 理解：就是运行环境
-   - Web容器
-     1. Tomcat
-     1. Jetty：为JSP和servlet提供运行环境的用Java语言编写的的web容器
-   - 应用容器
-     1. 理解：ejb容器无最大访问量一说，本身就是分布式/可伸缩的，只需增加机器就可实现同时计算，Tomcat和Jetty不是应用容器，无法运行EJB或JMS技术
-     1. 组成：JBoss、GlassFish、Oracle Weblogic、IBM WebSphere
-        - Jboss
-          1. 理解：开源的管理EJB的容器和服务器，不支持Servlet/JSP，一般与Tomcat/Jetty配合使用
-          1. 特点
-             - JMX微内核作为总线结构
-             - 面向服务架构(SOA，Service-Oriented Architecture)
-             - 具有统一的类装载器，实现应用热部署和热卸载能力
-             - 高度模块化和松耦合
-             - 支持集群
-1. RMI
-   - 理解：Java Remote method invocation，java方法远程调用，基于socket方式的远程调用，是java分布式的基础，将对象序列化在网络上传输
-   - 原理：服务端编写interface和其实现，客户端远程调用
-     1. 先定义RMI能够提供的服务，即interface，生成调用入口，编写实现类
-     1. 编写RMI注册机制，并启动
-     1. 客户端就可以访问了
-1. EJB
-   - 理解：JavaEE服务器端组件模型，Enterprise Java Beans，用于部署分布式应用程序，是一个逻辑概念，与传统的bean无关，就是将一个业务逻辑类放在服务器上部署，供客户端调用，依赖RMI通信，EJB3.0从早期版本已分离出来。用于部署分布式的程序，非常重量级，配置复杂，没有spring轻量，目前使用比较少。容器类框架
-   - 关键字：服务集群、企业开发
-   - 特点
-     1. 数据持久化
-     1. 事务处理
-     1. 并发控制
-     1. 基于JMS的事件驱动
-     1. 基于JNDI的名字和空间管理
-     1. 基于JCE和JAAS的安全管理
-     1. 应用服务器端的软件组件部署
-     1. 使用RMI-IIOP协议的远程过程调用
-     1. 将业务方法暴露为Web服务
-   - 组成
-     1. JPA：Java Persistence API，中文名Java持久层API。是JDK 5.0注解或XML描述对象关系表的映射关系，并将运行期的实体对象持久化到数据库中，提供了一种标准的OR映射解决方案
-   - 分类
-     1. 会话Bean
-     1. 实体Bean：和数据库打交道
-     1. 消息驱动Bean
-   - EJB容器：是EJB组件的运行环境，为部署EJB组件提供服务，包括事务、安全、远程客户端的网络发布、资源管理等
-   - EJB服务器：管理EJB容器的高端进程或应用程序，并提供对系统服务的访问
-     1. EJB客户端：Servlet/JSP/Java Application/Web Service/Applet/EJB
-     1. EJB服务器：Enterprise Bean
-   - EJB架构：ejb客户端————RMI/JNDI————remote/home接口————ejb服务器————ejb容器————BEAN代理————对象池————ejb实例————ejb部署描述
-1. JSF：Java Server Faces，Java EE中构建web页面的，基于事件绑定，基本没人用。Facelets是jsf MVC的视图部分，利用数据将模板转为html
 ### Servlet
 1. 认识：Java写的服务器端小程序，部署在web服务器上的组件，可以访问所有java API，用于创建基于java的动态网页，无法独立运行，必须运行在Servlet容器中，一个请求一个线程，性能好，独立于平台，安全性好
 1. 内置对象，9个，是Web容器创建的一组对象，可以不new直接使用的内置对象
@@ -76,8 +12,7 @@
    - exception          Throwable
 1. 结构
    - src：源码目录
-   - webapp：存放web资源，WEB-INF存放配置和类库，是安全目录，只有服务端能访问
-   - web.xml：部署描述符，配置文件
+   - WEB-INF：存放web资源/配置/类库，是安全目录只有服务端能访问，包含web.xml部署描述符
 1. 生命周期
    - init()
    - service()：服务器收到的每一个请求会创建新的线程并单一调用service()方法，检查请求类型选择doGet、doPost、doPut、doDelete
@@ -278,7 +213,7 @@
             public void contextDestoryed(ServletContextEvent servletcontextecent) {}
         }
         <listener>                                                                      // web.xml注册
-        <listener-class>com.package.XxxListener</listener-class>
+            <listener-class>com.package.XxxListener</listener-class>
         </listener>
         ```
 1. 异常
@@ -333,6 +268,14 @@
 	</servlet-mapping>
 	```
 1. 类的继承关系：自定义servlet——HttpServlet类(实现了http协议)——GenericServlet类(与协议无关)——Servlet接口
+1. 版本变迁：servlet2.4起配置顺序不再强制要求，servlet3.0起可以使用注解配置servlet
+1. web.xml
+   - 理解：web-app是根元素，DOCYTPE声指示适用的servlet规范版本，子元素状态可有可无、唯一一个、可多个，大小写敏感
+   - 加载过程
+     1. 容器执行时，先读取web.xml的配置、检验错误
+     1. 读取listener、context-param节点
+     1. 容器创建一个ServletContext(application)，并将param配置写入ServletContext，web项目所有部分都将共享这个上下文
+     1. 容器先后创建listener、filter、servlet实例
 ### JSP
 1. 理解：Java Server Pages，是简化的servlet设计，在html中插入java代码(Scriptlet)和jsp标记(tag)，实现了html中的Java扩展，与Servlet比较，方便编写html，不用大量的println一句句的输出，servlet是老的cgi的方式，内置对象和servlet相同
 1. 基本构成
@@ -437,11 +380,11 @@
      ```XML
     <jsp-config>                                                        // web.xml配置
         <taglib>
-                <taglib-uri>http://java.sun.com/jstl/fmt</taglib-uri>
-                <taglib-location>/WEB-INF/fmt.tld</taglib-location>
+            <taglib-uri>http://java.sun.com/jstl/fmt</taglib-uri>
+            <taglib-location>/WEB-INF/fmt.tld</taglib-location>
         </taglib>
-     </jsp-config>
-     <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>    // jsp页面中导入核心标签库
+    </jsp-config>
+    <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>    // jsp页面中导入核心标签库
      ```
    - EL
      1. 理解：Expression Language，表达式语言，创建表达式并输出结果。和<%=%>作用相同
@@ -571,6 +514,70 @@
      1. 初始化阶段：加载Servlet类，创建实例，调用初始化方法——jspInit()
      1. 执行阶段：_jspService(HttpServletRequest request,HttpServletResponse response)
      1. 销毁阶段:jspDestroy()
+### JavaEE
+1. 理解：是一个平台，是企业级分布式应用开发标准。构建于Java SE之上，提供API和运行环境，来运行大规模、可扩展的多层次的网络应用
+1. 特点：分布式、事务性、安全性、集成化、可扩展、可移植、易维护
+1. 规范：13个
+   - Servlet
+   - JSP
+   - EJB
+   - JMS：Java消息服务，实现异步的消息传递。支持点对点/发布订阅，可实现事务型/一致性/持久性消息传递
+   - JTA：Java事务处理API，Java Transaction API，保证了用户操作ACID（即原子、一致、隔离、持久）属性，跨数据源必须使用全局事务JTA，提供了分布式事务服务，实现了透明的事务管理方式，划清数据库中上行和下行的通信界限
+   - JTS：Java事务服务，Java Transaction Service，是一个组件事务监视器，为应用服务器/资源管理器/独立应用/通信资源管理器提供事务服务
+   - RMI：远程方法调用，Remote Method Invoke。像调用本地一样调用另一个java虚拟机上的方法，stub/skeleton层提供客户端和服务端交互接口
+   - IDL/CORBA：接口定义语言/公用对象请求代理程序体系结构
+   - JNDI：Java的命名和目录接口，Java Naming and Directory Interfaces。使Java能够无缝地获取任何可目录化的企业信息，独立于目录协议，可以访问LDAP、NDS
+   - JDBC
+   - XML
+   - JavaMail API
+   - JAF：JavaBean Activation Framewor，提供统一处理不同数据格式的方法
+1. JavaEE容器
+   - 理解：就是运行环境
+   - Web容器
+     1. Tomcat
+     1. Jetty：为JSP和servlet提供运行环境的用Java语言编写的的web容器
+   - 应用容器
+     1. 理解：ejb容器无最大访问量一说，本身就是分布式/可伸缩的，只需增加机器就可实现同时计算，Tomcat和Jetty不是应用容器，无法运行EJB或JMS技术
+     1. 组成：JBoss、GlassFish、Oracle Weblogic、IBM WebSphere
+        - Jboss
+          1. 理解：开源的管理EJB的容器和服务器，不支持Servlet/JSP，一般与Tomcat/Jetty配合使用
+          1. 特点
+             - JMX微内核作为总线结构
+             - 面向服务架构(SOA，Service-Oriented Architecture)
+             - 具有统一的类装载器，实现应用热部署和热卸载能力
+             - 高度模块化和松耦合
+             - 支持集群
+1. RMI
+   - 理解：Java Remote method invocation，java方法远程调用，基于socket方式的远程调用，是java分布式的基础，将对象序列化在网络上传输
+   - 原理：服务端编写interface和其实现，客户端远程调用
+     1. 先定义RMI能够提供的服务，即interface，生成调用入口，编写实现类
+     1. 编写RMI注册机制，并启动
+     1. 客户端就可以访问了
+1. EJB
+   - 理解：JavaEE服务器端组件模型，Enterprise Java Beans，用于部署分布式应用程序，是一个逻辑概念，与传统的bean无关，就是将一个业务逻辑类放在服务器上部署，供客户端调用，依赖RMI通信，EJB3.0从早期版本已分离出来。用于部署分布式的程序，非常重量级，配置复杂，没有spring轻量，目前使用比较少。容器类框架
+   - 关键字：服务集群、企业开发
+   - 特点
+     1. 数据持久化
+     1. 事务处理
+     1. 并发控制
+     1. 基于JMS的事件驱动
+     1. 基于JNDI的名字和空间管理
+     1. 基于JCE和JAAS的安全管理
+     1. 应用服务器端的软件组件部署
+     1. 使用RMI-IIOP协议的远程过程调用
+     1. 将业务方法暴露为Web服务
+   - 组成
+     1. JPA：Java Persistence API，中文名Java持久层API。是JDK 5.0注解或XML描述对象关系表的映射关系，并将运行期的实体对象持久化到数据库中，提供了一种标准的OR映射解决方案
+   - 分类
+     1. 会话Bean
+     1. 实体Bean：和数据库打交道
+     1. 消息驱动Bean
+   - EJB容器：是EJB组件的运行环境，为部署EJB组件提供服务，包括事务、安全、远程客户端的网络发布、资源管理等
+   - EJB服务器：管理EJB容器的高端进程或应用程序，并提供对系统服务的访问
+     1. EJB客户端：Servlet/JSP/Java Application/Web Service/Applet/EJB
+     1. EJB服务器：Enterprise Bean
+   - EJB架构：ejb客户端————RMI/JNDI————remote/home接口————ejb服务器————ejb容器————BEAN代理————对象池————ejb实例————ejb部署描述
+1. JSF：Java Server Faces，Java EE中构建web页面的，基于事件绑定，基本没人用。Facelets是jsf MVC的视图部分，利用数据将模板转为html
 ### wiki
 1. Servlet版本历史
    - 4.0——草案——HTTP/2支持

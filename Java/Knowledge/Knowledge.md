@@ -455,7 +455,7 @@
         - 打包 `jar cmf manifest jarName.jar ./`
      1. 使用 `java -jar jarName.jar`
    - War包
-     1. 理解：Web Application Archive，web应用归档文件，一个Web应用程序被定义为单独的一组文件/类/资源，可以对jar封装作为小型服务程序(servlet)来访问，包含了全部Web应用程序，包括jsp/图片等文件，用于封装web模块。放在tomcat/webapp下，启动就会生成源代码
+     1. 理解：Web Application Archive，web应用归档文件，一个Web应用程序被定义为单独的一组文件/类/资源，可以对jar封装作为小型服务程序(servlet)来访问，包含了全部Web应用程序，包括jsp/图片等文件，用于封装web模块。放在tomcat/webapp下，容器会自动解压并运行
      1. 打包
         - 压缩，改后缀名
         - 手动打包：`jar cmf warName.war ./`？？？

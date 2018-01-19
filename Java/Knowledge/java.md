@@ -832,9 +832,38 @@
       ```
    - 捕获组：将多个字符当一个独立单元处理的方法。调用matcher对象的groupCount方法统计组数
 ### 运维
+1. java安装
+   - JDK
+     1. rpm安装
+     1. centos手动安装
+        - 官网下载jdk，即java se
+        - tar -zxvf jdk-8-linux-x64.tar.gz
+        - mv jdk1.8.0 /usr/local
+        - vi /etc/profile
+        - 末尾添加
+          1. export JAVA_HOME=/usr/java/jdk1.7.0_80
+          1. export CLASSPATH=.:$JAVA_HOME/jre/lib/rt.jar:$JAVA_HOME/lib/dt.jar:$JAVA_HOME/lib/tools.jar
+          1. export MAVEN_HOME=/developer/apache-maven-3.0.5
+          1. export CATALINA_HOME=/developer/apache-tomcat-7.0.73
+          1. export PATH=$PATH:$JAVA_HOME/bin:$CATALINA_HOME/bin:$MAVEN_HOME/bin:$NODE_HOME/bin:/usr/local/bin:$RUBY_HOME/bin
+        - source /etc/profile
+        - java -version
+   - Tomcat
+      ```java
+      tar -zxvf tomcat.tar.gz
+      vim conf/server.xml                   // 编辑配置文件，<Connector ... URIEncoding="UTF-8">等
+      ./bin/startup.sh                      // 启动
+      ```
+   - 多个tomcat
+      ```
+      cp ~/tomcat-8 /usr/local/tomcats/tomcat1 -r
+      cp ~/tomcat-8 /usr/local/tomcats/tomcat2 -r
+      vim tomcat1/conf/server.xml           // 自增端口号等
+      tomcat1/bin/startup.sh                // 启动
+      ```
 1. 命令行
    - javac
-     1. cp：指定jar包位置，包的位置Linux是.:开头，window是.;开头
+     1. -cp：指定jar包位置，后边跟jar包的位置
      1. -D：指定调用的类
      1. -d：要生成的目录
      1. -encoding：utf-8
@@ -875,42 +904,15 @@
         nextLine：回车为结束符
         ```
         - System.out.write()：输出
-1. java安装
-   - JDK
-     1. rpm安装
-     1. centos手动安装
-        - 官网下载jdk，即java se
-        - tar -zxvf jdk-8-linux-x64.tar.gz
-        - mv jdk1.8.0 /usr/local
-        - vi /etc/profile
-        - 末尾添加
-          1. export JAVA_HOME=/usr/java/jdk1.7.0_80
-          1. export CLASSPATH=.:$JAVA_HOME/jre/lib/rt.jar:$JAVA_HOME/lib/dt.jar:$JAVA_HOME/lib/tools.jar
-          1. export MAVEN_HOME=/developer/apache-maven-3.0.5
-          1. export CATALINA_HOME=/developer/apache-tomcat-7.0.73
-          1. export PATH=$PATH:$JAVA_HOME/bin:$CATALINA_HOME/bin:$MAVEN_HOME/bin:$NODE_HOME/bin:/usr/local/bin:$RUBY_HOME/bin
-        - source /etc/profile
-        - java -version
-   - Tomcat
-      ```java
-      tar -zxvf tomcat.tar.gz
-      vim conf/server.xml                   // 编辑配置文件，<Connector ... URIEncoding="UTF-8">等
-      ./bin/startup.sh                      // 启动
-      ```
-   - 多个tomcat
-      ```
-      cp ~/tomcat-8 /usr/local/tomcats/tomcat1 -r
-      cp ~/tomcat-8 /usr/local/tomcats/tomcat2 -r
-      vim tomcat1/conf/server.xml           // 自增端口号等
-      tomcat1/bin/startup.sh                // 启动
-      ```
 1. java运行
    - 单跑：安装JDK，添加path，javac编译，java运行
    - 单跑，依赖其他类：默认同级目录和CLASSPATH引入，使用import按照包名查找对应目录下的类，如`import tool.MyDate`，可以添加CLASSPATH的引用目录
    - 单跑，依赖其他jar包：还是用import引入类，编译时，添加-cp参数指定jar位置
-   - 最简单的web项目组成，一个servlet输出页面，一个jsp输出页面
-   - 单跑tomcat，依赖其他类和资源文件
-   - 单跑tomcat，依赖其他jar包
+   - 单跑tomcat
+     1. 对于servlet，不能和html结合，只能在java程序里一句句输出html，且文件路径要正确，即web.xml在WEB-INF下，编译文件在classes下
+     1. 对于jsp，写个index.jsp放到ROOT目录即可
+   - 单跑tomcat，依赖其他类和资源文件，web.xml中找编译文件从classes中找，其他类型文件按照目录找，java程序中找类和单跑一样，IDE会自动帮你找，并且编译
+   - 单跑tomcat，依赖其他jar包，一般放在WEB-INF/lib中，类似依赖类，容器根据web.xml配置会自动解jar包进行类的载入
    - idea单跑
    - idea单跑，依赖其他类
    - idea单跑，依赖其他jar包
