@@ -463,5 +463,6 @@
         - idea打包
    - Ear：Enterprise Application Archive，企业应用归档文件，一个企业应用程序被定义为多个jar文件/资源/类、Web应用程序、ejb的集合，即jar、war、ejb
 1. 打包和部署
+   - java发布过程：源代码——生成项目文档——编译——打包——安装jar/war/zip包到服务器
    - 打包时，依赖的jar包要么在tomcat的lib目录下，要么声明在path中；如果用IDE就设置好就行
    - 部署时，需放在tomcat的webapp下，或者由IDE启动，或者由maven的plugin启动
