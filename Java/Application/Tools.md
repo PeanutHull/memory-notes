@@ -23,12 +23,12 @@
    1. `mvn archetype` // 创建maven项目
    1. `mvn install` // 在本地仓库安装依赖
    1. `mvn compile` // 编译源代码
-   1. `mvn test-compile` // 编译测试源代码
+   1. `mvn test-compile` // 编译测试代码，但不测试
    1. `mvn test` // 运行单元测试
    1. `mvn package` // 打包项目生成jar
    1. `mvn deploy` // 发布项目
-   1. `mvn clean` // 清除项目的结果
    1. `mvn site` // 生成项目相关信息的网站
+   1. `mvn clean` // 清除项目的编译打包的结果
    1. `mvnjetty:run` // 启动jetty服务
    1. `mvntomcat:run` // 启动tomcat
    1. `mvn eclipse:eclipse ` // 生成eclipse项目文件
@@ -67,7 +67,7 @@
         - 依赖目录：Project Structure--Modules--Dependencies选项卡--新增Export--JARs or directories--选择lib目录--Jar Directory
         - 打包方式：Artifacts--fix--add classes...
         - 配置tomcat
-   - 空白maven项目
+   - 空白mave
      1. 配置SDK、maven、tomcat
      1. 新建项目————maven————maven-archetype-webapp————配置项目信息
      1. src/main文件夹中创建java文件夹————并置为sources Root

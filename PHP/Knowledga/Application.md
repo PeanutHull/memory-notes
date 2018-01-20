@@ -88,11 +88,49 @@ function get_self_url($is_root=0) {
     else return false;
     ```
 ### xml处理
-1. XML：半结构化的文件格式，类似html的标记型语言，主要用于描述/存放数据
-   - 节点：xml的每个成分都是节点，有文档节点——元素节点——文本节点——属性节点——注释节点，2015不是元素节点的值，而是文本节点的值，元素节点包含了文本节点
-   - 节点树：根元素、元素、属性、文本
-   - 不同浏览器对XML解析：IE的ActiveXObject、FireFox的document.implementation.createDocument
-   - 通常用<?xml version="1.0" encoding="UTF-8"?>标识开始和版本
+1. XML：eXtensible Markup Language，可扩展标记语言，半结构化的文件格式，用于描述/存放数据，具有自我描述性，对大小写敏感，都是对标签且必须正确嵌套
+   - 节点树：根元素、元素、属性、文本。xml的每个成分都是节点
+   - 命名空间：用于避免元素命名冲突，由元素开始标签的xmlns属性定义，值为url不会用于查找，只是用于确定唯一名称，`<td xmlns="http://">`
+   - CDATA：由`<![CDATA["`开始，由`"]]>"`结束的部分被解释器忽略
+   - 举例
+    ```XML
+    <?xml version="1.0" encoding="UTF-8"?>          // XML声明可选，都在第一行
+    <note>
+        <heading>Reminder</heading>        
+    </note>
+    ```
+   - 良好的xml文档规范
+     1. 它必须以 XML 声明开头
+     1. 它必须拥有唯一的根元素
+     1. 开始标签必须与结束标签相匹配
+     1. 元素对大小写敏感
+     1. 所有的元素都必须关闭
+     1. 所有的元素都必须正确地嵌套
+     1. 必须对特殊字符使用实体
+1. DTD：Document Type Definition，文档类型定义，是关于标记符的语法规则，是XML文件的验证机制。 是一种保证xml文档格式正确的方法，通过比较xml文档和DTD文件来看文档是否符合规范，元素和标签使用是否正确，DTD文件是一个ASCII的文本文件，后缀名为.dtd。HTML4.01中的doctype需要对DTD进行引用，因为HTML4.01基于SGML。而HTML 5不基于SGML，因此不需要对DTD进行引用
+    ```XML
+    <!DOCTYPE NEWSPAPER [
+    <!ELEMENT NEWSPAPER (ARTICLE+)>
+    <!ATTLIST ARTICLE EDITION CDATA #IMPLIED>
+    ]>
+    ```
+1. Schema：是基于xml的DTD替代者，可描述xml的结构，使用xml语法，用于描述允许的文档内容/验证数据的正确性/定义数据约束、模型等
+    ```XML
+    // 一个xml文档
+    <?xml version="1.0"?>
+    // Schema声明
+    <note                                                       // 表示对Schema的引用，Schema文件定义了xml的内容和规范，以xsd为扩展名
+    xmlns="http://www.w3schools.com"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.w3schools.com/note.xsd">
+    <heading>Reminder</heading>
+    </note>
+    // 示例Schema文件内容
+    <?xml version="1.0"?>
+    <xs:schema>
+    ...
+    </xs:schema>
+    ```
 1. php读取xml数据
    - `simplexml_load_file();`
    - `simplexml_load_string($xmlData, 'SimpleXMLElement', LIBXML_NOCDATA);`

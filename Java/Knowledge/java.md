@@ -919,7 +919,7 @@
    - idea跑web
    - idea用maven跑
    - idea用maven跑web
-   - 单maven跑
+   - 单maven跑，官网的例子archetype:generate--package--java -cp--Hello World!
    - 单maven跑tomcat
 ### wiki
 1. 常见包

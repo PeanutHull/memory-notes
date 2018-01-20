@@ -442,7 +442,9 @@
 	response.sendRedirect(request.getContextPath + "/要跳转的页面相对地址"); // 重定向，地址改变
 	request.getRequestDispatcher("/要跳转的页面相对地址").forward(request, response); // 转发请求，地址不变
 	```
-1. 部署
+1. 打包和部署
+   - java发布过程：源代码——编译——打包——安装jar/war/zip包到服务器
+   - 打包时，依赖的jar包要么在tomcat的lib目录下，要么声明在path中；如果用IDE就设置好就行
    - Jar包
      1. 理解：Java Application Archive，java归档文件，是与平台无关的文件格式，允许将许多文件组合成一个压缩文件，是文件封装的最小单元。包含 META-INF 目录：存储配置数据，xxx.SF 签名文件等
      1. 特点
@@ -462,7 +464,3 @@
         - maven打包
         - idea打包
    - Ear：Enterprise Application Archive，企业应用归档文件，一个企业应用程序被定义为多个jar文件/资源/类、Web应用程序、ejb的集合，即jar、war、ejb
-1. 打包和部署
-   - java发布过程：源代码——生成项目文档——编译——打包——安装jar/war/zip包到服务器
-   - 打包时，依赖的jar包要么在tomcat的lib目录下，要么声明在path中；如果用IDE就设置好就行
-   - 部署时，需放在tomcat的webapp下，或者由IDE启动，或者由maven的plugin启动

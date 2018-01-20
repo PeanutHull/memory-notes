@@ -45,14 +45,14 @@
     done
     /developer/apache-tomcat-7.0.73/bin/startup.sh
     ```
-1. Java 从零打造企业级电商实战 - 服务端
-   - MyBatis
-     1. 返回新增的主键：mapper.xml文件中insert标签加入属性：`useGeneratedKeys="true" keyProperty="id"`
-     1. 数据绑定更新对应数据：mapper.xml文件中update指定parameterType的类地址：`parameterType="com.mall.pojo.Xxx"`
-     1. 批量插入：对应于子订单的批量插入
-   - 获得当前运行的文件夹目录：`request.getSession().getServletContext().getRealPath('upload');`
-   - 当使用`Set<Object>`，即自定义对象的Set集合，要在pojo中重写equals和hashCode方法，因为要保证这两个方法针对的对象属性相同，才能保证输出的bool结果的一致
-   - 返回值为List的写法提醒`ServerResponse<List<Category>>`
+### Java 从零打造企业级电商实战 - 服务端
+1. MyBatis
+   - 返回新增的主键：mapper.xml文件中insert标签加入属性：`useGeneratedKeys="true" keyProperty="id"`
+   - 数据绑定更新对应数据：mapper.xml文件中update指定parameterType的类地址：`parameterType="com.mall.pojo.Xxx"`
+   - 批量插入：对应于子订单的批量插入
+1. 获得当前运行的文件夹目录：`request.getSession().getServletContext().getRealPath('upload');`
+1. 当使用`Set<Object>`，即自定义对象的Set集合，要在pojo中重写equals和hashCode方法，因为要保证这两个方法针对的对象属性相同，才能保证输出的bool结果一致
+1. 返回值为List的写法提醒`ServerResponse<List<Category>>`
 ### 淘淘商城
 1. 技术点
    - Nginx反向代理
