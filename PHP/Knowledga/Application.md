@@ -120,8 +120,9 @@ function get_self_url($is_root=0) {
     <?xml version="1.0"?>
     // Schema声明
     <note                                                       // 表示对Schema的引用，Schema文件定义了xml的内容和规范，以xsd为扩展名
-    xmlns="http://www.w3schools.com"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns="http://www.w3schools.com"                            // 默认命名空间
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"       // xsi标准命名空间，用于指定自定义命名空间的schema文件
+    xmlns:self="http://"                                        // 自定义命名空间
     xsi:schemaLocation="http://www.w3schools.com/note.xsd">
     <heading>Reminder</heading>
     </note>
