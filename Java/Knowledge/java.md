@@ -301,16 +301,15 @@
         - 除非是抽象类，否则子类必须全部实现接口里的所有方法
         - 实现接口方法时，不能抛出强制性异常，只能在接口或继承接口的抽象类中抛出
         - 重写方法时保持一致的方法名，相同或兼容的返回值
-     1. extends要在implements前边
-   - 声明
+     1. extends要在implements前边。标记接口：没有任何属性和方法的接口，仅表明它的类属于一个特定的类型
+   - 实例
        ```Java
-        public/protected/private interface 接口名称 [extends 父接口1，父接口2] {
+        public/protected/private interface 接口名称 [extends 父接口1，父接口2] {            // 声明
             // 多个常量
             // 抽象方法
         }
+        public class Dog implements Animal{}                                            // 实现，implements
        ```
-   - 实现：implements，`public class Dog implements Animal{}`
-   - 标记接口：没有任何属性和方法的接口，仅表明它的类属于一个特定的类型
 1. 抽象类
    - 理解：为了对类进行扩充，除了不能被实例化，属性、方法、构造器和权限访问和类都一样，必须继承使用
    - 价值

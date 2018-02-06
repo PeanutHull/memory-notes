@@ -337,7 +337,7 @@
      1. id：行为元素的唯一标识，可以通过PageContext调用
      1. scope：page(当前页面有效)、request、session、application
    - 组成
-     1. useBean
+     1. useBean：jsp使用javaBean使逻辑代码和html分离带来好处
         ```Java
         <jsp:useBean id="" class="" scope="">
             <jsp:setProperty name="" property="" value="" param=""/>

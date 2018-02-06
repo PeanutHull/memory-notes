@@ -503,54 +503,49 @@
      1. `<s:radio label="" name="" list="{'',''}" />`
      1. `<s:select label="" name="" value="%{''}" list="%{#{'':''}}">`
 ### Spring
-1. 认识：用于构建轻量级/健壮的J2EE应用程序、解决开发的复杂性，是全栈的容器类框架
+1. 认识：用于构建轻量级、健壮的j2ee应用程序，解决开发的复杂性，是全栈的容器类框架
 1. 特点
-   1. IoC分层架构，灵活选用组件，方便集成各种框架，简化开发
-   1. AOP支持，面向方面编程
-   1. 声明式事务支持
-   1. 使用pojo编程模型
+   - IoC分层架构，灵活选用组件，方便集成各种框架，简化开发
+   - AOP支持，面向切面编程
+   - 声明式事务支持
+   - 使用pojo编程模型
 1. 组成
-   - 组件
-     1. Spring Core：主要组件BeanFactory，使用IOC将配置、依赖规范和应用程序分开
-     1. Spring AOP：通过配置管理特性，AOP模块为其他应用提供事务管理服务，不用依赖EJB组件，就可集成声明性事务管理
-     1. Spring Context：Spring的上下文是个配置文件，包括企业服务，有JNDI、EJB、mail、i18n、校验
-     1. Spring ORM：插入了很多ORM框架，如JDO、Hibernate、iBatis，都遵从Spring的通用事务和DAO异常结构
-     1. Spring DAO：提供异常层次结构，来管理异常和不同数据库的错误信息，简化了错误处理，
-     1. Spring Web：为基于Web的应用程度提供上下文，支持与Struts的集成，简化了参数绑定到对象的工作
-     1. Spring Web MVC：是全功能构建Web的MVC框架，包括了JSP、Velocity等
-1. IoC：控制反转，Inversion of Control
-   - 理解：将类之间的依赖从代码中脱离出来，用配置的方式描述，由IOC容器负责依赖类之间的管理。和AOP组成spring的核心/基础。Context模块构建于核心模块之上，添加i18n、Bean生命周期控制、框架事件体系、资源加载透明化等功能。BeanFactory是核心接口
-   - 设计思想：用DI(Dependency Injection)依赖注入的概念来代替IoC而便于理解，让调用类对某接口实现类(被依赖类)的依赖关系由第三方(容器或者协作类)注入，以移除调用类对某接口实现类的直接依赖。角色有调用类(主体逻辑实现类)，接口实现类(被依赖类)，第三方装配类(将前二者组合起来)
-   - IoC分类
+   - Spring Core：主要组件BeanFactory，使用IOC将配置、依赖规范和应用程序分开
+   - Spring AOP：通过配置管理特性，AOP模块为其他应用提供事务管理服务，不用依赖EJB组件，就可集成声明性事务管理
+   - Spring Context：Spring上下文是个配置文件，包括企业服务，有JNDI、EJB、mail、i18n、校验
+   - Spring ORM：插入了很多ORM框架，如JDO、Hibernate、iBatis，都遵从Spring的通用事务和DAO异常结构
+   - Spring DAO：提供异常层次结构，来管理异常和不同数据库的错误信息，简化了错误处理，
+   - Spring Web：为基于Web的应用程度提供上下文，支持与Struts的集成，简化了参数绑定到对象的工作
+   - Spring Web MVC：是全功能构建Web的MVC框架，包括了JSP、Velocity等
+1. IoC
+   - 理解：控制反转，Inversion of Control，将类之间的依赖从代码中脱离出来，用配置的方式描述，由IOC容器负责依赖类之间的管理。和AOP组成spring的核心/基础。Context模块构建于之上，添加i18n、Bean生命周期控制、框架事件体系、资源加载透明化等功能。BeanFactory是核心接口。用DI(Dependency Injection)依赖注入的概念来代替IoC而便于理解，让调用类对某接口实现类(被依赖类)的依赖关系由第三方(容器或者协作类)注入，以移除调用类对某接口实现类的直接依赖。角色有调用类(主体逻辑实现类)，接口实现类(被依赖类)，第三方装配类(将前二者组合起来)。反射是实现依赖注入的基础，第三方装配类将决定依赖的关系交给用户，由用户定义
+   - 注入方式
      1. 构造函数注入：通过构造函数将接口实现类当做变量注入，适用于调用类全局依赖接口实现类
      1. 属性注入：用setter方法在需要时才注入
      1. 接口注入：调用类实现一个接口，在接口方法中注入接口实现类，绕了，跟属性注入方式一样，还多了个调用类接口
-   - 实现原理：反射是实现依赖注入的基础，第三方装配类将决定依赖的关系交给用户，由用户定义
-   - Spring基础接口：
-   - Bean生命周期：
-   - 使用
+   - 装配方式
      1. 基于XML的装配方式
      1. 基于Java Configuration的装配方式
      1. 自动装配
      1. 多种装配方式的混用
      1. 处理装配的歧义
      1. 如何注入属性值
+   - Spring基础接口
+   - Bean生命周期
+   - Spring Bean 的作用域
+     1. Singleton
+     1. Prototype
+     1. Request
+     1. Session
+     1. Global
 1. AOP
-   - 切面、目标对象、切点、通知、织入等基本概念，横切逻辑编程，整合了AspectJAOP语言级的框架，
-   - 如何定义切点：定义切点的aspectJ语法
-   - 定义通知
+   - 理解：可以理解为切面、目标对象、切点、通知等基本概念，横切逻辑编程，整合了AspectJAOP语言级框架，aspectJ语法定义切点
+   - 通知类型
      1. 前置通知（Before)
      1. 后置通知（AfterReturning）
      1. 异常通知（AfterThrowing）
      1. 最终通知（After）
-     1. 环绕通知（Around）
-     1. 如何给切面传参
-1. Spring Bean 的作用域
-   - Singleton
-   - Prototype
-   - Request
-   - Session
-   - Global
+   - 如何给切面传参
 1. Spring MVC
    - 注解
      1. @Controller：负责处理由DispatcherServlet分发的请求，并返回一个数据模型Model。搭配完成请求。依赖spring的发现，方法有两种
@@ -573,20 +568,6 @@
      1. @RestController：避免重复写RequestMapping和ResponseBody
      1. @ModelAttribute：该Controller所有方法调用前先执行ModelAttribute指定的方法
      1. @SessionAttributes：写入session值，用于类
-     1. @Resource和@Autowired
-        - 理解：用于bean的注入，都可以写在字段和setter方法上，如果写在字段上，不需要写setter方法
-        ```java
-        <!--二者选其一-->
-        @Autowired/Resource
-        private UserDao userDao; // 用于字段
-        @Autowired/Resource
-        public void setUserDao(UserDao userDao) { // 用于setter方法
-            this.userDao = userDao;
-        }
-        ```
-        - 不同点
-          1. Autowired默认按照类型注入，如果允许null值，设置required属性为false。按照名称注入要加`@Qualifier("userDao")`注解
-          1. Resource默认按照名称注入，由J2EE提供，需导入javax.annotation.Resource。属性有name和type，分别指定则使用不同注入方法，都不指定使用反射按照名称注入
      1. @HttpEntity：用于标注访问请求和响应头
      1. @requestParam：获得请求参数，属性有defaultValue/required/value
         ```java
@@ -600,6 +581,19 @@
      1. @Service：标注一个业务逻辑组件类
      1. @Repository：用于dao层，在impl上使用
      1. @Component：通用注解，用于无法确定类属于的层，不建议使用
+     1. @Resource和@Autowired
+        - 理解：用于bean的注入，可以写在字段和setter方法上，如果写在字段上，不需要写setter方法
+        ```java
+        @Autowired/Resource                             // 二者选其一
+        private UserDao userDao;                        // 用于字段
+        @Autowired/Resource
+        public void setUserDao(UserDao userDao) {       // 用于setter方法
+            this.userDao = userDao;
+        }
+        ```
+        - 不同点
+          1. Autowired默认按照类型注入，如果允许null值，设置required属性为false。按照名称注入要加`@Qualifier("userDao")`注解
+          1. Resource默认按照名称注入，由J2EE提供，需导入javax.annotation.Resource。属性有name和type，分别指定则使用不同注入方法，都不指定使用反射按照名称注入
 1. 使用
    - 业务分层
      1. 持久层：JDBC、MyBatis
