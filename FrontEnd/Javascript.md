@@ -35,6 +35,8 @@
     }catch() {
     }finally {}
     ```
+###DOM
+1. dom：一组用来描述脚本怎样与结构性文档进行交互和访问的Web标准。DOM定义了一系列的对象、方法和属性，用于访问、操作和创建文档中的内容、结构、样式以及行为。
 ###BOM
 1. 调用父级方法：`parent.method()`，parent为window.parent的简写
 1. 打开新窗口：`window.open`
