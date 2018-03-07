@@ -3,55 +3,19 @@
    - Java SE：java平台标准版。包含最普遍的类库，针对普通的java程序
    - Java EE：java平台企业版。是类库最多、针对web应用的一个规范
    - Java ME：java平台微型版
-1. 知识体系
-   - 组成：JDK—->JRE—->JVM
-     1. JDK：Java Development Kit，开发工具包，包含编译器和调试器，运行环境
-     1. JRE：Java Runtime Environment，运行环境，包括JVM(包含解释器)和其他工具
-     1. JVM：Java Virtual Machine，虚拟机，光JVM还不能运行，因为没有lib类库，JRE编译时的会载入lib类库
-   - 基础
-     1. 基础：数据类型, 操作符, 运算符, 表达式
-     1. 面向对象：类, 继承, 多态, 重写, 重载
-     1. 常用类：String, Object, Array, Enum
-     1. 集合类, List, ArrayList, Set, HashSet, Map, HashMap, HashTable
-     1. I/O：File, IO, NIO, InputStream, OutputStream, Reader, Writer, Selector
-     1. 多线程：Thread, Runnable, Future
-     1. 反射、注解、泛型
-     1. 异常处理
-     1. JDBC、网络编程
-     1. 设计模式、IOC依赖注入, AOP面向切面编程
-     1. JVM
-   - JavaEE：Servlet、JSP等12项规范
-   - 框架和库
-     1. Spring
-     1. Hibernate,MyBatis
-     1. SpringMVC, Struts
-     1. Quartz、Ehcache、Apache commons
+1. 认识
+   - 多平台运行，静态语言，预先编译，解释执行
+   - 纯粹的面向对象特性，语法简单，强类型，传承于C++，不使用指针而是引用，异常处理，垃圾自动回收，安全检查机制、命名空间等
+   - 高性能，多线程
+   - 在企业，互联网，嵌入式都有广泛的应用
 1. 开始
     ```Java
     public class HelloWorld {
-        /* 第一个Java程序 */
         public static void main(String[] args) {
             System.out.println("Hello World");
         }
     }
     ```
-### 认识
-1. 认识
-   - 多平台运行，强类型
-   - 静态语言中优秀的面向对象特性
-   - 传承于C++，在企业，互联网，嵌入式都有广泛的应用
-1. 特点：
-   - 语法简单：类似C++，不使用指针而是引用
-   - 面向对象：提供类/接口/继承等，只支持类的单继承，但支持接口间的多继承，全面支持动态绑定，纯的面向对象的语言
-   - 健壮性：强类型机制，异常处理，垃圾自动回收，丢弃了指针。安全检查机制、命名空间等，还有安全性
-   - 体系结构中立：java程序在java平台编译为字节码格式.class，到处运行。严格要求数据类型的长度，具有较强移植性
-   - 解释性语言：java程序先编译为字节码格式，java解释器对字节码解释执行，执行中需要的类在编译的联接中载入
-   - 高性能：速度越来越接近C++，是多线程的，线程是特殊的对象，必须由Thread类或其子类来创建
-   - 是动态的
-1. 运行
-   - 源文件名：必须和类名相同
-   - 主方法入口：所有java程序由public static void main(String[] args)开始执行
-   - 流程：.java源文件———编译———.class字节码文件(与平台无关)———解释———完成
 ### 语法
 1. 数据类型
    - 分类：基本类型、引用类型
@@ -330,7 +294,7 @@
             public abstract double computePay();
         }
        ```
-1. 类：由方法和属性组成，`public/protected/private class 类名{}`
+1. 类：由方法和属性组成，`public/protected/private class 类名{}`，只支持类的单继承，但支持接口间的多继承
    - 属性
      1. 全局变量：成员变量
      1. 局部变量
@@ -903,24 +867,53 @@
         nextLine：回车为结束符
         ```
         - System.out.write()：输出
-1. java运行
-   - 单跑：安装JDK，添加path，javac编译，java运行
-   - 单跑，依赖其他类：默认同级目录和CLASSPATH引入，使用import按照包名查找对应目录下的类，如`import tool.MyDate`，可以添加CLASSPATH的引用目录
-   - 单跑，依赖其他jar包：还是用import引入类，编译时，添加-cp参数指定jar位置
-   - 单跑tomcat
-     1. 对于servlet，不能和html结合，只能在java程序里一句句输出html，且文件路径要正确，即web.xml在WEB-INF下，编译文件在classes下
-     1. 对于jsp，写个index.jsp放到ROOT目录即可
-   - 单跑tomcat，依赖其他类和资源文件，web.xml中找编译文件从classes中找，其他类型文件按照目录找，java程序中找类和单跑一样，IDE会自动帮你找，并且编译
-   - 单跑tomcat，依赖其他jar包，一般放在WEB-INF/lib中，类似依赖类，容器根据web.xml配置会自动解jar包进行类的载入
-   - idea单跑
-   - idea单跑，依赖其他类
-   - idea单跑，依赖其他jar包
-   - idea跑web
-   - idea用maven跑
-   - idea用maven跑web
-   - 单maven跑，官网的例子archetype:generate--package--java -cp--Hello World!
-   - 单maven跑tomcat
+1. 运行
+   - 特点
+     1. 源文件名：必须和类名相同
+     1. 主方法入口：所有java程序由public static void main(String[] args)开始执行
+     1. 流程：.java源文件———编译———.class字节码文件(与平台无关)———解释———完成
+   - 运行场景
+     1. 单跑：安装JDK，添加path，javac编译，java运行
+        - 依赖其他类：默认同级目录和CLASSPATH引入，使用import按照包名查找对应目录下的类，如`import tool.MyDate`，可以添加CLASSPATH的引用目录
+        - 依赖其他jar包：还是用import引入类，编译时，添加-cp参数指定jar位置
+     1. tomcat
+        - 对于servlet，不能和html结合，只能在java程序里一句句输出html，且文件路径要正确，即web.xml在WEB-INF下，编译文件在classes下
+        - 对于jsp，写个index.jsp放到ROOT目录即可
+        - 依赖其他类和资源文件：web.xml中找编译文件从classes中找，其他类型文件按照目录找，java程序中找类和单跑一样，IDE会自动帮你找，并且编译
+        - 依赖其他jar包：一般放在WEB-INF/lib中，类似依赖类，容器根据web.xml配置会自动解jar包进行类的载入
+     1. idea
+        - 依赖其他类
+        - 依赖其他jar包
+        - idea跑web
+        - idea用maven跑
+        - idea用maven跑web
+     1. maven
+        - 单maven跑：官网的例子archetype:generate--package--java -cp--Hello World!
+        - 单maven跑tomcat
 ### wiki
+1. 知识体系
+   - 组成：JDK—->JRE—->JVM
+     1. JDK：Java Development Kit，开发工具包，包含编译器和调试器，运行环境
+     1. JRE：Java Runtime Environment，运行环境，包括JVM(包含解释器)和其他工具
+     1. JVM：Java Virtual Machine，虚拟机，光JVM还不能运行，因为没有lib类库，JRE编译时的会载入lib类库
+   - 基础
+     1. 基础：数据类型, 操作符, 运算符, 表达式
+     1. 面向对象：类, 继承, 多态, 重写, 重载
+     1. 常用类：String, Object, Array, Enum
+     1. 集合类, List, ArrayList, Set, HashSet, Map, HashMap, HashTable
+     1. I/O：File, IO, NIO, InputStream, OutputStream, Reader, Writer, Selector
+     1. 多线程：Thread, Runnable, Future
+     1. 异常处理
+     1. 反射、注解、泛型
+     1. JDBC、网络编程
+     1. 设计模式、IOC依赖注入, AOP面向切面编程
+     1. JVM
+   - JavaEE：Servlet、JSP等12项规范
+   - 框架和库
+     1. Spring
+     1. Hibernate,MyBatis
+     1. SpringMVC, Struts
+     1. Quartz、Ehcache、Apache commons
 1. 常见包
    - java.lang：语言包，Number/Character/Boolean、String、Math、Object、Class、Thread、Process、Throwable
    - java.util：工具包，Array/Vector/Dictionary/Collection/map、Date、Random/UUID
@@ -1028,3 +1021,4 @@
    - 应用
      1. Spark-SQL组件
      1. DataFrame组件
+1. 动/静态语言，编译/解释

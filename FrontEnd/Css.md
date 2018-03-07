@@ -30,24 +30,30 @@
         E[attr*="value"]       有属性值，而且包含value
         E[attr|="value"]       是value或者以“value-”开头的值
         ```
-   - 伪类选择器：向选择器添加特殊状态下的效果
-        - 动态伪类
+   - 伪类选择器：向选择器添加特殊状态下的效果，使用单冒号
+        - 普通伪类
         ```
-        :hover                鼠标经过添加样式
-        :link                 未访问
-        :active               鼠标点中激活那一下
-        :visited              访问后
-        :focus                元素成为焦点，如表单元素
+        :first-child
+        :last-child
         :lang                 指定使用的语言        
         :not(selector)
         ```
-        - 状态伪类：通常用在form中，IE6-8不支持":checked",":enabled",":disabled"三种选择器
+        - 动态伪类：css3
+        ```
+        :link                 未访问
+        :active               鼠标点中激活那一下
+        :visited              访问后
+        :hover                鼠标经过添加样式
+        :focus                元素成为焦点，如表单元素
+        ```
+        - 状态伪类：通常用在form中,css3
         ```
         :checked
         :enabled
         :disabled
+        :target
         ```
-        - css3的nth选择器
+        - css3的nth伪类选择器
         ```
         :nth-of-type()       选择指定的元素
         :nth-last-of-type()  选择指定的元素，从元素的最后一个开始计算
@@ -55,20 +61,23 @@
         :last-of-type        选择一个上级元素的最后一个同类子元素
         :only-of-type        选择一个元素是它的上级元素的唯一一个相同类型的子元素        
 
-        :first-child
-        :last-child
         :nth-child()         选择某个元素的一个或多个特定的子元素，参数有num、n、2n+1等
         :nth-last-child()    选择某个元素的一个或多个特定的子元素，从这个元素的最后一个子元素开始算
         :only-child          选择的元素是它的父元素的唯一一个了元素
 
         :empty               选择的元素里面没有任何内容
         ```
-   - 伪元素：将特殊的效果添加到选择器，通过元素来表现
+   - 伪元素：添加特殊效果的选择器，通过元素来表现，实际不在文档中，但是外部可见，就是"虚假"的元素，使用双冒号
     ```
-    ::before         在某元素之前插入某些内容和样式
-    ::after          在某元素之后插入某些内容和样式
-    ::first-letter   将样式添加到文本首字母
+    ::before         在某元素之前添加某些内容和样式
+    ::after          在某元素之后添加某些内容和样式
+    以上两个伪元素使用content属性添加内容，可用url；其他样式正常显示，有background
     ::first-line     将样式添加到文本的首行
+    ::first-letter   将样式添加到文本首字母
+    以上四个单双冒号均可
+    ::selection
+    ::backdrop
+    以上两个仅双冒号，css3规范，用于区分伪类和伪元素
     ```
 1. 样式
    - 基本
@@ -142,6 +151,17 @@
         margin：0px；
     }
     ```
+   - 伪元素的使用
+     1. 利用:after清楚浮动
+        ```
+        .clearfix:after {
+            content: ".";
+            display: block;
+            height: 0;
+            visibility: hidden;
+            clear: both;
+        }
+        ```
 1. @media-query
 1. @font-face
    - 介绍：css2的语法，允许网页上显示自定义字体。即使客户端没有安装，网页也可以显示。浏览器支持有ttf/otf、woff、eot、svg，由于浏览器兼容差异，至少需要woff,eot两种格式字体
