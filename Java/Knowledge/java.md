@@ -20,60 +20,54 @@
 1. 数据类型
    - 分类：基本类型、引用类型
    - 基本类型
-     1. 数值型：
-        - 整数：byte, short, int, long
-        - 浮点数：float, double
-     1. 字符型：char
-     1. 布尔型：boolean
-   - 基本类型详解：
-     1. byte：8位有符号二进制补码形式的整数。-128~127——2的7次方。默认0。
-     1. short：16位有符号二进制补码形式的整数。-32768~32767——2的15次方。默认0。
-     1. int：32位有符号二进制补码形式的整数。4字节。2的31次方范围(-2147483648~2147483647十亿级)。默认0。
-     1. long：64位有符号二进制补码形式的整数。2的63次方范围(百亿亿级)。默认0L。表示形式为 Long b = -200000L。
-     1. float：32位单精度浮点型，不能用于货币。默认0.0f。如 float point = 15.1f;
-     1. double：64位双精度浮点型，不能用于货币。默认0.0d。如 double d1 = 123.4。
-     1. char：单一16位Unicode字符，如：char name = 'A';最小值是’\u0000’（即为0）
-     1. boolean：布尔型，1字节。默认false
-   - 引用数据类型
-     1. 理解：类似C/C++的指针， 其指向一个对象，指向对象的变量叫引用变量。这些变量声明时被指定为一个特定类型，一旦声明不能改变类型，默认null
-     1. 组成：类(接口)、对象、数组
-        ```Java
-        Site site = new Site("Runoob")
-        ```
-   - 区别：基本数据类型变量存储的是数据本身，引用类型变量存储数据空间地址
-   - 进制
-     1. 0表示8进制，0x表示16进制，
-     1. 整形都可以用十、八、十六进制表示。
-     1. 字符型可以包含unicode字符：char a = '\u0001';
-     1. 转义字符：\n换行，\r回车
-   - 类型转换
+     1. 分类
+        - 数值型
+          1. 整数：byte, short, int, long
+          1. 浮点数：float, double
+        - 字符型：char
+        - 布尔型：boolean
+     1. 基本类型详解：
+        - byte：8位有符号二进制补码形式的整数。-128~127——2的7次方。默认0。
+        - short：16位有符号二进制补码形式的整数。-32768~32767——2的15次方。默认0。
+        - int：32位有符号二进制补码形式的整数。4字节。2的31次方范围(-2147483648~2147483647十亿级)。默认0。
+        - long：64位有符号二进制补码形式的整数。2的63次方范围(百亿亿级)。默认0L。表示形式为 Long b = -200000L。
+        - float：32位单精度浮点型，不能用于货币。默认0.0f。如 float point = 15.1f;
+        - double：64位双精度浮点型，不能用于货币。默认0.0d。如 double d1 = 123.4。
+        - char：单一16位Unicode字符，如：char name = 'A';最小值是’\u0000’（即为0）
+        - boolean：布尔型，1字节。默认false
      1. 类型转换
-         - 整形、常量、字符可以混合运算，但须转为同一类型。
-         - 低到高排列：byte,short,char—> int —> long—> float —> double
-         - bool不能转换
-         - 对象类型不能改为不相关类
-         - 容量大转小时必须使用强制转换。转换可能导致溢出或损失精度
-         - int不能转char
-     1. 自动类型转换：容量小的转大的
-     1. 强制类型转换：数据截断后溢出，转换条件是数据类型必须是兼容的
+        - 原则
+          1. 整形、常量、字符可以混合运算，但须转为同一类型。
+          1. 低到高排列：byte,short,char—> int —> long—> float —> double
+          1. bool不能转换
+          1. 对象类型不能改为不相关类
+          1. 容量大转小时必须使用强制转换。转换可能导致溢出或损失精度
+          1. int不能转char
+        - 自动类型转换：容量小的转大的
+        - 强制类型转换：数据截断后溢出，转换条件是数据类型必须是兼容的
         ```Java
         double num = 6.66;
         int avg = (int) num;
         // 使用instanceof判断是否能够强制转换
         if(animal instanceof Cat) {}
         ```
+   - 引用类型：类似C/C++的指针， 其指向一个类/对象/数组
+    ```Java
+    Site site = new Site("Runoob")
+    ```
+   - 区别：基本类型存储的是数据本身，引用类型存储数据空间地址
 1. 变量
-   - 理解：使用前必须先声明
+   - 理解：使用前必须先声明类型
    - 定义
     ```Java
-    int a;          // 先声明，后赋值
-    a = 1;    
+    int a;
+    a = 1;          // 先声明，后赋值
     int a = 1;      // 声明并赋值
     ```
    - 分类
-     1. 全局变量：即成员变量，或者叫实例变量，类中共享的变量
-     1. 局部变量：方法中定义的变量，一个方法中局部变量不能重名，局部比全局的优先级高，java会给全局变量定义初始值(定义不赋值)，不会给局部定义
-     1. 类变量：即静态变量。在构造方法和语句块之外。属于类，所有实现的对象共享只有一份
+     1. 全局变量：即成员变量，或叫实例变量，类中共享的变量
+     1. 局部变量：方法中定义的变量，一个方法中局部变量不能重名，局部比全局的优先级高，java会给全局变量定义初始值，不会给局部定义
+     1. 类变量：即静态变量。在构造方法和语句块之外。属于类，所有实现的对象共享一份
         ```Java
         // 声明静态变量
         protected static String name = "haha";
@@ -82,6 +76,7 @@
         // 使用
         类名.name;(类中)/name;(类外)
         ```
+     1. 引用变量：指向对象的变量叫引用变量，这些变量声明时被指定为一个特定类型，一旦声明不能改变类型，默认null
 1. 常量：一旦定义，不能修改，通常大写，可提高程序可维护性，避免命名不规范等问题，使用final定义 `final String LOVE = "imooc";`
 1. 符号
    - 运算符
@@ -94,29 +89,29 @@
         - 条件： ? :
         - 位：&   |   ~(非)   ^(异或)   ~(逐位取反)   <<(按位左移固定位数)   >>   >>>("无符号"右移运算)   <<<
         - 强制类型转换：()
+        - instanceof：检测对象是否是一个类实例
      1. 特性
         - 自增/减只能用于变量，位置前后作用不同
         - 括号优先级最高
         - 只有==和!=两个比较运算符两边可以是引用类型，其他的两边都是数值型
         - ^异或：有且仅有一个才行。java有短路执行特性，即只执行一部分
    - 修饰符
-     1. 访问：用于修饰类、方法和变量，可以没有，默认为default，只能往更宽泛的权限继承
-        - private：本类可见，类和接口不能声明为private，一旦声明私有只能通过getter和setter被外部操作
+     1. 访问：用于修饰类、方法和变量，只能往更宽泛的权限继承，可以没有，默认为default
+        - private：本类可见
         - default：其他类和子类不可见
-        - protected：其他类不可见，接口不能声明为protected，类的方法和全局变量可以，接口的方法和全局变量不行
-        - public：所有类可见，main必须是public的，否则解释器不能运行此类
+        - protected：其他类不可见
+        - public：所有类可见
      1. 其他
         - static：创建类变量和类方法
         - interface：创建接口
         - abstract：创建抽象类和抽象方法
         - final：修饰的类不能被继承，修饰的方法不能被重载，修饰的变量为常量不能修改
         - strictfp：浮点数使用严格规则
-        - transient：对象变量持久化跳过修饰符，只修饰变量，不修饰方法和类。被修饰的变量和静态变量不能被序列化。`public transient int limit = 1;`
+        - transient：对象变量持久化跳过修饰符，只修饰变量，不修饰方法和类。`public transient int limit = 1;`
         - synchronized：同一时间只能被一个线程访问 `public synchronized void showDetails(){}`
         - volatile：每次被线程访问，强制从共享内存中重新读取该成员变量的值。当成员变量改变时强制线程将变化值写回内存。保证不同线程看到同一变量的值
         - native：表示方法用非java代码实现
-        - assert：判断条件是否满足 ？
-        - instanceof：检测对象是否是一个类实例
+        - assert：断言，判断条件是否满足，一种调试方法
    - 标识符：用于定义名字，大小写敏感，由字母/数字/下划线/$组成，数字不能开头，类首字母大写和驼峰法
    - 注释：// 单行注释、/* */文档注释、/* * */多行注释
      1. 注释标签：提取Java注释：`javadoc -d doc hello.java`
@@ -143,28 +138,93 @@
     }
     do {                                            // do
         i++;
-    } while(i <= 1000);
+    } while(i <= 100);
     break;continue;                                 // 流程控制
-    // foreach
+   - foreach
+    ```Java
     List<String> list = new ArrayList<String>();                // 数组
     for(String item : list){}
-    Map<String, String> map = new HashMap<String, String>();    // 非数组
+    Map<String, String> map = new HashMap<String, String>();    // Map
     for(Entry<String, String> item : map.entrySet()){
         item.getKey();
         item.getValue());
     }
-    Map<String, Integer> items = new HashMap<>();           // 遍历Map，java8
-    items.put("A", 10);
-    items.forEach((k,v)->{});
-
-    List<String> items = new ArrayList<>();                 // 遍历List
-    items.add("A");
-    items.forEach(item->{});
     ```
+1. 方法
+   - 可变参数：Varargs，jdk1.5，用于参数个数不确定，类型确定的情况
+     1. 定义
+        ```Java
+        public static void printMax(int x, double... y) {}
+        public static void printMax(new Class[]int.class, int.class{}) {}       // 数组形式
+        ```
+     1. 特点
+        - 只能出现在参数列表的最后
+        - 位于变量类型和变量名之间，前后有无空格都可以
+        - 调用可变参数的方法时，编译器为该可变参数隐含创建一个数组，在方法体中以数组的形式访问
+1. 代码块
+   - 执行顺序：静态代码块>mian方法>构造代码块>构造方法
+   - 分类
+     1. 普通代码块：就是普通方法里边的大括号
+     1. 构造代码块：类中定义，无任何修饰符的大括号，每次创建对象时执行，`public class ClassName{ {} }`
+     1. 静态代码块：使用`static`修饰的代码块，用于初始化静态属性，在编译时只执行一次，不能存在于方法体内，不能直接访问静态实例/方法，只能给静态变量赋值，
+        `public class ClassName{ static {} }`
+     1. 同步代码块：表示同一时间只能有一个线程进入到该方法块中，是一种多线程保护机制。多线程环境下，对共享数据进行读写操作是需要互斥进行的，否则会导致数据的不一致性。冗长的方法中，其实只有一小段代码需要访问共享资源，这时使用同步块，就只将这小段代码裹在synchronized块中，既能够实现同步访问，也能够减少同步引入的开销。必须写在方法中。`public void methodName() { synchronized() {} }`
 ### 面向对象
+1. 包
+   - 作用：package，对类和接口归类，用于解决文件名冲突，方便查找和使用
+   - 声明：`package com.imooc.myPackage1 myPackage2;`
+   - 使用：`import com.imooc.*`，`import com.imooc.myClass`
+   - 特点：
+     1. 默认引入lang包，不需要显式import
+     1. 采用了树形目录的存储方式，不同包中的类名可以相同
+     1. 限定了访问权限，有包的权限才能访问包中的类
+     1. 可以定义自己的包
+1. 接口：常量和抽象方法的集合，规定了子类必须提供某些方法，接口不是类，接口不是被类继承，而是被实现。可理解为对象间通信的协议。标记接口是指没有任何属性和方法的接口，仅表明它的类属于一个特定的类型
+   - 特点
+     1. 接口：不能被实例化，没有构造方法。接口可以多继承，extends要在implements前边
+     1. 属性：每个属性都被指定为public static final
+     1. 方法：
+        - 接口类和方法都是隐式抽象的，只能是public，可以不用abstract，默认加上，接口中不能实现方法，只能在实现类中实现
+        - 除非是抽象类，否则子类必须全部实现接口的所有方法
+        - 实现接口方法时，不能抛出强制性异常，只能在接口或继承接口的抽象类中抛出
+        - 重写方法时保持一致的方法名，相同或兼容的返回值
+   - 实例
+       ```Java
+        public/protected/private interface 接口名称 [extends 父接口1，父接口2] {            // 声明
+            // 常量、抽象方法
+        }
+        public class Dog implements Animal{}                                            // 实现
+       ```
+1. 抽象类
+   - 理解：父类约束子类应该有哪些方法，抽象出来，避免子类设计的随意性，必须继承使用
+   - 特点：除了不能被实例化，属性、方法、构造器和权限访问和类都一样，有抽象方法的一定是抽象类，抽象类中不一定包含抽象方法。子类必须重写全部抽象方法，或者声明自己为抽象类，否则不能被实例化。构造方法和类方法不能申明为抽象方法
+   - 定义和继承
+        ```Java
+        public abstract class Animal{}          // 定义
+        public class Cat extends Animal{}       // 继承
+        ```
+   - 抽象方法：具体实现由子类确定，没有花括号，没有方法体，`public abstract double computePay();`
+1. 类：由属性和方法组成，`public/protected/private class 类名{}`，只支持类的单继承
+   - 属性：全局变量、局部变量、类变量
+   - 方法
+     1. 特点
+        - 参数由参数类型和参数名组成，空格隔开
+        - 定义方法时有形参，调用方法时传递实参
+        - 返回值类型为void的不能有return
+     1. 定义：`public String show(String str) {return str;}`
+     1. 分类
+        - 普通
+        - 静态：定义 `public static void 方法名() {}`，使用：类.方法() 或 对象.方法()
+        - 构造方法：和类名相同，没有返回值，不能定义为void，用于初始化对象。没有定义编译器自动为类提供默认构造方法。一个类可有多个构造方法，只是参数不同
+        - 析构方法：定义 `protected void finalize(){}`
+1. 对象
+   - 访问属性和方法：对象名.变量; 对象名.方法();
+   - 复制
+     1. 浅表复制：自带，指的是同一个对象
+     1. 深表复制：另起一个对象
 1. 封装/继承/多态
-   - 封装：隐藏类的实现细节，保护类的数据，不让外部直接访问，而是通过类提供的方法来访问，安全、保护屏障，适当的封装更容易修改和实现
-     1. 步骤：修改可见性添加修饰符——创建getter/setter方法
+   - 封装：隐藏类的实现细节，保护类的数据，不让外部直接访问，而是通过类提供的方法来访问，保护屏障，适当的封装更容易修改和实现
+     1. 步骤：修改可见性添加修饰符，创建getter/setter方法
      1. 内部类
         - 定义：就是一个类中定义的类，对应的是外部类
         - 作用
@@ -247,116 +307,6 @@
         s.mailCheck();
         e.mailCheck(); // 先实例子类，再实例父类
         ```
-1. 包
-   - 作用：package，解决文件名冲突，对类和接口归类，方便查找和使用
-   - 声明：`package com.imooc.myPackage 包名1 包名2;`
-   - 使用：`import com.imooc.*`，`import com.imooc.myClass`
-   - 特点：
-     1. 默认引入lang包，不需要import
-     1. 包采用了树形目录的存储方式，不同包中的类名可以相同
-     1. 包也限定了访问权限，有包的权限才能访问包中的类
-     1. 可以定义自己的包
-1. 接口：全局变量和抽象方法的集合，规定了子类必须提供某些方法，接口不是类，接口不是被类继承，而是被实现。可理解为对象间通信的协议
-   - 特点
-     1. 本身：不能被实例化，没有构造方法。接口可以多继承，所有参与继承的方法都要实现
-     1. 属性：每个属性都被指定为public static final
-     1. 方法：
-        - 接口类和方法都是隐式抽象的，只能是public，可以不用abstract，默认加上，接口中不能实现方法，只能在实现类中实现
-        - 除非是抽象类，否则子类必须全部实现接口里的所有方法
-        - 实现接口方法时，不能抛出强制性异常，只能在接口或继承接口的抽象类中抛出
-        - 重写方法时保持一致的方法名，相同或兼容的返回值
-     1. extends要在implements前边。标记接口：没有任何属性和方法的接口，仅表明它的类属于一个特定的类型
-   - 实例
-       ```Java
-        public/protected/private interface 接口名称 [extends 父接口1，父接口2] {            // 声明
-            // 多个常量
-            // 抽象方法
-        }
-        public class Dog implements Animal{}                                            // 实现，implements
-       ```
-1. 抽象类
-   - 理解：为了对类进行扩充，除了不能被实例化，属性、方法、构造器和权限访问和类都一样，必须继承使用
-   - 价值
-     1. 父类约束子类应该有哪些方法，但是不知道如何实现
-     1. 抽象出来，避免子类设计的随意性
-   - 特点：有抽象方法的一定是抽象类，抽象类中不一定包含抽象方法。子类必须重写全部抽象方法，或者声明自己为抽象类，否则不能被实例化。构造方法和类方法不能申明为抽象方法
-   - 定义和继承
-        ```Java
-        
-        abstract class Animal{}                 // 定义
-        // 继承
-        public class Cat extends Animal{}       // 继承了父类的成员变量和成员方法
-        ```
-   - 抽象方法：具体实现由子类确定，就可声明为抽象方法。没有花括号，没有方法体
-     1. 定义
-       ```Java
-        public abstract class Employee {
-            public abstract double computePay();
-        }
-       ```
-1. 类：由方法和属性组成，`public/protected/private class 类名{}`，只支持类的单继承，但支持接口间的多继承
-   - 属性
-     1. 全局变量：成员变量
-     1. 局部变量
-     1. 类变量：静态变量
-   - 方法
-     1. 特点
-        - 参数由参数类型和参数名组成，空格隔开
-        - 定义方法时有形参，调用方法时传递实参
-        - 返回值类型为void的不能有return
-     1. 定义：`public String show(String str) { return str; }`
-     1. 分类
-        - 普通
-        - 静态：定义 `public static void 方法名() {}`，使用：类.方法() 或 对象.方法()
-        - 构造：即构造函数，和类名相同，没有返回值，不能定义为void/方法类型，用于初始化对象。没有定义的话编译器自动为类提供默认构造方法。一个类可以有多个构造方法，只是参数不同
-          1. 重载：参数不同的构造方法，java实例化时会自动选择不同的构造方法
-        - 析构：定义 `protected void finalize(){}`
-     1. 可变参数：Varargs，jdk1.5开始，适用于参数个数不确定，类型确定的情况
-        - 定义
-        ```Java
-        public static void printMax(int x, double... paramName) {}
-        public static void printMax(new Class[]int.class, int.class{}) {}       // 数组形式
-        ```
-        - 特点
-        - 只能出现在参数列表的最后
-        - 位于变量类型和变量名之间，前后有无空格都可以
-        - 调用可变参数的方法时，编译器为该可变参数隐含创建一个数组，在方法体中以数组的形式访问可变参数
-     1. 命令行参数：程序运行时传递参数给main()实现
-   - 代码块
-     1. 分类
-        - 普通代码块：就是普通方法里边的大括号
-        - 构造代码块：类中定义，无任何修饰符的大括号
-        ```Java
-        public class ClassName{
-            {}
-        }
-        ```
-        - 静态代码块：使用`static`修饰的代码块，用于初始化静态属性
-        ```Java
-        public class ClassName{
-            static {}
-        }
-        ```
-        - 同步代码块：表示同一时间只能有一个线程进入到该方法块中，是一种多线程保护机制。多线程环境下，对共享数据进行读写操作是需要互斥进行的，否则会导致数据的不一致性。冗长的方法中，其实只有一小段代码需要访问共享资源，这时使用同步块，就只将这小段代码裹在synchronized  block，既能够实现同步访问，也能够减少同步引入的开销
-        ```Java
-        public class ClassName{
-            public void methodName() {
-                synchronized(obj) {
-                    System.out.println("构造代码块");
-                }
-            }
-        }
-        ```
-     1. 特点
-        - 执行顺序：静态代码块>mian方法>构造代码块>构造方法
-        - 构造代码块每次创建对象时执行
-        - 静态代码块在编译时只执行一次，不能存在于任何方法体内，不能直接访问静态实例变量和实例方法，需要通过类的实例对象来访问，静态初始化块只能给静态变量赋值
-        - 同步代码块须写在方法中
-1. 对象
-   - 访问属性和方法：对象名.变量; 对象名.方法();
-   - 复制
-     1. 浅表复制：自带，指的是同一个对象
-     1. 深表复制：另起一个对象
 ### 数据和数据结构
 1. 包装类
    - 定义：将内置数据类型作为对象使用，都是抽象类Number的子类，属于java.lang包
@@ -697,6 +647,20 @@
             c.add(Calendar.DATE, 10);               // 加10天
             ```
       1. 字段类型：Calendar.YEAR/MOUTH/DATE/DAY_OF_MOUTH/HOUR/HOUR_OF_DAY/MINUTE/SECOND/DAY_OF_WEEK
+1. 文件和目录
+   - 文件：File类
+   - 读取：目录即对象
+    ```Java
+    File d = new File(dirname);
+    d.isDirectory(); // 是否是目录
+    d.list(); // 列出文件和文件夹列表
+    ```
+   - 创建：mkdir()/mkdirs()
+   - 删除文件/目录：delete()
+    ```Java
+    File currentFile = new File(folder.getPath());
+    currentFile.delete();
+    ```
 1. IO
    - 理解：Java.io包几乎包含所有操作输入/输出的类。流可以理解为一个序列的数据
      1. 字节流：FileInputStream/FileOutputStream
@@ -730,20 +694,6 @@
         - public void write(int w)
         - public void write(byte[] w)
         - public void close()
-1. 文件和目录
-   - 文件：File类
-   - 读取：目录即对象
-    ```Java
-    File d = new File(dirname);
-    d.isDirectory(); // 是否是目录
-    d.list(); // 列出文件和文件夹列表
-    ```
-   - 创建：mkdir()/mkdirs()
-   - 删除文件/目录：delete()
-    ```Java
-    File currentFile = new File(folder.getPath());
-    currentFile.delete();
-    ```
 1. 错误和异常
    - 理解：错误和异常是不同的，Throwable是祖宗，有两个子类：Exception和Error。所有异常类都是Exception的子类
    - 错误：`java.lang.Error`
@@ -958,7 +908,7 @@
      1. Junit 4.12
      1. Log4j 1.2.17
    - Java8：jdk1.8，14年3月发布
-     1. Lambda表达式：Lambda允许函数作为参数传递
+     1. Lambda表达式
      1. 方法引用：可以直接引用已有对象/类的方法，使语言结构更简洁紧凑
      1. 实现方法：就是类在接口里有个实现的方法
      1. 新工具：如新的编译工具，Nashorn引擎jjs、类依赖分析器jdeps
@@ -1021,4 +971,3 @@
    - 应用
      1. Spark-SQL组件
      1. DataFrame组件
-1. 动/静态语言，编译/解释

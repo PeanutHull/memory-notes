@@ -646,4 +646,11 @@
      1. `public OutputStream getOutputStream() throws IOException` // 返回输出流，用于写入
      1. `public URL getURL()` // 返回url
 ### Lambda
-1. 理解：表达式，Java 8中用来实现匿名方法，可在某些场景作为匿名类的替代方案
+1. 理解：表达式，Java 8中用来实现匿名方法，允许函数作为参数传递，可在某些场景作为匿名类的替代方案
+    ```Java
+    // 遍历
+    List<String> items = new ArrayList<>();                     // List
+    items.forEach(item->{});
+    Map<String, Integer> items = new HashMap<>();               // Map
+    items.forEach((k,v)->{});
+    ```

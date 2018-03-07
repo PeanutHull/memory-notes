@@ -464,3 +464,13 @@
         - maven打包
         - idea打包
    - Ear：Enterprise Application Archive，企业应用归档文件，一个企业应用程序被定义为多个jar文件/资源/类、Web应用程序、ejb的集合，即jar、war、ejb
+1. instanceof和isInstance
+   - instanceof：`obj.instanceof(class)`，对象是不是类/接口的实现，凡是null的都是false`null.instanceof(class)`
+   - isInstance：对象能不能被转化为这个类/接口
+1. 进制
+   - 0表示8进制，0x表示16进制
+   - 整形可以用十、八、十六进制表示
+   - 字符型可以包含unicode字符：char a = '\u0001';
+   - 转义字符：\n换行，\r回车
+1. main必须是public的，否则解释器不能运行此类
+1. 动/静态语言，编译/解释
