@@ -33,7 +33,7 @@
         - long：64位有符号二进制补码形式的整数。2的63次方范围(百亿亿级)。默认0L。表示形式为 Long b = -200000L。
         - float：32位单精度浮点型，不能用于货币。默认0.0f。如 float point = 15.1f;
         - double：64位双精度浮点型，不能用于货币。默认0.0d。如 double d1 = 123.4。
-        - char：单一16位Unicode字符，如：char name = 'A';最小值是’\u0000’（即为0）
+        - char：单一16位Unicode字符，如：`char name = 'A'`，最小值是’\u0000’（即为0）
         - boolean：布尔型，1字节。默认false
      1. 类型转换
         - 原则
@@ -140,17 +140,9 @@
         i++;
     } while(i <= 100);
     break;continue;                                 // 流程控制
-   - foreach
-    ```Java
-    List<String> list = new ArrayList<String>();                // 数组
-    for(String item : list){}
-    Map<String, String> map = new HashMap<String, String>();    // Map
-    for(Entry<String, String> item : map.entrySet()){
-        item.getKey();
-        item.getValue());
-    }
     ```
 1. 方法
+   - 参数：方法参数的传递永远是传值，基本数据类型值就是值，引用数据类型值是对象的引用，而不是对象本身，说明方法内修改对象是生效的
    - 可变参数：Varargs，jdk1.5，用于参数个数不确定，类型确定的情况
      1. 定义
         ```Java
@@ -204,7 +196,7 @@
         public class Cat extends Animal{}       // 继承
         ```
    - 抽象方法：具体实现由子类确定，没有花括号，没有方法体，`public abstract double computePay();`
-1. 类：由属性和方法组成，`public/protected/private class 类名{}`，只支持类的单继承
+1. 类：由属性和方法组成，`public/protected/private class 类名{}`，只支持类的单继承，静态变量和方法随着类的消失而消失
    - 属性：全局变量、局部变量、类变量
    - 方法
      1. 特点
@@ -215,404 +207,132 @@
      1. 分类
         - 普通
         - 静态：定义 `public static void 方法名() {}`，使用：类.方法() 或 对象.方法()
-        - 构造方法：和类名相同，没有返回值，不能定义为void，用于初始化对象。没有定义编译器自动为类提供默认构造方法。一个类可有多个构造方法，只是参数不同
+        - 构造方法：和类名相同，没有返回值，不能定义为void，用于初始化对象。没有定义编译器自动为类提供默认构造方法。一个类可有多个构造方法，只是参数不同。子类不能继承父类的构造器，必须调用父类的构造方法，有默认和显式调用两种。父类构造器带参数得，要用super方法显式调用并匹配相应参数、并且在子类构造方法的第一行，父类的默认构造器(没有任何参数)系统自动调用，都没有的报错
         - 析构方法：定义 `protected void finalize(){}`
-1. 对象
-   - 访问属性和方法：对象名.变量; 对象名.方法();
-   - 复制
-     1. 浅表复制：自带，指的是同一个对象
-     1. 深表复制：另起一个对象
-1. 封装/继承/多态
-   - 封装：隐藏类的实现细节，保护类的数据，不让外部直接访问，而是通过类提供的方法来访问，保护屏障，适当的封装更容易修改和实现
-     1. 步骤：修改可见性添加修饰符，创建getter/setter方法
-     1. 内部类
-        - 定义：就是一个类中定义的类，对应的是外部类
-        - 作用
-          1. 提供了更好的封装，不允许其他类访问该类
-          1. 内部类可以访问外部类的所有数据，包括私有数据，不受访问修饰符影响
-        - 分类
-          1. 成员内部类：即普通内部类
+   - 内部类
+     1. 理解：就是一个类中定义的类，对应的是外部类。提供了更好的封装，不允许其他类访问该类，内部类可以访问外部类的所有数据，包括私有数据，不受访问修饰符影响
+     1. 分类
+        - 普通：即成员内部类
             ```Java
-            Inner i= o.new Inner();     // 调用方法，o为外部类，不能直接实例化内部类
-            Outer.this.method();        // 内部类调用外部类方法，外部类不能直接调用内部类的对象，需要实例化内部类
+            Inner i= o.new Inner();     // o为外部类，实例化内部类
+            Outer.this.method();        // 内部类调用外部类方法
             ```
-          1. 静态内部类
-             - 静态内部类可以直接访问外部类的静态成员和静态方法
-             - 可以直接访问/调用与内部类静态成员名/方法名不相同的外部类成员/方法，相同需要加上类名
-             - 可以直接创建静态内部类的实例
-          1. 方法内部类
-             - 即定义在外部类方法中的内部类，不能在当前方法之外的地方使用，因此方法内部类不能使用访问控制符和static修饰符
-          1. 匿名内部类
-             - 价值：经常配合接口使用，关注实现而不关注名称
-             - 使用：直接new一个接口，实现其方法
+        - 静态
+          1. 静态内部类可以直接访问外部类的静态成员和静态方法
+          1. 可以直接访问/调用与内部类静态成员名/方法名不相同的外部类成员/方法，相同需要加上类名
+          1. 可以直接创建静态内部类的实例
+        - 方法：定义在方法中，不能在当前方法之外的地方使用，不能使用访问控制符和static修饰符
+        - 匿名
+          1. 价值：经常配合接口使用，关注实现而不关注名称
+          1. 使用：直接new一个接口，实现其方法
              ```Java
              new myInterface(){
                  public void method() {}
              }.method();
              ```
-   - 继承：extends，可以重用父类/超类的方法和属性
-     - 特点：拥有父类非private和default的属性、方法，可以对父类扩展，可以覆写父类方法。只支持类的单继承，但支持接口间的多继承
-     - 继承的初始化顺序：父类属性初始化——父类构造方法——子类属性初始化——子类构造方法
-     - 关于构造方法：子类不能继承父类的构造器，必须调用父类的构造方法，有默认和显式调用两种。父类构造器带参数得，要用super方法显式调用并匹配相应参数、并且在子类构造方法的第一行，父类的默认构造器(没有任何参数)系统自动调用，都没有的报错
-     - 关键字
-       1. extends：继承，`public class B extends A`
-       1. abstract：抽象类
-            ```Java
-            abstract class A{}
-            class B extends A{}
-            ```
-       1. interface：声明接口
-       1. implements：用于实现接口
-            ```Java
-            public interface A {}
-            public interface B {}
-            public class C implements A,B {}
-            ```
-       1. super和this：super实现对父类成员的访问，代表父类，this是自己的引用
-            ```Java
-            super.move(); // 调用父类方法   
-            this.name;
-            this.move();
-            ```                        
-       1. final
-       1. Object：所有类默认继承Object类
-          - 方法
-            1. toString：返回对象hash(对象地址字符串)
-            1. equals：比较对象的引用是否指向同一块内存地址
-   - 多态：对象的多种形态。就是同一个接口，使用不同实例而执行不同操作
-     - 存在条件：继承————>重写————>父类引用指向子类对象
-     - 实现：重写、接口、抽象类和抽象方法
-     - 优点：使程序有良好的扩展性、灵活性
-     - 分类
-       1. 引用多态
-            ```Java
-            Animal obj1 = new Animal(); // 指向本类
-            Animal obj2 = new Dog(); // 指向子类
-            Dog obj3 = new Animal(); // 这是错误的
-            ```
-       1. 方法多态：能使用子类或者本类的方法
-          - override重写：对父类允许访问的方法重写，核心重写
-            1. 遵循的规则
-               - 返回类型和形参不能改变
-               - 不能抛出更宽泛的异常
-               - 访问权限不能更低，异常的子类可以
-               - 声明为static的方法不能被重写，但是可以被再次声明
-               - 声明为final的方法不能被重写
-          - overload重载：在类中存在方法名字相同，参数个数或类型不同的多个方法叫重载。Java可以根据参数确定调用相应的方法。常用于构造器的重载
-            - 重载的规则：参数不一样、顺序和类型都生效，返回类型和修饰符可不一样，检查异常可扩展，类中和子类中都可重载
-     - 虚拟方法：使用多态调用方法时(即实例化的对象为父类的对象)，会先检查父级有没有，没有就报错，但最终执行的是子类的方法，叫做虚方法
+1. 对象
+   - 访问属性和方法：对象名.变量; 对象名.方法();
+   - 复制
+     1. 浅表复制：自带，指的是同一个对象
+     1. 深表复制：另起一个对象
+   - Object：所有类默认继承Object类
+     1. 方法
+        - toString：返回对象hash(对象地址字符串)
+        - equals：比较对象的引用是否指向同一块内存地址
+   - 匿名对象调用：`new Car().run();`
+1. 封装/继承/多态
+   - 封装：隐藏类的实现细节，保护类的数据，不让外部直接访问，而是通过类提供的方法来访问，保护屏障，适当的封装更容易修改和实现。步骤：添加修饰符，创建getter/setter方法
+   - 继承：extends，可以重用父类/超类的方法和属性。拥有父类非private和default的属性、方法，可以对父类扩展，可以覆写父类方法。初始化顺序为父类属性初始化——父类构造方法——子类属性初始化——子类构造方法
+   - 多态：父类引用指向子类对象，调用方法时会调用子类的实现，而不是父类的实现，先检查父级有没有，没有就报错，因此不能使用子类特有的成员属性/方法，使程序有良好的扩展性、灵活性。要存在继承或者接口
+     1. 引用多态
         ```Java
-        Salary s = new Salary("员工 A", "北京");
-        Employee e = new Salary("员工 B", "上海"); // 实例化了父类的对象
-        s.mailCheck();
-        e.mailCheck(); // 先实例子类，再实例父类
+        Animal parent = new Animal();         // 指向本类
+        Animal child = new Dog();             // 指向子类
+        parent.foo();
+        child.foo();                          // 先实例子类，再实例父类，使用子类方法
+        Dog obj3 = new Animal();              // 这是错误的
         ```
+     1. 方法多态：能使用子类或者本类的方法
+        - overload：重载，类中方法名相同，参数个数或类型不同的多个方法叫重载。顺序和类型都生效，java可以根据参数确定调用相应的方法。常用于构造器的重载。返回类型和修饰符可不一样，类中和子类中都可重载
+        - override：重写，和父类允许访问的方法名/参数相同
+          1. 返回类型和形参不能改变
+          1. 不能抛出更宽泛的异常
+          1. 访问权限不能更低，异常的子类可以
+          1. 声明为static的方法不能被重写，但是可以被再次声明
+          1. 声明为final的方法不能被重写
+1. 关键字
+   - extends：继承，`public class B extends A`
+   - abstract：抽象类
+    ```Java
+    abstract class A{}
+    class B extends A{}
+    ```
+   - interface：声明接口
+   - implements：用于实现接口
+    ```Java
+    public interface A {}
+    public interface B {}
+    public class C implements A,B {}
+    ```
+   - super和this：super实现对父类成员的访问，代表父类，this是所属对象的引用
+    ```Java
+    super.move();
+    this.move();
+    ```
+   - final
 ### 数据和数据结构
 1. 包装类
-   - 定义：将内置数据类型作为对象使用，都是抽象类Number的子类，属于java.lang包
+   - 定义：将内置数据类型作为对象使用，包装类和基本类型可以自动转换，叫自动封箱和自动解封，属于java.lang包
    - 分类
      1. Byte、Integer、Short、Long、Float、Double
-        ```Java
-        int a = 1;          // 内置数据类型
-        Integer a = 1;      // 包装类
-        ```
      1. Character、Boolean
-        - 示例：
-            ```Java
-            char char = 'a';                        // char数据类型
-            char[] charArray ={'a', 'b'};           // 字符数组
-            Character char = new Character('a');    //Character类对象
-            ```
-        - 常用方法：
-           1. isLetter()：是否一字母
-           1. isDigit()：是否一数字字符
-           1. isWhitespace()：是否空格
-           1. isUpperCase/LowerCase()：是否大、小写字母
-           1. toUpperCase/toLowerCase()：设置大、小写
-           1. toString()：返回字符的字符串形式
-   - 特点：包装类和基本类型可以自动转换，叫自动封箱和自动解封
-        ```Java
-        int a = 1;          // 内置数据类型
-        Integer a = a;      //自动封箱
-        int a1 = a;         //自动解封
-        ```
 1. String
-   - 理解：java使用String类来创建和操作字符串，不是8种基本类型，是特殊的对象，默认值是null
+   - 理解：java使用String类来创建和操作字符串，不是8种基本类型，是特殊的对象，默认值null
    - 特点
      1. 有11个构造方法
-     1. 字符串的不变性：String对象创建后不可修改，所谓的修改就是创建了新的对象，指向了不同的空间
-     1. 一旦创建不可改变，如果有很多修改，使用StringBuffer和StringBuilder
-   - 创建
-        ```Java
-        String s1 = "aaa";
-        String s2 = new Stirng();
-        String s3 = new String("aaa");
-        char[] helloArray = {'r', 'u'};
-        String helloString = new String(helloArray); // 输出runoob
-        ```
-   - 比较
-        ```Java
-        s1 == s2            // false
-        s1.equqls(s2);      // true
-        ```
+     1. 字符串的不变性：String对象创建后不可修改，所谓的修改就是创建了新的对象，指向了不同的空间。有很多修改，使用StringBuffer和StringBuilder
    - 子类
      1. StringBuilder
-        - 理解：同StringBuffer，但不是线程安全的，不能同步访问。更快，建议使用
+        - 理解：被修改时不产生新对象，非线程安全，不能同步访问，更快，建议使用
         - 方法：append、insert、toString、length
         - 例子：`productName = new StringBuilder().append("%").append(productName).append("%").toString();`
      1. StringBuffer
-        - 理解：对字符串进行修改时用到，能够被修改并且不产生新对象。如果要求线程安全，则必须使用StringBuffer
+        - 理解：被修改时不产生新对象，线程安全
         - 方法：append、insert、reverse、replace、delete
 1. 数据结构
-   - 枚举Enum：只能是预先设置好的值
-   - 数组Array————位集合BitSet：长度固定，但是位集合不固定
-   - 向量Vector————栈Stack：长度可以改变
-   - 字典Dictionary————哈希表Hashtable————属性Properties：键映射到值的数据结构，一个抽象类，一个实现了Map接口
-
-   - 枚举：Enumeration，java5.0引入，限制变量只能是预先设定好的值，取代定义很多变量，已被迭代器取代，很少使用，本质是类，可以在任何地方声明枚举
-     1. 包含：变量、方法、构造函数
-     1. 定义
-        ```Java
-        public enum Color {               // 定义
-            RED, GREEN, BLANK, YELLOW 
-        }
-        Color.RED                         // 使用
-        Color.RED.equals(color);
-        ```
-   - 数组：Array，存储在堆上的对象，长度是固定的，用来存储固定数量的多个同类型变量，是一种数据结构，是个容器
-     1. 定义：数据类型 数组名[] // 或者 数据类型[] 数组名
-        ```Java
-        int[] myArray = new int[size];    // 声明并指定长度
-        int[] myArray = new int(){78,93}; // 声明并填充内容        
-        int[] myArray = {78,93};          // 声明并填充内容
-        int myArray[] = {78,93};          // 声明并填充内容
-        ```
-     1. 处理：
-        ```Java
-        myArray[1];             // 访问
-        myArray[1] = 1;         // 赋值
-        myArray.length();       // 长度
-        for (int i = 0; i < myArray.length; i++) {}       // 循环
-        for (double element: myArray) {}                  // foreach
-        public static void printArray(int[] myArray) {}   // 作为参数传递
-        ```
-     1. 二维数组：`int 数组名[][] = new int[行数][列数]`
-        ```Java
-        int num[][] = new int[2][];     // 每个数组内容的列数可以不同
-        num[0] = new int[2];
-        num[1] = new int[3];
-        num[0][0]                       // 访问
-        ```
-   - 位集合：BitSet，位集合类实现了一组可以单独设置和清除的位或标志。该类处理一组布尔值的时候很有用。创建一种特殊类型的数组来保存值，数组大小随需要增加
-     1. 定义：
-        ```Java
-        BitSet bits1 = new BitSet(16);
-        // 有两个构造方法
-        BitSet();               // 创建一个默认对象
-        BitSet(int size);       // 指定初始大小，默认0
-        ```
-     1. 使用：`bits1.set(i);`
-     1. 方法：实现了Cloneable接口中定义的方法
-        - `void and(BitSet set)` // 逻辑与操作
-        - `void andNot(BitSet set)` // 清除此BitSet中所有的位
-        - `int cardinality()` // 返回为true的位数
-        - `void clear()` // 全部位置为false
-        - `void clear(int index)` // 指定位置为false
-        - `void clear(int startIndex, int endIndex)` // 指定位置为false
-        - `boolean get(int index)` // 返回索引处位值
-        - `BitSet get(int startIndex, int endIndex)` // 返回索引处位值
-   - 向量：Vector，向量类和传统数组非常相似，Vector能根据需要动态变化。和数组一样元素能通过索引访问。最主要好处就是在创建对象时不必指定大小，会动态变化。适用在数组要动态变化的情况下
-     1. 定义
-        ```Java
-        Vector()
-        Vector(int size)                // 指定大小
-        Vector(int size,int incr)       // 用incr确定向量每次增加的元素数目
-        Vector(Collection c)            // 包含集合C的向量
-        // 示例
-        Vector v = new Vector(3, 2);
-        v.size();
-        v.addElement(new Integer(1));
-        // 转换为枚举
-        Enumeration vEnum = v.elements();
-        while(vEnum.hasMoreElements()) {
-            vEnum.nextElement() + " ");
-        }
-        ```
-     1. 方法
-        - `void add(int index, Object element)` // 添加元素
-        - `boolean add(Object o)` // 添加到末尾
-        - `boolean addAll(int index, Collection c)` // 指定位置插入集合中所有值
-        - `int capacity()` // 返回当前容量
-     1. 特点：是同步访问=线程安全的，包含传统方法，和ArrayList类似，不属于集合框架
-   - 栈：Stack，实现了先进后出的数据结构，是Vector的子类
-     1. 定义
-        ```Java
-        // 示例
-        Stack st = new Stack();
-        st.push(new Integer(1));
-        ```
-     1. 方法
-        - `boolean empty()` // 是否为空
-        - `Object peek()` // 查看顶部对象，不移除
-        - `Object pop()` // 返回顶部并移除
-        - `Object push(Object element)` // 把元素压入顶部
-        - `int search(Object element)` // 对象在堆栈的位置，1为基数
-   - 字典：Dictionary，字典类是抽象类，定义键映射到值的数据结构。通过键而不是整数索引来访问数据时使用。因为是抽象类，所以只提供数据结构，没有提供具体实现。存储键/值对，作用和Map类相似
-     1. 方法
-        - `boolean isEmpty()` // 是否空字典
-        - `int size()` // 数量
-        - `Object get(Object key)` // 返回键对应的值
-        - `Object put(Object key, Object value)` // 插入或更新
-        - `Object remove(Object key)` // 删除
-        - `Enumeration keys()` // 返回字典中键的枚举
-        - `Enumeration elements()` // 返回字典中值的枚举
-   - 哈希表：Hashtable，Hashtable类提供了用户定义键结构的组织数据的手段，哈希表的键的具体含义取决于使用场景和包含的数据。属于java.util，是字典的具体实现，Java 2的Hashtable实现了Map接口，所以现在集成到了集合框架中，和HashMap类似，但是支持同步。哈希表的键经过哈希处理得到的散列码用作值的索引
-     1. 定义
-        ```Java
-        Hashtable()
-        Hashtable(int size)
-        Hashtable(int size,float fillRatio)   // fillRatio指定填充比例(0.0~1.0)，决定了重新调整大小的充满程度
-        Hashtable(Map m)                      // 以M中元素为初始化元素的哈希表，哈希表的容量被设置为M的两倍
-        ```
-     1. 实例
-        ```Java
-        Hashtable balance = new Hashtable();
-        balance.put("Zara", new Double(3434.34));
-        ```
-     1. 方法
-        - `Object get(Object key)` // 返回值
-        - `Object put(Object key, Object value)` // 添加或更新
-        - `Object remove(Object key)` // 删除
-        - 
-        - `boolean contains(Object value)` // 此映射表中是否存在与指定值关联的键
-        - `boolean containsKey(Object key)` // 是否存在键
-        - `boolean containsValue(Object value)` // 是否存在值
-        - `boolean isEmpty()` // 是否为空
-        - `int size()` // 键的数量
-        - 
-        - `Enumeration keys()` // 返回键的枚举
-        - `Enumeration elements()` // 返回值的枚举
-        - `String toString()` // 返回哈希对象的字符串表示形式
-        - 
-        - `void clear( )` // 清空
-        - `Object clone()` // 创建浅表副本
-        - `void rehash()` // 增加此哈希表的容量并在内部对其进行重组，以便更有效地容纳和访问其元素
-   - 属性：Properties，是Hashtable的子类，表示持久属性集，键值都是字符串，获取环境变量时作为System.getProperties()的返回值
-     1. 实例
-        ```Java
-        Properties capitals = new Properties();         // 定义
-        capitals.put("aa", "11");
-        // 读取配置
-        InputStream in = new BufferedInputStream(new FileInputStream(new File(basePath)));
-        Properties prop = new Properties();
-        prop.load(in);
-        prop.getProperty("path");
-        ```
-     1. 方法
-        - `load(InputStream streamIn)` // 从输入流中读取属性列表
-        - `propertyNames( )` // 按简单的面向行的格式从输入字符流中读取属性列表
-        - `list(PrintStream streamOut/PrintWriter streamOut)` // 属性列表输出流
-        - `getProperty(String key)` // 搜索属性
-        - `getProperty(String key, String defaultProperty)` // 搜索属性
-        - `setProperty(String key, String value)` // 调用Hashtable的put方法
-        - `store(OutputStream streamOut, String description)` // 输出配置
-        - `clear()` // 清楚装载的配置
-### 集合
-1. 集合：是一种工具类，是具有共同属性的数据集合，是盛装其他对象的容器，Java2引入，围绕一组标准接口而设计，是用来代表/操作集合的统一架构，可以直接使用接口的标准实现
+   - 分类
+     1. Enum 枚举：只能是预先设置好的值、Array 数组：长度固定、BitSet 位集合：长度不固定
+     1. Vector 向量：长度不固定————Stack栈：先进后出
+     1. Dictionary 字典————Hashtable 哈希表————Properties 属性
+   - 枚举：Enumeration，Enum，java5.0引入，只能是预先设定好的值，取代定义很多变量，已被迭代器取代，很少使用，本质是类
+   - 数组：Array，用来存储固定数量的多个同类型变量，是一种数据结构/容器。定义：数据类型 数组名[] 或者 数据类型[] 数组名。二维数组：`int array[][] = new int[行数][列数]`    
+   - 位集合：BitSet，存储一组位或标志，长度不固定
+   - 向量：Vector，长度不固定，通过索引访问，线程安全，和ArrayList类似
+     1. 栈：Stack，实现了先进后出的数据结构，是Vector的子类
+   - 字典：Dictionary，定义键值数据结构的抽象类。因为是抽象类，所以只提供数据结构，没有具体实现，和Map类相似
+     1. 哈希表：HashTable，字典的具体实现，Java 2实现了Map接口，集成到了集合中，和hashMap类似，支持同步。哈希散列码用作值的索引，属于java.util
+        - 属性：Properties，是哈希表的子类，表示持久属性集，键值都是字符串，获取环境变量时作为System.getProperties()的返回值
+1. 集合
+   - 理解：具有共同属性的数据集合/工具类，是盛装其他对象的容器，Java2引入，用来代表/操作集合的统一架构
    - 特点
-     1. ArrayList 排列有序可重复
-     1. HashMap 键值对
-     1. HashSet 排列无序不可重复
+     1. ArrayList 数组序列，排列有序可重复
+     1. HashSet 哈希集，排列无序不可重复
+     1. HashMap 散列表，键值对
    - 组成
-     1. Collection：内部存储的都是一个个对象
-        - List：序列，排列有序可重复
-          1. ArrayList：数组序列，底层由数组实现
-        - Queue：队列，排列有序可重复
-          1. LinkedList：链表，同时也是List的实现类
-        - Set：集，无序不可重复
-          1. HashSet：哈希集
-     1. Map：键值对，有众多子接口
-        - HashMap：基于hash表实现
-     1. 接口
-        - `Collection`：最基本集合接口，java不提供直接继承自Collection的类来使用，只提供继承Collection的子接口，如List和Set
-        - `List`：是有序的，精确控制每个元素的位置。通过索引(类似数组的小标)访问其中的元素，允许有相同元素
-        - `Set`：无序的，与Collection完全一样，行为上不同。不能有相同元素，访问集合中的元素只能根据元素本身来访问。子接口SortedSet接口保存有序集合
-        - `Map`：唯一键映射到值。Map.Entry描述Map中的键值对，是Map的内部类。子接口SortedMap，使key保持升序
-        - `Enumeration`
-        - `AbstractCollection`：实现了大部分的集合接口
-     1. 集合算法：用于搜索和排序，被定义为集合类的静态方法，定义了三个静态变量：EMPTY\_SET，EMPTY\_LIST，EMPTY_MAP，不可改变
-   - 工具接口和类
-        - Collections：工具类，最常用sort方法，`Java.util.Collections`
-        - Comparable接口：默认比较规则
-        - Comparator接口：临时比较规则
-1. Collection
-   - List：查询效率高，插入和删除低，因为引起其他元素改变。Set查询效率低，插入和删除效率高
-     1. `AbstractList`：继承于AbstractCollection，实现了大部分List接口。子类AbstractSequentialList提供对数据元素的链式访问，不是随机访问
-     1. `ArrayList`：实现可变大小的数组，线程不同步
-     1. `LinkedList`：实现了List接口，允许null存在。用于创建链表数据结构，查找效率低。没有同步方法，多线程需要自己实现访问同步，解决方案：创建List时候构造一个同步的List。
-   - Set：没有get方法，想要访问只能通过foreach和iterator方法遍历，而且每次迭代的结果都不一样。Set中不论添加多少次，因为不能重复，所以只能有一个
-     1. `AbstractSet`：继承于AbstractCollection，实现大部分Set接口
-     1. `HashSet`：不允许元素重复，不保证元素顺序，最多有一个null值
-     1. `LinkedHashSet`：可预知迭代顺序的Set接口的哈希表和链接列表实现
-     1. `TreeSet`：实现Set接口，实现排序等功能
-1. Map：存储键值对
-   - 特点：通过key查找value。内部以映射存储数据，就是Entry(键值对)类的实例，key和value可以是任意的对象。key不可重复，value可以
-   - 组成
-     1. `AbstractMap`：实现大部分Map接口
-     1. `HashMap`：是一个散列表，访问速度很快，线程不同步，键最多一个null
-        - `WeakHashMap`：弱秘钥的哈希表
-        - `LinkedHashMap`：按自然顺序对元素排序
-        - `IdentityHashMap`：比较文档时使用引用相等
-     1. `TreeMap`：使用一棵树
-     1. `synchronizedMap`：具有线程同步的能力
-   - 方法
-     1. `Object get(Object k)` // 通过键返回值，不存在为null
-     1. `Object put(Object k, Object v)` // 更新或添加
-     1. `Object remove(Object k)` // 通过键删除
-     1. `void putAll(Map m)` // 一个映射复制到另一个映射
-     1. `boolean equals(Object obj)` // 比价指定的对象和此映射是否相同
-     1. `boolean containsKey(Object k)` // 是否存在指定键
-     1. `boolean containsValue(Object v)` // 是否存在指定值
-     1. `int size( )` // 返回关系数量
-     1. `boolean isEmpty()` // 是否为空
-     1. `void clear( )` // 删除所有映射关系
-     1. `Set keySet( )` // 返回键的Set视图
-     1. `Collection values( )` // 返回值的Collection视图
-     1. `Set entrySet( )` // 返回映射关系的Set视图
-     1. `int hashCode()` // 返回映射的哈希码值
-1. 迭代器：Iterator，用来遍历集合中的元素，继承自Iterator接口或继承自ListIterator
-   - 遍历ArrayList
-        ```Java
-        String[] strArray=new String[list.size()];    // 链表转为数组遍历
-        list.toArray(strArray);
-        for(int i=0;i<strArray.length;i++) {}
-        
-        Iterator<String> ite=list.iterator();         // 迭代器遍历
-        while(ite.hasNext()) {}
-        ```
-   - 遍历Map
-        ```Java
-        for (String key : map.keySet()) {       // foreach
-            tmpKey = key
-            tmpValue = map.get(key));
-        }
-        for (String v : map.values()) {         // 遍历values
-            tmpValue = v;
-        }
-        // 通过Map.entrySet使用iterator遍历
-        Iterator<Map.Entry<String, String>> it = map.entrySet().iterator();
-        while (it.hasNext()) {
-            Map.Entry<String, String> entry = it.next();
-            tmpKey = entry.getKey();
-            tmpValue = entry.getValue();
-        }
-        // 推荐，尤其容量大时。通过Map.entrySet遍历
-        for (Map.Entry<String, String> entry : map.entrySet()) {
-            tmpKey = entry.getKey();
-            tmpValue = entry.getValue();
-        }
-        ```
-1. 比较器：Comparator，用来精确定义排序规则，以不同方式排序集合
+     1. Collection：内部存储为一个个对象，list查询效率高，插入、删除低，因为引起其他元素改变，set查询效率低，插入、删除效率高
+        - AbstractList：排列有序可重复
+          1. ArrayList：可变大小的数组，不同步
+          1. 链表 LinkedList：队列，允许null存在，查找效率低，不同步
+        - Set：集，无序不可重复，没有get方法，只能通过遍历访问，每次迭代结果不一样，抽象类AbstractSet
+          1. HashSet：不保证元素顺序，最多有一个null
+          1. LinkedHashSet：可预知迭代顺序的Set接口的哈希表和链接列表实现
+          1. TreeSet：实现排序等
+     1. Map：存储键值对，内部以映射存储数据，key不可重复，value可以。抽象类AbstractMap
+        - HashMap：访问速度很快，线程不同步，键最多一个null，基于hash表实现。子类有WeakHashMap、LinkedHashMap、IdentityHashMap
+        - TreeMap
+        - synchronizedMap：线程同步
+   - 迭代器：Iterator，遍历集合元素
+   - 比较器：Comparator，用来精确定义排序规则，以不同方式排序集合
 ### 应用
 1. 时间和日期：属于java.util
    - Date类
@@ -840,6 +560,28 @@
      1. maven
         - 单maven跑：官网的例子archetype:generate--package--java -cp--Hello World!
         - 单maven跑tomcat
+1. 打包和部署
+   - java发布过程：源代码——编译——打包——安装jar/war/zip包到服务器
+   - 打包时，依赖的jar包要么在tomcat的lib目录下，要么声明在path中；如果用IDE就设置好就行
+   - Jar包
+     1. 理解：Java Application Archive，java归档文件，是与平台无关的文件格式，允许将许多文件组合成一个压缩文件，是文件封装的最小单元。包含 META-INF 目录：存储配置数据，xxx.SF 签名文件等
+     1. 特点
+        - 以zip文件格式为基础，提供压缩/部署/封装库，可被像编译器和jvm直接使用，无需事先提取文件或设置类路径
+        - 包含特殊的文件，如manifests和部署描述符，用来指示工具如何处理特定的jar
+     1. 创建
+        - 所有代码放到一个目录中
+        - 某个位置创建manifest文件，写入主类`Main-Class: HelloWorld`
+        - 编译 `javac HelloWorld.java`
+        - 打包 `jar cmf manifest jarName.jar ./`
+     1. 使用 `java -jar jarName.jar`
+   - War包
+     1. 理解：Web Application Archive，web应用归档文件，一个Web应用程序被定义为单独的一组文件/类/资源，可以对jar封装作为小型服务程序(servlet)来访问，包含了全部Web应用程序，包括jsp/图片等文件，用于封装web模块。放在tomcat/webapp下，容器会自动解压并运行
+     1. 打包
+        - 压缩，改后缀名
+        - 手动打包：`jar cmf warName.war ./`？？？
+        - maven打包
+        - idea打包
+   - Ear：Enterprise Application Archive，企业应用归档文件，一个企业应用程序被定义为多个jar文件/资源/类、Web应用程序、ejb的集合，即jar、war、ejb
 ### wiki
 1. 知识体系
    - 组成：JDK—->JRE—->JVM
