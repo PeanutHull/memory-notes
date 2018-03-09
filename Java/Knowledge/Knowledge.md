@@ -182,6 +182,31 @@
    - `setProperty(String key, String value)` // 调用Hashtable的put方法
    - `store(OutputStream streamOut, String description)` // 输出配置
    - `clear()` // 清楚装载的配置
+1. Collections工具类：对集合进行操作，`Java.util.Collections`
+1. Map
+   - `Object get(Object k)` // 通过键返回值，不存在为null
+   - `Object put(Object k, Object v)` // 更新或添加
+   - `Object remove(Object k)` // 通过键删除
+   - `void putAll(Map m)` // 一个映射复制到另一个映射
+   - `boolean equals(Object obj)` // 比价指定的对象和此映射是否相同
+   - `boolean containsKey(Object k)` // 是否存在指定键
+   - `boolean containsValue(Object v)` // 是否存在指定值
+   - `int size( )` // 返回关系数量
+   - `boolean isEmpty()` // 是否为空
+   - `void clear( )` // 删除所有映射关系
+   - `Set keySet( )` // 返回键的Set视图
+   - `Collection values( )` // 返回值的Collection视图
+   - `Set entrySet( )` // 返回映射关系的Set视图
+   - `int hashCode()` // 返回映射的哈希码值
+1. Date日期
+   - alter()/before()：是否在日期之前/之后
+   - clone()：返回副本
+   - compareTo()：和日期对比。相同为0，在指定之前为负，之后为后
+   - equals()：对比是否相同
+   - getTime()：获得时间戳
+   - hashCode()：此对象哈希值
+   - setTime()：用时间戳设置时间
+   - toString()：转换Date为String
 1. Math类
    - 定义：提供了基本数学运算的属性和方法。如初等函数、对数、平方根和三角函数，都是静态函数
    - 示例
@@ -214,22 +239,6 @@
      1. round()：返回最接近的int、long值
      1. min、max()：两个参数得最大小值
      1. random()：返回随机值，0到1之间，无参数
-1. Collections工具类：对集合进行操作，`Java.util.Collections`
-1. Map
-   - `Object get(Object k)` // 通过键返回值，不存在为null
-   - `Object put(Object k, Object v)` // 更新或添加
-   - `Object remove(Object k)` // 通过键删除
-   - `void putAll(Map m)` // 一个映射复制到另一个映射
-   - `boolean equals(Object obj)` // 比价指定的对象和此映射是否相同
-   - `boolean containsKey(Object k)` // 是否存在指定键
-   - `boolean containsValue(Object v)` // 是否存在指定值
-   - `int size( )` // 返回关系数量
-   - `boolean isEmpty()` // 是否为空
-   - `void clear( )` // 删除所有映射关系
-   - `Set keySet( )` // 返回键的Set视图
-   - `Collection values( )` // 返回值的Collection视图
-   - `Set entrySet( )` // 返回映射关系的Set视图
-   - `int hashCode()` // 返回映射的哈希码值
 1. UUID
    - 理解：算法的核心思想是结合机器的网卡、当地时间、一个随即数来生成GUID，从理论上讲，如果一台机器每秒产生10000000个GUID，则可以保证（概率意义上）3240年不重复。java 5新增
    - 使用
@@ -289,19 +298,51 @@
         ```
    - 相关类：Externalizable，表示没有任何东西可以自动序列化，需要在writeExternal方法中进行手工指定
 ### 其他
-1. 知识点
-   - 环知识点：基础，web开发，常用框架，工程与设计模式，数据库和网络，数据结构和算法
-   - 扩展知识点：多线程 io jvm 分布式 mysql spring redis mq 微服务
+1. 常见包
+   - java.lang：语言包，Number/Character/Boolean、String、Math、Object、Class、Thread、Process、Throwable
+   - java.util：工具包，Array/Vector/Dictionary/Collection/map、Date、Random/UUID
+   - java.text：处理文本、日期、数字和消息的类和接口
+   - java.io/net/sql/awt/swing
+   - apache.commons.lang/beanutils
+   - google.guava
+1. 常用类库
+   - 日志：apache-log4j、Logback、slf4j-api
+   - Json：Jackson、Gson
+   - XML：jdom、dom4j、xercesImpl
+   - 日期：joda.time
+   - Jsoup：分析html
+   - Lomobok：消除冗长代码
 1. 关键字
-   - 基础关键字
-     1. 注解
-     1. java虚拟机
-     1. IO、阻塞和非阻塞
-     1. NIO
-     1. 并发
-     1. 线程池
-     1. 同步容器和并发容器
-     1. 反射
+   - 数据类型：byte、short、int、long、float、double、char、boolean
+   - 流程控制
+     1. if、else、switch、case、default
+     1. for、do、while、break、continue
+     1. return、void
+   - 异常：try、catch、finally、throw、throws
+   - 修饰符：vstrictf、native、volatile、synchronized、transient
+   - 判断：assert、instanceof
+   - 面向对象
+     1. 包： package、import
+     1. 接口： interface、implements
+     1. 抽象类： abstract、extends
+     1. 类： class、new、this、super
+     1. 修饰符： private/protected/public、static、final
+   - 预留关键字：goto，const
+1. 基础
+   - 基础：数据类型, 操作符, 运算符, 表达式
+   - 面向对象：类
+   - 常用类：String
+   - 集合类：ArrayList，HashSet，HashMap
+   - 反射、注解、泛型
+   - 多线程：Thread, Runnable, Future
+   - I/O：File, IO, NIO, InputStream, OutputStream, Reader, Writer, Selector
+   - JDBC、网络编程
+   - 设计模式、IOC依赖注入, AOP面向切面编程
+   - JVM
+1. 知识点
+   - 环知识点：基础，web开发，常用框架，设计模式，数据库和网络，数据结构和算法
+   - 扩展知识点：多线程 NIO 并发 jvm 分布式 mysql redis mq 微服务
+1. 关键字
    - 高级关键字
      1. quartz
      1. 事务管理

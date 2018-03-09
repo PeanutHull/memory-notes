@@ -515,7 +515,7 @@
      1. 执行阶段：_jspService(HttpServletRequest request,HttpServletResponse response)
      1. 销毁阶段:jspDestroy()
 ### JavaEE
-1. 理解：是一个平台，是企业级分布式应用开发标准。构建于Java SE之上，提供API和运行环境，来运行大规模、可扩展的多层次的网络应用
+1. 理解：是一个平台，是企业级分布式应用开发标准。有13个规范，构建于Java SE之上，提供API和运行环境，来运行大规模、可扩展的多层次的网络应用
 1. 特点：分布式、事务性、安全性、集成化、可扩展、可移植、易维护
 1. 规范：13个
    - Servlet

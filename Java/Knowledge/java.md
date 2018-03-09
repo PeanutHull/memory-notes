@@ -335,135 +335,46 @@
    - 比较器：Comparator，用来精确定义排序规则，以不同方式排序集合
 ### 应用
 1. 时间和日期：属于java.util
-   - Date类
-        ```Java
-        Date([long millsec]);       // 可以传入1970年后的毫秒数
-        Date date = new Date();     // 获取当前时间
-        ```
-     1. 方法
-        - alter()/before()：是否在日期之前/之后
-        - clone()：返回副本
-        - compareTo()：和日期对比。相同为0，在指定之前为负，之后为后
-        - equals()：对比是否相同
-        - getTime()：获得时间戳
-        - hashCode()：此对象哈希值
-        - setTime()：用时间戳设置时间
-        - toString()：转换Date为String
-   - SimpleDateFormat类
-        ```Java   
-        SimpleDateFormat ft = new SimpleDateFormat("E yyyy.MM.dd 'at' hh:mm:ss a zzz");
-        Date dNow = new Date();                 // 格式化时期显示
-        ft.format(dNow)
-        String input = "1818-11-11";            // 解析字符串为时间
-        ft.parse(input);
-        ```
-    - Calendar类
-      1. 理解：获取日期的一部分，加减日期，GregorianCalendar类：实现公历日历，是Calendar的一个实现
-      1. 示例
-            ```Java
-            Calendar c = Calendar.getInstance();    // 创建，默认当前时区
-            c.set(2009, 6 - 1, 12);
-            c.get(Calendar.YEAR);                   // 获得年份
-            c.add(Calendar.DATE, 10);               // 加10天
-            ```
-      1. 字段类型：Calendar.YEAR/MOUTH/DATE/DAY_OF_MOUTH/HOUR/HOUR_OF_DAY/MINUTE/SECOND/DAY_OF_WEEK
-1. 文件和目录
-   - 文件：File类
-   - 读取：目录即对象
-    ```Java
-    File d = new File(dirname);
-    d.isDirectory(); // 是否是目录
-    d.list(); // 列出文件和文件夹列表
-    ```
-   - 创建：mkdir()/mkdirs()
-   - 删除文件/目录：delete()
-    ```Java
-    File currentFile = new File(folder.getPath());
-    currentFile.delete();
-    ```
+   - Date
+   - SimpleDateFormat
+   - Calendar：日期，GregorianCalendar：公历日历
+1. 文件和目录：File类，文件和目录即对象
 1. IO
    - 理解：Java.io包几乎包含所有操作输入/输出的类。流可以理解为一个序列的数据
      1. 字节流：FileInputStream/FileOutputStream
+        - 输入流：FileInputStream、ByteArrayInputStream、DataInputStream
+        - 输出流：FileOutputStream、ByteArrayOutputStream、DataOutputStream
      1. 字符流：FileReader/FileWriter，一般读写两个字节
-     1. 标准流：
+     1. 标准流
         - Standard Input：System.in
         - Standard Output：System.out
         - Standard Error：System.err
-   - 输入流：FileInputStream、ByteArrayInputStream、DataInputStream
-     1. 创建
-        ```Java
-        InputStream f = new FileInputStream("C:/java/hello");   // 创建输入流对象
-        File file = new File("C:/java/hello");
-        InputStream f = new FileInputStream(file);              // 使用文件对象创建输入流对象
-        ```
-     1. 方法
-        - public int available()
-        - public int read(byte[] r)
-        - public int read(int r)
-        - protected void finalize()
-        - public void close()
-   - 输出流：FileOutputStream、ByteArrayOutputStream、DataOutputStream
-     1. 创建
-        ```Java
-        OutputStream f = new FileOutputStream("C:/java/hello");     // 创建输出流对象
-        File file = new File("C:/java/hello");
-        OutputStream f = new FileOutputStream(file);                // 创建使用文件对象创建输出流对象
-        ```
-     1. 方法
-        - protected void finalize()
-        - public void write(int w)
-        - public void write(byte[] w)
-        - public void close()
 1. 错误和异常
-   - 理解：错误和异常是不同的，Throwable是祖宗，有两个子类：Exception和Error。所有异常类都是Exception的子类
-   - 错误：`java.lang.Error`
+   - 理解：错误和异常不同，Throwable基类，两个子类：Exception和Error
+   - 错误：java.lang.Error包
    - 异常
-     1. 分类
+     1. 理解：所有异常类都是Exception的子类
         - 检查性异常类：Exception
         - 运行时异常类：RuntimeException
      1. 捕获异常：catch语句包含异常的声明，定义捕获哪种类型的异常
         ```Java
         try{
-        }catch(ExceptionName e) {}
-        try{
-            int a[] = new int[2];
-            System.out.println("Access element three :" + a[3]);
-        }catch(ArrayIndexOutOfBoundsException e){}
-        // 多重捕获
-        try{
-        }catch(异常类型1 异常的变量名1){
+        }catch(异常类型1 异常的变量名1){                  // 多重捕获
         }catch(异常类型2 异常的变量名2){
-        }finally{}                                    // 此代码块总会被执行，适用善后性质的语句
-        try{
-            file = new FileInputStream(fileName);
-            x = (byte) file.read();
-        }catch(IOException i){
-            i.printStackTrace();
-        }catch(FileNotFoundException f) {
-            f.printStackTrace();
-        }
+        }finally{}                                    // 总会被执行
         ```
      1. 抛出异常
-        - throw，方法体中，`throw new RemoteException();`
+        - throw，方法体中，`throw new Exception();`
         - throws，在用声明方法时
      1. 自定义异常：声明异常类
         ```Java
         class MyException extends Exception/RuntimeException{}
         ```
 1. 正则表达式
-   - 理解：和Perl类似，在java.util.regex
-   - 主要类
-     1. Patten：patten对象是一个正则表达式的编译表示。无公共构造方法，首先调用公共静态编译方法，获得Patten对象，接受一个正则表达式为一参
-     1. Matcher：matcher对象是对输入的字符串进行解释和匹配操作的引擎。无公共构造方法，用Patten的matcher方法获得Matcher对象。
+   - 理解：和Perl类似，属于java.util.regex
+     1. Patten：正则表达式的编译表示
+     1. Matcher：对字符串进行解释和匹配操作的引擎
      1. PattenSyntaxException：非强制异常类，表示正则表达式模式的语法错误
-   - 示例
-      ```Java
-      import java.util.regex.*;
-      String content = "aaa";
-      String pattern = ".\*bbb.\*";
-      boolean isMatch = Pattern.matches(pattern, content);      // 返回结果
-      ```
-   - 捕获组：将多个字符当一个独立单元处理的方法。调用matcher对象的groupCount方法统计组数
 ### 运维
 1. java安装
    - JDK
@@ -486,57 +397,25 @@
       tar -zxvf tomcat.tar.gz
       vim conf/server.xml                   // 编辑配置文件，<Connector ... URIEncoding="UTF-8">等
       ./bin/startup.sh                      // 启动
-      ```
-   - 多个tomcat
-      ```
+      // 多个tomcat
       cp ~/tomcat-8 /usr/local/tomcats/tomcat1 -r
       cp ~/tomcat-8 /usr/local/tomcats/tomcat2 -r
       vim tomcat1/conf/server.xml           // 自增端口号等
       tomcat1/bin/startup.sh                // 启动
       ```
 1. 命令行
-   - javac
+   - javac：编译
      1. -cp：指定jar包位置，后边跟jar包的位置
      1. -D：指定调用的类
      1. -d：要生成的目录
      1. -encoding：utf-8
-   - java
+   - java：运行
      1. -jar：运行jar包，环境变量CLASSPATH和在命令行中指定的所有类路径都被JVM所忽略
      1. -classpath：设定要搜索的类路径
    - jar
      1. c：生成jar包，需要先编译
      1. f：指定包名
-   - 控制台输入/输出
-     1. System.in、Scanner类：输入
-        - 方法一
-        ```Java
-        // 由System.in完成，在BufferedReader对象中创建字符流
-        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-        //读取字符
-        do {
-            c = (char)br.read();
-            System.out.println(c);
-        } while(c != 'q');
-        String str = br.readLine(); // 读取字符串
-        ```
-        - 方法二
-        ```Java
-        // Scanner类，jdk5之后可用获得输入
-        Scanner s = new Scanner(System.in);
-        if(scan.hasNext()){
-            String str1 = scan.next();
-            System.out.println("输入的数据为："+str1);
-        }
-        //或者
-        if(scan.hasNextLine()){
-            String str2 = scan.nextLine();
-            System.out.println("输入的数据为："+str2);
-        }
-        //区别：
-        next：一定读取到有效字符才结束输入，自动去掉之前空白，有效符后面的空白作为分隔符和结束符，所有不能输入空格
-        nextLine：回车为结束符
-        ```
-        - System.out.write()：输出
+   - 控制台输入/输出：System.in/out
 1. 运行
    - 特点
      1. 源文件名：必须和类名相同
@@ -547,7 +426,7 @@
         - 依赖其他类：默认同级目录和CLASSPATH引入，使用import按照包名查找对应目录下的类，如`import tool.MyDate`，可以添加CLASSPATH的引用目录
         - 依赖其他jar包：还是用import引入类，编译时，添加-cp参数指定jar位置
      1. tomcat
-        - 对于servlet，不能和html结合，只能在java程序里一句句输出html，且文件路径要正确，即web.xml在WEB-INF下，编译文件在classes下
+        - 对于servlet，不能和html结合，只能在java程序里一句句输出html字符，文件路径要正确，web.xml在WEB-INF下，编译文件在classes下
         - 对于jsp，写个index.jsp放到ROOT目录即可
         - 依赖其他类和资源文件：web.xml中找编译文件从classes中找，其他类型文件按照目录找，java程序中找类和单跑一样，IDE会自动帮你找，并且编译
         - 依赖其他jar包：一般放在WEB-INF/lib中，类似依赖类，容器根据web.xml配置会自动解jar包进行类的载入
@@ -559,14 +438,15 @@
         - idea用maven跑web
      1. maven
         - 单maven跑：官网的例子archetype:generate--package--java -cp--Hello World!
-        - 单maven跑tomcat
+        - 单maven跑tomcat：涉及打包后部署
 1. 打包和部署
-   - java发布过程：源代码——编译——打包——安装jar/war/zip包到服务器
-   - 打包时，依赖的jar包要么在tomcat的lib目录下，要么声明在path中；如果用IDE就设置好就行
+   - 特点
+     1. java发布过程：源代码——编译——打包——安装jar/war/zip包到服务器
+     1. 依赖的jar包：打包时要么在tomcat的lib目录下，要么声明在path中，如果用IDE就设置好就行
    - Jar包
-     1. 理解：Java Application Archive，java归档文件，是与平台无关的文件格式，允许将许多文件组合成一个压缩文件，是文件封装的最小单元。包含 META-INF 目录：存储配置数据，xxx.SF 签名文件等
+     1. 理解：Java Application Archive，java归档文件，是与平台无关的文件格式，允许将许多文件组合成一个压缩文件，是文件封装的最小单元。包含META-INF 目录：存储配置数据，xxx.SF 签名文件等
      1. 特点
-        - 以zip文件格式为基础，提供压缩/部署/封装库，可被像编译器和jvm直接使用，无需事先提取文件或设置类路径
+        - 以zip文件格式为基础，提供压缩/部署/封装库，可被编译器和jvm直接使用，无需事先提取文件或设置类路径
         - 包含特殊的文件，如manifests和部署描述符，用来指示工具如何处理特定的jar
      1. 创建
         - 所有代码放到一个目录中
@@ -588,53 +468,11 @@
      1. JDK：Java Development Kit，开发工具包，包含编译器和调试器，运行环境
      1. JRE：Java Runtime Environment，运行环境，包括JVM(包含解释器)和其他工具
      1. JVM：Java Virtual Machine，虚拟机，光JVM还不能运行，因为没有lib类库，JRE编译时的会载入lib类库
-   - 基础
-     1. 基础：数据类型, 操作符, 运算符, 表达式
-     1. 面向对象：类, 继承, 多态, 重写, 重载
-     1. 常用类：String, Object, Array, Enum
-     1. 集合类, List, ArrayList, Set, HashSet, Map, HashMap, HashTable
-     1. I/O：File, IO, NIO, InputStream, OutputStream, Reader, Writer, Selector
-     1. 多线程：Thread, Runnable, Future
-     1. 异常处理
-     1. 反射、注解、泛型
-     1. JDBC、网络编程
-     1. 设计模式、IOC依赖注入, AOP面向切面编程
-     1. JVM
-   - JavaEE：Servlet、JSP等12项规范
    - 框架和库
      1. Spring
      1. Hibernate,MyBatis
      1. SpringMVC, Struts
      1. Quartz、Ehcache、Apache commons
-1. 常见包
-   - java.lang：语言包，Number/Character/Boolean、String、Math、Object、Class、Thread、Process、Throwable
-   - java.util：工具包，Array/Vector/Dictionary/Collection/map、Date、Random/UUID
-   - java.text：处理文本、日期、数字和消息的类和接口
-   - java.io/net/sql/awt/swing
-   - apache.commons.lang/beanutils
-   - google.guava
-1. 常用类库
-   - 日志：apache-log4j、Logback、slf4j-api
-   - Json：Jackson、Gson
-   - XML：jdom、dom4j、xercesImpl
-   - 日期：joda.time
-   - 其他：Jsoup：分析html，Lomobok：消除冗长代码
-1. 关键字
-   - 数据类型：byte、short、int、long、float、double、char、boolean
-   - 流程控制
-     1. if、else、switch、case、default
-     1. for、do、while、break、continue
-     1. return、void
-   - 异常：try、catch、finally、throw、throws
-   - 修饰符：vstrictf、native、volatile、synchronized、transient
-   - 判断：assert、instanceof
-   - 面向对象
-     1. 包： package、import
-     1. 接口： interface、implements
-     1. 抽象类： abstract、extends
-     1. 类： class、new、this、super
-     1. 修饰符： private/protected/public、static、final
-   - 预留关键字：goto，const
 1. 版本发展
    - 历史：JDK5开始，Java8=JDK 8=JavaSE8=JavaSE1.8，不再使用J2SE等
    - 框架
@@ -653,7 +491,7 @@
      1. Lambda表达式
      1. 方法引用：可以直接引用已有对象/类的方法，使语言结构更简洁紧凑
      1. 实现方法：就是类在接口里有个实现的方法
-     1. 新工具：如新的编译工具，Nashorn引擎jjs、类依赖分析器jdeps
+     1. 新工具：如新的编译工具，Nashorn引擎js、类依赖分析器jdeps
      1. Stream API：即java.util.stream，把真正的函数式编程引入java中
      1. DateTime API：加强日期和时间的处理
      1. Optional 类：解决空指针异常
