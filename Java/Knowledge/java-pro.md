@@ -1,35 +1,30 @@
 ### 泛型
 1. 泛型
-   - 理解：为了参数化类型，JDK5引入的新特性，提供编译时的参数类型检测
-   - 特点：泛型集合中的限定类型，不能使用基本数据类型，必须使用包装类
-   - 类型通配符:用?代替具体的类型参数，此处?是类型实参，而不是类型形参，?也是一种实际的类型，看成所有类型的父类
-        ```Java
-        public static void getData(List<?> data) {}
-        ```
+   - 理解：为了参数化类型，JDK5引入的新特性，提供编译时的参数类型检测。泛型集合中必须使用包装类，不能基本类型
+   - 类型通配符:用?代替具体类型参数，此处?是类型实参，而不是类型形参，?也是一种实际的类型，看成所有类型的父类
+    ```Java
+    public static void getData(List<?> data) {}
+    ```
    - 有界的类型参数
-        ```java
-        public static <T extends Comparable<T>> T methodName(T x, T y, T z)
-        // 只接受Number及其子类型
-        public static void getUperNumber(List<? extends Number> data)
-        ```
+    ```java
+    public static <T extends Comparable<T>> T method(T x, T y, T z)？？？
+    public static void getUperNumber(List<? extends Number> data)           // 只接受Number及其子类型
+    ```
    - 泛型数组
-        ```java
-        List<String>[] ls = new ArrayList[10];
-        List<?>[] ls = new ArrayList<?>[10]; // 最后取出数据要做显式的类型转换
-        List<String>[] ls = new ArrayList<String>[10]; // 这样不可以
-        ```
+    ```java
+    List<String>[] ls = new ArrayList[10];
+    List<?>[] ls = new ArrayList<?>[10];            // 最后取出数据要做显式的类型转换
+    ```
    - 泛型变量
-        ```Java
-        List list = new ArrayList();                    // 普通定义方式
-        List<String> list = new ArrayList<String>();    // 泛型变量定义方式
-        ```
-   - 泛型成员变量
-        ```Java
-        public List<Course> course;             // 带有泛型的变量
-        course = new ArrayList<Course>();       // 赋值带有泛型的变量
-        ```
+    ```Java
+    List list = new ArrayList();                    // 普通定义方式
+    List<String> list = new ArrayList<String>();    // 泛型变量定义方式
+    // 泛型成员变量
+    public List<Course> course;             // 带有泛型的变量
+    course = new ArrayList<Course>();       // 赋值带有泛型的变量
+    ```
    - 泛型方法：在调用方法的时候指明泛型的具体类型，根据参数类型，泛型方法适当处理每一个方法调用
-     1. 特点：<T>声明此方法为泛型方法，才能使用T作为返回值，T可以随便写为任意标识，如T、E、K、V等
+     1. 特点：<T>声明此方法为泛型方法，才能使用T作为返回值，T可以随便写为任意标识
      1. 定义
         ```Java
         public static <T> T genericMethod(Class<T> tClass) {
@@ -52,7 +47,7 @@
         ```
    - 泛型接口：`public interface Generator<T> {}`
 ### 注解
-1. 理解：Annotation，Java5.0引入，是一种应用于类、方法、参数、变量、构造器及包声明中的特殊修饰符。是描述数据的数据，也叫元数据。和具体业务逻辑无关
+1. 理解：Annotation，Java5引入，是一种应用于类、方法、参数、变量、构造器及包声明中的特殊修饰符。是描述数据的数据，也叫元数据。和具体业务逻辑无关
 1. 价值：功能声明。XML的描述功能维护非常困难，只适用于设置很多参数，耦合代码并且声明作用需要简单直接的方法
 1. 分类
    - Java SE5内置三种标准注解
@@ -84,57 +79,24 @@
      1. `getAnnotations()` 返回该元素的所有注解
      1. `isAnnotationPresent(annotation)` 检查传入的注解是否存在于当前元素
      1. `getAnnotation(class)` 按照传入的参数获取指定类型的注解
-   - 例子
-        ```Java
-        // 定义注解
-        @Target(ElementType.METHOD)
-        @Retention(RetentionPolicy.RUNTIME)
-        @interface Todo {
-            public enum Priority {LOW, MEDIUM, HIGH}
-            public enum Status {STARTED, NOT_STARTED}
-            String author() default "peanut";
-            Priority priority() default Priority.LOW;
-            Status status() default Status.NOT_STARTED;
-        }
-        // 使用注解
-        @Todo(priority=Todo.Priority.MEDIUM, author="aaa", status=Todo.Status.STARTED)
-        public void incompleteMethod() {}
-        // 使用反射得到注解后的类信息
-        Class businessLogicClass = BusinessLogic.class;
-        for(Method method : businessLogicClass.getMethods()) {
-            Todo todoAnnotation = (Todo)method.getAnnotation(Todo.class);
-            if(todoAnnotation != null) {
-                System.out.println(" Method Name : " + method.getName());
-                System.out.println(" Author : " + todoAnnotation.author());
-                System.out.println(" Priority : " + todoAnnotation.priority());
-                System.out.println(" Status : " + todoAnnotation.status());
-            }
-        }
-        ```
 ### 反射
-1. 理解
+1. 理解：Java允许程序化的方式间接对Class进行获取和操作，可以获取类的名称、变量、方法等
    - 获得类类型：Foo.class/foo.getClass()/Class.forName()
    - 获得实例对象：c1.newInstance()
    - 反射执行方法：m.invoke()
-1. 理解：Java允许程序化的方式间接对Class进行操作。可以获取类的名称、变量、方法等信息
 1. 获取类信息
    - 获得类、实例对象
-     1. Class类的实例对象的获取，即得到类类型
-        - `CLass c1 = Foo.class` 通过类本身的隐含静态成员变量获取类类型
-        - `Class c2 = foo.getClass()` 通过实例化后的对象获取类类型，c1等于c2的
-        - `Class c3 = Class.forName('com.imooc.reflect.foo')` 通过Class类的方法
-     1. 通过类类型获取实例对象
-        - `Foo foo = (Foo) c1.newInstance()` 要做强制类型转换
+    ```Java
+    // 获得类类型，即Class类的实例对象
+    CLass c1 = Foo.class                                    // 通过类本身的隐含静态成员变量获取类类型
+    Class c2 = foo.getClass()                               // 通过实例化后的对象获取类类型，c1等于c2
+    Class c3 = Class.forName('com.imooc.reflect.foo')       // 通过Class类的方法
+    // 通过类类型获取实例对象
+    Foo foo = (Foo) c1.newInstance()                        // 要做强制类型转换
+    ```
    - 获取类的基本信息
-     1. 方法
-        - `c.getName()` 类名
-        - `c.getSimpleName()` 不包含包名
-     1. 实例
-        ```java
-        Class c1 = double.class;
-        Class c2 = Double.class;
-        Class c3 = void.class;
-        ```
+     1. `c.getName()` 类名
+     1. `c.getSimpleName()` 不包含包名
    - 获取成员变量的信息：成员变量也是对象，继承java.lang.reflect.Field
      1. `c.getFields()` 获取所有public的成员变量的信息
      1. `c.getDeclaredFields()` 获取自己声明的所有变量
@@ -171,48 +133,13 @@
         Method setColor = clazz.getMethod(“setColor”, String.class); // 跟两个参数类型，没有这里，下一句就不写
         setColor.invoke(car, “黑色”);
         ```
-1. 对象和类：java中只有基本数据类型和静态成员不是对象，其他都是对象。类是java.lang.Class类的对象
 ### 多线程
-1. 理解：使用更小资源开销，轮候使用cpu，存在等待，线程多了因为上下文切换反而效率下降
-1. 重难点
-   - ThreadPoolExecutor
-   - J.U.C
-   - Atomic*
-   - Fork/Join
-1. 状态
-   - 新建：Thread类及其子类建立线程对象后
-   - 就绪：线程对象调用start()后，等待JVM调度器的调度
-   - 运行：获取cpu资源，可以执行run方法，可以变为就绪、阻塞、死亡状态
-   - 阻塞：三种阻塞类型
-     1. 等待阻塞：运行中的线程执行wait()方法
-     1. 同步阻塞：线程获取synchronized同步锁失败
-     1. 其他阻塞：调用sleep()或join()发出io请求时，当这些结束时，线程重新进入就绪状态
-   - 死亡：完成任务或者终止条件发生时
-1. 优先级：整数，范围1~10，默认5，但是不能保证线程执行的顺序，非常依赖于平台
+1. 理解：使用更小资源开销，轮候使用cpu，存在等待，线程多了因为上下文切换反而效率下降。目的就是伪同时运行，因为cpu处理速度快
 1. 创建
-   - 实现Runnable接口
-        ```Java
-        class RunnableDemo implements Runnable {}
-        ```
-   - 继承Thread类
-     1. 实例
-        ```Java
-        class ThreadDemo extends Thread {}
-        ```
-     1. 普通方法
-          1. `public void start()` // 线程开始执行，JVM调用run方法
-          1. `public void run()` // 
-          1. `public void interrupt()` // 中断线程
-          1. `public final boolean isAlive()` // 检测是否处于活动状态
-          1. `public final void setName(String name)/setPriority(int priority)` // 设置名字、优先级
-          1. `public final void setDaemon(boolean on)` // 设为守护线程或用户线程
-          1. `public final void join(long millisec)` // 设置等待该线程的最长时间
-     1. 静态方法
-          1. `public static void yield()` // 暂停当前进程，执行其他进程
-          1. `public static void sleep(long millisec)` // 毫秒数休眠
-          1. `public static boolean holdsLock(Object x)` // 当且仅当当前线程在指定的对象上保持监视器锁时，才返回 true
-          1. `public static Thread currentThread()` // 返回对当前正在执行的线程对象的引用
-          1. `public static void dumpStack()` // 将当前线程的堆栈跟踪打印至标准错误流
+   - 继承Thread类：Thread类用于描述线程，线程是需要任务的用run来表示
+     1. 步骤：定义类继承Thread--覆盖run方法--创建子类对象来创建线程--调用start方法开启线程(即run方法执行)
+   - 实现Runnable接口：单独封装，避免单继承的局限，更常用。
+     1. 步骤：定义类实现Runnable接口--覆盖run方法--创建子类对象并作为参数传递给Thread类的构造方法--start开启线程
    - 通过Callable和Future
         ```Java
         public class CallableThreadTest implements Callable<Integer> {
@@ -227,6 +154,25 @@
         }
         ```
    - 比较：使用Runnable、Callable还可以继承其他类，使用Thread，直接使用this获得当前线程
+1. 线程安全：操作共享数据时，产生数据偏差
+   - 同步：synchronized，用同步代码争抢一个锁(this)，解决共享数据问题，锁的判断开销很大。
+   - 同步代码块：锁是任意的对象，如果用this的话可以和同步`public synchronized void add(int num){}`
+1. 锁
+   - Lock接口，可以一个锁加多个监视器。JDK1.5出现
+     1. lock()：获取锁
+     1. unlock()：释放锁
+   - Condition接口，替代Object中的wait/notify方法，变成Condition监视器对象，可以对任意锁进行组合
+     1. await：wait
+     1. signal：notify，signalAll
+1. 死锁
+   - 同步嵌套：自己需要的锁互相在对方那里
+1. 线程间通信
+   - 等待/唤醒机制
+     1. wait()：线程冻结，存储到线程池中。可以不指定时间
+        - wait：释放cpu执行权，释放锁
+        - sleep：释放cpu执行权，不释放锁
+     1. notify()：唤醒线程池中一个线程。notifyAll()唤醒所有
+     1. interrupt()：将线程从冻结状态强制恢复到运行状态
 1. volatile
     ```Java
     public class MyRunnable implements Runnable{
@@ -242,11 +188,26 @@
         }
     }
     ```
+1. 状态
+   - 新建：Thread类及其子类建立线程对象
+   - 就绪：线程对象调用start()后，等待JVM调度器的调度
+   - 运行：获取cpu资源，执行run方法，可以变为就绪、阻塞、死亡状态
+   - 阻塞：三种阻塞类型
+     1. 等待阻塞：运行中的线程执行wait()方法
+     1. 同步阻塞：线程获取synchronized同步锁失败
+     1. 其他阻塞：调用sleep()或join()发出io请求时，当这些结束时，线程重新进入就绪状态
+   - 死亡：完成任务或者终止条件发生时
+1. 优先级：整数范围1~10，默认5，不保证线程执行顺序，非常依赖平台
 1. 概念
    - 线程控制(挂起/停止/恢复)
-   - 线程同步：即任意时刻只能有一个线程同时写，可以保证数据一致
+   - 线程同步：即任意时刻只能有一个线程同时写，保证数据一致
    - 线程死锁
    - 线程间通信
+1. 重难点
+   - ThreadPoolExecutor
+   - J.U.C
+   - Atomic*
+   - Fork/Join
 ### 代理模式
 1. 理解：代理是一种设计模式，提供了对目标对象另外的访问方式，即通过代理对象访问目标对象
    - 三方角色：用户、代理对象、目标对象。代理对象是对目标对象的扩展

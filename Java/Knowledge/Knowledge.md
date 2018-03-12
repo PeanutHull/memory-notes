@@ -246,6 +246,26 @@
    import java.util.UUID;
    UUID.randomUUID().toString();
    ```
+### java-pro
+1. Thread类
+```Java
+run()                                               被覆盖方法
+start()                                             线程开始执行，JVM调用run方法    
+yield()                                             暂停当前进程，执行其他进程
+sleep(long millisec)                                毫秒数休眠
+join(long millisec)                                 设置等待该线程的最长时间
+interrupt()                                         中断线程
+isAlive()                                           检测是否处于活动状态
+
+Thread currentThread()                              返回对当前正在执行的线程对象的引用
+
+setName(String name)/setPriority(int priority)      设置名字、优先级
+setDaemon(boolean on)                               设为守护线程或用户线程
+
+boolean holdsLock(Object x)                         当且仅当当前线程在指定的对象上保持监视器锁时，才返回 true
+
+dumpStack()                                         将当前线程的堆栈跟踪打印至标准错误流
+```
 ### 零散
 1. 汇总
    - main必须是public的，否则解释器不能运行此类

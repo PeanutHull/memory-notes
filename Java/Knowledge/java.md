@@ -231,6 +231,7 @@
              }.method();
              ```
 1. 对象
+   - 理解：java中只有基本数据类型和静态成员不是对象，其他都是对象。类是java.lang.Class类的对象
    - 访问属性和方法：对象名.变量; 对象名.方法();
    - 复制
      1. 浅表复制：自带，指的是同一个对象
@@ -333,6 +334,7 @@
         - synchronizedMap：线程同步
    - 迭代器：Iterator，遍历集合元素
    - 比较器：Comparator，用来精确定义排序规则，以不同方式排序集合
+   - 工具类：Collections(sort)、Arrays(toString/asList)
 ### 应用
 1. 时间和日期：属于java.util
    - Date
