@@ -266,6 +266,97 @@ boolean holdsLock(Object x)                         当且仅当当前线程在�
 
 dumpStack()                                         将当前线程的堆栈跟踪打印至标准错误流
 ```
+### javaee
+1. servlet
+   - request
+    ```Java
+    getRemoteAddr()              // 获取请求者ip
+    getAuthType()                // 如SSL、BASIC，无则null
+    getHeaderNames()
+    getHeader(String name)
+    getMethod()
+    getQueryString()             // get参数
+    getContentLength()           // post的长度，字节为单位，未知为-1
+    getAttribute()               // 以对象形式返回属性，无则null
+    getParameterMap()            // 以map形式返回属性
+    getCookies()            
+    getSession()                 // 获取session对话，无则创建
+    ```
+   - response
+    ```Java
+    setStatus()                  // 设置状态码
+    addHeader()
+    setHeader()
+    setContentLength()
+    addCookie()
+
+    setBufferSize()              // 为响应主体设置首选缓冲大小
+    flushBuffer()                // 缓冲写入客户端
+    resetBuffer()                // 清除缓冲区内容，不清除状态码和头
+    reset()                      // 都清除
+    sendError()                  // 出现tomcat原生的错误页面
+    sendRedirect()               // 302跳转，带一个location头
+    ```
+   - out
+     1. getBufferSize：缓冲区字节数
+   - cookie类：`javax.servlet.http.Cookie`
+    ```Java
+    getName()
+    getValue()/setValue()
+    setPath()
+    getDomain()/setDomain()      // cookie的域
+    getMaxAge()/setMaxAge()
+    setSecure()/getComment()/setComment(String purpose)
+    ```
+   - session
+    ```Java
+    isNew()
+    getId()                     // 返回唯一标识符
+    getCreationTime()
+    getLastAccessedTime()
+    removeAttribute()
+    getAttributeNames()         // 返回名称集
+    getValueNames()
+    ```
+   - Locale
+    ```Java
+    getCountry()                 // 两个大写字母形式的ISO 3166格式国家代码
+    getDisplayCountry()          // 国家名称
+    getLanguage()                // 小写字母的 ISO 639格式语言代码
+    getDisplayLanguage()         // 语言名称
+    getISO3Country()             // 国家的3个字母缩写
+    getISO3Language()            // 语言的3个字母缩写
+    ```
+1. jsp
+   - 指令标记：page的属性
+     1. language：指定页面的脚本语言，默认java
+     1. import：指定使用的类
+     1. contentType：MIME和字符编码
+     1. extends：指定Servlet继承
+     1. info：页面的描述信息
+     1. session：是否使用session
+     1. errorPage：发生错误转向的错误页面
+     1. isErrorPage：表示本页面是否可作为错误页面
+     1. buffer：out对象使用缓冲区的大小
+     1. autoFlush：控制out对象的缓冲区
+     1. isELIgnored：是否执行EL表达式
+     1. isScriptingEnabled：脚本元素是否能被使用
+     1. isThreadSafe：指定对页面的访问是否为线程安全
+   - 标记别名
+     1. <%! %>：声明，<jsp:declaration></jsp:declaration>
+     1. <%= %>：表达式，<jsp:expression></jsp:expression>
+     1. <% %>：脚本，<jsp:scriptlet></jsp:scriptlet>
+   - JSTL
+     1. 安装：将官方jsp的jar包放到`/WEB-INF/lib/`下
+    ```XML
+    <jsp-config>                                                        // web.xml配置
+        <taglib>
+            <taglib-uri>http://java.sun.com/jstl/fmt</taglib-uri>
+            <taglib-location>/WEB-INF/fmt.tld</taglib-location>
+        </taglib>
+    </jsp-config>
+    <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>    // jsp页面中导入核心标签库
+    ```
 ### 零散
 1. 汇总
    - main必须是public的，否则解释器不能运行此类
