@@ -239,13 +239,22 @@
      1. round()：返回最接近的int、long值
      1. min、max()：两个参数得最大小值
      1. random()：返回随机值，0到1之间，无参数
+1. url
+   - url类
+     1. URL // 创建url
+     1. getHost/getPath/getQuery()/getRef()
+     1. openConnection()
+   - URLConnections类
+     1. getContent()
+     1. getContentLength()
+     1. getLastModified()/getExpiration
+     1. InputStream/OutputStream
 1. UUID
    - 理解：算法的核心思想是结合机器的网卡、当地时间、一个随即数来生成GUID，从理论上讲，如果一台机器每秒产生10000000个GUID，则可以保证（概率意义上）3240年不重复。java 5新增
-   - 使用
-   ```Java
-   import java.util.UUID;
-   UUID.randomUUID().toString();
-   ```
+    ```Java
+    import java.util.UUID;
+    UUID.randomUUID().toString();
+    ```
 ### java-pro
 1. Thread类
 ```Java
@@ -348,15 +357,56 @@ dumpStack()                                         将当前线程的堆栈跟�
      1. <% %>：脚本，<jsp:scriptlet></jsp:scriptlet>
    - JSTL
      1. 安装：将官方jsp的jar包放到`/WEB-INF/lib/`下
-    ```XML
-    <jsp-config>                                                        // web.xml配置
-        <taglib>
-            <taglib-uri>http://java.sun.com/jstl/fmt</taglib-uri>
-            <taglib-location>/WEB-INF/fmt.tld</taglib-location>
-        </taglib>
-    </jsp-config>
-    <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>    // jsp页面中导入核心标签库
-    ```
+        ```XML
+        <jsp-config>                                                        // web.xml配置
+            <taglib>
+                <taglib-uri>http://java.sun.com/jstl/fmt</taglib-uri>
+                <taglib-location>/WEB-INF/fmt.tld</taglib-location>
+            </taglib>
+        </jsp-config>
+        <%@ taglib uri="http://java.sun.com/jsp/jstl/core(fmt/sql/xml/functions)" prefix="c"%>    // jsp页面中导入核心标签库
+        ```
+     1. 格式化标签
+        - `<fmt:formatNumber>` // 针对指定格式或精度的数字
+        - `<fmt:parseNumber>` // 解析代表数字、货币、百分比的字符串
+        - `<fmt:formatDate>` // 针对日期和时间
+        - `<fmt:parseDate>` // 解析代表日期和时间的字符串
+        - `<fmt:setLocale>` // 指定地区
+        - `<fmt:timeZone>` // 指定时区
+        - `<fmt:setTimeZone>` // 指定时区
+        - `<fmt:bundle>` // 绑定资源
+        - `<fmt:setBundle>` // 绑定资源
+        - `<fmt:message>` // 显示资源配置文件信息
+        - `<fmt:requestEncoding>` // 设置request的字符编码
+     1. sql标签
+        - `<sql:setDataSource>` // 指定数据源
+        - `<sql:query>` // 运行查询语句
+        - `<sql:update>` // 运行更新语句
+        - `<sql:param>` // 设置sql语句的参数
+        - `<sql:dateParam>` // 将SQL语句中的日期参数设为指定的java.util.Date值
+        - `<sql:transaction>` // 执行事务语句
+     1. xml标签
+        - `<x:out>` // 类似<%= ... >，只用于XPath表达式
+        - `<x:parse>` // 解析xml
+        - `<x:set>` // 设置XPath表达式
+        - `<x:if>` // 判断XPath表达式
+        - `<x:forEach>` // 迭代xml的节点
+        - `<x:choose>/<x:when>/<x:otherwise>` // 
+        - `<x:transform>` // XSL转换应用在XML中
+        - `<x:param>` // 和<x:transform>共同使用，用于设置XSL样式表
+     1. JSTL函数
+        - `fn:length()` // 字符串长度
+        - `fn:join()` // 字符串合并
+        - `fn:replace()` // 替换字符串
+        - `fn:split()` // 分割字符串
+        - `fn:trim()` // 移除首尾空白
+        - `fn:toLowerCase()/fn:toUpperCase()` // 转大小写
+        - `fn:indexOf()	` // 返回指定字符串出现的位置
+        - `fn:substring()/fn:substringAfter()/` // 返回(之前/之后)的子串
+        - `fn:contains()/fn:containsIgnoreCase()` // 测试字符串是否包含指定的子串
+        - `fn:startsWith()` // 是否以指定开头开始
+        - `fn:endsWith()` // 是否以指定后缀结尾
+        - `fn:escapeXml()` // 跳过可以作为XML标记的字符
 ### 零散
 1. 汇总
    - main必须是public的，否则解释器不能运行此类

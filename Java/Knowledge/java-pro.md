@@ -209,125 +209,92 @@
    - Atomic*
    - Fork/Join
 ### 代理模式
-1. 理解：代理是一种设计模式，提供了对目标对象另外的访问方式，即通过代理对象访问目标对象
-   - 三方角色：用户、代理对象、目标对象。代理对象是对目标对象的扩展
+1. 理解：代理是一种设计模式，提供了对目标对象另外的访问方式，即通过代理对象访问目标对象。三方角色：用户、代理对象、目标对象
 1. 价值：可以在实现目标对象的基础上,增强额外的功能操作和功能扩展。不要随意修改已经写好的代码，如需修改使用代理的方式扩展该方法   
-1. 分类
-   - 静态代理
-     1. 理解：静态代理在使用时,需要定义接口或者父类,被代理对象与代理对象一起实现相同的接口或者是继承相同父类。就是把目标对象传入代理对象实例化，然后调用相同方法，代理对象中多加了一些方法，适当时候调用目标对象的方法。就是套了一层，然后执行
-     1. 特点
-        - 可以在不修改目标代理前提下，实现功能拓展
-        - 会产生很多代理类，要维护两份类
-     1. 示例
-        ```Java
-        public interface IUserDao {void save();} // 接口
-        public class UserDao implements IUserDao { public void save() {}} // 目标对象
-        public class UserDaoProxy implements IUserDao{ // 代理对象
-            private IUserDao target;
-            public UserDaoProxy(IUserDao target){
-                this.target=target;
-            }
-            public void save() {
-                // 执行其他逻辑
-                target.save();//执行目标对象的方法
-                // 其他逻辑                
-            }
+1. 分类：静态代理，动态代理，Cglib代理
+1. 静态代理
+   - 理解：需要被代理对象与代理对象一起实现同一接口或继承同一父类，目标对象传入代理对象实例化，调用被代理方法，套了一层代码，然后执行。可以在不修改目标代理前提下，实现功能拓展，会产生很多代理类，要维护两份类
+   - 示例
+    ```Java
+    public interface IUserDao {void save();}                                // 接口
+    public class UserDao implements IUserDao { public void save() {}}       // 目标对象
+    public class UserDaoProxy implements IUserDao{                          // 代理对象
+        private IUserDao target;
+        public UserDaoProxy(IUserDao target){
+            this.target=target;
         }
-        // 测试类
-        public static void main(String[] args) {
-            // 目标对象
-            UserDao target = new UserDao();
-            // 代理对象,把目标对象传给代理对象,建立代理关系
-            UserDaoProxy proxy = new UserDaoProxy(target);
-            // 执行代理方法
-            proxy.save();
+        public void save() {
+            // 执行其他逻辑
+            target.save();                                                  // 执行目标对象的方法
+            // 其他逻辑                
         }
-        ```
-   - 动态代理
-     1. 理解：利用API在内存中构建代理对象，也叫JDK代理,接口代理
-     1. 使用
-        ```Java
-        代理类所在包：java.lang.reflect.Proxy
-        实现方法：static Object newProxyInstance(ClassLoader loader, Class<?>[] interfaces,InvocationHandler h )
-        参数：
-        `ClassLoader loader` 指定当前目标对象使用类加载器
-        `Class<?>[] interfaces` 目标对象实现的接口的类型
-        `InvocationHandler h` 把当前执行目标对象的方法作为参数传入
-        ```
-     1. 特点：代理对象不需要实现接口,但是目标对象一定要实现接口
-     1. 示例
-        ```Java
-        public class ProxyFactory{ // 代理类
-            // 维护一个目标对象
-            private Object target;
-            public ProxyFactory(Object target){
-                this.target=target;
-            }
-            // 给目标对象生成代理对象
-            public Object getProxyInstance(){
-                return Proxy.newProxyInstance(
-                        target.getClass().getClassLoader(),
-                        target.getClass().getInterfaces(),
-                        new InvocationHandler() {
-                            // 代理的方法
-                            @Override
-                            public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-                                // 其他逻辑
-                                // 执行目标对象方法
-                                Object returnValue = method.invoke(target, args);
-                                // 其他逻辑
-                                return returnValue;
-                            }
+    }
+    
+    UserDao target = new UserDao();                                         // 测试类
+    UserDaoProxy proxy = new UserDaoProxy(target);                          // 建立代理关系
+    proxy.save();                                                           // 执行代理方法
+    ```
+1. 动态代理
+   - 理解：使用代理类`java.lang.reflect.Proxy`，在内存中构建代理对象，也叫JDK代理/接口代理
+   - 实现方法：`newProxyInstance(ClassLoader loader, Class<?>[] interfaces,InvocationHandler h )`
+     1. ClassLoader loader：指定当前目标对象使用类加载器
+     1. Class<?>[] interfaces：目标对象实现的接口的类型，目标对象一定要实现接口
+     1. InvocationHandler h：把当前执行目标对象的方法作为参数传入
+   - 示例
+    ```Java
+    public class ProxyFactory{                                                      // 代理类
+        private Object target;
+        public ProxyFactory(Object target){
+            this.target=target;
+        }
+        public Object getProxyInstance(){                                           // 给目标对象生成代理对象
+            return Proxy.newProxyInstance(
+                    target.getClass().getClassLoader(),
+                    target.getClass().getInterfaces(),
+                    new InvocationHandler() {
+                        @Override
+                        public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+                            // 其他逻辑
+                            Object returnValue = method.invoke(target, args);       // 执行目标对象方法
+                            // 其他逻辑
+                            return returnValue;
                         }
-                );
-            }
+                    }
+            );
         }
-        // 测试类
-        IUserDao target = new UserDao();
-        // 给目标对象，创建代理对象
-        IUserDao proxy = (IUserDao) new ProxyFactory(target).getProxyInstance();
-        // class $Proxy0   内存中动态生成的代理对象
-        // 执行方法   【代理对象】
-        proxy.save();
-        ```
-   - Cglib代理
-     1. 理解：以目标对象子类的方式在内存中构建子类实现代理，也叫子类代理
-     1. 价值：适用于目标对象没有实现接口的情况，可以在运行期扩展java类和实现java接口，被spring aop使用来提供interception(拦截)
-     1. 原理：Cglib包的底层是通过使用一个小而块的字节码处理框架ASM来转换字节码并生成新的类
-     1. 举例
-        ```Java
-        public class ProxyFactory implements MethodInterceptor{
-            //维护目标对象
-            private Object target;
-            public ProxyFactory(Object target) {this.target = target;}
-            //给目标对象创建一个代理对象
-            public Object getProxyInstance(){
-                //1.工具类
-                Enhancer en = new Enhancer();
-                //2.设置父类
-                en.setSuperclass(target.getClass());
-                //3.设置回调函数
-                en.setCallback(this);
-                //4.创建子类(代理对象)
-                return en.create();
-            }
-            @Override
-            public Object intercept(Object obj, Method method, Object[] args, MethodProxy proxy) throws Throwable {
-                // 其他逻辑
-                //执行目标对象的方法
-                Object returnValue = method.invoke(target, args);
-                // 其他逻辑
-                return returnValue;
-            }
+    }
+    IUserDao target = new UserDao();                                                // 测试类
+    IUserDao proxy = (IUserDao) new ProxyFactory(target).getProxyInstance();        // 创建代理对象
+    proxy.save();                                                                   // 执行代理方法
+    ```
+1. Cglib代理
+   - 理解：在内存中构建目标对象的子类实现代理，也叫子类代理。可以在运行期扩展java类，被spring aop使用来提供interception(拦截)
+   - 原理：Cglib包的底层是通过使用一个小而快的字节码处理框架ASM来转换字节码并生成新的类
+   - 举例
+    ```Java
+    public class ProxyFactory implements MethodInterceptor{
+        private Object target;
+        public ProxyFactory(Object target) {
+            this.target = target;
         }
-        // 测试方法
-        //目标对象
-        UserDao target = new UserDao();
-        //代理对象
-        UserDao proxy = (UserDao)new ProxyFactory(target).getProxyInstance();
-        //执行代理对象的方法
-        proxy.save();
-        ```
+        public Object getProxyInstance(){                           // 创建代理对象
+            Enhancer en = new Enhancer();                           // 1.工具类
+            en.setSuperclass(target.getClass());                    // 2.设置父类
+            en.setCallback(this);                                   // 3.设置回调函数
+            return en.create();                                     // 4.创建子类(代理对象)
+        }
+        @Override
+        public Object intercept(Object obj, Method method, Object[] args, MethodProxy proxy) throws Throwable {
+            // 其他逻辑
+            Object returnValue = method.invoke(target, args);       //执行目标对象的方法
+            // 其他逻辑
+            return returnValue;
+        }
+    }
+    UserDao target = new UserDao();                                 // 测试方法
+    UserDao proxy = (UserDao) new ProxyFactory(target).getProxyInstance();
+    proxy.save();                                                   // 执行代理方法
+    ```
 ### IO/NIO
 1. BIO：同步并阻塞，一个连接一个线程，可通过线程池改善
 1. NIO：同步非阻塞，一个请求一个线程，都注册到多路复用器上，轮询到连接有I/O请求时才启动一个线程进行处理。一个线程处理多个连接，防止给每一个连接新开线程。逻辑部分是单线程模式，同时还是高效率的异步IO，就偷着乐吧
@@ -633,99 +600,12 @@
    - 阻塞IO通道的优/缺点：实现简单，必须为每个数据数量分配一个单独的线等待IO数据的返回，造成内存暴增，缺乏伸缩性，线程池也不能有效解决。
    - 非阻塞IO通道：通过Message Reader/Write协议组织碎片化的channel数据，组成完整一个数据，提供给其他组件。用可伸缩的buffer存储不完整的Message，有拷贝扩容/追加扩容/TLV编码消息等方式
 ### 网络编程
-1. 理解：java.net包中，有接口和类提供低层次的通信细节。
+1. 理解：java.net包中，有接口和类提供底层通信细节
 1. Socket编程
    - 使用套接字建立TCP连接的过程
      1. 服务器实例化ServerSocket对象，调用accept()方法，等待客户端连接相应端口
      1. 客户端实例化Socket对象，指定地址等参数请求连接，连接建立
      1. 服务端的accept()方法返回新的与客户端连接的socket引用，使用I/O流进行通信，服务端和客户端的输出流和输入流分别相互连接。TCP是双向的，两个数据流可以同一时间发送
-   - 实例
-        ```Java
-        // 服务端
-        public class GreetingServer extends Thread{
-            private ServerSocket serverSocket;
-            public GreetingServer(int port) throws IOException
-            {
-                serverSocket = new ServerSocket(port);
-                serverSocket.setSoTimeout(10000);
-            }
-            public void run()
-            {
-                while(true)
-                {
-                    Socket server = serverSocket.accept();
-                    server.close();
-                }
-            }
-            // 入口程序
-            public static void main(String [] args)
-            {
-                Thread t = new GreetingServer(port);
-                t.start();
-            }
-        }
-        // 客户端
-        Socket client = new Socket(serverName, port);
-        client.close();
-        ```
-   - ServerSocket类的构造方法
-     1. `public ServerSocket(int port) throws IOException` // 绑端口
-     1. `public ServerSocket(int port, int backlog) throws IOException` // 指定backlog和本地端口号
-     1. `public ServerSocket(int port, int backlog, InetAddress address) throws IOException` // 绑定backlog、端口和本地ip
-     1. `public ServerSocket() throws IOException` // 创建非绑定Socket
-   - ServerSocket类的常用方法
-     1. `public int getLocalPort()` // 返回监听的端口
-     1. `public Socket accept() throws IOException` // 开始监听
-     1. `public void setSoTimeout(int timeout)` // 指定超时时间，毫秒为单位
-     1. `public void bind(SocketAddress host, int backlog)` // 绑定ip和backlog
-   - Socket类的构造方法：java.net.Socket代表服务端和客户端都用来通信。客户端实例化Socket，服务端通过accept()方法返回
-     1. `public Socket(String host, int port) throws UnknownHostException, IOException.` // 连接指定主机ip和端口
-     1. `public Socket(InetAddress host, int port) throws IOException` // 少了找不到异常
-     1. `public Socket(String host, int port, InetAddress localAddress, int localPort) throws IOException.` // 连接到远程主机和端口
-     1. `public Socket()` // 创建未连接的套接字
-   - Socket类的常用方法
-     1. `public void connect(SocketAddress host, int timeout) throws IOException` // 开始连接和超时时间
-     1. `public InetAddress getInetAddress()` // 返回地址
-     1. `public int getPort()` // 获得远程接口
-     1. `public SocketAddress getRemoteSocketAddress()` // 获得远程地址
-     1. `public int getLocalPort()` // 获得本地接口
-     1. `public InputStream getInputStream() throws IOException` // 获得输入流
-     1. `public OutputStream getOutputStream() throws IOException` // 获得输出流
-     1. `public void close() throws IOException` // 关闭套接字
-    - InetAddress类的方法
-     1. `static InetAddress getByAddress(byte[] addr)`
-     1. `static InetAddress getByName(String host)`
-     1. `String getHostName() `
-     1. `` // 
-     1. `String toString()` // ip地址转为String
-     1. `` // 
-1. URL处理
-   - URL 类方法
-     1. `public URL(String protocol, String host, int port, String file) throws MalformedURLException` // 创建url
-     1. `public URL(String url) throws MalformedURLException` // 给定url创建url
-     1. `public URL(URL context, String url) throws MalformedURLException` // 创建相对url地址
-     1. `public String getPath()` // 
-     1. `public String getQuery()` // 
-     1. `public String getAuthority()` // 
-     1. `public int getPort()` // 80
-     1. `public int getDefaultPort()` // 80
-     1. `public String getProtocol()` // http、https
-     1. `public String getHost()` // baidu.com
-     1. `public String getFile()` // index.html
-     1. `public String getRef()` // 获得锚点:j2se
-     1. `public URLConnection openConnection() throws IOException` // 打开url，访问资源
-   - URLConnections类方法：返回HttpURLConnection或者JarURLConnection对象
-     1. `Object getContent()` // 获得内容
-     1. `Object getContent(Class[] classes)` // 检索链接内容
-     1. `String getContentEncoding()` // 返回 content-encoding 值
-     1. `int getContentLength()` // 返回 content-type
-     1. `int getLastModified()` // 返回 last-modified
-     1. `long getExpiration()`
-     1. `long getIfModifiedSince()`
-     1. `public void setDoInput/setDoOutput(boolean input)` // 设置url连接是否用于输入/输出
-     1. `public InputStream getInputStream() throws IOException` // 返回输入流，用于读取
-     1. `public OutputStream getOutputStream() throws IOException` // 返回输出流，用于写入
-     1. `public URL getURL()` // 返回url
 ### Lambda
 1. 理解：表达式，Java 8中用来实现匿名方法，允许函数作为参数传递，可在某些场景作为匿名类的替代方案
     ```Java

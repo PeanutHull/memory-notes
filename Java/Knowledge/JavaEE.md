@@ -69,53 +69,14 @@
    - Servlet3.0新功能
      1. async：支持异步处理，先返回结果，后台一直执行直到结束，开启web.xml和Filter类的异步开关，`AsyncContext context = request.startAsync();`
      1. @WebFilter：将一个类声明为过滤器
-   - 实例
-     1. web.xml配置
-        ```XML
-        <filter>
-          <filter-name>LogFilter</filter-name>
-          <filter-class>com.runoob.test.LogFilter</filter-class>
-          <init-param>
-            <param-name>Site</param-name>
-            <param-value>菜鸟教程</param-value>
-          </init-param>
-        </filter>
-        <filter-mapping>
-          <filter-name>LogFilter</filter-name>
-          <url-pattern>/*</url-pattern>
-          <dispatcher></dispatcher>                 // 过滤类型请求，dispatcher：REQUEST、INCLUDE、FORWARD、ERROR，默认REQUEST
-        </filter-mapping>
-        ```
-     1. 过滤器类
-		```Java
-		public class LogFilter implements Filter{
-			public void  init(FilterConfig config) throws ServletException {
-				String site = config.getInitParameter("Site");                  // 获取初始化参数
-			}
-			public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws java.io.IOException, ServletException {
-				chain.doFilter(request,response);                               // 完成具体的过滤操作，FilterChain指出后续过滤器
-			}
-			public void destroy(){}                                             // Filter实例被Web容器从服务移除之前调用
-		}
-		```
 1. 监听器
-   - 理解：针对其他对象发生的事件/状态改变，进行监听和处理的对象。是servlet规范定义的一种特殊类，用于监听ServletContext/HttpSession/ServletRequest域对象的创建/销毁/属性修改等事件，可以在事件发生前、发生后做出响应。优先级：监听器->过滤器->Servlet
+   - 理解：用于监听ServletContext/HttpSession/ServletRequest域对象的创建/销毁/属性修改等事件，可以在事件发生前、发生后做出响应，servlet规范定义的特殊类，优先级：监听器->过滤器->Servlet
    - 分类
      1. 按照监听对象
 	    - ServletContext：应用程序环境对象
 		- ServletRequest：请求消息对象
 		- HttpSession：用户会话对象
      1. 按照监听的事件：域对象的创建/销毁，属性增加/删除
-   - 实例
-        ```Java
-        public class XxxListener implements ServletContextListener{                     // 针对ServletContext	
-            public void contextInitialized(ServletContextEvent servletcontextecent) {}
-            public void contextDestoryed(ServletContextEvent servletcontextecent) {}
-        }
-        <listener>                                                                      // web.xml注册
-            <listener-class>com.package.XxxListener</listener-class>
-        </listener>
-        ```
 1. wiki
    - 国际化：Locale对象提供，如en_US。i18n 国际化、l10n 本地化
    - 目录结构
@@ -168,122 +129,46 @@
    - 理解：JSP Standard Tag Library，JSP标准标签库。实现代码复用、增强可读性、简化开发
    - 分类
      1. 核心标签
+        - 分支
+          1. <c:if>
+          1. <c:choose>/<c:when>/<c:otherwise>
+        - 循环
+          1. <c:forEach>
      1. 格式化标签
      1. sql标签
      1. xml标签
      1. jstl函数
-   - 使用
-     1. 核心标签
+1. EL
+   - 理解：Expression Language，表达式语言，创建表达式并输出结果,用${expr}表示。和<%= %>作用相同，如`<%=session.getValue("name")%>`等于`<c:out value="${sessionScope.name}">`
+   - 组成
+     1. 操作符
         ```Java
-        <c:out value="${salary}"/> // 在JSP中显示数据
-        <c:set var="salary" scope="session" value="${2000*2}"/> // 保存数据，设置变量值和对象属性，类似<jsp:setProperty>
-        <c:remove var="salary"/> // 删除数据
-        // if
-        <c:if test = "${catchException != null}">
-            发生了异常: ${catchException.message}</p>
-        </c:if>
-        // choose，用于判断
-        <c:choose>
-            <c:when test="${salary <= 0}"></c:when>
-            <c:when test="${salary > 1000}"></c:when>
-            <c:otherwise></c:otherwise>
-        </c:choose>
-        // forEach
-        <c:forEach var="i" begin="1" end="5">
-            Item <c:out value="${i}"/><p>
-        </c:forEach>
-        // forTokens，根据指定分隔符分隔内容并迭代输出
-        <c:forTokens items="google,runoob,taobao" delims="," var="name">
-            <c:out value="${name}"/><p>
-        </c:forTokens>
-        // import，检索url，将其内容展示给页面
-        <c:import>  
-        // redirect，重定向
-        <c:redirect url="http://www.runoob.com"/>
-        // url，使用可选参数构造url
-        // param，给包含或重定向的页面传递参数
-        <c:url var="myURL" value="main.jsp">
-            <c:param name="name" value="Runoob"/>
-            <c:param name="url" value="www.runoob.com"/>
-        </c:url>
-        // catch，处理异常状况，将错误信息储存起来
-        <c:catch var ="catchException">
-            <% int x = 5/0;%>
-        </c:catch>
+        +-*/%                   // 算术运算符
+        == != > < gt lt ge le   // 关系运算符
+        &&||!                   // 逻辑运算符
+        ?:                      // 条件运算符
+        empty                   // empty运算符，null和对象为空和空字符串都为true
+        . []                    // 访问属性，如${booklist[0].price}
         ```
-     1. 格式化标签：引入`<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>`
-        - `<fmt:formatNumber>` // 针对指定格式或精度的数字
-        - `<fmt:parseNumber>` // 解析代表数字、货币、百分比的字符串
-        - `<fmt:formatDate>` // 针对日期和时间
-        - `<fmt:parseDate>` // 解析代表日期和时间的字符串
-        - `<fmt:setLocale>` // 指定地区
-        - `<fmt:timeZone>` // 指定时区
-        - `<fmt:setTimeZone>` // 指定时区
-        - `<fmt:bundle>` // 绑定资源
-        - `<fmt:setBundle>` // 绑定资源
-        - `<fmt:message>` // 显示资源配置文件信息
-        - `<fmt:requestEncoding>` // 设置request的字符编码
-        - TODO 以上没有仔细看：http://www.runoob.com/jsp/jsp-jstl.html
-     1. sql标签：引入`<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/sql" %>`
-        - `<sql:setDataSource>` // 指定数据源
-        - `<sql:query>` // 运行查询语句
-        - `<sql:update>` // 运行更新语句
-        - `<sql:param>` // 设置sql语句的参数
-        - `<sql:dateParam>` // 将SQL语句中的日期参数设为指定的java.util.Date值
-        - `<sql:transaction>` // 执行事务语句
-          ```Java
-          <sql:setDataSource var="snapshot" driver="com.mysql.jdbc.Driver"
-              url="jdbc:mysql://localhost/TEST"
-              user="root"  password="pass123"/>
-          <sql:query dataSource="${snapshot}" var="result">
-              SELECT * from Employees;
-          </sql:query>
-          ```
-     1. xml标签：引入`***xml %>`
-        - `<x:out>` // 类似<%= ... >，只用于XPath表达式
-        - `<x:parse>` // 解析xml
-        - `<x:set>` // 设置XPath表达式
-        - `<x:if>` // 判断XPath表达式
-        - `<x:forEach>` // 迭代xml的节点
-        - `<x:choose>/<x:when>/<x:otherwise>` // 
-        - `<x:transform>` // XSL转换应用在XML中
-        - `<x:param>` // 和<x:transform>共同使用，用于设置XSL样式表
-     1. JSTL函数：引入`<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>`
-        - `fn:length()` // 字符串长度
-        - `fn:join()` // 字符串合并
-        - `fn:replace()` // 替换字符串
-        - `fn:split()` // 分割字符串
-        - `fn:trim()` // 移除首尾空白
-        - `fn:toLowerCase()/fn:toUpperCase()` // 转大小写
-        - `fn:indexOf()	` // 返回指定字符串出现的位置
-        - `fn:substring()/fn:substringAfter()/` // 返回(之前/之后)的子串
-        - `fn:contains()/fn:containsIgnoreCase()` // 测试字符串是否包含指定的子串
-        - `fn:startsWith()` // 是否以指定开头开始
-        - `fn:endsWith()` // 是否以指定后缀结尾
-        - `fn:escapeXml()` // 跳过可以作为XML标记的字符
-   - EL
-     1. 理解：Expression Language，表达式语言，创建表达式并输出结果。和<%=%>作用相同
-     1. 表示：${expr}
-     1. 基础操作符
-        - `.` // 访问一个bean属性或者映射条目，不能用于键名包含-符号和为变量时不适用
-        - `[]` // 数组或者链表的元素，如${booklist[0].price}
-        - `+-*/%` // 加减乘除取余
-        - `==!=><` // 各种等于不等于
-        - `&&||!` // 与或非
-        - `empty` // 是否为空
-     1. 变量：环境变量，或称为隐式对象，部分有：PageScope/RequestScope/SessionScope/ApplicationScope
-     1. 函数：${ns:func(param1, param2)}，这些函数必须被定义在自定义标签库中
-     1. 举例：`<%=session.getValue("name")%>`等同于`<c:out value="${sessionScope.name}">`
+     1. 内置对象：即环境变量
+     1. PageContent/initParam/param/header/cookie
+     1. PageScope/ApplicationScope/RequestScope/SessionScope
+     1. 自定义函数：${ns:func(param)}，必须被定义在自定义标签库中
 1. 其他
+   - 生命周期
+     1. 编译阶段：解析jsp转成Servlet，编译Servlet文件，生成servlet类
+     1. 初始化阶段：加载Servlet类，创建实例，调用初始化方法——jspInit()
+     1. 执行阶段：_jspService(HttpServletRequest request,HttpServletResponse response)
+     1. 销毁阶段:jspDestroy()
    - 创建自定义标签类
      1. 定义类
         ```Java
         import javax.servlet.jsp.tagext.*;
         public class HelloTag extends SimpleTagSupport {
-        public void doTag() throws JspException, IOException {
-            JspWriter out = getJspContext().getOut();
-            out.println("Hello Custom Tag!");
-        }
+            public void doTag() throws JspException, IOException {
+                JspWriter out = getJspContext().getOut();
+                out.println("Hello Custom Tag!");
+            }
         }
         ```
      1. 建立标签配置文件：ROOT\WEB-INF\xxx.tld
@@ -295,11 +180,6 @@
       <x:parse xml="${bookInfo}" var="output"/>
       <x:out select="$output/books/book[1]/name" />
       ```
-   - 生命周期
-     1. 编译阶段：解析jsp转成Servlet，编译Servlet文件，生成servlet类
-     1. 初始化阶段：加载Servlet类，创建实例，调用初始化方法——jspInit()
-     1. 执行阶段：_jspService(HttpServletRequest request,HttpServletResponse response)
-     1. 销毁阶段:jspDestroy()
 ### JavaEE
 1. 理解：是一个平台，是企业级分布式应用开发标准。有13个规范，构建于Java SE之上，提供API和运行环境，来运行大规模、可扩展的多层次的网络应用
 1. 特点：分布式、事务性、安全性、集成化、可扩展、可移植、易维护
