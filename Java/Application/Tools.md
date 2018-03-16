@@ -35,13 +35,12 @@
 1. 使用
    - `mvn install:install-file -Dfile=name.jar -DgroupId= -DartifactId= -Dversion= -Dpackaging=jar` // 本地jar安装到本地仓库
    - `mvn clean package -Dmaven.test.skip=true` // 清除以前的包后重新打包，跳过测试类
-### Gradle
-1. 理解：基于Groovy和XML的构建工具
-### Ant
-1. 理解：集编译、测试、部署的自动化打包部署工具
-1. Maven与Ant
-   - Maven：声明式的方式，指定做什么，而不是怎么做
-   - Ant：命令式的方式
+1. 其他构建工具
+   - Gradle：基于Groovy和XML的构建工具
+   - Ant：集编译、测试、部署的自动化打包部署工具
+   - Maven与Ant
+     1. Maven：声明式的方式，指定做什么，而不是怎么做
+     1. Ant：命令式的方式
 ### Tomcat
 1. 理解：web服务器，也是servlet/jsp的运行环境/容器，最新servlet/jsp规范总能得到体现，技术先进、性能稳定、免费开源。静态html能力不如apache，可作为辅助web容器。组成：Container容器——Engine——HOST——Servlet。响应http过程：浏览器——tomcat——servlet容器——servlet实例...
 1. 特点
@@ -67,7 +66,7 @@
         - 依赖目录：Project Structure--Modules--Dependencies选项卡--新增Export--JARs or directories--选择lib目录--Jar Directory
         - 打包方式：Artifacts--fix--add classes...
         - 配置tomcat
-   - 空白mave
+   - 空白maven
      1. 配置SDK、maven、tomcat
      1. 新建项目————maven————maven-archetype-webapp————配置项目信息
      1. src/main文件夹中创建java文件夹————并置为sources Root

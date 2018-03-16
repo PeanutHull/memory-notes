@@ -1,6 +1,6 @@
 1. Controller：和Model层通过JavaBean交流数据
 1. Model
-   - DAO：即数据模型，不处理业务逻辑，只为业务层提供辅助，完成获取原始数据或持久层数据等。被Service层调取执行数据操作，逻辑在service层写
+   - DAO：即数据模型，不处理业务逻辑，只为业务层提供辅助，完成获取原始数据或持久层数据等。被service层调取执行数据操作，逻辑在service层写
    - Pojo：原始的数据Bean
 1. Bean
    - 理解：遵循了JavaBean规范的类
