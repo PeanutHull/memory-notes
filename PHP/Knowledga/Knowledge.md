@@ -205,20 +205,202 @@
      1. 抽象工厂：有多条产品线，系统提供一个产品类的库，所有的产品以同样的接口出现，从而使客户端不依赖于实现。无论是简单工厂模式、工厂模式还是抽象工厂模式，它们本质上都是将不变的部分提取出来，将可变的部分留作接口，以达到最大程度上的复用
 1. 注册树模式
    - 意图：全局共享/交换对象
+### 基本
+1. 数据类型详解：php根据上下文在运行时决定变量的类型
+   - bool：被认为false的：0.0、"0"、[]
+   - integer
+     1. 八进制加0/十六进制加0x/二进制0b
+     1. 整数溢出为float
+   - float
+     1. 字长和平台相关，通常是1.8e308，具有14位十进制数字的精度，754双精度格式
+     1. 永远不要相信浮点数结果精确到了最后一位，也永远不要比较两个浮点数是否相等
+     1. double==float，由于历史原因两者都存在
+     1. is_nan判断是否为合法数值，is_finite()是否为有限值，is_infinite()是否为无限值
+     ————————————以下没有好好的过手册——————————————
+   - string
+     1. 理解：由字符组成，每个字符等于一个字节，所以只支持256字符集，不支持Unicode。最大为2G
+     1. 4种表达方式：单引号/双引号/heredoc/nowdoc——————待补充<<<结构即定界符
+1. 数据类型操作
+   - 类型获取：var_dump()，包括方法/类
+   - 类型检测：is_int、is_string、不要用gettype()
+   - 强制转换：紧贴变量，或中间隔空格
+     1. (bool)/(boolean)
+     1. (int)/(integer)
+     1. (float)/(double)/(real)
+     1. (string)/""
+     1. (array)
+     1. (object)
+     1. (unset) // 转化为NULL
+     1. (binary)/b // 转为二进制字符串 V5.2
+     1. settype()
+1. 代码执行顺序：自上而下，从左至右，从里到外
+```php
+function myfunc($a){
+    echo $a + 10;
+}
+$val = 10;
+echo "myfunc($val)=".myfunc($val);          //输出结果为20myfunc(10)
+```
+1. 闭包
+   - 理解：即匿名函数、闭包函数，最常用回调函数的参数，v5.3之后使用use传递外面的值(传引用)，将修改值生效。闭包类 Closure，闭包都是Closure类的实例
+   - 示例
+    ```php
+    $func = function($str) {         // 将函数赋值给变量
+        echo $str;
+    };
+    $func('some string');
+    function callFunc( $func ) {     // 把匿名函数当做参数传递，并且调用它
+        $func( 'some string' );
+    }
+    ```
+1. 使用`parent::__construct()`继承父级的初始化
+1. 静态方法：`public static function eat(){}`
+1. 简单的静态构造器：PHP没有静态构造器，你可能需要初始化静态类去给静态变量赋值
+```php
+function Demonstration(){
+    return 'This is the result of demonstration()';
+}
+class MyStaticClass {
+    //public static $MyStaticVar = Demonstration(); //!!! FAILS: syntax error
+    public static $MyStaticVar = null;
+
+    public static function MyStaticInit(){
+        //this is the static constructor
+        //because in a function, everything is allowed, including initializing using other functions
+        self::$MyStaticVar = Demonstration();
+    }
+}
+//Call the static constructor
+MyStaticClass::MyStaticInit(); 
+echo MyStaticClass::$MyStaticVar;
+```
+1. 抽象类
+```php
+abstract class AbstractClass {
+    abstract protected function getValue();                             // 抽象方法
+    public function printOut() {print $this->getValue() . PHP_EOL;}     // // 普通方法
+}
+class ConcreteClass1 extends AbstractClass {
+    protected function getValue() {}
+}
+```
+1. 接口
+```php
+interface demo {                         // 定义
+    function method();
+}
+class example implements demo{}          // 实现
+```
+1. cookie：`setcookie(name,value,time() + 3600,'/');`
+### 应用
+1. strtotime
+```php
+strtotime("10:38pm April 15 2015");
+strtotime("tomorrow");
+strtotime("next Saturday");
+strtotime("+3 Months");
+strtotime("+1 weeks",strtotime("Saturday"));    // 下周六的日期
+$d1=strtotime("December 31");                   // 12月30日之前的天数
+$d2=ceil(($d1-time())/60/60/24);
+echo "距离十二月三十一日还有：" . $d2 ." 天。";
+```
+1. fopen
+```
+$fp = fopen("/tmp/lock.txt", "w+");
+if (flock($fp, LOCK_EX)) {                      // 排它型锁定
+    fwrite($fp, "Write something here\n");
+    flock($fp, LOCK_UN);                        // 释放锁定
+} else {
+    echo "Couldn't lock the file !";
+}
+fclose($fp);
+```
+1. php页面跳转方法
+   - header
+    ```php
+    header("HTTP/1.1 303 See Other");
+    header('Location:xxx');exit;
+    exit;                                // 不然会继续执行
+    ```
+   - javascript：`window.location.href`、`window.open`
+   - echo标签跳转：META(HTTP-EQUIV)、script(window.location.href、window.open)
+1. 图像输出到浏览器或者文件
+```php
+header('Content-type: image/png');
+imagepng($im);
+imagedestroy($im);
+```
+1. curl：curl_getinfo可获取Content-Length参数
+```php
+$ch = curl_init();
+curl_setopt($ch , CURLOPT_URL, $url);
+curl_setopt($ch , CURLOPT_RETURNTRANSFER, 1);
+curl_setopt($ch , CURLOPT_TIMEOUT, $timeout);
+$result = curl_exec($ch);
+curl_close($ch);
+```
+1. 数学
+   - mt_rand产生随机数的速度是旧的rand函数的4倍
+     1. mt_getrandmax 显示随机数的最大可能值
+     1. mt_srand 播下更好的随机数种子
+   - 获得指定范围随机浮点数：`return $min + mt_rand() / mt_getrandmax() * ($max - $min);`
+1. 脚本：以web服务器的权限来执行
+   - fastcgi_finish_request
+   - ignore_user_abort
+   - register_shutdown_function
+   - set_time_limit
+   - cli_set_process_title：设定脚本名
+   - shell_exec、system，exec，passthru，pcntl_exec：执行脚本
+   - memory_get_usage：当前内存
+   - memory_get_peak_usage 峰值内存
+   - getrusage：CPU信息，win不行
+1. 用`<script language="php"></script>`代替<?php(无结束符)防止输出空格
+### pro
+1. spl_autoload_register
+```php
+// 遵守PSR-4规范的自动载入简单实现
+class Loader {                                                                  // 加载类
+    public static $vendorMap = array(                                           // 路径映射
+        'app' => __DIR__ . DIRECTORY_SEPARATOR . 'app',
+    );
+    public static function autoload($class) {                                   // 自动加载器
+        $file = self::findFile($class);
+        if (file_exists($file)) {
+            self::includeFile($file);
+        }
+    }
+    private static function findFile($class) {                                  // 解析文件路径
+        $vendor = substr($class, 0, strpos($class, '\\'));                      // 顶级命名空间
+        $vendorDir = self::$vendorMap[$vendor];                                 // 文件基目录
+        $filePath = substr($class, strlen($vendor)) . '.php';                   // 文件相对路径
+        return strtr($vendorDir . $filePath, '\\', DIRECTORY_SEPARATOR);        // 文件标准路径
+    }
+    private static function includeFile($file) {                                // 引入文件
+        if (is_file($file)) {
+            include $file;
+        }
+    }
+}
+// 使用
+include 'Loader.php';                                       // 引入加载器
+spl_autoload_register('Loader::autoload');                  // 注册自动加载
+
+new \app\mvc\view\home\Index();                             // 实例化未引用的类
+```
 ### 函数大全
 1. 字符串类
+   - explode
+   - trim
    - serialize
    - preg_split
    - split
    - chunk_split
    - strpos
    - str_split
-   - explode
-   - trim
    - strrev
    - substr
-   - mb_substr
    - iconv_substr
+   - mb_substr
    - mb_strlen
    - mb_strcut
    - preg_replace
@@ -230,19 +412,19 @@
    - substr_count
    - str_shuffle
 1. 数组类
-   - implode别名join
+   - implode
    - array_diff
    - array_column
    - array_unique
    - array_sum
-   - empty(只能检测变量)
+   - empty
    - count
    - array_merge
    - in_array
    - array_pop
    - array_push
    - array_shift
-   - array_values(键名全置数字)
+   - array_values
    - array_slice
    - list(给一组变量赋值)
    - each
@@ -252,16 +434,20 @@
    - serialize()     序列化
    - unserialize()   反序列化
 1. 判断类
+   - empty
+   - isset
+   - defined
+   - function_exists
+   - method_exists
+   - class_exists
    - is_null
    - is_int
    - is_array
    - is_string
+   - in_array
    - is_file
    - is_dir
    - is_writeable
-   - empty
-   - in_array
-   - function_existsde
 1. 编码类
    - json_decode
    - iconv
@@ -313,6 +499,7 @@
    - rename
    - pathinfo
    - file_get_content
+   - fopen
    - file_put_content
    - is_file
    - is_dir

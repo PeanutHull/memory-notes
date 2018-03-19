@@ -6,6 +6,7 @@
 1. 编码转换
    - mb_convert_encoding($str, "UTF-8", "GBK/auto"); 支持未知原编码转换，通过auto自动检测
    - iconv('GBK', 'UTF-8', $str);
+1. 一个 NULL 字节（"\0"）并不等同于 PHP 的 NULL 常数
 ### 数组
 1. 遍历数组执行函数
     ```

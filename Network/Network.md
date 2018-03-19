@@ -234,6 +234,7 @@
    - 3xx：重定向。301 永久重定向，302 临时重定向，304 未修改(未符合If-Match，If-None-Match，If-Modified-Since，If-Unmodified-Since、If-Range)
    - 4xx：客户端错误。400 请求报文语法错误，401未认证，403 阻止，404 未找到
    - 5xx：服务器错误。500 内部错误，503 服务不可用
+1. ajax的['HTTP_X_REQUESTED_WITH']为'xmlhttprequest'
 1. URI：通用资源标志符，唯一标识一个资源，一个字符串格式规范，并没有指定用途。包含URL和URN
    - URL:统一资源定位符，即网址
    - URN:统一资源命名，用名字标识资源。文件 `file://ftp.yesky.com/soft/file/robots.txt`

@@ -1,5 +1,61 @@
+### 命名空间、文件载入
+1. 命名空间：解决重名，v5.3引入
+   - 全局空间：没有声明命名空间的默认空间，使用\表示使用全局空间
+   - 命名空间
+     1. namespace：声明命名空间，在所有代码之前
+        ```php
+        namespace foo\bar;                                  // 子命名空间定义
+        namespace foo\bar1{ // php代码 }                     // 另一种命名空间定义语法，可支持一个文件多个命名空间
+        ```
+     1. use：导入类，v5.6支持导入函数和常量
+        ```php
+        use foo\bar as Another;                             // 声明别名，可一行引入多个
+        use function foo\bar\functionName as func;
+        use const Mfooy\bar\CONSTANT;
+        ```
+     1. 作用范围：使用和定义时默认使用当前空间
+     1. 使用
+        ```php
+        namespace foo;
+        use My\Full\Classname as Another;
+        new namespace\Another;                              // 实例化 foo\Another 对象
+
+        new __NAMESPACE__ . '\\' . $classname;              // 动态创建名称
+        ```
+1. 文件载入
+   - 普通
+     1. 理解：once确保文件只被包含一次，避免函数重定义、变量重新赋值。要直接指明文件路径，否则需要php引擎去include_path中迭代查找所有符合的名称
+     1. 分类
+        - include()/include_once()：运行前引入、运行次数越多效率越高，出错产生警告
+        - require()/require_once()：用到才引入，出错抛出错误并终止脚本
+   - __autoload
+     1. 理解：当需要使用的类没有被引入时，会在php报错前被触发，未定义的类名会被当作参数传入，这样就不用一个个的文件去require了，v7.2废弃
+    ```php
+    function __autoload($classname){
+        require_once $classname . '.class.php';
+    }
+    $obj = new MyClass();                                       // MyClass类不存在时，自动调用__autoload()函数并传入参数”MyClass”
+    ```
+   - spl方式
+     1. 理解：使载入逻辑更加清晰，分离autoload的载入逻辑，重载spl函数即可。spl_autoload_register功能就是把传入的函数(函数或者回调函数)注册到spl的autoload函数队列中，并移除默认的autoload函数。当调用未定义类时，系统按顺序调用注册到register的所有函数，而不是只能载入一次
+     1. 使用spl载入文件
+        ```php
+        // 默认sql载入
+        spl_autoload_extensions('.class.php', '.php');              // 设置自动载入文件的后缀，有前后顺序
+        set_include_path(get_include_path() . PATH_SEPARATOR);      // 设置自动载入文件的目录，多个目录用PATH_SEPARATOR分割
+        spl_autoload_register();                                    // 注册
+        new Test();                                                 // 使用
+        // 使用自定义函数载入
+        function classLoader($className) {
+            set_include_path('libs');
+            spl_autoload($className);                               // sql方式
+            // require_once('libs' . $className . '.php');          // 或者使用普通方式
+        }
+        spl_autoload_register('classLoader');
+        new Test();
+        ```
 ### Reflection
-1. 理解：反射，用于自动加载插件，是操纵面向对象中元模型的API。在php运行过程中，分析php程序，导出/提取关于类、对象、方法、属性、参数、注释等信息。获取信息和调用对象的方法叫做反射API，是php内建的oop扩展。
+1. 理解：反射，用于自动加载插件，是操纵面向对象中元模型的API。在php运行过程中，分析php程序，导出/提取关于类、对象、方法、属性、参数、注释等信息。获取信息和调用对象的方法叫做反射API，是php内建的oop扩展。反射API：`$reflector = new ReflectionClass('A');`
 1. 后期静态绑定：用于继承范围内引用静态调用的类
     ```
     new self(); // 返回父类
@@ -90,36 +146,8 @@
         echo $item . PHP_EOL;
     }
     ```
-1. spl函数
-   - SPL自动载入函数：适应php的管理要求，使用spl分离__autoload的载入逻辑，可以使逻辑更加清晰，用spl函数重载即可
-     1. 类载入的基本流程：当前文件找类————spl_autoload_register————__autoload函数找类————异常
-     1. 使用spl载入文件
-        ```
-        spl_autoload_extensions('.class.php', '.php');           // 设置自动载入文件的后缀，多个逗号隔开，有前后顺序
-        set_include\_path(get_include_path() . PATH_SEPARATOR);  // 设置自动载入文件的目录，多个目录用PATH_SEPARATOR分割
-        spl_autoload_register();                                 // 注册
-        new Test();                                              // 使用
-
-        // 自定义函数装载类
-        function classLoader($className) {
-            require_once('libs' . $className . '.php');
-            // 或者使用spl方式载入文件
-            set_include_path('libs');
-            spl_autoload($className);                            // 不使用require和include时，要使用spl的自动载入
-        }
-        spl_autoload_register('classLoader');
-        new Test();
-        ```
-     1. 使用__autoload载入文件
-        ```
-        function __autoload($className) {
-            require_once('libs/' . $className . '.php');
-        }
-        new Test();
-        ```
    - 其他spl函数：文件处理、接口、异常、类和接口
-### 多线程
-1. pthreads
-### 消息队列
-1. gearman
-### 守护进程
+### 其他
+1. 多线程：pthreads
+1. 消息队列：gearman
+1. 守护进程
