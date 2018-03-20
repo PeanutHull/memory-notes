@@ -218,7 +218,7 @@
      1. is_nan判断是否为合法数值，is_finite()是否为有限值，is_infinite()是否为无限值
      ————————————以下没有好好的过手册——————————————
    - string
-     1. 理解：由字符组成，每个字符等于一个字节，所以只支持256字符集，不支持Unicode。最大为2G
+     1. 理解：由字符组成，每个字符等于一个字节，所以只支持256字符集，不支持Unicode。最大为2G，v7.0支持大于2G
      1. 4种表达方式：单引号/双引号/heredoc/nowdoc——————待补充<<<结构即定界符
 1. 数据类型操作
    - 类型获取：var_dump()，包括方法/类
@@ -354,7 +354,6 @@ curl_close($ch);
    - memory_get_usage：当前内存
    - memory_get_peak_usage 峰值内存
    - getrusage：CPU信息，win不行
-1. 用`<script language="php"></script>`代替<?php(无结束符)防止输出空格
 ### pro
 1. spl_autoload_register
 ```php

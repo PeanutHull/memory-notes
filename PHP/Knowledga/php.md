@@ -1,5 +1,5 @@
 ### php
-1. 认识：Hypertext Preprocessor/personal home pages/超文本预处理器，开源、用于产生动态网页的可嵌入HTML中的脚本语言，适合web开发
+1. 认识：Hypertext Preprocessor/personal home pages/超文本预处理器，开源、用于产生动态网页的可嵌入HTML中的脚本语言，适合web开发。web是IO密集型，瓶颈在mysql，体现不出php性能劣势，密集计算方面比C/C++差几十倍
 1. php模式：<?php ?>
 ### 语法
 1. 数据类型
@@ -159,6 +159,7 @@
    - 匹配手机号：`preg_match("/^(1([34578]))\d{9}$/", $mobile)`
    - 4到6位数字：`preg_match("/^\d{4,6}$/", $code)`
 1. 异常
+   - 理解：与异常类似，错误异常一直冒泡直到到达第一个匹配的catch块。如果没有匹配的，使用set_exception_handler()安装的默认异常处理程序，没有默认的，异常将被转换为致命错误，并将像传统错误一样处理。所以`catch（Error $e）{}`或`set_exception_handler()`是必须的。如`(DivisionByZeroError $e)`
    - 抛出异常：`throw new Exception();`
    - try：`try {} catch (Exception $e) {}`
 ### 运维
@@ -166,6 +167,11 @@
    - linux
      1. 源码安装
         - 安装php：开启fpm等配置
+        ```
+        ./configure --prefix=/opt/php --with-mysql --with-gd --with-curl        // 安装位置和扩展
+        make
+        sudo make install           // 以管理员权限安装
+        ```
         - 启动fpm：复制fpm配置文件，修改用户和权限组，启动 `/usr/local/php/sbin/php-fpm`
         - 安装nginx
         - nginx配置fpm：添加fastcgi支持
@@ -241,9 +247,10 @@
    - Cli
      1. php_sapi_name：运行环境检测
      1. 参数
-        - php -h
-        - php -m // 查看安装的扩展
-        - php -S 127.0.0.1:80 -t /www /www/index.php // 启动一个单线程http服务器，可以用于开发和测试
+        - php -h                                              // 查看帮助
+        - php file                                            // 执行php文件
+        - php -m                                              // 查看安装的扩展
+        - php -S 127.0.0.1:80 -t /www /www/index.php          // 启动一个单线程http服务器，可以用于开发和测试
    - 流行的php三种使用模式
      1. nginx + php-fpm
      1. apache + mod_php5
@@ -261,3 +268,116 @@
    - 5.4
      1. <?= 标签取代 echo
      1. [] 代替 array()
+   - 5.6
+     1. 增加可变参数，如`function sum(...$int) {}`，`sum(2, 3)`
+   - 7.2
+     1. 优化opcache
+     1. 弃用__autoload、each()、assert
+1. php7
+   - 整体：性能提升，内核更加健壮，抛弃了很多历史包袱，同时最大程度保证向前兼容，之前的代码基本可以无缝升级
+     1. PHPNG代码合并到PHP7，速度是v5.6的3倍，内存消耗比v5.6低50％
+     1. 一致的64位支持
+   - 更新内容：标量返回值类型、匿名类、常量数组、use、<=>、??、闭包对象绑定优化、层次异常扩展
+   - 新特性
+     1. ZEND引擎升级到Zend Engine 3，也就是所谓的PHP NG
+     1. 增加抽象语法树，使编译更加科学
+     1. 64位的INT支持
+     1. 统一的变量语法
+     1. 原声的TLS - 对扩展开发有意义
+     1. 一致性foreach循环的改进
+     1. 新增 <=>、**、?? 、\u{xxxx}操作符
+     1. 增加了返回类型的声明
+     1. 增加了标量类型的声明
+     1. 核心错误可以通过异常捕获了：很多致命错误以及可恢复的致命错误，都被转换为异常来处理，这些异常继承自Error类，此类实现了 Throwable 接口。更多的Error变为可捕获的Exception，PHP7实现了一个全局的throwable接口，原来的Exception和部分Error都实现了这个接口（interface），以接口的方式定义了异常的继承结构
+     1. 增加了上下文敏感的词法分析
+   - 移除的特性
+     1. 移除的扩展：Ereg正则表达式、mysql(迁移到了PECL)
+     1. 移除SAPIs的支持
+     1. <?和<? language=“php”这样的标签被移除了
+     1. 16进制的字符串转换被废除
+        ```php
+        //PHP5
+        "0x10" == "16"
+        //PHP7
+        "0x10" != "16"
+        ```
+     1. $o = & new className{}，不再支持这样的写法
+     1. php.ini文件移除了#作为注释，统一用;去注释
+   - 标量/返回值类型声明
+     1. 理解：参数和返回值增加了类型限定，如`function test(int $a, string $b, array $c) : int {}`
+     1. 选项
+        - 强制：默认，也可以不声明类型
+        - 严格：开始 `declare(strict_types=1);`
+     1. 类型字段：bool、int、float、string、array、callable、interfaces
+   - 匿名类：可以代替完整的类定义
+    ```php
+    interface Logger { public function log(string $msg); }
+
+    class Application {
+        private $logger;
+        public function getLogger(): Logger { return $this->logger; }
+        public function setLogger(Logger $logger) { $this->logger = $logger; }
+    }
+
+    $app = new Application;
+    $app->setLogger(new class implements Logger {
+        public function log(string $msg) {
+            print($msg);
+        }
+    });
+
+    $app->getLogger()->log("My first Log Message");
+    ```
+   - 常量数组：使用define定义数组常量，v5.6中只能使用类常量const定义
+    ```php
+    define('animals', [
+        'dog',
+        'cat',
+    ]);
+    ```
+   - use增强：可以使用单个use从相同的命名空间导入类/函数/常量，如`use com\{ClassA, ClassB as B};`
+   - 空合并运算符：用空合并运算符??代替isset和三元结合的操作
+    ```php
+    $username ?? 'no';
+    isset($username) ? $username : 'no';
+    $username = $_GET['username'] ?? $_POST['username'] ?? 'not passed';        // 连续判断并采用
+    ```
+   - 太空船运算符(组合比较符)：<=>，第一个表达式大等小于第二个分别返回-1/0/1
+    ```php
+    1 <=> 1     // 0
+    1 <=> 2     // -1
+    2 <=> 1     // 1
+    ```
+   - Closure::call()：作为一个简短的方式来临时绑定一个对象作用域到一个闭包并调用它，比v5的bindTo快很多
+    ```php
+    class A { private $x = 1; }
+
+    $getValue = function() { return $this->x; };          // php5之前
+    $value = $getValue->bindTo(new A, 'A');
+    print($value());
+
+    $value = function() { return $this->x; };             // php7
+    print($value->call(new A));
+    ```
+   - 错误处理：大多数错误被作为Error异常抛出
+   - 废弃特性
+     1. php4样式的构造函数(即和类名相同)，弃用
+     1. 对非静态方法的静态调用，弃用。`class A { function b() {}}`，`A::b();`
+   - 其他
+     1. list不再按照相反的顺序赋值
+     1. 对变量、属性和方法的间接调用现在将严格遵循从左到右的顺序来解析，而不是之前混杂着几个特殊的案例
+     1. Unicode codepoint转译语法：接受任何有效的16进制的codepoint，如 `echo "\u{9999}"; // 香`
+     1. 零成本断言增加：向后兼用并增强之前的assert的方法，使得在生产环境中启用断言为零成本，并提供当断言失败时抛出特定异常的能力
+        ```php
+        ini_set('assert.exception', 1);
+        class CustomError extends AssertionError {}
+        assert(false, new CustomError('Some error message'));
+        ```
+     1. 过滤unserialize()：方便在对不可信数据上的对象进行反序列化时提供更好的安全性，防止可能的代码注入
+        ```php
+        $serializedObj = serialize($obj);
+        $data = unserialize($serializedObj , ["allowed_classes" => ["MyClass1", "MyClass2"]]);
+        ```
+     1. 新增：intdiv整数除法
+     1. CSPRNG：两个新函数来以跨平台的方式生成密码安全的整数和字符串，`random_bytes/random_int`
+     1. IntlChar类：试图揭示额外的ICU功能，用来处理Unicode字符

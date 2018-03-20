@@ -31,7 +31,7 @@
    - __autoload
      1. 理解：当需要使用的类没有被引入时，会在php报错前被触发，未定义的类名会被当作参数传入，这样就不用一个个的文件去require了，v7.2废弃
     ```php
-    function __autoload($classname){
+    function __autoload($classname) {
         require_once $classname . '.class.php';
     }
     $obj = new MyClass();                                       // MyClass类不存在时，自动调用__autoload()函数并传入参数”MyClass”
@@ -55,14 +55,15 @@
         new Test();
         ```
 ### Reflection
-1. 理解：反射，用于自动加载插件，是操纵面向对象中元模型的API。在php运行过程中，分析php程序，导出/提取关于类、对象、方法、属性、参数、注释等信息。获取信息和调用对象的方法叫做反射API，是php内建的oop扩展。反射API：`$reflector = new ReflectionClass('A');`
+1. 理解：反射，用于自动加载插件，是操纵面向对象中元模型的api。在php运行过程中，分析php程序，导出/提取关于类、对象、方法、属性、参数、注释等信息。获取信息和调用对象的方法叫做反射api，是php内建的oop扩展
 1. 后期静态绑定：用于继承范围内引用静态调用的类
-    ```
-    new self(); // 返回父类
-    new static(); // 返回当前的类
-    $class = new static($user); // 返回一个对象，可以使用当前类的方法了，同时类的成员包括$user中的数据
+    ```php
+    new self();                         // 返回父类
+    new static();                       // 返回当前的类
+    $class = new static($user);         // 返回一个对象，可以使用当前类的方法，同时类的成员包括$user中的数据
     ```
 1. 相关函数
+   - `$reflector = new ReflectionClass('A');`
    - 方法
      1. func_get_args
    - 类
@@ -75,26 +76,25 @@
      1. 调用
         - call_user_func_array()
 ### Trait
-1. 理解：特质,是一种为类似PHP的单继承语言而准备的代码复用机制，使开发人员能够自由地在不同层次结构的独立的类中复用方法集。来避免传统多继承和混入类（Mixin）相关的典型问题，就是先定义trait，用use给类插入代码，代码复用，属于类与对象，5.4加上的
-1. 示例
-    ```
-    class Base {
-        public function sayHello () {
-            echo 'Hello ' ;
-        }
+1. 理解：特质,是一种为类似PHP的单继承语言而准备的代码复用机制，使开发人员能够自由地在不同层次结构的独立的类中复用方法集。来避免传统多继承和混入类（Mixin）相关的典型问题，就是先定义trait，用use给类插入代码，代码复用，属于类与对象，v5.4
+```php
+class Base {
+    public function sayHello () {
+        echo 'Hello ' ;
     }
-    trait SayWorld {
-        public function  sayHello () {
-            parent::sayHello();
-            echo  'World!';
-        }
+}
+trait SayWorld {
+    public function sayHello () {
+        parent::sayHello();
+        echo 'World!';
     }
-    class MyHelloWorld extends Base {
-        use SayWorld ;
-    }
-    $o = new MyHelloWorld();
-    $o->sayHello ();                        // 输出Hello World!
-    ```
+}
+class MyHelloWorld extends Base {
+    use SayWorld;
+}
+$o = new MyHelloWorld();
+$o->sayHello ();                        // 输出Hello World!
+```
 #### 协程
 1. 理解：在同一进程或线程中运行多个任务，即将任务切换的部分工作从内核转移到应用层，这种解决方案称为协程。任务调度器
 1. 特点
@@ -102,7 +102,8 @@
    - 协程不允许多任务同时执行，要执行其它协程，必须使用关键字yield主动放弃cpu控制权
    - 协程需要自己写任务管理器，以及任务调度器
    - 减轻了OS处理零散任务和轻量级任务的负担
-1. 实现：php5.5加入，使用迭代生成器和yield关键字
+1. php7：生成器（或者叫迭代器更合适）可以有一个最终返回值（return），也可以通过 yield from 的新语法进入一个另外一个生成器中（生成器委托）。生成器的两个新特性（return 和 yield from）可以组合
+1. 实现：v5.5加入，使用迭代生成器和yield关键字
     ```
     function gen(){
         echo "hello gen".PHP_EOL;
@@ -116,37 +117,37 @@
     var_dump($myGen->send("main send"));
     ```
 #### SPL
-1. 理解：PHP标准库，Standard PHP Library，用于解决典型问题的一组接口和类的集合
-1. 数据结构：对应数据的存储结构
+1. 理解：Standard PHP Library，PHP标准库，用于解决典型问题的一组接口和类的集合
+1. 数据结构：对应数据的存储结构，数据的存储和操作
    - 双向链表：SplQueue
    - 堆：SplStack
    - 阵列：SplFixedArray
    - 映射：SplObjectStorage
 1. 迭代器：以不同的方式来遍历操作的对象，提供了对应数据类型的迭代器。虽然更多的代码，但是高度重用且可测试，都可以尝试下spl的迭代器，或许能改变你编写传统代码的习惯
-    ```
-    class RecursiveFileFilterIterator extends FilterIterator {
+```php
+class RecursiveFileFilterIterator extends FilterIterator {
 
-        // 满足条件的扩展名
-        protected $ext = array('jpg','gif');
-        // 提供 $path 并生成对应的目录迭代器
-        public function __construct($path) {
-            parent::__construct(new RecursiveIteratorIterator(new RecursiveDirectoryIterator($path)));
-        }
-        // 检查文件扩展名是否满足条件
-        public function accept() {
-            $item = $this->getInnerIterator();
-            if ($item->isFile() && in_array(pathinfo($item->getFilename(), PATHINFO_EXTENSION), $this->ext)) {
-                return TRUE;
-            }
+    // 满足条件的扩展名
+    protected $ext = array('jpg','gif');
+    // 提供 $path 并生成对应的目录迭代器
+    public function __construct($path) {
+        parent::__construct(new RecursiveIteratorIterator(new RecursiveDirectoryIterator($path)));
+    }
+    // 检查文件扩展名是否满足条件
+    public function accept() {
+        $item = $this->getInnerIterator();
+        if ($item->isFile() && in_array(pathinfo($item->getFilename(), PATHINFO_EXTENSION), $this->ext)) {
+            return TRUE;
         }
     }
+}
 
-    // 实例化
-    foreach (new RecursiveFileFilterIterator('/path/to/something') as $item) {
-        echo $item . PHP_EOL;
-    }
-    ```
-   - 其他spl函数：文件处理、接口、异常、类和接口
+// 实例化
+foreach (new RecursiveFileFilterIterator('/path/to/something') as $item) {
+    echo $item . PHP_EOL;
+}
+```
+1. 其他spl函数：文件处理、接口、异常、类和接口
 ### 其他
 1. 多线程：pthreads
 1. 消息队列：gearman
