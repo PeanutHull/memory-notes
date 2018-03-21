@@ -1,4 +1,7 @@
 ### Swoole
+1. 安装
+   - make三件套
+   - php.ini：extension=swoole.so
 ### ThinkPHP
 1. 结构
    - URL模式：普通(get参数形式)、PATHINFO、REWRITE、兼容(不支持PATHINFO)。优点排序：REWRITE>PATHINFO>普通

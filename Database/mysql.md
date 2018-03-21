@@ -553,3 +553,22 @@
      1. Users/Hosts/Accounts 级别资源消耗 ：找出消耗资源最多的Users/Hosts/Accounts
      1. Network I/O ： 网络还是应用程序？ 会话闲置多久？
      1. 通过 thread, user, host, account, object聚合总结
+1. 5.7
+   - 查询json数据
+    ```sql
+    SELECT
+        json_extract (
+            json_data,
+            '$.content.answer[*].group[*].value'
+        ),json_data
+    FROM
+        entity_question
+    WHERE
+        JSON_SEARCH (
+            json_data,
+            'all',
+            '行到水穷处',
+            NULL,
+            '$.content.answer[*].group[*].value'
+        )  IS NOT NULL;
+    ```

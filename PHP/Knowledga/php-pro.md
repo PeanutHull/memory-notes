@@ -55,26 +55,24 @@
         new Test();
         ```
 ### Reflection
-1. 理解：反射，用于自动加载插件，是操纵面向对象中元模型的api。在php运行过程中，分析php程序，导出/提取关于类、对象、方法、属性、参数、注释等信息。获取信息和调用对象的方法叫做反射api，是php内建的oop扩展
-1. 后期静态绑定：用于继承范围内引用静态调用的类
+1. 理解：反射，是在php运行过程中分析php程序，提取类/对象/方法/属性/参数/注释等信息。获取信息和调用对象的方法叫做反射api，是php内建的oop扩展
+1. 分类
+   - 反射api：非常强大，任何信息都可以获取
     ```php
-    new self();                         // 返回父类
-    new static();                       // 返回当前的类
-    $class = new static($user);         // 返回一个对象，可以使用当前类的方法，同时类的成员包括$user中的数据
+    $class = new ReflectionClass('Person');                                     // 建立Person类的反射类
+    $instance  = $class->newInstanceArgs($args);                                // 实例化Person类
+    $properties = $class->getProperties(ReflectionProperty::IS_PUBLIC);         // 获取公共属性
+    $ec=$class->getmethod();                                                    // 获得方法
+    $ec->invoke($instance);                                                     // 执行方法  
     ```
-1. 相关函数
-   - `$reflector = new ReflectionClass('A');`
-   - 方法
+   - 函数
+     1. interface_exist
+     1. class_exists
+     1. get_class
+     1. get_class_methods
+     1. instanceof
      1. func_get_args
-   - 类
-     1. 获取
-        - get_class();
-        - get_class_methods();
-        - instanceof
-        - class_exists();
-        - interface_exist();
-     1. 调用
-        - call_user_func_array()
+     1. call_user_func_array
 ### Trait
 1. 理解：特质,是一种为类似PHP的单继承语言而准备的代码复用机制，使开发人员能够自由地在不同层次结构的独立的类中复用方法集。来避免传统多继承和混入类（Mixin）相关的典型问题，就是先定义trait，用use给类插入代码，代码复用，属于类与对象，v5.4
 ```php

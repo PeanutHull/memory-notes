@@ -103,6 +103,26 @@
 1. 静态类：速度快，效率高，直接加载到内存，公用性强，使用时不生成对象就执行，不属于对象，不依赖对象调用，静态方法只能访问静态属性
    - 静态变量：类变量/成员属性，属于类
    - 静态方法：类方法/成员方法，静态方法不能被非静态方法重写
+   - 后期静态绑定：用于继承范围内引用静态调用的类，就是用static表示引用当前使用的类，v5.3增加
+    ```php
+    class A {
+        public static function who() { echo __CLASS__; }
+        public static function test() {
+            self::who();                                        // 返回A
+            static::who();                                      // 返回B，后期静态绑定
+        }
+    }
+
+    class B extends A {
+        public static function who() { echo __CLASS__; }
+    }
+
+    B::test();
+
+    new self();                         // 返回父类
+    new static();                       // 返回当前的类
+    $class = new static($user);         // 返回一个对象，可以使用当前类的方法，同时类的成员包括$user中的数据
+    ```
 1. 关键字
    - static：修饰静态变量、静态方法
    - self/parent：对当前/父类的引用

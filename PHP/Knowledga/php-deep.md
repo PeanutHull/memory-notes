@@ -17,7 +17,7 @@
    - 新增4种opcode，call_user_function，defined等函数变为OpCode指令，速度更快
    - int、float改为直接进行值拷贝
    - AST：Abstract Syntax Tree, 抽象语法树，在编译过程中作为中间件，替换原来直接从解释器吐出opcode的方式，让解释器(parser)和编译器(compliler)解耦, 可以减少一些Hack代码, 同时, 让实现更容易理解和可维护
-     1. PHP5 : PHP代码 -> Parser语法解析 -> OPCODE -> 执行 
+     1. PHP5 : PHP代码 -> Parser语法解析 -> OPCODE -> 执行
      1. PHP7 : PHP代码 -> Parser语法解析 -> AST -> OPCODE -> 执行
    - 数组php5的底层是HashTable实现的，php7使用了新的Zend Array类型，性能和访问速度上都有了大幅度提升
    - https://www.csdn.net/article/2015-09-16/2825720
@@ -31,8 +31,8 @@
 ### 调优
 1. 发挥PHP7的性能
    - 开启Opcache
-     1. zend_extension=opcache.so 
-     1. opcache.enable=1 
+     1. zend_extension=opcache.so
+     1. opcache.enable=1
      1. opcache.enable_cli=1
    - 使用GCC 4.8以上进行编译
    - 开启HugePage （根据系统内存决定）：操作系统默认的内存是以4KB分页的，而虚拟地址和内存地址需要转换， 而这个转换要查表，CPU为了加速这个查表过程会内建TLB(Translation Lookaside Buffer)。 显然，如果虚拟页越小，表里的条目数也就越多，而TLB大小是有限的，条目数越多TLB的Cache Miss也就会越高，所以如果我们能启用大内存页就能间接降低这个TLB Cache Miss。php将采用大内存页来保存，减少TLB miss，提高性能
