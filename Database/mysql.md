@@ -554,13 +554,13 @@
      1. Network I/O ： 网络还是应用程序？ 会话闲置多久？
      1. 通过 thread, user, host, account, object聚合总结
 1. 5.7
-   - 查询json数据
+   - 查询json数据：json_column->"$.id"，和json_extract，是两种使用方式。->>表示去掉转义符
     ```sql
     SELECT
         json_extract (
             json_data,
             '$.content.answer[*].group[*].value'
-        ),json_data
+        )
     FROM
         entity_question
     WHERE
@@ -571,4 +571,13 @@
             NULL,
             '$.content.answer[*].group[*].value'
         )  IS NOT NULL;
+    SELECT
+        json_extract (
+            json_data,
+            '$.content.answer'
+        )
+    FROM
+        entity_question
+    WHERE
+    	JSON_EXTRACT(json_data, "$.content.answer[*].group[*].type") != 'text';
     ```

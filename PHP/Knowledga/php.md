@@ -178,6 +178,7 @@
 1. 正则
    - 匹配手机号：`preg_match("/^(1([34578]))\d{9}$/", $mobile)`
    - 4到6位数字：`preg_match("/^\d{4,6}$/", $code)`
+   - 匹配中文+数字，不能是纯中文，也不是纯数字：`preg_match('/^(?!\d+$)(?![\x{4e00}-\x{9fa5}]+$)[\x{4e00}-\x{9fa5}\d]+$/u', $string)`
 1. 异常
    - 理解：与异常类似，错误异常一直冒泡直到到达第一个匹配的catch块。如果没有匹配的，使用set_exception_handler()安装的默认异常处理程序，没有默认的，异常将被转换为致命错误，并将像传统错误一样处理。所以`catch（Error $e）{}`或`set_exception_handler()`是必须的。如`(DivisionByZeroError $e)`
    - 抛出异常：`throw new Exception();`
@@ -271,6 +272,7 @@
         - php file                                            // 执行php文件
         - php -m                                              // 查看安装的扩展
         - php -S 127.0.0.1:80 -t /www /www/index.php          // 启动一个单线程http服务器，可以用于开发和测试
+   - PHP-GTK：gui
    - 流行的php三种使用模式
      1. nginx + php-fpm
      1. apache + mod_php5

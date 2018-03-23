@@ -1,4 +1,12 @@
 ### Swoole
+1. 理解：面向生产环境的php异步网络通信引擎，可以编写高性能的异步并发TCP/UDP/Unix Socket/HTTP/WebSocket服务
+   - 纯C编写，提供php语言的异步多线程服务器
+   - 异步IO，事件驱动的异步编程模式
+   - 异步TCP/UDP网络客户端，异步MySQL，异步Redis，数据库连接池，AsyncTask，消息队列，毫秒定时器，异步文件读写，异步DNS查询。Swoole内置了Http/WebSocket服务器端/客户端、Http2.0服务器端
+   - 为PHP多进程的模式设计了多个并发数据结构和IPC通信机制大大简化多进程并发编程的工作。其中包括了并发原子计数器，并发HashTable，Channel，Lock，进程间通信IPC等特性
+   - 支持异步/同步/协程，v2.0实现协程，可以使用完全同步的代码实现异步程序，底层自动进行协程调度，实现异步
+   - 支持SSL/TLS加密
+1. 观念：swoole在服务端只编译一次，一直存于内存，使用swoole来编写常规项目时，需要将自己置身于第三方上帝的角色，而非访问者的角色来编写并阅读自己的代码。PHP入门时就必须要掌握的session，对于运用了swoole扩展的PHP程序而言，完全可以用一个变量来替换
 1. 安装
    - make三件套
    - php.ini：extension=swoole.so
@@ -277,6 +285,13 @@
    - DB facade(原始查找)
    - 查询构造器：提供方便、流畅的接口，建立/执行数据库操作方法。使用PDO参数绑定，免于SQL注入，参数不需转义
    - Eloquent ORM：优美、简洁的ActiveRecord实现，firstOrCreate/firstOrNew
+     1. 指定查询的字段：`DB::raw`
+        ```php
+        DB::table('entity_question')
+            ->where('id' , 899)
+            ->select(DB::raw("json_extract(json_data,'$.content.answer')"))
+            ->get();
+        ```
 1. 中间件：过滤http请求，在请求到达最终动作之前对请求进行过滤和处理。如Auth中间件身份校验地址导向，CORS为离开程序的响应加标头。用于日志\维护\CSRF保护\身份验证等。有前置/后置中间件
 1. 队列
  - 理解：将用框架处理的东西，放到一个队列里，延迟执行
@@ -288,10 +303,10 @@
 1. Artisan命令行工具：基于Symfony Console开发。新增app/commands文件夹下继承Command即可
     ```php
     php artisan list                                // 显示命令列表
-    php artisan *** --env=zzg                       // 指定配置环境
+    php artisan *** --env=_zzg                      // 指定配置环境
     php artisan config:cache                        // 缓冲配置信息到文件，更快
     php artisan read:word                           // 生成队列
-    php artisan queue:work redis                    // 消费队列
+    php artisan queue:work redis                    // 消费队列，指使用哪个队列，如redis、mq
     php artisan queue:work connection --daemon      // 常驻队列
     php artisan dump-autoload                       // 重新载入类
     ```

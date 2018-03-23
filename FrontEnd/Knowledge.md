@@ -28,6 +28,16 @@
     ```
          1. 写：属性接连赋值，var yz = obj && obj.y && obj.y.z，从左向右，为false返回，不为false时继续往后走，最后返回undefined或z的值
 ###应用
+1. js跳出最外层循环
+```javascript
+outerloop:
+    for (var i=0; i<10; i++){
+        for (var j=0; j<10; j++){
+            break;
+            break outerloop;
+        }
+    }
+```
 1. JSON解析：
   - eval：较危险，不能防止恶意代码，方法会直接执行
 ```
