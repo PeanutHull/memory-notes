@@ -50,5 +50,60 @@
      1. /home、/root、/tmp、/lost+fount
 1. iptables
    - 编辑：`vim /etc/sysconfig/iptables`
-   - 增加：`-A INPUT -m state –state NEW -m tcp -p tcp –dport 80 -j ACCEPT`
+   - 增加：`-A INPUT -m state --state NEW -m tcp -p tcp –-dport 80 -j ACCEPT`
    - 状态/重启/关闭：`/etc/init.d/iptables status/restart/stop`
+1. supervisor
+   - 认识：进程管理器，用于保证进程的自动重启等。通过fork/exec的方式将这些被管理的进程当作supervisor的子进程来启动，配置好进程命令即可
+   - 配置
+    ```
+    [unix_http_server]
+    file=/tmp/supervisor_zzg.sock                   ; UNIX socket 文件，supervisorctl 会使用
+    chmod=0770                                      ; socket 文件的 mode，默认是 0700
+    chown=zhaozhigang:www                           ; socket 文件的 owner，格式： uid:gid
+
+    [inet_http_server]                              ; HTTP 服务器，提供 web 管理界面
+    port=0.0.0.1:9568                               ; Web 管理后台运行的 IP 和端口，如果开放到公网，需要注意安全性
+    username=resource                               ; 登录管理后台的用户名
+    password=1a2s3dqwe                              ; 登录管理后台的密码
+
+    [supervisord]
+    logfile=/tmp/supervisord_zzg.log                ; 日志文件，默认是 $CWD/supervisord.log
+    logfile_maxbytes=50MB                           ; 日志文件大小，超出会 rotate，默认 50MB
+    logfile_backups=10                              ; 日志文件保留备份数量默认 10
+    loglevel=info                                   ; 日志级别，默认 info，其它: debug,warn,trace
+    pidfile=/tmp/supervisord_zzg.pid                ; pid 文件
+    nodaemon=false                                  ; 是否在前台启动，默认是 false，即以 daemon 的方式启动
+    minfds=1024                                     ; 可以打开的文件描述符的最小值，默认 1024
+    minprocs=200                                    ; 可以打开的进程数的最小值，默认 200
+
+    ; the below section must remain in the config file for RPC
+    ; (supervisorctl/web interface) to work, additional interfaces may be
+    ; added by defining them in separate rpcinterface: sections
+
+    [rpcinterface:supervisor]
+    supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
+
+    [supervisorctl]
+    serverurl=unix:///tmp/supervisor_zzg.sock       ; 通过 UNIX socket 连接 supervisord，路径与 unix_http_server 部分的 file 一致
+    ;serverurl=http://127.0.0.1:9001                ; 通过 HTTP 的方式连接 supervisord
+
+    [program:zzg_worker]
+    process_name=%(program_name)s_%(process_num)02d
+    command=php /xdfapp/apps/develop/okayAdmin_zzg/artisan queue:work redis --daemon --delay=600 --sleep=1 --tries=1 --env=_zzg
+    autostart=true
+    autorestart=true
+    user=zhangyunfei
+    numprocs=4
+    redirect_stderr=true
+    stdout_logfile=/tmp/zzg_worker.log
+
+    [include]
+    ;files = /xdfapp//_zzg/*.conf
+    ```
+   - 启动
+    ```
+    supervisord -c supervisor.conf                                                          // 通过配置文件启动supervisor
+    supervisorctl -c supervisor.conf status/reload//start/stop [all]|[x|zzg_worker]         // 查看状态/重新载入配置文件/启动停止所有一个
+    ```
+   - 安装：`yum supervisor`
+1. 命令 + &：后台执行

@@ -271,9 +271,8 @@
  - yii/helpers/FileHelper
  - yii/helpers/Json
 ### Laravel
-1. laravel运行前的准备工作
-   - 环境检测、配置加载、日志管理、异常处理、外观注册、服务提供者注册、启动服务提供者
-1. 介绍：提供常用组件，简化程序开发，让开发更有乐趣
+1. 介绍：像流水线一样处理用户请求，模块耦合低、扩展性高。运用了组件化开发、依赖注入、接口编程
+提供常用组件，简化程序开发，让开发更有乐趣
 1. laravel哲学
    - 富有表达性、简洁语法的应用框架，开发过程应该是愉悦并且有创造性的，快乐的开发者才能创造最棒的代码
    - laravel易于理解且强大，杰出的IoC、数据库迁移工具、紧密集成的单元测试
@@ -320,22 +319,8 @@
     ```
    - 使用`Config::get('app.aa')`或`Config::get('question.aa')`获取对应配置，配置都在超全局变量$_ENV中
 1. 日志：`app/storage/logs`，查看日志`grep "ERROR" laravel.log`
-
 1. Contracts：契约，定义框架核心服务的接口
 1. Facade：门面，模拟一个类，提供静态魔术方法`__callStatic`，将该静态方法映射到真正的方法上
-1. 服务容器：IoC容器，是laravel的核心，该容器提供了整个框架中的一系列服务
-1. 服务提供者
-   - 一个类能够被提取，要先被注册，绑定到容器，提供服务并绑定服务至容器的东西就是服务提供者
-   - 意义：是启动laravel的真正关键，自己和所有的laravel都是通过服务提供者启动的。启动指注册事物，包括注册服务容器绑定/事件侦听器/中间件/路由，有些属于延迟注册。应用程序创建————服务提供者注册————请求转义至已启动的应用程序。默认的服务提供者在 `app\Providers` 目录下，config/app.php的providers数组即是
-   - 组成：`register`（注册） 和 `boot`（引导、初始化）
-1. 5.X启动过程
-   - 单入口文件
-   - 加载Composer自动加载器，获取bootstrap\app.php中的laravel实例
-   - laravel第一步创建 应用程序 / 服务容器 的实例
-   - 流向http核心 app/Http/Kernel.php，核心加载行为之一————服务提供者，调用所有提供者的 `register` 方法，注册完后，调用 `boot` 方法
-   - 设置错误处理/日志记录/环境监测
-   - 转移到路由器进行分配，运行 `中间件`，再到路由/控制器
-
 1. 运维
    - 安装：`composer create-project laravel/laravel your-project-name --prefer-dist "5.1.*"`
    - 目录
@@ -350,3 +335,28 @@
      1. public 前端控制器和资源文件
      1. resource 视图、原始的资源文件(LESS/SASS/CoffeeScript)、语言包
      1. storage 编译后的blade模板，基于文件的session，文件缓冲等其他文件。包含app存储应用程序使用的文件/framework保存框架生成的文件和缓冲/logs
+1. 服务容器
+   - 理解：IoC容器，是laravel的核心，该容器提供了整个框架中的一系列服务
+   - 步骤
+     1. Container：binding成员变量存储服务
+     1. bind：绑定服务
+     1. make：利用反射解决服务依赖，并且实例化服务
+1. 服务提供者
+   - 一个类能够被提取，要先被注册，绑定到容器，提供服务并绑定服务至容器的东西就是服务提供者
+   - 意义：是启动laravel的真正关键，自己和所有的laravel都是通过服务提供者启动的。启动指注册事物，包括注册服务容器绑定/事件侦听器/中间件/路由，有些属于延迟注册。应用程序创建————服务提供者注册————请求转义至已启动的应用程序。默认的服务提供者在 `app\Providers` 目录下，config/app.php的providers数组即是
+   - 组成：`register`（注册） 和 `boot`（引导、初始化）
+1. 请求处理管道
+   - 理解：使用装饰器模式，利用父子方法继承或者递归回调，实现中心方法执行前后的动态触发事件
+   - 步骤：`new Pipeline($this->app)->send()->through()->then();        // then管道触发执行`
+1. 5.X启动过程
+   - 单入口文件，加载Composer自动加载器，获取app.php中laravel实例，即$app创建服务容器，构造函数初始化以下
+     1. 基础绑定：将app/Container和$this进行bind，即instance注册实例化后的实例
+     1. 注册基础服务提供者：register EventServiceProvider/RoutingServiceProvider
+     1. 注册核心类别名和基础路径
+   - 加载Contracts/http/Kernel和App/http/kernel两个核心实例，核心实例化如下
+     1. 定义middleware和routeMiddleware以接收之后的请求处理管道
+     1. 实例化请求：capture
+     1. 处理请求：handle：使用sendRequestThroughRouter处理管道，包含：环境检测、配置加载、日志配置、异常处理、外观注册、服务提供者注册、启动服务，之后是中间件处理(cookie/session/csrf)，路由处理(路由到对应的处理方法)，控制器生成响应
+1. 版本特性
+   - 5.2：访问频率限制中间件throttle
+   - 5.3：支持mysql5.7的json操作、WebSockets操作的Echo
