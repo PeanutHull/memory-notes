@@ -166,15 +166,19 @@
         - network.host: ip
         - http.port: 9201
         - discovery.zen.ping.unicast.hosts: ["ip"]        // 主节点ip
-   - 配置管理工具elasticsearch-head
+   - 配置web管理工具elasticsearch-head
      1. wget github/elasticsearch-head && cd head
      1. npm install
      1. npm run start
      1. 最下边添加es配置，解决两个进程跨域问题
         - http.cors.enabled: true
         - http.cors.allow-origin: "*"
+   - 中文分词插件：elasticsearch-ik
+   - mysql数据导入：elasticsearch-jdbc，编写脚本即可实现
+   - mysql数据同步更新：logstash-input-jdbc，可以做全量同步和增量同步，数据表中定义订阅的update_time字段即可
 1. wiki
    - 默认端口：9200
    - web端管理工具：
    - 版本历史：1.x->2.x->5.x
    - head中粗线框为主分片，细的为备份分片
+   - ELK：elasticSearch、logstash、kibana

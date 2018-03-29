@@ -238,3 +238,21 @@ function get_self_url($is_root=0) {
     $rt = shell_exec($cmd);
     return trim($rt) > 1 ? true : false;
     ```
+1. php监听队列消息
+    ```php
+    $connection = new AMQPConnection([]);
+    $channel = new AMQPChannel($connection);
+    $queue = new AMQPQueue($channel);
+    $queue->setName($queueName);
+    // 消费队列消息
+    while(TRUE) {
+        $queue->consume('processMessage');
+    }
+    // 断开连接
+    $connection->disconnect();
+
+    function processMessage($envelope, $queue) {
+        $msg = $envelope->getBody();
+        $queue->ack($envelope->getDeliveryTag());           // 手动发送ACK应答
+    }
+    ```
