@@ -175,7 +175,7 @@
         - http.cors.allow-origin: "*"
    - 中文分词插件：elasticsearch-ik
    - mysql数据导入和计划任务：elasticsearch-jdbc，编写脚本即可实现
-   - mysql数据同步更新：logstash-input-jdbc，可以做全量同步和增量同步，数据表中定义订阅的update_time字段即可
+   - mysql数据同步更新：logstash-input-jdbc，可以做全量同步和增量同步，数据表中定义订阅的update_time字段即可，其他的可以订阅binlog
 1. wiki
    - 默认端口：9200
    - 版本历史：1.x->2.x->5.x
