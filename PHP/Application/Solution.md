@@ -6,6 +6,13 @@
    - 现成方案：
     1. 客户端登陆同时写入session和加密的cookie，服务端拿到这两个cookie，先看infodig和加密后的userinfo是否一致，是否有uid，是否过期，最后写入session
     1. 共享SESSION（db,nosql等)
+1. OAuth
+   - Open Authorization，开放式授权，v1.0有漏洞
+   - 流程
+     1. 发起方请求令牌
+     1. 发放令牌
+     1. 利用令牌访问相应api
+1. AUTH——基于节点的权限管理
 1. RBAC
    - 理解：基于角色的访问控制，用户通过角色与权限进行关联，即 用户-角色-权限-资源
    - 表结构
@@ -13,13 +20,6 @@
      1. auth_group：组数据表
      1. auth_group_access：用户、组关系表
      1. auth_rule：权限表，模块+控制器+方法名、名称
-1. AUTH——基于节点的权限管理
-1. OAuth
-   - Open Authorization，开放式授权，v1.0有漏洞
-   - 流程
-     1. 发起方请求令牌
-     1. 发放令牌
-     1. 利用令牌访问相应api
 ### NB
 1. 作业调度平台：集群下的高可用多维度的定时任务
 1. 服务治理框架

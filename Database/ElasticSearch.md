@@ -174,11 +174,13 @@
         - http.cors.enabled: true
         - http.cors.allow-origin: "*"
    - 中文分词插件：elasticsearch-ik
-   - mysql数据导入：elasticsearch-jdbc，编写脚本即可实现
+   - mysql数据导入和计划任务：elasticsearch-jdbc，编写脚本即可实现
    - mysql数据同步更新：logstash-input-jdbc，可以做全量同步和增量同步，数据表中定义订阅的update_time字段即可
 1. wiki
    - 默认端口：9200
-   - web端管理工具：
    - 版本历史：1.x->2.x->5.x
    - head中粗线框为主分片，细的为备份分片
    - ELK：elasticSearch、logstash、kibana
+   - 结构化/非结构化：无法用统一结构表示的，可称为全文数据
+   - 顺序扫描法/索引扫描法：将全文数据一部分提取出来变成一定结构，加快搜索速度
+   - 原理：将文档传给分词组件，将每一个词排序、记录位置并形成链表，搜索的时候直接查索引。lucene被认为是最好的搜索引擎

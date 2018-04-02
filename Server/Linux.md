@@ -6,11 +6,11 @@
 1. 进程后台运行：processName &
 1. 查看运行的进程：ps -ef/aux | grep xxx
 1. 查看端口号：lsof -i:80，root用户查看
-1. 查看程序安装位置：which nginx
 1. 关闭应用程序
    - 从容停止：kill -QUIT MasterProcessNumber
    - 快速停止：kill -TERM MasterProcessNumber
    - 强制停止：kill -9 programName/nginx
+1. 查看程序安装位置：which nginx
 1. 查看centos版本：cat /etc/redhat-release
 1. 查看centos位数：getconf LONG_BIT
 1. 查看ip：ifconfig -a中的inet addr
@@ -52,6 +52,11 @@
    - 编辑：`vim /etc/sysconfig/iptables`
    - 增加：`-A INPUT -m state --state NEW -m tcp -p tcp –-dport 80 -j ACCEPT`
    - 状态/重启/关闭：`/etc/init.d/iptables status/restart/stop`
+1. mac环境变量默认加载地址，系统的都在bin和sbin，php、php-config、phpize在/usr/bin，php-fpm在/usr/sbin
+   - /bin
+   - /sbin
+   - /usr/bin
+   - /usr/sbin
 1. supervisor
    - 认识：进程管理器，用于保证进程的自动重启等。通过fork/exec的方式将这些被管理的进程当作supervisor的子进程来启动，配置好进程命令即可
    - 配置
@@ -106,4 +111,3 @@
     supervisorctl -c supervisor.conf status/reload//start/stop [all]|[x|zzg_worker]         // 查看状态/重新载入配置文件/启动停止所有一个
     ```
    - 安装：`yum supervisor`
-1. 命令 + &：后台执行

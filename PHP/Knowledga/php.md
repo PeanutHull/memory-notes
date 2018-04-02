@@ -243,7 +243,7 @@
 1. PHP配置：php.ini
 1. PHP扩展安装
 ### wiki
-1. php运行模式
+1. php运行模式：SAPI，Server Application Programming Interface 服务器端应用编程端口，是php与其它应用交互的接口
    - CGI
      1. 理解：通用网关接口，外部应用程序和web服务器的接口标准，允许web服务器执行外部程序，并将输出发回web服务器。早期动态网页处理程序一次只能处理一个请求。跨平台性极佳，性能低下
      1. 原理
@@ -259,7 +259,6 @@
         - 所有配置只在进程启动时加载一次
         - PHP死掉不会带死apache，而且会立即启动一个新的php进程
         - fastcgi是适用高并发场景的，对web服务器不挑可以自由更换
-        - php5.3.29之后自带fpm，之前需要另外加载模块。PHP-FPM：fastcgi Process Manager，fastcgi进程管理器，有效控制内存、进程，平滑重载php配置，比spawn-fcgi更优秀，官方收录。fastcgi是一个协议，php-fpm实现了这个协议
    - Module
      1. 理解：将php集成到web服务器，以同一个进程运行。php作为apache的模块，预先生成多个进程副本驻留内存，一旦请求出现就立即响应，省去创建子进程的延迟，处理完成后不退出，等待下次请求
    - ISAPI
@@ -269,14 +268,20 @@
      1. php_sapi_name：运行环境检测
      1. 参数
         - php -h                                              // 查看帮助
+        - php -m                                              // 查看cli模式安装的扩展
+        - php --ini                                           // 查看cli模式的配置文件位置
+        - php-config
         - php file                                            // 执行php文件
-        - php -m                                              // 查看安装的扩展
         - php -S 127.0.0.1:80 -t /www /www/index.php          // 启动一个单线程http服务器，可以用于开发和测试
-   - PHP-GTK：gui
-   - 流行的php三种使用模式
-     1. nginx + php-fpm
-     1. apache + mod_php5
-     1. lighttp + spawn-fcgi
+1. PHP-FPM：fastcgi Process Manager，fastcgi进程管理器，比spawn-fcgi更优秀，官方收录。fastcgi是一个协议，php-fpm实现了这个协议。v5.3.29自带fpm，之前需要另外加载模块
+   - 特点
+     1. 有效控制内存/进程
+     1. 支持平滑停止/启动的高级进程管理功能
+     1. 发生意外情况的时候能够重新启动并缓存被破坏的 opcode
+   - 运维
+     1. 杀掉主进程就是重启
+     1. 有了pid文件后，可以理解信号：INT/TERM 立刻终止，QUIT 平滑终止，USR1 重新打开日志文件、USR2 平滑重载所有worker进程并重新载入配置和二进制模块
+        - 重启：`kill -USR2 'cat /usr/local/php/var/run/php-fpm.pid'`
 1. ts/nts
    - 查看：phpinfo()————Thread Safety
    - 分类   
@@ -284,6 +289,11 @@
         - ISAPI执行方式以DLL动态库的形式使用，在处理完一个用户请求后不会马上消失，需要进行线程安全检查
      1. Non Thread Safe：非线程安全，执行时不进行线程安全检查
         - FastCGI执行方式以单一线程来执行操作，不需要检查，效率更高
+1. PHP-GTK：gui
+1. 流行的php三种使用模式
+   - nginx + php-fpm
+   - apache + mod_php5
+   - lighttp + spawn-fcgi
 1. 版本历史
    - 5.3
      1. 增加命名空间

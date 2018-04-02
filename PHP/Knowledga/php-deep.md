@@ -1,9 +1,33 @@
-### 编译
-1. 默认情况下，Zend引擎先将PHP源码编译为opcode，然后Zend解析引擎逐条执行。这里的opcode码，可以理解成C语言级的函数。而HHVM提升性能方式为替代Zend引擎将PHP代码转换成中间字节码（HHVM自己的中间字节码，通常称为中间语言），然后在运行时通过即时（JIT）编译器将这些字节码转换成x64的机器码，类似于Java的JVM。HHVM为了达到最佳优化效果，需要将PHP的变量类型固定下来，而不是让编译器去猜测。Facebook的工程师们就定义一种Hack写法，进而来达到编译器优化的目的
 ### 扩展
-1. PEAR：php扩展和应用仓库，PEAR将常用功能(数据库访问、文件操作、数据结构、缓冲操作、网络协议)写成类库，用户下载并定制功能，提高开发效率
-1. PECL：可看做PEAR的一部分，用php写，PECL用C写的，编译或配置后才能使用。PEAR是上层扩展，PECL是底层扩展
+1. PEAR：php扩展和应用仓库，将常用功能(数据库访问、文件操作、数据结构、缓冲操作、网络协议)写成类库，提供下载，提高开发效率，php编写
+1. PECL：PHP Extension Community Library，php扩展社区库，C编写，是通过pear打包系统的php扩展库
+1. 扩展安装
+   - pecl
+     1. pecl install xx
+     1. php.ini：extension=xx.so && restart
+   - php的ext扩展目录进行源码编译安装
+     1. cd ext/pcntl
+     1. phpize：准备扩展库的编译环境，产生configure
+     1. ./configure --with-php-config=/usr/local/php/bin/php-config
+     1. make && make install
+     1. php.ini：extension=pcntl.so && restart
+1. 扩展开发
+   - 理解：C/C++基础，同时需要熟悉php扩展API
+     1. 要用到PHP自身定义的函数和宏
+   - 扩展编译分动态编译和静态编译
+     1. 动态：phpize、configure
+   - ext_skel快速开发工具
+   - 开发
+     1. config.m4：PHP_ARG_WITH、PHP_ARG_ENABLE
+     1. php_xx.h、xx.c
+
+
+1. posix/pcntl
 1. php5和php7的扩展大部分都不一样了
+### 编译
+1. opcode：即字节码
+1. 默认情况下，Zend引擎先将PHP源码编译为opcode，然后Zend解析引擎逐条执行。这里的opcode码，可以理解成C语言级的函数。而HHVM提升性能方式为替代Zend引擎将PHP代码转换成中间字节码（HHVM自己的中间字节码，通常称为中间语言），然后在运行时通过即时（JIT）编译器将这些字节码转换成x64的机器码，类似于Java的JVM。HHVM为了达到最佳优化效果，需要将PHP的变量类型固定下来，而不是让编译器去猜测。Facebook的工程师们就定义一种Hack写法，进而来达到编译器优化的目的
+1. 所有的用户编写的PHP代码，都会被翻译成PHP的虚拟机ZE的虚拟指令（OPCODES）来执行，不论细节的话，就是说，我们所编写的任何PHP脚本，都会最终被翻译成一条条的指令，从而根据指令，由相应的C编写的函数来执行
 ### 引擎
 1. HHVM：重写的php引擎
 1. JIT特性
