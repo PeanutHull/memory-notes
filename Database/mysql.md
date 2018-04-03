@@ -77,7 +77,7 @@
     drop database/table if exists baseName/tableName;                                       # 删除库/表
     drop index indexName on table                                                           # 删除索引，各种类型的索引都用这个删除
     ## lock
-    lock tables tableName write/read;                                                       # 锁表
+    lock tables tableName write/read local;                                                 # 锁表的读/写，local允许其他用户表尾添加行
     unlock tables;
     ```
    - DML
@@ -107,6 +107,102 @@
     truncate table;                                                                   # 数据清空，主键归0
     delete t1,t2 from t1 join t2 on t1.xx=t2.xx;                                      # 多表数据删除
     ```
+1. 变量：基于会话，用户变量不区分大小写。定义 `set @a:=/=1`
+1. 函数
+   - 数学：format/round/pow/abs/sin/cos/tan/bit_and
+   - 字符串：char/concat/length  
+   - cast：类型转换，如`cast(1 as signed)`
+   - password
+   - UNIX_TIMESTAMP：时间转换为时间戳
+   - match：全文搜索
+   - uuid()：aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
+   - distinct去重可能要全表扫描，concat字符串连接
+   - 修饰符
+     1. unsigned
+     1. zerofill
+     1. variables
+1. sql
+   - 分组
+     1. group by：用列的值进行分组/计算，必须在where之后order by之前，select的字段除了被group的其他要么被统计，要么没有
+     1. having：筛选成组后的数据，作用于组，如`having sum(age) > 10`
+   - 连表
+     1. inner join：无关系不显示，同join
+     1. left join：获取左表所有记录，即使右表没有
+     1. right join：反过来
+     1. cross join：在mysql中和inner join相同，标准sql中不同，产生笛卡尔集，即M*N，
+   - 组合
+     1. union：自动处理重合，即去掉重复的数据，以第一个取出的为准
+     1. union all：不处理重合，相反
+   - replace：是标准sql的mysql扩展，使用primary key/unique key确定是否插入新行
+     1. 注意：会抹掉其他未指定数据，应作为插入使用，而不是更新
+     1. 原理：将数据插入，成功则结束；否则引发重复键错误，先删除原有记录，然后更新
+1. 表
+   - 结构
+     1. primary key：主键列，作为一行的唯一标识符用来定位，不能重复不能为空，特殊的唯一索引，可有复合主键 `primary key(id,name)`
+     1. auto_increment：自增，必须是索引列(index/primary key)，只能有一个自增列，可以设置起始值和步长
+     1. unique/not null/default
+     1. foreign key：外键列，保证表之间数据完整性和准确性，体现表之间关系，可进行级联操作，由于对业务的强一致性要求，现在由程序控制，不使用外键关联
+        - 基本形式：`constraint foreignKeyName foreign key(selfId) references foreignTable(foreignTableId)`
+        - 级联限制：`constraint foreignKeyName foreign key(selfId) references foreignTable(foreignTableId) on delete/update cascade;`，删除被连接数据自己也被删除，连带删除
+   - 分类
+     1. 临时表：只有当前连接可见，关闭连接自动删除，如`create temporary table tableName ();`，show tables看不到该表
+     1. 派生表：是select返回的虚拟表，即from使用的独立子查询，可以和子查询互换使用。如`from(select * from table2)derivedTableName`
+     1. 公共表表达式：CTE，是一个命名的临时结果集，仅在单个SQL语句的执行范围内存在，比派生表更易读，性能更高
+   - 表间关系：一对一、一对多、多对多
+   - 存储引擎
+     1. MyISAM：5.5之前的默认引擎，用于只读提高性能、不支持事务、不支持外键，最大256TB，可以压缩为只读表，支持全文索引
+     1. InnoDB：支持MVCC，多种行锁机制组合，一致性读或者读快照就是读取当前事务开始之前的数据快照，在这个事务开始之后的更新不会被读到。InnoDB行锁是通过给索引上的索引项加锁来实现的
+        - 事务
+        - 行级锁
+        - 实现sql标准的4种隔离级别
+        - 插入缓存(insert buffer)
+        - 二次写(double write)
+        - 自适应hash索引(adaptive hash index)
+        - 预读(read ahead)
+        - 索引是其表空间的组成部分
+     1. merge：将具有相似结构的多个MyISAM表组合到一个表中的虚拟表
+     1. memory；内存表存储在内存中，并使用散列索引，使其比MyISAM表格快，服务器停止数据丢失
+1. 数据库组成
+   - mysql：用户/权限相关，user表存储用户和权限
+   - information_schema：自身架构相关
+   - performance_schema
+   - sys
+1. 视图
+   - 理解：即虚拟表，可以对视图进行操作，作用有简化查询，限制用户访问和权限。不支持物理视图，可以进行查询和更改，表改变不会联动视图改变    
+   - 创建：`create view viewName as select * from table`，分辨视图 `show full tables;`
+1. 触发器
+   - 理解：triggers，自动执行响应事件的存储程序
+   - 分类：before/after insert/update/delete
+   - 实例
+    ```sql
+    create trigger triName
+        before update on table
+        for each row
+    begin
+        # some sql
+    end;
+    ```
+1. 预解析
+   - 理解：使用占位符预先准备查询语句，不用解析语句，查询速度更快，防止注入。步骤有：prepare、execute、deallocate prepare(发布)
+   - 实例
+    ```sql
+    PREPARE stmt1 FROM 'select ... ?';          # 准备占位符
+
+    SET @a = '1';
+    EXECUTE stmt1 USING @a;
+
+    DEALLOCATE PREPARE stmt1;
+    ```
+1. 存储过程
+   - 理解：在mysql中存储了sql语句，预先缓存编译结果、执行速度快，传输数据少。耗内存，不灵活
+   - 实例
+    ```sql
+    CREATE PROCEDURE procedureName()
+    BEGIN
+        SELECT * FROM user;
+    END
+    ```
+1. 注释 ：--、#、/**/=
 ### 应用
 1. 索引
    - 理解：为了加快查询速度，对数据列进行排序的一种结构，包含所有记录的引用指针，查询数据时先检查索引是否存在，用于精确到对应行，
@@ -144,11 +240,6 @@
      1. 稳定性：有非法数据(外键约束等)，事务撤回
      1. 隔离性：在一个客户端执行事务未完成，所修改的数据对其他客户端是不可见的，是原来的数据
      1. 可靠性
-   - 隔离级别
-     1. READ UNCOMMITTED     最低级别，会导致数据完整性的严重问题
-     1. READ COMMITTED       
-     1. REPEATABLE READ      默认，一个事务开始后其他session对数据库的修改在本事务中不可见，直到本事务commit或rollback
-     1. SERIALIZABLE         最高级别，性能问题并增加死锁的机率
    - 使用
     ```sql
     set autocommit=0/1;                 # 禁止/开启自动提交
@@ -162,23 +253,47 @@
     release savepoint xx;               # 删除标记点
     rollback to xx;                     # 回滚到标记点
     ```
+   - 并发事务
+     1. 产生的问题
+        - 更新覆盖丢失
+        - 脏读
+        - 不可重复读
+        - 幻读
+     1. 事务隔离：并发本身和数据冲突的"串行化"是矛盾的，用隔离级别平衡隔离和并发的矛盾
+        - 方法
+          1. 读取数据前加锁
+          1. 使用一致性数据快照：MVCC，Multi-Version Concurrency Control 数据多版本并发控制
+        - 隔离级别：由低到高
+          1. Read Uncommitted：未提交读，会导致数据完整性的严重问题，4种问题都存在
+          1. Read committed：已提交读
+          1. Repeatable Read：可重复读，默认，一个事务开始后其他session对数据库的修改在本事务中不可见，直到本事务commit或rollback
+          1. Serializable：可序列化，性能问题并增加死锁的机率
 1. 分布式事务
 1. 锁
-   - InnoDB行锁基于索引
    - 分类
-     1. 行级锁：Row-Level Lock，InnoDB默认，如果改的字段是索引或者自增字段，会锁住整个表
-     1. 表级锁：Table Lock，MyISAM
-1. 悲观锁
-   - 理解：Pessimistic Locking，读取的时候为后面的更新加锁，之后再来的读写都会等待，属于数据库锁
-   - 意义：数据修改排他性，高并发下，数据可以正确写入。但带来数据库性能的大量开销，影响并发访问性，特别是长事务
-1. 乐观锁
-   - 理解：Optimistic Locking，乐观并发控制。基于数据版本记录机制实现。添加updatetime/version等版本标识字段，根据version更新数据，一旦发现其他并发操作更新，会回退，并从新执行自己
-   - 优缺点：程序实现，不会存在死锁。但是阻止不了程序之外的数据库操作
-   - 流程
-     1. 读数据时，将version/时间戳一同读出
-     1. 更新数据时，对比数据局版本
-     1. 版本正确，更新数据，version加1
-     1. 版本错误，认为是过期数据，采取补救措施
+     1. 表锁：MyISAM，开销小，加锁快，无死锁，冲突高，并发低。可以并发读，写的时候读写都加锁等待，系统自动加锁。因为一次获取所有锁，不会死锁。必须一次锁定所有用到的表，别名也要指定，否则出错
+     1. 行锁：InnoDB，开销大，加锁慢，有死锁，冲突低，并发高。基于索引，如果改的字段是索引或者自增字段，会锁住整个表
+     1. 间隙锁：范围查找自动锁定范围内所有行，防止幻读
+     1. 页锁：BDB被InnoDB取代，介于表和行之间，会死锁
+   - 表锁：lock table给InnoDB加表级锁
+   - 行锁
+     1. 共享锁：`lock in share mode;`，可读不可拿到写锁
+     1. 排他锁：`for update`，读写锁都拿不到，update/delete/insert自动加，select任何锁不加
+   - 查看
+     1. 表锁争用情况：`show status like 'table%';`
+     1. 行锁争用情况：`show status like 'innodb_row_lock%';`，使用监视器`CREATE TABLE innodb_monitor(a INT) ENGINE=INNODB;Show innodb status\G;DROP TABLE innodb_monitor;`
+   - 死锁：发生死锁后InnoDB一般都能自动检测到，并使一个事务释放锁并回退，涉及表锁稍微不行
+   - 悲观锁
+     1. 理解：Pessimistic Locking，读取的时候为后面的更新加锁，之后再来的读写都会等待，属于数据库锁
+     1. 意义：数据修改排他性，高并发下，数据可以正确写入。但带来数据库性能的大量开销，影响并发访问性，特别是长事务
+   - 乐观锁
+     1. 理解：Optimistic Locking，乐观并发控制。基于数据版本记录机制实现。如updatetime/version等版本标识字段，根据version更新数据，一旦发现其他并发操作更新，会回退，并从新执行自己
+     1. 优缺点：程序实现，不会存在死锁。但是阻止不了程序之外的数据库操作
+     1. 流程
+        - 读数据时，将version/时间戳一同读出
+        - 更新数据时，对比数据局版本
+        - 版本正确，更新数据，version加1
+        - 版本错误，认为是过期数据，采取补救措施
 1. sql注入
    - 类型：like注入，使用php的addcslashes
    - 安全措施
@@ -198,7 +313,7 @@
      1. 无select *，sql中无计算，where中无函数，提高索引利用覆盖率
      1. 所有where条件加引号，防止类型隐式转换
      1. 尽量inner join让优化器自动选择驱动表
-     1. 关键业务上线前EXPLAIN确认执行计划
+     1. 关键业务上线前explain确认执行计划
      1. 存了数字的字符串加上引号     
 1. explain
    - 理解：sql语句分析，将过程和索引等信息列出来
@@ -217,7 +332,12 @@
      1. ref：另外表的数据列名字
      1. row：预计读出的数据行数，里面所有数字乘积代表需要处理的组合数
      1. extra：问题解决提示信息
-1. 慢查询
+1. 慢查询：记录超过一定时间的查询语句
+    ```
+    slow_query_log = ON
+    slow_query_log_file = /usr/local/mysql/data/slow.log
+    long_query_time = 1
+    ```
 1. 性能测试原则：数据多才有参考价值，数据总量超过内存总量，如几百条数据第一条命令下去就全部加载到内存了，没有参考意义
 1. 硬件：主频高处理快高吞吐低时延，L1/2/3的cache大速度快，内存大磁盘读写少TPS高，固态快机械配阵列卡，网卡好低时延，文件系统用xfs/ext4不用ext3
 ### 运维
@@ -226,9 +346,14 @@
    - 设置字符集：`vim /etc/my.cnf` ([mysqld]下添加)
      1. `character-set-server=utf8`
      1. `default-character-set=utf8`
+1. 配置
+   - 查看配置：`show variables like 'slow_query%';`
+   - 变量配置：`set global slow_query_log='ON';`
+   - 配置文件配置：my.cnf，`slow_query_log = ON`
 1. 使用
    - 启动：`mysqld_safe &`
    - 关闭：`mysqladmin -u -p shutdown`
+   - 重启：`service mysqld restart`
    - 查看：`ps -ef | grep mysqld`
 1. 数据库操作
    - 备份库
@@ -286,112 +411,14 @@
         - PROCESS：查看/杀死线程
         - RELOAD：重载授权表、清空日志/主机缓存/表缓存
         - SHUTDOWN：关闭服务器
-### 其他特性
-1. 视图
-   - 理解：即虚拟表，可以对视图进行操作，作用有简化查询，限制用户访问和权限。不支持物理视图，可以进行查询和更改，表改变不会联动视图改变    
-   - 创建：`create view viewName as select * from table`，分辨视图 `show full tables;`
-1. 触发器
-   - 理解：triggers，自动执行响应事件的存储程序
-   - 分类：before/after insert/update/delete
-   - 实例
-    ```sql
-    create trigger triName
-        before update on table
-        for each row
-    begin
-        # some sql
-    end;
-    ```
-1. 预解析
-   - 理解：使用占位符预先准备查询语句，不用解析语句，查询速度更快，防止注入。步骤有：prepare、execute、deallocate prepare(发布)
-   - 实例
-    ```sql
-    PREPARE stmt1 FROM 'select ... ?';          # 准备占位符
-
-    SET @a = '1';
-    EXECUTE stmt1 USING @a;
-
-    DEALLOCATE PREPARE stmt1;
-    ```
-1. 存储过程
-   - 理解：在mysql中存储了sql语句，预先缓存编译结果、执行速度快，传输数据少。耗内存，不灵活
-   - 实例
-    ```sql
-    CREATE PROCEDURE procedureName()
-    BEGIN
-        SELECT * FROM user;
-    END
-    ```
 ### WIKI
 1. 概念
    - 数据库：文件中读写数据不方便、速度慢，按照数据结构来组织、存储和管理数据的仓库，提供API进行数据操作
    - 关系型数据库：建立在关系模型基础上，由行、表、库等组成
    - MySQL：瑞典的属于Oracle公司的开源数据库，使用标准sql语句，支持多客户端语言如c、php等，32位最大表文件4GB，64的8TB
-1. 变量：基于会话，用户变量不区分大小写。定义 `set @a:=/=1`
-1. 函数
-   - 数学：format/round/pow/abs/sin/cos/tan/bit_and
-   - 字符串：char/concat/length  
-   - cast：类型转换，如`cast(1 as signed)`
-   - password
-   - UNIX_TIMESTAMP：时间转换为时间戳
-   - match：全文搜索
-   - uuid()：aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
-   - distinct去重可能要全表扫描，concat字符串连接
-   - 修饰符
-     1. unsigned
-     1. zerofill
-1. NULL与任何其它值的比较永远返回false，即使NULL=NULL也返回false
-1. 注释 ：--、#、/**/
-1. sql
-   - 分组
-     1. group by：用列的值进行分组/计算，必须在where之后order by之前，select的字段除了被group的其他要么被统计，要么没有
-     1. having：筛选成组后的数据，作用于组，如`having sum(age) > 10`
-   - 连表
-     1. inner join：无关系不显示，同join
-     1. left join：获取左表所有记录，即使右表没有
-     1. right join：反过来
-     1. cross join：在mysql中和inner join相同，标准sql中不同，产生笛卡尔集，即M*N，
-   - 组合
-     1. union：自动处理重合，即去掉重复的数据，以第一个取出的为准
-     1. union all：不处理重合，相反
-   - replace：是标准sql的mysql扩展，使用primary key/unique key确定是否插入新行
-     1. 注意：会抹掉其他未指定数据，应作为插入使用，而不是更新
-     1. 原理：将数据插入，成功则结束；否则引发重复键错误，先删除原有记录，然后更新
-1. 表
-   - 结构
-     1. primary key：主键列，作为一行的唯一标识符用来定位，不能重复不能为空，特殊的唯一索引，可有复合主键 `primary key(id,name)`
-     1. auto_increment：自增，必须是索引列(index/primary key)，只能有一个自增列，可以设置起始值和步长
-     1. unique/not null/default
-     1. foreign key：外键列，保证表之间数据完整性和准确性，体现表之间关系，可进行级联操作，由于对业务的强一致性要求，现在由程序控制，不使用外键关联
-        - 基本形式：`constraint foreignKeyName foreign key(selfId) references foreignTable(foreignTableId)`
-        - 级联限制：`constraint foreignKeyName foreign key(selfId) references foreignTable(foreignTableId) on delete/update cascade;`，删除被连接数据自己也被删除，连带删除
-   - 分类
-     1. 临时表：只有当前连接可见，关闭连接自动删除，如`create temporary table tableName ();`，show tables看不到该表
-     1. 派生表：是select返回的虚拟表，即from使用的独立子查询，可以和子查询互换使用。如`from(select * from table2)derivedTableName`
-     1. 公共表表达式：CTE，是一个命名的临时结果集，仅在单个SQL语句的执行范围内存在，比派生表更易读，性能更高
-   - 表间关系：一对一、一对多、多对多
-   - 存储引擎
-     1. MyISAM：5.5之前的默认引擎，用于只读提高性能、不支持事务、不支持外键，最大256TB，可以压缩为只读表
-     1. InnoDB：MVCC: Multi-Version Concurrency Control 多版本并发控制，多种行锁机制组合
-        - 事务
-        - 行级锁
-        - 实现sql标准的4种隔离级别
-        - 插入缓存(insert buffer)
-        - 二次写(double write)
-        - 自适应hash索引(adaptive hash index)
-        - 预读(read ahead)
-        - 索引是其表空间的组成部分
-     1. merge：将具有相似结构的多个MyISAM表组合到一个表中的虚拟表
-     1. memory；内存表存储在内存中，并使用散列索引，使其比MyISAM表格快，服务器停止数据丢失
-1. 默认数据库含义
-   - mysql：用户/权限相关，user表存储用户和权限
-   - information_schema：自身架构相关
-   - performance_schema
-   - sys
 1. 聚集索引/非聚集索引
    - 聚簇索引：按数据存放的物理位置为顺序，提高多行的检索速度
    - 非聚簇索引：单行检索快
-1. 严格模式
 1. gist
    - 查询这个数据是否存在，存在则存到另一张表里：`create table temp as select * from admin a where exists (select uid from user u where a.userName = u.account);`
    - 查询两张表中是否有相同数据：`select * from admin wherer uid IN(select uid from temp);`
@@ -399,6 +426,9 @@
    - 求全集：`SELECT * FROM A LEFT JOIN B ON A.xx = B.xx union SELECT * FROM A RIGHT JOIN B ON A.xx = B.xx;`
    - 原所有id增加5万，必须倒叙操作：`update user SET uid=uid+50000 order by uid desc;`
    - 插入不重复数据行，mysql特有不是标准sql语法：`INSERT token(udid) values ('{$udid}') ON DUPLICATE KEY UPDATE activetime ='{$time}'`
+1. 知识点
+   - 严格模式
+   - NULL与任何其它值的比较永远返回false，即使NULL=NULL也返回false
 1. 5.6新特性
    - server参数默认值改变
    - innodb增强

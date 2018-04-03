@@ -1,24 +1,25 @@
-###关于Apache
+###Apache
 1. 特点
    - 模块化，模块多
    - 支持虚拟主机
    - 支持cgi、fastcgi、ssl、servlet
-1. Apache的工作模式
-   - CGI模式
+1. 工作模式
+   - cgi模式
      1. 用法：`Action application/x-httpd-php "/php/php-cgi.exe"`
      1. 原理：apache调用php.exe去解释文件，再将结果以网页的形式返回给客户机
    - 模块模式
      1. 用法：`LoadModule php5_module "c:/php/php5apache2.dll"`
      1. 原理：php和apache一起启动并运行
    - FastCGI模式
-     1. 用法：1. 下载fastcgi模块mod_fcgid.so/mod_fcgid.pd。2. 添加配置
+     1. 下载fastcgi模块mod_fcgid.so/mod_fcgid.pd
+     2. 添加配置
 ###常用命令
 1. windows下
    - httpd.exe -t // 检测配置文件是否正确
    - httpd.exe -k install
    - httpd.exe -k start/stop/restart
 ###window下安装apache+php
-1. 安装目录：
+1. 安装目录
    - Apache：C://http/http/Apache24
    - PHP：C://http/php
 1. 安装vc_redist.x64.exe和vcredist_x64

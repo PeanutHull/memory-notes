@@ -1,4 +1,3 @@
-
 1. web攻击方式
    - XSS：Cross Site Script，跨站请求攻击，链接中附加js代码，可以获取数据和cookies，修改页面内容
    - XFS：iframe别人的页面，使用x-frame-options或者提前检测屏蔽防范

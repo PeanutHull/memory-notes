@@ -1,7 +1,4 @@
-# python
-
 ## 认识
-
 1. 理解：是一种解释性、动态数据类型、面向对象的高级编程语言，抽象层次高，表达能力强，1989年发明。Python3不向下兼容
 1. 特点
    - 易于理解、学习
@@ -13,9 +10,7 @@
         print("Hello, World!");
         ```
    - python3 hello.py
-
 ## 语法
-
 1. 基础
    - 编码：默认utf8编码，可以指定不同编码：`# -*- coding: cp-1252 -*-`\
    - 标识符：不能以数字开头，对大小写敏感
@@ -676,7 +671,6 @@
      1. 构造函数：dict([('a', 1), ('b', 2), ('c', 3)])
 
 ## 使用
-
 1. CGI编程
    - 示例
     ```python
@@ -805,13 +799,11 @@
         collection.getAttribute("shelf")
         collection.getElementsByTagName("movie")
         ```
-
 ## WIKI
-
 1. 保留字
    - class，from，import，return，
    - if，elif，else，for，while，continue，break，finally，pass，
    - None，False，True
    - del，in，is，and，or，not，global，nonlocal，def，lambda，yield，
    - try，except，raise，
-   - as，assert，with，
+   - as，assert，with
