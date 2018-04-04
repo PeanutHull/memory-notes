@@ -256,3 +256,12 @@ function get_self_url($is_root=0) {
         $queue->ack($envelope->getDeliveryTag());           // 手动发送ACK应答
     }
     ```
+1. redis
+   - php扩展：PRedis、phpredis(c扩展)
+   - windows下安装php的redis扩展
+    ```
+    // 下载：php_redis.dll、php_igbinary.dll————注意ts/nts
+    // 添加配置文件
+    extension=php_igbinary.dll
+    extension=php_redis.dll
+    ```

@@ -1,5 +1,5 @@
 ### PSR
-1. 解释：PHP Standards Recommendation，是PHP-FIG组织制定的php推荐书写标准
+1. 解释：PHP Standards Recommendation，php推荐标准，是PHP-FIG组织制定的php推荐书写标准
 1. 分类
    - PSR-1：基本的代码风格
      1. 标签   php代码必须在<?php ?>中

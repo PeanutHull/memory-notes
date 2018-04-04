@@ -1,14 +1,9 @@
 #### 认识和使用
-1. 理解：是开源使用ANSI C语言编写的，可基于内存，可持久化的日志型、Key-Value数据库。对关系型数据库起到补充作用，多客户端支持。常用作缓存、数据库、消息中间件。端口6379
-   - 速度快，性能高
-   - 实现了多数据结构，发布/订阅模式，key过期
-   - 支持原子操作、数据持久化、Lua脚本、LRU收回、事务、主从同步
-   - Sentinel提供高可用，Cluster提供自动分区
-1. 特性
-   - 性能好：读11万次/秒，写8万次/秒
-   - 原子性：单个操作都是原子性的，多个操作支持事务
-   - 数据持久化：会周期性的把数据写入硬盘，有着不同的级别。数据存储方式：内存、磁盘、文件
-   - 主从同步：可以数据备份
+1. 理解：开源使用ANSI C编写，基于内存，可持久化的日志型、Key-Value数据库。对关系型数据库起到补充作用，多客户端支持。常用作缓存、数据库、消息中间件
+   - 速度快，性能高：读11万次/秒，写8万次/秒
+   - 多数据结构，发布/订阅模式，key过期
+   - 原子操作、事务、数据持久化、Lua脚本、LRU收回
+   - 主从同步、Sentinel提供高可用，Cluster提供自动分区
 1. 数据类型
    - string：字符串，键值对类型，二进制安全，意味着可以包含任意对象(比如一个图片的内容)，最大512MB
      1. set/get/del/exists/append/rename/expire/pexpire/ttl/pttl
@@ -36,10 +31,10 @@
    - geospatial：地理空间，索引半径查找
 1. 功能
    - 超时：expire，设置超时时间，超时后不删除，只有对值进行改变才会删除
-        ```
-        SET mykey "Hello"
-        EXPIRE mykey 10
-        ```
+    ```
+    SET mykey "Hello"
+    EXPIRE mykey 10
+    ```
    - 发布订阅：pub/sub，一种消息通信模式，发送者(pub)发送消息，订阅者(sub)接收消息
      1. pubsub：查看订阅和发布系统状态
      1. subscribe：订阅一个或多个，unsubscribe退订。psubscribe/punsubscribe用于给定模式的频道，即使用通配符啥的
@@ -69,32 +64,66 @@
         - 范围分区：不同范围放到不同实例中，需要维护范围表
         - hash分区：使用crc32将key转为数字，然后取模(模为实例数量)确定实例
      1. 自动分区：Cluster
-   - 命令
-     1. 服务器命令
-        - info：服务器信息
-        - save：异步保存数据到硬盘
-        - bgsave：后台异步保存数据到磁盘
-        - client list：客户端列表
-        - dbsize：key的数量
-        - flushall：删除所有数据库的所有key
-        - flushdb：删除当前数据库的所有key
-        - debug segfault：让redis崩溃
-        - monitor：实时打印接收到的命令，调试用
-        - slowlog subcommand：管理慢日志
-        - sync：用于复制功能的内部
-     1. ping：查看是否运行
-     1. select index：切换数据库
-     1. auth password：验证密码
-     1. echo string：打印字符串
-   - 脚本：eval，执行lua脚本，内嵌lua环境
-     1. eval script numkeys key：使用解释器执行脚本
-     1. script load script：缓冲脚本
-     1. script exists script：脚本是否存在
-     1. evalsha sha1 numkeys key：根据给定sha1码执行缓从的脚本
-     1. script flush：移除缓冲脚本
-     1. script kill：杀死脚本
+   - 持久化
+     1. RDB
+     1. AOF：fsync
+#### 应用
+1. 命令
+   - 服务器命令
+     1. info：服务器信息
+     1. save：异步保存数据到硬盘
+     1. bgsave：后台异步保存数据到磁盘
+     1. client list：客户端列表
+     1. keys：查看所有keys
+     1. dbsize：key的数量
+     1. type：查看key类型
+     1. flushall：删除所有数据库的所有key
+     1. flushdb：删除当前数据库的所有key
+     1. debug segfault：让redis崩溃
+     1. monitor：实时打印接收到的命令，调试用
+     1. slowlog subcommand：管理慢日志
+     1. sync：用于复制功能的内部
+   - ping：查看是否运行
+   - select index：切换数据库
+   - auth password：验证密码
+   - echo string：打印字符串
+1. 脚本：eval，执行lua脚本，内嵌lua环境
+   - eval script numkeys key：使用解释器执行脚本
+   - script load script：缓冲脚本
+   - script exists script：脚本是否存在
+   - evalsha sha1 numkeys key：根据给定sha1码执行缓从的脚本
+   - script flush：移除缓冲脚本
+   - script kill：杀死脚本
+1. 锁
+```
+do {
+    $microtime = microtime(true) * 1000;
+    $microtimeout = $microtime+$timeout+1;
+    
+    $isLock = $redis->setnx('lock.count', $microtimeout);                   // 上锁
+    if (!$isLock) {
+        $getTime = $redis->get('lock.count');
+        if ($getTime > $microtime) {
+            usleep(5000);                                                   // 睡眠 降低抢锁频率　缓解redis压力
+            continue;                                                       // 未超时继续等待
+        }
+        
+        $previousTime = $redis->getset('lock.count', $microtimeout);        // 超时,抢锁,可能有几毫秒级时间差可忽略
+        if ((int)$previousTime < $microtime) {
+            break;                                                          // 已获得锁
+        }
+    }
+} while (!$isLock);
+$count = $redis->get('count')? : 0;
+```
+#### 运维
+1. 安装和启动
+   - 启动server：`src/redis-server|redis-server.exe`
+   - 停止server：`src/redis-cli|redis-server.exe shutdown`
+   - 连接本地server：`src/redis-cli`
+   - 连接远程server：`src/redis-cli|redis-cli.exe -h host -p port -a password`
 1. 配置
-   - 操作配置：config get/set/rewrite/ */configName configValue
+   - 配置操作：config get/set/rewrite/ */configName configValue
    - 配置分类
      1. 常规
         - port/bind/timeout：超时断掉连接，为0不断
@@ -121,7 +150,7 @@
      1. 守护进程的方式
         - daemonize no：yes
         - pidfile /var/run/redis.pid：pid位置
-     1. 主从配置
+     1. 主从配置：从机的配置文件中指定slaveof参数为主机的ip和port即可
         - slaveof <masterip> <masterport>
         - masterauth <master-password>
 1. 性能测试
@@ -132,30 +161,14 @@
      1. -n：请求数
      1. -d：字节形式指定set/get大小
      1. -k：1=keep alive 0=reconnect
-1. 主从配置：master-slave，从机的配置文件中指定slaveof参数为主机的ip和port即可
-1. Redis集群
-1. 查看所有keys：`keys *`
-1. 查看key类型：`type keyName`
-#### 应用
-1. 主从配置
-1. 集群配置
-1. 数据测试，定性处理指标
-#### 运维
-1. 安装和启动
-   - 启动server：`src/redis-server|redis-server.exe`
-   - 停止server：`src/redis-cli|redis-server.exe shutdown`
-   - 连接本地server：`src/redis-cli`
-   - 连接远程server：`src/redis-cli|redis-cli.exe -h host -p port -a password`
-1. 哨兵机制：sentinel，做redis的存活性检测，提供高可用
-1. 持久化
-   - RDB
-   - AOF：fsync
-1. 备份恢复
-   - 备份：save/bgsave，产生dump.rdb文件，即备份成功
-   - 恢复：将dump.rdb文件放到redis目录并启动即可，config get dir获得目录
 1. 安全
    - 获得/设置密码：config get/set requirepass
    - 检验密码是否正确：auth password
+1. 备份恢复
+   - 备份：save/bgsave，产生dump.rdb文件，即备份成功
+   - 恢复：将dump.rdb文件放到redis目录并启动即可，config get dir获得目录
+1. 集群配置
+1. 哨兵机制：sentinel，做redis的存活性检测，提供高可用
 #### 原理
 1. 复杂的数据结构在内存中操作非常简单，redis可以做很复杂的操作
 1. 磁盘中是紧凑追加方式存在，不存在随机io
@@ -170,24 +183,7 @@
 1. 哨兵机制：通过多个sentinel的订阅和发布，实现对主的监视
 1. 探索方向：中文网的知识点梳理掌握（主要每个点都掌握，否则过不了关），各个文章的配置和讲解，云栖论坛的相关帖子搜索
 #### wiki
-1. php和redis
-   - php扩展：PRedis、phpredis(c扩展)
-   - windows下安装php的redis扩展
-    ```
-    // 下载：php_redis.dll、php_igbinary.dll————注意ts/nts
-    // 添加配置文件
-    extension=php_igbinary.dll
-    extension=php_redis.dll
-    ```
-   - 连接/测试
-    ```php
-    $redis = new Redis();
-    $redis->connect('127.0.0.1',6379);
-    $redis->ping(); // 返回+PONG
-    $redis->set/get();                      # String
-    $redis->lpush/lrange();                 # list
-    $redis->subscribe/publish();            # 发布订阅
-    ```
+1. 端口6379
 1. 阿里云Redis集群版
    - 表现
      1. 突破百万QPS，最好性能512G内存、最大连载数320000、最大吞吐1536M
