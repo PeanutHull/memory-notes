@@ -13,7 +13,8 @@
      1. 赋值：$xx=xx
      1. 传址赋值：$xx=&$xx
    - 静态变量：只存在于函数作用域内，只存活在栈中，再次调用函数会保留，`static $n = 1;`
-   - 超全局变量
+   - 超全局变量：也是数组
+     1. $GLOBALS：包含全部变量的全局组合数组
      1. $_ENV
      1. $_REQUEST：包含GET、POST、COOKIE 和 FILE 的数据
      1. $_POST：只包含application/x-www-form-urlencoded和multipart/form-data两种类型的post数据
@@ -21,10 +22,12 @@
      1. $_COOKIE
      1. $_SESSION
      1. $_FILES
-     1. $GLOBALS：包含全部变量的全局组合数组
    - 特殊保留变量
      1. $this
      1. $_SERVER：php预定义变量，包含服务器信息的数组，由web服务器创建，包含请求头、路径、脚本位置，具体内容会在CGI 1.1规范中说明
+   - 作用域
+     1. 全局/局部变量：全局变量不能在函数体内使用，需要用global关键字和$GLOBALS['']数组来引用，并且修改也对全局变量生效，对于require和include进来的相当于写了一个文件中
+     1. 静态变量：只在局部函数中存在和有效，程序执行离开时值不会消失，可以记录赋值次数用于终止递归
 1. 常量
    - 理解：只能是标量，一旦定义不能修改/删除，可以不用$。常量的范围是全局的，不用管作用区域就可以在脚本的任何地方访问常量
    - 分类
@@ -60,6 +63,10 @@
    - 三元表达式：表达式 ? 值1 : 值2
    - 字符串连接符：.
 1. 流程控制：选择if，循环while/for/switch-case，break离开循环，continue跳过本次循环进入下次
+1. 函数
+   - 参数的传递和引用传递：引用传递可以修改其值
+   - 返回值和引用返回：只能返回一个值，引用返回`&func()`会绑定函数的返回值
+   - 系统内置函数
 ### 面向对象
 1. 理解
    - 面向过程：优点：用什么功能就编写什么函数，注重实现细节。缺点：数据管理较混乱集中在函数方面
@@ -72,7 +79,7 @@
    - 接口：接口是特殊的抽象类，所有的方法都是public的抽象方法，所有变量都是常量，可多继承，接口没有构造函数
    - 抽象类：只要包含抽象方法的类，不能实例化只能继承，可定义普通方法和构造函数，抽象方法：抽象方法不能定义具体的实现，不能有主体即{}，子类必须全部重写父类抽象方法，访问控制只能更宽泛
    - 类：具有相同属性和方法的对象集合，只能实例化。类名首字母大写，一个文件可以写多个，规范就一个。可实现多接口，只能继承一个抽象类
-   - 对象：包含属性、方法，$this是当前对象的引用
+   - 对象：包含属性、方法，$this是当前对象的引用。对象本身是传址赋值，不像变量赋值时会空间复制
 1. 类
    - 魔术常量
     ```php
@@ -132,26 +139,66 @@
    - interface
    - implements
 ### 应用
-1. 会话控制：cookie、session
+1. 会话控制
+   - cookie：$_COOKIE，setcookie()/unset/过期
+   - session：$_SESSION，session由服务器存储，基于cookie，信息安全，占用服务器资源，分布式问题
+     1. 使用
+        - session_start();
+        - session_destory();
+     1. 传递SessionID
+        - session_name()
+        - session_id()
+        - 
+     1. 存储：session_set_save_handler()，默认文件形式，用MySQL、Redis等
+     1. 配置
+        ```php
+        session.auto_start
+        session.cookie_domain
+        session.cookie_lifetime
+        session.cookie_path
+        session.name
+        session.save_path
+        session.save_handler
+        session.use_cookies
+        session.use_trans_sid
+        session.gc_probability
+        session.gc_divisor
+        session.gc_maxlifetime
+        ```
 1. 日期时间
    - time        时间戳
    - date        格式化时间/日期
    - strtotime   字符串转为时间戳，啥都能转
    - mktime      日期转为时间戳
 1. 文件/目录
-   - 获取文件信息
-     1. mime_content_type：类型
-     1. stat/filesize：大小，在部分x86系统上读取大于2GB文件会报错
-     1. file_get_contents：内容
-   - 写入文件
-     1. file_put_content
-     1. fopen,fwrite,fclose
-   - 创建目录：mkdir
-   - 查看目录
-     1. glob：查找文件
-     1. scandir：列出目录
-     1. dirname(dirname(__FILE__))：访问上上级目录
-   - 判断：is_file、is_dir、file_exists。后一速度最慢
+   - 文件
+     1. filetype/mime_content_type：类型
+     1. filesize/stat：大小，在部分x86系统上读取大于2GB文件会报错
+     1. 文件属性：file_exists、is_readable、is_writable、is_executable、filectime、fileatime、filemtime
+     1. 读取内容
+        - file_get_contents
+        - fopen：打开模式：r/r+、w/w+、a/a+、x/x+、b、t，各种头/尾、追加/覆盖写入，二进制文件打开等
+        - fread/fgets/fgetc：一行、一个字符
+     1. 写入内容
+        - file_put_content
+        - fwrite,fclose
+     1. 复制：copy
+     1. 删除：unlink
+     1. 文件截取：ftruncate
+     1. 文件锁：flock
+     1. 文件指针：ftell、fseek、rewind
+   - 目录
+     1. 查看
+        - pathinfo
+        - basename
+        - dirname(dirname(__FILE__))：访问上上级目录
+     1. 读取：opendir、readdir、closedir、rewinddir、scandir
+     1. 创建：mkdir
+     1. 删除空目录：rmdir
+   - 磁盘：disk_free_space、disk_total_space
+   - 判断：is_file、is_dir
+   - 查找：glob
+   - 重命名/移动：rename
 1. 网络/IO
    - socket：socket类遵循tcp/ip协议，封装大量的内部通讯方法，用于创建主机端与客户端的数据通讯，就是listen/accept/send/write等几个基本操作，相关函数：fopen/fsockopen/stream_socket_server/stream_socket_client
    - stream：流，补充文件形式的其他数据源的处理能力，经常和socket联合使用
@@ -175,14 +222,50 @@
     ```
 1. 加密
    sha1：用于校验文件完整性，是否被篡改，可生成一个160位校验值，不可逆
-1. 正则
-   - 匹配手机号：`preg_match("/^(1([34578]))\d{9}$/", $mobile)`
-   - 4到6位数字：`preg_match("/^\d{4,6}$/", $code)`
-   - 匹配中文+数字，不能是纯中文，也不是纯数字：`preg_match('/^(?!\d+$)(?![\x{4e00}-\x{9fa5}]+$)[\x{4e00}-\x{9fa5}\d]+$/u', $string)`
+1. 正则：用于分割、查找、匹配、替换
+   - 组成
+     1. 分隔符：/斜线 #hash符号 ~取反符号
+     1. 通用原子：\d\D\w\W\s\S
+     1. 元字符：. * ? ^ $ + {n} {n,} {n,m} [] () [^] | [-]
+     1. 模式修正符：i m e s U x A D u(用于utf8模式下的匹配)
+   - 特性
+     1. 后向引用：一个字符类外面，反斜线紧跟一个大于0的数字就是之前出现的某个捕获组的后向引用
+        ```php
+        $str = '<b>abc</b>'
+        $pattern = '/<b>(.*)<\/b>/';
+        preg_replace($pattern, '\\1', $str);        // 用\\1后向引用括号中匹配到的
+        ```
+     1. 贪婪模式
+        ```php
+        $str = '<b>abc</b><b>bcd</b>'
+        $pattern = '/<b>.*?<\/b>/';                 // ?取消贪婪模式，要不一直往后匹配
+        $pattern = '/<b>.*?<\/b>/U';                // U取消
+        preg_replace_all($pattern, '\\1', $str);
+        ```
+     1. 断言：分为前瞻断言/后瞻断言，正面断言(?<=)/消极断言(?<!)
+   - 步骤
+     1. 写出要匹配的字符串
+     1. 从左向右使用原子和元字符拼接
+     1. 加入模式修正符
+   - 实例
+     1. 匹配手机号：`preg_match("/^(1([34578]))\d{9}$/", $mobile)`
+     1. 4到6位数字：`preg_match("/^\d{4,6}$/", $code)`
+     1. 匹配中文+数字，不能是纯中文，也不是纯数字：`preg_match('/^(?!\d+$)(?![\x{4e00}-\x{9fa5}]+$)[\x{4e00}-\x{9fa5}\d]+$/u', $string)`
+     1. 匹配img标签中的src值
+        ```php
+        $str = '<img id="aa" src="aa.jpg">';
+        $pattern = '/<img.*?src="(.*?).*?\/?>"/i';
+        preg_match($pattern, $str, $match);
+        var_dump($match);
+        ```
 1. 异常
    - 理解：与异常类似，错误异常一直冒泡直到到达第一个匹配的catch块。如果没有匹配的，使用set_exception_handler()安装的默认异常处理程序，没有默认的，异常将被转换为致命错误，并将像传统错误一样处理。所以`catch（Error $e）{}`或`set_exception_handler()`是必须的。如`(DivisionByZeroError $e)`
    - 抛出异常：`throw new Exception();`
    - try：`try {} catch (Exception $e) {}`
+1. 连接数据库
+   - PDO
+   - MySQLi：要淘汰
+   - mysql函数：不支持预处理，不安全
 ### 运维
 1. PHP安装
    - linux
@@ -240,7 +323,7 @@
      1. composer/php composer.phar -V
      1. composer self-update
      1. 考虑缓存，dist包优先？？？
-1. PHP配置：php.ini
+1. PHP配置：php.ini。register_globals(变量注入代码)、allow_url_include(包含远程文件)、allow_url_fopen、date.timezone、display_errors、error_reporting、safe_mode、post_max_size
 1. PHP扩展安装
 ### wiki
 1. php运行模式：SAPI，Server Application Programming Interface 服务器端应用编程端口，是php与其它应用交互的接口

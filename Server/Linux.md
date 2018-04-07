@@ -1,3 +1,23 @@
+### 基础
+1. 系统安全：sudo、su、chmod、setfacl
+1. 系统关机和重启：shutdown、reboot
+1. 进程管理：w、top、ps、kill、pkill、pstree、killall
+1. 用户管理：id、usermod、useradd、groupadd、groupdel
+1. 文件
+   - 文件系统：mount、umount、fsck、df、du
+   - 文件查找比较：locate、find
+   - 文件内容查看：head、tail、less、more
+   - 文件处理：touch、unlink、rename、ln、cat
+   - 文件权限：setfacl、chmod、chown、chgrp
+   - 文件传输：ftp、scp
+1. 目录操作：cd、mv、rm、pwd、tree、cp、ls
+1. 压缩解压：bzip2/bunzip2、gzip/gunzip、zip/unzip、tar
+1. 网络
+   - 网络应用：curl、telnet、mail、elinks
+   - 网络测试：ping、netstat、host
+   - 网络配置：hostname、ifconfig
+1. 常用工具：ssh、screen、clear、who、date
+1. 软件包管理：yum、rpm、apt-get
 ### 查看
 1. 查看运行的进程：ps -ef/aux | grep xxx
 1. 查看程序安装位置：which nginx
@@ -11,15 +31,31 @@
    - 从容停止：kill -QUIT MasterProcessNumber
    - 快速停止：kill -TERM MasterProcessNumber
    - 强制停止：kill -9 programName/nginx
-1. iptables
-   - 编辑：`vim /etc/sysconfig/iptables`
-   - 增加：`-A INPUT -m state --state NEW -m tcp -p tcp –-dport 80 -j ACCEPT`
-   - 状态/重启/关闭：`/etc/init.d/iptables status/restart/stop`
 1. 环境变量
    - /etc/profile：全局
    - .bash_profile：个人
    - souurce .bash_profile：使生效
    - export PATH=：书写格式
+1. iptables
+   - 编辑：`vim /etc/sysconfig/iptables`
+   - 增加：`-A INPUT -m state --state NEW -m tcp -p tcp –-dport 80 -j ACCEPT`
+   - 状态/重启/关闭：`/etc/init.d/iptables status/restart/stop`
+1. 定时任务
+   - crontab：添加 `crontab -e`，格式：* * * * *(分时日月周)
+   - at：执行一次，`at 2:00 tomorrow`，`at>/home/job`
+1. vim
+   - 一般模式：用于删除、复制、粘贴
+     1. x、X、dd、ndd、yy、nyy、p、P、ctrl+r
+     1. 视图模式：v、V、ctrl+v、y、d
+   - 编辑模式：i、a、r
+   - 命令行模式：: / ?
+     1. 查找和替换
+     1. 配置：:setnu、:setnonu
+1. 脚本执行
+   - 加权限执行：chmod+x、./、source
+   - 编写
+     1. 解释器：bash、csh、ash、bsh、ksh
+     1. 指定解释器：#!，如#!/bin/sh
 ### 应用
 1. VirtualBox安装虚拟机、连接网络
    - 安装：blog.csdn.net/risingsun001/article/details/37934975

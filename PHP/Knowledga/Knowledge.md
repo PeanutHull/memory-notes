@@ -205,6 +205,38 @@
      1. 抽象工厂：有多条产品线，系统提供一个产品类的库，所有的产品以同样的接口出现，从而使客户端不依赖于实现。无论是简单工厂模式、工厂模式还是抽象工厂模式，它们本质上都是将不变的部分提取出来，将可变的部分留作接口，以达到最大程度上的复用
 1. 注册树模式
    - 意图：全局共享/交换对象
+### 算法
+1. 理解：解决特定问题的步骤的描述，每个算法效率不一样
+1. 特点：有穷性、确切性、输入项、输出项、可行性
+1. 时间复杂度、空间复杂度
+   - 时间复杂度：执行算法需要的计算量，是问题规模n的函数f(n)，记做T(n)=O(f(n))，即计算次数。如常数阶`O(1)`、线性阶`O(n)`、平方阶`O(n^2)`、对数阶`O(log2n)`
+     1. 得出算法的计算次数公式
+     1. 用常数1取代所有时间中的所有加法常数
+     1. 只保留最高阶项
+     1. 如果最高阶存在且不是1，则去除与这个项相乘的常数
+   - 空间复杂度：需要的内存空间，包含代码所占空间，输入数据所占空间，辅助变量所占空间。和时间的表示一样
+1. 常见排序算法
+   - 冒泡排序：两两相邻的数进行比较，如果反序就交换。时间最坏/平均O(n^2)，空间O(1)
+   - 直接插入排除：每次从无序表中取出第一个元素，插入到有序表的合适位置。时间最坏/平均O(n^2)，空间O(1)
+   - 希尔排序：把待排序的根据增量分成几个子序列，对子序列插入排序，直到增量为1，直接插入排序。增量的排序一般是数组长度的一半，再变为原来增量的一版，直到为1。时间最坏O(n^2)/平均O(nlog2n)，空间O(1)
+   - 选择排序：每次从待排序的数据中选出最大/小的元素，放在起始位置，直到排完。时间最坏/平均O(n^2)，空间O(1)
+   - 快速排序：通过一趟排序将数据分割为两部分，一部分比另一部分所有数据都小，递归对两部分快排。时间最坏O(n^2)/平均O(nlog2n)，空间最坏O(n)/平均O(log2n)
+   - 堆排序：把待排序的元素按照大小在二叉树位置上排列，排序规则为父节点大于等于子节点，即堆化过程，如果根节点最大叫大根堆，最小小根堆，把根节点拿出来再堆化循环到最后一个节点。时间最坏/平均O(nlog2n)，空间O(1)
+   - 归并排序：将两个或以上有序表合并为新的有序表，即把待排序序列分为若干有序的子序列，再把有序的子序列合并为整体有序序列。时间最坏/平均O(nlog2n)，空间O(n)
+1. 常见查找算法
+   - 二分查找：从数组中间开始，命中结束，之后在偏向的方向查找。时间最坏/平均O(log2n)，空间迭代O(1)递归O(log2n)
+   - 顺序查找：就按顺序找。时间最坏/平均O(n)，空间O(1)
+### 数据结构
+1. Array：数组，最简单最广泛，使用连续内存来存储，所有元素类型相同或衍生，可下标访问
+1. LinkedList：链表，线性表一种，除了首尾其他元素首尾相接，顺序存储结构和链式存储结构两种方式
+1. Stack：栈，只有一个出口，先进后出
+1. Heap：堆，一般叫二叉堆，类似二叉树，子节点键值总小于父节点，节点邻居都是二叉堆，分大根堆小根堆
+1. list：线性表，长度有限，除了首尾其他元素首尾相接
+1. doubly-linked-list：双向链表，每个元素都是对象，都有一个关键字key两个指针next和prev
+1. queue：队列，先进先出
+1. set：集合，不重复的元素
+1. map：字典，键值对
+1. graph：图，通常使用邻接矩阵和邻接表表示，前者对于稀疏矩阵浪费时间，后者检索时间复杂度高
 ### 调优
 1. 编码级优化
    - 提前销毁大变量
@@ -239,7 +271,11 @@
      ————————————以下没有好好的过手册——————————————
    - string
      1. 理解：由字符组成，每个字符等于一个字节，所以只支持256字符集，不支持Unicode。最大为2G，v7.0支持大于2G
-     1. 4种表达方式：单引号/双引号/heredoc/nowdoc——————待补充<<<结构即定界符
+     1. 4种表达方式：单引号/双引号/heredoc/nowdoc
+        - 单引号：不能解析变量和转义字符
+        - 双引号：可以解析变量和任意转义字符，变量可以用特殊字符&等和{}包含，如"abcd'{$a}'ef"，为提高效率'abcd\''.$a'\'ef'
+        - Heredoc类似双引号，用于长字符串大文本，<<<定界符后边跟自定义字符串以作为结束符，可以解析变量，不转义'
+        - Nowdoc类似单引号
 1. 数据类型操作
    - 类型获取：var_dump()，包括方法/类
    - 类型检测：is_int、is_string、不要用gettype()
@@ -374,6 +410,27 @@ curl_close($ch);
    - memory_get_usage：当前内存
    - memory_get_peak_usage 峰值内存
    - getrusage：CPU信息，win不行
+1. 输出缓存区：所有输出的内容放入缓存区
+```php
+// 实现动态内容静态化
+<?php
+$cache_name = md5(__FILE__).'.html';
+$cache_lifetime = 3600;
+if(filectime(__FILE__) <= filectime($cache_name) && file_exists($cache_name) && filectime($cache_name) + $cache_lifetime > time()) {
+    include $cache_name;
+    exit;
+}
+ob_start();
+?>
+
+<p>This is page</p>
+
+<?php
+$content = ob_get_contents();
+ob_end_flush();
+file_put_content($cache_name, $content);
+?>
+```
 ### pro
 1. spl_autoload_register
 ```php
@@ -467,6 +524,13 @@ new \app\mvc\view\home\Index();                             // 实例化未引�
    - is_file
    - is_dir
    - is_writeable
+1. 时间类
+   - time
+   - date
+   - strtotime
+   - microtime
+   - mktime
+   - date_default_timezone_set
 1. 编码类
    - json_decode
    - iconv
@@ -488,24 +552,6 @@ new \app\mvc\view\home\Index();                             // 实例化未引�
    - rawurlencode
    - urldecode
    - urlencode
-1. 常变量
-   - const
-   - define
-   - defined
-   - constant
-1. 类类
-   - class_exists();
-   - get_class();
-   - get_class_methods();
-   - interface_exist();
-   - instanceof
-   - func_get_args
-1. 时间类
-   - time
-   - date
-   - strtotime
-   - microtime
-   - mktime
 1. 文件类
    - is_writeable
    - is_readable
@@ -519,6 +565,9 @@ new \app\mvc\view\home\Index();                             // 实例化未引�
    - pathinfo
    - file_get_content
    - fopen
+   - fread
+   - fgets
+   - fgetc
    - file_put_content
    - is_file
    - is_dir
@@ -580,3 +629,63 @@ new \app\mvc\view\home\Index();                             // 实例化未引�
    - ignore_user_abort
    - register_shutdown_function
    - set_time_limit
+1. 打印类
+   - print
+   - printf
+   - print_r
+   - sprintf
+   - echo 
+   - var_dump
+   - var_export
+1. 常变量
+   - const
+   - define
+   - defined
+   - constant
+1. 类类
+   - class_exists();
+   - get_class();
+   - get_class_methods();
+   - interface_exist();
+   - instanceof
+   - func_get_args
+1. 面试题：注意典型题的答案
+   - php
+     1. 三种定义字符串的方式
+     1. php的预定义常量：$_SERVER等
+     1. 三种null的情况：赋值null、未定义变量、unset后
+     1. const和define区别
+     1. 预定义常量和魔术常量
+     1. 变量作用域
+     1. require和include的区别
+     1. 各种函数的认识
+     1. 文件目录函数
+     1. 会话控制：cookie优点缺点，和session区别
+     1. 魔术方法数量和举例
+     1. 设计模式：工厂、单例、注册树、适配器、观察者、策略
+     1. php的运行模式
+   - 网络：状态码、OSI七层模型、http的工作特点和原理、请求头响应头和请求方法、https、其他网络协议
+   - linux：常用命令和操作
+   - mysql
+     1. 数据类型
+        - 各个数据类型的意义，char和varchar，int(1)的含义
+     1. 基础操作
+     1. 存储引擎
+        - MySIAM和InnoDB的区别
+     1. 索引
+        - 主键、唯一、联合索引的区别，对数据库有什么影响
+        - 索引建立的原则
+        - 索引使用的原则
+     1. 锁机制
+        - 锁的分类和实现：https://mp.weixin.qq.com/s/wAK_c4WFF2furI8b3u-v-g
+     1. 事务、存储过程、触发器
+     1. 分表、分区
+   - 程序设计：要有自己的思想，并且用代码去证明自己的想法
+     1. mvc
+     1. 单一入口：用一个文件处理所有http请求，根据参数区分模块和操作要求。统一安全检测，集中处理程序，效率不高
+     1. 模板引擎：smarty、twig，就是庞大的正则表达式替换库
+   - 不同框架的区别：考察项目经验，结合自己的开发过程中理解
+     1. yaf：使用扩展编写，性能高，高版本兼容差，底层代码可读性差，功能单一，需要大量插件
+     1. yii2：结构简单，功能丰富，扩展性高，重量级
+   - 算法、数据结构
+   - 高并发的指标、计算、解决方案

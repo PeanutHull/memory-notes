@@ -125,6 +125,21 @@
         }
     }
     ```
+1. 防盗链：通过Referer或者签名，检测访问的来源网页
+    ```
+    location ~ .*\.(gif|jpg|png|fiv|swf)$ {
+        valid_referers none blocked imooc.com *.imooc.com       # 针对referer
+        if($invalid_referer) {
+            rewrite ^/ http://403.jpg
+        }
+
+        # 针对伪造referer，第三方模块HttpAccessKeyModule
+        accesskey on;
+        accesskey_hashmethod md5;
+        accesskey_arg "key";                                    # get参数名称
+        accesskey_signature "mypass$remote_addr"                # 加密规则，nginx会检查签名的正误
+    }
+    ```
 ### 运维
 1. 安装
    - linux

@@ -3,20 +3,28 @@
 ### 基础
 1. 数据类型
    - 数字
-     1. bit：默认1，长度1~64，如bit(6)
-     1. tinyint：-128~127，smallint：前后3万2，mediumint：前后8.3千万
-     1. int：范围前后21亿，int中m仅用于显示，不影响存储范围，如int(5)，显示为00001，和INTEGER相同
-     1. bigint：前后9亿亿亿，19位，2E64，
-     1. decimal：精确小数值，m是数字总个数，d是小数点后个数，m最大值为65，d最大值为30，能够存储精确值的原因在于其内部按照字符串存储
-     1. float：前后38次方，数值越大，越不准确
-     1. double：前后308次方，数值越大，越不准确
+     1. 整数
+        - 分类
+          1. tinyint：-128~127
+          1. smallint：前后3万2
+          1. mediumint：前后8.3千万
+          1. int：前后21亿，int中m仅用于显示不影响存储范围，如int(3)，显示为001，和INTEGER相同
+          1. bigint：前后9亿亿亿，19位，2E64
+        - 属性
+          1. unsigned
+     1. 实数
+        - float：前后38次方，数值越大，越不准确
+        - double：前后308次方，数值越大，越不准确
+        - decimal：精确小数值，m数字总个数，d小数点后个数，m最大65d最大30，内部按字符串存储
+     1. 位
+        - bit：默认1，长度1~64
    - 字符串
-     1. char：定长字符串，0~255字节，m表示长度，即使数据小于m，也占用m长度，处理速度更快，甚至快过varchar50%
-     1. varchar：变长字符串，0~255字节，m表示最大保存长度
-     1. binary：二进制形式的字符串，即包含字节字符串，不包含字符字符串，没有字符集
+     1. char：定长字符串，0~255字节，m最大保存长度，数据小于m空格填充，速度更快甚至快过varchar50%，用于很短字符串或长度接近的，经常变更的，char不容易产生碎片
+     1. varchar：变长字符串，0~255字节，m最大保存长度，超出截断，使用1或2个字节记录字符串长度
      1. text：大字符串，0~65535字节，2E16，mediumtext：1600万，2E24，longtext：42亿长度或4GB字符，tinytext
-     1. blob：二进制形式的长文本数据，0~65535字节，tiny/medium/longblob，可变长度
-   - 时间
+     1. blob：二进制形式的长文本数据，0~65535字节，tiny/medium/longblob，可变长度，避免使用，会用到临时表，性能开销
+     1. binary：二进制形式的字符串，即包含字节字符串，不包含字符字符串，没有字符集，避免使用，会用到临时表，性能开销
+   - 日期时间
      1. DATETIME：YYYY-MM-DD HH:MM:SS (1000-01-01 00:00:00/9999-12-31 23:59:59)，日期和时间
      1. TIMESTAMP：YYYY-MM-DD HH:MM:SS (1970-01-01 00:00:00/2038 格林尼治时间/北京时间)，日期和时间/时间戳，只是时间戳表示的范围，可自动更新
      1. DATE：YYYY-MM-DD (1000-01-01/9999-12-31)，日期
@@ -33,7 +41,7 @@
      1. DML：对数据操作：select、insert、delete、update、replace
    - 基础
     ```sql
-    mysql -h地址(不写-h默认localhost) -u -p                   # 连接
+    mysql -h地址(不写-h默认localhost) -u -p -P 3306           # 连接
     quit/exit                                               # 断开
     status                                                  # 查看信息：版本、账号等
     show status                                             # 服务器状态
@@ -122,17 +130,22 @@
      1. zerofill
      1. variables
 1. sql
-   - 分组
-     1. group by：用列的值进行分组/计算，必须在where之后order by之前，select的字段除了被group的其他要么被统计，要么没有
-     1. having：筛选成组后的数据，作用于组，如`having sum(age) > 10`
-   - 连表
+   - 关联查询
      1. inner join：无关系不显示，同join
      1. left join：获取左表所有记录，即使右表没有
      1. right join：反过来
-     1. cross join：在mysql中和inner join相同，标准sql中不同，产生笛卡尔集，即M*N，
-   - 组合
+     1. cross join：在mysql中和inner join相同，标准sql中不同，产生笛卡尔集，即M*N
+   - 内连接关系形式
+     1. 等值连接：on a.id = b.id
+     1. 不等值连接：on a.id > b.id
+     1. 自连接：on a1.id = a2.id
+   - 组合查询 
      1. union：自动处理重合，即去掉重复的数据，以第一个取出的为准
-     1. union all：不处理重合，相反
+     1. union all：不处理重合，相反，更快
+   - 嵌套查询：select * from (select ...);
+   - 分组
+     1. group by：用列的值进行分组/计算，必须在where之后order by之前，select的字段除了被group的其他要么被统计，要么没有
+     1. having：筛选成组后的数据，作用于组，如`having sum(age) > 10`
    - replace：是标准sql的mysql扩展，使用primary key/unique key确定是否插入新行
      1. 注意：会抹掉其他未指定数据，应作为插入使用，而不是更新
      1. 原理：将数据插入，成功则结束；否则引发重复键错误，先删除原有记录，然后更新
@@ -150,91 +163,61 @@
      1. 公共表表达式：CTE，是一个命名的临时结果集，仅在单个SQL语句的执行范围内存在，比派生表更易读，性能更高
    - 表间关系：一对一、一对多、多对多
    - 存储引擎
-     1. MyISAM：5.5之前的默认引擎，用于只读提高性能、不支持事务、不支持外键，最大256TB，可以压缩为只读表，支持全文索引
-     1. InnoDB：支持MVCC，多种行锁机制组合，一致性读或者读快照就是读取当前事务开始之前的数据快照，在这个事务开始之后的更新不会被读到。InnoDB行锁是通过给索引上的索引项加锁来实现的
+     1. MyISAM：5.1之前的默认引擎，用于只读提高性能、不支持事务、不支持外键，最大256TB，可以压缩为只读表，支持全文索引、压缩、空间函数。表存两个文件myd和myi，表示数据和索引
+     1. InnoDB：性能优秀，数据存在共享表空间，可通过配置分开，支持MVCC，多种行锁机制组合，一致性读或者读快照就是读取当前事务开始之前的数据快照，在这个事务开始之后的更新不会被读到。InnoDB行锁是通过给索引上的索引项加锁来实现的
         - 事务
         - 行级锁
         - 实现sql标准的4种隔离级别
-        - 插入缓存(insert buffer)
+        - 自动插入缓存(insert buffer)
         - 二次写(double write)
-        - 自适应hash索引(adaptive hash index)
+        - 读取数据时自动在内存构建hash索引(adaptive hash index)
         - 预读(read ahead)
         - 索引是其表空间的组成部分
-     1. merge：将具有相似结构的多个MyISAM表组合到一个表中的虚拟表
+        - 通过工具支持热备份
+        - 支持崩溃后安全恢复
+        - 支持外键
      1. memory；内存表存储在内存中，并使用散列索引，使其比MyISAM表格快，服务器停止数据丢失
+     1. Archive、Blackhole、CSV
+     1. merge：将具有相似结构的多个MyISAM表组合到一个表中的虚拟表
 1. 数据库组成
    - mysql：用户/权限相关，user表存储用户和权限
    - information_schema：自身架构相关
    - performance_schema
    - sys
-1. 视图
-   - 理解：即虚拟表，可以对视图进行操作，作用有简化查询，限制用户访问和权限。不支持物理视图，可以进行查询和更改，表改变不会联动视图改变    
-   - 创建：`create view viewName as select * from table`，分辨视图 `show full tables;`
-1. 触发器
-   - 理解：triggers，自动执行响应事件的存储程序
-   - 分类：before/after insert/update/delete
-   - 实例
-    ```sql
-    create trigger triName
-        before update on table
-        for each row
-    begin
-        # some sql
-    end;
-    ```
-1. 预解析
-   - 理解：使用占位符预先准备查询语句，不用解析语句，查询速度更快，防止注入。步骤有：prepare、execute、deallocate prepare(发布)
-   - 实例
-    ```sql
-    PREPARE stmt1 FROM 'select ... ?';          # 准备占位符
-
-    SET @a = '1';
-    EXECUTE stmt1 USING @a;
-
-    DEALLOCATE PREPARE stmt1;
-    ```
-1. 存储过程
-   - 理解：在mysql中存储了sql语句，预先缓存编译结果、执行速度快，传输数据少。耗内存，不灵活
-   - 实例
-    ```sql
-    CREATE PROCEDURE procedureName()
-    BEGIN
-        SELECT * FROM user;
-    END
-    ```
 1. 注释 ：--、#、/**/=
-### 应用
+### 特性
 1. 索引
-   - 理解：为了加快查询速度，对数据列进行排序的一种结构，包含所有记录的引用指针，查询数据时先检查索引是否存在，用于精确到对应行，
-   - 特点
-     1. 选择性原则：指不重复的索引值和总数的比值，范围0~1，索引的选择性越高查询效率越高，唯一索引的选择性是1性能是最好的
-     1. 最左前缀原则：组合索引只会从左边开始按照索引搜索，如果检索条件没有最左的，那么就不会使用到索引，因为不知道去哪儿开始找。所以不用给联合索引最左边的列单独建立索引
-     1. 查询只能使用一个索引，会选择限制最严格的索引：where用了order没法用，只有order的字段在where中才会用
-     1. key和index：相同，mysql为了兼容其他系统，都是索引，key多了一层约束层含义
-     1. 数据库会同时维护索引表，太多索引影响更新/插入
+   - 认识：为加快查询速度，对数据列进行排序的一种结构，包含所有记录的引用指针，查询时先查索引，引擎实现
+     1. 加快查询速度，大大减少服务器的检索数据
+     1. 避免排序和临时表，将随机io变顺序io
+     1. 同时维护索引表，降低写入更新速度，占用磁盘
+   - 使用场景
+     1. 非常小的表：全表扫描效率更高
+     1. 中大型：索引非常有效
+     1. 特大型：索引代价增长，使用分区
    - 分类
-     1. key/index：普通索引，只用于加快查询速度
-     1. primary key：主键索引，不能重复，不为null
-     1. unique/unique key：唯一索引，可组合多个列。除了BDB外，都允许重复NULL
-     1. column(n)：前缀索引，鉴于选择性原则，根据内容制定合适的前缀长度，以达到最佳查询效果。无法做order、group、覆盖扫描
-     1. fulltext：全文索引，用于文本搜索，仅MySIAM支持，仅用于char/varchar/text
-     1. spatial：空间列，值不为null
-     1. foreign key：外键索引
-   - 建立原则
-     1. 数据量少的、数据经常改变的不能建立
-     1. 数据差别不大的不能建立：区分度公式COUNT(DISTINCT col)/COUNT(*)，表示字段不重复比率
+    ```
+    key/index               # 普通索引
+    key(,)                  # 组合索引
+    column(n)               # 前缀索引，鉴于选择性原则，通过select left(column,n)不断增加n查看重复行的减少制定合适的前缀长度以达到最佳查询效果。无法order、group、覆盖扫描
+
+    unique key              # 唯一索引，可组合多个列。具有唯一性约束，除了BDB外允许重复NULL
+    primary key             # 主键索引，特殊的唯一索引，不能重复，不为null
+
+    foreign key             # 外键索引，保证数据一致性、完整性，实现级联操作
+    fulltext                # 全文索引，用于文本搜索，仅MySIAM，仅用于char/varchar/text，仅英文
+    spatial                 # 空间列，值不为null
+    ```
+   - 特性
+     1. 选择性原则：不重复的索引值和总数的比值。范围0~1，选择性越高查询效率越高，提高查询速度，节省空间和io。唯一索引的选择性是1性能最好。区分度公式COUNT(DISTINCT col)/COUNT(*)
+     1. 最左前缀原则：组合索引只会从左边开始按照索引搜索，如果检索条件没有最左的，那么就不会使用到索引，因为不知道去哪儿开始找
+     1. 查询只能使用一个索引，会选择限制最严格的索引：where用了order没法用，只有order的字段在where中才会用
      1. 有null的列不会包含在索引中
-     1. 尽量建立适当短索引、前缀索引：选择性原则，提高查询速度，节省空间和io。通过select left(column,n)不断增加n查看重复行的减少，以达到最佳选择
-     1. 尽可能扩展和整合索引，而不是增加索引：如联合索引
-     1. 索引越多，占用空间越大，新增修改越慢
-   - 使用原则
-     1. 不在列上运算：因为每个行要运算所以索引失效
-     1. 使用索引列排序：唯一索引原则
-     1. like：最左原则，%aa%不使用索引，而aa%使用
-     1. !=、not in、<>：不使用索引，范围查询可能用到索引如>、in等
-     1. or：前后条件都有索引，整个语句才使用索引，否则推荐用union
+   - 特点
+     1. 表只有一个主键索引，可有多个唯一索引
+     1. key和index都是索引，为兼容其他系统，key多了一层约束层含义
 1. 事务
-   - 理解：保证所有操作全部执行，用于数据量大、复杂的操作
+   - 理解：保证所有操作全部执行，由InnoDB提供，服务层不管理，由下边的引擎实现，在一个事务中，使用多个引擎不靠谱
    - 特性：ACID
      1. 原子性：一个事务是一个整体，要么全部成功，要么全部失败
      1. 稳定性：有非法数据(外键约束等)，事务撤回
@@ -270,15 +253,15 @@
           1. Serializable：可序列化，性能问题并增加死锁的机率
 1. 分布式事务
 1. 锁
-   - 分类
-     1. 表锁：MyISAM，开销小，加锁快，无死锁，冲突高，并发低。可以并发读，写的时候读写都加锁等待，系统自动加锁。因为一次获取所有锁，不会死锁。必须一次锁定所有用到的表，别名也要指定，否则出错
+   - 基于数据操作分类
+     1. 共享锁：`lock in share mode;`，读锁，多个可读不可拿到写锁
+     1. 排他锁：`for update`，读写锁都拿不到，update/delete/insert自动加，select任何锁不加
+   - 基于范围分类
+     1. 表锁：MyISAM，性能开销小，加锁快，无死锁，冲突高，并发低。可以并发读，写的时候读写都加锁等待，系统自动加锁。因为一次获取所有锁，不会死锁。必须一次锁定所有用到的表，别名也要指定，否则出错
      1. 行锁：InnoDB，开销大，加锁慢，有死锁，冲突低，并发高。基于索引，如果改的字段是索引或者自增字段，会锁住整个表
      1. 间隙锁：范围查找自动锁定范围内所有行，防止幻读
      1. 页锁：BDB被InnoDB取代，介于表和行之间，会死锁
    - 表锁：lock table给InnoDB加表级锁
-   - 行锁
-     1. 共享锁：`lock in share mode;`，可读不可拿到写锁
-     1. 排他锁：`for update`，读写锁都拿不到，update/delete/insert自动加，select任何锁不加
    - 查看
      1. 表锁争用情况：`show status like 'table%';`
      1. 行锁争用情况：`show status like 'innodb_row_lock%';`，使用监视器`CREATE TABLE innodb_monitor(a INT) ENGINE=INNODB;Show innodb status\G;DROP TABLE innodb_monitor;`
@@ -294,6 +277,41 @@
         - 更新数据时，对比数据局版本
         - 版本正确，更新数据，version加1
         - 版本错误，认为是过期数据，采取补救措施
+1. 视图
+   - 理解：即虚拟表，可以对视图进行操作，作用有简化查询，限制用户访问和权限。不支持物理视图，可以进行查询和更改，表改变不会联动视图改变    
+   - 创建：`create view viewName as select * from table`，分辨视图 `show full tables;`
+1. 预解析
+   - 理解：使用占位符预先准备查询语句，不用解析语句，查询速度更快，防止注入。步骤有：prepare、execute、deallocate prepare(发布)
+   - 实例
+    ```sql
+    PREPARE stmt1 FROM 'select ... ?';          # 准备占位符
+
+    SET @a = '1';
+    EXECUTE stmt1 USING @a;
+
+    DEALLOCATE PREPARE stmt1;
+    ```
+1. 触发器
+   - 理解：triggers，自动执行响应事件的存储程序，滥用造成数据库的维护困难
+   - 分类：before/after insert/update/delete
+   - 实例
+    ```sql
+    create trigger triName
+        before update on table
+        for each row
+    begin
+        # sql
+    end;
+    ```
+1. 存储过程
+   - 理解：是以后使用而保存的一条或多条sql集合，预先缓存编译结果，是业务逻辑和流程的集合。执行速度快，传输数据少，耗内存，不灵活
+   - 实例
+    ```sql
+    CREATE PROCEDURE procedureName()
+    BEGIN
+        SELECT * FROM user;
+    END
+    ```
 1. sql注入
    - 类型：like注入，使用php的addcslashes
    - 安全措施
@@ -304,17 +322,46 @@
      1. jsky：漏洞扫描工具
 ### 性能和调优
 1. 设计和使用
-   - 数据类
+   - 数据类型
+     1. 尽量使用更简单的类型，数据长度越短越好(更少存储内存空间)
+     1. 长数字使用string
+     1. 用枚举代替常用字符串类型
+     1. 尽量用timestamp，比datetime效率高
+   - 列设计
      1. 一定有主键，最好是自增，否则多次读写后更离散，更多随机io
-     1. 数据长度越短越好，更少存储/内存空间
-     1. int比string快，长数字使用string
      1. 增加create_time/update_time字段，用于数据归档/自定义差异备份
-   - sql
-     1. 无select *，sql中无计算，where中无函数，提高索引利用覆盖率
-     1. 所有where条件加引号，防止类型隐式转换
+   - 索引
+     1. 建立原则
+        - 数据量少的、数据经常改变的、数据差别不大的不能建立
+        - 字符串使用前缀索引，节省大量空间
+        - 尽可能扩展和整合索引，而不是增加索引
+        - 最左前缀原则：不用给组合索引最左边的列单独建立索引
+     1. 使用原则
+        - like：最左原则，%aa%不使用索引，而aa%使用
+        - !=、not in、<>：不使用索引，范围查询可能用到索引如>、in等
+        - or：前后条件都有索引才使用索引，否则用union
+        - on、using子句上有索引，否则全表
+        - 字符串列加引号，否则索引失效
+        - 不在列上运算：因为每个行要运算所以索引失效
+        - 使用索引列排序：唯一索引原则
+        - 优化器会评估，有可能放弃使用索引
+   - 查询
+     1. 无select *，sql中无计算
+     1. 提高索引利用率
+     1. where中无函数，所有where条件加引号，防止类型隐式转换
+     1. 尽量用union代替子查询
+     1. union all代替union
+     1. group和order尽量在一个表中，否则全表
+     1. 不需要排序用order by null否则依然排序
+     1. 使用count(*)忽略所有列，不用列名
      1. 尽量inner join让优化器自动选择驱动表
+     1. 一个大查询可以分解为小查询，内部每秒能扫描百万行
+   - 运维
+     1. 慢查询日志，不要直接打开，使用pt-query-digest工具分析
+     1. set profile = 1;show profile;show profile for query 1;获取sql执行时间
+     1. show status;show global status;分析计数器
+     1. show processlist;查看线程状态
      1. 关键业务上线前explain确认执行计划
-     1. 存了数字的字符串加上引号     
 1. explain
    - 理解：sql语句分析，将过程和索引等信息列出来
    - 使用解析
@@ -355,14 +402,23 @@
    - 关闭：`mysqladmin -u -p shutdown`
    - 重启：`service mysqld restart`
    - 查看：`ps -ef | grep mysqld`
+1. 安全
+   - sql安全：防注入(预处理)、特殊字符转义、错误信息屏蔽
+   - 权限分开、定期修改密码
+   - 定期备份
 1. 数据库操作
    - 备份库
    - 恢复库
 1. 数据库中间件，故障切换
 1. mycat：开源分布式数据库中间件
-1. 主从，amoeba
+1. 主从，主主，amoeba
+   - 原理：主库将更改记录到二进制日志binlog，从库复制到中继日志，读取中继重新放到库中
+     1. 负载均衡，降低压力
+     1. 高可用，故障切换
 1. 读写分离
-1. 分表
+1. 分表分区
+   - 分区：对用户透明，底层分为多个物理子表。用partition by定义每个分区存放的数据，优化器自动使用。适用于数据多，只在表最后有热点数据，其他都是历史数据。分区可以分布在不同机器上独立维护，有很多功能不能用
+   - 分表：通过hash算法或工具将表垂直或水平切分。水平拆分用于数据本身有独立性，可以拆分，逻辑分层算法无法变更。垂直拆分用于某些列常用某些不常用，查询时减少io次数。应用增加复杂度
 1. 监控系统
 1. 物理备份、逻辑备份、binlog增量恢复
 1. 数据操作
@@ -429,6 +485,7 @@
 1. 知识点
    - 严格模式
    - NULL与任何其它值的比较永远返回false，即使NULL=NULL也返回false
+   - 修饰符：格式化显示 \G、取消当前sql \c、退出 \q、显示状态 \s、\h、\d
 1. 5.6新特性
    - server参数默认值改变
    - innodb增强
