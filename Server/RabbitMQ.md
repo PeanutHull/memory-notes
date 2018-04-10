@@ -17,12 +17,12 @@
    - 集群
      1. 虚拟主机：Virtual Host，一个独立的虚拟的包含交换器、队列等的raMQ服务器
      1. 代理：Broker，表示消息队列服务器实体。
-1. 消息的路由
-   - 理解：生产者把消息发布到Exchange上，Binding决定发送到那个队列
+1. 消息路由
+   - 理解：生产者把消息发布到exchange上时一般携带routingKey，exchange的类型和bindingKey一起决定发送位置
    - Exchange类型
-     1. direct：完全匹配，routing-key和binding-key相同直传过去
+     1. direct：完全匹配，routingKey和bindingKey相同直传过去
      1. fanout：广播，发给所有绑定的队列，最快
-     1. topic：匹配路由键，用.切分，通配符#，如`#.usa`
+     1. topic：用bindingKey匹配routingKey，用.切分，通配符#和*，如`#.usa`
      1. headers：匹配header，和direct一致，慢不用了
 1. 消息持久化
 1. 消息确认、事务机制

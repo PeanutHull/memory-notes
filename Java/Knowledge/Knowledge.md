@@ -514,7 +514,6 @@ dumpStack()                                         将当前线程的堆栈跟�
      1. CDN
      1. Elasticsearch
      1. solr
-     1. 负载均衡
      1. mysql集群
      1. JVM性能调优
      1. 负载均衡

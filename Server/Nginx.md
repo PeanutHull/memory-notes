@@ -47,55 +47,61 @@
         listen       80;
         listen       somename:8080;
         server_name  somename  alias  another.alias;
+    }
+    ```
+1. location配置
+    ```
+    location / {
+        root   html;
+        index  index.html index.htm;
+    }
 
-        location / {
-            root   html;
-            index  index.html index.htm;
-        }
+    location ~ \.php$ {                                                         # php-fpm
+        fastcgi_pass   127.0.0.1:9000;
+        fastcgi_index  index.php;
+        fastcgi_param  SCRIPT_FILENAME  $document_root$fastcgi_script_name;
+        include        fastcgi_params;
+    }
 
-        location ~ \.php$ {                                                         # php-fpm
-            fastcgi_pass   127.0.0.1:9000;
-            fastcgi_index  index.php;
-            fastcgi_param  SCRIPT_FILENAME  $document_root$fastcgi_script_name;
-            include        fastcgi_params;
-        }
+    location ~* .(gif|png|jpg|jpeg|zip|apk)$ {                                  # 定向文件
+        root   /mnt/opt/wecook-base/uploads;
+        expires 7d;                                     // 缓存时间
+        access_log off;
+    }
+    location ~* (^/statics/dishes/.*\.(html|js|css|eot|svg|ttf|woff)$){
+        root /Users/Treri/project/wecook/mobile;
+    }
 
-        location ~* .(gif|png|jpg|jpeg|zip|apk)$ {                                  # 定向文件
-            root   /mnt/opt/wecook-base/uploads;
-            expires 7d;                                     // 缓存时间
-            access_log off;
+    location / {                                                                # 重动向
+        if (!-e $request_filename) {
+            rewrite  ^(.*)$  /index.php?s=$1  last;
+            break;
         }
-        location ~* (^/statics/dishes/.*\.(html|js|css|eot|svg|ttf|woff)$){
-            root /Users/Treri/project/wecook/mobile;
-        }
+    }
 
-        location / {                                                                # 重动向
-            if (!-e $request_filename) {
-                rewrite  ^(.*)$  /index.php?s=$1  last;
-                break;
-            }
-        }
+    location / {                                                                # 反向代理，请求转发
+        proxy_pass http://localhost:99;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_redirect off;
+    }
 
-        location / {                                                                # 反向代理，请求转发
-            proxy_pass http://localhost:99;
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_redirect off;
-        }
+    error_page   500 502 503 504  /50x.html;                                    # 错误页面
+    location = /50x.html {
+        root   html;
+    }
 
-        error_page   500 502 503 504  /50x.html;                                    # 错误页面
-        location = /50x.html {
-            root   html;
-        }
+    location ~ /\.ht {                                                          # 拒绝
+        allow 127.0.0.1/24;
+        deny  all;
+    }
+    location ~ /\.(git|svn|vcs)/ {
+        return 404;
+    }
 
-        location ~ /\.ht {                                                          # 拒绝
-            allow 127.0.0.1/24;
-            deny  all;
-        }
-        location ~ /\.(git|svn|vcs)/ {
-            return 404;
-        }
+    location / {                                                                # 添加header
+        add_header headerName headerValue
     }
     ```
 1. gzip压缩：可在任何层级定义，越细优先级越高
@@ -112,16 +118,28 @@
     gzip_proxied any;
     limit_zone crawler $binary_remote_addr 10m;         // 开启限制IP连接数的时候需要使用
     ```
-1. 负载均衡：weight是权重，权值越高被分配到几率越大
+1. 负载均衡
+   - 特点：实现了七层负载均衡，功能多、性能好、运行稳定，自动剔除不正常服务器，上传文件使用异步模式，有权重等多种分配策略
+   - 内置策略
+     1. ip hash：变相轮询算法
+     1. 加权轮询：一直给高权重机器，分配请求会权重降低。先给高权重机器，直到该机器权值降到了比其他机器低才给其他机器，weight是权重。当所有机器都down时，nginx会立即将所有机器标志位变初始状态，避免全部timeout的状态
+   - 扩展策略
+     1. fair策略：根据机器响应时间判断负载情况，选出最快的
+     1. 通用hash：以nginx内置的变量为key进行hash
+     1. 一致性hash：使用nginx内置的一致性hash环
+   - 内置策略：nginx的proxy
     ```
-    upstream somename {
-        server 192.168.80.121:80 weight=3;              
-        server 192.168.80.122:80 weight=2;
-        server 192.168.80.123:80 weight=3;
-    }
-    server {
-        location / {
-            proxy_pass http://somename
+    http{
+        upstream somename {
+            ip_hash;                                        # 加上几位ipHash策略，去掉为加权
+            server 0.0.0.1:80 weight=3;
+            server 0.0.0.2:80 weight=2;
+            server 0.0.0.3:80 weight=3;
+        }
+        server {
+            location / {
+                proxy_pass http://somename
+            }
         }
     }
     ```
@@ -189,3 +207,8 @@
    - zlib：提供了多种压缩/解压缩的方式。nginx使用zlib对http包的内容进行gzip
    - openssl
 1. nginx层级：http{}、server{}、location{}
+1. 负载均衡的实现方式
+   - 七层实现：基于url等应用层信息
+   - 四层实现：通过报文的目标地址和端口，加上负载均衡设备设置的服务器选择方式，决定机器
+     1. 软件：LVS，NAT、DR、TUN三种方式
+     1. 硬件：F5

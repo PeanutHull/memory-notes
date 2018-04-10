@@ -6,8 +6,10 @@
    - 8种原始数据类型
      1. 标量：boolean、integer、float、string
      1. 复合：array、object
-     1. 特殊：resource、null
-   - 伪类型：mixed(所有)、number(int，float)、callback(V5.4)
+     1. 特殊
+        - resource：资源类型，是特殊变量，保存了到外部资源的一个引用。具体为为打开文件、数据库连接、图形画布区域等特殊句柄，因此将其它类型的值转换为资源没有意义。不可被serialize()
+        - null
+   - 伪类型：mixed(所有)、number(int，float)、callback(V5.4)、void
 1. 变量
    - 普通变量：区分大小写，可变变量 $$a
      1. 赋值：$xx=xx
@@ -84,7 +86,7 @@
    - 魔术常量：8个
     ```php
     __DIR__
-    __FILE__            // 当前文件的完整路径和文件名
+    __FILE__            // 当前文件的绝对路径和文件名，不论文件是否被包含
     __NAMESPACE__       // 当前命名空间名
     __TRAIT__           // 5.4新增，返回trait被定义时的名字
     __CLASS__           // 类名
@@ -167,9 +169,9 @@
         ```
 1. 日期时间
    - time        时间戳
-   - date        格式化时间/日期
    - strtotime   字符串转为时间戳，啥都能转
    - mktime      日期转为时间戳
+   - date        格式化时间/日期
 1. 文件/目录
    - 文件
      1. filetype/mime_content_type：类型
@@ -189,8 +191,8 @@
      1. 文件指针：ftell、fseek、rewind
    - 目录
      1. 查看
-        - pathinfo
-        - basename
+        - basename：文件名
+        - pathinfo：较全的路径信息
         - dirname(dirname(__FILE__))：访问上上级目录
      1. 读取：opendir、readdir、closedir、rewinddir、scandir
      1. 创建：mkdir

@@ -27,8 +27,8 @@
      1. 理解：once确保文件只被包含一次，避免函数重定义、变量重新赋值
      1. 查找逻辑：找到即终止
         - 如果给出路径按照路径查找
-        - 从include_path查找
-        - 从调用脚本目录和当前工作目录查找
+        - 从include_path查找(include_path就是一个在php.ini中配置的，也可以用set_include_path()配置的用于载入文件的路径，path分隔符使用系统的)
+        - 从调用脚本目录(getcwd())和当前工作目录(__FILE__)查找
      1. 分类
         - include()/include_once()：运行前引入、运行次数越多效率越高，出错产生警告
         - require()/require_once()：用到才引入，出错抛出错误并终止脚本
@@ -70,13 +70,16 @@
     $ec->invoke($instance);                                                     // 执行方法  
     ```
    - 函数
-     1. interface_exist
-     1. class_exists
-     1. get_class
-     1. get_class_methods
-     1. instanceof
-     1. func_get_args
-     1. call_user_func_array
+     1. 判断啊
+        - interface_exist/trait_exists...
+        - class_exists/is_subclass_of/instanceof...
+        - property_exists/method_exists...
+        - is_null/is_int/is_string...
+     1. 获取
+        - get_class/get_class_methods
+        - get_defined_functions/func_get_args
+     1. 使用
+        - call_user_func/forward_static_call
 ### Trait
 1. 理解：特质,是一种为类似PHP的单继承语言而准备的代码复用机制，使开发人员能够自由地在不同层次结构的独立的类中复用方法集。来避免传统多继承和混入类（Mixin）相关的典型问题，就是先定义trait，用use给类插入代码，代码复用，属于类与对象，v5.4
 ```php

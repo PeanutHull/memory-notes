@@ -205,6 +205,9 @@
      1. 抽象工厂：有多条产品线，系统提供一个产品类的库，所有的产品以同样的接口出现，从而使客户端不依赖于实现。无论是简单工厂模式、工厂模式还是抽象工厂模式，它们本质上都是将不变的部分提取出来，将可变的部分留作接口，以达到最大程度上的复用
 1. 注册树模式
    - 意图：全局共享/交换对象
+1. 装饰着模式
+   - 认识：动态地给一个对象增加一些额外的职责，对于扩展比继承更有弹性。
+   - 原理：将一个类的对象嵌入另一个对象中，由另一个对象来决定是否调用嵌入对象的行为以便扩展自己的行为，我们称这个嵌入的对象为装饰器
 ### 算法
 1. 理解：解决特定问题的步骤的描述，每个算法效率不一样
 1. 特点：有穷性、确切性、输入项、输出项、可行性
@@ -465,135 +468,76 @@ new \app\mvc\view\home\Index();                             // 实例化未引�
 ```
 ### 函数大全
 1. 字符串类
-   - explode
-   - trim
-   - serialize
-   - preg_split
-   - split
-   - chunk_split
-   - strpos
-   - str_split
-   - strrev
-   - substr
-   - iconv_substr
-   - mb_substr
-   - mb_strlen
-   - mb_strcut
-   - preg_replace
-   - preg_match
-   - preg_match_all
-   - chr
-   - ord
-   - str_repeat
-   - substr_count
-   - str_shuffle
+   - explode/str_split/preg_split/chunk_split           分割
+   - trim/str_replace/preg_replace/preg_filter          替换
+   - substr/strstr/preg_match/preg_match_all            截取
+   - strlen/substr_count                                统计
+   - strpos/stripos/strrpos/strripos                    位置
+   - strrev/str_repeat/str_shuffle/rand                 其他操作
 1. 数组类
    - implode
-   - array_diff
-   - array_column
-   - array_unique
-   - array_sum
-   - empty
-   - count
-   - array_merge
-   - in_array
-   - array_pop
-   - array_push
-   - array_shift
-   - array_values
-   - array_slice
-   - list(给一组变量赋值)
-   - each
-   - reset
-   - ksort
-   - array_reverse
-   - serialize()     序列化
-   - unserialize()   反序列化
+   - count/in_array
+   - sort/ksort/asort/array_multisort/usort/shuffle                                 k是键，默认和a是值，r倒序，u自定义
+   - array_keys/array_values/array_slice/array_chunk/preg_grep/array_column         数据获取
+   - array_pop/array_push/array_shift/array_unshift                                 元素处理
+   - each/reset/current/next                                                        指针处理
+   - array_unique/array_sum/array_reverse                                           加工处理
+   - array_diff/array_merge                                                         多数组处理
+   - list                                                                           把数组值给一组变量赋值，是语言结构
 1. 判断类
-   - empty
-   - isset
-   - defined
-   - function_exists
-   - method_exists
-   - class_exists
-   - is_null
-   - is_int
-   - is_array
-   - is_string
-   - in_array
-   - is_file
-   - is_dir
-   - is_writeable
-1. 时间类
-   - time
-   - date
-   - strtotime
-   - microtime
-   - mktime
-   - date_default_timezone_set
+   - empty/isset                                        empty不存在或值等于false，isset变量存在且不是null，都不报错
+   - defined/constant/get_defined_constants             常量
+   - is_dir/is_link/is_file/file_exist/is_readable
+   - get_class/call_user_func                           反射族
 1. 编码类
-   - json_decode
-   - iconv
-   - mb_convert_encoding
-   - htmlentities
-   - htmlspecialchars
-   - htmlspecialchars_decode
-   - strip_tags
-   - addslashes
-   - stripslashes
-   - quotemeta
-   - nl2br
-   - strip_tags
-   - mysql_real_escape_string
-   - mysql_escape_string
-   - base64_decode
-   - base64_encode
-   - rawurldecode
-   - rawurlencode
-   - urldecode
-   - urlencode
+   - chr/ord                                                ascii转换
+   - iconv/iconv_substr                                     字符集转换
+   - mb_convert_encoding/mb_strlen/mb_strcut/mb_substr      多字节字符串处理
+   - hex2bin/pack                                           进制处理
+   - json_encode/json_decode                                json编解码
+   - base64_encode/base64_decode                            mime base64编解码
+   - convert_uuencode                                       uuencode编解码
+   - urlencode/urldecode                                    url编码，空格转为+
+   - rawurlencode/rawurldecode                              url编码，空格转为%20
+   - addslashes/stripslashes                                斜线转义
+   - htmlentities                                           html转义编解码
+   - htmlspecialchars/htmlspecialchars_decode/strip_tags    特殊字符、html实体转换
+   - quotemeta/nl2br
+   - serialize/unserialize                                  字符序列化
+1. 时间类
+   - date_default_timezone_set
+   - time/microtime
+   - mktime/strtotime
+   - date
 1. 文件类
-   - is_writeable
-   - is_readable
-   - unlink
    - mkdir
-   - readfile
-   - filetime
-   - basename
    - dirname
-   - rename
-   - pathinfo
-   - file_get_content
-   - fopen
-   - fread
-   - fgets
-   - fgetc
-   - file_put_content
-   - is_file
-   - is_dir
-   - file_exist
-   - filesize
-   - stat
+   - basename
    - getcwd
+   - pathinfo
+   - filetime
+   - rename
+   - stat
+   - file_get_content/file_put_content
+   - fopen
+   - fread/fgets/fgetc
+   - readfile
+   - filesize
+   - unlink
    - getimagesize
-   - getimagesizefromstring
    - move_uploaded_file
 1. 网络类
    - http_build_query
-   - file_get_contents
-   - fopen
-   - fget
-   - fgetc
-   - fclose
+   - fopen/file_get_contents
    - ldap_connect
    - header
 1. 安全类
-   - md5
+   - md5/md5_file
    - sha1
    - crypt
-   - addslashes
-   - stripslashes
-   - mysql_real_escape_string
+   - addslashes/stripslashes
+   - escapeshellarg
+   - mysql_escape_string
 1. 数学类
    - cadd 精度加法
    - bcsub 精度减法
@@ -607,48 +551,26 @@ new \app\mvc\view\home\Index();                             // 实例化未引�
    - gmp 函数，专业计算
    - intval
    - number_format
-   - rand
-   - mt_rand
    - pow
    - uniqid
    - round
    - abs 绝对值
+   - rand/mt_rand
 1. 系统类
-   - onst
-   - list
-   - getenv
-   - putenv
-   - shell_exec
+   - const
+   - getenv/putenv
+   - ini_set/ini_get
    - php_sapi_name
-   - system
+   - set_include_path/get_include_path
+   - shell_exec/system
    - extract
-   - var_export
-   - var_dump
-   - call_user_func_array
+   - set_time_limit
    - fastcgi_finish_request
    - ignore_user_abort
    - register_shutdown_function
-   - set_time_limit
-1. 打印类
-   - print
-   - printf
-   - print_r
-   - sprintf
    - echo 
-   - var_dump
-   - var_export
-1. 常变量
-   - const
-   - define
-   - defined
-   - constant
-1. 类类
-   - class_exists();
-   - get_class();
-   - get_class_methods();
-   - interface_exist();
-   - instanceof
-   - func_get_args
+   - print/printf/print_r/sprintf
+   - var_dump/var_export   
 1. 面试题：注意典型题的答案
    - php
      1. 三种定义字符串的方式
@@ -689,3 +611,7 @@ new \app\mvc\view\home\Index();                             // 实例化未引�
      1. yii2：结构简单，功能丰富，扩展性高，重量级
    - 算法、数据结构
    - 高并发的指标、计算、解决方案
+
+### **的背面
+1. 装饰着模式，在一个model里的多个方法定义要获取的select，最后用一个end方法将结果返回。其实是个伪装饰者，就是一个对象层层返回，能放到一个model执行查询的就放，不行的就另起一个查询并添加数据到数组里。在controller里链式调用，最终组合出自己想要的结果。真正的装饰者人家不干预主逻辑，只是前后执行自己的逻辑
+
