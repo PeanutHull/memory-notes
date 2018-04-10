@@ -527,8 +527,9 @@
 1. 5.7新特性
 ```sql
 # 查询json数据：json_column->"$.id"，和json_extract，是两种使用方式。->>表示去掉转义符
-SELECT json_extract (json_data, '$.content.answer[*].group[*].value') FROM entity_question WHERE JSON_SEARCH (json_data,'all','行到水穷处',NULL,'$.content.answer[*].group[*].value') IS NOT NULL;
-SELECT json_extract (json_data,'$.content.answer') FROM entity_question WHERE JSON_EXTRACT(json_data, "$.content.answer[*].group[*].type") != 'text';
+SELECT json_extract(json_data, '$.content.answer[*].group[*].value') FROM entity_question WHERE JSON_SEARCH (json_data,'all','行到水穷处',NULL,'$.content.answer[*].group[*].value') IS NOT NULL;
+# 以下这条不能准确的搜索，因为不能遍历所有的type
+SELECT json_extract(json_data,'$.content.answer') FROM entity_question WHERE JSON_EXTRACT(json_data, "$.content.answer[*].group[*].type") != 'text';
 ```
 ### 原理
 1. 语法分析器：优化查询，会帮你优化成索引可以识别的模式

@@ -15,7 +15,7 @@
    - 静态变量：只存在于函数作用域内，只存活在栈中，再次调用函数会保留，`static $n = 1;`
    - 超全局变量：也是数组
      1. $GLOBALS：包含全部变量的全局组合数组
-     1. $_ENV
+     1. $_ENV：cli模式下的环境变量
      1. $_REQUEST：包含GET、POST、COOKIE 和 FILE 的数据
      1. $_POST：只包含application/x-www-form-urlencoded和multipart/form-data两种类型的post数据
      1. $_GET
@@ -32,29 +32,29 @@
    - 理解：只能是标量，一旦定义不能修改/删除，可以不用$。常量的范围是全局的，不用管作用区域就可以在脚本的任何地方访问常量
    - 分类
      1. 用户常量
-        - 全局常量：`define('name', 'value')`，任意地方定义和访问，不能在类中，大小写敏感，通常大写
-        - 类常量：`const name='value'`，只能在类中定义常量，不能在条件语句中，const5.3之后也可在类外定义，是语言结构，比较快，和static不同的是没有权限限定符和不能修改值，7.1中可以加限定符，使用：self::xxx、className::xxx
+        - 全局常量：`define('name', 'value')`，任意地方定义和访问，不能在类中，通常大写
+        - 类常量：`const name='value'`，只能在类中定义常量，不能在条件语句中，v5.3之后也可在类外定义，和static不同的是没有权限限定符和不能修改值，7.1中可以加限定符，使用：self::xxx、className::xxx
         - 特点
           1. const只接受标量，define可采用任何表达式。const是一个语言结构。而define是一个函数，const在编译时比define快很多
           1. const定义的常量大小写敏感，define可通过参数指定大小写是否敏感
      1. 系统常量(预定义常量)
         - 整体
           1. PHP_VERSION
-          1. PHP_OS
-          1. PHP_SAPI ———— 判断是用命令行/浏览器执行的，PHP_SAPI=='cli'表示命令行
+          1. PHP_OS                 # 执行PHP解释器的操作系统名称
+          1. PHP_SAPI               # 判断是用命令行/浏览器执行的，为cli表示命令行
           1. PHP_INT_MAX
           1. PHP_INT_SIZE
           1. TRUE
           1. FALSE
         - 错误
-          1. E_ERROR ———— 最近的错误处
+          1. E_ERROR                # 最近的错误处
           1. E_WARNING
-          1. E_PARSE ———— 剖析语法有潜在问题处
+          1. E_PARSE                # 剖析语法有潜在问题处
           1. E_NOTICE
         - 符号
-          1. PHP_EOL ———— 系统换行符，Windows是（\r\n），Linux是（/n），MAC是（\r）
-          1. DIRECTORY_SEPARATOR ———— 系统目录分隔符，Windows是反斜线（\），Linux是斜线（/）
-          1. PATH_SEPARATOR ———— 多路径间分隔符，Windows是反斜线（;），Linux是斜线（:）
+          1. PHP_EOL                # 系统换行符，Windows是（\r\n），Linux是（/n），MAC是（\r）
+          1. DIRECTORY_SEPARATOR    # 系统目录分隔符，Windows是反斜线（\），Linux是斜线（/）
+          1. PATH_SEPARATOR         # 多路径间分隔符，Windows是反斜线（;），Linux是斜线（:）
 1. 运算符
    - 计算：%、++$a、$a--
    - 比较：==等于、===全等于，类型相同、!=或<>不等于
@@ -81,16 +81,16 @@
    - 类：具有相同属性和方法的对象集合，只能实例化。类名首字母大写，一个文件可以写多个，规范就一个。可实现多接口，只能继承一个抽象类
    - 对象：包含属性、方法，$this是当前对象的引用。对象本身是传址赋值，不像变量赋值时会空间复制
 1. 类
-   - 魔术常量
+   - 魔术常量：8个
     ```php
-    __NAMESPACE__       // 当前命名空间名
-    __CLASS__           // 类名
-    __METHOD__          // 方法名
-    __LINE__    
-    __FILE__            // 当前文件的完整路径和文件名
     __DIR__
-    __FUNCTION__    
+    __FILE__            // 当前文件的完整路径和文件名
+    __NAMESPACE__       // 当前命名空间名
     __TRAIT__           // 5.4新增，返回trait被定义时的名字
+    __CLASS__           // 类名
+    __METHOD__          // 返回类名和方法名
+    __FUNCTION__        // 只返回函数名
+    __LINE__    
     ```
    - 魔术变量
    - 魔术方法：13个
@@ -347,7 +347,7 @@
    - ISAPI
      1. 理解：微软提供的一套面向Internet服务的API接口，ISAPI的dll被请求激活后常驻内存，不停接受请求。dll和web服务器处于同一个进程中，5.3舍弃
      1. 特点：微软的排他性，只能在windows运行、效率高于CGI、稳定性不好，php出错，IIS或apache也死掉
-   - Cli
+   - Cli：command-line interface
      1. php_sapi_name：运行环境检测
      1. 参数
         - php -h                                              // 查看帮助
