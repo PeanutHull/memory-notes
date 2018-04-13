@@ -320,7 +320,7 @@
    - 使用`Config::get('app.aa')`或`Config::get('question.aa')`获取对应配置，配置都在超全局变量$_ENV中
 1. 日志：`app/storage/logs`，查看日志`grep "ERROR" laravel.log`
 1. Contracts：契约，定义框架核心服务的接口
-1. Facade：门面，模拟一个类，提供静态魔术方法`__callStatic`，将该静态方法映射到真正的方法上
+1. Facade：门面，模拟一个类，提供静态魔术方法`__callStatic`，将该静态方法映射到真正的方法上。提供了一个"static"（静态）接口去访问注册到IoC 容器中的类
 1. 运维
    - 安装：`composer create-project laravel/laravel your-project-name --prefer-dist "5.1.*"`
    - 目录

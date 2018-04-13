@@ -114,7 +114,7 @@
     stdout_logfile=/tmp/zzg_worker.log
 
     [include]
-    ;files = /xdfapp//_zzg/*.conf
+    ;files = /xdfapp/_zzg/*.conf
     ```
    - 启动
     ```
