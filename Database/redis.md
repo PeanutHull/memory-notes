@@ -64,9 +64,6 @@
         - 范围分区：不同范围放到不同实例中，需要维护范围表
         - hash分区：使用crc32将key转为数字，然后取模(模为实例数量)确定实例
      1. 自动分区：Cluster
-   - 持久化
-     1. RDB
-     1. AOF：fsync
 #### 应用
 1. 命令
    - 服务器命令
@@ -153,6 +150,12 @@ $count = $redis->get('count')? : 0;
      1. 主从配置：从机的配置文件中指定slaveof参数为主机的ip和port即可
         - slaveof <masterip> <masterport>
         - masterauth <master-password>
+1. 持久化
+   - RDB
+   - AOF：fsync
+1. 安全
+   - 获得/设置密码：config get/set requirepass
+   - 检验密码是否正确：auth password
 1. 性能测试
    - redis-benchmark [option] [option value]
      1. -h/-p：地址端口
@@ -161,9 +164,6 @@ $count = $redis->get('count')? : 0;
      1. -n：请求数
      1. -d：字节形式指定set/get大小
      1. -k：1=keep alive 0=reconnect
-1. 安全
-   - 获得/设置密码：config get/set requirepass
-   - 检验密码是否正确：auth password
 1. 备份恢复
    - 备份：save/bgsave，产生dump.rdb文件，即备份成功
    - 恢复：将dump.rdb文件放到redis目录并启动即可，config get dir获得目录

@@ -261,6 +261,7 @@
           1. 访问权限不能更低，异常的子类可以
           1. 声明为static的方法不能被重写，但是可以被再次声明
           1. 声明为final的方法不能被重写
+1. 浅表复制和深表复制
 1. 关键字
    - extends：继承，`public class B extends A`
    - abstract：抽象类

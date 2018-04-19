@@ -61,6 +61,14 @@
    - 标签载入：`<link rel="shortcut icon" type="image/x-icon" href=""/>`
 1. 实体：用符号表示特殊字符，被表示的字符有"/</>/&/空格
 1. 注释：`<!--...-->`
+1. 表单提交
+```html
+<form action="" method="post" enctype="multipart/form-data">
+    <input type="text" name="name">
+    <input type="file" name="file">
+    <input type="submit">
+</form>
+```
 ### wiki
 1. 知识点
    - /表示标签结束，单标签/符号在后边如`<img/>`，对标签/在字母前边`<a></a>`

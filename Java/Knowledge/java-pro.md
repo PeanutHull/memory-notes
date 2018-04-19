@@ -615,3 +615,4 @@
     Map<String, Integer> items = new HashMap<>();               // Map
     items.forEach((k,v)->{});
     ```
+1. 函数式编程

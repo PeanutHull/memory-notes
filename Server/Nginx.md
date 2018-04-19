@@ -121,7 +121,7 @@
 1. 负载均衡
    - 特点：实现了七层负载均衡，功能多、性能好、运行稳定，自动剔除不正常服务器，上传文件使用异步模式，有权重等多种分配策略
    - 内置策略
-     1. ip hash：变相轮询算法
+     1. ip hash：变相轮询算法，将访问固定到某一机器上
      1. 加权轮询：一直给高权重机器，分配请求会权重降低。先给高权重机器，直到该机器权值降到了比其他机器低才给其他机器，weight是权重。当所有机器都down时，nginx会立即将所有机器标志位变初始状态，避免全部timeout的状态
    - 扩展策略
      1. fair策略：根据机器响应时间判断负载情况，选出最快的
@@ -201,6 +201,14 @@
 1. 操作
    - 启动：`nginx`
    - 热重启：`nginx -s stop/reload`
+1. 优化：修改配置项目
+   - worker_processes 8;                                    # 进程数
+   - worker_cpu_affinity 1000 0100 0010 0001;               # 每个进程分配cpu，这是4核
+   - worker_connections 65535;                              # 连接数=进程数*单个进程连接数
+   - worker_rlimit_nofile 65535;                            # 打开的最多文件描述符
+   - use epoll;                                             # 不同系统不同模型
+   - keepalive_timeout 60;
+   - gzip on;
 ### wiki
 1. nginx依赖
    - pcre：Perl Compatible Regular Expressions，是Perl库。nginx的http模块使用pcre来解析正则表达式
