@@ -30,7 +30,7 @@
      1. pfadd/pfcount/pfmerge
    - geospatial：地理空间，索引半径查找
 1. 功能
-   - 超时：expire，设置超时时间，超时后不删除，只有对值进行改变才会删除
+   - 超时：expire，设置超时时间，超时后不删除，只有对值进行改变才会删除，过期是不可靠的
     ```
     SET mykey "Hello"
     EXPIRE mykey 10

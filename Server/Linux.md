@@ -6,6 +6,7 @@
 1. 文件
    - 文件系统：mount、umount、fsck、df、du
    - 文件查找比较：locate、find
+     1. 全局查找指定文件名：find / -name fileName|'*name'
    - 文件内容查看：head、tail、less、more
    - 文件处理：touch、unlink、rename、ln、cat
    - 文件权限：setfacl、chmod、chown、chgrp
@@ -148,3 +149,8 @@
 1. mac环境变量默认地址
    - /bin、/sbin：系统命令目录
    - /usr/bin、/usr/sbin：用户程序命令目录，如php、php-config、phpize、php-fpm
+1. iTerm快捷键设置：Profiles->Keys
+   - ctrl + a/e：移动到行首尾
+   - ctrl + ←/→：单词移动，需设置`Send Escape Sequence + d/f`
+   - shift + ←/→：单词选择，需设置`Move Start of Selection Left By Word`，`Move End of Selection Right By Word`
+   - ctrl + w：单词删除

@@ -198,6 +198,16 @@
         yum makecache
         yum install nginx
         ```
+   - tengine
+    ```
+    wget -c --no-check-certificate ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/pcre-8.39.tar.gz
+    wget -c --no-check-certificate https://www.openssl.org/source/openssl-1.0.2j.tar.gz
+    wget -c --no-check-certificate https://github.com/alibaba/tengine/archive/tengine-2.2.0.tar.gz
+    tar -zxf pcre/openssl/tengine
+    cd tengine
+    ./configure --with-pcre=pcre解压位置 --with-openssl=openssl解压位置
+    make && make install
+    ```
 1. 操作
    - 启动：`nginx`
    - 热重启：`nginx -s stop/reload`

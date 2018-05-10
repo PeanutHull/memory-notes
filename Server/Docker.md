@@ -97,6 +97,7 @@
     passwd
     docker commit -m '' hash image-name:tagName
     启动新镜像并启动sshd
+    ## TODO 应该设置开机启动，否则需要先进入shell
     ```
 1. 运行容器
     ```
