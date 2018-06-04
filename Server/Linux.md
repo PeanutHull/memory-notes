@@ -35,7 +35,7 @@
 1. 环境变量
    - /etc/profile：全局
    - .bash_profile：个人
-   - souurce .bash_profile：使生效
+   - source .bash_profile：使生效
    - export PATH=：书写格式
 1. iptables
    - 编辑：`vim /etc/sysconfig/iptables`

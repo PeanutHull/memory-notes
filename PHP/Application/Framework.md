@@ -7,9 +7,6 @@
    - 支持异步/同步/协程，v2.0实现协程，可以使用完全同步的代码实现异步程序，底层自动进行协程调度，实现异步
    - 支持SSL/TLS加密
 1. 观念：swoole在服务端只编译一次，一直存于内存，使用swoole来编写常规项目时，需要将自己置身于第三方上帝的角色，而非访问者的角色来编写并阅读自己的代码。PHP入门时就必须要掌握的session，对于运用了swoole扩展的PHP程序而言，完全可以用一个变量来替换
-1. 安装
-   - make三件套
-   - php.ini：extension=swoole.so
 ### ThinkPHP
 1. 结构
    - URL模式：普通(get参数形式)、PATHINFO、REWRITE、兼容(不支持PATHINFO)。优点排序：REWRITE>PATHINFO>普通

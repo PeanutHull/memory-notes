@@ -587,7 +587,7 @@ new \app\mvc\view\home\Index();                             // 实例化未引�
    - ini_set/ini_get
    - php_sapi_name
    - set_include_path/get_include_path
-   - shell_exec/system
+   - shell_exec/system/proc_open
    - extract
    - set_time_limit
    - fastcgi_finish_request

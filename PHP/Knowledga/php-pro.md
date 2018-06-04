@@ -58,6 +58,26 @@
         spl_autoload_register('classLoader');
         new Test();
         ```
+### Trait
+1. 理解：特质,是一种为类似PHP的单继承语言而准备的代码复用机制，使开发人员能够自由地在不同层次结构的独立的类中复用方法集。来避免传统多继承和混入类（Mixin）相关的典型问题，就是先定义trait，用use给类插入代码，代码复用，属于类与对象，v5.4
+```php
+class Base {
+    public function sayHello () {
+        echo 'Hello ' ;
+    }
+}
+trait SayWorld {
+    public function sayHello () {
+        parent::sayHello();
+        echo 'World!';
+    }
+}
+class MyHelloWorld extends Base {
+    use SayWorld;
+}
+$o = new MyHelloWorld();
+$o->sayHello ();                        // 输出Hello World!
+```
 ### Reflection
 1. 理解：反射，是在php运行过程中分析php程序，提取类/对象/方法/属性/参数/注释等信息。获取信息和调用对象的方法叫做反射api，是php内建的oop扩展
 1. 分类
@@ -80,26 +100,6 @@
         - get_defined_functions/func_get_args
      1. 使用
         - call_user_func/forward_static_call
-### Trait
-1. 理解：特质,是一种为类似PHP的单继承语言而准备的代码复用机制，使开发人员能够自由地在不同层次结构的独立的类中复用方法集。来避免传统多继承和混入类（Mixin）相关的典型问题，就是先定义trait，用use给类插入代码，代码复用，属于类与对象，v5.4
-```php
-class Base {
-    public function sayHello () {
-        echo 'Hello ' ;
-    }
-}
-trait SayWorld {
-    public function sayHello () {
-        parent::sayHello();
-        echo 'World!';
-    }
-}
-class MyHelloWorld extends Base {
-    use SayWorld;
-}
-$o = new MyHelloWorld();
-$o->sayHello ();                        // 输出Hello World!
-```
 ### 并发处理
 1. 进程、线程、协程
    - 进程：是某数据集合上的一次运行活动，是系统进行资源分配和调度的基本单位，是操作系统结构的基础
@@ -119,7 +119,8 @@ $o->sayHello ();                        // 输出Hello World!
      1. 就绪：同进程
      1. 运行：占有处理机正在运行
      1. 阻塞：等待一个事件，如某个信号量，逻辑上不可执行
-   - 协程：是用户态的轻量级线程，由用户控制调度。有自己的寄存器上下文和栈，协程调度切换时，将二者保存到其他地方，切回来恢复之前的，直接操作栈基本没有内核切换开销，可不加锁的访问全局变量，所以上下文切换非常快。
+   - 协程：是用户态的轻量级线程，由用户控制调度。有自己的寄存器上下文和栈，协程调度切换时，将二者保存到其他地方，切回来恢复之前的，直接操作栈基本没有内核切换开销，可不加锁的访问全局变量，所以上下文切换非常快
+1. 相互的理解
    - 进程和线程
      1. 线程是进程中的实体、执行单元。所有线程共享进程地址空间，进程是资源分配和拥有的单位，进程有自己的地址空间
      1. 一个程序最少有一个线程，就是程序本身。线程是处理器调度的基本单位，进程不是
@@ -132,8 +133,7 @@ $o->sayHello ();                        // 输出Hello World!
    - 多线程、多进程
      1. 多进程：多个进程同时运行，多分配了一份资源，进程间通讯不方便，边玩游戏边听歌
      1. 多线程：同时运行，可以直接通信
-php reactor
-1. 同步阻塞模型、异步非阻塞
+1. 同步阻塞、异步非阻塞
 1. 并发编程实战
 #### 协程
 1. 尝试自己将协程应用在实际项目中

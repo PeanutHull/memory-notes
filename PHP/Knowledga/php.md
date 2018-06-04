@@ -370,7 +370,10 @@
    - 运维
      1. 杀掉主进程就是重启
      1. 有了pid文件后，可以理解信号：INT/TERM 立刻终止，QUIT 平滑终止，USR1 重新打开日志文件、USR2 平滑重载所有worker进程并重新载入配置和二进制模块
+        - 关闭：`pkill php-fpm`
         - 重启：`kill -USR2 'cat /usr/local/php/var/run/php-fpm.pid'`
+1. TSRM
+   - 理解：Thread Safe Resource Manager，线程安全资源管理器，保证在单线程和多线程模型下的线程安全，和代码一致性
 1. ts/nts
    - 查看：phpinfo()————Thread Safety
    - 分类   

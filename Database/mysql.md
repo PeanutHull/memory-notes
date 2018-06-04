@@ -103,7 +103,7 @@
     order by xx1 desc/asc/rand() xx2 asc                                                    # 排序，多个排序规则
     limit x/limit x offset x/limit x.x                                                      # 限制条数/从x行开始的x行
     ## 插入数据
-    insert into table set XX=xx/(,,) values (,);                                            # 插入数据
+    insert into table set XX=xx/(,,) values (,) on duplicate key update;                    # 插入数据，如果引发唯一或主键索引重复则更新
     replace into table (,,) values (,,);                                                    # 插入或更新，命中主键修改，未命中添加
     ## 更新数据
     updata table set XX1=xx1, XX2=xx;                                                       # 更新所有数据

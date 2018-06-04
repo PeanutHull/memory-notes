@@ -81,7 +81,7 @@
      1. slowlog subcommand：管理慢日志
      1. sync：用于复制功能的内部
    - ping：查看是否运行
-   - select index：切换数据库
+   - select index：切换到指定数据库，更像命名空间，隔离key名冲突，索引号只能是数字不能自定义，可以设置数据库数量，以0开始，默认使用0
    - auth password：验证密码
    - echo string：打印字符串
 1. 脚本：eval，执行lua脚本，内嵌lua环境
