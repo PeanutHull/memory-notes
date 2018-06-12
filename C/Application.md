@@ -1,7 +1,5 @@
 ### 语法文档
 1. 函数
-   - printf
-     1. 参数分类：%d 整数，%c 字符，%s 字符串，%x 十六进制, %p 十六进制数, %lu 32位无符号整数，%E 以指数形式输出单/双精度实数
 1. 存储类说明符
    - static
         ```c
@@ -25,17 +23,60 @@
             printf(" thingy 为 %d ， count 为 %d\n", thingy, count);
         }
         ```
+1. 预处理命令示例
+    ```c
+    // 宏定义
+    #define MAX_ARRAY_LENGTH 20
+    // 宏定义运算符
+    #define tokenpaster(n) \
+        printf ("token" #n " = %d", token##n)
+    #define MAX(x,y) ((x) > (y) ? (x) : (y))            // 宏函数
+
+    int main(void) {
+        int token34 = 40;
+
+        tokenpaster(34);
+        return 0;
+    }
+
+    // 文件包含
+    #include <stdio.h>                      # 从系统库中获取stdio.h
+    #include "myheader.h"                   # 从本地目录中获取myheader.h
+
+    // 条件预处理
+    #ifndef MESSAGE
+        #define MESSAGE "aaa"
+    #endif
+    // 是否定义判断符
+    #if !defined (MESSAGE)
+        #define MESSAGE "aaa"
+    #endif
+    ```
+1. 头文件
+    ```c
+    // 宏名配置头文件
+    #define SYSTEM_H "system_1.h"
+    #include SYSTEM_H
+    // 使用_GLOBAL_H将所有头文件集合
+    #ifndef _GLOBAL_H
+    #define _GLOBAL_H
+    #include 其他头文件...
+    #endif
+    ```
 ### 应用代码
 1. 无限循环：`for( ; ; ) {}`
 1. 输入输出
-    ```
-    // argc，参数个数
-    // argv，字符串数组
-    int main(int argc, char *argv[]) {
+    ```c
+    // 获取输入参数
+    int main(int argc, char *argv[]) {                  // argc 1参数个数，argv 字符串数组
         printf("可执行程序 %s ,参数个数为[%d], 运行输出：[%s]\n",argv[0],argc,argv[1]); 
         return 0;
     }
     // ./a.out Hello,World!
+    // 判断停止输入
+    while(scanf("%d",&n)!=EOF|-1);
+    // 获取空格后继续输入
+    scanf("%[^\n]", str;
     ```
 1. 内联汇编获取寄存器的值
     ```c

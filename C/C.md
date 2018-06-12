@@ -63,9 +63,18 @@
         - ?:：三元
         - sizeof：得到对象或类型的内存占用大小
    - 关键字
+     1. typedef：为类型取新名字，作为缩写使用，通常大写
+        ```c
+        // 为单字节数字定义了术语 BYTE
+        typedef unsigned char BYTE;
+        BYTE  b1, b2;                    // 相当于unsigned char b1,b2
+        // 对结构体使用typeof定义新数据类型，使用新类型直接定义结构变量
+        typedef struct Books {} Book;
+        Book book;
+        ```
    - 表达式
-      1. 左值：指向内存位置的表达式，可出现在左右边，变量是左值
-      1. 右值：存储在内存中某些地址的数值，不能被赋值，只能出现在右边
+     1. 左值：指向内存位置的表达式，可出现在左右边，变量是左值
+     1. 右值：存储在内存中某些地址的数值，不能被赋值，只能出现在右边
    - 注释、结束符、大小写区分、从上往下(后边定义的函数前边不能用，用函数声明解决)、从左至右
      1. // 
      1. /* ... */，不能嵌套注释
@@ -84,6 +93,26 @@
 1. 函数
    - 认识：函数声明告诉编译器函数的名称/返回类型/参数，函数定义提供实际主体。参数分传值和传引用，默认传值，必须写函数声明
    - 回调函数：是通过函数指针调用的函数，通过参数传递函数指针。回调函数是由别人的函数执行时调用你实现的函数
+   - 函数使用数据类型
+     1. 参数
+        - 数组
+          1. 数组形式：`void method(int param[10])`
+          1. 不定参数形式：`void method(int *param)`，函数不会对形参做边界检查
+            ```c
+            double method(int *arr);            // 声明
+            int balance[5] = {1};               // 赋值
+            double avg;
+            avg = method(balance);
+            ```
+        - 结构体：`void printBook( struct Books book );`
+        - 指针：`void method(long *ptr);`
+            ```c
+            long sec;
+            method(&sec);         // 传址，传递内存地址
+            ```
+     1. 返回值
+        - 数组：不允许返回完整数组，可以返回指向数组的指针
+        - 指针：函数定义方式 `int * method(){}`，C不支持返回局部变量的地址，可以定义为static
    - 内置函数
      1. 标准库：strcat()、memcpy()
      1. 字符串：strlen、strchr、strstr、strcpy、strcat、strcmp
@@ -91,41 +120,34 @@
    - 认识：是一个变量，值为另一个变量的内存地址，值都是十六进制数，不同指针类型是指指向的变量或常量的类型不同，可用于动态内存分配
    - 空指针：`int  *p = NULL;`
    - 间接寻址：保存指针的内存地址，定义 `int **ptr;`，赋值 `pptr = &ptr;`，获得内存地址上的值 `**pptr`
-   - 指针数组：存储了一堆内存地址的数组，定义`int *ptr[n];`，获取第一个元素的内存地址`ptr`，第n个的内存地址`&ptr[n]`，访问元素`ptr[1]或*(ptr+1)`
-   - 指针函数：指向函数的指针，可用于调用函数，传递参数。声明`typedef int (*pName)();`参数和函数保持一致
-        ```c
-        int max(int x, int y){}
-        int (*p)(int, int) = & max;        // &可以省略
-        p(a, b)                            // 调用
-        ```
    - 使用
      1. 定义 `type *name;`
      1. 访问被存储的内存地址：`name`
      1. 使用指针访问值：`*name`
      1. 算术运算：是一个地址可以计算，有四种运算++、--、+、-
      1. 比较运算：== < >
-     1. 传递指针给函数：`void method(long *ptr);`
-        ```c
-        long sec;
-        method(&sec);         // 传址，传递内存地址
-        ```
-     1. 返回指针的函数：`int * method(){}`，C不支持返回局部变量的地址，可以定义为static
+   - 和数据类型
+     1. 指针数组：存储了数组某值的内存地址
+        - 定义：`int *ptr[n];`
+        - 获取第一个元素的内存地址：`ptr`，第n个的内存地址`&ptr[n]`
+        - 访问元素：`ptr[1]或*(ptr+1)`
+     1. 指针结构体|指针位域
+        - 定义：`struct Books *struct_pointer;`
+        - 赋值：`struct_pointer = &Book1;`
+        - 访问成员：`struct_pointer->title;`
+     1. 指针函数：指向函数的指针，可用于调用函数，传递参数
+        - 声明`typedef int (*pName)();`，参数和函数保持一致
+            ```c
+            int max(int x, int y){}
+            int (*p)(int, int) = & max;        // &可以省略
+            p(a, b)                            // 调用
+            ```
 1. 流程控制
    - 判断：非零和非空为true
      1. if else
      1. switch case default
      1. ?:
    - 循环：for、while、do/while、goto不建议
-1. 预处理：不做语法检查
-   - 功能分类
-     1. 宏：如FLT_MIN，概念关键是“换”，一般大写，提高程序通用性/易读性，便于修改
-        - 宏定义/宏替换：`#define 标识符/符号常量/宏名 字符串`，宏定义末尾不加分号；作用域为后边的程序；用#undef终止宏定义的作用域；宏定义可嵌套；宏定义不分配内存，变量定义分配内存
-          1. 宏带参数：除了字符串替换，还要做参数代换
-        - 预编译/宏展开：即将宏名替换为字符串
-        - 宏函数
-        - 宏的字符串化，宏连接
-     1. 文件包含
-     1. 条件编译
 1. 备注
    - 数据类型
      1. 2byte前后3万，4byte前后20亿
@@ -137,6 +159,21 @@
         - 自动转换规则：浮点数->整型：小数舍去
         - 强制转换方法：(int)xxx
    - 运算符：运算符优先级
+   - 关键字
+     1. typedef和#define：都是为数据类型定义
+        - #define不仅可以为类型定义名称，也能为数值定义名称。就是字面上的替换
+        - typeof编译器执行解释，#define语句由预编译器处理
+        - #define对typedef定义的名称不能扩展
+        - 连续定义变量时，typedef能保证所有变量为同类型，#define不行
+            ```c
+            #define PTR_INT int *
+            PTR_INT p1, p2;             //p1、p2 类型不相同，宏展开后变为int *p1, p2;
+            typedef int * PTR_INT
+            PTR_INT p1, p2;             //p1、p2 类型相同，都指向int类型的指针
+            ```
+   - 预解析
+     1. 头文件
+        - EOF：是一个定义在头文件stdio.h中的常量
 ### 数据结构
 1. 数组
    - 认识：存储固定大小的相同类型元素的顺序集合，由连续的内存位置组成，访问array(0)，声明`int num[2]`或`int num[2] = {1,2}`或`int num = {1,2}`
@@ -150,18 +187,18 @@
         p = balance;            // 数组名是一个指向数组中第一个元素的常量指针
         *(balance + 4)          // 所以表示balance[4]
         ```
-     1. 传递数组给函数：函数不会对形参做边界检查
-        - 数组形式：`void method(int param[10])`
-        - 不定参数|传递数组：`void method(int *param)`
-        ```c
-        double method(int *arr);            // 声明
-        int balance[5] = {1};               // 赋值
-        double avg;
-        avg = method(balance);
-        ```
-     1. 函数返回数组：不允许返回完整数组，可以返回指向数组的指针
 1. 结构体
    - 认识：用户自定义的存储不同类型的数据项
+     1. 如果两个结构体互相包含，需要对其中一个进行不完整声明
+        ```c
+        struct B;    // 对结构体B进行不完整声明
+        struct A{
+            struct B *partner;
+        };
+        struct B{
+            struct A *partner;
+        };
+        ```
    - 使用
     ```c
     // 定义，以下三项最少有两个，可以少
@@ -172,26 +209,111 @@
         struct  tag *next_tag;    // 包含指向自己结构体标签的指针，可以实现链表、树等数据结构
         ...
     } variable;                         // 3. 声明的结构体变量
-    // 访问，成员访问运算符 .
+    // 访问，成员访问运算符 .，使用结构体变量访问
     variable.title
+    // 结构体数组
+    struct book bk[];
     ```
-   - 特点
+   - 位域
+     1. 认识：将一个字节中的二进位划分为不同的区域，并说明每个区域的位数。每个域有域名，允许按域名操作。带有预定义宽度的变量被称为位域，可用于存放开关量、读取非标准的文件格式，如外部的9位整数
+        - 一个位域必须存储在同一个字节中，不能跨字节，可以另起一个字节单位存储
+        - 本质是结构体，但是成员按照位分配，如要表示0~7，使用3个位
+        - 内存占用：结构体是一个成员占一个类型的内存，位域是多个成员合并，一个位一个位的使用内存
+     1. 使用
+        ```c
+        // 定义
+        struct 位域结构名 {
+            位域列表
+        }位域变量;
+        // 如
+        struct bs{
+            int a:8;        // data为bs变量，位域a占8位，b占2位
+            int b:2;
+            int  :6;        // 空域，表示后6位填零不允许使用，下面的位域从新字节开始
+        }data;
+        // 访问成员
+        data.a
+        data->a
+        ```
+1. 共用体
+   - 认识：允许在相同的内存位置存储不同的数据类型，可以定义有多成员的共用体，给不同的成员赋值会影响其他成员的值，同时只使用一个。提供了一种使用相同的内存位置的有效方式
+   - 定义
     ```c
-    // 如果两个结构体互相包含，需要对其中一个进行不完整声明
-    struct B;    // 对结构体B进行不完整声明
-    struct A{
-        struct B *partner;
-    };
-    struct B{
-        struct A *partner;
-    };
+    union tag {
+        成员定义，即标准的变量定义，可以内置、自定义的数据类型
+    } variables variables1
+    // 如
+    union Data {
+        int i;
+        float f;
+        char  str[20];
+    } data;
     ```
 ### 应用
-1. 输入输出
-   - printf()
+1. 输入输出：都是依赖内置的函数，在stdio.h头文件中声明
+   - 标准文件：C语言把所有的设备都当作文件，设备被处理的方式与文件相同：标准输入：stdin、标准输出：stdout、标准错误：stderr
+   - 输入：从命令行
+        - getchar：从屏幕读取下一个可用的字符，并返回整数，可循环使用获取字符串
+        - gets：`char *gets(char *s)`，从stdin读取一行到s所指向的缓冲区，直到一个终止符或EOF
+        - scanf：从stdin读取输入，并根据提供的format来浏览输入，空格作为截止符
+   - 输出
+        - putchar：把字符输出到屏幕上，并返回整数，可循环使用
+        - puts：`int puts(const char *s)`，把字符串s和一个尾随的换行符写入到stdout
+        - printf：%d 整型，%f 浮点型，%c 字符，%s 字符串，%x 十六进制, %p 十六进制数, %lu 32位无符号整数，%E 以指数形式输出单/双精度实数
+1. 文件：文件的本质是一系列的字节，c提供了访问顶层函数，也提供OS层面。提供了各种函数来按字符或者以固定长度字符串的形式读写文件，都是失败返回EOF
+   - 基本
+     1. fopen：`FILE *fopen( const char * filename, const char * mode );`，用于新文件或已存在文件，会初始化FILE类型的一个对象
+        - 访问模式：r、w(覆盖写)、a(追加写)、r+、w+、a+，二进制文件就后面加b如a+b
+     1. fclose：`int fclose( FILE *fp );`，成功返回0。会清空缓冲区中的数据、关闭文件、释放用于该文件的内存
+   - 读取：随着读取文件指针会移动
+     1. fgetc：`int fgetc( FILE * fp );`，读取字符
+     1. fgets：`char *fgets( char *buf, int n, FILE *fp );`，读取n-1个字符，将字符串复制到缓冲区buf，在最后追加null终止字符串。途中遇到换行符\n或文件的末尾EOF、换行符就返回了
+     1. fsanf：`int fscanf(FILE *fp, const char *format, ...)`，遇到空格字符时停止读取
+   - 写入
+     1. fputc：`int fputc( int c, FILE *fp );`，写入字符到指定输出流，成功返回字符
+     1. fputs：`int fputs( const char *s, FILE *fp );`，写入字符串
+     1. fprintf：`int fprintf(FILE *fp, const char *format, ...)`，写入字符串
+   - 移动文件指针：fseek：`int fseek(FILE *fp, long offset, int whence);`
+     1. whence：SEEK_SET,SEEK_CUR,SEEK_END，文件头，当前点，文件尾
+     1. a|a+模式总会在文件尾添加，哪怕移动文件指针
+   - 二进制
+     1. fread
+     1. fwrite
 ### 运维
 1. 开发
    - cli：多文件编译 gcc a.c b.c
+1. C预处理：CPP，C Preprocessor，不是编译器的组成，是编译过程一个单独的步骤，不做语法检查，可理解为文本替换工具。包含宏、文件包含、条件编译
+   - 宏：如FLT_MIN，概念关键是“换”，一般大写，提高程序通用性/易读性，便于修改，还有宏函数等
+     1. 宏定义：`#define 标识符/符号常量/宏名/数值 字符串`，无分号，作用域为后边的程序，#undef终止宏定义的作用域；宏定义可嵌套；宏定义不分配内存
+     1. 预编译：也叫宏展开，即将宏名替换为字符串
+        - 宏带参数：除了字符串替换，还要做参数代换
+     1. 预定义宏
+        - __DATE__：当前日期，"MMM DD YYYY"格式的字符常量
+        - __TIME__：当前时间，"HH:MM:SS" 格式的字符常量
+        - __FILE__：当前文件名，字符串常量
+        - __LINE__：当前行号，十进制常量
+        - __STDC__：当编译器以ANSI标准编译时，定义为1
+   - 预处理运算符
+     1. 宏延续运算符：\，可以分行写宏
+     1. 字符串常量化运算符：#，把宏参数转换为字符串常量
+     1. 标记粘贴运算符：##，宏定义中合并标记
+     1. 是否定义判断符：defined()，
+   - 预处理命令：都以井号#开头，从第一列开始写
+     1. #define、#undef
+     1. #include
+     1. #ifdef、#ifndef、#if、#else、#elif、#endif
+     1. #error
+     1. #pragma
+1. 头文件
+   - 认识：扩展名为.h的文件，包含c函数声明和宏定义，分为自定义和编译器自带的头文件
+   - 引用：#include，<file>用于系统头文件，在系统目录的标准列表中搜索，"file"用于用户头文件。-I前置目录
+   - 编写
+    ```c
+    #ifndef HEADER_FILE         // 添加判断，防止二次引入，即包装器
+    #define HEADER_FILE
+        the entire header file file
+    #endif
+    ```
 ###wiki
 1. c编程
    - 基本策略：将源代码翻译为可执行文件(机器码)
@@ -209,12 +331,12 @@
 1. 关键字
    - 基本
      1. char/int/short/long/float/double/unsigned/signed/void
-     1. enum/struct/const/
+     1. const/enum/struct/union/
      1. auto/register/static/extern
      1. if/else/switch/case/default
      1. for/do/while/break/continue/goto
-     1. sizeof/volatile/typedef
-     1. return/union
+     1. sizeof/typedef/volatile
+     1. return
      1. _Packed
    - C99新增：_Bool	_Complex、_Imaginary、inline、restrict
    - C11新增：_Alignas、_Alignof、_Atomic、_Generic、_Noreturn、_Static_assert、_Thread_local
@@ -239,4 +361,10 @@
    - 存储类的作用，c语言的寄存器的理解————
    - &运算符是干啥的————
    - 指针的运算和为什么按照类型的长度增加，十六进制的运算
+   - 指针的++和--怎么回事
    - size_t什么玩意
+   - 数据类型unsigned的是什么类型
+   - 结构体数组没有深入了解————
+   - 文件访问模式，带加号的和不带的啥区别
+   - EOF是什么玩意
+   - 头文件引入前端目录怎么写
