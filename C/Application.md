@@ -23,6 +23,21 @@
             printf(" thingy 为 %d ， count 为 %d\n", thingy, count);
         }
         ```
+1. 定义可变参数
+    ```c
+    #include <stdio.h>
+    #include <stdarg.h>
+
+    void average(int num, ...){
+        va_list valist;                     # 创建va_list类型变量
+        
+        va_start(valist, num);              # 为 num 个参数初始化 valist
+        for (i = 0; i < num; i++) {
+            va_arg(valist, int);            # 访问所有赋给 valist 的参数
+        }
+        va_end(valist);                     # 清理为 valist 保留的内存
+    }
+    ```
 1. 预处理命令示例
     ```c
     // 宏定义
@@ -122,5 +137,22 @@
         }
         printf("\n");
         return 0;
+    }
+    ```
+1. 错误处理
+    ```c
+    FILE * pf;
+    int errnum;
+    pf = fopen ("unexist.txt", "rb");
+    if (pf == NULL)
+    {
+        errnum = errno;
+        fprintf(stderr, "错误号: %d\n", errno);
+        perror("通过 perror 输出错误");
+        fprintf(stderr, "打开文件错误: %s\n", strerror( errnum ));
+    }
+    else
+    {
+        fclose (pf);
     }
     ```

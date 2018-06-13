@@ -44,6 +44,7 @@
     char greeting[6] = {'H', 'e', 'l', 'l', 'o', '\0'};         // 比单词多一个字符
     char greeting[] = "Hello";
     ```
+   - 操作函数：strlen、strchr、strstr、strcpy、strcat、strcmp
 1. 符号
    - 说明符
      1. 存储说明符：定义变量或函数的范围/生命周期，书写在类型前，`auto type n`
@@ -76,8 +77,8 @@
      1. 左值：指向内存位置的表达式，可出现在左右边，变量是左值
      1. 右值：存储在内存中某些地址的数值，不能被赋值，只能出现在右边
    - 注释、结束符、大小写区分、从上往下(后边定义的函数前边不能用，用函数声明解决)、从左至右
-     1. // 
-     1. /* ... */，不能嵌套注释
+     1. //：单行注释
+     1. /* ... */：多行注释，不能嵌套注释
      1. ;
 1. 变量：程序可操作存储区的名称，变量类型决定存储的大小和布局，如枚举、指针、数组、结构、共用体等
    - 定义：`int i,j,k;`，`int a=1, b=2;`
@@ -92,18 +93,13 @@
      1. const type n v
 1. 函数
    - 认识：函数声明告诉编译器函数的名称/返回类型/参数，函数定义提供实际主体。参数分传值和传引用，默认传值，必须写函数声明
+   - 定义：`type funcName()`
    - 回调函数：是通过函数指针调用的函数，通过参数传递函数指针。回调函数是由别人的函数执行时调用你实现的函数
    - 函数使用数据类型
      1. 参数
-        - 数组
-          1. 数组形式：`void method(int param[10])`
-          1. 不定参数形式：`void method(int *param)`，函数不会对形参做边界检查
-            ```c
-            double method(int *arr);            // 声明
-            int balance[5] = {1};               // 赋值
-            double avg;
-            avg = method(balance);
-            ```
+        - 可变参数：`int func(int a, ...)`，需要stdarg.h头文件
+        - 字符串：`int myfuction(char *id);|int myfuction(char *);`
+        - 数组：`void method(int param[n])`
         - 结构体：`void printBook( struct Books book );`
         - 指针：`void method(long *ptr);`
             ```c
@@ -115,7 +111,19 @@
         - 指针：函数定义方式 `int * method(){}`，C不支持返回局部变量的地址，可以定义为static
    - 内置函数
      1. 标准库：strcat()、memcpy()
-     1. 字符串：strlen、strchr、strstr、strcpy、strcat、strcmp
+1. 流程控制
+   - 判断：非零和非空为true
+     1. if else
+     1. switch case default
+     1. ?:
+   - 循环：for、while、do/while、goto不建议
+1. 错误处理
+   - 认识：通过检查返回值获取在errno.h头文件中的错误代码，错误代码是全局变量，0表示没有错误
+   - 相关函数
+     1. errno：变量，错误号
+     1. perror(char *str)：可以显示给定字符串和错误文本
+     1. strerror(errno)：返回指向当前错误文本的指针
+     1. exit()：程序退出，可指定错误号，参数传EXIT_FAILURE或其他负数
 1. 指针
    - 认识：是一个变量，值为另一个变量的内存地址，值都是十六进制数，不同指针类型是指指向的变量或常量的类型不同，可用于动态内存分配
    - 空指针：`int  *p = NULL;`
@@ -142,12 +150,6 @@
             int (*p)(int, int) = & max;        // &可以省略
             p(a, b)                            // 调用
             ```
-1. 流程控制
-   - 判断：非零和非空为true
-     1. if else
-     1. switch case default
-     1. ?:
-   - 循环：for、while、do/while、goto不建议
 1. 备注
    - 数据类型
      1. 2byte前后3万，4byte前后20亿
@@ -156,8 +158,8 @@
      1. 后缀：U 无符号整数，L 长整数
      1. 单精度常量：2.3f，双~：2.3，默认双
      1. 数据类型转换：一个表达式中不同类型的计算时自动转换
-        - 自动转换规则：浮点数->整型：小数舍去
-        - 强制转换方法：(int)xxx
+        - 自动转换规则：浮点数->整型：小数舍去，运算时类型不同先将低类型转换为高类型，即字节越多越高
+        - 强制转换方法：(int) expression
    - 运算符：运算符优先级
    - 关键字
      1. typedef和#define：都是为数据类型定义
@@ -279,9 +281,14 @@
    - 二进制
      1. fread
      1. fwrite
-### 运维
-1. 开发
-   - cli：多文件编译 gcc a.c b.c
+1. 内存管理
+   - 函数
+     1. calloc：int num/size，分配num个长度为size的连续空间，每个字节初始化为0
+     1. free：void *address，释放address指向的内存块，也就是释放 动态分配的内存空间
+     1. malloc：int num，堆区分配指定大小的内存空间，函数执行完成后不会被初始化，值未知
+     1. realloc：void *address/int newsize，重新分配内存，把内存扩展到newsize
+   - 动态分配内存：使用 `calloc(1, sizeof(char)) | malloc(sizeof(char));`，当程序退出时操作系统会自动释放所有分配给程序的内存，但是如果无限循环占用内存就会占满内存，或者程序一直执行内存泄露
+### C周边
 1. C预处理：CPP，C Preprocessor，不是编译器的组成，是编译过程一个单独的步骤，不做语法检查，可理解为文本替换工具。包含宏、文件包含、条件编译
    - 宏：如FLT_MIN，概念关键是“换”，一般大写，提高程序通用性/易读性，便于修改，还有宏函数等
      1. 宏定义：`#define 标识符/符号常量/宏名/数值 字符串`，无分号，作用域为后边的程序，#undef终止宏定义的作用域；宏定义可嵌套；宏定义不分配内存
@@ -314,6 +321,19 @@
         the entire header file file
     #endif
     ```
+1. 标准库
+   - <assert.h>：
+   - <>
+   - <>
+   - <>
+   - <>
+   - <>
+   - <>
+   - <>
+### 运维
+1. 命令行
+   - cli：多文件编译 gcc a.c b.c
+   - 参数：通过main函数的参数处理，`int main(int argc, char *argv[]){}`，argc参数数量，argv[1]参数值，argv[0]存程序名称，参数用空格隔开，用单双引号包裹
 ###wiki
 1. c编程
    - 基本策略：将源代码翻译为可执行文件(机器码)
