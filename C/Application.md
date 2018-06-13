@@ -57,7 +57,14 @@
     // 宏名配置头文件
     #define SYSTEM_H "system_1.h"
     #include SYSTEM_H
-    // 使用_GLOBAL_H将所有头文件集合
+    // 有条件引用
+    #if SYSTEM_1
+    # include "system_1.h"
+    #elif SYSTEM_2
+    # include "system_2.h"
+    #elif SYSTEM_3
+    #endif
+    // 实际实用：使用_GLOBAL_H将所有头文件集合，所有文件就拥有了
     #ifndef _GLOBAL_H
     #define _GLOBAL_H
     #include 其他头文件...
