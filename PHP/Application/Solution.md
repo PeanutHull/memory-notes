@@ -73,3 +73,7 @@
 1. 4层：使用LVS
 1. 7层和缓存：使用nginx、varnish、squid、apache trafficserver
 1. 反向代理：squid、nginx
+### 创造并发执行
+1. curl的mult
+1. pcntl
+1. 工具：ab、jmeter

@@ -224,6 +224,61 @@ function get_self_url($is_root=0) {
     openssl_free_key($res);                                     // 释放资源
     return $result;                                             // 返回明文
     ```
+### 加解密
+```
+/**
+* 字符串加密解密
+* @param  string $string 需要加密或解密的字符串
+* @param  string $key 加密密钥
+* @param  string $operation 加密还是解密,默认解密
+* @return string             加密或者解密结果
+*/
+function authCode($string, $key = '', $operation = 'DECODE')
+{
+    if (empty($string)) {
+        return $string;
+    }
+    // 密匙
+    $key = md5($key ? $key : 'admin.xuersi.com');
+    $keyLength = strlen($key);
+    // 前八位用于验证数据完整性
+    $string = $operation == 'DECODE' ? base64_decode($string) : substr(md5($string . $key), 0, 8) . $string;
+    $stringLength = strlen($string);
+    $rndkey = $box = array();
+    $result = '';
+    // 产生密匙簿
+    for ($i = 0; $i <= 255; $i++) {
+        $rndkey[$i] = ord($key[$i % $keyLength]);
+        $box[$i] = $i;
+    }
+    // 用固定的算法，打乱密匙簿，增加随机性，虽复杂但实际上不会增加密文的强度
+    for ($j = $i = 0; $i < 256; $i++) {
+        $j = ($j + $box[$i] + $rndkey[$i]) % 256;
+        $tmp = $box[$i];
+        $box[$i] = $box[$j];
+        $box[$j] = $tmp;
+    }
+    // 核心加解密部分
+    for ($a = $j = $i = 0; $i < $stringLength; $i++) {
+        $a = ($a + 1) % 256;
+        $j = ($j + $box[$a]) % 256;
+        $tmp = $box[$a];
+        $box[$a] = $box[$j];
+        $box[$j] = $tmp;
+        // 从密匙簿得出密匙进行异或，再转成字符
+        $result .= chr(ord($string[$i]) ^ ($box[($box[$a] + $box[$j]) % 256]));
+    }
+    //解密
+    if ($operation == 'DECODE') {
+        if (substr($result, 0, 8) == substr(md5(substr($result, 8) . $key), 0, 8)) {
+            return substr($result, 8);
+        }
+        return '';
+    }
+    // 因为加密后的密文可能是一些特殊字符，复制过程可能会丢失，所以用base64编码
+    return str_replace('=', '', base64_encode($result));
+}
+```
 ### 其他
 1. 获得毫秒数
     ```

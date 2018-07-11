@@ -61,3 +61,11 @@
    - 使用GCC 4.8以上进行编译
    - 开启HugePage （根据系统内存决定）：操作系统默认的内存是以4KB分页的，而虚拟地址和内存地址需要转换， 而这个转换要查表，CPU为了加速这个查表过程会内建TLB(Translation Lookaside Buffer)。 显然，如果虚拟页越小，表里的条目数也就越多，而TLB大小是有限的，条目数越多TLB的Cache Miss也就会越高，所以如果我们能启用大内存页就能间接降低这个TLB Cache Miss。php将采用大内存页来保存，减少TLB miss，提高性能
    - PGO：Profile Guided Optimization，第一次编译成功后，用项目代码去训练PHP，会产生一些profile信息，最后根据这些信息第二次gcc编译PHP就可以得到量身定做的PHP7
+1. 性能
+    ```php
+    ini_set('memory_limit', "1024M");
+    set_time_limit(0);
+    echo microtime() . PHP_EOL;
+    echo microtime() . PHP_EOL;
+    echo memory_get_usage() . PHP_EOL;
+    ```

@@ -103,7 +103,7 @@
     order by xx1 desc/asc/rand() xx2 asc                                                    # 排序，多个排序规则
     limit x/limit x offset x/limit x.x                                                      # 限制条数/从x行开始的x行
     ## 插入数据
-    insert into table set XX=xx/(,,) values (,) on duplicate key update;                    # 插入数据，如果引发唯一或主键索引重复则更新
+    insert into table(xx) set XX=xx/(,,) values (,) on duplicate key update;                    # 插入数据，如果引发唯一或主键索引重复则更新
     replace into table (,,) values (,,);                                                    # 插入或更新，命中主键修改，未命中添加
     ## 更新数据
     updata table set XX1=xx1, XX2=xx;                                                       # 更新所有数据
@@ -391,6 +391,11 @@
     ```
 1. 性能测试原则：数据多才有参考价值，数据总量超过内存总量，如几百条数据第一条命令下去就全部加载到内存了，没有参考意义
 1. 硬件：主频高处理快高吞吐低时延，L1/2/3的cache大速度快，内存大磁盘读写少TPS高，固态快机械配阵列卡，网卡好低时延，文件系统用xfs/ext4不用ext3
+1. 性能监控
+   - 连接数
+     1. `show status like 'Threads%';`：查看连接数
+     1. `show processlist;`：查看所有连接
+     1. `show variables like '%connect%';`：查看连接的配置
 ### 运维
 1. 安装
    - 安装：`yum -y install mysql-server`

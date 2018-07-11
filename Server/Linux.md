@@ -3,6 +3,11 @@
 1. 系统关机和重启：shutdown、reboot
 1. 进程管理：w、top、ps、kill、pkill、pstree、killall
 1. 用户管理：id、usermod、useradd、groupadd、groupdel
+1. 命令执行：command1 && command2，可以一次执行两个命令，前一个报错则停止运行
+1. 数据重定向
+   - 输出：>>追加，>覆盖，如./a.out 1>t.txt 2>f.txt，1标准输出流2标准错误流
+   - 输入：<
+1. echo &?：获取上一条命令的错误码
 1. 文件
    - 文件系统：mount、umount、fsck、df、du
    - 文件查找比较：locate、find
@@ -123,6 +128,19 @@
     supervisorctl -c supervisor.conf status/reload//start/stop [all]|[x|zzg_worker]         // 查看状态/重新载入配置文件/启动停止所有一个
     ```
    - 安装：`yum supervisor`
+1. Systemd
+   - 背景：linux采用init进程启动服务，如`/etc/init.d/apache2 start`或`service apache2 start`，缺点为只能串行启动，只启动脚本，不管其他事情，如session信号通知，
+   - 理解：linux系统自带，是操作系统一部分，直接与内核交互，性能出色、功能强大、面向目标，体系庞大复杂。给出目标及依赖条件即可执行。即将程序交给系统管理了，d是daemon的缩写，systemd取代initd，成为系统的第一个进程（PID等于1），其他进程都是它的子进程，EL7才能用
+     1. 处理进程和服务
+     1. 挂载文件系统
+     1. 监控网络套接字(如动态开关进程)
+     1. 运行时系统
+   - 功能：处理时称之为单元，有单元类型
+     1. 服务单元：控制unix上的传统服务守护进程
+     1. 挂载单元：控制文件系统的挂载
+     1. 目标单元：控制其余的单元，通常是通过将他们分组的方式
+   - 使用：编写.service文件，通过设置参数决定某一命令的守护
+1. 进程守护：supervisor、Systemd、monit(还能性能监控等等)、命令(nohup/Screen/Tmux)、Node工具(forever/nodemon/pm2)、写锁(让工作进程和守护进程争抢写锁，当守护获得写锁时重启工作进程并放弃写锁))
 ### 知识
 1. SELinux：Security Enhanced Linux，安全强化Linux，是强制访问控制系统的一种实现，用于指明进程可以访问的资源，增强系统抵御0-Day的攻击
    - 特点：可查看、热更改、进程初始化/继承/执行三方面进行策略控制、控制范围包括文件系统/目录/文件/文件启动描述符/端口/消息接口/网络接口
@@ -554,7 +572,7 @@ kill -9 PID
 ctrl+alt+1
 ```
 1. 端口
- - 查看端口占用：netstat -anpt | grep 80
+   - 查看端口占用：netstat -anpt | grep 80
 ### 软件安装
 1. 源码包编译安装
 ```
