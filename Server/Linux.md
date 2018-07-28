@@ -24,6 +24,10 @@
    - 网络配置：hostname、ifconfig
 1. 常用工具：ssh、screen、clear、who、date
 1. 软件包管理：yum、rpm、apt-get
+1. centos7防火墙配置
+   - 添加端口：firewall-cmd --zone=public --add-port=80/tcp --permanent
+   - 查看端口：firewall-cmd --zone=public --list-ports
+   - 开关：systemctl start/disable/restart firewalld
 ### 查看
 1. 查看运行的进程：ps -ef/aux | grep xxx
 1. 查看程序安装位置：which nginx
