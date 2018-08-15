@@ -264,6 +264,7 @@
    - 理解：与异常类似，错误异常一直冒泡直到到达第一个匹配的catch块。如果没有匹配的，使用set_exception_handler()安装的默认异常处理程序，没有默认的，异常将被转换为致命错误，并将像传统错误一样处理。所以`catch（Error $e）{}`或`set_exception_handler()`是必须的。如`(DivisionByZeroError $e)`
    - 抛出异常：`throw new Exception();`
    - try：`try {} catch (Exception $e) {}`
+   - 错误控制：ini和运行时的设置是否显示 display_errors(致命错误时不管用)，错误类别报告 error_reporting(E_ALL ^ E_NOTICE)，除了NOTICE
 1. 连接数据库
    - PDO
    - MySQLi：要淘汰

@@ -499,6 +499,7 @@ new \app\mvc\view\home\Index();                             // 实例化未引�
    - strlen/substr_count                                统计
    - strpos/stripos/strrpos/strripos                    位置
    - strrev/str_repeat/str_shuffle/rand                 其他操作
+   - printf/vprintf/vsprintf                            格式化
 1. 数组类
    - implode
    - count/in_array
@@ -509,6 +510,7 @@ new \app\mvc\view\home\Index();                             // 实例化未引�
    - array_unique/array_sum/array_reverse                                           加工处理
    - array_diff/array_merge                                                         多数组处理
    - list                                                                           把数组值给一组变量赋值，是语言结构
+   - array_change_key_case                                                          修改健名大小写
 1. 判断类
    - empty/isset                                        empty不存在或值等于false，isset变量存在且不是null，都不报错
    - defined/constant/get_defined_constants             常量

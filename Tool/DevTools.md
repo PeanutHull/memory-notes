@@ -1,0 +1,113 @@
+1. 简介
+ - 官方文档：https://developers.google.com/web/tools/
+ - 功能：
+     1. Elements ：显示／更改DOM
+     1. Network ：HTTP的详细信息
+     1. Sources : 调试js
+     1. Timeline ：页面加载时间的详细分析，
+     1. Profiles ：内存／CPU占用
+     1. Resources ：本地数据编辑
+     1. Audits ：分析页面加载过程，提供减少页面加载时间，提升相应速度的方案
+     1. Console ：显示信息，提供shell来和开发者交互
+     1. Emulation ：移动端仿真
+1. Elements 功能点
+ - DOM右键功能
+     1. Add Attribute
+     1. Force Element State ： 强制元素状态，便于调试
+     1. Edit as HTML ：以HTML形式更改页面元素
+     1. Copy XPath
+     1. Delete Node ： 删除DOM
+     1. Break On ： 设置DOM断点
+ - 右侧功能区
+     1. style
+     1. Computed
+     1. Event Listenters ：事件侦听——选择事件——右键-show function definition，定位到对应函数
+     1. DOM Breakds
+     1. Properties ：列出选中内容的所有属性
+1. Console
+ - 输入变量名，回车查看变量内容
+ - Preserve log ：继续保持记录
+ - 代码解析功能
+ - 记录XHR数据
+1. Sources
+ - 文件切换与打开
+ - 文件查看与搜索
+ - 代码格式化：中间左下角`{}`符号
+ - workspaces：直接编辑本地代码，并且可以保存
+ - 新增代码片段并执行 ：Snippets——new——run
+1. Network
+ - 界面解析
+     1. Initiator ：请求来源
+     1. Parser：html解析
+     1. Redirect：重定向
+     1. Script：js
+ - 功能
+      1. 红点单步请求
+      1. 小三角模拟网络环境
+      1. 复制作为HAR，在其他工具中重现请求信息
+      1. 过滤，重载
+ - 网络电影胶片
+      1. 摄像机图标，点击每个截图查看相应时间线的资源加载
+ - 抓包：chrome://net-internals/#events
+1. 移动端调试
+ - 截取长图：三个点中有capture full-page screenshots
+1. ShortCuts
+ - 全局
+     1. 打开DevTool： Cmd +Option+I
+     1. 切换选取元素： Cmd + Shift + C
+     1. 刷新页面忽略缓冲： Cmd + Shift + R
+     1. 查找下一个：Cmd + G
+     1. 查找上一个：Cmd + Shift + G
+     1. 选中地址栏：Cmd + L
+     1. 历史记录：Cmd + Y
+     1. 下载记录：Cmd + Shift + J
+ - 打开与查找
+     1. 打开文件：Cmd + O
+     1. 当前文件/面板查找： Cmd +F
+     1. 所有资源查找： Cmd + Opt + F
+     1. 撤销/重做： Cmd + Z/Y
+     1. 打开移动模式： Cmd + Shift + M
+ - DOM面板
+     1. 选取dom： up / down
+     1. 展开/折叠： left / right
+     1. 编辑： enter / Double-click
+     1. 隐藏元素： H
+ - 样式侧边栏(Style Sidebar)
+     1. 插入：空白处单击
+     1. 编辑：single-click
+     1. 选取下一个：tab
+     1. 定位到属性定义处：Cmd + 单击
+ - Sources 资源面板
+     1. 打开文件：Cmd + O
+     1. 打开当前页面方法：Cmd + Shift + O
+     1. 快速文件切换：Cmd + P
+
+     1. 暂停/回复脚本运行：Cmd + \
+     1. 单步执行函数调用：Cmd + '
+     1. 进入下一个函数调用：Cmd + ;
+     1. 跳出当前函数：Cmd + Shift + ;
+     1. 切换断点：Cmd + B，左侧边栏单击
+
+     1. 关闭标签：Opt + W
+     1. 跳转到行：Ctrl + G
+     1. 注释：Cmd + /
+     1. 选择下一个出现：Cmd + D，多选
+     1. 撤销上一次操作：Cmd + U
+ - TimeLine 面板
+     1. 启动/停止记录：Cmd + E
+     1. 保存timeline数据：Cmd + S
+     1. 加载timeline数据：Cmd + O
+ - Profiles 面板
+     1. 启动/停止记录：Cmd + E
+ - Console 控制台
+     1. 清空：Cmd + K
+     1. 可以输入执行命令，回车执行
+     1. 右键查看XHR的记录
+1. 实践
+ - 手机端进行chrome-devtools调试 ：打开use调试——输入chrome://inspect——点击inspect
+ - Elements功能体验：Edit as HTML，dom断点
+ - XPath ：是一门在XML中查找信息的语言。a标签的Xpath为：/html/body/div[2]/p[1]/a，解读为：html里面body标签的第二个div标签的第一个p标签下的a标签
+ - DOM事件：点击／移动到／按键／重新调整大小
+ - DOM断点：监听DOM修改情况，分为：子节点修改／自身属性修改，一旦DOM被修改，断点会定位到执行的代码
+ - XML：是一个浏览器接口
+ - WebSocket：定义了一种API，可建立套接字连接，即持久的连接，双方可以随时发送数据
