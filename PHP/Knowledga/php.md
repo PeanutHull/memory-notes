@@ -260,11 +260,17 @@
         preg_match($pattern, $str, $match);
         var_dump($match);
         ```
-1. 异常
+1. 错误和异常
    - 理解：与异常类似，错误异常一直冒泡直到到达第一个匹配的catch块。如果没有匹配的，使用set_exception_handler()安装的默认异常处理程序，没有默认的，异常将被转换为致命错误，并将像传统错误一样处理。所以`catch（Error $e）{}`或`set_exception_handler()`是必须的。如`(DivisionByZeroError $e)`
    - 抛出异常：`throw new Exception();`
    - try：`try {} catch (Exception $e) {}`
    - 错误控制：ini和运行时的设置是否显示 display_errors(致命错误时不管用)，错误类别报告 error_reporting(E_ALL ^ E_NOTICE)，除了NOTICE
+   - 错误类型
+     1. E_ERROR、E_WARNING、E_NOTICE、E_PARSE、E_STRICT、E_RECOVERABLE_ERROR、E_DEPRECATED、E_ALL
+     1. E_CORE_ERROR, E_CORE_WARNING：引擎产生
+     1. E_COMPILE_ERROR, E_COMPILE_WARNING：引擎产生
+     1. E_USER_ERROR, E_USER_WARNING, E_USER_NOTICE, E_USER_DEPRECATED
+   - 错误配置：php.ini(log_errors/display_errors)、php-fpm.conf(error_log/log_level)
 1. 连接数据库
    - PDO
    - MySQLi：要淘汰
@@ -387,7 +393,14 @@
    - nginx + php-fpm
    - apache + mod_php5
    - lighttp + spawn-fcgi
-1. 版本历史
+1. 历史
+   - 1994：Rasmus Lerdorf 为了维护个人网页而制作了一个简单的用 Perl 语言编写的程序，称为 Personal Home Page
+   - 1995：Rasmus Lerdorf 用 C 语言对"Personal Home Page"进行重新编写，包括可以访问数据库，并于 1995 年 6 月 8 日发布了首个公开版。这是 PHP 1.0 版本，也是第一次使用了"PHP"的名字
+   - 1997：Rasmus Lerdorf、Andi Gutmans 和 Zeev Suraski 加入了该语言的第三个版本的开发，并进行根本性的重新设计，性能大大提升。从那之后， PHP 开发组也创建并发展起来。PHP 也在这个时候改称为 PHP：Hypertext Preprocessor
+   - 2000：以 Zend Engine 1.0 为基础的 PHP 4 正式发布，自此，PHP 的性能才开始变得正式起来
+   - 2004：发布了 PHP 5，PHP 5 使用了第二代的 Zend Engine。PHP 包含了许多新特色，如强化的面向对象功能、引入 PDO（PHP Data Objects，一个存取数据库的延伸函数库）、以及许多效能上的增强
+   - 2015：12 月 3 日，PHP 7.0 正式发布，使用的 Zend Engine 3 带来了 100% 的性能提升，还有统一的变量语法，基于抽象语法树编译过程。
+1. 版本
    - 5.3
      1. 增加命名空间
    - 5.4
@@ -395,13 +408,20 @@
      1. [] 代替 array()
    - 5.6
      1. 增加可变参数，如`function sum(...$int) {}`，`sum(2, 3)`，使用可变参数`array_intersect($v, ...$vv)`;相当于一次传入了多个参数
+   - 7.1
+     1. 引入"类型推断"，是正在实现的JIT的前驱
    - 7.2
+     1. sparse conditional constant propagation
+     1. 逃逸分析
+     1. 移除“死代码”（消除没有副作用的代码）
+     1. 引入 "HYBRID VM"虚拟机引擎
      1. 优化opcache
      1. 弃用__autoload、each()、assert
 1. php7
    - 整体：性能提升，内核更加健壮，抛弃了很多历史包袱，同时最大程度保证向前兼容，之前的代码基本可以无缝升级
      1. PHPNG代码合并到PHP7，速度是v5.6的3倍，内存消耗比v5.6低50％
      1. 一致的64位支持：不论32位64位机，变量占用不变
+     1. 7.2是7.1的10%性能提升
    - 更新内容：标量和返回值类型、匿名类、常量数组、use增强、<=>、??、闭包对象绑定优化、层次异常扩展、原生的TLS
      1. ZEND引擎升级到Zend Engine 3，也就是所谓的PHP NG
      1. 增加抽象语法树，使编译更加科学

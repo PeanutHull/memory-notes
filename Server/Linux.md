@@ -35,6 +35,17 @@
 1. 查看centos版本：cat /etc/redhat-release
 1. 查看centos位数：getconf LONG_BIT
 1. 查看ip：ifconfig -a中的inet addr
+1. top
+   - VIRT：virtual memory usage 虚拟内存
+     1. 进程“需要的”虚拟内存大小，包括进程使用的库、代码、数据等
+     1. 假如进程申请100m的内存，但实际只使用了10m，那么它会增长100m，而不是实际的使用量
+   - RES：resident memory usage 常驻内存
+     1. 进程当前使用的内存大小，但不包括swap out
+     1. 包含其他进程的共享
+     1. 如果申请100m的内存，实际使用10m，它只增长10m，与VIRT相反
+     1. 关于库占用内存的情况，它只统计加载的库文件所占内存大小
+   - SHR：shared memory 共享内存
+     1. 计算某个进程所占的物理内存大小公式：RES – SHR
 ### 操作
 1. 进程后台运行：processName &
 1. 关闭应用程序
