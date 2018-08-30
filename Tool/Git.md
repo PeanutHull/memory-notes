@@ -130,7 +130,7 @@ git config --global alias.c 'commit -m'
 ####git merge————合并
 - git merge < branch_name >        将此分支合并到当前分支
 - git merge origin/master --no-ff     不要fast-forward合并，可生成merge提交
-- git merge -no-ff 本地两个分支合并，是会显示成一条直线的，强迫git保留分支历史，可以有合并分支树
+- git merge --no-ff 本地两个分支合并，是会显示成一条直线的，强迫git保留分支历史，可以有合并分支树
 
 ------------
 ####git rebase————衍合

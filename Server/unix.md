@@ -183,6 +183,24 @@
    - 会话可有一个控制终端，控制终端连接的会话首进程称为控制进程，终端断开会发送挂断信号
    - tcgetpgrp/tcsetpgrp：获得/设置前台进程组ID，后台运行加&，作业编号1转为前台fg %1
 1. 作业控制：允许一个终端启动多个作业(进程组)，控制前后台调配
+### 守护进程
+1. 认识：生存期长，系统引导装入时启动，系统关闭时停止，没有控制终端后台运行，就是长时间提供服务呗。系统的如kswapd、flush、sync_supers、jbd
+1. 实现
+   - 规则
+     1. umask的注意
+     1. 调用fork，然后使父进程exit，则继承了进程组id，保证子进程不是组长进程
+     1. 调用setsid创建新会话，则成为新会话的首进程，成为新组长进程，没有控制终端
+     1. 当前工作目录改为根目录，防止占用挂载的文件系统
+     1. 关闭文件描述符
+     1. 打开/dev/null，使其具有文件描述符0124
+   - 惯例
+     1. 配置：启动时读取一次配置文件，需要捕捉SIGHUP信号然后重新读配置，存放在/etc目录
+     1. 日志记录：调用syslog，函数有openlog/syslog/closelog/setlogmask
+     1. 使用锁文件：name.pid
+     1. 自动重启：/etc/inittab设置respawn记录项
+     1. 单实例：任何时刻只运行一个副本，使用文件和记录锁lockfile提供互斥机制，如需要排他访问设备
+   - 编写：P375
+     1. 单线程守护进程捕捉SIGHUP并重读配置文件
 ### 信号
 1. 认识：是软件中断，是处理异步事件的方法，逻辑是当XX发生时，执行以下操作。POSIX.1有了标准化的可靠信号机制
    - 名字：SIG开头，正整数常量，0为空信号
@@ -232,6 +250,105 @@
      1. SIGABRT：夭折信号，调用about触发，进程异常终止
      1. SIGALRM：闹钟信号，alarm超时触发
      1. SIGSEGV：无效内存引用
+### 线程
+1. 认识
+   - 组成：线程ID、寄存器、栈、调度优先级和策略、信号屏蔽字、errno变量，功能测试宏_POSIX_THREADS
+   - 好处
+     1. 每种事件类型分配单独的线程，简化异步事件处理复杂度，可以采用同步编程模式
+     1. 避免了进程间复杂的资源共享问题
+     1. 并行处理提高吞吐量
+   - 特点
+     1. 自动的访问进程所有的资源
+     1. 除了寄存器外，一个线程无法阻止另一个访问其数据
+     1. 线程函数一般返回错误码，不会依赖全局错误状态，缩小了错误范围
+1. 属性
+   - 限制：sysconf，如进程最大线程数
+   - 属性
+     1. 线程属性
+        - pthread_attr_init
+        - pthread_attr_destory：对线程相关资源清理的唯一接口，失败就造成内存泄露
+        - pthread_attr_get/setdetachstate：是否分离状态
+        - pthread_attr_get/setstack：栈属性
+        - pthread_attr_get/setstacksize
+        - pthread_attr_get/setguardsize：线程栈末尾避免栈溢出的扩展内存大小
+     1. 同步属性
+        - 函数关键字：互斥量 mutexattr、读写锁 rwlockattr、条件变量 condattr、屏障 barrierattr
+        - 共同属性：pthread_xxx_init/destory/getsetpshared
+        - 进程共享属性：即多个进程将同一内存区块映射到各自独立的地址空间中，实现进程共享，也可限制开销较大的互斥量，pshared
+        - 独特属性：条件变量 getsetclock
+   - 重入：即线程安全：一个函数在相同时间点可被多个线程安全调用，不能是因为数据放在静态内存缓存区，操作系统为一些函数提供了线程安全版本，和信号的可重入没关系
+   - 和信号：每个线程有自己的信号屏蔽字，但信号处理所有线程共享，信号是递送给单个任意线程的
+     1. pthread_sigmask：多线程中使用
+     1. sigwait：等待n个信号出现，可以将异步产生的信号同步处理，可以安排专用线程处理
+     1. pthread_kill：将信号发给线程，闹钟是进程资源，所有线程互不合作的使用
+     1. 不能把pthread函数用于成为异步信号安全的其他函数的一部分
+   - 和fork：由于写时复制，子进程fork之后不是立马exec需要清理锁状态(因为exec后旧地址空间被丢弃，锁没问题了)
+     1. pthread_atfork：可安装清理锁的函数，POSIX.1声明fork返回和调用exec之间，子进程只能调用异步信号安全的函数
+   - 和IO：所有线程共享文件描述符，
+     1. pread、pwrite：将偏移量和数据操作成为一个原子操作
+1. 操作
+   - 线程标识：不可移植，是整形或结构，不能直接比较
+     1. pthread_self：获取线程ID
+     1. pthread_equal：判断是否相等
+   - 创建
+     1. pthread_create，不能保证哪个线程先执行，后边的会覆盖前边的栈内容，所以线程间用全局结构或者malloc分配数据
+   - 特定数据：绑定一个key用于对特定数据的访问，可以设置析构函数只有正常退出才触发，exit不触发
+     1. pthread_key_create/delete
+     1. pthread_get/setspecific：获得某个线程键的特定地址
+   - 保证只调用一次：pthread_once
+   - 等待结束
+     1. pthread_join，将线程置于分离状态
+     1. pthread_detach，分离线程，就是不关心终止状态，让系统在线程退出时收回资源
+   - 终止：线程调用exit/_Exit/_exit，进程终止
+     1. 终止方式
+        - 直接返回，返回值是退出码，`return((void *)1)`
+        - 被其他线程取消：pthread_cancel，可以忽略或控制如何取消
+          1. pthread_setcancelstate：是否可取消，将取消请求挂起，直到再次改变是否可取消状态
+          1. pthread_testcancel：添加自定义取消点
+          1. pthread_setcanceltype：设置推迟取消/异步取消，默认推迟取消，到达取消点才被取消，异步的任意时间取消
+        - pthread_exit
+     1. 清理程序：调用pthread_exit、响应取消、非0参数调用pthread_cleanup_pop，触发。必须在和线程相同作用域中成对使用，可以实现为宏，可以包含{}字符
+        - pthread_cleanup_push
+        - pthread_cleanup_pop：都会删除push设置的程序，执行顺序和注册顺序相反
+1. 线程同步
+   - 原因：单个资源在多个用户共享的问题
+     1. 访问变量需要先拿到锁
+     1. 同一时间对一个变量做增量要同步，当多个线程观察不到数据不一致时操作就是顺序一致的
+   - 同步机制
+     1. 互斥量：是把锁，确保同一时间只有一个线程访问数据。就是互斥量的争抢设置和释放，只有所有线程都使用互斥量才起作用，是递归的就表示占有锁时可再次获取该锁
+        - 方法
+          1. pthread_mutex_init：必须初始化，也可设置为只适用静态分配互斥量的常量
+          1. pthread_mutex_destory：动态分配(如malloc)互斥量要销毁
+          1. pthread_mutex_lock：如上锁会阻塞
+          1. pthread_mutex_trylock：试着上锁，不会阻塞
+          1. pthread_mutex_timedlock：设置能加上锁的超时时间，避免永远阻塞
+          1. pthread_mutex_unlock
+        - 避免死锁：控制互斥量加锁的顺序来避免，即锁A前先锁B，只可能和相反顺序加锁的发生死锁。也可以trylock不行就释放自己的锁，过一会再来试。需要控制锁的粒度，实现复杂性和性能的平衡
+     1. 读写锁：读锁，写锁，无锁，读锁可同时存在多个不阻塞读锁，读锁不会抢先写锁以免写一直得不到满足，也称共享互斥锁
+        - 方法
+          1. pthread_rwlock_init：使用前必须初始化，释放锁内存前必须销毁
+          1. pthread_rwlock_destory：
+          1. pthread_rwlock_rdlock
+          1. pthread_rwlock_wrlock
+          1. pthread_rwlock_unlock
+          1. pthread_rwlock_timedrdlock
+          1. pthread_rwlock_timedwrlock
+     1. 条件变量：为线程提供会合的场所。和互斥量一起使用时，允许线程以无竞争的方式等待特定条件发生，必须先锁住互斥量来保护条件，其他线程获得互斥量之前不会觉察到改变
+        - pthread_cond_init：同上
+        - pthread_cond_destory
+        - pthread_cond_wait：等待条件变量为真，自动将线程放到等待条件的线程列表上并对互斥量解锁，就关闭了条件检查和线程进入休眠等待条件改变之间的时间通道，不会错过任何变化，函数返回时互斥量再次被锁住。是一个原子操作，等待前会解锁，唤醒后会加锁
+        - pthread_cond_timedwait
+        - pthread_cond_signal：通知线程条件已经满足，最少唤醒一个
+        - pthread_cond_broadcast：唤醒所有等待的线程
+     1. 自旋锁：拿锁前一直处于忙等(自旋)阻塞状态，不是休眠(互斥量)，用于锁持有时间短，线程不希望重新调度上花费太多成本。可用于非抢占式内核、实时调度中，会阻塞中断，不要有自旋锁的情况下使用可能会休眠的函数，会增加时间。有些互斥会自旋一小段时间才休眠
+        - pthread_spin_init：同上
+        - pthread_spin_destory
+        - pthread_spin_lock
+        - pthread_spin_trylock
+        - pthread_spin_unlock
+     1. 屏障：协调多个线程并行工作的机制，允许每个线程等待，直到所有线程到达某一点，然后继续执行
+        - pthread_barrier_destory
+        - pthread_barrier_wait：可以使用一个线程作为主线程，等待其他线程的执行结果
 ### 进程间通信
 1. IPC
 1. 进程间通信对象：消息队列、信号量、共享存储对象，实际系统没当成文件
@@ -251,7 +368,10 @@
 1. realloc可创建恰好的数组，如路径
 ### 问题
 1. 多进程模式下的文件原子读写
-1. 啥是作业控制
+1. 避免死锁的代码再好好理解下，11.6.2
+1. 互斥量的递归非递归
+1. 线程和信号的代码，12.8
+1. 线程和fork理解，12.9
 ### wiki
 1. libc：泛指C函数库，包括头文件和基本C库libc.a，最初由c发明者写，后来移植到多个平台，有了多个版本。包含常用的数据结构和处理方法，如数组(长度可变),单(双)向链表,hash表,队列,关系，处理方法如:字符串,标准输出(g_print等),错误输出,日志记录，还有事件循环,线程,IO操作等，是ANSI C函数库
    - glibc：c运行库，是GNU发布的libc库，是linux最底层的api，包括了unix通行的标准，各发行版Linux用的就是glibc，是GUN C函数库，Linux下面的标准c库还有uclibc、klibc、libc，glibc用得最多，glib是GTK+的基础库
