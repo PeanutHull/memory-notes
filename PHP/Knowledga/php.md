@@ -264,17 +264,23 @@
    - 理解：与异常类似，错误异常一直冒泡直到到达第一个匹配的catch块。如果没有匹配的，使用set_exception_handler()安装的默认异常处理程序，没有默认的，异常将被转换为致命错误，并将像传统错误一样处理。所以`catch（Error $e）{}`或`set_exception_handler()`是必须的。如`(DivisionByZeroError $e)`
    - 抛出异常：`throw new Exception();`
    - try：`try {} catch (Exception $e) {}`
-   - 错误控制：ini和运行时的设置是否显示 display_errors(致命错误时不管用)，错误类别报告 error_reporting(E_ALL ^ E_NOTICE)，除了NOTICE
+   - 错误控制：ini和运行时的设置是否显示 display_errors(致命错误时不管用)，错误类别报告 error_reporting(E_ALL ^|& ~E_NOTICE)，除了NOTICE
    - 错误类型
      1. E_ERROR、E_WARNING、E_NOTICE、E_PARSE、E_STRICT、E_RECOVERABLE_ERROR、E_DEPRECATED、E_ALL
      1. E_CORE_ERROR, E_CORE_WARNING：引擎产生
      1. E_COMPILE_ERROR, E_COMPILE_WARNING：引擎产生
      1. E_USER_ERROR, E_USER_WARNING, E_USER_NOTICE, E_USER_DEPRECATED
-   - 错误配置：php.ini(log_errors/display_errors)、php-fpm.conf(error_log/log_level)
+   - 错误配置
+     1. php.ini
+        - log_errors：开关
+        - display_errors：是否显示
+        - error_reporting：错误级别
+        - error_log：日志地址
+     1. php-fpm.conf(error_log/log_level)
 1. 连接数据库
-   - PDO
-   - MySQLi：要淘汰
-   - mysql函数：不支持预处理，不安全
+   - PDO：php database object，可以设置长连接，但是会受上一个锁等待，事务回滚的影响，可以设置超时断开时间30秒，正好一个web响应时间
+   - MySqli：可以设置长连接，进程重用长连接，但是mysqli会做一些清理工作
+   - mysql函数：不支持预处理，不安全，已经淘汰
 ### 运维
 1. PHP安装
    - linux

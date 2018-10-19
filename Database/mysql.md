@@ -120,6 +120,7 @@
    - 数学：format/round/pow/abs/sin/cos/tan/bit_and
    - 字符串：char/concat/length  
    - cast：类型转换，如`cast(1 as signed)`
+   - Find_IN_SET：查找通过,分隔的某一个数据
    - password
    - UNIX_TIMESTAMP：时间转换为时间戳
    - match：全文搜索
