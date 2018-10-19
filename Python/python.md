@@ -1,7 +1,9 @@
-## 认识
-1. 理解：是一种解释性、动态数据类型、面向对象的高级编程语言，抽象层次高，表达能力强，1989年发明。Python3不向下兼容
-   - 易于理解、学习
-   - 拥有广泛的标准库，广泛用于爬虫、数学分析
+### 认识
+1. 理解：是一种解释性(解释执行)、动态数据类型、面向对象的高级编程语言，抽象层次高，表达能力强，1989年发明。源代码开源，版权与许可证在python软件基金会
+   - 易于理解、学习，简单优雅、易于开发
+   - 执行效率换来了开发效率
+   - 内置电池：官方提供完善广泛的标准库，众多第三方库远超其他语言，如网络编程、输入输出、文件系统、图形处理、数据库、文本处理等
+   - 胶水语言：具有可扩展性，丰富api和工具，轻松使用其他语言的模块
 1. 用途
    - web
    - 脚本
@@ -14,40 +16,31 @@
         print("Hello, World!");
         ```
    - python3 hello.py
-## 语法
+### 语法
 1. 基础
    - 编码：默认utf8编码，可以指定不同编码：`# -*- coding: cp-1252 -*-`\
    - 标识符：不能以数字开头，对大小写敏感
    - 注释：单行 #，多行 '''或"""
    - 行与缩进：用缩进代表代码块，无需大括号包裹。同一代码块的缩进空格数必须相等。使用反斜杠实现多行语句，使用分号表示多条语句在一行
-   - 关键字：True/False，表示1/0，可以和数字直接运算，""也是假，不是基本数据类型
 1. 数据类型
-   - Number：数字
+   - Number
      1. 分类
         - int：整数，可以表示长整型，没有python2的long类型
         - float：浮点数，如1.23、1E-2
         - complex：复数，如1 + 2j
-     1. 运算符
-        - 算术运算符：+-*/%，a**b次幂，//取整除
-        - 比较运算符：== != > < >= <=，==比较的是值，is比较引用对象
-        - 赋值运算符：= += -= *= /= %= **= //=
-        - 位运算符：& | ^ ~ << >>
-        - 逻辑运算符：and or not，如`if(a and b)`，and从左到右计算表达式，若所有值均为真，返回最后一个值，若存在假，返回第一个假值；or从左到右返回第一个为真的值
-        - 成员运算符：in/not in，是否存在于序列中，如`if(a in list)`
-        - 身份运算符：is/is not，两个标识符是否引用自一个对象，如`if(a is b)`，a是20b是30都不同
      1. 特点
         - 除法(/)总是返回一个浮点数，要获取整数使用//操作符
         - 不同机器上浮点数运算的结果可能不一样
-   - String：字符串
+   - String
+     1. 分类
+        - 自然字符串：前缀r/R表示全部输出，如 r"hello\n"，则\n会显示
+        - unicode字符串：前缀u/U
+        - 级联字符串：如"this " "is " "string"会被自动转换为this is string
      1. 功能
         - 单引号和双引号完全相同，两者都可表示
         - 字符串不可改变，向一个索引位置赋值，比如word[0] = 'm'会导致错误
-        - 字符串截取：左往右以0开始，从右往左以-1开始
+        - 字符串截取：从左往右以0开始，从右往左以-1开始
         - 连接符+，转义符\，复制符*
-     1. 分类
-        - 自然字符串：加前缀r/R，表示全部输出。如 r"hello\n"，则\n会显示
-        - unicode字符串：加前缀u/U
-        - 级联字符串：如"this " "is " "string"会被自动转换为this is string
      1. 三引号：从引号和特殊字符串的泥潭中走出来
         ```python
         cursor.execute('''
@@ -57,77 +50,24 @@
         prid INTEGER)
         ''')
         ```
-     1. 格式化：
-        - 新版：`print('{1} 和 {0}, 和 {other}, 和 {0:.3f} 和 {1:10d}, 和 {5[a]:d} 和{a:d}'.format('a', 'b', other='c', math.pi, '1.2345', dict, **dict))`
-        - 旧版格式化：支持格式化输出字符串，就是将值插入到有格式符%s的字符串中，和c的sprintf一样的语法，如`print("我叫 %s 今年 %d 岁!" % ('小明', 10)`
-          1. 格式化符号：%c符合和ACS||，%s字符串，%d整数，%u无符号整数，%o八进制，%x十六进制，%X十六进制(大写)...
-          1. 辅助指令：*定义宽度或小数点精度，-左对齐，(var)映射变量...
-     1. 函数：len(string)、lower()、count(str, beg= 0,end=len(string))、encode/decode(encoding='UTF-8',errors='strict')、
+     1. 函数：len()、lower()、count(str,beg= 0,end=len())、encode/decode(encoding='UTF-8',errors='strict')
      1. 方法
         - str.rjust/center/zfill/format
         - str()：以用户易读的方式输出
-        - repr(`：解释器易读的形式输出
-     1. 实例
-        ```python
-        str = 'abcde'
-        print (str[0])       # 输出字符串第一个字符
-        print (str[2:])      # 输出从第三个开始的后的所有字符
-        print (str[0:-1])    # 输出第一个到倒数第二个的所有字符
-        print (str * 2)      # 输出字符串两次
-        print (str + "TEST") # 连接字符串
-        ```
-   - List：列表
-     1. 理解：使用最频繁，可以继续嵌套列表，可以被索引和切片、可以用+拼接、元素可以被改变，以数字为索引
-     1. 实例
-        ```python
-        # 定义
-        list = ['abcd', 786, 70.2]
-        # 使用
-        list[1:3]        # 第二个到第三个元素，第二位置进一
-        # 改变
-        list[0] = 9
-        # 删除
-        del list[2]
-        # 重复
-        ['a'] * 4
-        # 检查是否存在，返回True
-        3 in [1, 2, 3]
-        # 遍历
-        for x in [1, 2, 3]:
-            print(x, end=" ")
-        # 同时遍历更多序列
-        num = ['1', '2', '3']
-        word = ['a', 'b', 'c']
-        for n, w in zip(num, word):
-        # 多维
-        list = [ [0 for i in range(5)] for i in range(5)]
-        listp[0][0]
-        ```
+        - repr()：解释器易读的形式输出
+     1. 格式化：
+        - 新版：`print('{1} 和 {0}, 和 {other}, 和 {0:.3f} 和 {1:10d}, 和 {5[a]:d} 和{a:d}'.format('a', 'b', other='c', math.pi, '1.2345', dict, **dict))`
+        - 旧版：支持格式化输出字符串，就是将值插入到有格式符%s的字符串中，和c的sprintf一样的语法，如`print("我叫 %s 今年 %d 岁!" % ('小明', 10)`
+          1. 格式化符号：%c符合和ACSII，%d整数，%u无符号整数，%o八进制，%x十六进制，%X十六进制(大写)，%s字符串...
+          1. 辅助指令：*定义宽度或小数点精度，-左对齐，(var)映射变量...
+   - List
+     1. 理解：列表，数字为索引的数组，使用最频繁，可被索引和切片、元素可被改变、可用+拼接、可继续嵌套
      1. 方法
-        - len()
         - append()/extend()/insert()
+        - len()
         - pop()
         - index()
         - max/min()
-     1. 列表推导式：提供了从序列创建列表的简单途径，通过计算、判断得出新的列表
-        ```python
-        vec = [2, 4, 6]
-        [3*x for x in vec]          # 将元素都乘以3，[6, 12, 18]
-        [[x, x**2] for x in vec]    # 得出二维列表，[[2, 4], [4, 16], [6, 36]]
-        [3*x for x in vec if x > 3] # 判断，[12, 18]
-
-        word = ['  a', '  b ', 'c  ']
-        x.strip() for x in freshfruit   # 调用方法处理
-        ```
-     1. 列表嵌套
-        ```python
-        matrix = [                                          # 3x4矩阵
-            [1, 2, 3, 4],
-            [5, 6, 7, 8],
-            [9, 10, 11, 12],
-        ]
-        [[row[i] for row in matrix] for i in range(4)]      # 转换为4x3矩阵
-        ```
    - Tuple
      1. 理解：元组，元素不能被改变的列表，用括号表示，可以嵌套包含列表等数据类型。只有一个元素需要后边加逗号。string、list和tuple都属于sequence序列
      1. 定义
@@ -183,11 +123,20 @@
         # 遍历
         for k, v in knights.items():
         ```
-   - 类型转换
-     1. int/long/float/complex()
-     1. str/repr(表达式字符串)/eval(执行字符串中的python表达式)()
-     1. list/tuple/set/dict/frozenset(不可变集合)()
-     1. chr(整数转字符)/unichr(整数转unicode)/ord(字符转整数)/hex(整数转十六进制字符串)/oct(整数转八进制字符串)
+   - 关键字：True/False，表示1/0，可以和数字直接运算，""也是假，不是基本数据类型
+1. 运算符
+   - 算术运算符：+-*/%，a**b次幂，//取整除
+   - 比较运算符：== != > < >= <=，==比较的是值，is比较引用对象
+   - 赋值运算符：= += -= *= /= %= **= //=
+   - 位运算符：& | ^ ~ << >>
+   - 逻辑运算符：and or not，如`if(a and b)`，and从左到右计算表达式，若所有值均为真，返回最后一个值，若存在假，返回第一个假值；or从左到右返回第一个为真的值
+   - 成员运算符：in/not in，是否存在于序列中，如`if(a in list)`
+   - 身份运算符：is/is not，两个标识符是否引用自一个对象，如`if(a is b)`，a是20b是30都不同
+1. 类型转换
+   - int/long/float/complex()
+   - str/repr(表达式字符串)/eval(执行字符串中的python表达式)()
+   - list/tuple/set/dict/frozenset(不可变集合)()
+   - chr(整数转字符)/unichr(整数转unicode)/ord(字符转整数)/hex(整数转十六进制字符串)/oct(整数转八进制字符串)
 1. 变量
    - 理解：不需要声明，使用前必须赋值，赋值之后变量才会被创建。变量的类型由赋予它的值来决定，以值为基准，一个值一个内存地址，多个变量可以指向一个内存地址，变量没有类型，仅仅是一个对象的引用
    - 操作
@@ -368,6 +317,31 @@
      1. urllib/smtplib：网络和邮件
      1. math
      1. pprint
+1. 错误和异常
+   - 异常处理：try/except
+    ```python
+    try:
+    except OSError as err:
+        print("OS error: {0}".format(err))
+    except ValueError:
+    except (RuntimeError, TypeError, NameError):
+    except:                                         # 最后一个作为通配使用
+    else:                                           # 放在except之后，没有异常会执行这里
+    finally:                                        # 无论如何都会执行。如果有异常，没有except接住的话，会再抛一次
+    ```
+   - 抛出异常：raise
+    ```python
+    raise                           # 抛出一个异常
+    raise NameError('HiThere')      # 抛出指定异常，参数必须为异常的实例或者异常的类(即Exception的子类)
+    ```
+   - 自定义异常
+    ```python
+    class Error(Exception):             # 定义一个基础的类，通过继承扩展异常类型
+        pass
+    class InputError(Error):
+    class TransitionError(Error):
+    ```
+### 面向对象
 1. 面向对象
    - 理解：尽量不增加新的语法和语义，
    - 特点
@@ -395,6 +369,7 @@
     x.i                                         # 访问类属性
     x.f()                                       # 访问类方法
     ```
+### 应用
 1. IO
    - 文件
      1. 理解
@@ -462,6 +437,41 @@
         print("你输入的内容是: ", str)
         ```
    - 打印：`print(x)`，不换行和连接符`print(x, end="", sep='&')`
+1. 时间和日期
+   - time
+     1. time.time()：时间戳
+     1. time.asctime(time.localtime(time.time()))：格式化时间，Thu Apr  7 10:29:13 2016
+     1. time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())：格式化时间，2016-03-20 11:45:39
+   - calendar
+     1. calendar.month(2016, 1)：输出日历
+1. 正则
+   - 理解：自1.5增加re模块，提供Perl风格的正则模式
+   - 函数
+     1. match：只从起始位置匹配，否则返回None，成功返回对象
+        ```python
+        matchObj = re.match('www', 'www.a.com').span()      # 在起始位置匹配
+        matchObj.group(num=0)                               # 包含对应组的值
+        matchObj.groups()                                   # 包含所有小组字符串的元组
+        ```
+     1. search：查找，用法同match
+     1. sub：替换
+        ```python
+        # 被替换者可以是个函数
+        def double(matched):
+            value = int(matched.group('value'))
+            return str(value * 2)
+
+        s = 'A23G4HFD567'
+        print(re.sub('(?P<value>\d+)', double, s))          # 输出A46G8HFD1134
+        ```
+   - 修饰符
+     1. re.I 大小写
+     1. re.L 本地化识别匹配
+     1. re.M 多行
+     1. re.S 匹配所有字符
+     1. re.U 根据Unicode字符集解析字符，影响\w/W/b/B
+     1. re.X 给允更灵活的方式
+### 高级
 1. 多线程
    - 多线程的特点
      1. 并行提高处理速度，充分利用多核优势
@@ -604,205 +614,20 @@
             t.join()
         print ("退出主线程")
         ```
-1. 函数式编程
-1. 装饰器模式
-1. 时间和日期
-   - time
-     1. time.time()：时间戳
-     1. time.asctime(time.localtime(time.time()))：格式化时间，Thu Apr  7 10:29:13 2016
-     1. time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())：格式化时间，2016-03-20 11:45:39
-   - calendar
-     1. calendar.month(2016, 1)：输出日历
-1. 错误和异常
-   - 异常处理：try/except
-    ```python
-    try:
-    except OSError as err:
-        print("OS error: {0}".format(err))
-    except ValueError:
-    except (RuntimeError, TypeError, NameError):
-    except:                                         # 最后一个作为通配使用
-    else:                                           # 放在except之后，没有异常会执行这里
-    finally:                                        # 无论如何都会执行。如果有异常，没有except接住的话，会再抛一次
-    ```
-   - 抛出异常：raise
-    ```python
-    raise                           # 抛出一个异常
-    raise NameError('HiThere')      # 抛出指定异常，参数必须为异常的实例或者异常的类(即Exception的子类)
-    ```
-   - 自定义异常
-    ```python
-    class Error(Exception):             # 定义一个基础的类，通过继承扩展异常类型
-        pass
-    class InputError(Error):
-    class TransitionError(Error):
-    ```
-1. 正则
-   - 理解：自1.5增加re模块，提供Perl风格的正则模式
-   - 函数
-     1. match：只从起始位置匹配，否则返回None，成功返回对象
-        ```python
-        matchObj = re.match('www', 'www.a.com').span()      # 在起始位置匹配
-        matchObj.group(num=0)                               # 包含对应组的值
-        matchObj.groups()                                   # 包含所有小组字符串的元组
-        ```
-     1. search：查找，用法同match
-     1. sub：替换
-        ```python
-        # 被替换者可以是个函数
-        def double(matched):
-            value = int(matched.group('value'))
-            return str(value * 2)
-
-        s = 'A23G4HFD567'
-        print(re.sub('(?P<value>\d+)', double, s))          # 输出A46G8HFD1134
-        ```
-   - 修饰符
-     1. re.I 大小写
-     1. re.L 本地化识别匹配
-     1. re.M 多行
-     1. re.S 匹配所有字符
-     1. re.U 根据Unicode字符集解析字符，影响\w/W/b/B
-     1. re.X 给允更灵活的方式
-1. 使用方式
-   - 脚本式模式：指定Shell脚本的解释器，作为脚本文件执行
-     1. 添加：#! /usr/bin/env python3
-     1. 执行命令：./hello.pf
-   - 命令行：python3 -h
-   - 交互式编辑模式：输入python3进入
-     1. help(max)：打印文档，:q退出说明文档
+### 运维
+1. 运行模式
+   - 交互式：python3、IDLE
+     1. help()：打印文档，:q退出说明文档
      1. 等待用户输入：`input("按下 enter 键后退出")`
      1. 构造函数：dict([('a', 1), ('b', 2), ('c', 3)])
-
-## 使用
-1. CGI编程
-   - 示例
-    ```python
-    import cgi, cgitb
-    # 实例化cgi
-    form = cgi.FieldStorage()
-    # 获取数据
-    form.getvalue('name')
-    # 获取环境变量
-    for key in os.environ.keys():
-        pass
-    os.environ.get('HTTP_COOKIE')
-    # 上传文件
-    fileitem = form['filename']
-    fn = os.path.basename(fileitem.filename)                # 设置文件路径
-    open('/tmp/' + fn, 'wb').write(fileitem.file.read())
-    # 返回数据
-    print ("Content-type:text/html")
-    print ()                                                # 空行，告诉服务器结束头部
-    print ('<html></html>')
-    ```
-1. 连接MySQL
-   - 理解：p3使用PyMySQL，p2使用mysqldb
-   - 方法
-     1. 查询：fetchall()全部结果/fetchone下一条结果
-   - 示例
-    ```python
-    import pymysql
-    db = pymysql.connect("localhost","user","test","test" )             # 打开数据库连接
-    cursor = db.cursor()                                                # 创建游标对象
-    try:
-        cursor.execute("DROP TABLE IF EXISTS USER")                     # 执行sql语句
-        db.commit()
-    except:
-        db.rollback()
-    db.close()
-    ```
-1. 网络编程
-   - 分类
-     1. 低级别：提供了标准的BSD Sockets API，可以访问底层操作系统Socket接口的全部方法
-     1. SocketServer：简化网络服务开发
-   - 定义
-    ```python
-    import socket
-    # 参一套接字家族，为AF\_UNIX或者AF_INET
-    # 参二，套接字类型，SOCK\_STREAM或SOCK_DGRAM
-    serversocket = socket.socket(socket.AF\_INET, socket.SOCK\_STREAM)
-    ```
-   - 方法
-     1. 服务端：bind()/listen()/accept()
-     1. 客户端：connect()/connect_ex()
-     1. 公共
-        - send()：发送tcp数据
-        - recv(size)：接受tcp数据，指定最大接收量
-        - sendto()：发送UDP数据
-        - recvform()：接收UDP数据
-        - settimeout()：超时期
-   - 网络模块
-     1. HTTP
-     1. NNTP：帖子
-     1. FTP
-     1. Telnet：命令行
-     1. Gopher：信息查找
-     1. SMTP/POP3/IMAP4
-   - 服务端实例
-    ```python
-    serversocket = socket.socket(socket.AF\_INET, socket.SOCK\_STREAM)
-    serversocket.bind((socket.gethostname(), 9999))
-    serversocket.listen(5)                              # 最大连接数，超过后排队
-    # 阻塞监听
-    while True:
-        clientsocket,addr = serversocket.accept()       # 建立客户端连接
-        msg='你好'+ "\r\n"
-        clientsocket.send(msg.encode('utf-8'))
-        clientsocket.close()
-    ```
-   - 客户端实例
-    ```python
-    s = socket.socket(socket.AF\_INET, socket.SOCK_STREAM)
-    s.connect((socket.gethostname(), 9999))
-    msg = s.recv(1024)                  # 接收小于1024字节的数据
-    s.close()
-    ```
-1. json解析：json.dumps()，编码。json.loads()，解码
-    ```python
-    import json
-    data = {
-        'no' : 1,
-        'name' : 'Runoob',
-    }
-
-    json_str = json.dumps(data)
-    print ("Python 原始数据：", repr(data))
-    print ("JSON 对象：", json_str)
-    ```
-1. XML解析
-   - XML理解：可扩展标记语言，通用标记语言的子集
-   - 方案
-     1. SAX：Simple API for XML，采用事件驱动模型，包含解析器和事件处理器，python标准库包含SAX解析器
-        ```python
-        # 创建一个 XMLReader
-        parser = xml.sax.make_parser()
-        parser.setFeature(xml.sax.handler.feature_namespaces, 0)        # turn off namepsaces
-        Handler = MovieHandler()                                        # 重写 ContextHandler
-        parser.setContentHandler(Handler)
-        parser.parse("movies.xml")
-
-        class MovieHandler( xml.sax.ContentHandler ):
-            def \_\_init__(self):
-            # 元素开始调用
-            def startElement(self, tag, attributes):
-            # 元素结束调用
-            def endElement(self, tag):
-            # 读取字符时调用
-            def characters(self, content):
-        ```
-     1. DOM：Document Object Model，将xml数据在内存中解析为一个树
-        ```python
-        from xml.dom.minidom import parse
-        import xml.dom.minidom
-
-        # 使用minidom解析器打开 XML 文档
-        DOMTree = xml.dom.minidom.parse("movies.xml")
-        collection = DOMTree.documentElement
-        collection.hasAttribute("shelf")
-        collection.getAttribute("shelf")
-        collection.getElementsByTagName("movie")
-        ```
+   - 脚本：指定shell脚本解释器，作为脚本文件执行
+     1. 添加：`#!/usr/bin/env python3`
+     1. 执行：`./hello.py`
+1. 交互
+   - print
+     1. 连续打印：`print('hello', 'world')`
+     1. 打印变量：`print('hello,', name)`
+   - input：获取输入值 `input()`
 ## WIKI
 1. 保留字
    - class，from，import，return，
@@ -811,3 +636,15 @@
    - del，in，is，and，or，not，global，nonlocal，def，lambda，yield，
    - try，except，raise，
    - as，assert，with
+1. 历史
+   - python3不向下兼容，性能有提升，语法差别不大
+   - Life is short, you need Python
+   - 创始人吉多•范罗苏姆的心思缜密与灵活处事为Python最初的发展营造了良好的环境，包括几次权属的转移、起草新的许可证、机智地与自由软件阵营斡旋，最后安全融入开源的大潮。这一切为Python此后十多年里逐渐成长为主流编程语言赢得了契机
+   - Python编程思想包含强烈的黑箱思维，这意味着开发者将愈加重视模块化和流水线式的编程工作
+   - python：蟒蛇
+1. python解释器：开源，有多种
+   - CPython：官方，c语言开发，提示符>>>
+   - IPython：交互方式增强，提示符:
+   - PyPy：执行速度快，使用JIT技术进行动态编译，和其他解释器执行可能有不同地方
+   - Jython：java平台上的，可将python编译为java字节码
+   - IronPython：.net平台上的

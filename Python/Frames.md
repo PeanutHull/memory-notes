@@ -1,5 +1,5 @@
-## Django
-1. 特点
+## Web
+1. Django
    - 效率高：使用ORM
    - 大量内置应用，后台管理admin，用户认证auth，会话系统sessions
    - 安全性好：表单验证、SQL注入、跨站点攻击
@@ -21,5 +21,8 @@
     python manage.py shell      # 进入shell
     Article.objects.all()       # 查询数据
     ```
-## Web.py
-## Flask
+1. web.py
+1. flask
+1. falcon，高性能api
+## 爬虫
+1. scrapy
