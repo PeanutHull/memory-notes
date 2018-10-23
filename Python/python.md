@@ -18,11 +18,12 @@
    - python3 hello.py
 ### 语法
 1. 基础
-   - 编码：默认utf8编码，可以指定不同编码：`# -*- coding: cp-1252 -*-`\
+   - 编码：默认utf8编码，可以指定不同编码：`# -*- coding: cp-1252 -*-`
    - 标识符：不能以数字开头，对大小写敏感
    - 注释：单行 #，多行 '''或"""
    - 行与缩进：用缩进代表代码块，无需大括号包裹。同一代码块的缩进空格数必须相等。使用反斜杠实现多行语句，使用分号表示多条语句在一行
 1. 数据类型
+   - Bool：True/False，表示1/0，可以和数字直接运算，""也是假，不是基本数据类型
    - Number
      1. 分类
         - int：整数，可以表示长整型，没有python2的long类型
@@ -68,39 +69,8 @@
         - pop()
         - index()
         - max/min()
-   - Tuple
-     1. 理解：元组，元素不能被改变的列表，用括号表示，可以嵌套包含列表等数据类型。只有一个元素需要后边加逗号。string、list和tuple都属于sequence序列
-     1. 定义
-        ```python
-        # 定义
-        tuple = ('abcd', 786, 70.2)
-        # 定义
-        t = 12345, 54321, 'hello!'
-        u = t, (1, 2, 3, 4, 5)
-        ```
-   - Sets：集合
-     1. 理解：是无序不重复元素的序列，用于成员关系测试和删除重复元素。用{}或set()函数创建集合，必须用set()创建空集合
-     1. 实例
-        ```python
-        student = {'Tom', 'Jim', 'Mary', 'Tom', 'Jack', 'Rose'}
-
-        # 输出集合，重复的元素被自动去掉
-        print(student)
-
-        # 成员测试
-        if('Rose' in student) :
-            print('Rose 在集合中')
-        else :
-            print('Rose 不在集合中')
-        # set进行集合运算
-        a = set('abracadabra')
-        b = set('alacazam')
-        # 显示结果
-        print(a - b)     # a和b的差集
-        print(a | b)     # a和b的并集
-        print(a & b)     # a和b的交集
-        print(a ^ b)     # a和b中不同时存在的元素
-        ```
+   - Tuple：元组，元素不能被改变的列表，用括号表示，可以嵌套包含列表等数据类型。只有一个元素需要后边加逗号。string、list和tuple都属于sequence序列
+   - Sets：集合，是无序不重复元素的序列，用于成员关系测试和删除重复元素。用{}或set()函数创建集合，必须用set()创建空集合
    - Dictionary：字典
      1. 理解：字典是无序的键值对集合。字典当中的元素是通过键来存取的，而不是通过偏移存取。同一个字典键必须唯一，并且是不可变类型，可以无极限嵌套
      1. 函数
@@ -108,22 +78,6 @@
      1. 方法
         - clear()
         - keys()/items()
-     1. 实例
-        ```python
-        # 定义
-        dict = {}
-        dict['one'] = "1"
-        dict[2]     = "2"
-        # 定义
-        dict = {'name': 'runoob','code': 1}
-        dict = dict([('name', 'runoob'), ('code', 1)])
-        dict = dict(sape=4139, guido=4127, jack=4098)
-        # 输出
-        dict['one']
-        # 遍历
-        for k, v in knights.items():
-        ```
-   - 关键字：True/False，表示1/0，可以和数字直接运算，""也是假，不是基本数据类型
 1. 运算符
    - 算术运算符：+-*/%，a**b次幂，//取整除
    - 比较运算符：== != > < >= <=，==比较的是值，is比较引用对象
@@ -134,9 +88,9 @@
    - 身份运算符：is/is not，两个标识符是否引用自一个对象，如`if(a is b)`，a是20b是30都不同
 1. 类型转换
    - int/long/float/complex()
+   - chr(整数转字符)/unichr(整数转unicode)/ord(字符转整数)/hex(整数转十六进制字符串)/oct(整数转八进制字符串)
    - str/repr(表达式字符串)/eval(执行字符串中的python表达式)()
    - list/tuple/set/dict/frozenset(不可变集合)()
-   - chr(整数转字符)/unichr(整数转unicode)/ord(字符转整数)/hex(整数转十六进制字符串)/oct(整数转八进制字符串)
 1. 变量
    - 理解：不需要声明，使用前必须赋值，赋值之后变量才会被创建。变量的类型由赋予它的值来决定，以值为基准，一个值一个内存地址，多个变量可以指向一个内存地址，变量没有类型，仅仅是一个对象的引用
    - 操作
@@ -144,21 +98,6 @@
      1. *：重复
      1. in：是否存在
      1. for x in：迭代
-   - 数据类型判断
-     1. type：不认为子类是一种父类类型
-     1. isinstance：认为子类是一种父类类型
-     1. 实例
-        ```python
-        class A:
-            pass
-        class B(A):
-            pass
-
-        isinstance(A(), A)    # returns True
-        type(A()) == A        # returns True
-        isinstance(B(), A)    # returns True
-        type(B()) == A        # returns False
-        ```
    - 作用域
      1. 分类
         - L：local，局部作用域
@@ -171,51 +110,8 @@
      1. 修改作用域
         - global：定义为全局变量
         - nonlocal：当函数嵌套时，内层函数内使用nonlocal声明全局变量
-     1. 实例
-        ```python
-        b = int(2.9)            # 内建作用域
-        g_count = 0             # 全局作用域
-        def outer():
-            e_count = 1         # 闭包函数外的函数中
-            def inner():
-                l_count = 2     # 局部作用域
-        ```
-   - 迭代器
-     1. 理解：是可以记住遍历的位置的对象，从第一个元素开始，只能往前不能后退
-     1. 实例
-        ```python
-        list=[1,2,3,4]
-        it = iter(list)    # 创建迭代器对象
-        next(it)           # 输出迭代器的下一个元素
-        for x in it: 语句   # 可以迭代迭代器
-        ```
-   - 生成器
-     1. 理解：使用yield的函数是生成器，是一个返回迭代器的函数，只能用于迭代操作。在调用生成器运行的过程中，每次遇到 yield 时函数会暂停并保存当前所有的运行信息，返回yield的值。并在下一次执行next()方法时从当前位置继续运行，就是在 yield 处中断并返回一个结果，然后再次调用的时候再恢复中断继续运行，可以节省内容
-     1. 实例
-        ```python
-        def fibonacci(n):                   # 生成器函数 - 斐波那契
-            a, b, counter = 0, 1, 0
-            while True:
-                if (counter > n):
-                    return
-                yield a
-                a, b = b, a + b
-                counter += 1
-        f = fibonacci(10)                   # f 是一个迭代器，由生成器返回生成，已经执行了一次，停在了yield处
-        # 执行具体代码
-        while True:
-            try:
-                print (next(f), end=" ")    # 调用next函数，开始执行第二以及更多次
-            except StopIteration:
-                sys.exit()
-        ```
-   - 举例
-    ```python
-    counter = 1000         # 整型变量
-    name    = "runoob"     # 字符串
-    a = b = c = 1          # 多个变量赋值，三个变量被分配到相同的内存空间上
-    a, b, c = 1, 2, "abc"  # 多个变量赋多个值
-    ```
+   - 迭代器：是可以记住遍历的位置的对象，从第一个元素开始，只能往前不能后退
+   - 生成器：使用yield的函数是生成器，是一个返回迭代器的函数，只能用于迭代操作。在调用生成器运行的过程中，每次遇到yield时函数会暂停并保存当前所有的运行信息，返回yield的值。并在下一次执行next()方法时从当前位置继续运行，就是在 yield 处中断并返回一个结果，然后再次调用的时候再恢复中断继续运行
 1. 函数
    - 定义：def
     ```python
@@ -224,11 +120,10 @@
         return              # 没有return，函数返回None
     ```
    - 参数
-     1. 分类
-        - 必需：正常的，不能缺失，顺序不能变
-        - 关键字：参数顺序可打乱，根据参数名解释器对应，如 `printinfo(age=1, name="a");`
-        - 默认：函数自己定义默认值，如 `def printinfo(name, age = 35):`
-        - 不定长：加*号的变量名会存放所有未命名的参数，没有参数就是空元组，**会将参数转为字典如 `def printinfo(arg1, *vartuple):`
+     1. 必需：正常的，不能缺失，顺序不能变
+     1. 关键字：参数顺序可打乱，根据参数名解释器对应，如 `printinfo(age=1, name="a");`
+     1. 默认：函数自己定义默认值，如 `def printinfo(name, age = 35):`
+     1. 不定长：加*号的变量名会存放所有未命名的参数，没有参数就是空元组，**会将参数转为字典如 `def printinfo(arg1, *vartuple):`
    - 参数传递与值改变
      1. 传不可变对象：如String、Tuples、Numbers，函数不会改变函数外其原本的值
      1. 传可变对象：如List、Dict，函数会改变其原本的值
@@ -242,47 +137,22 @@
         sum = lambda arg1, arg2: arg1 + arg2;   # 可以无限参数，像函数一样
         sum(1, 2)                               # 输出3
         ```
-   - 分类
-     1. 数学函数
-        - 随机数函数
-          1. random()：0-1的随机数
-          1. choice(seq)：随机挑选一个元素，如随机一个整数 `random.choice(range(10))`
-          1. shuffle(list)：随机排序序列
-          1. randrange([start,] stop [,step])：指定范围内按指定基数递增的集合中获取一个随机数
-          1. uniform(x, y)：随机生成下一个实数
-          1. seed([x])：改变随机数生成器的种子
-     1. 数学函数：round(奇进偶弃，懂？)/max/min/abs/exp/log/pow/sqrt...
-     1. 三角函数：sin/cos/tan...
-     1. 数学常量：pi圆周率、e自然常数
-   - id()：获取对象内存地址
-   - enumerate()
 1. 流程控制
    - 判断
     ```python
     if 表达式1:
-        语句
-    elif 表达式4:
-        语句
+    elif 表达式2:
     else:
-        语句
     ```
-   - 循环
+   - 循环：跳出循环，continue/break，但是不会执行else里的语句
     ```python
     # for
     for x in y:
-        语句
     else:
-        语句
     # while
-    while 判断条件：
-        语句
+    while 判断条件:
     else:
-        语句
-    while 判断条件：语句
-    # 遍历数字
-    for i in range(5):
-        语句
-    # 跳出循环，continue，break，但是不用执行else里的语句
+    while 判断条件:
     ```
    - pass：空/占位语句，为了保持程序结构完整，无意义
 1. 模块
@@ -291,7 +161,7 @@
      1. 不管import多少次，都只会引入一次
      1. 搜索目录：文件只要存在于sys.path输出的目录下即可，结果第一个表示当前脚本目录
    - 组成
-     1. `__name__`：当值为'\_\_main__'时，模块为自身运行，否则被引入执行，
+     1. `__name__`：当值为'__main__'时，模块为自身运行，否则被引入执行
    - 使用
      1. 使用
         - `module.func()`：直接执行模块中方法
@@ -321,149 +191,80 @@
    - 异常处理：try/except
     ```python
     try:
-    except OSError as err:
-        print("OS error: {0}".format(err))
-    except ValueError:
-    except (RuntimeError, TypeError, NameError):
+    except OSError:
+    except ValueError as err:                       # 单个
+    except (RuntimeError, TypeError, NameError):    # 多个
     except:                                         # 最后一个作为通配使用
     else:                                           # 放在except之后，没有异常会执行这里
     finally:                                        # 无论如何都会执行。如果有异常，没有except接住的话，会再抛一次
     ```
    - 抛出异常：raise
     ```python
-    raise                           # 抛出一个异常
-    raise NameError('HiThere')      # 抛出指定异常，参数必须为异常的实例或者异常的类(即Exception的子类)
+    raise                                           # 抛出一个异常
+    raise NameError('HiThere')                      # 抛出指定异常，参数必须为异常的实例或者异常的类(即Exception的子类)
     ```
    - 自定义异常
     ```python
-    class Error(Exception):             # 定义一个基础的类，通过继承扩展异常类型
-        pass
+    class Error(Exception):                         # 定义一个基础的类，通过继承扩展异常类型
     class InputError(Error):
     class TransitionError(Error):
     ```
 ### 面向对象
 1. 面向对象
-   - 理解：尽量不增加新的语法和语义，
+   - 理解：尽量不增加新的语法和语义
    - 特点
-     1. 私有属性：以两个下划线开头，不能在类外部访问和直接访问
-     1. 私有方法：以两个下划线开头
+     1. 私有属性/方法：以两个下划线开头，不能在类外部访问和直接访问
      1. 方法访问：直接向上的、从左至右的查找
-     1. 方法重写：子类直接覆盖方法名重写
+     1. 方法重写：子类直接覆盖方法名
    - 类的专有方法
-     1. \_\_init__
-     1. \_\_del__：析构
-     1. \_\_repr__：打印，转换
-     1. \_\_call__：函数调用
-     1. \_\_setitem/getitem/len/cmp/add/sub/mul/div/mod/pow__：各种运算类的时候用
-   - 实例
-    ```python
-    class MyClass(BaseClass1, BaseClass2):      # 继承，子类没有方法，从左至右的父级中查找
-        def \__init__(self, realpart):
-            self.r = realpart
-        i = 12345
-        def f(self):                            # 类的方法与普通的函数只有一个区别就是有一个额外的第一参数，惯例为self
-            this = self.class                   # 指向类
-            j = self.i                          # 访问类变量
-            return 'hello world'
-    x = MyClass(3306)                           # 实例化类
-    x.i                                         # 访问类属性
-    x.f()                                       # 访问类方法
-    ```
+     1. `__init__`
+     1. `__del__`：析构
+     1. `__repr__`：打印，转换
+     1. `__call__`：函数调用
+     1. `__setitem/getitem/len/cmp/add/sub/mul/div/mod/pow__`：各种运算类的时候用
+   - 数据类型判断
+     1. type：不认为子类是一种父类类型
+     1. isinstance：认为子类是一种父类类型
 ### 应用
-1. IO
-   - 文件
-     1. 理解
-        - 对待方式：文件指针默认在文件头部
-          1. r：只读
-          1. w：只用于写入
-          1. +：读写
-          1. a：用于追加，文件指针在结尾
-          1. b：二进制格式
-     1. 方法：对象为file.xxx
-        - read(size)：限定大小，无则全部
-        - readline()：读取一行，换行符为\n
-        - next()：返回文件下一行
-        - write()：返回写入的字符数
-        - tell()：指针位置
-        - seek(offset, from)：参一字符数，参二0开头，1当前，2结尾
-        - close()：关闭文件释放资源
-        - flush()：刷新缓冲，缓冲区数据立即写入
-        - fileno()：返回文件描述符，用在os模块等底层操作上
-     1. 实例
-        ```python
-        f = open("/tmp/foo.txt", "wb+")           # 二进制方式读写，默认r
-        f.write( "你好! \n" )
-        value = ('a', 1)                          # 先转换
-        s = str(value)
-        f.write(s)
-        f.close()
-        ```
-   - 目录
-     1. `os.system('')`：执行系统命令
-     1. `os.getcwd()`：当前目录，如`os.getcwd()`
-     1. `os.chdir()`
-     1. `os.mkdir()`
-     1. `os.rmdir()`
-     1. `os.chroot()`：改变当前进程根目录
-     1. `os.access(path, mode)`：检测权限，mode包括os.F\_OK存在/R\_OK读/W\_OK写/X_OK执行
-     1. `os.chmod(path, mode)`
-     1. `os.chown()`
-     1. `os.open(path)`：打开文件
-     1. `os.remove(path)`：删除文件
-     1. `os.mkfifo(path[, mode])`：创建命名管道，默认0666
-     1. `os.symlink(src, dst)`：软链接
-     1. `os.link(src, dst)`：硬链接
-   - 序列化/反序列化
-     1. 理解：用于对象信息的保存
-     1. 序列化
-        ```python
-        output = open('data.pkl', 'wb')
-        pickle.dump(data1, output)
-        pickle.dump(data2, output, -1)          # 结尾添加
-        output.close()
-        ```
-     1. 反序列化
-        ```python
-        pkl_file = open('data.pkl', 'rb')
-        data1 = pickle.load(pkl_file)
-        pprint.pprint(data1)
-        pkl_file.close()
-        ```
-   - 输入输出
-     1. 标准输出文件：`sys.stdout`
-     1. 键盘输入：python的默认标准输入为键盘
-        ```python
-        str = input("请输入：");
-        print("你输入的内容是: ", str)
-        ```
-   - 打印：`print(x)`，不换行和连接符`print(x, end="", sep='&')`
+1. 文件
+   - 方式：文件指针默认在文件头部
+     1. r：只读
+     1. w：只用于写入
+     1. +：读写
+     1. a：用于追加，文件指针在结尾
+     1. b：二进制格式
+   - 方法：对象为file.xxx
+     1. read(size)：限定大小，无则全部
+     1. readline()：读取一行，换行符为\n
+     1. next()：返回文件下一行
+     1. write()：返回写入的字符数
+     1. tell()：指针位置
+     1. seek(offset, from)：参一字符数，参二0开头，1当前，2结尾
+     1. close()：关闭文件释放资源
+     1. flush()：刷新缓冲，缓冲区数据立即写入
+     1. fileno()：返回文件描述符，用在os模块等底层操作上
+1. 目录
+   - `os.system('')`：执行系统命令
+   - `os.chroot/getcwd()`：改变当前进程根目录
+   - `os.chdir/mkdir/rmdir()`
+   - `os.access/chown/chmod(path, mode)`：检测权限，mode包括os.F_OK存在/R_OK读/W_OK写/X_OK执行
+   - `os.open/remove(path)`：打开文件
+   - `os.mkfifo(path[, mode])`：创建命名管道，默认0666
+   - `os.symlink(src, dst)`：软链接
+   - `os.link(src, dst)`：硬链接
 1. 时间和日期
    - time
-     1. time.time()：时间戳
-     1. time.asctime(time.localtime(time.time()))：格式化时间，Thu Apr  7 10:29:13 2016
-     1. time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())：格式化时间，2016-03-20 11:45:39
+     1. `time.time()`：时间戳
+     1. `time.asctime(time.localtime(time.time()))`：格式化时间，Thu Apr  7 10:29:13 2016
+     1. `time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())`：格式化时间，2016-03-20 11:45:39
    - calendar
-     1. calendar.month(2016, 1)：输出日历
+     1. `calendar.month(2016, 1)`：输出日历
 1. 正则
    - 理解：自1.5增加re模块，提供Perl风格的正则模式
    - 函数
      1. match：只从起始位置匹配，否则返回None，成功返回对象
-        ```python
-        matchObj = re.match('www', 'www.a.com').span()      # 在起始位置匹配
-        matchObj.group(num=0)                               # 包含对应组的值
-        matchObj.groups()                                   # 包含所有小组字符串的元组
-        ```
      1. search：查找，用法同match
      1. sub：替换
-        ```python
-        # 被替换者可以是个函数
-        def double(matched):
-            value = int(matched.group('value'))
-            return str(value * 2)
-
-        s = 'A23G4HFD567'
-        print(re.sub('(?P<value>\d+)', double, s))          # 输出A46G8HFD1134
-        ```
    - 修饰符
      1. re.I 大小写
      1. re.L 本地化识别匹配
@@ -481,18 +282,7 @@
      1. 线程可以被抢占(中断)、搁置(睡眠)
      1. 分为：内核线程、用户线程
    - 分类
-     1. \_thread：thread被废弃，p3叫_thread，提供低级别的、原始的线程以及一个简单的锁，功能有限
-        ```python
-        # 为线程定义一个函数
-        def print_time( threadName, delay):
-            count = 0
-            while count < 5:
-                time.sleep(delay)
-                count += 1
-                print ("%s: %s" % ( threadName, time.ctime(time.time())))
-        # 创建线程
-        \_thread.start\_new\_thread(print_time, ("Thread-1", 2,))
-        ```
+     1. _thread：thread被废弃，p3叫_thread，提供低级别的、原始的线程以及一个简单的锁，功能有限
      1. threading：使用threading代替
         - 方法
           1. threading.currentThread()：返回当前的线程变量
@@ -505,115 +295,19 @@
           1. exit()：终止线程
           1. getName()：返回线程名
           1. setName()：设置线程名
-        - 实例
-            ```python
-            class myThread (threading.Thread):
-                def \_\_init__(self):
-                    threading.Thread.\_\_init__(self)
-                def run(self):
-                    print ("开始线程：" + self.name)
-                    print ("退出线程：" + self.name)
-            # 创建新线程
-            thread1 = myThread()
-            # 开始运行
-            thread1.start()
-            thread1.join()
-            ```
    - 线程同步：即线程锁，使用Thread对象的Lock/Rlock，具体为acquire/release方法
-        ```python
-        class myThread (threading.Thread):
-            def \_\_init__(self):
-                threading.Thread.\_\_init__(self)
-            def run(self):
-                threadLock.acquire()        # 获取锁，用于线程同步
-                threadLock.release()        # 释放锁，开启下一个线程
-
-        threadLock = threading.Lock()
-        threads = []
-
-        # 创建新线程
-        thread1 = myThread()
-
-        # 开启新线程
-        thread1.start()
-
-        # 等待所有线程完成
-        threads.join()
-        ```
-   - 优先级队列
-     1. 理解：Queue模块提供了同步的、线程安全的队列类，实现了锁原语，可以使用队列实现线程间的同步、
-     1. 分类
-        - Queue：先入先出，FIFO
-        - LifoQueue：后入先出，LIFO
-        - PriorityQueue：优先级队列
-     1. 方法
-        - Queue.qsize()/empty()/full()/maxsize()
-        - Queue.get([block[, timeout])/get\_nowait()：获取队列，get_nowait和get(false)相同
-        - Queue.put(item)/put\_nowait()：写入队列，put_nowait()相当于put(item, False)
-        - Queue.task_done()：完成一项工作后，向已完成的队列发送一个信号
-        - Queue.join()：等到队列为空，再执行别的操作
-     1. 实例
-        ```python
-        import queue
-        import threading
-        import time
-
-        exitFlag = 0
-
-        class myThread (threading.Thread):
-            def \_\_init__(self, threadID, name, q):
-                threading.Thread.\_\_init__(self)
-                self.threadID = threadID
-                self.name = name
-                self.q = q
-            def run(self):
-                print ("开启线程：" + self.name)
-                process_data(self.name, self.q)
-                print ("退出线程：" + self.name)
-
-        def process_data(threadName, q):
-            while not exitFlag:
-                queueLock.acquire()
-                if not workQueue.empty():
-                    data = q.get()
-                    queueLock.release()
-                    print ("%s processing %s" % (threadName, data))
-                else:
-                    queueLock.release()
-                time.sleep(1)
-
-        threadList = ["Thread-1", "Thread-2", "Thread-3"]
-        nameList = ["One", "Two", "Three", "Four", "Five"]
-        queueLock = threading.Lock()
-        workQueue = queue.Queue(10)
-        threads = []
-        threadID = 1
-
-        # 创建新线程
-        for tName in threadList:
-            thread = myThread(threadID, tName, workQueue)
-            thread.start()
-            threads.append(thread)
-            threadID += 1
-
-        # 填充队列
-        queueLock.acquire()
-        for word in nameList:
-            workQueue.put(word)
-        queueLock.release()
-
-        # 等待队列清空
-        while not workQueue.empty():
-            pass
-
-        # 通知线程是时候退出
-        exitFlag = 1
-
-        # 等待所有线程完成
-        for t in threads:
-            t.join()
-        print ("退出主线程")
-        ```
+1. 优先级队列
+   - 理解：Queue模块提供了同步的、线程安全的队列类，实现了锁原语，可以使用队列实现线程间的同步
+   - 分类
+     1. Queue：先入先出，FIFO
+     1. LifoQueue：后入先出，LIFO
+     1. PriorityQueue：优先级队列
+   - 方法
+     1. Queue.qsize()/empty()/full()/maxsize()
+     1. Queue.get([block[, timeout])/get_nowait()：获取队列，get_nowait和get(false)相同
+     1. Queue.put(item)/put_nowait()：写入队列，put_nowait()相当于put(item, False)
+     1. Queue.task_done()：完成一项工作后，向已完成的队列发送一个信号
+     1. Queue.join()：等到队列为空，再执行别的操作
 ### 运维
 1. 运行模式
    - 交互式：python3、IDLE
@@ -624,10 +318,15 @@
      1. 添加：`#!/usr/bin/env python3`
      1. 执行：`./hello.py`
 1. 交互
-   - print
+   - 输入输出
+     1. 标准输入：input()，默认标准输入为键盘
+     1. 标准输出：`sys.stdout`
+   - 打印：print(x)
      1. 连续打印：`print('hello', 'world')`
      1. 打印变量：`print('hello,', name)`
-   - input：获取输入值 `input()`
+     1. print("OS error: {0}".format(err))
+     1. 不换行和连接符：`print(x, end="", sep='&')`
+   - 序列化/反序列化：pickle，用于对象信息的保存
 ## WIKI
 1. 保留字
    - class，from，import，return，

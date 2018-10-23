@@ -47,6 +47,287 @@
         ]
         [[row[i] for row in matrix] for i in range(4)]      # 转换为4x3矩阵
         ```
+1. Tuple
+    ```python
+    # 定义
+    tuple = ('abcd', 786, 70.2)
+    # 定义
+    t = 12345, 54321, 'hello!'
+    u = t, (1, 2, 3, 4, 5)
+    ```
+1. Sets
+    ```python
+    student = {'Tom', 'Jim', 'Mary', 'Tom', 'Jack', 'Rose'}
+    # 输出集合，重复的元素被自动去掉
+    print(student)
+    # 成员测试
+    if('Rose' in student) :
+        print('Rose 在集合中')
+    else :
+        print('Rose 不在集合中')
+    # set进行集合运算
+    a = set('abracadabra')
+    b = set('alacazam')
+    # 显示结果
+    print(a - b)     # a和b的差集
+    print(a | b)     # a和b的并集
+    print(a & b)     # a和b的交集
+    print(a ^ b)     # a和b中不同时存在的元素
+    ```
+1. Dictionary
+    ```python
+    # 定义
+    dict = {}
+    dict['one'] = "1"
+    dict[2]     = "2"
+    # 定义
+    dict = {'name': 'runoob','code': 1}
+    dict = dict([('name', 'runoob'), ('code', 1)])
+    dict = dict(sape=4139, guido=4127, jack=4098)
+    # 输出
+    dict['one']
+    # 遍历
+    for k, v in knights.items():
+    ```
+1. 变量
+    ```python
+    counter = 1000         # 整型变量
+    name    = "runoob"     # 字符串
+    a = b = c = 1          # 多个变量赋值，三个变量被分配到相同的内存空间上
+    a, b, c = 1, 2, "abc"  # 多个变量赋多个值
+    ```
+1. 作用域
+    ```python
+    b = int(2.9)            # 内建作用域
+    g_count = 0             # 全局作用域
+    def outer():
+        e_count = 1         # 闭包函数外的函数中
+        def inner():
+            l_count = 2     # 局部作用域
+    ```
+1. 迭代器
+    ```python
+    list=[1,2,3,4]
+    it = iter(list)    # 创建迭代器对象
+    next(it)           # 输出迭代器的下一个元素
+    for x in it: 语句   # 可以迭代迭代器
+    ```
+1. 生成器
+    ```python
+    def fibonacci(n):                   # 生成器函数 - 斐波那契
+        a, b, counter = 0, 1, 0
+        while True:
+            if (counter > n):
+                return
+            yield a
+            a, b = b, a + b
+            counter += 1
+    f = fibonacci(10)                   # f 是一个迭代器，由生成器返回生成，已经执行了一次，停在了yield处
+    # 执行具体代码
+    while True:
+        try:
+            print (next(f), end=" ")    # 调用next函数，开始执行第二以及更多次
+        except StopIteration:
+            sys.exit()
+    ```
+1. 函数分类
+   - 数学函数
+     1. 随机数函数
+        - random()：0-1的随机数
+        - choice(seq)：随机挑选一个元素，如随机一个整数 `random.choice(range(10))`
+        - shuffle(list)：随机排序序列
+        - randrange([start,] stop [,step])：指定范围内按指定基数递增的集合中获取一个随机数
+        - uniform(x, y)：随机生成下一个实数
+        - seed([x])：改变随机数生成器的种子
+     1. 数学函数：round(奇进偶弃，懂？)/max/min/abs/exp/log/pow/sqrt...
+     1. 三角函数：sin/cos/tan...
+     1. 数学常量：pi圆周率、e自然常数
+   - id()：获取对象内存地址
+   - enumerate()
+1. 遍历
+    ```python
+    # 遍历数字
+    for i in range(5):
+    ```
+1. 类
+    ```python
+    class MyClass(BaseClass1, BaseClass2):      # 继承，子类没有方法，从左至右的父级中查找
+        def __init__(self, realpart):
+            self.r = realpart
+        i = 12345
+        def f(self):                            # 类的方法与普通的函数只有一个区别就是有一个额外的第一参数，惯例为self
+            this = self.class                   # 指向类
+            j = self.i                          # 访问类变量
+            return 'hello world'
+    x = MyClass(3306)                           # 实例化类
+    x.i                                         # 访问类属性
+    x.f()                                       # 访问类方法
+    ```
+1. 类的关系判断
+    ```python
+    class A:
+        pass
+    class B(A):
+        pass
+
+    isinstance(A(), A)    # returns True
+    type(A()) == A        # returns True
+    isinstance(B(), A)    # returns True
+    type(B()) == A        # returns False
+    ```
+1. 文件
+    ```python
+    f = open("/tmp/foo.txt", "wb+")           # 二进制方式读写，默认r
+    f.write( "你好! \n" )
+    value = ('a', 1)                          # 先转换
+    s = str(value)
+    f.write(s)
+    f.close()
+    ```
+1. 正则
+   - match
+    ```python
+    matchObj = re.match('www', 'www.a.com').span()      # 在起始位置匹配
+    matchObj.group(num=0)                               # 包含对应组的值
+    matchObj.groups()                                   # 包含所有小组字符串的元组
+    ```
+   - sub
+    ```python
+    # 被替换者可以是个函数
+    def double(matched):
+        value = int(matched.group('value'))
+        return str(value * 2)
+
+    s = 'A23G4HFD567'
+    print(re.sub('(?P<value>\d+)', double, s))          # 输出A46G8HFD1134
+    ```
+1. 输入
+    ```python
+    str = input("请输入：");
+    print("你输入的内容是: ", str)
+    ```
+1. 序列化
+    ```python
+    output = open('data.pkl', 'wb')
+    pickle.dump(data1, output)
+    pickle.dump(data2, output, -1)          # 结尾添加
+    output.close()
+    ```
+1. 反序列化
+    ```python
+    pkl_file = open('data.pkl', 'rb')
+    data1 = pickle.load(pkl_file)
+    pprint.pprint(data1)
+    pkl_file.close()
+    ```
+1. 多线程
+   - _thread
+    ```python
+    # 为线程定义一个函数
+    def print_time( threadName, delay):
+        count = 0
+        while count < 5:
+            time.sleep(delay)
+            count += 1
+            print ("%s: %s" % ( threadName, time.ctime(time.time())))
+    # 创建线程
+    _thread.start_new_thread(print_time, ("Thread-1", 2,))
+    ```
+   - threading
+    ```python
+    class myThread (threading.Thread):
+        def __init__(self):
+            threading.Thread.__init__(self)
+        def run(self):
+            print ("开始线程：" + self.name)
+            print ("退出线程：" + self.name)
+    # 创建新线程
+    thread1 = myThread()
+    # 开始运行
+    thread1.start()
+    thread1.join()
+    ```
+1. 线程同步
+    ```python
+    class myThread (threading.Thread):
+        def __init__(self):
+            threading.Thread.__init__(self)
+        def run(self):
+            threadLock.acquire()        # 获取锁，用于线程同步
+            threadLock.release()        # 释放锁，开启下一个线程
+
+    threadLock = threading.Lock()
+    threads = []
+
+    # 创建新线程
+    thread1 = myThread()
+    # 开启新线程
+    thread1.start()
+    # 等待所有线程完成
+    threads.join()
+    ```
+1. 优先级队列
+    ```python
+    import queue
+    import threading
+    import time
+
+    exitFlag = 0
+
+    class myThread (threading.Thread):
+        def __init__(self, threadID, name, q):
+            threading.Thread.__init__(self)
+            self.threadID = threadID
+            self.name = name
+            self.q = q
+        def run(self):
+            print ("开启线程：" + self.name)
+            process_data(self.name, self.q)
+            print ("退出线程：" + self.name)
+
+    def process_data(threadName, q):
+        while not exitFlag:
+            queueLock.acquire()
+            if not workQueue.empty():
+                data = q.get()
+                queueLock.release()
+                print ("%s processing %s" % (threadName, data))
+            else:
+                queueLock.release()
+            time.sleep(1)
+
+    threadList = ["Thread-1", "Thread-2", "Thread-3"]
+    nameList = ["One", "Two", "Three", "Four", "Five"]
+    queueLock = threading.Lock()
+    workQueue = queue.Queue(10)
+    threads = []
+    threadID = 1
+
+    # 创建新线程
+    for tName in threadList:
+        thread = myThread(threadID, tName, workQueue)
+        thread.start()
+        threads.append(thread)
+        threadID += 1
+
+    # 填充队列
+    queueLock.acquire()
+    for word in nameList:
+        workQueue.put(word)
+    queueLock.release()
+
+    # 等待队列清空
+    while not workQueue.empty():
+        pass
+
+    # 通知线程是时候退出
+    exitFlag = 1
+
+    # 等待所有线程完成
+    for t in threads:
+        t.join()
+    print ("退出主线程")
+    ```
 1. CGI编程
    - 示例
     ```python
