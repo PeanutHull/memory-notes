@@ -328,6 +328,25 @@
         t.join()
     print ("退出主线程")
     ```
+1. 网络编程服务端实例
+    ```python
+    serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    serversocket.bind((socket.gethostname(), 9999))
+    serversocket.listen(5)                              # 最大连接数，超过后排队
+    # 阻塞监听
+    while True:
+        clientsocket,addr = serversocket.accept()       # 建立客户端连接
+        msg='你好'+ "\r\n"
+        clientsocket.send(msg.encode('utf-8'))
+        clientsocket.close()
+    ```
+   - 客户端实例
+    ```python
+    s = socket.socket(socket.AF\_INET, socket.SOCK_STREAM)
+    s.connect((socket.gethostname(), 9999))
+    msg = s.recv(1024)                  # 接收小于1024字节的数据
+    s.close()
+    ```
 1. CGI编程
    - 示例
     ```python
@@ -349,52 +368,6 @@
     print ()                                                # 空行，告诉服务器结束头部
     print ('<html></html>')
     ```
-1. 网络编程
-   - 分类
-     1. 低级别：提供了标准的BSD Sockets API，可以访问底层操作系统Socket接口的全部方法
-     1. SocketServer：简化网络服务开发
-   - 定义
-    ```python
-    import socket
-    # 参一套接字家族，为AF\_UNIX或者AF_INET
-    # 参二，套接字类型，SOCK\_STREAM或SOCK_DGRAM
-    serversocket = socket.socket(socket.AF\_INET, socket.SOCK\_STREAM)
-    ```
-   - 方法
-     1. 服务端：bind()/listen()/accept()
-     1. 客户端：connect()/connect_ex()
-     1. 公共
-        - send()：发送tcp数据
-        - recv(size)：接受tcp数据，指定最大接收量
-        - sendto()：发送UDP数据
-        - recvform()：接收UDP数据
-        - settimeout()：超时期
-   - 网络模块
-     1. HTTP
-     1. NNTP：帖子
-     1. FTP
-     1. Telnet：命令行
-     1. Gopher：信息查找
-     1. SMTP/POP3/IMAP4
-   - 服务端实例
-    ```python
-    serversocket = socket.socket(socket.AF\_INET, socket.SOCK\_STREAM)
-    serversocket.bind((socket.gethostname(), 9999))
-    serversocket.listen(5)                              # 最大连接数，超过后排队
-    # 阻塞监听
-    while True:
-        clientsocket,addr = serversocket.accept()       # 建立客户端连接
-        msg='你好'+ "\r\n"
-        clientsocket.send(msg.encode('utf-8'))
-        clientsocket.close()
-    ```
-   - 客户端实例
-    ```python
-    s = socket.socket(socket.AF\_INET, socket.SOCK_STREAM)
-    s.connect((socket.gethostname(), 9999))
-    msg = s.recv(1024)                  # 接收小于1024字节的数据
-    s.close()
-    ```
 ### 应用
 1. 连接MySQL
    - 理解：p3使用PyMySQL，p2使用mysqldb
@@ -404,9 +377,9 @@
     ```python
     import pymysql
     db = pymysql.connect("localhost","user","test","test" )             # 打开数据库连接
-    cursor = db.cursor()                                                # 创建游标对象
+    cursor = db.cursor()                                                # 创建光标对象
     try:
-        cursor.execute("DROP TABLE IF EXISTS USER")                     # 执行sql语句
+        cursor.execute("DROP TABLE IF EXISTS table")                     # 执行sql语句
         db.commit()
     except:
         db.rollback()
@@ -415,11 +388,7 @@
 1. json解析：json.dumps()，编码。json.loads()，解码
     ```python
     import json
-    data = {
-        'no' : 1,
-        'name' : 'Runoob',
-    }
-
+    data = {'no':1,'name':'Runoob'}
     json_str = json.dumps(data)
     print ("Python 原始数据：", repr(data))
     print ("JSON 对象：", json_str)
@@ -449,7 +418,7 @@
         ```python
         from xml.dom.minidom import parse
         import xml.dom.minidom
-
+        
         # 使用minidom解析器打开 XML 文档
         DOMTree = xml.dom.minidom.parse("movies.xml")
         collection = DOMTree.documentElement

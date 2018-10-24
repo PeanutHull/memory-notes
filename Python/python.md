@@ -110,8 +110,10 @@
      1. 修改作用域
         - global：定义为全局变量
         - nonlocal：当函数嵌套时，内层函数内使用nonlocal声明全局变量
-   - 迭代器：是可以记住遍历的位置的对象，从第一个元素开始，只能往前不能后退
-   - 生成器：使用yield的函数是生成器，是一个返回迭代器的函数，只能用于迭代操作。在调用生成器运行的过程中，每次遇到yield时函数会暂停并保存当前所有的运行信息，返回yield的值。并在下一次执行next()方法时从当前位置继续运行，就是在 yield 处中断并返回一个结果，然后再次调用的时候再恢复中断继续运行
+   - 切片
+   - 列表生成式
+   - 迭代器：iter/next，s是可以记住遍历的位置的对象，从第一个元素开始，只能往前不能后退
+   - 生成器：使用yield的函数是生成器，是一个返回迭代器的函数，只能用于迭代操作。在调用生成器运行的过程中，每次遇到yield时函数会暂停并保存当前所有的运行信息，返回yield的值。并在下一次执行next()方法时从当前位置继续运行，就是在yield处中断并返回一个结果，然后再次调用的时候再恢复中断继续运行，特点是一边循环一边计算，比如节省内存
 1. 函数
    - 定义：def
     ```python
@@ -171,22 +173,37 @@
         - `import modules.child`：导入模块，使用时需要带上全路径
         - `from modules import child`：导入子模块
         - `from module import firstfunc, secondfunc`：导入模块的某个函数，`from module import *`：导入模块的全部函数
-   - 标准模块
+   - 内置模块
      1. sys：
         - `sys.argv` 输出命令行参数
         - `sys.path` python安装路径
         - `sys.stderr.write('Warning')` 错误输出重定向
+     1. itertools：操作迭代对象
+     1. collections：集合类
+     1. struct：处理字节
+     1. hashlib：摘要算法，如md5
+     1. hmac：哈希算法
+     1. urllib
+     1. HTMLParser
+     1. XML
+     1. contextlib：读写文件
      1. os：目录接口
      1. glob：从目录通配符搜索中生成文件列表，如`glob.glob('*.py')`
-     1. datetime：提供了很多日期和时间的方法，date.today()
-     1. re：正则匹配
+     1. base64
+     1. datetime：日期和时间，如`date.today()`
+     1. pprint
      1. pickle：序列化/反序列化对象
+     1. re：正则匹配
+     1. math
+     1. urllib/smtplib：网络和邮件
      1. zlib：打包和压缩，zlib.compress/decompress/crc32(s)
      1. timeit：性能度量工具，如`Timer('a,b = b,a', 'a=1; b=2').timeit()`
-     1. doctest/unittest：
-     1. urllib/smtplib：网络和邮件
-     1. math
-     1. pprint
+     1. doctest/unittest、
+   - 第三方模块
+     1. Pillow：图像处理
+     1. requests：处理url
+     1. chardet：编码
+     1. psutil：系统监控
 1. 错误和异常
    - 异常处理：try/except
     ```python
@@ -209,6 +226,7 @@
     class InputError(Error):
     class TransitionError(Error):
     ```
+1. 调试，单元测试，文档测试
 ### 面向对象
 1. 面向对象
    - 理解：尽量不增加新的语法和语义
@@ -225,6 +243,13 @@
    - 数据类型判断
      1. type：不认为子类是一种父类类型
      1. isinstance：认为子类是一种父类类型
+1. 类
+   - __solts__
+   - @property
+   - 多重继承
+   - 定制类
+   - 枚举类
+   - 元类
 ### 应用
 1. 文件
    - 方式：文件指针默认在文件头部
@@ -273,6 +298,12 @@
      1. re.U 根据Unicode字符集解析字符，影响\w/W/b/B
      1. re.X 给允更灵活的方式
 ### 高级
+1. 函数式编程
+   - 返回函数
+   - 匿名函数
+   - 装饰器
+   - 偏函数
+1. 多进程：分布式进程
 1. 多线程
    - 多线程的特点
      1. 并行提高处理速度，充分利用多核优势
@@ -308,6 +339,40 @@
      1. Queue.put(item)/put_nowait()：写入队列，put_nowait()相当于put(item, False)
      1. Queue.task_done()：完成一项工作后，向已完成的队列发送一个信号
      1. Queue.join()：等到队列为空，再执行别的操作
+1. 异步io
+1. 网络编程
+   - 分类
+     1. 低级别：提供了标准的BSD Sockets API，可以访问底层操作系统Socket接口的全部方法
+     1. SocketServer：简化网络服务开发
+     1. tcp/udp
+   - 定义
+    ```python
+    import socket
+    # 参一套接字家族，为AF_UNIX或者AF_INET
+    # 参二套接字类型，SOCK_STREAM或SOCK_DGRAM
+    serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    ```
+   - 方法
+     1. 服务端：bind()/listen()/accept()
+     1. 客户端：connect()/connect_ex()
+     1. 公共
+        - send()：发送tcp数据
+        - recv(size)：接受tcp数据，指定最大接收量
+        - sendto()：发送UDP数据
+        - recvform()：接收UDP数据
+        - settimeout()：超时期
+   - 网络模块
+     1. HTTP
+     1. NNTP：帖子
+     1. FTP
+     1. Telnet：命令行
+     1. Gopher：信息查找
+     1. SMTP/POP3/IMAP4
+1. 图形界面
+   - Tk
+   - wxWidgets
+   - Qt
+   - GTK
 ### 运维
 1. 运行模式
    - 交互式：python3、IDLE
@@ -327,6 +392,18 @@
      1. print("OS error: {0}".format(err))
      1. 不换行和连接符：`print(x, end="", sep='&')`
    - 序列化/反序列化：pickle，用于对象信息的保存
+1. python解释器
+   - 理解：开源，有多种
+   - 分类
+     1. CPython：官方，c语言开发，提示符>>>
+     1. IPython：交互方式增强，提示符:
+     1. PyPy：执行速度快，使用JIT技术进行动态编译，和其他解释器执行可能有不同地方
+     1. Jython：java平台上的，可将python编译为java字节码
+     1. IronPython：.net平台上的
+   - 虚拟环境：virtualenv
+1. web开发
+1. 依赖管理工具：pip，pip3
+
 ## WIKI
 1. 保留字
    - class，from，import，return，
@@ -341,9 +418,8 @@
    - 创始人吉多•范罗苏姆的心思缜密与灵活处事为Python最初的发展营造了良好的环境，包括几次权属的转移、起草新的许可证、机智地与自由软件阵营斡旋，最后安全融入开源的大潮。这一切为Python此后十多年里逐渐成长为主流编程语言赢得了契机
    - Python编程思想包含强烈的黑箱思维，这意味着开发者将愈加重视模块化和流水线式的编程工作
    - python：蟒蛇
-1. python解释器：开源，有多种
-   - CPython：官方，c语言开发，提示符>>>
-   - IPython：交互方式增强，提示符:
-   - PyPy：执行速度快，使用JIT技术进行动态编译，和其他解释器执行可能有不同地方
-   - Jython：java平台上的，可将python编译为java字节码
-   - IronPython：.net平台上的
+1. mysql，SQL占位符是%s
+   - pip安装mysql-connector-python驱动：`import mysql.connector`
+1. mail
+   - smtp
+   - pop3

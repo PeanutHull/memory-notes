@@ -11,11 +11,12 @@
    - 静态资源服务器：如js、images
    - 虚拟主机：实现一台服务器虚拟出多个网站
    - 反向代理、负载均衡
-### 应用
+### 操作
+1. nginx层级：http-->server-->location
 1. nginx.conf配置
     ```
     user                        www;                            # 用户和用户组
-    worker_processes            8;                              # 进程数，建议设置为cpu核心数
+    worker_processes            8;                              # 同时工作的进程数，建议设置为cpu核心数
     error_log                   /var/nginx/error.log;           # 全局错误日志，类型有debug|info|notice|warn|error|crit
     pid                         /var/nginx.pid;                 # 进程文件
     worker_rlimit_nofile        65535                           # 一个nginx进程打开的最多文件描述符数
@@ -41,7 +42,7 @@
         include /etc/nginx/conf.d/*.conf;
     }
     ```
-1. server配置
+1. server配置，决定虚拟主机
     ```
     server {
         listen       80;
@@ -49,7 +50,7 @@
         server_name  somename  alias  another.alias;
     }
     ```
-1. location配置
+1. location配置，匹配路径
     ```
     location / {
         root   html;
@@ -104,6 +105,11 @@
         add_header headerName headerValue
     }
     ```
+1. 其他配置文件
+   - mime.types：文件扩展名与文件类型映射表，找不到使用默认default_type
+   - fastcgi_params/uwsgi_params/scgi_params：使用对应cgi时，向cgi传递的变量
+   - koi-utf/koi-win/win-utf：编码转换映射文件
+### 应用
 1. gzip压缩：可在任何层级定义，越细优先级越高
     ```
     gzip on;
@@ -224,7 +230,6 @@
    - pcre：Perl Compatible Regular Expressions，是Perl库。nginx的http模块使用pcre来解析正则表达式
    - zlib：提供了多种压缩/解压缩的方式。nginx使用zlib对http包的内容进行gzip
    - openssl
-1. nginx层级：http{}、server{}、location{}
 1. 负载均衡的实现方式
    - 七层实现：基于url等应用层信息
    - 四层实现：通过报文的目标地址和端口，加上负载均衡设备设置的服务器选择方式，决定机器

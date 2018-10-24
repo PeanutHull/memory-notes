@@ -352,7 +352,8 @@
      1. 原理
         - web服务器载入fastcgi进程管理器
         - fastcgi自身初始化，启动多个cgi解释器进程等待调用
-        - 请求到达时，fastcgi选择并连接到一个cgi解释器
+        - 请求到达时，web服务器连接到fastcgi，fastcgi选择一个cgi解释器交给web服务器
+        - cgi将结果返回web服务器
      1. 特点
         - 所有配置只在进程启动时加载一次
         - PHP死掉不会带死apache，而且会立即启动一个新的php进程
