@@ -340,6 +340,10 @@
      1. Queue.task_done()：完成一项工作后，向已完成的队列发送一个信号
      1. Queue.join()：等到队列为空，再执行别的操作
 1. 异步io
+   - 协程
+   - asyncio
+   - async/await
+   - aiohttp
 1. 网络编程
    - 分类
      1. 低级别：提供了标准的BSD Sockets API，可以访问底层操作系统Socket接口的全部方法
@@ -392,6 +396,15 @@
      1. print("OS error: {0}".format(err))
      1. 不换行和连接符：`print(x, end="", sep='&')`
    - 序列化/反序列化：pickle，用于对象信息的保存
+1. 依赖管理工具：pip，pip3
+   - 安装包
+     1. pip install package              # 最新版本
+     1. pip install package==1.0.4       # 指定版本
+     1. pip install 'package>=1.0.4'     # 最小版本
+   - 更新包：pip install --upgrade package
+   - 可更新的包：pip list -o package
+   - 其他操作：pip list/show/search/uninstall/ package
+   - 更新自己：pip3 install --upgrade pip
 1. python解释器
    - 理解：开源，有多种
    - 分类
@@ -401,9 +414,6 @@
      1. Jython：java平台上的，可将python编译为java字节码
      1. IronPython：.net平台上的
    - 虚拟环境：virtualenv
-1. web开发
-1. 依赖管理工具：pip，pip3
-
 ## WIKI
 1. 保留字
    - class，from，import，return，
@@ -418,6 +428,7 @@
    - 创始人吉多•范罗苏姆的心思缜密与灵活处事为Python最初的发展营造了良好的环境，包括几次权属的转移、起草新的许可证、机智地与自由软件阵营斡旋，最后安全融入开源的大潮。这一切为Python此后十多年里逐渐成长为主流编程语言赢得了契机
    - Python编程思想包含强烈的黑箱思维，这意味着开发者将愈加重视模块化和流水线式的编程工作
    - python：蟒蛇
+1. PyPI：Python Package Index，官方的第三方仓库
 1. mysql，SQL占位符是%s
    - pip安装mysql-connector-python驱动：`import mysql.connector`
 1. mail
