@@ -4,6 +4,7 @@
    - IEEE POSIX：可移植操作系统接口，用于提升应用程序在unix系统的可移植性，规定了各种必须的服务
    - Single UNIX Specification：单一unix规范，是POSIX.1标准的超集，包括XSI(X/Open System Interface)
 1. 实现：SVR4、BSD、FreeBSD、Linux、Mac OS X、Solaris
+   - Linux是一套免费使用和自由传播的类Unix操作系统，是一个基于POSIX和UNIX的多用户、多任务、支持多线程和多CPU的操作系统
 1. 限制
    - 编译时限制：头文件中定义
    - 运行时限制：进程调用函数获得、修改
@@ -96,6 +97,54 @@
      1. 效率：和直接read、write差不多
      1. 内存流：创建fmemopen、open_memstream、open_wmemstream
 1. 系统数据文件和信息
+### 高级IO
+1. 非阻塞io
+   - 理解：即永远不阻塞的io，操作不能完成即出错返回，但是数据并没有完成，可以使用轮询或者多线程多进程代替非阻塞，但是都不好
+   - 实现：两种方式指定
+     1. 获得描述符时：open，指定O_NONBLOCK
+     1. 已经打开的描述符时：使用fcntl
+1. io多路转接
+   - 理解：解决非阻塞io带来的不成功问题，构造描述符列表，调用函数即阻塞，当某描述符准备好io时函数返回，那么确知read/write函数不会阻塞
+   - select/pselect：指定变动条件的描述符列表、等待时间，准备好的描述符数量、3个条件(读写异常)的哪些描述符准备好
+   - poll：指定描述符数组、变动条件、等待时间
+1. 异步io
+   - 理解：当描述符准备好可以io时，用信号通知
+     1. 不同版本实现不用，可移植性
+     1. 无法分辨多描述符的信号通知。SUSv4解决了这种局限性
+   - System/BSD/POSIX
+     1. System V：异步io信号是SIGPOLL，调用ioctl
+     1. BSD：通用异步io信号是SIGIO，SIGURG通知进程网络连接上的带外数据到达如tcp，调用fcntl
+     1、POSIX：使用aio控制块描述io操作，如aio_read/aio_write/aio_fsync/aio_error/aio_return/aio_suspend/aio_cancel/lio_listio
+1. 记录锁
+   - 理解：解决多方写入同一文件的问题，平时取决于最后一个写进程。记录锁可实现单独写一个文件，真正是字节范围锁，即锁定某区域
+     1. 加解锁时系统会自动组合、分裂相邻区
+     1. 绝不能测试进程自己是否有锁
+   - 使用：fcntl，指定文件描述符、命令、flock的指针
+     1. 命令：三个命令非原子操作，需要兼容被插队
+        - F_GETLK：测试是否可加锁(被另外锁阻塞)
+        - F_SETLK：非阻塞加锁(不能加锁立即返回)
+        - F_SETLKW：阻塞加锁(调用进程会休眠，锁可用被唤醒)
+     1. flock组成：锁类型、字节偏移量、字节长度
+        - 锁类型：共享读、独占性写、解锁
+          1. 多个进程中可有多个共享读锁，一个独占性写锁，有了读/写锁不能加写/读锁
+          1. 单个进程多次加锁(当然是同一字节区域)会替换
+   - 相关
+     1. 死锁：内核选择一个进程接受出错返回
+     1. 锁的隐含继承和释放
+        - 进程终止，锁释放
+        - 文件描述符关闭，锁释放：dup/二重open然后close都会释放
+        - fork的子进程不继承锁
+        - exec后新程序可继承锁
+     1. 文件尾端加锁：特别小心，加锁时内核指定偏移量为绝对文件偏移量，因为要处理加锁和获取文件长度不定
+     1. 建议性锁/强制性锁：进程间是否通过一致的方法处理记录锁，强制性锁是让内核检查是否违背锁，ed可绕过强制性锁,centos7不支持强制性锁
+1. 存储映射io
+   - 理解：能将磁盘文件映射到存储空间的一个缓冲区上，不用read和write情况下执行io，使用mmap/mprotect/msync/munmap
+   - 特点
+     1. 步长要求为系统虚拟存储页长度的倍数
+     1. 可做多进程的共享存储区
+1. readv/writev/readn/writen
+   - readv/writev：用于一次函数中读写多个非连续缓冲区
+   - readn/writen：读写指定的n字节数据，并处理返回值可能小于要求值的情况，apue自定义
 ### 进程
 1. 运行背景
 1. 命令行参数
@@ -351,10 +400,63 @@
         - pthread_barrier_destory
         - pthread_barrier_wait：可以使用一个线程作为主线程，等待其他线程的执行结果
 ### 进程间通信
-1. IPC
-1. 进程间通信对象：消息队列、信号量、共享存储对象，实际系统没当成文件
-1. 操作：建立，同步，通信，互斥
-1. 复用：select，poll，epoll
+1. 理解：缩写IPC
+1. 管道
+   - 理解：最古老的通信机制，不能假定为全双工的，只能在有共同祖先的进程间使用
+   - 使用
+     1. pipe，传递fd从而控制数据流向，可与fork联合使用，PIPE_BUF确定传输字节数，可有多个写端
+     1. popen/pclose：参数传递w/r用于读写管道
+   - 协同进程：同时产生某个过滤程序的输入，和读取其输出，相当于有两个popen
+1. FIFO
+   - 理解：命名管道，FIFO是一种文件类型，不相关进程可用
+   - 使用：mkfifo/mkfifoat
+1. XSI
+   - 特点
+     1. 标识符和键：都有一个非负整数的标识符，是内部名，和一个键关联作为外部名
+     1. 权限结构：包括uid、gid等
+     1. 结构限制
+     1. 没有引用计数，在文件系统中没有名字从而多了系统调用(函数)，不使用文件描述符从而不能多路转接
+     1. 不相关进程可用
+   - 分类
+     1. 消息队列
+        - 理解：存储在内核中的消息链表，由标识符标识，和信号量不建议使用，使用全双工管道和记录锁
+        - 使用：msgget、msgsnd、msgrcv、msgctl(类似ioctl垃圾桶函数)
+     1. 信号量
+        - 理解：是一个计数器，用于多进程的共享数据对象访问， 初值表示多少个单位可共享，使用加1，放弃减1，和记录锁、互斥量比较
+        - 使用：semget、semctl、semop、
+     1. 共享存储
+        - 理解：不需要数据复制最快，需要保证写时不能读，可用信号量/记录锁/互斥量。mmap映射的存储段是文件相关联的，共享存储没有。匿名存储映射
+        - 使用：shmget、shmctl、shmat、shmdt
+1. POSIX 信号量
+   - 理解：比XSI 信号量有更高性能，删除时更完美。未/已命名，未命名的只能是同一进程的线程中，或不同进程中已映射相同内存内容中的线程
+   - 命名使用：sem_open、sem_close、sem_unlink、sem_trywait、sem_wait、sem_timewait、sem_post
+   - 未命名使用：sem_init、sem_destory、sem_getvalue、sem_
+1. 网络IPC
+   - 理解：一套为实现不同或相同计算机上的进程通信的接口，双向传输，使用tcp/ip协议栈，即套接字api
+     1. 套接字：是通信端点的抽象，使用套接字描述符访问套接字
+     1. 套接字描述符：在unix中当做文件描述符
+   - 使用
+     1. socket：创建，可指定协议，可指定底层的ip层传输，read/write/dup/dup2/poll/select为可正常工作的函数
+     1. bind：关联地址
+     1. listen：监听请求
+     1. accept：获得连接请求并建立连接
+     1. send/sendto/sendmsg：发送数据
+     1. recv/recvfrom/recvmsg
+     1. connect：建立连接
+     1. close：关闭连接
+     1. shutdown：禁止读/写端
+   - 寻址
+     1. 字节序：大/小端，tcp/ip指定了字节序，函数有htonl/htons/ntohl/ntohs
+     1. 地址格式：使用sockaddr结构，转换函数inet_ntop/inet_pton
+     1. 地址查询：hostent/sethostent/endhostent，getnetbyaddr/getnetbyname/getnetent/setnetent/endnetent,getprotobyname/getprotobynumber/getprotoent/setprotoent/endprotoent，getservbyname/getservbyport/getservent/setservent/endservent，getaddrinfo/freeaddrinfo，getsockname/getpeername
+   - 设置：setsockopt/getsockopt
+   - 带外数据：允许更高优先级数据传输，tcp支持，称为紧急数据，也可有紧急标记，使用sockatmark
+   - 非阻塞：使用poll或select判断是否能够操作数据
+   - 异步io：发送信号SIGIO，使用fcntl、ioctl
+1. 域套接字
+1. 唯一连接
+1. 传送文件描述符
+1. STREAMS
 ### Application
 1. 同时读写：`open(path, O_RDWR|O_CREAT|O_TRUNC, mode);`，creat需要开关两次实现
 1. 进程崩溃时临时文件的确保删除：进程运行，open临时文件后，就unlink，等崩溃时就会删除
