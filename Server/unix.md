@@ -3,8 +3,15 @@
    - ISO C：c语言标准，涉及是否支持头文件和库函数
    - IEEE POSIX：可移植操作系统接口，用于提升应用程序在unix系统的可移植性，规定了各种必须的服务
    - Single UNIX Specification：单一unix规范，是POSIX.1标准的超集，包括XSI(X/Open System Interface)
-1. 实现：SVR4、BSD、FreeBSD、Linux、Mac OS X、Solaris
-   - Linux是一套免费使用和自由传播的类Unix操作系统，是一个基于POSIX和UNIX的多用户、多任务、支持多线程和多CPU的操作系统
+1. 实现
+   - 分支
+     1. AT&T：系统三、系统五
+     1. 加州大学伯克利分校：4.xBSD(替换AT&T的源代码，以避免许可证)，FreeBSD(继承4.4BSD)
+     1. AT&T贝尔实验室的计算科学研究中心：SVR4
+   - 其他实现
+     1. Linux：在GUN公用许可证指导下，免费使用，亮丽风景线，吸引全世界开发
+     1. Mac OS X：基于Mach内核，FreeBSD以及面向对象框架的驱动和其他内核扩展结合而成
+     1. Solaris：Sun公司开发，唯一商业成功的SVR4
 1. 限制
    - 编译时限制：头文件中定义
    - 运行时限制：进程调用函数获得、修改
@@ -453,10 +460,15 @@
    - 带外数据：允许更高优先级数据传输，tcp支持，称为紧急数据，也可有紧急标记，使用sockatmark
    - 非阻塞：使用poll或select判断是否能够操作数据
    - 异步io：发送信号SIGIO，使用fcntl、ioctl
-1. 域套接字
-1. 唯一连接
-1. 传送文件描述符
-1. STREAMS
+1. unix 域套接字
+   - 理解：高级IPC，可传送打开的文件描述符，进程可关联描述符。提供流和数据报两种接口
+     1. 效率更高，仅复制数据，不执行协议处理
+   - 使用
+     1. 数据报：SOCK_DGRAM，可靠，不会丢失报文不会传递出错，像套接字和管道的混合
+        - socketpair：创建无命名、相互连接的unix域套接字，全双工，意味着无关进程不能使用
+        - sockaddr_un：命名域套接字，域套接字的地址，使用socket创建
+   - 唯一连接：就是每有新客户端连接，就新建一条
+   - 传送文件描述符
 ### Application
 1. 同时读写：`open(path, O_RDWR|O_CREAT|O_TRUNC, mode);`，creat需要开关两次实现
 1. 进程崩溃时临时文件的确保删除：进程运行，open临时文件后，就unlink，等崩溃时就会删除

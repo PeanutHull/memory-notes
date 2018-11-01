@@ -319,25 +319,73 @@
           1. httpd.exe -k start
 1. PHP依赖：Composer，依赖管理工具
    - 命令
-     1. composer create-project                       // 创建Composer项目
+     1. composer create-project                       // 创建composer项目
      1. composer init                                 // 初始化项目依赖，自动生成json文件
      1. composer install/update (foo/bar:1.0.0)       // 安装/更新所有/单个依赖
+     1. composer dump-autoload --optimize             // 为生产环境做准备
+     1. composer self-update
    - 参数
      1. --prefer-dist：用于install/update，强制下载源代码，在修改文件后更新文件会给出提示
      1. --prefer-source
      1. --lock：仅更新锁文件，用于update
-   - 功能
-     1. 自动加载：composer自动会生成一个vender/autoload.php，载入这个文件后，直接new，就会自动载入。在composer.json的autoload字段中增加自己的autoloader
-        ```
-        "autoload": {                       
-            "psr-4": {"Acme\\": "src/"}     // 注册一个PSR-4 autoloader到Acme命名空间
+     1. --no-dev：跳过require-dev中的包
+     1. -V
+   - json文件架构
+     1. 包版本
+        - 1.0.2：确切
+        - >=1.0：范围，,为and，|为or。>、>=、<、<=、!=，如>=1.0,<2.0
+        - 1.0.*：通配符
+        - ~1.0：适用遵循语义化版本号，以最后一位数字加1为上限，相当于>=1.0,<2.0
+        - 1.0.0-stable/dev/alpha3/beta2/RC5：添加后缀
+        - 1.0.0#2eb0c0978d29：添加提交编号，不建议
+     1. 包类型
+        - php：php版本要求
+        - hhvm：HipHop Virtual Machine运行环境的版本
+        - ext-：php扩展限制，可用*指定版本，如`ext-gd`
+        - lib-：php库的版本，如lib-curl
+     1. 稳定性
+        - 全局设置
+          1. minimum-stability：最小稳定容忍，有dev、alpha、beta、RC、stable
+          1. prefer-stable：是否更倾向稳定版，有true、false
+     1. type：安装类型
+        - library：默认，复制文件
+        - project：表示当前包是一个项目
+        - metapackage：当一个空的包，包含依赖并且需要触发依赖的安装，这将不会对系统写入额外的文件。因此这种安装类型并不需要一个 dist 或 source
+        - composer-plugin：自定义安装类型，可以继承接口写一个installler
+     1. require-dev：root-only，开发或测试使用
+     1. repositories：资源库
+        - 指定多个资源库，位置靠前的先使用
+        ```json
+        {
+            "repositories": [
+                {
+                    "type": "composer",
+                    "url": "http://packages.example.com"
+                },
+                {
+                    "type": "composer",
+                    "url": "https://packages.example.com",
+                    "options": {
+                        "ssl": {
+                            "verify_peer": "true"
+                        }
+                    }
+                },
+            ]
         }
         ```
-     1. 为生产环境做准备：`composer dump-autoload --optimize`
-   - 运维
-     1. composer/php composer.phar -V
-     1. composer self-update
-     1. 考虑缓存，dist包优先？？？
+   - 功能
+     1. 锁文件：会将把安装时确切的版本号列表写入，install会在lock存在情况下下载lock中的，忽略json中的，update则会更新lock文件
+     1. 自动加载：composer自动会生成一个vender/autoload.php，载入这个文件后，直接new，就会自动载入。命名空间的申明应该以\\结束
+        - 在composer.json的autoload字段中增加自己的autoloader
+            ```json
+            "autoload": {                       
+                "psr-4": {"Acme\\": "src/"}     // 注册一个PSR-4 autoloader到Acme命名空间
+            }
+            ```
+        - PSR-0： PEAR形式的路径映射
+        - include-path：追加传统的引用路径，不建议
+   - 考虑缓存，dist包优先？？？
 1. PHP配置：php.ini。register_globals(变量注入代码)、allow_url_include(包含远程文件)、allow_url_fopen、date.timezone、display_errors、error_reporting、safe_mode、post_max_size
 1. PHP扩展安装
 ### wiki

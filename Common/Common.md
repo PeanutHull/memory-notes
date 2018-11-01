@@ -30,3 +30,17 @@
    - 应用：如果都是活跃请求，epoll和select一样
 ### 异步非阻塞
 1. 理解：用户进程只需要发起一个IO操作然后立即返回，等IO操作真正的完成以后，应用程序会得到IO操作完成的通知，不需要进行实际的IO读写操作，已经由内核完成了
+### 许可协议
+Apache-2.0
+BSD-2-Clause
+BSD-3-Clause
+BSD-4-Clause
+GPL-2.0
+GPL-2.0+
+GPL-3.0
+GPL-3.0+
+LGPL-2.1
+LGPL-2.1+
+LGPL-3.0
+LGPL-3.0+
+MIT
