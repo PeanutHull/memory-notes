@@ -1,76 +1,9 @@
 ### 基础
-1. 目录操作：cd、mv、rm、pwd、tree、cp、ls
-1. 压缩解压：bzip2/bunzip2、gzip/gunzip、zip/unzip、tar
-1. 网络
-   - 网络应用：curl、telnet、mail、elinks
-   - 网络测试：ping、netstat、host
-   - 网络配置：hostname、ifconfig
-1. 常用工具：ssh、screen、clear、who、date
-1. 软件包管理：yum、rpm、apt-get
-1. 查看文件信息：file a.jpg
-1. iotop: 将进程按磁盘写次数排序，并且显示程序写磁盘的次数和频率
-1. nethogs: 将进程按网络流量列表显示
-1. tee：将程序的输出结果重定向，同时显示和保存。`echo "127.0.0.1 foobar" | sudo tee -a /etc/hosts`
-1. pidof：打印出进程id，`pidof nginx`
-1. tree：列出目录
-### 查看
-1. 查看运行的进程：ps -ef/aux | grep xxx
-1. 查看程序安装位置：which nginx
-1. 查看端口号：lsof -i:80，root用户查看
-1. 查看centos版本：cat /etc/redhat-release
-1. 查看centos位数：getconf LONG_BIT
-1. 查看ip：ifconfig -a中的inet addr
-1. top
-   - VIRT：virtual memory usage 虚拟内存
-     1. 进程“需要的”虚拟内存大小，包括进程使用的库、代码、数据等
-     1. 假如进程申请100m的内存，但实际只使用了10m，那么它会增长100m，而不是实际的使用量
-   - RES：resident memory usage 常驻内存
-     1. 进程当前使用的内存大小，但不包括swap out
-     1. 包含其他进程的共享
-     1. 如果申请100m的内存，实际使用10m，它只增长10m，与VIRT相反
-     1. 关于库占用内存的情况，它只统计加载的库文件所占内存大小
-   - SHR：shared memory 共享内存
-     1. 计算某个进程所占的物理内存大小公式：RES – SHR
-### 操作
-1. 进程后台运行：processName &
-1. 关闭应用程序
-   - 从容停止：kill -QUIT MasterProcessNumber
-   - 快速停止：kill -TERM MasterProcessNumber
-   - 强制停止：kill -9 programName/nginx
-1. 环境变量
+1. 环境变量：系统预定义的参数。window页也有。作用：在程序里可以获得环境变量的值，根据值决定如何操作，运行，找路径，文件夹等等
    - /etc/profile：全局
    - .bash_profile：个人
    - source .bash_profile：使生效
    - export PATH=：书写格式
-1. iptables
-   - 编辑：`vim /etc/sysconfig/iptables`
-   - 增加：`-A INPUT -m state --state NEW -m tcp -p tcp –-dport 80 -j ACCEPT`
-   - 状态/重启/关闭：`/etc/init.d/iptables status/restart/stop`
-1. 定时任务
-   - crontab：添加 `crontab -e`，格式：* * * * *(分时日月周)
-   - at：执行一次，`at 2:00 tomorrow`，`at>/home/job`
-1. vim
-   - 一般模式：用于删除、复制、粘贴
-     1. x、X、dd、ndd、yy、nyy、p、P、ctrl+r
-     1. 视图模式：v、V、ctrl+v、y、d
-   - 编辑模式：i、a、r
-   - 命令行模式：: / ?
-     1. 查找和替换
-     1. 配置：:setnu、:setnonu
-1. 脚本执行
-   - 加权限执行：chmod+x、./、source
-   - 编写
-     1. 解释器：bash、csh、ash、bsh、ksh
-     1. 指定解释器：#!，如#!/bin/sh
-1. shell工具
-   - tumx 断网保存用户操作的界面
-
-
-
-
-
-### 基础
-1. 环境变量：系统预定义的参数。window页也有。作用：在程序里可以获得环境变量的值，根据值决定如何操作，运行，找路径，文件夹等等
 1. 重定向
    - 管道：|，前面输出作为后面输入，依次类推。`cat file.txt | uniq | grep txt | sort`
    - 输出：>，>>
@@ -92,10 +25,12 @@
    - command1 && command2，可以一次执行两个命令，前一个报错则停止运行
    - 将程序后台执行：&
    - echo &?：获取上一条命令的错误码
+   - tee：将程序的输出结果重定向，同时显示和保存。`echo "127.0.0.1 foobar" | sudo tee -a /etc/hosts`
 ### 文件和目录
 1. 查看
    - ls
      1. -ld：查看目录详细
+   - tree
    - cat：查看文件内容
      1. `cat file1 file2`：同时查看两个文件
      1. `cat -n file | grep ''| more`：分页查看
@@ -124,11 +59,13 @@
    - locate：系统全局范围定位文件，从database中查找数据，一般一天更新一次database，更新文件数据库`sudo updatedb`
      1. --regexp：正则
    - whereis
+   - which：查看程序安装位置
 1. 操作
    - 切换
      1. cd            回到用户主目录
      1. cd ../../     连续向上
      1. cd -          回到上一次的目录
+     1. pwd
    - 复制/移动/删除
      1. cp -r dir1 dir2
      1. mv file dir/
@@ -184,32 +121,61 @@
      1. -m 以兆显示内存状态
    - runlevel：查看系统运行级别，修改系统默认运行级别`cat /etc/inittab id:3:initdefault:`
    - sudo、su、setfacl
+   - cat /etc/redhat-release：查看centos版本
+   - getconf LONG_BIT：查看centos位数
 1. 进程
    - 查看
      1. ps：显示系统运行状态
         - aux：pid，process ID，进程号
      1. top：查看活跃进程
-     1. pstree
+        - VIRT：virtual memory usage 虚拟内存
+          1. 进程“需要的”虚拟内存大小，包括进程使用的库、代码、数据等
+          1. 假如进程申请100m的内存，但实际只使用了10m，那么它会增长100m，而不是实际的使用量
+        - RES：resident memory usage 常驻内存
+          1. 进程当前使用的内存大小，但不包括swap out
+          1. 包含其他进程的共享
+          1. 如果申请100m的内存，实际使用10m，它只增长10m，与VIRT相反
+          1. 关于库占用内存的情况，它只统计加载的库文件所占内存大小
+        - SHR：shared memory 共享内存
+          1. 计算某个进程所占的物理内存大小公式：RES – SHR
+          1. pstree
+          1. pidof：打印pid
    - 操作
      1. kill/pkill/killall
         - -USR2 pid
-        - -9 pid
-1. 防火墙
-   - centos7防火墙配置
-     1. 添加端口：firewall-cmd --zone=public --add-port=80/tcp --permanent
-     1. 查看端口：firewall-cmd --zone=public --list-ports
-     1. 开关：systemctl start/disable/restart firewalld
+        - -QUIT：从容
+        - -TERM：快速
+        - -9 pid：强制
 1. 知识
    - 整个桌面进程都拖死，因为linux运行着7个工作台的，切到第一个工作台，杀死那个进程，ctrl+alt+1
 ### 网络
 1. 网络
+   - ifconfig：显示当前网络接口状态、配置网络
+     1. -a：inet addr，ip地址
    - netstat：显示网络连接/运行端口/路由表等
      1. anpt：查看端口占用，`netstat anpt | grep 80`
-   - ifconfig：显示当前网络接口状态、配置网络
-   - /etc/sysconfig/network-scripts/ifcfg-eth0：配置
+   - traceroute：显示网络数据包传输到指定主机的路径信息，追踪数据传输路由状况
+   - ping
+   - host
+   - nethogs: 将进程按网络流量列表显示
+   - lsof
+     1. i:80：查看端口号，root用户查看
 1. 操作
    - telnet：使用telnet协议通信
-   - traceroute：显示网络数据包传输到指定主机的路径信息，追踪数据传输路由状况
+   - curl
+   - elinks
+1. 配置
+   - /etc/sysconfig/network-scripts/ifcfg-eth0
+   - hostname
+1. 防火墙
+   - iptables
+     1. 编辑：`vim /etc/sysconfig/iptables`
+     1. 增加：`-A INPUT -m state --state NEW -m tcp -p tcp –-dport 80 -j ACCEPT`
+     1. 状态/重启/关闭：`/etc/init.d/iptables status/restart/stop`
+   - centos7防火墙配置
+     1. 添加端口：firewall-cmd --zone=public --add-port=80/tcp --permanent
+     1. 查看端口：firewall-cmd --zone=public --list-ports
+     1. 开关：systemctl start/disable/restart firewalld
 1. 数据传输
    - rsync
      1. -r：同步
@@ -226,13 +192,13 @@
 1. df：查看磁盘占用情况
 1. du
 1. fsck：检查文件系统，并尝试修复
+1. iotop: 将进程按磁盘写次数排序，并且显示程序写磁盘的次数和频率
 1. 文件系统
    - 文件树：一根文件数，根目录为/
    - 分区：sda1、sda2
    - 挂载点：把sda1挂载到根目录/上，则所有数据都在sda1分区。当sda2挂载到/home，则数据到了sda2的分区下 
 ### 应用
 1. 压缩、解压缩
-   - unzip/zip
    - tar
      1. tar.gz
         - zxvf       解压缩
@@ -240,13 +206,17 @@
      1. tar.bz2
         - jxvf       解压缩
         - jxvf       压缩
+   - bzip2/bunzip2
+   - gzip/gunzip
+   - zip/unzip
 1. 时间
    - date
      1. -s：设置系统时间
 1. 定时任务
    - crontab：linux原生定时器
      1. -l
-     1. -e： * * * * * php index.php >> index.log
+     1. -e： 添加，* * * * *(分时日月周) php index.php >> index.log
+     1. at：执行一次，`at 2:00 tomorrow`
    - 运维
      1. service crond start/stop/restart/reload/status
      1. chkconfig -level 35 crond on       加入开机启动
@@ -348,6 +318,7 @@
    - ctrl + ←/→：单词移动，需设置`Send Escape Sequence + d/f`
    - shift + ←/→：单词选择，需设置`Move Start of Selection Left By Word`，`Move End of Selection Right By Word`
    - ctrl + w：单词删除
+1. tumx：多个界面，断网保存用户操作的界面
 ### shell编程
 1. 理解：壳，命令行解释器，利用ASCII码表转换将命令传给内核，敲命令的界面就是shell。支持命令执行、条件判断、循环控制
 1. 运算符：expr、let
@@ -519,6 +490,8 @@
    - 查看shell版本：`echo $SHELL`
    - 注释：#
    - 进入sh的shell：`sh`
+   - 解释器：bash、csh、ash、bsh、ksh
+   - 指定解释器：#!，如#!/bin/sh
    - 主要语法类型，彼此不兼容
      1. Bourne：包括标准的Bash、sh、ksh、psh、zsh
      1. C：包括csh、tcsh。C shell主要在Unix中使用，语法有较大区别
