@@ -554,3 +554,10 @@
    - 应用
      1. Spark-SQL组件
      1. DataFrame组件
+   - 提高：spark积累主要包括三方面
+     1. 用起来：目前spark sql、pyspark、struct streaming都比较易用，在自己的业务场景先用起来，再逐步的优化
+     2. 视野及场景提高：可以关注类似spark submit、中国数据库技术大会、hbase中国社区相关的 topic，看看其他公司都怎么使用的；另外需要关注spark和其他组件的配合使用，类似hbase、mongo、solr等
+     3. spark本身原理：可以关注spark每个版本的release note、hbase中国社区的相关问答。另外推荐几个比较好的原理博客
+        - https://github.com/JerryLead/SparkInternals
+        - https://github.com/jaceklaskowski/mastering-spark-sql-book
+        - https://github.com/jaceklaskowski/spark-structured-streaming-book

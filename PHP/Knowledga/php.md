@@ -264,7 +264,8 @@
    - 理解：与异常类似，错误异常一直冒泡直到到达第一个匹配的catch块。如果没有匹配的，使用set_exception_handler()安装的默认异常处理程序，没有默认的，异常将被转换为致命错误，并将像传统错误一样处理。所以`catch（Error $e）{}`或`set_exception_handler()`是必须的。如`(DivisionByZeroError $e)`
    - 抛出异常：`throw new Exception();`
    - try：`try {} catch (Exception $e) {}`
-   - 错误控制：ini和运行时的设置是否显示 display_errors(致命错误时不管用)，错误类别报告 error_reporting(E_ALL ^|& ~E_NOTICE)，除了NOTICE
+   - 错误控制：ini和运行时的设置是否显示 display_errors(致命错误时不管用)
+     1. 错误类别报告`error_reporting(E_ALL & ~E_NOTICE)`或`error_reporting(E_ALL ^ ~E_NOTICE)`，除了NOTICE
    - 错误类型
      1. E_ERROR、E_WARNING、E_NOTICE、E_PARSE、E_STRICT、E_RECOVERABLE_ERROR、E_DEPRECATED、E_ALL
      1. E_CORE_ERROR, E_CORE_WARNING：引擎产生
@@ -340,7 +341,7 @@
         - 1.0.0#2eb0c0978d29：添加提交编号，不建议
      1. 包类型
         - php：php版本要求
-        - hhvm：HipHop Virtual Machine运行环境的版本
+        - hhvm：HipHop Virtual Machine，是Facebook执行php的虚拟机，是JIT（Just-In- Time）编译器，同时具有产生快速代码和即时编译的优点
         - ext-：php扩展限制，可用*指定版本，如`ext-gd`
         - lib-：php库的版本，如lib-curl
      1. 稳定性

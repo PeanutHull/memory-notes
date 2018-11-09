@@ -44,3 +44,9 @@ LGPL-2.1+
 LGPL-3.0
 LGPL-3.0+
 MIT
+### 换行符
+linux：<换行>，\n
+windows：<换行><回车>，\n\r
+mac：<回车>，\r
+unix/mac的文件windows打开，所有文字变成一行
+windows的文件在unix/mac打开，每行结尾可能会多出一个^M符号

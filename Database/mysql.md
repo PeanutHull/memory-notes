@@ -106,7 +106,7 @@
     insert into table(xx) set XX=xx/(,,) values (,) on duplicate key update;                    # 插入数据，如果引发唯一或主键索引重复则更新
     replace into table (,,) values (,,);                                                    # 插入或更新，命中主键修改，未命中添加
     ## 更新数据
-    updata table set XX1=xx1, XX2=xx;                                                       # 更新所有数据
+    update table set XX1=xx1, XX2=xx;                                                       # 更新所有数据
     update t1,t2 set t1.xx=xx,t2.xx=xx                                                      # 多表更新
     update t1 join t2 on t1.xx=t2.xx set t1.xx=xx
     ## 删除数据
