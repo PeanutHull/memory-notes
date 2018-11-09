@@ -1,90 +1,21 @@
-### 应用
-1. SSH省去输入密码
-    ```shell
-    ssh -kengen
-    cd ~/.ssh
-    ssh -copy-id peter@happypeter.net       // 把公钥复制到服务器上
-    ```
-1. Vim快捷键
-   - 基本命令
-     1. yy 复制当前行
-     1. dd 删除当前行，并复制
-     1. p 当前位置之后粘贴，之前粘贴P
-   - 升级
-     1. :20 跳到20行
-     1. . 重复上一次命令
-1. 定时任务
- - 方法1：crontab————Linux原生定时器
-     1. 解释：crontab是定时执行的工具，使用crontab来配置cron任务
-     1. 查看
- ```
- // 查看定时任务
- crontab -l
- ```
-     1. 操作
- ```
- yum install crontabs // 安装crontab
- /sbin/service crond start          // 启动服务
- /sbin/service crond stop           // 关闭服务
- /sbin/service crond restart        // 重启服务
- /sbin/service crond reload         // 重新载入配置
- service crond status
- chkconfig -level 35 crond on       // 加入开机启动
- ntsysv                             // 查看是否开机启动
- ```
-     1. 添加php定时
- ```
- // 添加定时任务
- crontab -e
- ** * * * /usr/bin/php -f /root/test.php >> test.log       // -q是安静模式
- chmod +x test.php           // 必须为可执行文件
- ```
- - 方法2：使用php内置函数
-     1. 解释：最好分master和worker，master负责监控是否有任务执行，以免某次任务出问题，系统挂掉
-     1. 示例
- ```
- ignore_user_abort();//关掉浏览器，PHP脚本也可以继续执行.
- set_time_limit(0);// 通过set_time_limit(0)可以让程序无限制的执行下去
- $interval=60*30;// 每隔半小时运行
- do{
-  //这里是你要执行的代码 
-  sleep($interval);// 执行程序间隔的时间
- }while(true);
- ```
- - 方法3：用C语言写一个守护程序
-1. tail查看系统日志，nginx日志文件地址在配置中存着
-    ```
-    tail      显示指定文件末尾内容，并且不停刷新可以看到最新的内容
-    tail -1000f test.log        最后1000不停刷新
-    grep '搜索内容' 日志文件
-    ```
-1. supervisor——保持进程常驻工具，用python写的
-   - 配置文件
-    ```
-    [program:zzg_worker]
-    process_name=%(program_name)s_%(process_num)02d
-    command=php /xdfapp/apps/develop/okayAdmin_zzg/artisan queue:work redis --daemon --sleep=1 --tries=1 --env=_lj
-    autostart=true
-    autorestart=true
-    user=zhaozhigang
-    numprocs=1
-    redirect_stderr=true
-    stdout_logfile=/tmp/zzg_worker.log
-    ```
+### 配置
+1. ssh省去输入密码
+   - ssh -kengen
+   - cd ~/.ssh
+   - ssh -copy-id peter@happypeter.net       // 把公钥复制到服务器上
+1. vim
+   - yy 复制当前行
+   - dd 删除当前行，并复制
+   - p 当前位置之后粘贴，之前粘贴P
+   - :20 跳到20行
+   - . 重复上一次命令
+### 实操 
 1. 判断是否是root用户
     ```bash
     #!/bin/bash
     test=$(env | grep USER | cut -d "=" -f 2)
     if [ "$test" == "root" ];then
         echo "you are root now"
-    fi
-    ```
-1. 判断磁盘使用率
-    ```bash
-    #!/bin/bash
-    test=$(df -h | grep sda5 | awk '{print $5}' | cut -d "%" -f 1)
-    if [ "$test" -ge "90" ];then
-        echo "sda5 is full"
     fi
     ```
 1. 判断是否是目录
@@ -114,60 +45,21 @@
     /etc/rc.d/init.d/httpd start $>/dev/null                # 启动apache
     echo "aa" >> /tmp/err.log                               # 写入日志文件
     ```
-1. 判断分支、提交develop、合并到release、自动递增tag号的shell脚本
+1. 判断磁盘使用率
     ```bash
     #!/bin/bash
-    branch='develop';
-    status=`git status`
-    status=${status:9:8};
-    # 判断是否在develop分支上
-    if [ $status != $branch ];then
-        git checkout develop;
+    test=$(df -h | grep sda5 | awk '{print $5}' | cut -d "%" -f 1)
+    if [ "$test" -ge "90" ];then
+        echo "sda5 is full"
     fi
-
-    # 提交develop分支
-    git pull;
-    git add -A;
-    git commit -m "$1";
-    git push origin develop;
-
-    # 提交release分支
-    git checkout release;
-    git pull;
-    git merge develop;
-    git push origin release;
-
-    # 打tag
-    res=`git tag -l`
-    tag=`echo $res | awk -F ' ' '{print $NF}'`
-    # 创建tag号
-    # 三级版本号情况
-    if [ ${#tag} = 6 ];then
-        last=$[${tag:5:1}+1];
-        newTag=${tag:0:5}$last;
-    fi
-    # 二级版本号情况
-    if [ ${#tag} = 4 ];then
-
-        newTag=${tag}'.1';
-    fi
-    # push tag
-    git tag $newTag;
-    git push origin tag $newTag;
     ```
-1. VirtualBox安装虚拟机、连接网络
-   - 安装：blog.csdn.net/risingsun001/article/details/37934975
-   - 调通网络
-     1. vi /etc/sysconfig/network-scripts/ifcfg-eth0
-        ```
-        NM_CONTROLLED=no
-        ONBOOT=yes  #自动启动
-        BOOTPROTO=dhcp  #动态IP
-        ```
-     1. service network start
-   - 调通ssh：blog.csdn.net/risingsun001/article/details/38040451
+### 解决方案
+1. 进程守护
+   - supervisor、Systemd、monit(还能性能监控等等)
+   - 命令(nohup/Screen/Tmux)、Node工具(forever/nodemon/pm2)
+   - 写锁(让工作进程和守护进程争抢写锁，当守护获得写锁时重启工作进程并放弃写锁))
 1. supervisor
-   - 认识：进程管理器，用于保证进程的自动重启等。通过fork/exec的方式将这些被管理的进程当作supervisor的子进程来启动，配置好进程命令即可
+   - 认识：进程管理器，用于保证进程的自动重启等。通过fork/exec的方式将这些被管理的进程当作supervisor的子进程来启动，配置好进程命令即可，python写的
    - 配置
     ```
     [unix_http_server]
@@ -219,7 +111,18 @@
     supervisord -c supervisor.conf                                                          // 通过配置文件启动supervisor
     supervisorctl -c supervisor.conf status/reload//start/stop [all]|[x|zzg_worker]         // 查看状态/重新载入配置文件/启动停止所有一个
     ```
-   - 安装：`yum supervisor`
+   - 其他配置
+    ```
+    [program:zzg_worker]
+    process_name=%(program_name)s_%(process_num)02d
+    command=php /xdfapp/apps/develop/okayAdmin_zzg/artisan queue:work redis --daemon --sleep=1 --tries=1 --env=_lj
+    autostart=true
+    autorestart=true
+    user=zhaozhigang
+    numprocs=1
+    redirect_stderr=true
+    stdout_logfile=/tmp/zzg_worker.log
+    ```
 1. Systemd
    - 背景：linux采用init进程启动服务，如`/etc/init.d/apache2 start`或`service apache2 start`，缺点为只能串行启动，只启动脚本，不管其他事情，如session信号通知，
    - 理解：linux系统自带，是操作系统一部分，直接与内核交互，性能出色、功能强大、面向目标，体系庞大复杂。给出目标及依赖条件即可执行。即将程序交给系统管理了，d是daemon的缩写，systemd取代initd，成为系统的第一个进程（PID等于1），其他进程都是它的子进程，EL7才能用
@@ -232,4 +135,55 @@
      1. 挂载单元：控制文件系统的挂载
      1. 目标单元：控制其余的单元，通常是通过将他们分组的方式
    - 使用：编写.service文件，通过设置参数决定某一命令的守护
-1. 进程守护：supervisor、Systemd、monit(还能性能监控等等)、命令(nohup/Screen/Tmux)、Node工具(forever/nodemon/pm2)、写锁(让工作进程和守护进程争抢写锁，当守护获得写锁时重启工作进程并放弃写锁))
+1. VirtualBox安装虚拟机、连接网络
+   - 安装：blog.csdn.net/risingsun001/article/details/37934975
+   - 调通网络
+     1. vi /etc/sysconfig/network-scripts/ifcfg-eth0
+        ```
+        NM_CONTROLLED=no
+        ONBOOT=yes  #自动启动
+        BOOTPROTO=dhcp  #动态IP
+        ```
+     1. service network start
+   - 调通ssh：blog.csdn.net/risingsun001/article/details/38040451
+1. 判断分支、提交develop、合并到release、自动递增tag号的shell脚本
+    ```bash
+    #!/bin/bash
+    branch='develop';
+    status=`git status`
+    status=${status:9:8};
+    # 判断是否在develop分支上
+    if [ $status != $branch ];then
+        git checkout develop;
+    fi
+
+    # 提交develop分支
+    git pull;
+    git add -A;
+    git commit -m "$1";
+    git push origin develop;
+
+    # 提交release分支
+    git checkout release;
+    git pull;
+    git merge develop;
+    git push origin release;
+
+    # 打tag
+    res=`git tag -l`
+    tag=`echo $res | awk -F ' ' '{print $NF}'`
+    # 创建tag号
+    # 三级版本号情况
+    if [ ${#tag} = 6 ];then
+        last=$[${tag:5:1}+1];
+        newTag=${tag:0:5}$last;
+    fi
+    # 二级版本号情况
+    if [ ${#tag} = 4 ];then
+
+        newTag=${tag}'.1';
+    fi
+    # push tag
+    git tag $newTag;
+    git push origin tag $newTag;
+    ```

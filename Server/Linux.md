@@ -1,20 +1,4 @@
 ### 基础
-1. 系统安全：sudo、su、chmod、setfacl
-1. 系统关机和重启：shutdown、reboot
-1. 进程管理：w、top、ps、kill、pkill、pstree、killall
-1. 用户管理：id、usermod、useradd、groupadd、groupdel
-1. 命令执行：command1 && command2，可以一次执行两个命令，前一个报错则停止运行
-1. 数据重定向
-   - 输出：>>追加，>覆盖，如./a.out 1>t.txt 2>f.txt，1标准输出流2标准错误流
-   - 输入：<
-1. echo &?：获取上一条命令的错误码
-1. 文件
-   - 文件系统：mount、umount、fsck、df、du
-   - 文件查找比较：locate、find
-     1. 全局查找指定文件名：find / -name fileName|'*name'
-   - 文件内容查看：head、tail、less、more
-   - 文件处理：touch、unlink、rename、ln、cat
-   - 文件权限：setfacl、chmod、chown、chgrp
 1. 目录操作：cd、mv、rm、pwd、tree、cp、ls
 1. 压缩解压：bzip2/bunzip2、gzip/gunzip、zip/unzip、tar
 1. 网络
@@ -23,10 +7,6 @@
    - 网络配置：hostname、ifconfig
 1. 常用工具：ssh、screen、clear、who、date
 1. 软件包管理：yum、rpm、apt-get
-1. centos7防火墙配置
-   - 添加端口：firewall-cmd --zone=public --add-port=80/tcp --permanent
-   - 查看端口：firewall-cmd --zone=public --list-ports
-   - 开关：systemctl start/disable/restart firewalld
 1. 查看文件信息：file a.jpg
 1. iotop: 将进程按磁盘写次数排序，并且显示程序写磁盘的次数和频率
 1. nethogs: 将进程按网络流量列表显示
@@ -95,7 +75,7 @@
    - 管道：|，前面输出作为后面输入，依次类推。`cat file.txt | uniq | grep txt | sort`
    - 输出：>，>>
      1. more file1 file2 file3 > file2：清空file2
-     1. cat file1 >> file2：追加
+     1. cat file1 1 >> file2：追加，1标准输出流
    - 输入：< <<(表示当前命令的标准输入为来自命令行中一对分隔号之间的内容)
 1. 通配符
    - 分类
@@ -108,14 +88,14 @@
 1. 输出
    - echo：输出，-e 支持反斜线控制的字符转换，\a 警告音 \n 换行键 \r 回车键 \t 制表符，Tan键 \v 垂直制表符
    - awk、cut
+1. 运行
+   - command1 && command2，可以一次执行两个命令，前一个报错则停止运行
+   - 将程序后台执行：&
+   - echo &?：获取上一条命令的错误码
 ### 文件和目录
 1. 查看
    - ls
      1. -ld：查看目录详细
-   - grep：过滤
-   - uniq：唯一显示
-   - sort排序显示
-1. 查看文件
    - cat：查看文件内容
      1. `cat file1 file2`：同时查看两个文件
      1. `cat -n file | grep ''| more`：分页查看
@@ -129,8 +109,12 @@
    - more：用于文本较长，无法一屏显示
      1. enter：下一行
      1. 空格|n：下一屏
+   - grep：过滤
    - head：输出文件头
    - tail：输出文件尾
+     1. -f：不停显示
+   - uniq：唯一显示
+   - sort排序显示
    - file：查看文件详细
 1. 搜索
    - find：一参指定目录
@@ -149,36 +133,73 @@
      1. cp -r dir1 dir2
      1. mv file dir/
      1. rm -r dir
+     1. rename
+     1. unlink
    - 创建
-     1. 目录
-        - mkdir -p dir/dir：递归创建
-     1. 文件
-        - vi/vim file
-        - touch file
-        - > file
-     1. 链接，ln，文件或目录
-        - 硬链接：多个路径指向一个inode号，最后inode号删除才删除文件，可防止误删除，默认硬链接
-        - 软连接：-s，即符号链接，类似快捷方式
+     1. mkdir -p dir/dir：递归创建
+     1. vi/vim file
+     1. touch file
+   - 链接，ln，文件或目录
+     1. 硬链接：多个路径指向一个inode号，最后inode号删除才删除文件，可防止误删除，默认硬链接
+     1. 软连接：-s，即符号链接，类似快捷方式
 1. 知识
    - .开头的文件和目录都是隐藏的
    - 只显示目录，目录为蓝色，-l参数下-为文件、d为目录、l为符号链接
    - 重要文件防删除
      1. chattr +i filename      加提醒
      1. chattr -i filename      解除
+### 用户、权限
+1. 用户和用户组
+   - 查看
+     1. /etc/passwd
+     1. /etc/group
+   - 操作
+     1. id
+     1. useradd/usermod
+     1. groupadd/groupmod/groupdel
+   - 命令
+     1. who、w：显示当前用户
+     1. passwd：修改密码
+1. 权限
+   - 分类：r、w、x
+   - 文件模式：即rwxr-r--，如何控制权限
+   - 目录权限
+     1. r：可查看目录下内容
+     1. w：对目录里文件进行创建、删除、重命名等操作
+     1. x：可cd目录，一般有
+   - 操作
+     1. chmod：以8进制控制文件模式
+     1. chown
+        - -R：递归修改
+        - +x：添加
+     1. owner
+     1. group
+     1. setfacl
+     1. chgrp
 ### 进程、系统
 1. 系统
+   - uname -a 显示系统信息
    - uptime：当前系统时间、开机到现在运行时间、用户在线数、系统平均负载
    - free
      1. -m 以兆显示内存状态
    - runlevel：查看系统运行级别，修改系统默认运行级别`cat /etc/inittab id:3:initdefault:`
+   - sudo、su、setfacl
 1. 进程
-   - ps：显示系统运行状态
-     1. aux：pid，process ID，进程号
-   - top：查看活跃进程
-   - kill -9 PID
-   - uname -a 显示系统信息
+   - 查看
+     1. ps：显示系统运行状态
+        - aux：pid，process ID，进程号
+     1. top：查看活跃进程
+     1. pstree
+   - 操作
+     1. kill/pkill/killall
+        - -USR2 pid
+        - -9 pid
+1. 防火墙
+   - centos7防火墙配置
+     1. 添加端口：firewall-cmd --zone=public --add-port=80/tcp --permanent
+     1. 查看端口：firewall-cmd --zone=public --list-ports
+     1. 开关：systemctl start/disable/restart firewalld
 1. 知识
-   - 将程序后台执行：&
    - 整个桌面进程都拖死，因为linux运行着7个工作台的，切到第一个工作台，杀死那个进程，ctrl+alt+1
 ### 网络
 1. 网络
@@ -201,40 +222,14 @@
    - ssh
      1. ssh addr@ip
 ### 磁盘
-1. mount：挂载
+1. mount/umount：挂载
 1. df：查看磁盘占用情况
+1. du
 1. fsck：检查文件系统，并尝试修复
 1. 文件系统
    - 文件树：一根文件数，根目录为/
    - 分区：sda1、sda2
    - 挂载点：把sda1挂载到根目录/上，则所有数据都在sda1分区。当sda2挂载到/home，则数据到了sda2的分区下 
-### 用户、权限
-1. 用户和用户组
-   - 查看
-     1. /etc/passwd
-     1. /etc/group
-   - 操作
-     1. useradd
-     1. groupadd
-     1. groupmod
-     1. groupdel
-   - 命令
-     1. who、w：显示当前用户
-     1. passwd：修改密码
-1. 权限
-   - 分类：r、w、x
-   - 文件模式：即rwxr-r--，如何控制权限
-   - 目录权限
-     1. r：可查看目录下内容
-     1. w：对目录里文件进行创建、删除、重命名等操作
-     1. x：可cd目录，一般有
-   - 操作
-     1. chmod：以8进制控制文件模式
-     1. chown
-        - -R：递归修改
-        - +x：添加
-     1. owner
-     1. group
 ### 应用
 1. 压缩、解压缩
    - unzip/zip
@@ -248,6 +243,14 @@
 1. 时间
    - date
      1. -s：设置系统时间
+1. 定时任务
+   - crontab：linux原生定时器
+     1. -l
+     1. -e： * * * * * php index.php >> index.log
+   - 运维
+     1. service crond start/stop/restart/reload/status
+     1. chkconfig -level 35 crond on       加入开机启动
+     1. ntsysv                             查看是否开机启动
 ### wiki
 1. linux分类
    - RedHat系列：Redhat、Centos、Fedora等 
