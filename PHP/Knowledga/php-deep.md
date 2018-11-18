@@ -46,13 +46,26 @@
    - 数组php5的底层是HashTable实现的，php7使用了新的Zend Array类型，性能和访问速度上都有了大幅度提升
    - https://www.csdn.net/article/2015-09-16/2825720
 1. JIT：just in time，即时编译，表示运行时将指令转为二进制机器码，jit可以将opcode直接转为机器码，大幅提升性能
-### 内存
-1. 类和对象在内存中的体现
-   - 栈空间段：存储占用相同空间长度并且占用空间小的数据类型，可直接存取，存对象名称
-   - 堆空间段：不定长、体积大，不可直接存取，存对象。通过名称找对象
-   - 代码段
-   - 初使化静态段:存放静态属性和方法，类第一次被加载即放入，可被堆内存的对象所共享
 ### 调优
+1. 编码级优化
+   - 提前销毁大变量
+   - 避免使用魔术方法耗性能
+   - requiere_once耗性能
+   - 少用正则
+   - 不要用@符掩盖错误
+   - 单引号代替双引号
+1. 语言级优化
+   - 部署环境：nginx+php-fpm方式
+   - 框架选择
+   - 缓存
+     1. 程序层面的文件静态和优化比底层来的更有效、直接
+     1. 开启opcode缓存：避免重复编译，如APC、xcache
+     1. 本地缓存：如用xcache缓存元数据，不用每次读文件
+   - 文件加载：一个文件操作胜过优化N个CPU指令
+   - nginx开启gzip压缩
+1. 配置优化
+   - php.ini：memory_limit、session.save_handler、output_buffering
+   - php-fpm：动态和静态的子进程管理，平衡cpu和内存，参数有pm、pm.max_children、pm.start_servers
 1. 发挥PHP7的性能
    - 开启Opcache
      1. zend_extension=opcache.so
@@ -69,3 +82,4 @@
     echo microtime() . PHP_EOL;
     echo memory_get_usage() . PHP_EOL;
     ```
+1. xhprof

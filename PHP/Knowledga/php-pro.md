@@ -25,13 +25,13 @@
 1. 文件载入
    - 普通
      1. 理解：once确保文件只被包含一次，避免函数重定义、变量重新赋值
+     1. 分类
+        - include()/include_once()：运行前引入、运行次数越多效率越高，出错产生警告
+        - require()/require_once()：用到才引入，出错抛出错误并终止脚本
      1. 查找逻辑：找到即终止
         - 如果给出路径按照路径查找
         - 从include_path查找(include_path就是一个在php.ini中配置的，也可以用set_include_path()配置的用于载入文件的路径，path分隔符使用系统的)
         - 从调用脚本目录(getcwd())和当前工作目录(__FILE__)查找
-     1. 分类
-        - include()/include_once()：运行前引入、运行次数越多效率越高，出错产生警告
-        - require()/require_once()：用到才引入，出错抛出错误并终止脚本
    - __autoload
      1. 理解：当需要使用的类没有被引入时，会在php报错前被触发，未定义的类名会被当作参数传入，这样就不用一个个的文件去require了，v7.2废弃
     ```php
@@ -191,6 +191,32 @@ foreach (new RecursiveFileFilterIterator('/path/to/something') as $item) {
 }
 ```
 1. 其他spl函数：文件处理、接口、异常、类和接口
+### PSR
+1. 解释：PHP Standards Recommendation，php推荐标准，是PHP-FIG组织制定的php推荐书写标准
+1. 分类
+   - PSR-1：基本的代码风格
+     1. 标签   php代码必须在<?php ?>中
+     1. 编码   必须使用utf8，不能有字节顺序标记(BOM Byte Order Mark)
+     1. 常量   全部大写，可用下划线
+     1. 类名   必须驼峰
+     1. 方法名 小写开头+驼峰
+     1. 加载   命名空间和类必须遵守psr-4自动加载器标准
+     1. 目的   一个php文件，要么定义符号，要么执行操作，不能同时做
+   - PSR-2：严格的代码风格
+     1. 贯彻   首先遵守psr-1
+     1. 缩进   四个空格
+     1. 文件和代码行、关键字、命名空间、类、方法、可见性、控制结构
+   - PSR-3：日志记录器接口，不是指导，是一个接口
+   - PSR-4：自动加载，命名空间前缀和文件系统的目录对应起来，代替PSR-0(已弃用)
+   - PSR-7：http通信标准
+1. 注释书写参考
+   - @access
+   - @param  string|array
+   - @static
+   - @return  void|
+   - @desc
+   - @example
+   - @version
 ### 其他
 1. 多线程：pthreads
 1. 消息队列：gearman
