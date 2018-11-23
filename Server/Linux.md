@@ -158,7 +158,7 @@
           1. pstree
           1. pidof：打印pid
    - 操作
-     1. kill/pkill/killall
+     1. kill/pkill/killall：杀死所有fpm`ps -ef|grep php-fpm|awk -F ' ' '{print $2}'|xargs kill -9`
         - -USR2 pid
         - -QUIT：从容
         - -TERM：快速

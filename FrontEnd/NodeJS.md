@@ -1,8 +1,7 @@
 1. NodeJS
    - 认识：采用chrome的v8引擎，由C++编写的超快js解释器/运行环境。使用事件驱动、非阻塞式IO模型。轻量高效，没有浏览器的安全限制，提供系统级别api如文件读写、进程管理、网络通信
-   - 特点
      1. 优点：采用事件驱动、非阻塞IO模型、异步编程、为网络服务而设计、轻量高效
-     1. 缺点：可靠性低、单进程，单线程，只支持单核cpu，一个进程崩溃，所有的都崩溃
+     1. 缺点：可靠性低、单进程、单线程，只支持单核cpu，一个进程崩溃，所有的都崩溃
    - 组成：交互组件、异步请求
 1. 全局变量：process
 1. url解析
@@ -12,14 +11,14 @@
    - querystring.escape()：urlencode
    - querystring.unescape()：urldecode
 1. 事件模块
-```
-var EventEmitter = require('events').EventEmitter;
-var life = new EventEmitter;
-life.on('eventName' function(params) {});               // 绑定事件
-life.emit('eventName' params);                          // 触发事件
-life.listeners('eventName').length;                     // 事件监听数量
-EventEmitter.listenerCount(life, 'eventName');          // 事件监听数量
-```
+    ```js
+    var EventEmitter = require('events').EventEmitter;
+    var life = new EventEmitter;
+    life.on('eventName' function(params) {});               // 绑定事件
+    life.emit('eventName' params);                          // 触发事件
+    life.listeners('eventName').length;                     // 事件监听数量
+    EventEmitter.listenerCount(life, 'eventName');          // 事件监听数量
+    ```
 1. Promise
    - 面对的问题：回调增多，需要分析哪些代码处理应用逻辑，哪些处理异步调用，代码支离破碎，错误处理处处需要存在
    - 解释：promise模式，是一种对象，用来传递异步操作的消息，返回一个代表承诺的结果对象，用then方法注册状态变化时对应的回调函数。es6原生提供promise对象，解决A+规范。目的：将异步操作以同步操作的流程表达出来，避免嵌套的回调函数。有统一的接口，
@@ -40,7 +39,7 @@ EventEmitter.listenerCount(life, 'eventName');          // 事件监听数量
 1. Stream
    - 解释：流，标准输入输出错误
    - 示例
-    ```
+    ```js
     var fs = require('fs');
     fs.readFileSync('file');
     fs.writeFileSync('file', source);

@@ -61,7 +61,7 @@
     ```
 ### 解决方案
 1. 进程守护
-   - supervisor、Systemd、monit(还能性能监控等等)
+   - supervisor、systemd、monit(还能性能监控等等)
    - 命令(nohup/Screen/Tmux)、Node工具(forever/nodemon/pm2)
    - 写锁(让工作进程和守护进程争抢写锁，当守护获得写锁时重启工作进程并放弃写锁))
 1. supervisor
@@ -121,7 +121,7 @@
     ```
     [program:zzg_worker]
     process_name=%(program_name)s_%(process_num)02d
-    command=php /xdfapp/apps/develop/okayAdmin_zzg/artisan queue:work redis --daemon --sleep=1 --tries=1 --env=_lj
+    command=php /xdfapp/develop/okayAdmin/artisan queue:work redis --daemon --sleep=1 --tries=1 --env=_lj
     autostart=true
     autorestart=true
     user=zhaozhigang

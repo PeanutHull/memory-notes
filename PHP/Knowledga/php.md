@@ -267,23 +267,69 @@
         var_dump($match);
         ```
 1. 错误和异常
-   - 理解：与异常类似，错误异常一直冒泡直到到达第一个匹配的catch块。如果没有匹配的，使用set_exception_handler()安装的默认异常处理程序，没有默认的，异常将被转换为致命错误，并将像传统错误一样处理。所以`catch（Error $e）{}`或`set_exception_handler()`是必须的。如`(DivisionByZeroError $e)`
-   - 抛出异常：`throw new Exception();`
-   - try：`try {} catch (Exception $e) {}`
-   - 错误控制：ini和运行时的设置是否显示 display_errors(致命错误时不管用)
-     1. 错误类别报告`error_reporting(E_ALL & ~E_NOTICE)`或`error_reporting(E_ALL ^ ~E_NOTICE)`，除了NOTICE
-   - 错误类型
-     1. E_ERROR、E_WARNING、E_NOTICE、E_PARSE、E_STRICT、E_RECOVERABLE_ERROR、E_DEPRECATED、E_ALL
-     1. E_CORE_ERROR, E_CORE_WARNING：引擎产生
-     1. E_COMPILE_ERROR, E_COMPILE_WARNING：引擎产生
-     1. E_USER_ERROR, E_USER_WARNING, E_USER_NOTICE, E_USER_DEPRECATED
-   - 错误配置
+   - 理解：Error和Exception都实现了Throwable接口，可用`handler(Throwable $e)`
+     1. 错误：错误不能以异常的形式捕获
+        - php7：大多数错误被作为Error抛出，可用`Error`或`Throwable`捕获，Exception不可以
+        - 错误类型
+          1. E_ERROR/E_WARNING/E_PARSE/E_NOTICE：错误、警告、解析、注意
+          1. E_STRICT/E_RECOVERABLE_ERROR/E_DEPRECATED/E_ALL
+          1. E_CORE_ERROR, E_CORE_WARNING：引擎产生
+          1. E_COMPILE_ERROR, E_COMPILE_WARNING：引擎产生
+          1. E_USER_ERROR, E_USER_WARNING, E_USER_NOTICE, E_USER_DEPRECATED：用户级
+   - 使用
+     1. 抛出：`throw new Exception()`
+     1. 捕获：`try {} catch (Exception $e) {} finally {}`
+     1. 处理
+        - set_exception_handler/set_error_handler：设置异常、错误处理时的函数，不能捕获E_ERROR、E_PARSE
+        - register_shutdown_function：设置php终止执行的函数，脚本执行完后或exit后，可多次调用则依次执行，常配合error_get_last
+        - error_get_last/error_clear_last
+        - trigger_error：抛出用户级错误
+        - error_log/debug_backtrace
+     1. 显示控制
+        - display_errors
+        - error_reporting：除了NOTICE，`(E_ALL & ~E_NOTICE)`或`(E_ALL ^ ~E_NOTICE)`
+   - 配置
      1. php.ini
         - log_errors：开关
         - display_errors：是否显示
         - error_reporting：错误级别
         - error_log：日志地址
-     1. php-fpm.conf(error_log/log_level)
+     1. php-fpm.conf
+        - error_log
+        - log_level
+   - 预定义的异常：即老的异常
+     1. Exception：是所有异常的基类
+        - 方法
+          1. Exception::getMessage/getCode — 获取异常消息内容
+          1. Exception::getFile/getLine/getTrace — 获取创建的异常所在文件中的行号
+          1. Exception::getPrevious — 返回异常链中的前一个异常
+        - 自定义异常处理类
+          1. 定义
+            ```php
+            class MyException extends Exception {
+                // 重定义构造器使 message 变为必须被指定的属性
+                public function __construct($message, $code = 0, Exception $previous = null) {
+                    // 自定义的代码
+                    // 确保所有变量都被正确赋值
+                    parent::__construct($message, $code, $previous);
+                }
+                // 自定义字符串输出的样式
+                public function __toString() {
+                    return __CLASS__ . ": [{$this->code}]: {$this->message}\n";
+                }
+            }
+            ```
+          1. 抛出：`throw new MyException('a', 5);`
+     1. ErrorException：错误异常
+        - 方法
+          1. `ErrorException::getSeverity`：获取异常级别
+        - 将错误信息托管至ErrorException
+            ```php
+            function exception_error_handler($errno, $errstr, $errfile, $errline ) {
+                throw new ErrorException($errstr, 0, $errno, $errfile, $errline);
+            }
+            set_error_handler("exception_error_handler");
+            ```
 1. 连接数据库
    - PDO：php database object，可以设置长连接，但是会受上一个锁等待，事务回滚的影响，可以设置超时断开时间30秒，正好一个web响应时间
    - MySqli：可以设置长连接，进程重用长连接，但是mysqli会做一些清理工作

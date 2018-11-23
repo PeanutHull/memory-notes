@@ -506,6 +506,11 @@ new \app\mvc\view\home\Index();                             // 实例化未引�
    - register_tick_function/unregister_tick_function
 1. 资源
    - is_resource/get_resource_type
+1. 错误
+   - set_error_handler
+   - trigger_error
+   - display_errors/ini_set
+   - error_reporting
 1. **的背面
    - 装饰者模式，在一个model里的多个方法定义要获取的select，最后用一个end方法将结果返回。其实是个伪装饰者，就是一个对象层层返回，类似orm查询，能放到一个model执行查询的就放，不行的就另起一个查询并添加数据到数组里。在controller里链式调用，最终组合出自己想要的结果。真正的装饰者人家不干预主逻辑，只是前后执行自己的逻辑
 ### 版本更新
