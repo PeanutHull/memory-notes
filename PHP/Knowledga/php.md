@@ -442,7 +442,16 @@
 1. PHP配置：php.ini。register_globals(变量注入代码)、allow_url_include(包含远程文件)、allow_url_fopen、date.timezone、display_errors、error_reporting、safe_mode、post_max_size
 1. PHP扩展安装
 ### wiki
-1. php运行模式：SAPI，Server Application Programming Interface 服务器端应用编程端口，是php与其它应用交互的接口
+1. php运行模式
+   - Cli：command-line interface
+     1. php_sapi_name：运行环境检测
+     1. 参数
+        - php -h                                              // 查看帮助
+        - php -m                                              // 查看cli模式安装的扩展
+        - php --ini                                           // 查看cli模式的配置文件位置
+        - php-config
+        - php file                                            // 执行php文件
+        - php -S 127.0.0.1:80 -t /www /www/index.php          // 启动一个单线程http服务器，可以用于开发和测试
    - CGI
      1. 理解：通用网关接口，外部应用程序和web服务器的接口标准，允许web服务器执行外部程序，并将输出发回web服务器。早期动态网页处理程序一次只能处理一个请求。跨平台性极佳，性能低下
      1. 原理
@@ -464,15 +473,6 @@
    - ISAPI
      1. 理解：微软提供的一套面向Internet服务的API接口，ISAPI的dll被请求激活后常驻内存，不停接受请求。dll和web服务器处于同一个进程中，5.3舍弃
      1. 特点：微软的排他性，只能在windows运行、效率高于CGI、稳定性不好，php出错，IIS或apache也死掉
-   - Cli：command-line interface
-     1. php_sapi_name：运行环境检测
-     1. 参数
-        - php -h                                              // 查看帮助
-        - php -m                                              // 查看cli模式安装的扩展
-        - php --ini                                           // 查看cli模式的配置文件位置
-        - php-config
-        - php file                                            // 执行php文件
-        - php -S 127.0.0.1:80 -t /www /www/index.php          // 启动一个单线程http服务器，可以用于开发和测试
 1. PHP-FPM：fastcgi Process Manager，fastcgi进程管理器，比spawn-fcgi更优秀，官方收录。fastcgi是一个协议，php-fpm实现了这个协议。v5.3.29自带fpm，之前需要另外加载模块
    - 特点
      1. 有效控制内存/进程
@@ -507,8 +507,18 @@
    - 1997：Rasmus Lerdorf、Andi Gutmans 和 Zeev Suraski 加入了该语言的第三个版本的开发，并进行根本性的重新设计，性能大大提升。从那之后， PHP 开发组也创建并发展起来。PHP 也在这个时候改称为 PHP：Hypertext Preprocessor
    - 2000：以 Zend Engine 1.0 为基础的 PHP 4 正式发布，自此，PHP 的性能才开始变得正式起来
    - 2004：发布了 PHP 5，PHP 5 使用了第二代的 Zend Engine。PHP 包含了许多新特色，如强化的面向对象功能、引入 PDO（PHP Data Objects，一个存取数据库的延伸函数库）、以及许多效能上的增强
-   - 2015：12 月 3 日，PHP 7.0 正式发布，使用的 Zend Engine 3 带来了 100% 的性能提升，还有统一的变量语法，基于抽象语法树编译过程。
+   - 2015：12 月 3 日，PHP 7.0 正式发布，使用的 Zend Engine 3 带来了 100% 的性能提升，还有统一的变量语法，基于抽象语法树编译过程
 1. 版本
+   - 2
+     1. 发布PHP/FI
+   - 3
+     1. 重写php解释器
+   - 4
+     1. Zend Engine 1.0
+   - 5
+     1. Zend Engine 2.0
+     1. 完全实现面向对象
+     1. PDO
    - 5.3
      1. 增加命名空间
    - 5.4

@@ -160,3 +160,13 @@
 1. 方案
    - java：dobbu、spring cloud
    - 其他：grpc(使用protobuf，用于协议编解码的工具库，是二进制格式)、phprpc、yar、swoole、hprose、thrift
+### 技能树
+1. 开始
+   - 代码：git/svn -> jenkins
+   - 日志：log -> kibana
+   - 搜索：elasticsearch(更新运维大数据量)
+   - 接口：openresty -> grafana
+   - 深入：swoole -> zend
+   - 数据：mysql -> redis -> 分布式 -> 服务治理 -> 架构
+   - 其他：go -> lua -> python
+   - 附属：音视频编解码 -> 流

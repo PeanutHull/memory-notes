@@ -1,12 +1,3 @@
-### Swoole
-1. 理解：面向生产环境的php异步网络通信引擎，可以编写高性能的异步并发TCP/UDP/Unix Socket/HTTP/WebSocket服务
-   - 纯C编写，提供php语言的异步多线程服务器
-   - 异步IO，事件驱动的异步编程模式
-   - 异步TCP/UDP网络客户端，异步MySQL，异步Redis，数据库连接池，AsyncTask，消息队列，毫秒定时器，异步文件读写，异步DNS查询。Swoole内置了Http/WebSocket服务器端/客户端、Http2.0服务器端
-   - 为PHP多进程的模式设计了多个并发数据结构和IPC通信机制，大大简化多进程并发编程的工作。其中包括了并发原子计数器，并发HashTable，Channel，Lock，进程间通信IPC等特性
-   - 支持异步/同步/协程，v2.0实现协程，可以使用完全同步的代码实现异步程序，底层自动进行协程调度，实现异步
-   - 支持SSL/TLS加密
-1. 观念：swoole在服务端只编译一次，一直存于内存，使用swoole来编写常规项目时，需要将自己置身于第三方上帝的角色，而非访问者的角色来编写并阅读自己的代码。PHP入门时就必须要掌握的session，对于运用了swoole扩展的PHP程序而言，完全可以用一个变量来替换
 ### ThinkPHP
 1. 结构
    - URL模式：普通(get参数形式)、PATHINFO、REWRITE、兼容(不支持PATHINFO)。优点排序：REWRITE>PATHINFO>普通

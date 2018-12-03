@@ -1,3 +1,21 @@
+### php
+1. 特性：动态、符号表、间接引用
+1. 组成
+   - SAPI：Server Application Programming Interface 服务器端应用编程端口，是php与其它应用交互的接口，是php的接入层，接受请求，然后调用php内核api，严格来说不属于内核
+   - 引擎
+     1. 理解：核心，负责从编译到执行
+     1. 组成
+        - 编译器：代码->抽象语法树->opcode，相当于gcc，编译器是一个语言实现的基础
+        - 执行器：执行opcode，即执行逻辑
+     1. 分类
+        - Zend
+        - HHVM
+1. 相关
+   - 数据类型
+   - 内存管理
+   - 编译与执行
+   - 函数
+   - 类、基础语法
 ### 扩展
 1. PEAR：php扩展和应用仓库，将常用功能(数据库访问、文件操作、数据结构、缓冲操作、网络协议)写成类库，提供下载，提高开发效率，php编写
 1. PECL：PHP Extension Community Library，php扩展社区库，C编写，是通过pear打包系统的php扩展库
@@ -27,25 +45,20 @@
 1. opcode：即字节码
 1. 默认情况下，Zend引擎先将PHP源码编译为opcode，然后Zend解析引擎逐条执行。这里的opcode码，可以理解成C语言级的函数。而HHVM提升性能方式为替代Zend引擎将PHP代码转换成中间字节码（HHVM自己的中间字节码，通常称为中间语言），然后在运行时通过即时（JIT）编译器将这些字节码转换成x64的机器码，类似于Java的JVM。HHVM为了达到最佳优化效果，需要将PHP的变量类型固定下来，而不是让编译器去猜测。Facebook的工程师们就定义一种Hack写法，进而来达到编译器优化的目的
 1. 所有的用户编写的PHP代码，都会被翻译成PHP的虚拟机ZE的虚拟指令（OPCODES）来执行，不论细节的话，就是说，我们所编写的任何PHP脚本，都会最终被翻译成一条条的指令，从而根据指令，由相应的C编写的函数来执行
-### SAPI模块
-### 引擎
-1. HHVM：重写的php引擎
-1. JIT特性
-1. php特性：动态、符号表、间接引用
-1. php7性能优化：使用Zend Engine 3.0，ZEND引擎升级到Zend Engine 3，也就是所谓的PHP NG，重写了ZendVM
-   - 标量类型声明：为了v7.1的jit特性做准备，因为jit有了准确的变量类型，可以生成最佳的机器指令
-   - zval使用栈内存：ZVAL结构的重构，一个php变量就是一个zval指针，之前是动态从堆上分配，php7直接使用栈内存
-   - zend_string存储hash值，array查询不再需要重复计算hash
-   - hashtable桶内直接存数据，减少了内存申请次数，提升了cache命中率和内存访问速度
-   - zend_parse_parameters改为宏实现，性能提升5%
-   - 新增4种opcode，call_user_function，defined等函数变为OpCode指令，速度更快
-   - int、float改为直接进行值拷贝
-   - AST：Abstract Syntax Tree, 抽象语法树，在编译过程中作为中间件，替换原来直接从解释器吐出opcode的方式，让解释器(parser)和编译器(compliler)解耦, 可以减少一些Hack代码, 同时, 让实现更容易理解和可维护
-     1. PHP5 : PHP代码 -> Parser语法解析 -> OPCODE -> 执行
-     1. PHP7 : PHP代码 -> Parser语法解析 -> AST -> OPCODE -> 执行
-   - 数组php5的底层是HashTable实现的，php7使用了新的Zend Array类型，性能和访问速度上都有了大幅度提升
-   - https://www.csdn.net/article/2015-09-16/2825720
 1. JIT：just in time，即时编译，表示运行时将指令转为二进制机器码，jit可以将opcode直接转为机器码，大幅提升性能
+### Swoole
+1. 理解：面向生产环境的php异步网络通信引擎，可以编写高性能的异步并发TCP/UDP/Unix Socket/HTTP/WebSocket服务
+   - 纯C编写，提供php语言的异步多线程服务器
+   - 异步IO，事件驱动的异步编程模式
+   - 异步TCP/UDP网络客户端，异步MySQL，异步Redis，数据库连接池，AsyncTask，消息队列，毫秒定时器，异步文件读写，异步DNS查询。Swoole内置了Http/WebSocket服务器端/客户端、Http2.0服务器端
+   - 为PHP多进程的模式设计了多个并发数据结构和IPC通信机制，大大简化多进程并发编程的工作。其中包括了并发原子计数器，并发HashTable，Channel，Lock，进程间通信IPC等特性
+   - 支持异步/同步/协程，v2.0实现协程，可以使用完全同步的代码实现异步程序，底层自动进行协程调度，实现异步
+   - 支持SSL/TLS加密
+1. 观念：swoole在服务端只编译一次，一直存于内存，使用swoole来编写常规项目时，需要将自己置身于第三方上帝的角色，而非访问者的角色来编写并阅读自己的代码。PHP入门时就必须要掌握的session，对于运用了swoole扩展的PHP程序而言，完全可以用一个变量来替换
+1. 历史
+   - 1.6.2：异步支持，像node
+   - 2.0：内置协程+通道，代替异步回调
+   - 4.0：重构协程内核
 ### 调优
 1. 编码级优化
    - 提前销毁大变量
@@ -83,3 +96,16 @@
     echo memory_get_usage() . PHP_EOL;
     ```
 1. xhprof
+1. php7性能优化：使用Zend Engine 3.0，ZEND引擎升级到Zend Engine 3，也就是所谓的PHP NG，重写了ZendVM
+   - 标量类型声明：为了v7.1的jit特性做准备，因为jit有了准确的变量类型，可以生成最佳的机器指令
+   - zval使用栈内存：ZVAL结构的重构，一个php变量就是一个zval指针，之前是动态从堆上分配，php7直接使用栈内存
+   - zend_string存储hash值，array查询不再需要重复计算hash
+   - hashtable桶内直接存数据，减少了内存申请次数，提升了cache命中率和内存访问速度
+   - zend_parse_parameters改为宏实现，性能提升5%
+   - 新增4种opcode，call_user_function，defined等函数变为OpCode指令，速度更快
+   - int、float改为直接进行值拷贝
+   - AST：Abstract Syntax Tree, 抽象语法树，在编译过程中作为中间件，替换原来直接从解释器吐出opcode的方式，让解释器(parser)和编译器(compliler)解耦, 可以减少一些Hack代码, 同时, 让实现更容易理解和可维护
+     1. PHP5 : PHP代码 -> Parser语法解析 -> OPCODE -> 执行
+     1. PHP7 : PHP代码 -> Parser语法解析 -> AST -> OPCODE -> 执行
+   - 数组php5的底层是HashTable实现的，php7使用了新的Zend Array类型，性能和访问速度上都有了大幅度提升
+   - https://www.csdn.net/article/2015-09-16/2825720
