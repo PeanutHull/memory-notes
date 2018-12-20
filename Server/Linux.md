@@ -466,6 +466,8 @@
     // 一个命令多行用\持续
     ```
 ### wiki
+1. 运维
+   - nat：网络地址转换服务，可基于状态过滤连接（就是内网出去的能回来，其他进不来），可做对外网的口子
 1. linux分类
    - RedHat系列：Redhat、Centos、Fedora等
      1. cat /etc/redhat-release：查看centos版本

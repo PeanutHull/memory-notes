@@ -1,7 +1,7 @@
 1. web攻击方式
    - XSS：Cross Site Script，跨站请求攻击，链接中附加js代码，可以获取数据和cookies，修改页面内容
-   - XFS：iframe别人的页面，使用x-frame-options或者提前检测屏蔽防范
    - CSRF：Cross-Site Request Forgeries，跨站点请求伪造，诱导点击，或者直接触发访问，利用别人的认证id实现操作，使用同源策略防范
+   - XFS：iframe别人的页面，使用x-frame-options或者提前检测屏蔽防范
    - http首部注入：在响应头部插入换行和其他头，实现cookie设置、重定向、修改主体。%0D%0A代表http报文的换行符
     ```
     Location: http://example.com/?cat=101（%0D%0A ：换行符）
@@ -10,7 +10,7 @@
     任意主体
     ```
    - 透明点击
-   - sql注入、漏洞扫描
+   - sql注入
    - os命令注入：在可以执行shell脚本的地方注入
    - 目录遍历：对文件地址使用../等相对路径定位到/etc/passed等绝对路径，实现浏览、修改的目的
    - 远程文件包含：网站会载入外部文件包含在代码里，上传恶意文件就可以执行任意脚本
@@ -24,7 +24,7 @@
    - 搜索网站指纹和关键词词法
    - shodan查询服务器信息
    - 漏洞扫描
-   - SQLmap注入(sqlmap.py -u http://xxx.com/list.php?id=1 --dbs --users)，不同网站防护情况不同注入的效果是不同的，不能一条指令走到黑，需要调整注入的参数，例如是否加长时间延迟、是否采用随机头部、是否加大注入级别
+   - SQLmap注入
    - 注入成功，下载数据库账号和密码
    - 密码爆破，后台进入
    - 服务器提权：爆出物理路径，图片木马
@@ -50,3 +50,60 @@
    - driftnet：抓图片流工具
 1. DNS劫持：linux使用dnsmasq配置一台DNS应用服务器。https://www.cnblogs.com/beer/p/4932146.html#baidu-baike-openwrt
 1. 手机端路由器攻击软件：dsploit和busybox
+### sql注入
+1. 理解：构建特殊输入，数据变成了代码被执行
+   - 不要相信用户输入
+   - 不同网站防护情况不同注入的效果是不同的，不能一条指令走到黑，需要调整注入的参数，例如是否加长时间延迟、是否采用随机头部、是否加大注入级别
+1. 产生和阻止
+   - 类型
+     1. 配置
+        - 密码强加密，多类型组合无规律长字符串，阻止爆破
+        - 最小化细分权限
+        - ssl加密连接
+     1. 类型
+        - 是什么类型就转为什么类型：过滤非法字符
+     1. 转义
+        - 特殊符号：' " \ NULL
+        - url编码
+        - 进制转换
+     1. 执行
+     1. 错误
+        - 关闭错误提示（防止得到更多信息）
+   - 处理：要么数据转义和过滤，要么让mysql预处理
+     1. 数据转义
+        - intval、floatval
+        - addcslashes、real_escape_string：或开启magic_quotes_gpc，like注入
+        - mysql_escape_string、mysql_real_escape_string
+     1. pdo/mysqli预处理、参数绑定：注意模拟预处理，真正将sql和参数分开才管用，最佳处理方式，根本杜绝参数变为代码的可能
+        - bindParam、execute(真正将参数传递给mysql)
+1. 注入
+   - 类型
+     1. 强制产生错误
+     1. 转义字符
+        - `/*!12345select*//**/from`
+        - `/*!50001select*/from`
+        - `Select/**/column_name/**/from`
+        - `/*!/*!select*/column_name/*!/*!from*/`
+        - `空格用/*!*/代替`
+        - `%53elect/*!1,2,schema_name%0aFROM`
+        - `Get+Post，编码，超长内容等`
+        - `%23%0a`：绕过正则，空格payload
+        - `0x12312`：十六进制
+        - 避开过滤
+        - `xx'#`：sql注释，后边sql不执行，或--
+        - `xx' OR 1='1`：根据sql不同，可为)，"动态添加，可用于判断有无注入点
+        - `UNION SELECT * `：
+        - `sleep(3)`
+        - 动态查询。截断、url编码、空字节的使用、大小写变种、嵌套剥离表达式
+     1. 推断
+        - 查看相关字段和表名
+        - 根据一点信息暴力跑
+        - 经验、社工
+     1. 二次注入：写入数据库后读取时触发
+   - 常用
+     1. 查看表名：`SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'database';`
+     1. 查看字段：`SHOW columns FROM table`
+     1. 爆出错误：`SELECT id FROM keyword WHERE id=1 UNION SELECT 1 FROM (SELECT COUNT(*),CONCAT(FLOOR(RAND(0)*2),(SELECT CONCAT(0x5f,DATABASE(),0x5f,USER(),0x5f,VERSION())))a FROM information_schema.tables GROUP BY a)b--`
+   - 工具
+     1. sqlmap：sqlmap.py -u http://x.com/?id=1 --dbs --users)
+     1. jsky：漏洞扫描工具
