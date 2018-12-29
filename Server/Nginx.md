@@ -105,6 +105,47 @@
         add_header headerName headerValue
     }
     ```
+1. 代理线上配置
+    ```nginx
+    server
+    {
+        listen 80;
+        server_name tntapi.xesv5.com;
+        set_by_lua_block $request_trace_id {
+            local mid = ngx.var.pid..ngx.var.server_addr..ngx.var.remote_addr..ngx.var.connection..ngx.var.connection_requests..ngx.var.bytes_sent..ngx.now()
+                return ngx.md5(mid)
+        }
+        access_log  /home/nginx/logs/tntapi.xesv5.com_access.log  main;
+        location / {
+            add_header 'Access-Control-Allow-Methods' 'GET,POST,OPTIONS';
+            add_header 'Access-Control-Allow-Credentials' 'true';
+            add_header 'Access-Control-Allow-Origin' '$http_origin';
+            add_header 'Access-Control-Allow-Headers' 'prelogid,Authorization,DNT,User-Agent,Keep-Alive,Content-Type,accept,origin,X-Requested-With';
+            proxy_pass http://tntapi.xesv5.com;
+                proxy_redirect          off;
+                proxy_set_header        Host $host;
+                proxy_set_header        X-Real-IP $remote_addr;
+                proxy_set_header        X-Request-Id $request_trace_id;
+                proxy_set_header        X-Forwarded-For $proxy_add_x_forwarded_for;
+                client_max_body_size    500m;
+                client_body_buffer_size 128k;
+			proxy_ignore_client_abort on;
+                proxy_connect_timeout   60;
+                proxy_send_timeout      60;
+                proxy_read_timeout      60;
+                proxy_buffer_size       128k;
+                proxy_buffers           32 32k;
+                proxy_busy_buffers_size 128k;
+                proxy_temp_file_write_size 128k;
+                proxy_next_upstream off;
+                add_header X-Request-Id $request_trace_id;
+                add_header "Set-Cookie" "X-Request-Id=$request_trace_id; path=/";
+                add_header Xes-App $upstream_http_server;
+			include /home/openresty/nginx/conf/nconf/office_deny.conf;
+          }
+		error_page 500 502 503 504  http://www.xueersi.com/wait.html;
+    }
+    ```
 1. 其他配置文件
    - mime.types：文件扩展名与文件类型映射表，找不到使用默认default_type
    - fastcgi_params/uwsgi_params/scgi_params：使用对应cgi时，向cgi传递的变量
@@ -162,6 +203,38 @@
         accesskey_hashmethod md5;
         accesskey_arg "key";                                    # get参数名称
         accesskey_signature "mypass$remote_addr"                # 加密规则，nginx会检查签名的正误
+    }
+    ```
+1. cors配置
+    ```lua
+    location / {
+        if ($request_method = 'OPTIONS') {
+            add_header 'Access-Control-Allow-Origin' '*';
+            add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS';
+            #
+            # Custom headers and headers various browsers *should* be OK with but aren't
+            #
+            add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range';
+            #
+            # Tell client that this pre-flight info is valid for 20 days
+            #
+            add_header 'Access-Control-Max-Age' 1728000;
+            add_header 'Content-Type' 'text/plain; charset=utf-8';
+            add_header 'Content-Length' 0;
+            return 204;
+        }
+        if ($request_method = 'POST') {
+            add_header 'Access-Control-Allow-Origin' '*';
+            add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS';
+            add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range';
+            add_header 'Access-Control-Expose-Headers' 'Content-Length,Content-Range';
+        }
+        if ($request_method = 'GET') {
+            add_header 'Access-Control-Allow-Origin' '*';
+            add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS';
+            add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range';
+            add_header 'Access-Control-Expose-Headers' 'Content-Length,Content-Range';
+        }
     }
     ```
 ### 运维

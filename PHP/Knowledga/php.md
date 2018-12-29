@@ -269,17 +269,14 @@
         ```
 1. 错误和异常
    - 理解：Error和Exception都实现了Throwable接口，可用`handler(Throwable $e)`
-     1. 错误：错误不能以异常的形式捕获
-        - php7：大多数错误被作为Error抛出，可用`Error`或`Throwable`捕获，Exception不可以
-        - 错误类型
+     1. 错误：错误不能以异常的形式捕获，php7中大多数错误被作为Error抛出，可用`Error`或`Throwable`捕获，Exception不可以
+        - 类型
           1. E_ERROR/E_WARNING/E_PARSE/E_NOTICE：错误、警告、解析、注意
           1. E_STRICT/E_RECOVERABLE_ERROR/E_DEPRECATED/E_ALL
           1. E_CORE_ERROR, E_CORE_WARNING：引擎产生
           1. E_COMPILE_ERROR, E_COMPILE_WARNING：引擎产生
           1. E_USER_ERROR, E_USER_WARNING, E_USER_NOTICE, E_USER_DEPRECATED：用户级
    - 使用
-     1. 抛出：`throw new Exception()`
-     1. 捕获：`try {} catch (Exception $e) {} finally {}`
      1. 处理
         - set_exception_handler/set_error_handler：设置异常、错误处理时的函数，不能捕获E_ERROR、E_PARSE
         - register_shutdown_function：设置php终止执行的函数，脚本执行完后或exit后，可多次调用则依次执行，常配合error_get_last
@@ -288,18 +285,20 @@
         - error_log/debug_backtrace
      1. 显示控制
         - display_errors
-        - error_reporting：除了NOTICE，`(E_ALL & ~E_NOTICE)`或`(E_ALL ^ ~E_NOTICE)`
-   - 配置
-     1. php.ini
-        - log_errors：开关
-        - display_errors：是否显示
-        - error_reporting：错误级别
-        - error_log：日志地址
-     1. php-fpm.conf
-        - error_log
-        - log_level
+        - error_reporting：除了NOTICE的写法，`(E_ALL & ~E_NOTICE)`或`(E_ALL ^ ~E_NOTICE)`
+     1. 配置
+        - php.ini
+          1. log_errors：开关
+          1. display_errors：是否显示
+          1. error_reporting：错误级别
+          1. error_log：日志地址
+        - php-fpm.conf
+          1. error_log
+          1. log_level
    - 预定义的异常：即老的异常
      1. Exception：是所有异常的基类
+        - 抛出：`throw new Exception()`
+        - 捕获：`try {} catch (Exception $e) {} finally {}`
         - 方法
           1. Exception::getMessage/getCode — 获取异常消息内容
           1. Exception::getFile/getLine/getTrace — 获取创建的异常所在文件中的行号
@@ -441,6 +440,10 @@
         - include-path：追加传统的引用路径，不建议
    - 考虑缓存，dist包优先？？？
 1. PHP配置：php.ini。register_globals(变量注入代码)、allow_url_include(包含远程文件)、allow_url_fopen、date.timezone、display_errors、error_reporting、safe_mode、post_max_size
+   - pcre.jit：
+   - session.gc_maxlifetime
+   - upload_max_filesize/max_file_uploads = 200M
+   - max_input_vars：影响最大表单数量
 1. PHP扩展安装
 ### wiki
 1. php运行模式

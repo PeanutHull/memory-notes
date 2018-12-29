@@ -193,3 +193,198 @@
     git tag $newTag;
     git push origin tag $newTag;
     ```
+### shell编程
+1. 理解：壳，命令行解释器，利用ASCII码表转换将命令传给内核，敲命令的界面就是shell。支持命令执行、条件判断、循环控制
+1. 运算符：expr、let
+1. 变量
+   - 声明
+     1. declare————声明变量类型
+     1. declare +/-X 变量名
+   - 选项
+     1. -    给变量设定类型属性
+     1. +    取消变量类型属性
+     1. -a   声明为数组型
+     1. -i   整数型int
+     1. -x   环境变量
+     1. -r   只读变量
+     1. -p   显示被声明的类型，不加变量参数的话查询所有的
+   - 分类
+     1. 环境变量：作用———定义每个用户的操作环境。如PATH、ps1。有环境变量的配置文件
+     1. 预定义变量
+     1. 位置参数变量
+     1. 用户自定义变量(本地变量)
+   - 实例
+    ```bash
+    aa=11                    # 整型
+    bb=22
+    cc=$aa+$bb
+    echo cc                  # 结果为11+22
+    declare -i cc=$aa+$bb    # 为33
+    # 数组型
+    movie[0] = cl
+    echo ${movie[0]}
+    echo ${movie}
+    ```
+1. 流程控制
+   - 判断
+     1. if
+        ```bash
+        # 写法1
+        if [ 条件 ];then
+        fi
+        # 写法2
+        if [ 条件 ]
+            then
+        else
+        fi
+        # 写法3
+        if [ 条件 ]
+            then
+        elif [ 条件 ]
+            then
+        else
+        fi
+        ```
+     1. case
+        ```bash
+        case $var in
+            "value1")
+                ;;
+            "value2")
+                ;;
+            "*")
+                ;;
+        esac
+        ```
+   - 循环
+     1. for
+        ```bash
+        for 变量 in 值1 值2 值3
+            do
+                命令
+            done
+        ```
+     1. while/until
+        ```bash
+        while [ 条件判断式 ]
+            do
+                命令
+            done
+        ```
+1. 判断
+   - 文件判断
+     1. 判断文件类型
+        ```
+        方法1(推荐)：[-X /root/install.log]
+        方法2：test -X /root/install.log
+        参数：
+        -b 是否存在,块设备文件
+        -c 是否存在,字符设备文件(一切皆文件)
+        -e 是否存在
+        -d 是否存在,目录
+        -f 是否存在,普通文件
+        -L 是否存在,符号链接文件
+        -p 是否存在,管道文件
+        -s 是否存在,是否为空
+        -S 是否存在，套接字文件
+        // 例
+        [-d /root] && echo "yes" || echo "no"     // 如果为真则yes
+        ```
+     1. 文件权限
+        ```
+        -r 是否存在，是否有读权限
+        -w 是否存在，写
+        -x 是否存在，执行
+        -u 是否存在，是否有SUID
+        -g 是否存在，SGID
+        -k 是否存在，SBit
+        // 例
+        [-d /root]    // 只要有读的等就为真，要是判断用户和用户组的需要自己截取权限位
+        ```
+     1. 两个文件比较
+        ```
+        文件1 -nt 文件2      修改时间1是否比2新
+        文件1 -ot 文件2      修改时间1是否比2旧
+        文件1 -et 文件2       判断Inode号是否一致，即是否同一文件，用来判断硬链接
+        // 例
+        [ /root/a.log -ef /tmp/b.log]
+        ```
+   - 常量判断
+     1. 整型比较
+        ```
+        [ num1 -eq num2]
+        -ne 不相等
+        -gt 大于
+        -lt 小于
+        -ge 大于等于
+        -le 小于等于
+        ```
+     1. 字符串比较
+        ```
+        -z string   是否为空
+        -n string   是否非空
+        == 相等
+        != 不等
+        // 例子：
+        aa=11 bb=22
+        [ "$aa" == "$bb" ] && echo "yes" || echo "no"        // no，不等
+        ```
+     1. 多重条件判断
+        ```
+        判断1 -a 判断2   逻辑与
+        判断1 -o 判断2   逻辑或
+        ！ 判断          逻辑非
+        例子：
+        aa=11
+        [ -n "$aa" -a "$aa" -gt 23 ] && echo "yes" || "no"
+        ```
+1. 引用
+   - 理解：通知shell将特殊字符当做普通字符来使用
+   - 分类
+     1. 转义字符：\
+        - `mv abc\?\* abc`：将abc?*重命名为abc
+        - `mv C\:\\backup backup`：将C:\backup重命名为backup
+     1. 单引号 ''，单引号中的所有字符串的特殊意义都被忽略
+        - `mv 'C:\backup'  backup`
+     1. 双引号 ""
+        ```shell
+        // $、\和`在双引号中不能被转成普通意义
+        str="The \$SHELL Current shell is $SHELL"
+        str1="\$$SHELL"
+        echo $str
+        The $SHELL Current shell is /bin/bash
+        echo $str1
+        $/bin/bash
+        从上面可以看出，$和\在双引号内仍然保留了特殊含义。
+        str="This hostname is `hostname`" 
+        echo $str
+        This hostname is WEBServer
+        ```
+1. 知识
+   - 查看shell版本：`echo $SHELL`
+   - 注释：#
+   - 进入sh的shell：`sh`
+   - 解释器：bash、csh、ash、bsh、ksh
+   - 指定解释器：#!，如#!/bin/sh
+   - 主要语法类型，彼此不兼容
+     1. Bourne：包括标准的Bash、sh、ksh、psh、zsh
+     1. C：包括csh、tcsh。C shell主要在Unix中使用，语法有较大区别
+   - 指定解析器：#!/bin/bash #!/usr/bin/env bash/python/ruby
+   - 语句即命令，命令就是语句
+   - shell语法不重要，实现功能即可，不用考虑多人访问
+   - $n 表示第n个参数，$#表示参数总个数
+   - 脚本执行
+     1. ./a.sh           当前脚本不会更换路径
+     1. bash hello.sh
+     1. source a.sh      会改变当前的路径，在当前的shell执行，脚本在另一shell中执行看不见
+   - 不同shell稍稍不同，shell的语法分析是指对命令的扫描处理过程
+   - shell命令格式：command [options] [arguments] ------命令本身+选项+操作对象即参数
+    ```
+    ls–a –l
+    // 也可写成
+    ls -al
+    // 加上参数
+    ls –al  /etc
+    // 一行输入多个命令用;隔开
+    // 一个命令多行用\持续
+    ```

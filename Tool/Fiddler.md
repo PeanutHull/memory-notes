@@ -17,3 +17,6 @@ Rules – Performances – Simulate Modem Speeds
 2. 精确模拟，编辑CustomRules.js
 Rules – Customize Rules，找到m_SimulateModem标志位
 ```
+1. 其他
+   - tcpdump
+   - wireshark

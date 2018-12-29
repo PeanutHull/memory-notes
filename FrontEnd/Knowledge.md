@@ -58,7 +58,7 @@ alert(jsonobj.name);
    - 解决方案：想要实现跨域访问，需要被调用方的服务端指示浏览器，我的资源可以被其他人使用
      1. web代理：本域脚本利用本域服务器端发起跨域请求然后返回，即本域服务器做代理，做请求转发
      1. jsonp实现方案
-        - 原理：直接去调用其他域名下的js脚本文件
+        - 原理：直接去调用其他域名下的js脚本文件，只支持get，可支持老式浏览器
         - 实现
         ```
         // $.ajax
@@ -71,12 +71,21 @@ alert(jsonobj.name);
         ```
      1. iframe方案
      1. CORS
-        - 认识：Cross-Origin Resource Sharing，w3c的跨域请求的标准方案，各大浏览器都支持
-        - 实现：加入响应头，浏览器就允许了
-        ```
-        header("Access-Control-Allow-Origin:*,http://www.xx.com");          # 允许所有/某个域名访问该资源
-        header("Access-Control-Allow-Methods:POST,GET");
-        ```
+        - 认识：Cross-Origin Resource Sharing，跨域资源共享，w3c的跨域请求的标准方案，克服了ajax的同源策略，各大浏览器都支持
+        - 实现：服务端加入响应头，浏览器就允许了
+            ```javascript
+            header("Access-Control-Allow-Origin:*,http://www.xx.com");          // 允许所有/某个域名访问该资源
+            header("Access-Control-Allow-Credentials:true");                    // 是否允许发送cookie，前端需显性打开，true的话上一不能为*，因为cookie同源
+            header("Access-Control-Allow-Methods:POST,GET");
+            header("Access-Control-Allow-Headers prelogid,DNTX-Requested-With"); // 指定6个基本响应头之外的，Cache-Control/Content-Language/Content-Type/Expires/Last-Modified/Pragma
+            ```
+        - 浏览器对其分类：
+          1. 类别：同时满足以上条件是简单的
+             - 简单请求：直接发出请求，添加origin头
+             - 非简单请求
+          1. 条件
+             - 三种请求方法：head、get、post
+             - 请求头不超出以下字段：Accept、Accept-Language、Content-Language、Last-Event-ID、Content-Type(仅三个application/x-www-form-urlencoded、multipart/form-data、text/plain)
 1. Hybrid App开发
  - 集成组件和打包的：appcan、Dcloud(组件库mui)、WeX5、APICloud
  - 组件代码库：Ionic(放弃IOS6和Android4.1以下的版本支持)

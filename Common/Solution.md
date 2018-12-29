@@ -109,7 +109,7 @@
         - LVS：基于linux操作系统实现，只工作在四层
         - HAproxy：不是web服务器，可基于tcp和http
         - Nginx Upstream
-        - varnish
+        - varnish：高性能、开源的反向代理服务器和缓存服务器，比squid先进
         - squid
         - apache trafficserver
         - envoy：微服务下nginx替代者，非侵入架构，C++11编写，L3L4L7层过滤器，支持http2/gprc，支持DNS/EDS多种服务发现机制，内置健康检查，支持api配置
@@ -208,3 +208,18 @@
    - 数据：mysql -> redis -> 分布式 -> 服务治理 -> 架构
    - 其他：go -> lua -> python
    - 附属：音视频编解码 -> 流
+1. WINS服务：将NetBIOS名转解析ip地址
+   - WINS实现的是IP地址和计算机名称的映射，DNS实现的是IP地址和域名的映射。
+   - WINS作用的范围是某个内部网络，DNS的范围是整个互联网
+1. Gopher：比Internet早几年的只支持文本的信息索引程序，是一种传输协议
+1. RTSP：Real-Time Stream Protocol，基于文本的多媒体播放控制协议，流媒体协议，是共有协议并有专门机构做维护，一般传输TS、MP4格式的流，其传输一般需要2~3个通道，命令和数据通道分离，应用层
+   - 客户->服务：
+     1. RTP数据分组(UDP)
+     1. RTCP分组(UDP)
+   - 服务->客户
+     1. RTSP分组(TCP)
+1. RTMP：流媒体协议，是Adobe私有协议未完全公开，一般传输flv、f4v，一般在TCP1个通道上传输命令和数据
+1. http：不是是流媒体协议，是共有协议，没有特定的传输流，一般需要2-3个通道，命令和数据通道分离
+1. socks：防火墙安全会话转换协议，只提供两端连接和数据包传递，在握手阶段通知客户端，用于客户端与外网的中间传递(如防火墙)，5支持udp，4是tcp
+1. LDAP：轻量级目录访问协议，Lightweight Directory Access Protocol，用于访问"目录服务器"的协议，发布目录信息到许多不同资源，是一种数据库，通常作为hierarchal数据库使用。类似电话薄，允许任何程序获得目录和其他信息。目录：指一种按照树状结构存储信息的数据库
+1. AD：Active Directory，域服务器，使用ladp存储，提供了接口

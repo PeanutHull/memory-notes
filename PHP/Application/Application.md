@@ -285,7 +285,6 @@ function authCode($string, $key = '', $operation = 'DECODE')
     list($t1, $t2) = explode(' ', microtime());
     return (float)sprintf('%.0f',(floatval($t1)+floatval($t2))*1000);
     ```
-1. LDAP：轻量级目录访问协议，Lightweight Directory Access Protocol，用于访问"目录服务器"的协议，发布目录信息到许多不同资源，是一种数据库，通常作为hierarchal数据库使用。类似电话薄，允许任何程序获得目录和其他信息。目录：指一种按照树状结构存储信息的数据库
 1. php阻止重复执行脚本
     ```
     cli_set_process_title('worker');                                // 设定脚本title
