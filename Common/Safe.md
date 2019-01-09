@@ -107,3 +107,4 @@
    - 工具
      1. sqlmap：sqlmap.py -u http://x.com/?id=1 --dbs --users)
      1. jsky：漏洞扫描工具
+### xss扫描器

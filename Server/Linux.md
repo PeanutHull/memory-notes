@@ -9,7 +9,12 @@
    - 输出：>，>>
      1. more file1 file2 file3 > file2：清空file2
      1. cat file1 1 >> file2：追加，1标准输出流
-   - 输入：< <<(表示当前命令的标准输入为来自命令行中一对分隔号之间的内容)
+   - 输入：>/< <<(表示当前命令的标准输入为来自命令行中一对分隔号之间的内容)
+    ```shell
+    cat > ~/xjj <<EOF
+    echo "pleasant taste"
+    EOF
+    ```
 1. 通配符
    - 分类
      1. * 一个或多个
@@ -206,16 +211,24 @@
      1. ssh addr@ip
 ### 磁盘
 1. mount/umount：挂载
+   - /dev/sd*：设备文件，`mount /dev/sda1 /mnt/sda1`
 1. df：查看磁盘占用情况
+1. dlkid
 1. du
 1. fsck：检查文件系统，并尝试修复
 1. mkfs
 1. fdisk
 1. parted
+1. lvreduce
 1. iotop: 将进程按磁盘写次数排序，并且显示程序写磁盘的次数和频率
 1. 文件系统
    - 文件树：一根文件数，根目录为/
    - 分区：sda1、sda2
+     1. swap分区：交换区，物理内存不够时，将不用的内存数据放到这个分区。分的大了浪费小了影响性能，小内存为2倍，大内存(8G)相等
+        - swappiness：使用权重，复杂算法
+        - swapon：启用，-s，查看swap相关信息
+        - swapoff：关闭/回收
+        - mkswap：格式化
    - 挂载点：把sda1挂载到根目录/上，则所有数据都在sda1分区。当sda2挂载到/home，则数据到了sda2的分区下 
 ### 应用
 1. 压缩、解压缩
@@ -296,6 +309,18 @@
    - nat：网络地址转换服务，可基于状态过滤连接（就是内网出去的能回来，其他进不来），可做对外网的口子
    - lvm：逻辑卷管理，动态扩缩容
    - DNS：智能dns，DNS view，可根据用户ip返回不同的ip，解决了同域名不同解析地址问题，使用bind 9
+### 优化
+1. 查看系统性能
+   - ps
+   - top：`man top`
+     1. shift+p：占用cpu最高的进程
+     1. top -Hp 进程号：占用CPU最高的线程
+   - free：-m
+   - vmstat：3 3秒更新一次
+   - sar
+   - mpstat
+1. 问题定位
+1. 问题解决
 ### wiki
 1. linux分类
    - RedHat系列：Redhat、Centos、Fedora等

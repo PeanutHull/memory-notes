@@ -388,3 +388,8 @@
     // 一行输入多个命令用;隔开
     // 一个命令多行用\持续
     ```
+   - 找出占用cpu最高的线程：`ps -eo %cpu,pid |sort -n -k1 -r (第一列倒序排序)| head -n 1 (取第一行)|  awk '{print $2}' (取第二列)|xargs  top -b -n1 -Hp | grep COMMAND -A1 (后面一行)| tail -n 1 (取最后一行)| awk '{print $1}' | xargs printf 0x%x`
+     1. 在命令行输入top，然后shift+p查看占用CPU最高的进程，记下进程号
+     1. 在命令行输入top -Hp 进程号，查看占用CPU最高的线程
+     1. 使用printf 0x%x 线程号，得到其16进制线程号
+     1. 使用jstack 进程号得到java执行栈，然后grep16进制找到相应的信息

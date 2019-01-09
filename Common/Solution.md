@@ -103,14 +103,14 @@
    - 类型
      1. 四层代理：ip加port，不能理解应用层协议，在接受SYN请求时转发，不会进行三次握手
      1. 七层代理：可区分http、mysql，进行了前后两次握手
-   - 实现
+   - 实现方式
      1. 硬件：F5
      1. 软件
-        - LVS：基于linux操作系统实现，只工作在四层
+        - LVS：基于linux操作系统实现，只工作在四层，NAT、DR、TUN三种方式
         - HAproxy：不是web服务器，可基于tcp和http
         - Nginx Upstream
         - varnish：高性能、开源的反向代理服务器和缓存服务器，比squid先进
-        - squid
+        - squid：代理缓存服务器
         - apache trafficserver
         - envoy：微服务下nginx替代者，非侵入架构，C++11编写，L3L4L7层过滤器，支持http2/gprc，支持DNS/EDS多种服务发现机制，内置健康检查，支持api配置
 ### CDN
@@ -223,3 +223,7 @@
 1. socks：防火墙安全会话转换协议，只提供两端连接和数据包传递，在握手阶段通知客户端，用于客户端与外网的中间传递(如防火墙)，5支持udp，4是tcp
 1. LDAP：轻量级目录访问协议，Lightweight Directory Access Protocol，用于访问"目录服务器"的协议，发布目录信息到许多不同资源，是一种数据库，通常作为hierarchal数据库使用。类似电话薄，允许任何程序获得目录和其他信息。目录：指一种按照树状结构存储信息的数据库
 1. AD：Active Directory，域服务器，使用ladp存储，提供了接口
+### 性能调优
+1. 机器性能
+1. 性能检测
+1. 调优思路
