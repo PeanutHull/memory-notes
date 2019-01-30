@@ -50,6 +50,10 @@
    - driftnet：抓图片流工具
 1. DNS劫持：linux使用dnsmasq配置一台DNS应用服务器。https://www.cnblogs.com/beer/p/4932146.html#baidu-baike-openwrt
 1. 手机端路由器攻击软件：dsploit和busybox
+路由器：minidwep/aircrack-ng/Elcomsoft Wireless Security Auditor
+路由：dns篡改，dhcp查看
+端口：arp嗅探端口
+远程调试：adb(5555端口)/genymotion
 ### sql注入
 1. 理解：构建特殊输入，数据变成了代码被执行
    - 不要相信用户输入
