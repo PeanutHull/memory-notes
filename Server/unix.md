@@ -496,6 +496,6 @@
 1. unix
    - cpu、memcory、devices->kernel->applications
 1. Linux：Linux的基石是Unix内核，其基于Unix的基本特点以及POSIX和单独的UNIX规范标准
-1. 编译apue.h：gcc a.c -l apue，.a文件是静态库文件，在链接阶段，会将汇编生成的目标文件.o与引用到的库一起链接打包到可执行文件中称为静态库，是一组目标文件的集合
+1. 编译apue.h：gcc a.c -l apue，.a文件是静态库文件，在链接阶段，会将汇编生成的目标文件.o与引用到的库一起链接打包到可执行文件中称为静态库，是一组目标文件的集合。-l指定头文件目录，-std=c99指定c方言
 1. 内核级进程是自己的父进程
 1. 杀死僵死进程：ps -ef | grep defunct | grep -v grep | cut -b8-20 | xargs kill -9
