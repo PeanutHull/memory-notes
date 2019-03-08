@@ -25,18 +25,6 @@
    - 编译与执行
    - 内存管理
 ### 扩展
-1. 扩展安装
-   - yum：`yum/apt-get install php-pear`，推荐
-   - 源码编译
-     1. `cd ext/pcntl`
-     1. `phpize`：准备扩展库的编译环境，产生configure
-     1. `./configure --prefix=/ --with-php-config=/usr/local/php/bin/php-config`
-     1. `make && make install`
-     1. `php.ini：extension=pcntl.so && restart`
-   - pecl：PHP Extension Community Library，php扩展社区库，C编写，是通过pear打包系统的php扩展库
-     1. pecl install xx
-     1. php.ini：extension=xx.so && restart
-   - pear：php扩展和应用仓库，将常用功能(数据库访问、文件操作、数据结构、缓冲操作、网络协议)写成类库，提供下载，提高开发效率，php编写
 1. 扩展开发
    - 理解：C/C++基础，同时需要熟悉php扩展api，要用到PHP自身定义的函数和宏
    - 扩展编译分动态编译和静态编译

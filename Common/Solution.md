@@ -13,6 +13,7 @@
 1. 挑战词儿：高并发、高可用、大负载
 1. 解决词儿：弹性扩容、故障转移(双机热备)、负载均衡、主从配置
 1. 服务发现、负载均衡、动态路由、容错限流、监控度量、安全日志
+1. 两地三中心
 ### 服务治理
 ### 微服务
 1. 理解：微服务架构是一种架构模式，是分布式网状结构，它提倡将单一应用程序划分成一组小的服务，服务之间互相协调、互相配合，为用户提供最终价值。微服务架构 ≈ 模块化开发 + 分布式计算
@@ -130,7 +131,7 @@
 ### 分布式事务
    - 基于消息中间件的解决分布式事务框架：https://github.com/yu199195/myth
    - 消息中间件支持：jms(activimq),amqp(rabbitmq),kafka,roceketmq。
-   - rpc框架支持 : dubbo,motan,springcloud
+   - rpc框架支持 : dubbo(可用Fescar保持数据一致性),motan,springcloud
    - 本地事务日志存储支持 : redis,mogondb,zookeeper,file,mysql
    - TCC：https://github.com/yu199195/happylifeplat-tcc
    - 二阶段提交：https://github.com/yu199195/happylifeplat-transaction

@@ -195,6 +195,112 @@ foreach (new RecursiveFileFilterIterator('/path/to/something') as $item) {
    - 1.6.2：异步支持，像node
    - 2.0：内置协程+通道，代替异步回调
    - 4.0：重构协程内核
+###PHPUnit
+1. 认识：xUnit的体系结构的面向php的php开发的单元测试框架，源于SUnit
+   - 特点
+     1. 命令可以操控测试脚本
+     1. 测试性能
+     1. 测试代码覆盖率
+     1. 自动化的更新测试用例的参数数据
+     1. 各种格式的日志
+   - annotation：标注
+     1. `@test`：标记为测试方法
+     1. `@depends`：标记依赖谁，自动执行依赖
+     1. `@assert`：框架生成器，搭配--skeleton
+     1. `@dataProvider`：标记数据供给方
+     1. `@expectedException...`：异常标记，还有另外3个
+     1. `@after/before`
+     1. `@covers`
+   - fixture：基境
+     1. 理解：设置成某个已知的状态称为基境
+     1. setUp()：运行方法前运行，用于设置环境
+     1. tearDown()：运行方法后运行
+   - 方面
+     1. 测试类建立
+        - XxxTest：测试类
+        - testXxx：测试方法
+     1. assert：断言
+        - assertEquals
+        - ssertArrayHasKey
+     1. Stubs、Mock
+        - 理解：替身，使用替身的实践方法称为上桩；保证对象预期行为必会发生的实践方法为模仿。可以对web请求、文件系统(vfsStream)进行模仿
+        - 方法：`createMock->method->willReturn`
+        - 方法：`getMockBuilder->with->expects->attach`
+        - Prophecy：极为自我却又非常强大灵活的PHP对象模仿框架，PHPUnit对用Prophecy建立测试替身提供了内建支持
+     1. DBUnit
+        - 数据库查询：`$queryTable = $this->getConnection()->createQueryTable('guestbook', 'SELECT * FROM guestbook');`
+     1. 流程控制
+        - 跳过测试：`markTestSkipped`，或者`@requires extension mysqli`
+     1. 错误和异常
+        - expectException
+        - expectExceptionCode
+        - expectExceptionMessage
+        - expectExceptionMessageRegExp
+     1. 代码覆盖率
+     1. Logging：日志记录
+     1. 扩展
+        - 自定义断言
+        - 测试监听器
+        - 测试修饰器
+   - 运行
+     1. phpunit：--include-path 指定路径，--configuration 指定配置文件
+     1. xml配置：
+        - 理解：自动载入`phpunit.xml`配置文件
+        - demo
+            ```xml
+            <phpunit bootstrap="vendor/autoload.php">
+            <testsuites>
+                <testsuite name="money">
+                    <directory>tests</directory>
+                    <file>ControllerNewsTest.php</file>
+                </testsuite>
+            </testsuites>
+            <!--配合@group使用，指定要测试的分类-->
+            <groups>
+                <include>
+                    <group>news</group>
+                    <group>base</group>
+                </include>
+            </groups>
+            </phpunit>
+            ```
+1. 代码测试
+   - 分类
+     1. 功能测试：http、大块代码，如Codeception、Selenium、Mink
+     1. 单元测试：对软件的基本单元进行测试，监控其行为和返回值。相互隔离、单一功能。对单独的代码对象进行测试的过程，比如对函数、类、方法进行测试。单元测试可以使用任意一段已经写好的测试代码，单元测试框架提供了一系列共同、有用的功能来帮助人们编写自动化的检测单元，报告测试结果和代码覆盖率。就是覆盖被测方法所有预期行为的测试，提升开发者对代码的自信心
+   - 原则
+     1. 测试调用的方式嵌入到框架中，不同框架测试方法不同
+     1. 单元测试需要载入类，功能测试直接访问地址
+     1. 正确的单元测试就是确保测试代码准确隔离（isolate）了待测代码，如果你测试一个类，那么测试代码中就应该避免出现对于其他类的依赖
+     1. 即使方法的返回结果的确要依赖前置条件才能正确输出，单元测试本身也不应该浪费精力在塑造这些前置条件上，而是应该把重点放在测试和保障该方法的返回结果是预期的并且在可预见的各种边缘条件下该方法的返回结果都不会超出预期之上。可以伪造（后面会讲）它们而不是去调用真正生成它们的其他代码，只有这样才能保证“隔离性”，才能称的上是单元测试
+     1. 只写必要的测试，只写关键的测试
+     1. 测试代码应当尽可能简短精确
+        - 你不希望因为生产代码的小变更而需要对测试代码进行数量可观的修改
+        - 你希望在哪怕好几个月以后也能轻松地阅读并理解测试代码
+     1. 需要编写的是那些觉得能运作但却失败或觉得必将失败但却成功的测试。另外一种思考方式是从成本/收益的关系上去考量。需要编写的是能够给出反馈信息的测试。
+1. wiki
+   - 开发方式
+     1. TDD：测试驱动开发，先写测试后写实现，red=>green=>refactor(错误=>正确=>重构)
+        - PHPUnit
+        - Enhance PHP
+        - SimpleTest
+     1. BDD：行为驱动开发
+        - 分支
+          1. SpecBDD：专注代码层面，如phpspec
+          1. StoryBDD：专注功能测试，如Behat、Codeception
+   - 具体操作
+     1. get/post()：发出http请求
+     1. assertXxx()：判断
+     1. Array::get()
+     1. seeJson/seeJsonEquals()：是否精确的json
+     1. actingAs()：绑定用户
+     1. seeInDatabase
+     1. DatabaseMigrations：每次测试后回滚数据库并在下次测试前重新迁移
+     1. DatabaseTransactions：使用事务
+     1. 反射
+     1. 上桩：继承类并覆盖方法、值，模拟数据对象
+   - 代码覆盖算法：大致上对比准确性：路径覆盖 > 条件覆盖 ~= 判定覆盖 > 语句覆盖
+   - 其他框架：JUnit
 ### 其他
 1. 多线程：pthreads
 1. 消息队列：gearman

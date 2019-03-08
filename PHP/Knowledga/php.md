@@ -372,11 +372,10 @@
           1. httpd.exe -k start
 1. PHP依赖：Composer，依赖管理工具
    - 命令
-     1. composer create-project                       // 创建composer项目
+     1. composer config                               // 配置设置
      1. composer init                                 // 初始化项目依赖，自动生成json文件
      1. composer install/update (foo/bar:1.0.0)       // 安装/更新所有/单个依赖
      1. composer dump-autoload --optimize             // 为生产环境做准备
-     1. composer self-update
    - 参数
      1. --prefer-dist：用于install/update，强制下载源代码，在修改文件后更新文件会给出提示
      1. --prefer-source
@@ -445,6 +444,18 @@
    - upload_max_filesize/max_file_uploads = 200M
    - max_input_vars：影响最大表单数量
 1. PHP扩展安装
+   - yum：`yum/apt-get install php-pear`，推荐
+   - 源码编译
+     1. `cd ext/pcntl`
+     1. `phpize`：准备扩展库的编译环境，产生configure
+     1. `./configure --prefix=/ --with-php-config=/usr/local/php/bin/php-config`
+     1. `make && make install`
+     1. `php.ini：extension=pcntl.so && restart`
+   - pecl：PHP Extension Community Library，php扩展社区库，C编写，是通过pear打包系统的php扩展库
+     1. pecl install xx
+     1. php.ini：extension=xx.so && restart
+   - pear：php扩展和应用仓库，将常用功能(数据库访问、文件操作、数据结构、缓冲操作、网络协议)写成类库，提供下载，提高开发效率，php编写
+   - phar：Php ARchive，是php的打包文件
 ### wiki
 1. php运行模式
    - Cli：command-line interface
