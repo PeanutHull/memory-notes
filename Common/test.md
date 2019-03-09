@@ -1,0 +1,43 @@
+1. 自动化测试
+   - Selenium
+     1. 理解：脚本控制浏览器
+     1. 成员
+        - IDE：脚本录制工具
+        - WebDriver
+        - Grid
+   - 接口自动化测试框架
+     1. RobotFramework：python开发，
+     1. jmeter
+     1. TestNG+HttpClient：ng负责用例的管理和执行，java开发
+1. 性能测试
+   - 性能场景设计
+     1. 项目分析：目标、架构、业务流程
+     1. 需求分析：28原则、公认标准
+     1. 场景选定、数据确定
+   - 测试脚本开发
+     1. jmeter
+     1. LoadRunner
+     1. apache banch
+   - 性能监控
+     1. 操作系统
+     1. 架构组件
+   - 结果分析
+     1. 指标
+        - 并发数：uv
+        - 处理数：tps
+        - 响应时间
+        - 设备性能
+   - apm：应用性能管理，如听云
+1. 安全测试
+   - 测试方法
+   - 测试工具
+     1. appscan、webinspect、Fortity
+     1. nessus：针对服务器
+     1. Nmap：端口嗅探
+     1. MetaSploit：很多工具
+     1. WebScarab：代理劫持的工具
+     1. W3AF：开源漏洞扫描工具
+   - 漏洞原理
+   - 防范方法
+   - 自动化审计
+1. vagrant：基于Ruby的工具，用于创建和部署虚拟化开发环境。使用Oracle的开源VirtualBox，使用Chef创建自动化虚拟环境

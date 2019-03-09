@@ -152,7 +152,56 @@
         ```
      1. service network start
    - 调通ssh：blog.csdn.net/risingsun001/article/details/38040451
-1. 判断分支、提交develop、合并到release、自动递增tag号的shell脚本
+1. DNS
+   - 理解：域名解析服务，域名和ip的绑定查询，一级级的往上查询
+     1. 域名：.(根域)，com(一级域名)，二级三级...
+     1. 解析记录分类
+        - A记录：单一指向ip
+        - CNAME记录：多个域名到ip，也有域名到域名
+        - MX记录：不返回权威解析
+        - NS记录：针对邮件服务解析，配合A记录
+     1. dns解析
+        - 正向查询：A记录，域名找ip
+        - 反向查询：PTR记录，ip找域名
+        - 迭代查询：服务器角度，是否多次查询
+        - 递归查询
+   - 组成
+     1. bind服务
+        - 理解：加州大学开发的开源、稳定、应用广泛的dns服务
+          1. 组成：域名解析服务、权威域名解析服务(级级查询中最终提供ip的服务)、dns工具
+        - 安装：`yum install bind bind-chroot`，`apt-get install bind9`
+        - 配置：options、logging、zone dns域解析
+          1. 配置域名
+            ```shell
+            // named.conf
+            zone "imooc.com" {                                                      // 一个域名一个 
+                type master;                                                        // 主从配置
+                file "imooc.com.zone";
+            }
+            // imooc.com.zone，@是保留字，表示当前域名
+            $TTL 7200
+            imooc.com. IN SOA imooc.com. jeson.imooc.com. (222 1H 15M 1W 1D)        // 解析域的开始
+            imooc.com. IN NS dns1.imooc.com.
+            dns1.imooc.com. IN A 10.10.10.135
+            www.imooc.com IN A 2.2.2.2                                              // 解析了一个ip
+            // 查询命令
+            dig @ 10.10.10.135 www.imooc.com
+            nslookup www.imooc.com
+            ```
+        - 应用场景
+     1. bind负载均衡
+        - dns转发：子域授权
+        - dns主从模式：主从传输、主从同步、数据加密、事务签名
+        - dns传输限制
+     1. 智能dns
+        - 理解：能够基于IP信息给不同的用户最合适的服务器IP，关键在于搭建ip库，提供完整准确的ip地址和位置，由第三方、isp、APINC提供。即把地理位置和dns解析服务器绑定一起，不用走多余的网络路线
+          1. 特点：减少动态服务响应延迟，cdn加速，负载均衡，防止ddos
+        - 攻击
+          1. dns污染：dns劫持
+          1. ddos
+          1. 放大攻击：dns服务器被作为肉鸡
+     1. CDN：：内容分发网络，部署大量网络节点通过服务器缓存加速，让用户就近更快访问网络。指标有带宽、命中率、请求数
+1. shell脚本：判断分支、提交develop、合并到release、自动递增tag号
     ```bash
     #!/bin/bash
     branch='develop';

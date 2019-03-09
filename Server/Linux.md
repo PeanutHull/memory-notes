@@ -273,6 +273,8 @@
           1. search
           1. install/update/remove
           1. list/info installed/updates
+        - 查看安装的服务：`rpm -qa | grep bind`
+        - 查看安装的位置：`rpm -ql bind`
         - 配置yum源：配置分两部分，全局配置项为/etc/yum.conf，定义每个源/服务器的具体配置在/etc/yum.repo.d的rep文件
    - Debian
      1. deb/dpkg：软件包名称，比rpm晚，`dpkg -l`
