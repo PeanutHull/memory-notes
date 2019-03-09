@@ -144,11 +144,6 @@ alert(jsonobj.name);
           1. 条件
              - 三种请求方法：head、get、post
              - 请求头不超出以下字段：Accept、Accept-Language、Content-Language、Last-Event-ID、Content-Type(仅三个application/x-www-form-urlencoded、multipart/form-data、text/plain)
-1. Hybrid App开发
- - 集成组件和打包的：flutter、appcan、Dcloud(组件库mui)、WeX5、APICloud
- - 组件代码库：Ionic(放弃IOS6和Android4.1以下的版本支持)
- - 打包工具：Cordova、Phonegap
- - 安卓模拟器：genymotion、海马玩
 1. jsBridge定义不同平台、app构建viewport、只访问jsBridge的方法，他去实现不同情况的请求方法————把不变的放在一起
 1. MEAN————全栈javascript开发架构
  - 理解：即MongoDB、ExpressJS，AngularJS、Node.js

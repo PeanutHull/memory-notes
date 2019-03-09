@@ -470,3 +470,15 @@ require(['tabview'], function(tab) {
      1. gulp：基于流的代码自动化工具
      1. webpack
      1. fis
+### Flutter
+1. 认识：google的开源移动ui框架，快速在ios、android构建原生用户界面。渲染技术使用GDI，gpu渲染，比rn快很多
+   - 跨平台：Linux、Android、IOS、Fuchsia
+   - 原生：体验更好、性能更好，可以120fps
+   - 开源：技术的生态环境，google推广
+1. Dart：可用于全平台、web、脚本、服务端开发，google的开源的面向对象语言，立志成为下一代web开发语言，目前2.x版本
+1. Fuchsia：google的操作系统
+1. Hybrid App开发
+   - 集成组件和打包的：flutter、appcan、Dcloud(组件库mui)、WeX5、APICloud
+   - 组件代码库：Ionic(放弃IOS6和Android4.1以下的版本支持)，React Native(生成原生app，但以view为基础嵌入)
+   - 打包工具：Cordova、Phonegap
+   - 安卓模拟器：genymotion、海马玩
