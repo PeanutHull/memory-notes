@@ -112,3 +112,20 @@
      1. sqlmap：sqlmap.py -u http://x.com/?id=1 --dbs --users)
      1. jsky：漏洞扫描工具
 ### xss扫描器
+1. XSS与防范
+ - 概念：跨站脚本(Cross Site Script)：让某网站执行一个非法脚本。
+ - 发生条件：非法脚本必须在浏览器中解析，点在HTML、URL、javascript，顺序为HTML——URL——JS
+ - HTML:浏览器解析顺序：能识别的编码符号都解码(但是只在俩个地反解：标签内容和标签属性值)
+ - URL:传输要进行转义：整个URL转用 encodeURI，如果对参数的值转用 encodeURIComponent
+ - Javascript特殊字符：JS的转义都采用\解决，三种类型：
+      - 直接反斜杠：  \'\"   \\(转义反斜杠本身)
+      - 十六进制：  \x22\x27
+      - Unicode：  \u0022\u0027
+ - 举例：
+```
+危险写法，这里输入来自用户，用户输入不可靠：
+el.innerHTML = title.value;
+修改后：
+el.innerHTML = escapeHTML(title.value);
+```
+ - 阻止办法：用适当的方法对html、js转义

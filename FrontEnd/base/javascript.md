@@ -40,6 +40,41 @@
 ###BOM
 1. 调用父级方法：`parent.method()`，parent为window.parent的简写
 1. 打开新窗口：`window.open`
+###NPM
+1. 理解：nodejs的包管理器npm是全球最大的开源库生态系统。就是给js赋予了更多底层的能力
+1. package.json
+ - 理解：具有的版本管理的nodejs配置文件，运行 npm install 就会自动安装
+ - 安装
+```
+npm init
+```
+1. npm
+ - 查看当前插件
+```
+npm list
+```
+ - 安装插件
+```
+npm install <name> [-g] [--save-dev]
+-g 全局安装：将安装在C:\Users\Administrator\AppData\Roaming\npm，并写入环境变量。本地安装的话在定位目录的node_modules文件夹下，通过require()调用
+--save 保存配置信息至nodejs的配置文件package.json中
+--dev 保存至package.json的devDependencies节点，不指定-dev将保存至dependencies节点
+```
+ - 卸载
+```
+// 不能直接删除
+npm uninstall <name> [-g] [--save-dev]
+```
+ - 更新
+```
+npm update <name> [-g] [--save-dev]
+```
+ - 选装cnpm
+```
+执行：   npm install cnpm -g --registry=https://registry.npm.taobao.org
+安装完成查看版本： cnpm -v
+使用和npm一致，npm更换为cnpm
+```
 ###wiki
 1. 严格模式：修复部分语言不足，更强错误检查，增强安全性。`use strict`
 1. 历史版本：ECMAScript是JavaScript的标准规范，二者相同。ES6含义是5.1以后的JavaScript的下一代标准，包含ES2015、ES2016、ES2017等

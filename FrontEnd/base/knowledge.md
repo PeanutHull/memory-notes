@@ -27,6 +27,64 @@
     selfUpdate(); // second run!
     ```
          1. 写：属性接连赋值，var yz = obj && obj.y && obj.y.z，从左向右，为false返回，不为false时继续往后走，最后返回undefined或z的值
+1. XMLHttpRequest
+   - 方法
+        ```PHP
+        var request = new XMLHttpRequest;
+        request.open("GET", "get.php", true);
+        request.send();
+        request.onreadystatechange = function() {}
+        ```
+1. XMLHttpRequest方法：
+  - 发送：open/send/setRequestHeader
+  - 接收：status/statusText/getAllResponseHeader
+        ```
+        var request = new XMLHttpRequest;
+        request.open("GET", "get.php", true);
+        request.send();
+        request.onreadystatechange = function() {
+            if(request.readyState === 4 && request.status === 200) {
+                console.log('接收成功');
+            }
+        }
+        ```
+1. 浏览器实时通信解决方案
+   - 轮询：循环间隔固定时间不断发送请求，服务端不需修改，服务端有结果立即返回并关闭连接
+     1. 特点：简单粗暴，请求和处理资源大部分被浪费。固定的请求间隔要么消息延迟，要么只有最后一次有效。要求服务器处理速度很快
+     1. 实例
+        ```
+        window.setInterval(function () {
+            // 发送请求
+        }, 3000);
+        ```
+   - 长连接：即Comet，基于HTTP长连接的"服务器推"技术。服务端收到请求hold住，有新消息时返回数据，此时客户端再次发起请求，循环下去。即阻塞模型(一直打电话，没收到就不挂电话)，和上边的都体现了http的被动性，服务端不能主动联系客户端。实现方式有ajax、iframe、script脚本
+     1. 特点：消息即时送达，无无效请求。对服务端是个考验，需要维护很多长连接，要有高并发的能力
+     1. 实例
+        ```
+        // 递归调用
+        (function longPolling() {
+            $.ajax({
+                timeout: 5000,
+                error: function () {
+                    longPolling();
+                },
+                success: function () {
+                    longPolling();
+                }
+            });
+        })();
+        ```
+   - WebSocket：全双工的消息机制，服务器可以给客户端推送消息，是一个网络协议，和http有一定的交集
+     1. 实现
+        ```
+        websocket = new WebSocket();                    # javascript
+        websocket.send();
+        websocket.onmessage = function (evt) {};
+        $ws = new swoole_websocket_server();            # php swoole实现
+        $ws->on('open/message/close', function () {
+            $ws->push();
+        });
+        ```
 ###应用
 1. js跳出最外层循环
 ```javascript
@@ -87,7 +145,7 @@ alert(jsonobj.name);
              - 三种请求方法：head、get、post
              - 请求头不超出以下字段：Accept、Accept-Language、Content-Language、Last-Event-ID、Content-Type(仅三个application/x-www-form-urlencoded、multipart/form-data、text/plain)
 1. Hybrid App开发
- - 集成组件和打包的：appcan、Dcloud(组件库mui)、WeX5、APICloud
+ - 集成组件和打包的：flutter、appcan、Dcloud(组件库mui)、WeX5、APICloud
  - 组件代码库：Ionic(放弃IOS6和Android4.1以下的版本支持)
  - 打包工具：Cordova、Phonegap
  - 安卓模拟器：genymotion、海马玩
@@ -101,31 +159,61 @@ alert(jsonobj.name);
  - 特点：
     1. 数据格式前后端无缝通用JSON数据格式
     1. 数据库对象即前后端对象，方便，前后端语法相同，还是方便
-###安全
-1. XSS与防范：
- - 概念：跨站脚本(Cross Site Script)：让某网站执行一个非法脚本。
- - 发生条件：非法脚本必须在浏览器中解析，点在HTML、URL、javascript，顺序为HTML——URL——JS
- - HTML:浏览器解析顺序：能识别的编码符号都解码(但是只在俩个地反解：标签内容和标签属性值)
- - URL:传输要进行转义：整个URL转用 encodeURI，如果对参数的值转用 encodeURIComponent
- - Javascript特殊字符：JS的转义都采用\解决，三种类型：
-      - 直接反斜杠：  \'\"   \\(转义反斜杠本身)
-      - 十六进制：  \x22\x27
-      - Unicode：  \u0022\u0027
- - 举例：
+####优化和技巧
+1. 内容、表现、行为相分离
 ```
-危险写法，这里输入来自用户，用户输入不可靠：
-el.innerHTML = title.value;
-修改后：
-el.innerHTML = escapeHTML(title.value);
+// 这是不对的，但是能运行
+function demo() {}
+<p onclick="demo()"></p>
+1 判断元素是否存在：$(..).length()，跟js一样
+2 DOM对象不存在选择时会报错，$(..)[0]不会
 ```
- - 阻止办法：用适当的方法对html、js转义
-### PDF
-1. 理解：Portable Document Format，便携式文档格式，Adobe公司开发的可移植文档格式，以PostScript语言图象模型为基础，保证打印机无关的精确打印效果
-1. 特点
-   - 跨平台，与应用程序、操作系统、硬件无关，流行范围广
-   - 多媒体集成，可将字形、独立于设备和分辨率的图形图像封装在文件中随文件传输，文件压缩效率高
-   - 阅读效果好
-   - 存在页的概念
-1. 格式组成：首部、文件体(有若干obj对象组成)、交叉引用表、尾部
-1. 历史：1990年代早期开发，版本有1.1~1.6(05年)
-1. wiki：Adobe公司, 是著名的图形图像和排版软件的生产商
+1. $(~).find()可以提高搜索的性能
+1. IE8及以下对class的检索只能搜索DOM，所以非常低效
+1. attr=value，这种搜索同样对性能有害，加上find、filter
+1. $(~).find(:hidden)，伪选择器也慢，用#
+1. 同一个操作对象多用链式开发
+1. 可以将jquery缓冲到全局变量中，供其他函数使用
+1. 先循环生成DOM，再一次性插入html()，DOM操作很低效
+1. for代替$.each，原生代替jquery，如this.style.css替代css()
+1. 相同的代码可以写成jquery插件
+1. 用join代替+连接字符串
+1. jquery可以强大的操作xml
+1. 技巧
+```
+// 禁用右键菜单
+$(document).bind('contextmenu',function(e){ return false; })
+// 判断元素是否存在
+$(~).length();
+// 点击div跳转
+给div内部添加a标签
+// 敲击回车执行
+$(~).keyup(function(e) {
+        if(e.which == '13') {}
+})
+// 获取选中的下拉框
+$('#select option:selected');
+或者
+$(~).find('option:selected');
+```
+####实际的那些坑
+1. 使用sco引入页面，多次引入页面，表单重复提交
+   - 原理：使用了$(document).on("submit", "form", function(e){}绑定事件，因为document给整个页面绑了多次事件，才会多次提交。sco没有起另外一个iframe，只是把一些DOM放入了模态框，$(document)是把整个页面绑了多次事件
+   - 解决办法：将事件绑在具体的模态框里，DOM消失时，事件也就没有了
+```
+$('#region_form').on("submit", "", function(e){
+```
+1. 用on替代live事件
+```
+// 未来元素事件要绑定到document上，用on
+// 因为事件冒泡，绑到了document上，之前没有元素就绑不了事件
+$(document).on('click', '#element', function() {})
+```
+1. 添加DOM元素
+```
+var html = [];
+html.push('<tr>');           // js的push方法
+html.push('<td class="col-sm-1"></td>');
+html.push('</tr>');
+tbody.append(html.join(''));
+```

@@ -1,4 +1,5 @@
 1. html：hyper text markup language，超文本标记语言，浏览器解释执行，语法要求不严，标签不闭合/大小写不注意/引号运用不严格。html和htm无区别，xhtml是语法严格的版本，但不流行
+1. html：标准通用标记语言SGML(Standard Generalized Markup Language)的分支：超文本标记语言(html HyperText Markup Language)和XML
   - 实例
     ```
     <!DOCTYPE html>
