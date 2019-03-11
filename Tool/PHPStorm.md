@@ -10,16 +10,12 @@
  - php和js、html设置断点
  - git、svn、数据库的支持
  - 生成类的继承关系图
-
 ######功能
 1. 全局搜索：两次shift
 1. 项目列表：alt+1
 1. 方法列表：alt+7
 1. 数据库显示：ctri+tab+0
 1. 数据库隐藏：ctrl+esc
-
-------------
-
 #####快捷键
 1. 编辑器操作
 ```
@@ -88,7 +84,6 @@ HTML标签+右键+Show Applied Styles For Tag  查看标签应用的样式
 1.Ctrl+Shift+J
 1.ctrl+H
 ```
-
 #####编辑器设置
 1. 导出设置方法：File -> Export Settings，导入设置方法：File -> Import Settings
 1. 去掉波浪线

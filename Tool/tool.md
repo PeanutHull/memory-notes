@@ -1,3 +1,28 @@
+### c3d
+1. 原则：建好模，打好光，K动画，玩插件，学渲染
+### Fiddler
+1. 功能：
+   - 解密https的请求
+   - 请求替换
+   - HTTP 断点调试
+   - 伪造请求和响应
+   - 网速设定
+1. 基于.net的规则语法：Fiddler Script
+1. 使用
+   - host配置
+   - 前后端假数据接口调试
+   - 线上bugfix，文件指向本地
+   - 网速限制
+        ```
+        1. 简单模拟，模拟猫的网速，几十kb吧
+        Rules – Performances – Simulate Modem Speeds
+        2. 精确模拟，编辑CustomRules.js
+        Rules – Customize Rules，找到m_SimulateModem标志位
+        ```
+   - 其他
+     1. tcpdump
+     1. wireshark
+### DevTool
 1. 简介
  - 官方文档：https://developers.google.com/web/tools/
  - 功能：
