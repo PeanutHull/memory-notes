@@ -25,4 +25,13 @@
         - Dithering 抖动
      1. 渲染到纹理
      1. SwapBuffer 渲染上屏/交换缓冲区
+1. 语言架构
+   - 桌面开发
+     1. c#/.net+wpf(现代，可实现复杂效果)/winform(较早，适合标准界面)/CEF/uwp(只win10)
+     1. qt(嵌入式)+c++：跨平台大型GUI，还有pyqt
+     1. electron：跨平台
+     1. wxWidget
+     1. GTK
+   - 游戏开发
+     1. .net+unity
         
