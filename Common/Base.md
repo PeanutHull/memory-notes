@@ -92,6 +92,7 @@ windows的文件在unix/mac打开，每行结尾可能会多出一个^M符号
    - 动态规划 Dynamic Programming
    - 扫描线 Scan-line algorithm
    - 快排 Quick Sort
+   - 斐波纳契
 1. 八皇后问题
    - 解决方案：递归回溯，本质上是一种枚举法。不满足就调整上一级数据
 1. 平滑线绘制：道格拉斯算法

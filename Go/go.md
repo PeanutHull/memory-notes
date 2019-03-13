@@ -60,6 +60,8 @@
     func add(x int, y int) int {
         return x + y
     }
+    // 函数值
+    hypot := func(x, y int) int {}
     ```
    - 使用
      1. split(17)/hypot/compute：返回7和10
@@ -117,10 +119,12 @@
         X int
         Y int
     }
-    vertex{1, 2}    // 赋值
-    vertex{X: 1}    // Y:0 被省略
-    v.X             // 访问
-    v.X = 4         // 赋值
+    vertex{1, 2}        // 赋值
+    vertex{X: 1}        // Y:0 被省略
+    Vertex{}            // X:0 和 Y:0 被忽略
+    p = &Vertex{1, 2}   // 类型为 *Vertex
+    v.X                 // 访问
+    v.X = 4             // 赋值
     ```
 1. 包
    - 导出名：package指定，首字母大写的名称是被导出的，外界只能访问首字母大写的名称
@@ -149,40 +153,48 @@
 1. array 数组
    - 理解：[n]T有n个类型为T的值的数组，不能改变长度
     ```go
-    var a [2]string     // 定义
-	a[0] = "Hello"
-	a[1] = "World"      // 赋值
+    // 定义
+    var a [2]string
     a[0]                // 访问
+    a[1] = "World"      // 赋值
     ```
 1. slice 切片
-   - 理解：一个slice会指向一个序列的值，并且包含了长度信息
+   - 理解：指向一个序列的值，包含了长度信息
        ```go
-        // 定义
-        s := []int
+        // 定义/赋值
+        s := []int                              // slice的零值是nil，长度和容量是0
         s := []int{2, 3, 5, 7, 11, 13}
-        s := make([]int, 5)                     // 5个0
+        // 构造slice，分配一个零长度的数组并且返回一个slice指向这个数组
+        s := make([]int, 5)                     // 5个0的元素
         s := make([]int, 0, 5)                  // 0个元素，但是cap=5。cap即容量，返回的是数组切片分配的空间大小
-        // 赋值
-        s == nil                                // slice的默认值为nil，长度和容量都是0
         // 访问
         s[i]
+        // 遍历，也适用于map
+        for i, v := range pow {}                // 下标i，值v
+        for i := range pow {}                   // 只需要下标
+        for _, v := range pow {}                // 只需要值，忽略下标
+        // 赋值
+        s == nil                                // slice的默认值为nil，长度和容量都是0
+        // 添加
+        s = append(s, 2, 3, 4)                  // 添加所有的T类型，s的底层数组太小不够容纳自动分配更大的数组
+        // 切片
+        s[1:4]                                  // 即第1到第3个(后边为n-1)，从0开始
+        s[:3]
+        s[4:]
+        s = s[:cap(s)]                          // len(s)=5, cap(s)=5
+        s = s[1:]                               // len(s)=4, cap(s)=4
         ```
    - 操作
      1. len(s)：长度
+     1. cap(s)：容量
      1. append(s, 0)：新增
-   - 二维切片
+   - 二维slice
         ```go
         game := [][]string{                     // 定义
             []string{"a", "a", "a"},
             []string{"a", "a", "a"},
         }
         game[0][0] = "X"                        // 赋值
-        // 切片
-        s[1:4]                                  // 即第1到第3个，从0开始
-        // 遍历
-        for i, v := range pow {}                // 下标i，值v
-        for i := range pow {}                   // 只需要下标
-        for _, v := range pow {}                // 只需要值
         ```
 1. map 映射
    - 理解：映射键到值
@@ -190,18 +202,30 @@
         type Vertex struct {
             Lat, Long int
         }
-        var m map[string]Vertex                 // 定义
-        m = make(map[string]Vertex)             // 创建
-        m["a"] = Vertex{                        // 创建后才能使用
-            1, 2,
-        }
-        var m = map[string]Vertex{              // 赋值
+        // 定义
+        var m map[string]Vertex
+        // 创建
+        m = make(map[string]Vertex)
+
+        // 定义、赋值
+        var m = map[string]Vertex{
             "a": {1, 2},
             "b": {3, 4},
+            "c": vertex{
+                5, 6,
+            },
         }
-        m[key] = elem                           // 插入或修改
-        elem = m[key]                           // 获取
-        v, ok = m[key]                          // 双赋值检测是否存在，ok为bool指示是否存在
+
+        // 获取
+        elem = m["key"]
+        // 插入或修改
+        m["a"] = Vertex{
+            1, 2,
+        }
+        // 删除
+        delete(m, "key")
+        // 双赋值检测是否存在，ok为bool指示是否存在
+        v, ok = m["key"]
         ```
    - 操作
      1. delete(m, key)：删除

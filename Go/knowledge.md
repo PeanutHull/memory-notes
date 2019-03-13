@@ -1,6 +1,10 @@
 ### 基础
 1. 打印
    - `fmt.Printf("s[%d] == %d\n", i, s[i])`
+     1. %s：字符串
+     1. %d：数字
+     1. %v：slice
+   - `fmt.Println(m)`
 1. 数据类型转换
     ```go
     var f float64 = float64(i)
