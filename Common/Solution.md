@@ -173,8 +173,7 @@
 1. 服务治理框架
 1. 数据一致性
 ### RPC
-1. 理解：远程调用框架，打通了应用层和传输层，可以不关注通信细节，直接调用远程的一个方法，内含多种实现方案(socket/管道)
-1. 方案
+1. 理解：Remote Procedure Call Protocol，远程过程调用协议，打通了应用层和传输层，不关注通信细节直接调用远程方法，实现函数调用模式的网络化。内含多种实现方案(socket/管道)
    - java：dobbu、spring cloud
    - 其他：grpc(使用protobuf，用于协议编解码的工具库，是二进制格式)、phprpc、yar、swoole、hprose、thrift
 ### 登录鉴权

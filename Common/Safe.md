@@ -113,19 +113,19 @@
      1. jsky：漏洞扫描工具
 ### xss扫描器
 1. XSS与防范
- - 概念：跨站脚本(Cross Site Script)：让某网站执行一个非法脚本。
- - 发生条件：非法脚本必须在浏览器中解析，点在HTML、URL、javascript，顺序为HTML——URL——JS
- - HTML:浏览器解析顺序：能识别的编码符号都解码(但是只在俩个地反解：标签内容和标签属性值)
- - URL:传输要进行转义：整个URL转用 encodeURI，如果对参数的值转用 encodeURIComponent
- - Javascript特殊字符：JS的转义都采用\解决，三种类型：
-      - 直接反斜杠：  \'\"   \\(转义反斜杠本身)
-      - 十六进制：  \x22\x27
-      - Unicode：  \u0022\u0027
- - 举例：
-```
-危险写法，这里输入来自用户，用户输入不可靠：
-el.innerHTML = title.value;
-修改后：
-el.innerHTML = escapeHTML(title.value);
-```
- - 阻止办法：用适当的方法对html、js转义
+   - 概念：跨站脚本(Cross Site Script)：让某网站执行一个非法脚本。
+   - 发生条件：非法脚本必须在浏览器中解析，点在HTML、URL、javascript，顺序为HTML——URL——JS
+   - HTML:浏览器解析顺序：能识别的编码符号都解码(但是只在俩个地反解：标签内容和标签属性值)
+   - URL:传输要进行转义：整个URL转用 encodeURI，如果对参数的值转用 encodeURIComponent
+   - Javascript特殊字符：JS的转义都采用\解决，三种类型：
+     1. 直接反斜杠：  \'\"   \\(转义反斜杠本身)
+     1. 十六进制：  \x22\x27
+     1. Unicode：  \u0022\u0027
+   - 举例
+     1. 危险写法，这里输入来自用户，用户输入不可靠：el.innerHTML = title.value，修改后：el.innerHTML = escapeHTML(title.value);
+   - 阻止办法：用适当的方法对html、js转义
+### 加密方式
+1. AES：Advanced Encryption Standard，对称加密标准，又称Rijndael加密法，美国联邦政府采用的一种区块加密标准。AES-128、AES-192、AES-256
+1. DES：Data Encryption Standard，对称加密标准，被AES替代
+1. SHA：单向加密，SHA-256、SHA-1
+1. MD5

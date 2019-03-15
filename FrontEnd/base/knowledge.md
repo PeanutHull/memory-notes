@@ -74,7 +74,7 @@
             });
         })();
         ```
-   - WebSocket：全双工的消息机制，服务器可以给客户端推送消息，是一个网络协议，和http有一定的交集
+   - WebSocket：全双工的消息机制，服务器可以给客户端推送消息，是一个网络协议，和http有一定的交集，是HTML5的重要特性
      1. 实现
         ```
         websocket = new WebSocket();                    # javascript

@@ -141,6 +141,7 @@
      1. 挂载单元：控制文件系统的挂载
      1. 目标单元：控制其余的单元，通常是通过将他们分组的方式
    - 使用：编写.service文件，通过设置参数决定某一命令的守护
+1. rsync：linux的文件备份、同步工具
 1. VirtualBox安装虚拟机、连接网络
    - 安装：blog.csdn.net/risingsun001/article/details/37934975
    - 调通网络
