@@ -399,10 +399,6 @@
      1. NumGoroutine
      1. GOMAXPROCS
 ### 应用
-1. 工作空间
-   - src
-   - pkg：包对象
-   - bin：可执行命令
 1. 文本处理
    - string：分割、连接、转换等
      1. strings包
@@ -604,7 +600,38 @@
 
         loc,_ := time.LoadLocation(msg(lang,"time_zone"))
         ```
+1. 配合其他语言
+   - python
+   - c
 ### 运维
+1. 运行
+   - 环境变量
+     1. GOROOT：告知当前go的位置，可以不设置，默认在/usr/local/go，编译的时候从GOROOT找system libariry
+     1. GOPATH：告知去哪里找代码，必须设置，可以修改，工作空间为
+        - src：源码目录，import时来src查找
+        - bin：可执行命令，go get二进制文件下载的目的地
+        - pkg：包对象，编译生成的lib文件存储的地方
+   - 依赖
+     1. 认识：dep，实现了tag管理代码，而不是trunk/mainline，如go get下载的代码，依赖管理工具为应用管理代码，go get为GOPATH管理代码
+     1. 组成
+        - `Gopkg.toml`：配置文件，可以手工修改
+        - `Gopkg.lock`
+        - vendor：依赖管理目录，vendor属性是go编译时，先从项目根目录的vendor目录查找代码，有则不再去GOPATH中去查找
+     1. 命令
+        - `dep init`：初始化新项目
+        - `dep status`
+        - `dep check`：检查toml和lock文件是否同步
+        - `dep ensure`
+          1. `dep ensure`：安装依赖
+          1. `dep ensure -update`：更新依赖
+          1. `dep ensure -add github.com/pkg/errors`：添加依赖
+        - `dep version`：dep的版本
+     1. 其他依赖管理工具
+        - godep：Godeps/Godeps.json
+        - glide：glide.yaml、glide.lock，官方建议迁移到dep
+        - govendor
+        - gvt
+   - module
 1. cli
    - 基础
      1. `go help`
@@ -621,18 +648,30 @@
      1. `go vet`：静态检查工具，项目快完成时进行进行优化
    - 运行和编译
      1. `go run hello.go`
-     1. `go build`：用于测试编译，普通包不产生任何文件，main包生成可执行文件
+     1. `go build`：用于测试编译，普通包不产生任何文件，main包生成可执行文件，在GOROOT/src和GOPATH/src搜索包
      1. `go install`：生成可执行文件，结果移到$GOPATH/pkg(bin)
      1. `go clean`：移除当前源码包里面编译生成的文件
    - 依赖
-     1. `go get`：动态获取远程代码包，下载和install
-     1. `go list`：查看安装的package
+     1. `go get`：动态获取远程代码包，下载和install，下载到GOROOT/src
+     1. `go list`：查看安装的packag
 ### wiki
 1. 历史
    - 07年开发
    - 09年开源
    - 12年1.0稳定版本
    - 14年1.4版本
+   - 1.11
+     1. 库文件管理模块：go Module，命令行支持modules操作，modules用来替换GOPATH的
+        ```go
+        // go.mod文件
+        module "rsc.io/hello"
+
+        require (
+            "golang.org/x/text" v0.0.0-20180208041248-4e4a3210bb54
+            "rsc.io/quote" v1.5.2
+        )
+        ```
+     1. WebAssembly
 1. wiki
    - int/uint/uintptr受系统位数影响
 1. 测试：go test和testing包构成

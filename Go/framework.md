@@ -1,0 +1,38 @@
+### beego
+1. 认识：用于开发api、web的http框架，自带orm，用go的思维
+   - 简单：RESTFul、mvc，支持热编译，自动化打包
+   - 智能：路由、监控
+   - 模块：Session、缓存、日志、配置解析、性能监控、上下文操作、ORM 模块、请求模拟
+   - 性能：原生http包、goroutine
+1. 架构
+   - cache
+   - config
+   - context
+   - httplibs
+   - logs
+   - orm
+   - session
+   - toolbox
+1. 组成
+   - mvc
+   - 路由
+   - orm
+   - 配置
+   - 模块
+   - 进程内监控
+   - 部署
+     1. 独立部署：`nohup ./beepkg &`
+     1. supervisord部署
+     1. nginx反向代理
+### Gin
+1. 认识：以更好的性能实现类似Martini框架的API
+### Iris
+1. 最快，完善的mvc
+### Martini
+1. 轻巧、功能强大、模块化web，不再维护
+### Buffalo
+1. 快速构建web
+### Echo
+1. 简约、高性能
+### Revel
+1. 高效、全栈

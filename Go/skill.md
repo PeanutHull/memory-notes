@@ -20,10 +20,6 @@
 - 标准库（Standard Library）
 - 反射（Reflection）
 
-## 并发编程
-- Go 并发基础（Concurrency, Race Conditions and Channels）
-- 并发模式（Concurrency Patterns）
-
 ## Go Web 编程
 - Web基础
   - Web工作方式
@@ -92,10 +88,12 @@
   - 多语言支持
   - pprof支持
 
+## 并发编程
+- Go 并发基础（Concurrency, Race Conditions and Channels）
+- 并发模式（Concurrency Patterns）
+
 ## Go 应用
 - Docker
 - Bee Go
 - NSQ
 - NewSQL
-
-## Go 实战案例
