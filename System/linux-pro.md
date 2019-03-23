@@ -32,3 +32,14 @@
      1. 多线程：同时运行，可以直接通信
 1. 同步阻塞、异步非阻塞
 1. 并发编程实战
+### OpenStack
+1. 认识：用于管理基础设施的一系列开源项目组成的平台
+1. 组成
+   - Horizon：ui服务
+   - Keystone：身份服务
+   - Nova：计算服务
+   - Glance：镜像服务
+   - Cinder/Swift：存储服务
+   - Neutron：网络服务
+   - Heat：编排组织服务
+   - Ceilometer：监控计量服务
