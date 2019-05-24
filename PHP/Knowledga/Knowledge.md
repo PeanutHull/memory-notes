@@ -546,8 +546,8 @@ new \app\mvc\view\home\Index();                             // 实例化未引�
      1. php.ini文件移除了#作为注释，统一用;去注释
      1. php4样式的构造函数(即和类名相同)，弃用
      1. 对非静态方法的静态调用，弃用。`class A { function b() {}}`，`A::b();`
-   - 标量/返回值类型声明
-     1. 理解：参数和返回值增加了类型限定，如`function test(int $a, string $b, array $c) : int {}`
+   - 返回值类型声明
+     1. 理解：参数和返回值增加了类型限定，可以是标量或者对象，如`function test(int $a, string $b, array $c) : int {}`
      1. 选项
         - 强制：默认，也可以不声明类型
         - 严格：开始 `declare(strict_types=1);`

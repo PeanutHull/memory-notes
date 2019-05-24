@@ -190,6 +190,7 @@ foreach (new RecursiveFileFilterIterator('/path/to/something') as $item) {
    - 为PHP多进程的模式设计了多个并发数据结构和IPC通信机制，大大简化多进程并发编程的工作。其中包括了并发原子计数器，并发HashTable，Channel，Lock，进程间通信IPC等特性
    - 支持异步/同步/协程，v2.0实现协程，可以使用完全同步的代码实现异步程序，底层自动进行协程调度，实现异步
    - 支持SSL/TLS加密
+   - 包含分配线程、心跳线程的reator的epoll模型后边连接多个由manager进程管理的worker进程，用reator接受连接，worker进程处理，即异步+同步，并发+php处理
 1. 观念：swoole在服务端只编译一次，一直存于内存，使用swoole来编写常规项目时，需要将自己置身于第三方上帝的角色，而非访问者的角色来编写并阅读自己的代码。PHP入门时就必须要掌握的session，对于运用了swoole扩展的PHP程序而言，完全可以用一个变量来替换
 1. 历史
    - 1.6.2：异步支持，像node

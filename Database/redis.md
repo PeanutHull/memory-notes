@@ -35,7 +35,7 @@
     SET mykey "Hello"
     EXPIRE mykey 10
     ```
-   - 发布订阅：pub/sub，一种消息通信模式，发送者(pub)发送消息，订阅者(sub)接收消息
+   - 发布订阅：pub/sub，一种消息通信模式，发送者(pub)发送消息，订阅者(sub)接收消息，是原子的
      1. pubsub：查看订阅和发布系统状态
      1. subscribe：订阅一个或多个，unsubscribe退订。psubscribe/punsubscribe用于给定模式的频道，即使用通配符啥的
      1. publish：发布

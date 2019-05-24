@@ -1,19 +1,19 @@
+### ElasticSearch
 1. 认识
    - 基于Apache Lucene构建的开源搜索引擎，用于数据搜索、数据分析、数据仓库
    - java编写，提供简单的RESTFul API
    - 支持集群部署，支持PB级结构化/非结构化数据处理，速度超快
 1. 理解
+   - 索引、类型、文档：即库、表、数据，文档是最小存储单位，必须属于一个类型。索引名称必须小写，无下划线，分为结构化/非结构化，就是没有那些字段吧。结构化/非结构化：无法用统一结构表示的，可称为全文数据
    - 集群和节点
-   - 索引、类型、文档：即库、表、数据，文档是最小存储单位，必须属于一个类型。索引名称必须小写，无下划线，分为结构化/非结构化，就是没有那些字段吧
    - 分片、备份
      1. 分片：每个索引都有多个分片，每个分片是一个Lucene索引。分担索引压力，提高搜索效率，可以进行水平拆分，默认5个
      1. 备份：即备份分片，默认1个
+### 使用
 1. 使用
-   - api格式：http://<ip>:<port>/<索引>/<类型>/<文档>
-   - 动词：get/post/put/delete
+   - http方式：http://ip/索引/类型/文档，get/post/put/delete
 1. 查询
-   - 简单查询
-     1. `http://ip/索引名/类型/文档id`，get方法
+   - 简单查询：`http://ip/索引名/类型/文档id`，get方法
    - 条件查询
      1. `http://ip/索引名/_search`，post方法
         ```json
@@ -166,21 +166,20 @@
         - network.host: ip
         - http.port: 9201
         - discovery.zen.ping.unicast.hosts: ["ip"]        // 主节点ip
-   - 配置web管理工具elasticsearch-head
-     1. wget github/elasticsearch-head && cd head
-     1. npm install
-     1. npm run start
-     1. 最下边添加es配置，解决两个进程跨域问题
-        - http.cors.enabled: true
-        - http.cors.allow-origin: "*"
-   - 中文分词插件：elasticsearch-ik
-   - mysql数据导入和计划任务：elasticsearch-jdbc，编写脚本即可实现
-   - mysql数据同步更新：logstash-input-jdbc，可以做全量同步和增量同步，数据表中定义订阅的update_time字段即可，其他的可以订阅binlog
 1. wiki
    - 默认端口：9200
    - 版本历史：1.x->2.x->5.x
-   - head中粗线框为主分片，细的为备份分片
    - ELK：elasticSearch、logstash、kibana
-   - 结构化/非结构化：无法用统一结构表示的，可称为全文数据
-   - 顺序扫描法/索引扫描法：将全文数据一部分提取出来变成一定结构，加快搜索速度
-   - 原理：将文档传给分词组件，将每一个词排序、记录位置并形成链表，搜索的时候直接查索引。lucene被认为是最好的搜索引擎
+### 应用
+1. elasticsearch-head：web管理工具。粗线框为主分片，细的为备份分片
+   - 安装
+     1. wget github/elasticsearch-head && cd head
+     1. npm install
+     1. npm run start
+     1. 最下边添加es配置，解决两个进程跨域问题，`http.cors.enabled: true`，`http.cors.allow-origin: "*"`
+1. elasticsearch-ik：中文分词插件
+1. elasticsearch-jdbc：mysql数据导入和计划任务，编写脚本即可实现
+1. logstash-input-jdbc：mysql数据同步更新，可做全量同步和增量同步，数据表中定义订阅的update_time字段即可，其他的可以订阅binlog
+### pro
+1. 顺序扫描法/索引扫描法：将全文数据一部分提取出来变成一定结构，加快搜索速度
+1. 原理：将文档传给分词组件，将每一个词排序、记录位置并形成链表，搜索的时候直接查索引。lucene被认为是最好的搜索引擎
