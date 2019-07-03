@@ -29,7 +29,7 @@
      1. 无副作用：不要干未被预期的事情
      1. 将检测类函数和动作类的分开，使用异常替代返回错误码，抽离try/catch和逻辑，不要放在一起
      1. 不要重复
-   - 注释：注释是我们代码表达意图时失败的弥补，它不能美化糟糕的代码，能用代码的不要用注释，不准确的注释是在满口胡言
+   - 注释：注释是我们代码表达意图时失败的弥补，它不能美化糟糕的代码，能用代码的不要用注释，好代码即注释，不准确的注释是在满口胡言
      1. 好的注释有以下特征
         - 提供相关的信息
         - 对函数意图的解释
@@ -44,49 +44,95 @@
         - 注释的代码，应该被删除
    - 类、对象
      1. 单一职责原则：一个类应该有且只有一条加以修改的理由，是应该和其他类配合共同完成某一行为
-     1. 开放闭合原则：对扩展开放、对修改封闭。如每当添加新类型就必须修改时，可以使用工厂模式代替
+     1. 开放封闭原则：对扩展开放、对修改封闭。如每当添加新类型就必须修改时，可以使用工厂模式代替
      1. 依赖倒转原则：细节应该依赖于抽象，高层模块不应该依赖底层模块，两个都应该依赖抽象
-     1. 里氏代换原则：子类必须能够替换父类，并出现在父类出现的任何地方
-     1. 接口隔离原则：使用多个专门的接口，而不使用单一的总接口，就是接口也要遵从单一职责原则
+     1. 里氏代换原则：子类必须能够替换父类，并出现在父类出现的任何地方。因为子类可以替换掉父类，父类才能被复用，子类也能增加新的功能
+     1. 接口隔离原则：使用多个专门的接口，而不使用单一的总接口，就是接口也要遵从单一职责原则，每一个接口只负责一种角色
      1. 迪米特法则：即最少知识原则，强调类之间的松耦合，应该对其他对象保持最少的了解
+     1. 合成/聚合复用原则：要尽量使用合成/聚合，不要滥用继承
    - 其他
      1. 性能：for循环里不能有调用api、数据库操作等，字符串用单引号代替双引号
      1. 格式：整洁、规范、团队统一，垂直方向上空行作为概念的分隔，有联系的代码紧挨着；水平方向上空格表示参数隔离，太长的一行代码不好阅读，严格遵循缩进
+### 代码的22种坏味道
+1. 重复代码
+   - 一个类中：提炼成一个函数
+   - 兄弟类中：提炼成一个函数，并且提取到父类中
+   - 两个不相关的类：提炼成一个函数，放到两个类中的一个类中或者一个单独的类中
+1. 过长函数
+1. 过大的类
+1. 方法中过长的参数列
+1. 发散式变化
+   - 一个类做太多的事情了，万能类，经常因为不同的原因在不同的方向上发生变化，将会产生发散式变化
+   - 将变化隔离，封装变化，把变化的和不变的部分分开，拆分成多个类
+1. 散弹式变化
+   - 一个变化引发多个类的修改，把需要修改的部分抽取出来，放到一个单独的类中
+1. 依恋情节
+   - 使用了大量其他类的成员
+   - 如果该方法只调用了一个类的多个方法。将该方法移到调用类里，如果该方法调用了多个类的多个方法。将该方法拆解。然后分离到调用类里
+1. 数据泥团
+   - 总是成堆出现在一起的数据，应该封装在一个单独的类中
+1. 基本类型偏执
+   - 用对象代替基本类型，并不是代替单个的基本类型，而是几个基本类型放在一起更有意义时应该使用对象
+1. switch语句
+   - 一看到switch语句，你就应该考虑以多态来替换它，如果一个switch操作只是执行简单的行为，就没有重构的必要了
+1. 平行继承体系
+   - 每当为某个类增加一个子类，必须也为另一个类增加一个子类。消除这种重复性的一般策略是：让一个继承体系的实例引用另一个继承体系的实例
+1. 冗赘类
+1. 夸夸奇谈谈未来
+   - “我想总有一天需要做这事”，并因而企图以各样的钩子和特殊情况来处理一些非必要的事情。如果用不到，就不值得。删掉
+1. 令人迷惑的临时字段
+   - 有时候你会发现：类中的某个实例变量仅为某种特定情况而设。这样的代码让人难以理解，因为你通常认为对象在所有时候都需要它的所有变量
+   - 将这些临时变量集中到一个新类中管理
+1. 过度耦合的消息链
+   - 有些时候我们在调用某个函数的时候往往会形成A->B->C->D.test(),这个时候如果你在A端，你就产生了Message Chains的坏味道。这种状态使的你客户代码在A中变成getB()->getC()->getD()->test(),这会使得客户代码在以后这些类关系发生变化的时候变得极易修改与相当不稳定。可以使用隐藏“委托关系”，并在服务类上建立客户所需要的所有函数来打破这消息链，理论上你可以重构消息链上的任一对象。但这样做往往会让这些小对象都变成Middle Man(中间人)，通常更好的做法是：查看消息链最终对象是用来干什么的，看看是否能用Extract Method把他提炼到一个独立的函数中去，再运用Move Method把这个函数推入消息链
+1. 中间人
+   - 大部分都交给中介来处理了。用继承替代委托
+1. 狎昵关系
+   - 两个类彼此使用对方的私有的东西。可以通过“移动方法”和“移动字段”帮它们划清界限，从而减少狎昵行径
+   - 如果两个类实在是情投意合，可以把两者共同点提炼到一个安全地点，让它们坦荡地使用这个新类，从而改变从双向依赖A->B,B->A变成A->C,B->C。或者通过隐藏“委托关系”让另一个类来为它们传递相思情，
+1. 异曲同工的类
+1. 不完美的库类
+   - 包一层函数或包成新的类
+1. 纯稚的数据类
+   - 类很简单，仅有公共成员变量，或简单操作函数。将相关操作封装进去，减少public成员变量
+1. 被拒绝的遗贈
+   - 父类里面方法很多，子类只用有限几个,用代理替代继承关系
+1. 过多的注释
+   - 当你感觉需要撰写注释时，请先尝试重构，试着让所有注释都变得多余。好代码即注释
 ### 设计模式
-1. 认识：design pattern，
-### 设计模式
-1. 理解
-   - 是遇到问题的解决方案，是自下而上的，来源于实践，发现模式而不是发明模式
-   - 是特定环境下同类问题的解决方案，但是实现细节却有非常多的差别
-   - 问题是所有的基础
-   - 设计模式是语言无关的
-1. 组成
-   - 组成：命名、问题、解决方案、效果
-   - 格式：意图、动机、适用性、结构交互、实现、相关模式的合作
-1. 原则
-   - 开闭原则：模块应对扩展开放，而对修改关闭
-   - 里氏代换原则：如果调用的是父类的话，那么换成子类也完全可以运行
-   - 依赖倒转原则：抽象不依赖细节，面向接口编程，传递参数尽量引用层次高的类
-   - 接口隔离原则：每一个接口只负责一种角色
-   - 合成/聚合复用原则：要尽量使用合成/聚合，不要滥用继承
-1. 意义
-   - 好处：好的代码风格，易读性，扩展性强，稳定性好
-   - 不能解决：是组织代码的模板，不是直接调用库，不要一味追求并套用，合理就好
+1. design pattern
+   - 理解
+     1. 是遇到问题的解决方案，是自下而上的，来源于实践，发现模式而不是发明模式
+     1. 是特定环境下同类问题的解决方案，但是实现细节却有非常多的差别
+     1. 问题是所有的基础
+     1. 设计模式是语言无关的
+     1. 好处：好的代码风格，易读性，扩展性强，稳定性好
+     1. 不能解决：是组织代码的模板，不是直接调用库，不要一味追求并套用，合理就好
+   - 组成
+     1. 组成：命名、问题、解决方案、效果
+     1. 格式：意图、动机、适用性、结构交互、实现、相关模式的合作
+   - 特性
+     1. 尽量解耦
+     1. 抽象类高于实现：尽量一般化而不特殊化
+     1. 
 1. 分类：23种设计模式
    - 创建型
-     1. 单例模式、工厂模式（简单工厂、工厂方法、抽象工厂）、创建者模式、原型模式
+     1. 类模式：工厂方法
+     1. 对象模式：单例、工厂(简单工厂/抽象工厂)、建造者、原型
    - 结构型
-     1. 适配器模式、桥接模式、装饰模式、组合模式、外观模式、享元模式、代理模式
+     1. 类模式：适配器
+     1. 对象模式：桥接、装饰、组合、外观、享元、代理
    - 行为型
-     1. 模版方法模式、命令模式、迭代器模式、观察者模式、中介者模式、备忘录模式、解释器模式、状态模式、策略模式、职责链模式、访问者模式
+     1. 类模式：模版方法、解释器
+     1. 对象模式：命令、迭代器、观察者、中介者、备忘录、状态、策略、职责链、访问者
 1. 单例模式
-   - 理解：创建型模式，它是建立在面向对象基础上的，要确保某个类只有一个实例，避免不断重新new浪费资源，完善全局变量的功能。php的所有在页面执行完后全部清空削弱了单例的表现
+   - 理解：建立在面向对象基础上，要确保某个类只有一个实例，避免不断new浪费资源，完善全局变量的功能。php的所有在页面执行完后全部清空削弱了单例的表现
    - 要点
      1. 类只能有一个实例
      1. 它自己自行创建这个实例
      1. 它必须自行向整个系统提供这个实例
    - 基础例子
-        ```
+        ```php
         class User{
             static private $_instance = NULL;               // 静态成员变量，保存全局实例
             private function  __construct() {}              // 私有化构造函数，防止外界实例化对象从而失去单例模式的意义
@@ -102,7 +148,7 @@
         $obj = User::getInstance();                         // 获得实例
         ```
    - 克隆和继承
-        ```
+        ```php
         class Foo {
             static private $instances = [];
             protected function __construct() {}
@@ -123,11 +169,11 @@
         $bar = Bar::getInstance();
         ```
 1. 工厂模式
-   - 理解：创建型模式，定义一个由工厂方法或者类生成对象的工厂，让子类决定实例化哪一个类
+   - 理解：创建型模式，定义一个由工厂方法或者类生成对象的工厂，让子类决定实例化哪一个类。本质上将不变的部分提取出来，将可变的部分留作接口，以达到最大程度上的复用
    - 适用性：有众多子类并且会扩充，创建方法比较复杂的情况下适用。工厂类在多态性编程实践中是至关重要的，它允许动态的替换类，修改配置，使程序更加灵活
-   - 分类：
+   - 分类
      1. 简单工厂：未严格遵循开闭原则，增加新产品时需修改工厂代码。用于客户只知道传入工厂类的参数，对于如何创建对象不关心的场景
-        ```
+        ```php
         interface Person {                              // 抽象产品
             public function getName();
         }
@@ -147,18 +193,65 @@
             }
         }
         ```
-     1. 工厂方法：只有一条产品线，抽象工厂的简化。工厂方法严格遵守开闭原则。当一个类希望由子类来指定它所创建的对象，将创建对象的职责委托给多个帮助子类中的某一个，并且你希望将哪一个帮助子类是代理者这一信息局部化的时候使用
-     1. 抽象工厂：有多条产品线，系统提供一个产品类的库，所有的产品以同样的接口出现，从而使客户端不依赖于实现。无论是简单工厂模式、工厂模式还是抽象工厂模式，它们本质上都是将不变的部分提取出来，将可变的部分留作接口，以达到最大程度上的复用
-1. 注册树模式
-   - 意图：全局共享/交换对象
-1. 装饰着模式
-   - 认识：动态地给一个对象增加一些额外的职责，对于扩展比继承更有弹性。
-   - 原理：将一个类的对象嵌入另一个对象中，由另一个对象来决定是否调用嵌入对象的行为以便扩展自己的行为，我们称这个嵌入的对象为装饰器
-1. java实现
-   - 单例模式：用if判断多次申请只返回同一个对象
-   - 建造者模式
-     1. 理解：就是用一个建造类建造一个类让对象更方便建造
-     1. 特点
+     1. 工厂方法：只有一条产品线，抽象工厂的简化。工厂方法严格遵守开闭原则。当一个类希望由子类来指定它所创建的对象，将创建对象的职责委托给多个帮助子类中的某一个
+        ```php
+        // 工厂方法
+        interface Factory {
+            public function produce();
+        }
+        // 工厂方法
+        class Farm implements Factory
+        {
+            public function produce($type='') {
+                switch ($type) {
+                    case 'chicken':
+                        return new Chicken();
+                        break;
+                    case 'pig':
+                        return new Pig();
+                        break;
+                    default:
+                        echo "该农场不支持生产该农物~\n";
+                        break;
+                }
+            }
+        }
+        // 实体
+        class Chicken implements AnimalInterface {}
+        ```
+     1. 抽象工厂：有多条产品线，系统提供一个产品类的库，所有的产品以同样的接口出现，从而使客户端不依赖于实现
+        ```php
+        // 定义集团
+        interface Factory {
+            public function createFarm();
+            public function createZoo();
+        }
+        class AnimalFactory implements Factory {
+            public function createFarm() {
+                return new PigFarm();
+            }
+            public function createZoo() {
+                return new PandaZoo();
+            }
+        }
+
+        $animal = new AnimalFactory();                                  // 初始化一个动物生产线, 包含了一类产品
+        $plant = new PlantFactory();                                    // 初始化一个植物生产线, 包含了一类产品
+
+        // 调用，最后都调用money方法
+        function call($factory) {
+            $earn = function($income) {
+                $income->money();
+            };
+            $earn($factory->createFarm());
+            $earn($factory->createZoo());
+        }
+        call($animal);
+        call($plant);
+        ```
+1. 建造者模式
+   - java实现
+     1. 理解：就是用一个建造类建造另一个类让对象更方便建造，简单对象构建复杂对象，
         - 良好封装性，使用者可以不用了解内部组成就创建可使用的对象
         - 建造者独立，被建造类容易扩展
      1. 实例：建造几个王者荣耀英雄
@@ -166,10 +259,9 @@
             ```java
             public class HeroConfig{
                 HeroBuilder mbuilder = null;
-                // 英雄的三个技能
+                // 英雄的两个技能
                 private String firstSkill;
                 private String secondSkill;
-                private String thirdSkill;
                 private String TPeffect = "无回城特效";
 
                 public HeroConfig(HeroBuilder builder) {
@@ -182,9 +274,6 @@
                     }
                     if(mbuilder.secondSkill != null) {
                         secondSkill = mbuilder.secondSkill;
-                    }
-                    if(mbuilder.thirdSkill != null) {
-                        thirdSkill = mbuilder.thirdSkill;
                     }
                     if(mbuilder.TPeffect != null) {
                         TPeffect = mbuilder.TPeffect;
@@ -199,17 +288,15 @@
         - 建造者(即建造执行者)
             ```java
             public static class HeroBuilder{
-                // 英雄的三个技能
+                // 英雄的两个技能
                 private String firstSkill;
                 private String secondSkill;
-                private String thirdSkill;
                 private String TPeffect; // 回城效果
 
-                // 英雄的三个技能是必选的，回城的特效是可选的，所以构造方法只设置三个技能
-                public HeroBuilder(String firstSkill, String secondSkill, String thirdSkill) {
+                // 英雄的两个技能是必选的，回城的特效是可选的，所以构造方法只设置两个技能
+                public HeroBuilder(String firstSkill, String secondSkill) {
                     this.firstSkill = firstSkill;
                     this.secondSkill = secondSkill;
-                    this.thirdSkill = thirdSkill;
                 }
 
                 public HeroConfig create() {
@@ -225,6 +312,265 @@
             ```
         - 使用，来建造类
             ```java
-            HeroConfig.HeroBuilder("","","").BuilXX("").create();
             HeroConfig 韩信 = new HeroConfig.HeroBuilder("无情冲锋","背水一战","国士无双").BuilTPeffect("金光闪闪").create();
             ```
+1. 原型模式
+   - 理解：用于创建对象成本过高时，就是可以快速复制一个对象出来
+   - 代码
+        ```php
+        // 原型接口
+        abstract class PrototypeAbstract {
+            protected $_name;
+            abstract public function getName();
+            abstract public function getPrototype();
+        }
+        // 原型实体
+        class Prototype extends PrototypeAbstract {
+            public function __construct($name='') {
+                $this->_name = $name;
+            }
+            public function __set($name='', $value='')
+            {
+                $this->$name = $value;
+            }
+            public function getName() {
+                echo $this->_name;
+            }
+            public function getPrototype() {
+                return clone $this;
+            }
+        }
+
+        // 创建一个原型对象
+        $prototype = new Prototype();
+        // 获取一个原型的clone
+        $prototypeCloneOne = $prototype->getPrototype();
+        $prototypeCloneOne->_name = 'one';
+        $prototypeCloneOne->getName();
+        // 获取一个原型的clone
+        $prototypeCloneTwo = $prototype->getPrototype();
+        $prototypeCloneTwo->_name = 'two';
+        $prototypeCloneTwo->getName();
+        // 再次获取$prototypeCloneOne的名称
+        $prototypeCloneOne->getName();
+        ```
+1. 适配器模式
+   - 理解：把实现了不同接口的对象通过适配器的方式组合起来放在一个新的环境
+    ```php
+    class Adapter {
+        private $_advancePlayerInstance;
+        private $_type = '';
+        public function __construct($type='') {
+            switch ($type) {
+                case 'mp4':
+                    $this->_advancePlayerInstance = new AdvanceMp4Player();
+                    break;
+                case 'wma':
+                    $this->_advancePlayerInstance = new AdvanceWmaPlayer();
+                    break;
+                default:
+            }
+            $this->_type = $type;
+        }
+        public function play($file='') {
+            switch ($this->_type) {
+            case 'mp4':
+                $this->_advancePlayerInstance->playMp4($file);
+                break;
+            case 'wma':
+                $this->_advancePlayerInstance->playWma($file);
+                break;
+            default:
+                break;
+            }
+        }
+    }
+    class AudioPlayer implements MediaInterface {
+        public function play($file='', $type='') {
+            switch ($type) {
+            case 'mp3':
+                echo 'playing file: ' . $file . ".mp3\n";
+                break;
+            case 'mp4':
+                $adapter = new Adapter($type);
+                $adapter->play($file);
+                break;
+            case 'wma':
+                $adapter = new Adapter($type);
+                $adapter->play($file);
+                break;
+            default:
+                break;
+            }
+        }
+    }
+
+    $mp4 = new AudioPlayer();
+    $mp4->play('忍者', 'mp3');
+    $mp4->play('彩虹', 'wma');
+    ```
+1. 桥接模式
+   - 理解：基础的结构型设计模式，将抽象和实现解耦，对抽象的实现是实体行为对接口的实现
+1. 装饰模式
+   - 理解：动态地给一个对象增加一些额外的职责，就增加功能来说比生成子类更加灵活。将一个类的对象嵌入另一个对象中，由另一个对象来决定是否调用嵌入对象的行为以扩展自己的行为，称这个嵌入的对象为装饰器。
+     1. 组装过程中建造者模式要求建造过程是稳定的，装饰模式不稳定
+     1. 就是为已有功能添加更多功能的方式，即这些功能仅仅是特殊情况下才会加入的，装饰模式将装饰功能封装到具体的类中，就可以有选择、有顺序的使用了
+   - 组成
+     1. 结构图
+        - Component接口：下边是Decorator装饰抽象类和ConcreteComponent具体类，继承关系
+        - Decorator装饰抽象类：下边ConcreteDecorator具体装饰类
+     1. 组成
+        - Component接口：定义具体需要装饰的方法，只有一个装饰器的话，需要将Decorator继承ConcreteComponent
+        - ConcreteComponent：具体装饰，给Component添加职责的功能
+        - Decorator：装饰抽象类
+        - ConcreteDecorator：具体装饰类，实现需要装饰的方法，添加自己的特点
+   - demo
+    ```c#
+    namespace 装饰模式
+    {
+        abstract class Component
+        {
+            public abstract void Operation();
+        }
+
+        class ConcreteComponent : Component
+        {
+            public override void Operation()
+            {
+                Console.WriteLine("具体对象的操作");
+            }
+        }
+
+        abstract class Decorator : Component
+        {
+            protected Component component;
+
+            public void SetComponent(Component component)
+            {
+                this.component = component;
+            }
+
+            public override void Operation()
+            {
+                if (component != null)
+                {
+                    component.Operation();
+                }
+            }
+        }
+
+        class ConcreteDecoratorA : Decorator
+        {
+            private string addedState;                      // 本类独有功能
+
+            public override void Operation()
+            {
+                base.Operation();                           // 一层层装饰能够连续进行的保证
+                addedState = "New State";                   // 本装饰的作用
+                Console.WriteLine("具体装饰对象A的操作");
+            }
+        }
+
+        class ConcreteDecoratorB : Decorator
+        {
+            private void AddedBehavior()
+
+            public override void Operation()
+            {
+                base.Operation();
+                AddedBehavior();
+                Console.WriteLine("具体装饰对象B的操作");
+            }
+        }
+
+        class Program
+        {
+            static void Main(string[] args)
+            {
+                ConcreteComponent c = new ConcreteComponent();          // 初始化装饰器
+                ConcreteDecoratorA d1 = new ConcreteDecoratorA();       // 初始化装饰
+                ConcreteDecoratorB d2 = new ConcreteDecoratorB();
+
+                d1.SetComponent(c);                                     // 加入装饰
+                d2.SetComponent(d1);
+
+                d2.Operation();
+            }
+        }
+    }
+    ```
+1. 策略模式
+   - 理解：定义了算法家族，分别封装起来，使其之间可以相互替换，变化和用户进行了隔离，比简单工厂单纯列举条件（主要是简单工厂遇到算法变化也要变化导致）要高级
+     1. 算法随时可能替换，这是变化点，封装变化点是面向对象的一个很重要的思维方式
+     1. 策略模式封装了变化，即写代码中消除了条件语句
+     1. 可以使用反射消除客户端对于算法选择的switch判断代码
+   - 组成
+     1. 结构图
+        - 策略接口：下边具体的策略类，继承关系
+        - 上下文：用一个配置维护对策略类对象的引用
+     1. 组成
+        - 策略接口：定义所有支持的算法的公共接口
+        - 具体策略类：封装了算法或者行为
+        - 上下文类
+   - demo
+    ```c#
+    namespace 策略模式
+    {
+        //抽象算法类
+        abstract class Strategy
+        {
+            //算法方法
+            public abstract void AlgorithmInterface();
+        }
+        //具体算法A
+        class ConcreteStrategyA : Strategy
+        {
+            //算法A实现方法
+            public override void AlgorithmInterface()
+            {
+                Console.WriteLine("算法A实现");
+            }
+        }
+        //具体算法B
+        class ConcreteStrategyB : Strategy
+        {
+            //算法B实现方法
+            public override void AlgorithmInterface()
+            {
+                Console.WriteLine("算法B实现");
+            }
+        }
+
+        //上下文
+        class Context
+        {
+            Strategy strategy;
+
+            public Context(Strategy strategy)
+            {
+                this.strategy = strategy;
+            }
+            //上下文接口
+            public void ContextInterface()
+            {
+                strategy.AlgorithmInterface();
+            }
+        }
+
+        class Program
+        {
+            static void Main(string[] args)
+            {
+                Context context;
+
+                context = new Context(new ConcreteStrategyA());
+                context.ContextInterface();
+
+                context = new Context(new ConcreteStrategyB());
+                context.ContextInterface();
+            }
+        }
+    }
+    ```
+1. 注册树模式
+   - 意图：全局共享/交换对象
