@@ -172,7 +172,7 @@
    - 理解：创建型模式，定义一个由工厂方法或者类生成对象的工厂，让子类决定实例化哪一个类。本质上将不变的部分提取出来，将可变的部分留作接口，以达到最大程度上的复用
    - 适用性：有众多子类并且会扩充，创建方法比较复杂的情况下适用。工厂类在多态性编程实践中是至关重要的，它允许动态的替换类，修改配置，使程序更加灵活
    - 分类
-     1. 简单工厂：未严格遵循开闭原则，增加新产品时需修改工厂代码。用于客户只知道传入工厂类的参数，对于如何创建对象不关心的场景
+     1. 简单工厂：违背开闭原则，增加新产品时需修改工厂代码。用于客户只知道传入工厂类的参数，将客户端和对象创建隔离
         ```php
         interface Person {                              // 抽象产品
             public function getName();
@@ -192,32 +192,31 @@
                 return $person;
             }
         }
+
+        // 使用
+        $factory = new SimpleFactory();
+        $teacher = $factory->getPerson('teacher');
+        $teacher->getName();
         ```
-     1. 工厂方法：只有一条产品线，抽象工厂的简化。工厂方法严格遵守开闭原则。当一个类希望由子类来指定它所创建的对象，将创建对象的职责委托给多个帮助子类中的某一个
+     1. 工厂方法：只有一条产品线，抽象工厂的简化。遵守了开闭原则，但是将选择实例化交给了客户。将创建对象的职责转移给子类中的一个，从而实现扩展不修改根代码
         ```php
         // 工厂方法
-        interface Factory {
+        interface Factory
+        {
             public function produce();
         }
-        // 工厂方法
+        // 具体实现
         class Farm implements Factory
         {
-            public function produce($type='') {
-                switch ($type) {
-                    case 'chicken':
-                        return new Chicken();
-                        break;
-                    case 'pig':
-                        return new Pig();
-                        break;
-                    default:
-                        echo "该农场不支持生产该农物~\n";
-                        break;
-                }
-            }
+            public function produce() {}
         }
-        // 实体
-        class Chicken implements AnimalInterface {}
+        class Airport implements Factory
+        {
+            public function produce() {}
+        }
+        // 客户端
+        $farm = new Farm();
+        $farm->produce();
         ```
      1. 抽象工厂：有多条产品线，系统提供一个产品类的库，所有的产品以同样的接口出现，从而使客户端不依赖于实现
         ```php
@@ -250,85 +249,82 @@
         call($plant);
         ```
 1. 建造者模式
-   - java实现
-     1. 理解：就是用一个建造类建造另一个类让对象更方便建造，简单对象构建复杂对象，
-        - 良好封装性，使用者可以不用了解内部组成就创建可使用的对象
-        - 建造者独立，被建造类容易扩展
-     1. 实例：建造几个王者荣耀英雄
-        - 被建造类
-            ```java
-            public class HeroConfig{
-                HeroBuilder mbuilder = null;
-                // 英雄的两个技能
-                private String firstSkill;
-                private String secondSkill;
-                private String TPeffect = "无回城特效";
+   - 理解：就是用一个建造类建造另一个类让对象更方便建造，同样的建造过程创建不同的表示，定义建造的配置，不关心建造过程和细节，简单对象构建复杂对象，
+     1. 良好封装性，使用者可以不用了解内部组成就创建可使用的对象
+     1. 建造者独立，被建造类容易扩展
+   - 实例：建造几个王者荣耀英雄
+     1. 被建造类
+        ```java
+        public class HeroConfig{
+            HeroBuilder mbuilder = null;
+            // 英雄的两个技能
+            private String firstSkill;
+            private String secondSkill;
+            private String TPeffect = "无回城特效";
 
-                public HeroConfig(HeroBuilder builder) {
-                    mbuilder = builder;
-                    init();
+            public HeroConfig(HeroBuilder builder) {
+                mbuilder = builder;
+                init();
+            }
+            private void init() {
+                if(mbuilder.firstSkill != null) {
+                    firstSkill = mbuilder.firstSkill;
                 }
-                private void init() {
-                    if(mbuilder.firstSkill != null) {
-                        firstSkill = mbuilder.firstSkill;
-                    }
-                    if(mbuilder.secondSkill != null) {
-                        secondSkill = mbuilder.secondSkill;
-                    }
-                    if(mbuilder.TPeffect != null) {
-                        TPeffect = mbuilder.TPeffect;
-                    }
+                if(mbuilder.secondSkill != null) {
+                    secondSkill = mbuilder.secondSkill;
                 }
-                @Override
-                public String toString() {
-                    return "技能1-->" + firstSkill + " 技能2-->" + secondSkill + " 技能2-->" + thirdSkill + " 回城特效-->" + TPeffect;
+                if(mbuilder.TPeffect != null) {
+                    TPeffect = mbuilder.TPeffect;
                 }
             }
-            ```
-        - 建造者(即建造执行者)
-            ```java
-            public static class HeroBuilder{
-                // 英雄的两个技能
-                private String firstSkill;
-                private String secondSkill;
-                private String TPeffect; // 回城效果
-
-                // 英雄的两个技能是必选的，回城的特效是可选的，所以构造方法只设置两个技能
-                public HeroBuilder(String firstSkill, String secondSkill) {
-                    this.firstSkill = firstSkill;
-                    this.secondSkill = secondSkill;
-                }
-
-                public HeroConfig create() {
-                    HeroConfig mHeroConfig = new HeroConfig(this);
-                    return mHeroConfig;
-                }
-
-                public HeroBuilder builderTPeffect(String effect) {
-                    this.TPeffect = effect;
-                    return this; // 实现链式调用
-                }
+            @Override
+            public String toString() {
+                return "技能1-->" + firstSkill + " 技能2-->" + secondSkill + " 技能2-->" + thirdSkill + " 回城特效-->" + TPeffect;
             }
-            ```
-        - 使用，来建造类
-            ```java
-            HeroConfig 韩信 = new HeroConfig.HeroBuilder("无情冲锋","背水一战","国士无双").BuilTPeffect("金光闪闪").create();
-            ```
+        }
+        ```
+     1. 建造者(即建造执行者)
+        ```java
+        public static class HeroBuilder{
+            // 英雄的两个技能
+            private String firstSkill;
+            private String secondSkill;
+            private String TPeffect;        // 回城效果
+
+            public HeroBuilder(String firstSkill, String secondSkill) {
+                this.firstSkill = firstSkill;
+                this.secondSkill = secondSkill;
+            }
+
+            public HeroConfig create() {
+                HeroConfig mHeroConfig = new HeroConfig(this);
+                return mHeroConfig;
+            }
+
+            public HeroBuilder builderTPeffect(String effect) {
+                this.TPeffect = effect;
+                return this;                // 实现链式调用
+            }
+        }
+        ```
+     1. 使用，来建造类
+        ```java
+        HeroConfig 韩信 = new HeroConfig.HeroBuilder("无情冲锋","背水一战","国士无双").BuilTPeffect("金光闪闪").create();
+        ```
 1. 原型模式
-   - 理解：用于创建对象成本过高时，就是可以快速复制一个对象出来
+   - 理解：复制原型创建新的对象，从一个对象克隆一个新的，而不需要知道如何创建的细节。可用于创建对象成本过高
+     1. 浅复制：引用不会被复制
+     1. 深复制：可调用被引用对象自身的克隆方法进行复制
    - 代码
         ```php
         // 原型接口
         abstract class PrototypeAbstract {
             protected $_name;
             abstract public function getName();
-            abstract public function getPrototype();
+            abstract public function getPrototype();            // 声明克隆自身的方法，从而允许克隆
         }
         // 原型实体
         class Prototype extends PrototypeAbstract {
-            public function __construct($name='') {
-                $this->_name = $name;
-            }
             public function __set($name='', $value='')
             {
                 $this->$name = $value;
@@ -498,6 +494,213 @@
             }
         }
     }
+    ```
+1. 外观模式
+   - 理解：为子系统中的一组接口提供一致的界面，使得子系统更加容易调用，也可以包装复杂的内部接口，重新提供简单的接口
+   - code
+    ```c#
+    class SubSystemOne
+    {
+        public void MethodOne()
+        {
+            Console.WriteLine(" 子系统方法一");
+        }
+    }
+
+    class SubSystemTwo
+    {
+        public void MethodTwo()
+        {
+            Console.WriteLine(" 子系统方法二");
+        }
+    }
+
+    class SubSystemThree
+    {
+        public void MethodThree()
+        {
+            Console.WriteLine(" 子系统方法三");
+        }
+    }
+
+    class SubSystemFour
+    {
+        public void MethodFour()
+        {
+            Console.WriteLine(" 子系统方法四");
+        }
+    }
+
+    class Facade                                                // 门面类
+    {
+        SubSystemOne one;
+        SubSystemTwo two;
+        SubSystemThree three;
+        SubSystemFour four;
+
+        public Facade()
+        {
+            one = new SubSystemOne();
+            two = new SubSystemTwo();
+            three = new SubSystemThree();
+            four = new SubSystemFour();
+        }
+
+        public void MethodA()                                   // 封装了调用，需要对子系统了解
+        {
+            Console.WriteLine("\n方法组A() ---- ");
+            one.MethodOne();
+            two.MethodTwo();
+            four.MethodFour();
+        }
+
+        public void MethodB()
+        {
+            Console.WriteLine("\n方法组B() ---- ");
+            two.MethodTwo();
+            three.MethodThree();
+        }
+    }
+
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            Facade facade = new Facade();
+
+            facade.MethodA();
+            facade.MethodB();
+
+            Console.Read();
+        }
+    }
+    ```
+1. 代理模式
+   - 理解：对其他对象添加一层代理，就可以附加多种用途
+   - 作用
+     1. 可对一个类在不同地址空间进行局部代表，隐藏了一个类在不同空间的事实
+     1. 虚拟代理：提前做一些事情，比如预加载图片时虚拟类先弄个框，速度更快
+     1. 安全代理：控制权限
+     1. 其他：引用计数等
+   - code
+    ```c#
+    abstract class Subject
+    {
+        public abstract void Request();             // 定义共同接口，使得proxy可以完全代替实体
+    }
+
+    class RealSubject : Subject                     // 真实实体
+    {
+        public override void Request()
+        {
+            Console.WriteLine("真实的请求");
+        }
+    }
+
+    class Proxy : Subject                           // 代理类
+    {
+        RealSubject realSubject;
+        public override void Request()
+        {
+            if (realSubject == null)
+            {
+                realSubject = new RealSubject();
+            }
+
+            realSubject.Request();
+        }
+    }
+
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            Proxy proxy = new Proxy();              // 代理访问
+            proxy.Request();
+
+            Console.Read();
+        }
+    }
+    ```
+1. 模板方法模式
+   - 理解：定义好骨架，将一些步骤延迟到子类中，使得子类不改变骨架即可重定义某些步骤。把不变的聚合，变的暴露出来
+   - code
+    ```c#
+    class TestPaper
+    {
+        public void TestQuestion1()
+        {
+            Console.WriteLine(" 杨过得到，后来给了郭靖，炼成倚天剑、屠龙刀的玄铁可能是[ ] a.球磨铸铁 b.马口铁 c.高速合金钢 d.碳素纤维 ");
+            Console.WriteLine("答案：" + Answer1());
+        }
+
+        public void TestQuestion2()
+        {
+            Console.WriteLine(" 杨过、程英、陆无双铲除了情花，造成[ ] a.使这种植物不再害人 b.使一种珍稀物种灭绝 c.破坏了那个生物圈的生态平衡 d.造成该地区沙漠化  ");
+            Console.WriteLine("答案：" + Answer2());
+        }
+
+        protected virtual string Answer1()
+        {
+            return "";
+        }
+
+        protected virtual string Answer2()
+        {
+            return "";
+        }
+    }
+    //学生甲抄的试卷
+    class TestPaperA : TestPaper
+    {
+        protected override string Answer1()
+        {
+            return "b";
+        }
+
+        protected override string Answer2()
+        {
+            return "c";
+        }
+    }
+    //学生乙抄的试卷
+    class TestPaperB : TestPaper
+    {
+        protected override string Answer1()
+        {
+            return "c";
+        }
+
+        protected override string Answer2()
+        {
+            return "a";
+        }
+    }
+
+    // 试卷答题
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            Console.WriteLine("学生甲抄的试卷：");
+            TestPaper studentA = new TestPaperA();
+            studentA.TestQuestion1();
+            studentA.TestQuestion2();
+
+            Console.WriteLine("学生乙抄的试卷：");
+            TestPaper studentB = new TestPaperB();
+            studentB.TestQuestion1();
+            studentB.TestQuestion2();
+
+            Console.Read();
+        }
+    }
+    ```
+1. 观察者模式
+   - 理解：
+   - code
+    ```c#
+
     ```
 1. 策略模式
    - 理解：定义了算法家族，分别封装起来，减少了算法类和使用算法之间的耦合，使其之间可以相互替换，变化和用户进行了隔离，比简单工厂单纯列举条件（主要是简单工厂遇到算法变化也要变化导致）要高级
