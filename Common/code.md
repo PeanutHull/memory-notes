@@ -465,7 +465,7 @@
 
             public override void Operation()
             {
-                base.Operation();                           // 一层层装饰能够连续进行的保证
+                base.Operation();                           // 一层层装饰能够连续进行的保证***
                 addedState = "New State";                   // 本装饰的作用
                 Console.WriteLine("具体装饰对象A的操作");
             }
@@ -491,7 +491,7 @@
                 ConcreteDecoratorA d1 = new ConcreteDecoratorA();       // 初始化装饰
                 ConcreteDecoratorB d2 = new ConcreteDecoratorB();
 
-                d1.SetComponent(c);                                     // 加入装饰
+                d1.SetComponent(c);                                     // 一层层加入装饰***
                 d2.SetComponent(d1);
 
                 d2.Operation();
@@ -500,7 +500,7 @@
     }
     ```
 1. 策略模式
-   - 理解：定义了算法家族，分别封装起来，使其之间可以相互替换，变化和用户进行了隔离，比简单工厂单纯列举条件（主要是简单工厂遇到算法变化也要变化导致）要高级
+   - 理解：定义了算法家族，分别封装起来，减少了算法类和使用算法之间的耦合，使其之间可以相互替换，变化和用户进行了隔离，比简单工厂单纯列举条件（主要是简单工厂遇到算法变化也要变化导致）要高级
      1. 算法随时可能替换，这是变化点，封装变化点是面向对象的一个很重要的思维方式
      1. 策略模式封装了变化，即写代码中消除了条件语句
      1. 可以使用反射消除客户端对于算法选择的switch判断代码
