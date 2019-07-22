@@ -54,6 +54,7 @@
 路由：dns篡改，dhcp查看
 端口：arp嗅探端口
 远程调试：adb(5555端口)/genymotion
+Google Hacking：利用高级搜索，过滤、查找更仔细、高级操作符、关键词顺序，如`intitle:index.of “Apache/1.3.27 Server at”`
 ### sql注入
 1. 理解：构建特殊输入，数据变成了代码被执行
    - 不要相信用户输入
@@ -78,7 +79,7 @@
         - intval、floatval
         - addcslashes、real_escape_string：或开启magic_quotes_gpc，like注入
         - mysql_escape_string、mysql_real_escape_string
-     1. pdo/mysqli预处理、参数绑定：注意模拟预处理，真正将sql和参数分开才管用，最佳处理方式，根本杜绝参数变为代码的可能
+     1. pdo/mysqli：预处理和参数绑定，真正将sql和参数分开才管用，是最佳处理方式，根本杜绝参数变为代码的可能，注意模拟预处理
         - bindParam、execute(真正将参数传递给mysql)
 1. 注入
    - 类型
@@ -109,8 +110,37 @@
      1. 查看字段：`SHOW columns FROM table`
      1. 爆出错误：`SELECT id FROM keyword WHERE id=1 UNION SELECT 1 FROM (SELECT COUNT(*),CONCAT(FLOOR(RAND(0)*2),(SELECT CONCAT(0x5f,DATABASE(),0x5f,USER(),0x5f,VERSION())))a FROM information_schema.tables GROUP BY a)b--`
    - 工具
-     1. sqlmap：sqlmap.py -u http://x.com/?id=1 --dbs --users)
+     1. sqlmap：sqlmap.py -u http://x.com/?id=1 --cookie "token=xxx" --batch --dbms MySQL
+     1. sqlmap：sqlmap.py -r test.txt
+        --headers="User-Agent:66666666666\nReferer:www.666.com"
+        --is-dba            检测DBMS当前用户是否DBA
+        --users             枚举数据库管理系统用户
+        --passwords         枚举数据库管理系统用户密码哈希
+        --privileges        枚举数据库管理系统用户的权限
+        --roles             枚举数据库管理系统用户的角色
+        --dbs               枚举数据库管理系统数据库
+        --tables            枚举的DBMS数据库中的表
+        --columns           枚举DBMS数据库表列
      1. jsky：漏洞扫描工具
+1. 方法
+   - 判断是否有漏洞
+     1. 单双引号报错法
+     1. 正确错误法：当使用and 1=1进行测试时返回正常页面而and 1=2进行测试时返回错误页面或者页面没有正常显示则说明该链接存在SQL漏洞
+   - 判断常见数据库类型：不同的数据库的函数、注入方法有差异
+   - 注入参数类型判断
+     1. 数字型
+     1. 字符型
+     1. 搜索型
+   - 注入类型
+     1. 基于报错注入
+     1. 基于时间的盲注
+     1. 基于布尔的盲注：返回页面判断条件真假的注入，部分盲注可以观察不同的HTTP状态码，确定响应时间、内容的长度，并在HTTP响应中的查看HTML内容来进行确认
+     1. 
+     1. 
+1. 渗透步骤
+   - 推测技术栈，灵活制定策略
+   - 获取服务器信息
+   - 上传一句话木马
 ### xss扫描器
 1. XSS与防范
    - 概念：跨站脚本(Cross Site Script)：让某网站执行一个非法脚本。

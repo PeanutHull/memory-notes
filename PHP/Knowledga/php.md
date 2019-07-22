@@ -332,7 +332,34 @@
             set_error_handler("exception_error_handler");
             ```
 1. 连接数据库
-   - PDO：php database object，可以设置长连接，但是会受上一个锁等待，事务回滚的影响，可以设置超时断开时间30秒，正好一个web响应时间
+   - PDO：php database object
+     1. 理解：提供了一个数据访问抽象层，这意味着不管使用哪种数据库，都可以用相同的方法来查询和获取数据
+     1. 特性
+        - 长连接：可以设置长连接，但是会受上一个锁等待，事务回滚的影响，可以设置超时断开时间30秒，正好一个web响应时间，`PDO::ATTR_PERSISTENT => true`
+        - 预处理
+            ```php
+            $stmt = $dbh->prepare("(:name, :value)");
+            $stmt->bindParam(':name', $name);
+            $stmt->bindParam(':value', $value);
+
+            // 插入一行
+            $name = 'one';
+            $value = 1;
+            $stmt->execute();
+            // 用不同的值插入另一行
+            $name = 'two';
+            $value = 2;
+            $stmt->execute();
+
+            // prepare另一种方式
+            $stmt = $dbh->prepare("(?, ?)");
+            $stmt->bindParam(1, $name);
+            $stmt->bindParam(2, $value);
+            ```
+        - 事务
+          1. `PDO::beginTransaction()`
+          1. `PDO::commit()`
+          1. `PDO::rollBack()`
    - MySqli：可以设置长连接，进程重用长连接，但是mysqli会做一些清理工作
    - mysql函数：不支持预处理，不安全，已经淘汰
 ### 运维
@@ -383,6 +410,23 @@
      1. --lock：仅更新锁文件，用于update
      1. --no-dev：跳过require-dev中的包
      1. -V
+   - 功能
+     1. 锁文件：会将把安装时确切的版本号列表写入，install会在lock存在情况下下载lock中的，忽略json中的，update则会更新lock文件
+     1. 自动加载：composer自动会生成一个vender/autoload.php，载入这个文件后，直接new，就会自动载入。命名空间的申明应该以\\结束
+        - 在composer.json的autoload字段中增加自己的autoloader
+            ```json
+            "autoload": {                       
+                "psr-4": {"Acme\\": "src/"}     // 注册一个PSR-4 autoloader到Acme命名空间
+            }
+            ```
+        - PSR-0： PEAR形式的路径映射
+        - include-path：追加传统的引用路径，不建议
+   - 考虑缓存，dist包优先？？？
+   - 配置
+     1. 镜像地址
+        - 全局：`composer config -g repo.packagist composer https://packagist.phpcomposer.com`
+        - 局部：项目目录下执行，`composer config repo.packagist composer https://packagist.phpcomposer.com`
+        - 删除：`composer config -g --unset repos.packagist`
    - json文件架构
      1. 包版本
         - 1.0.2：确切
@@ -427,18 +471,6 @@
             ]
         }
         ```
-   - 功能
-     1. 锁文件：会将把安装时确切的版本号列表写入，install会在lock存在情况下下载lock中的，忽略json中的，update则会更新lock文件
-     1. 自动加载：composer自动会生成一个vender/autoload.php，载入这个文件后，直接new，就会自动载入。命名空间的申明应该以\\结束
-        - 在composer.json的autoload字段中增加自己的autoloader
-            ```json
-            "autoload": {                       
-                "psr-4": {"Acme\\": "src/"}     // 注册一个PSR-4 autoloader到Acme命名空间
-            }
-            ```
-        - PSR-0： PEAR形式的路径映射
-        - include-path：追加传统的引用路径，不建议
-   - 考虑缓存，dist包优先？？？
 1. PHP配置：php.ini。register_globals(变量注入代码)、allow_url_include(包含远程文件)、allow_url_fopen、date.timezone、display_errors、error_reporting、safe_mode、post_max_size
    - pcre.jit：
    - session.gc_maxlifetime

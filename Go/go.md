@@ -671,7 +671,6 @@
             "rsc.io/quote" v1.5.2
         )
         ```
-     1. WebAssembly
 1. wiki
    - int/uint/uintptr受系统位数影响
 1. 测试：go test和testing包构成

@@ -89,3 +89,63 @@
      1. PHP7 : PHP代码 -> Parser语法解析 -> AST -> OPCODE -> 执行
    - 数组php5的底层是HashTable实现的，php7使用了新的Zend Array类型，性能和访问速度上都有了大幅度提升
    - https://www.csdn.net/article/2015-09-16/2825720
+### 底层实现
+1. 数组 - HashTable
+   - 类型
+     1. xxxx
+     1. dart？？？
+   - 组成
+     1. 索引数组
+        - gc
+        - u
+        - nTableMask
+        - *arData
+        - nNumUsed
+        - nNextFreeElement
+        - pDestructor
+     1. bucket数组：重复就采用链表
+        - 0~7
+        - -1~-8
+   - 其他
+     1. Packed Array：不需要建立散列关系
+     1. Hash Array：需要建立散列关系
+1. 引用类型
+   - 理解：使用&后，两个都是引用类型，指向了那谁
+   - 特性
+     1. 循环引用：自己引用自己，引用计数还是1，产生死亡拥抱，产生了垃圾
+1. 内存回收
+   - 和垃圾回收不一样
+1. 垃圾回收
+   - 认识：解决引用回收的缺陷，因为只记录了次数，没有记录引用的地址
+   - 四色法
+     1. 标成紫色放到垃圾桶（默认10000），标记后不会再次放入
+     1. 垃圾桶满时，触发回收，触发gc
+     1. 遍历垃圾桶，标记为灰色，同时引用计数减1
+     1. 再一次遍历，都是0的标记为白色，回收，大于0的标记为黑色返回
+1. 内存管理
+   - 内存分配
+     1. 概念
+        - chunk：2M大小，仓库
+        - page：4kb，面粉袋
+     1. 理解：将1个page分成512个，要一个给一个，用链表管理，因为内存回收时无顺序，用回插法。是页管理的，是4k的整数倍，为了更好的管理，给php进程都进行内存分配
+        - 减少malloc次数
+        - 给我任意大小都知道放哪儿
+     1. 流程
+        - emalloc 分配
+        - zend_mm_alloc_heap
+        - size大小，人为划分，直接卖面包，没有了就用一整袋面(page)做很多面包出来
+          1. 小于3072 3k：zend_mm_alloc_small、zend_mm_small_slow
+          1. 小于2M-4k：zend_mm_alloc_large、zend_mm_small_pages
+          1. 大于2M-4k：zend_mm_alloc_huge、zend_mm_chunk_alloc、mmap
+   - 内存对齐
+   - 内存类型标记
+   - wiki
+     1. 内存规格
+        - 内存预分配：
+          1. 分类
+             - small
+             - large
+     1. 缺陷
+        - 内核态和用户态的切换，很大的浪费
+     1. php7内存接口
+        - 

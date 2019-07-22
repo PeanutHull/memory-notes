@@ -1,3 +1,4 @@
+### 语法
 1. 类
    - Function
      1. 理解：js内建的类，function是简写的创建函数的方法
@@ -236,7 +237,8 @@
         });
         ```
 1. NodeJS：NodeJS自带模块功能，可以使用require和module.exports构建项目
-####模块规范
+
+### 模块规范
 1. 分类：
  - CommonJS
  - AMD
@@ -482,3 +484,44 @@ require(['tabview'], function(tab) {
    - 组件代码库：Ionic(放弃IOS6和Android4.1以下的版本支持)，React Native(生成原生app，但以view为基础嵌入)
    - 打包工具：Cordova、Phonegap
    - 安卓模拟器：genymotion、海马玩
+### WebAssembly
+1. 认识：WebAssembly(缩写Wasm)是基于堆栈虚拟机的二进制指令格式。Wasm为了一个可移植的目标而设计的，可用于编译C/C+/RUST等高级语言，使客户端和服务器应用程序能够在Web上部署
+1. 理解：可以使用非JavaScript编写代码并且能在浏览器上运行的技术方案。让Web执行低级二进制语法，解决目前JS效率问题，设计立足点为快速，内存安全和开放，专门为编译而设计的语言
+   - V8引擎也支持WebAssembly，可在Node.js中无缝嵌入
+   - 用途：适合那些需要非常高性能的Web产品
+     1. asm.js 不仅能让浏览器运行 3D 游戏，还可以运行各种服务器软件，比如 Lua、Ruby 和 SQLite。 这意味着很多工具和算法，都可以使用现成的代码，不用重新写一遍。另外，由于 asm.js 的运行速度较快，所以一些计算密集型的操作（比如计算 Hash）可以使用 C / C++ 实现，再在 JS 中调用它们。
+     1. Figma基于React构建的，但应用程序的主要功能部分是WebAssembly图形编辑器，它由C++应用编写，并转译为WebAssembly，使用WebGL在Canvas中呈现
+     1. AutoCAD也发布了在Web应用程序中运行的流行设计产品，使用WebAssembly呈现其复杂的编辑器，该编辑器（从桌面客户端代码库迁移）是使用C++构建的
+     1. 取代：当年javafx，微软的银光号都称 flash杀手，终结者，要取代flash，结果自己先死了。 flash之死是被时代和它自己杀死的，绝非是这些后来的小弟们。无论是js，flash，还是h5，他们都是不同时期的王者。当前dart要杀js，ts要杀js，历史的车轮总是惊人的相似。可以预见最后js肯定是被自己搞死而非这些小弟们，当然wasm连小弟都不是，它只是路人
+1. 特点
+   - 安全性：运行在JS虚拟机的沙盒环境中，具有与JavaScript相同的安全策略，浏览器确保相同的源和权限策略
+   - 高性能：将在执行之前转换为二进制文件。在理论上它可以达到与C等本机编译语言同等的性能，呈几何级的性能提高
+1. 转换机制
+   - 编译器前端：将c、c++、Rust编译为LLVM IR 码
+   - 编译器后端：将LLVM IR编译成各架构（x86，AMD64，ARM）对应的机器码
+1. 应用
+   - 转换流程
+     1. c/c++            Emscripten编译，即构建工具链
+     1. wasm文件、html    胶接代码，就是WebAssembly，用支持的浏览器访问html
+1. 历史
+   - Emscripten：可以将C/C++代码编译成JS代码，但不是普通的JS，而是一种叫做asm.js的JavaScript变体，性能差不多是原生代码的50%
+     1. asm.js：变量都是静态类型，取消垃圾回收机制。除了这两点与JavaScript无差异。也就是说是JavaScript的一个严格的子集，只能使用后者的一部分语法
+     1. emscripten：底层是LLVM编译器，理论上任何可以生成LLVM IR（Intermediate Representation）的语言，都可以编译生成asm.js
+   - Portable Native Client：也是一种能让浏览器运行C/C++代码的技术
+   - WebAssembly：Google, Microsoft, Mozilla, Apple等合作开发。asm.js是文本，WebAssembly是二进制字节码，因此运行速度更快、体积更小
+   - cheerp：将c++交叉编译成js的解决方案，后来直到wasm的原型和草案通过，17年底cheerp技术才开始支持到wasm，wast的交叉编译。cheerp原有代码基本上不需要更改就能直接生成wasm字节码。cheerp最新版本是2.0，有win版本。后来搞了一套cheerpj给java开发人员用于移植java的老富客户端应用
+   - flascc：adobe公司的 flash as3 交叉编译方案，是通过gcc生成优化过的AS3代码，搞得不是很彻底（没有生成字节码），编译速度很慢。最早是可以支持c开发， 后来全部到flascc 改成了c++ sdk ，体积暴增。随着flash技术没落而完结
+   - ane：adobe的air拓展方案之一，所谓拓展其实在平台上就是dll/so，通过代理技术（类似jni）使用。目前还存在于tv端，移动游戏端。
+   - swig 号称将c++/c 转化成多种语言的拓展，包括不限于（js,tcl,python,lua,java,php,perl)等等等。其实也是类似上面的技术， 公开C函数和符号， 上层加上各种语言的数据包装调用。你如果选用了这个技术，就要忍受他的一些智能的傻逼的行为， 有时候转会造成内存泄漏，比如拷贝大块内存来做包装
+   - 其他：alchemy
+   - 支持语言：C，C++和Rust，预计会推出的语言有Go，Java和C#
+   - 使用WebAssembly对浏览器API进行任何调用时，目前还需要JS进行交互，用JS作为入口。未来WebAssembly可能被浏览器内置支持，并使其能够直接调用DOM，Web Workers或其他浏览器API等
+### 原理
+1. js的运行方式发展
+   - 解释器：
+   - 即时编译器：JITs，速度快10倍
+1. js的其他语法
+   - 微软的 TypeScrip
+   - 谷歌的 Dart
+   - Mozilla的 asm.js
+   - W3C的 WebAssembly
