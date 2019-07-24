@@ -171,21 +171,21 @@
 1. 知识
    - 整个桌面进程都拖死，因为linux运行着7个工作台的，切到第一个工作台，杀死那个进程，ctrl+alt+1
 ### 网络
-1. 网络
+1. 查看
+   - ping
+   - traceroute：显示网络数据包传输到指定主机的路径信息，追踪数据传输路由状况
    - ifconfig：显示当前网络接口状态、配置网络
      1. -a：inet addr，ip地址
-   - netstat：显示网络连接/运行端口/路由表等
-     1. anpt：查看端口占用，`netstat anpt | grep 80`
-   - traceroute：显示网络数据包传输到指定主机的路径信息，追踪数据传输路由状况
-   - ping
-   - host
    - nethogs: 将进程按网络流量列表显示
    - lsof
      1. i:80：查看端口号，root用户查看
-1. 操作
-   - telnet：使用telnet协议通信
-   - curl
-   - elinks
+   - netstat：显示网络连接/运行端口/路由表等
+     1. anpt：查看端口占用，`netstat anpt | grep 80`
+   - ss
+     1. 认识：Socket Statistics，用来获取socket统计信息，显示和netstat类似，优势在于能显示更详细的TCP和连接状态的信息，比netstat更快速更高效
+   - host
+   - dig
+     1. 认识：从DNS域名服务器查询主机地址信息
 1. 配置
    - /etc/sysconfig/network-scripts/ifcfg-eth0
    - hostname
@@ -198,17 +198,21 @@
      1. 添加端口：firewall-cmd --zone=public --add-port=80/tcp --permanent
      1. 查看端口：firewall-cmd --zone=public --list-ports
      1. 开关：systemctl start/disable/restart firewalld
-1. 数据传输
-   - rsync
-     1. -r：同步
-     1. -av：同步文件，删除--delete
-   - scp
-     1. 上传：scp [-r] local addr@ip:/addr
-     1. 下载：scp [-r] addr@ip:/addr local
-   - rcp
-   - ftp
-   - ssh
-     1. ssh addr@ip
+1. 操作
+   - telnet：使用telnet协议通信
+   - curl
+   - elinks
+   - 数据传输
+     1. rsync
+        - -r：同步
+        - -av：同步文件，删除--delete
+     1. scp
+        - 上传：scp [-r] local addr@ip:/addr
+        - 下载：scp [-r] addr@ip:/addr local
+     1. rcp
+     1. ftp
+     1. ssh
+        - ssh addr@ip
 ### 磁盘
 1. mount/umount：挂载
    - /dev/sd*：设备文件，`mount /dev/sda1 /mnt/sda1`
