@@ -541,6 +541,12 @@ SELECT json_extract(json_data, '$.content.answer[*].group[*].value') FROM entity
 # 以下这条不能准确的搜索，因为不能遍历所有的type
 SELECT json_extract(json_data,'$.content.answer') FROM entity_question WHERE JSON_EXTRACT(json_data, "$.content.answer[*].group[*].type") != 'text';
 ```
+1. 数据大小写
+   - 默认的字符检索策略：utf8_general_ci，不区分大小写
+   - utf8_general_cs 表示区分大小写，utf8_bin表示二进制比较，同样也区分大小写
+   - 解决方案
+     1. 直接修改字符集属性
+     1. 搜索时添加关键字binary表示二进制区分：`SELECT * FROM a WHERE binary name LIKE 'a%';`
 ### 原理
 1. 语法分析器：优化查询，会帮你优化成索引可以识别的模式
 1. 索引
