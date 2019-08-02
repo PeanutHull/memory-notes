@@ -201,6 +201,11 @@
      1. auth_group：组数据表
      1. auth_group_access：用户、组关系表
      1. auth_rule：权限表，模块+控制器+方法名、名称
+### 限流
+1. 计数器算法：redis的key一定时间内做减法、加法限制，时间约小，误差越小，简单粗暴，不是平均速率限流
+1. 滑动窗口算范：把时间划片，一点点往前挪，抛弃前一个格子，进入下一个格子，能够保留前后固定时间窗口的请求统计。不存在临界问题。划分格子越多，限流统计越精准
+1. 漏桶算法：将所有请求放入桶中，然后定时拿出n个执行，桶满时抛弃，严格限制了吞吐量
+1. 令牌桶算法：以固定速率往桶中放入令牌，令牌有最大数量，使用时减去相应令牌即可，适合突发特性的流量
 ### 技能树
 1. 开始
    - 代码：git/svn -> jenkins
@@ -262,3 +267,85 @@
      1. 训练学习：网络结构、逻辑回归、激励函数、损失函数、梯度下降、网络向量化、网络梯度下降、训练过程
    - 场景
      1. 分类识别：图像、语音、文本
+### 开放平台
+1. 账号体系
+   - 用户：级别、账户、余额
+     1. 是否第三方登录：自建用户体系，（微信、qq）oauth2.0、OpenID
+   - 鉴权：
+     1. 将userId和服务id绑定，鉴定具有哪些权限
+     1. 过期时间
+   - 秘钥管理：accessId、accessKey。用于鉴别是否真正请求人（验证请求的发送者身份），用秘钥和参数生成加密串
+     1. Format：json、xml
+     1. Version：api版本号
+     1. AccessId
+     1. Signature：签名结果串
+     1. SignatureMethod：签名方式，md5、HMAC-SHA1
+     1. SignatureVersion：签名算法版本
+     1. Timestamp：请求的时间戳，要标识出来UTC
+     1. SignatureNonce：唯一随机数，用于防止网络重放攻击，用户在不同请求间要使用不同的随机数值
+1. open api
+   - 访问统计：配置能访问的模块
+   - 频率控制：独立的流控模块，粒度是每秒/分钟/小时/天，
+     1. 单ip
+     1. 单应用
+     1. 单用户
+   - 安全：http/https、注入、网络重放攻击
+   - 日志：访问日志
+1. 问题
+   - 微信为什么要用具有2小时过期的access_token？这个设计思路是：每次验证的时候将（accesskey+accessA+curTimestamp(当前时间戳)+randomNum(随机数)）这个加密，产生一个api_code,发送验证串的时候将api_code和里面的参数带到proxy验证，产生一个access_token和expire_time(token过期时间)。为了校验的时候快速？
+1， 方案
+   - 设计：产品设计、技术实现
+   - accessId、accessKey：一般是把所有的请求参数排序后和apisecretkey做hash生成一个签名sign参数，服务器后台只需要按照规则做一次签名计算，然后和请求的签名做比较，如果相等验证通过，不相等就不通过。此排序严格大小写敏感排序。不包括sign本身
+   - 参数：两个部分，公共请求参数，业务参数
+   - utf-8编码
+   - 返回RequestId：便于追查，和日志放在一起
+   - 产品体系
+     1. 简介
+     1. 定价
+     1. 快速入门
+     1. 开发指南
+     1. 用户指南
+     1. 最佳实践：教用户怎么更好使用，比如设计场景，有什么好处
+     1. 常见问题
+     1. 相关协议
+   - 频率控制
+	 1. 方案1
+        ```
+        $listLength = LLEN rate.limiting:$IP
+
+        if ($listLength < 10) {
+            LPUSH rate.limiting:$IP now()
+        }else{
+            $time = LINDEX rate.limiting:$IP, -1
+            if (now() - $time < 60){
+                print "超过访问限制"
+                exit
+            }else{
+                LPUSH rate.limiting:$IP now()
+                LTRIM rate.limiting:$IP, 0, 9
+            }
+        }
+        ```
+	 1. 方案2
+        ```php
+        $key = 'ImageCode_RequestLimit_Uid';  
+    	$listLen = lLen($key);  
+    	if($listLen < 3){  
+       		// 直接将当前时间戳插入List尾部  
+        	Lpush($key, now());  
+    	} else {  
+        	$index0Time = Lindex($key);  
+        	if((当前时间 - $index0Time) < 10min){  
+            		// 触发10min内请求大于3次，提醒，“请求过多，请稍后再试。”  
+            		echo "请求过多，请稍后再试。";  
+            		exit;  
+        	} else {  
+            		// 将当前时间戳插入List尾部  
+            		// 取出List头部首元素  
+            		Lpush($key, now());  
+            		Ltrim($key, 0, 2);  
+        	}
+    	}
+        ```
+1. wiki
+   - OAuth2.0协议：是为了解决第三方程序可以获取保存在服务器上的用户的信息但用户又能不将自己的账号密码告知第三方程序
