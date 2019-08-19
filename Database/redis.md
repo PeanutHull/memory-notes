@@ -92,6 +92,10 @@
    - script flush：移除缓冲脚本
    - script kill：杀死脚本
 1. 锁
+   - set nx ex val lua：排他，过期，一段时间内唯一的特性
+     1. 存在执行时间超出锁时间，造成同时拥有锁，这就是setnx陷阱
+     1. 删除锁时，锁已过期，这个间隔他人拿到了锁，会误删他人锁：利用lua脚本，拿锁和删锁原子操作，解决了此问题
+   - RedLock：分布式锁，watch，multi事务
 ```
 do {
     $microtime = microtime(true) * 1000;

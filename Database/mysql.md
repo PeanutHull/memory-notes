@@ -239,11 +239,11 @@
     rollback to xx;                     # 回滚到标记点
     ```
    - 并发事务
-     1. 产生的问题：https://www.cnblogs.com/snsdzjlz320/p/5761387.html，以下都是1没commit，或者只是普通的读数据
-        - 更新覆盖丢失：可重复读，读取另一个事务正在修改的数据。1可以看到2没commit的数据
-        - 脏读：1不可以看到2没commit的数据，但是1可以看到2commit的数据
-        - 不可重复读：默认，同一事务的多个实例在并发读取数据时，会看到同样的数据行。1没commit看到2已经修改的值前后时间是一样的
-        - 幻读：1没commit查范围数据时，会受到2新插入数据的影响，前后不一样
+     1. 产生的问题：https://www.cnblogs.com/snsdzjlz320/p/5761387.html，以下情况是A没commit或者A只是普通的读数据
+        - 更新覆盖丢失：可重复读，读取另一个事务正在修改的数据。A可以看到B没commit的数据
+        - 脏读：A不可以看到B没commit的数据，但是A可以看到Bcommit的数据，B的事务前后，A读取的数据是错误的
+        - 不可重复读：默认，同一事务的多个实例在并发读取数据时，不会看到同样的数据行。A没commit看到B已经修改的值前后是一样的
+        - 幻读：A没commit查范围数据时，会受到B新插入数据的影响，前后不一样
      1. 事务隔离：并发本身和数据冲突的"串行化"是矛盾的，用隔离级别平衡隔离和并发的矛盾
         - 方法
           1. 读取数据前加锁
@@ -259,7 +259,7 @@
 1. 分布式事务
 1. 锁
    - 基于数据操作分类：共享锁、独占锁、意向共享锁、意向独占锁
-     1. 共享锁：`lock in share mode;`，读锁，多个可读不可拿到写锁
+     1. 共享锁：`lock in share mode;`，读锁，其他人可读不可拿到写锁
      1. 排他锁：`for update`，普通select写锁拿不到，for update读写都拿不到，update/delete/insert自动加，select任何锁不加
         - 锁级别：有主键或索引行级别，无则表级别
         - 注意：仅适用于InnoDB，必须在事务中执行
@@ -274,7 +274,7 @@
      1. 行锁争用情况：`show status like 'innodb_row_lock%';`，使用监视器`CREATE TABLE innodb_monitor(a INT) ENGINE=INNODB;Show innodb status\G;DROP TABLE innodb_monitor;`
    - 死锁：发生死锁后InnoDB一般都能自动检测到，并使一个事务释放锁并回退，涉及表锁稍微不行
    - 悲观锁
-     1. 理解：Pessimistic Locking，读取的时候为后面的更新加锁，之后再来的读写都会等待，属于数据库锁
+     1. 理解：Pessimistic Locking，读取的时候为后面的更新加锁，之后再来的读写都会等待，属于数据库层面的锁
      1. 意义：数据修改排他性，高并发下，数据可以正确写入。但带来数据库性能的大量开销，影响并发访问性，特别是长事务
    - 乐观锁
      1. 理解：Optimistic Locking，乐观并发控制。基于数据版本记录机制实现。如updatetime/version等版本标识字段，根据version更新数据，一旦发现其他并发操作更新，会回退，并从新执行自己

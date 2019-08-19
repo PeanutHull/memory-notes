@@ -1,6 +1,10 @@
 1. web攻击方式
    - XSS：Cross Site Script，跨站请求攻击，链接中附加js代码，可以获取数据和cookies，修改页面内容
-   - CSRF：Cross-Site Request Forgeries，跨站点请求伪造，诱导点击，或者直接触发访问，利用别人的认证id实现操作，使用同源策略防范
+   - CSRF：
+     1. 认识：Cross-Site Request Forgeries，跨站点请求伪造，诱导触发别人利用别人自己的合法身份发送自己伪造的请求来实现攻击。即站点A会报据用户C的权限来处理恶意站点B所发起的请求，达到了目的
+     1. 防范方法
+        - 同源策略：检测Referer字段，非法的Reffer来源直接拒绝访问
+        - 当前session构造唯一token放入请求头、参数中，攻击者不能拿到这个token
    - XFS：iframe别人的页面，使用x-frame-options或者提前检测屏蔽防范
    - http首部注入：在响应头部插入换行和其他头，实现cookie设置、重定向、修改主体。%0D%0A代表http报文的换行符
     ```

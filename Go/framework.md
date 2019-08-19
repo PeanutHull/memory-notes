@@ -22,7 +22,7 @@
    - 进程内监控
    - 部署
      1. 独立部署：`nohup ./beepkg &`
-     1. supervisord部署
+     1. supervisor部署
      1. nginx反向代理
 ### Gin
 1. 认识：以更好的性能实现类似Martini框架的API
