@@ -42,7 +42,7 @@
      1. start_app、stop_app、reset：针对raMQ程序
      1. list_exchanges、list_bindings、list_queues [name type durable auto_delete]：后俩为是否持久化、是否自动删除
    - 集群
-     1. 认识：保证节点崩溃后继续可用，提高消息吞吐量。共享user/vhost/exchange等，v2.6支持镜像队列，最少一个磁盘节点，其他为内存节点。
+     1. 认识：保证节点崩溃后继续可用，提高消息吞吐量。共享user/vhost/exchange等，v2.6支持镜像队列，最少一个磁盘节点，其他为内存节点
      1. 节点配置
         - rabbitmqctl -n rabbit_1 join_cluster rab@rab：加入cluster
         - RABBITMQ_NODENAME=rabbit_1 RABBITMQ_NODE_PORT=5672 ./sbin/rabbitmq-server -detached

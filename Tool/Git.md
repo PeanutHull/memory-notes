@@ -129,7 +129,7 @@
 ### revert————撤销某次提交，恢复到HEAD之前
 1. git revert < HASH >
 1. git revert HEAD
-1. 理解：reset是把HEAD向后移动，revert继续往前
+1. 理解：reset是把HEAD向后移动。revert继续往前，不会改变项目历史
 ### show
 1. git show branchName:firename     查看其它分支的文件
 ### remote————远程操作

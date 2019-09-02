@@ -120,6 +120,7 @@ $count = $redis->get('count')? : 0;
 1. 集群
    - TwemProxy
    - Codis
+   - pika
 #### 运维
 1. 安装和启动
    - 启动server：`src/redis-server|redis-server.exe`
