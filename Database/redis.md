@@ -176,6 +176,7 @@ $count = $redis->get('count')? : 0;
    - 备份：save/bgsave，产生dump.rdb文件，即备份成功
    - 恢复：将dump.rdb文件放到redis目录并启动即可，config get dir获得目录
 1. 集群配置
+   - 数据分片：hash slot，引入哈希槽和节点的对应关系确定key的位置，存放哈希槽的Bitmap通过Gossip协议，在结点之间传递
 1. 哨兵机制：sentinel，做redis的存活性检测，提供高可用
 #### 原理
 1. 复杂的数据结构在内存中操作非常简单，redis可以做很复杂的操作

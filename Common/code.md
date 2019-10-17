@@ -774,5 +774,147 @@
         }
     }
     ```
+1. 职责链模式
+   - 理解：利用抽象方法，将业务请求连成一条链层层传递，谁符合条件谁处理，重点在于多个对象都有机会处理请求，需要解耦请求发送者和接受者的关系
+     1. 客户端不需要关心处理类，可以灵活设置链条
+     1. 扩展处理方法不需要修改处理类，直接新增即可
+   - 组成
+     1. 一个抽象类，多个具体处理类：抽象类定义链条上下级和抽象处理方法
+     1. 客户端设置链条中的执行顺序
+   - demo
+    ```c#
+    // 抽象类
+    abstract class Handler
+    {
+        protected Handler successor;
+
+        public void SetSuccessor(Handler successor)                     // 设置链条继任者
+        {
+            this.successor = successor;
+        }
+
+        public abstract void HandleRequest(int request);                // 抽象处理方法
+    }
+
+    // 具体处理类
+    class ConcreteHandler1 : Handler
+    {
+        public override void HandleRequest(int request)
+        {
+            if (request >= 0 && request < 10)
+            {
+                Console.WriteLine("{0}  处理请求  {1}", this.GetType().Name, request);
+            }
+            else if (successor != null)
+            {
+                successor.HandleRequest(request);
+            }
+        }
+    }
+    class ConcreteHandler2 : Handler
+    {
+        public override void HandleRequest(int request)
+        {
+            if (request >= 10 && request < 20)
+            {
+                Console.WriteLine("{0}  处理请求  {1}", this.GetType().Name, request);
+            }
+            else if (successor != null)
+            {
+                successor.HandleRequest(request);
+            }
+        }
+    }
+    // 客户端代码
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            Handler h1 = new ConcreteHandler1();
+            Handler h2 = new ConcreteHandler2();
+            Handler h3 = new ConcreteHandler3();
+            h1.SetSuccessor(h2);                                    // 设置链条
+            h2.SetSuccessor(h3);
+
+            int[] requests = { 2, 5, 14, 22, 18, 3, 27, 20 };
+
+            foreach (int request in requests)
+            {
+                h1.HandleRequest(request);
+            }
+        }
+    }
+    ```
+1. 访问者模式
+   - 理解：设计模式中最复杂的一个模式。表示作用于某对象结构中的各元素的操作，可以在不改变各元素的类的前提下定义作用于这些元素的新操作。即改变的新增的是访问者
+     1. 就是将处理从数据结构分离出来，将数据结构和作用于数据结构的操作解耦合，使得操作可以自由变化，体现开放-封闭原则
+     1. 适用于数据结构相对稳定，又有变化多端的算法。也就是启用条件苛刻：大多时候你并不需要访问者模式，一旦需要时就真的需要了
+     1. 新增数据结构就比较麻烦了
+     1. 双分派技术：不仅受具体状态的影响，还受访问的人的影响
+        - 第一次分派：状态作为参数传递给具体人类
+        - 第二次分派：人类调用某个访问者方法后，将自己(this)作为参数传递进去
+   - 组成
+     1. 一个访问者抽象类：稳定的按照数据结构个数安排的抽象逻辑方法，多个具体算法状态类
+     1. 数据结构抽象类：有一个用结构具体类使用访问者的哪一个方法的抽象方法
+   - demo
+    ```c#
+    // 定义访问者抽象类
+    abstract class Visitor
+    {
+        // 以下两个抽象方法决定了只有两个数据结构
+        public abstract void VisitConcreteElementA(ConcreteElementA concreteElementA);
+
+        public abstract void VisitConcreteElementB(ConcreteElementB concreteElementB);
+    }
+
+    // 访问者实现类
+    class ConcreteVisitor1 : Visitor
+    {
+        public override void VisitConcreteElementA(ConcreteElementA concreteElementA)
+        {
+            Console.WriteLine("{0}被{1}访问", concreteElementA.GetType().Name, this.GetType().Name);
+        }
+
+        public override void VisitConcreteElementB(ConcreteElementB concreteElementB)
+        {
+            Console.WriteLine("{0}被{1}访问", concreteElementB.GetType().Name, this.GetType().Name);
+        }
+    }
+
+    // 数据结构抽象类
+    abstract class Element
+    {
+        public abstract void Accept(Visitor visitor);
+    }
+
+    // 数据结构具体类
+    class ConcreteElementA : Element
+    {
+        public override void Accept(Visitor visitor)                // 双分派的第一次分派
+        {
+            visitor.VisitConcreteElementA(this);                    // 双分派的第二次分派
+        }
+
+        public void OperationA()
+        { }
+    }
+
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            ConcreteElementA a = new ConcreteElementA();
+            ConcreteElementB b = new ConcreteElementB();
+
+            ConcreteVisitor1 v1 = new ConcreteVisitor1();
+            ConcreteVisitor2 v2 = new ConcreteVisitor2();
+
+            a.Accept(v1);
+            a.Accept(v2);
+            b.Accept(v1);
+            b.Accept(v2);
+        }
+    }
+    ```
 1. 注册树模式
    - 意图：全局共享/交换对象
