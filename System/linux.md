@@ -204,8 +204,12 @@
    - elinks
    - 数据传输
      1. rsync
-        - -r：同步
-        - -av：同步文件，删除--delete
+        - 认识：linux的文件备份、同步工具
+          1. 计算源文件和目标文件的差异，仅同步差异（因为全量成本高）
+          1. 压缩、解压数据以进一步提高速度
+        - 命令行
+          1. -r：同步
+          1. -av：同步文件，删除--delete
      1. scp
         - 上传：scp [-r] local addr@ip:/addr
         - 下载：scp [-r] addr@ip:/addr local

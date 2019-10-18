@@ -23,7 +23,7 @@
 
     events {                                                    # 工作模式
         worker_connections      1024;                           # 单个进程最大连接数，最大连接数=连接数*进程数
-        use epoll               kqueue|epoll|poll               # epoll模型是Linux2.6以上内核高性能网络I/O模型，如果FreeBSD用kqueue
+        use epoll               kqueue|epoll|poll
     }
 
     http {                                                      # 服务器配置
