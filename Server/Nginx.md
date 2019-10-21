@@ -1,6 +1,5 @@
 ### 认识
-1. 原理：基于事件驱动，轻量级、高性能非阻塞的http/反向代理/负载均衡服务器。C编写，官方测试5万并发。windows系统不能发挥全部的性能
-1. 特点
+1. 认识：基于事件驱动，轻量级、高性能非阻塞的http/反向代理/负载均衡服务器。C编写，官方测试5万并发。windows系统不能发挥全部的性能
    - 资源消耗低，运行稳定，并发高
    - 分阶段资源分配技术，cpu/内存占用率低
    - 静态文件可开启索引和描述符缓冲
@@ -11,10 +10,10 @@
    - 静态资源服务器：如js、images
    - 虚拟主机：实现一台服务器虚拟出多个网站
    - 反向代理、负载均衡
-### 操作
+### 配置
 1. nginx层级：http-->server-->location
 1. nginx.conf配置
-    ```
+    ```lua
     user                        www;                            # 用户和用户组
     worker_processes            8;                              # 同时工作的进程数，建议设置为cpu核心数
     error_log                   /var/nginx/error.log;           # 全局错误日志，类型有debug|info|notice|warn|error|crit
@@ -43,7 +42,7 @@
     }
     ```
 1. server配置，决定虚拟主机
-    ```
+    ```lua
     server {
         listen       80;
         listen       somename:8080;
@@ -51,7 +50,7 @@
     }
     ```
 1. location配置，匹配路径
-    ```
+    ```lua
     location / {
         root   html;
         index  index.html index.htm;
@@ -106,7 +105,7 @@
     }
     ```
 1. 代理线上配置
-    ```nginx
+    ```lua
     server
     {
         listen 80;
@@ -152,7 +151,7 @@
    - koi-utf/koi-win/win-utf：编码转换映射文件
 ### 应用
 1. gzip压缩：可在任何层级定义，越细优先级越高
-    ```
+    ```lua
     gzip on;
     gzip_static on;        
     gzip_min_length 1k/1024;                            // 最小压缩文件大小
@@ -175,7 +174,7 @@
      1. 通用hash：以nginx内置的变量为key进行hash
      1. 一致性hash：使用nginx内置的一致性hash环
    - 内置策略：nginx的proxy
-    ```
+    ```lua
     http{
         upstream somename {
             ip_hash;                                        # 加上几位ipHash策略，去掉为加权
@@ -191,7 +190,7 @@
     }
     ```
 1. 防盗链：通过Referer或者签名，检测访问的来源网页
-    ```
+    ```lua
     location ~ .*\.(gif|jpg|png|fiv|swf)$ {
         valid_referers none blocked imooc.com *.imooc.com       # 针对referer
         if($invalid_referer) {
@@ -205,7 +204,7 @@
         accesskey_signature "mypass$remote_addr"                # 加密规则，nginx会检查签名的正误
     }
     ```
-1. cors配置
+1. CORS
     ```lua
     location / {
         if ($request_method = 'OPTIONS') {
@@ -303,4 +302,9 @@
    - pcre：Perl Compatible Regular Expressions，是Perl库。nginx的http模块使用pcre来解析正则表达式
    - zlib：提供了多种压缩/解压缩的方式。nginx使用zlib对http包的内容进行gzip
    - openssl
-1. Lighttpd：低内存开销、模块丰富、动态页面处理能力很强
+1. Lighttpd：web服务器，低内存开销、模块丰富、动态页面处理能力很强
+### 原理
+1. 内存池，连接池，自旋锁，红黑树
+1. 进程模型：管理进程(master)和工作进程(worker)
+1. 模块化设计：主框架只提供核心代码，各模块继承同套标准接口规范和数据结构，模块进行分层，为核心/配置/事件/HTTP/mail
+1. 事件驱动：event模块，采用红黑树管理事件定时器，支持各种事件驱动模型
