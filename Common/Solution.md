@@ -129,13 +129,6 @@
 1. 实现
    - 使用服务商提供的CDN服务
 ### 分布式缓存
-### 分布式事务
-   - 基于消息中间件的解决分布式事务框架：https://github.com/yu199195/myth
-   - 消息中间件支持：jms(activimq),amqp(rabbitmq),kafka,roceketmq。
-   - rpc框架支持 : dubbo(可用Fescar保持数据一致性),motan,springcloud
-   - 本地事务日志存储支持 : redis,mogondb,zookeeper,file,mysql
-   - TCC：https://github.com/yu199195/happylifeplat-tcc
-   - 二阶段提交：https://github.com/yu199195/happylifeplat-transaction
 ### 消息中间件
 1. 中间件
    - ActiveMQ

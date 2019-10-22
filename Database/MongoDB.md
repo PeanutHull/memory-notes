@@ -82,8 +82,12 @@
    - CAP理论：Consistency 一致性，Availability 可用性，Partition tolerance 分区容错性，不可兼得
    - BASE方案：Basically Available 基本可用，Soft state 软状态，Eventually Consistent 最终一致，牺牲某时刻一致性保证最终一致性
    - 分布式事务实现：只能实现弱一致性
-     1. 两阶段提交/XA：事务管理器协调，先问问ok不，再判断是否全部ok
-     1. TCC：Try-Confirm-Cancel
+     1. 两阶段提交/XA：事务管理器协调，先问问ok不，再判断是否全部ok，https://github.com/yu199195/happylifeplat-transaction
+     1. TCC：Try-Confirm-Cancel：https://github.com/yu199195/happylifeplat-tcc
+     1. 基于消息中间件的解决分布式事务框架：https://github.com/yu199195/myth
+     1. 消息中间件支持：jms(activimq),amqp(rabbitmq),kafka,roceketmq。
+     1. rpc框架支持 : dubbo(可用Fescar保持数据一致性),motan,springcloud
+     1. 本地事务日志存储支持 : redis,mogondb,zookeeper,file,mysql
 1. sql历史
    - Oracle：
      1. 不开源，传奇的公司，传奇的大老板，连续12年每年销售额翻一番。

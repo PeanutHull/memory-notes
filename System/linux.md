@@ -111,13 +111,29 @@
           1. 计算某个进程所占的物理内存大小公式：RES – SHR
           1. pstree
           1. pidof：打印pid
-   - 操作
-     1. kill/pkill/killall：杀死所有fpm`ps -ef|grep php-fpm|awk -F ' ' '{print $2}'|xargs kill -9`
+   - 杀死
+     1. 分类
+        - kill：发信号
+        - killall：按照名字消灭进程
+        - pkill：根据名字和其它属性查看、发出信号
+        - skill：发送信号、报告进程状态
+     1. 参数
         - -USR2 pid
         - -QUIT：从容
         - -TERM：快速
         - -9 pid：强制
-        - 杀死僵死进程：ps -ef | grep defunct | grep -v grep | cut -b8-20 | xargs kill -9
+     1. 命令
+        - 杀死僵死进程：`ps -ef | grep defunct | grep -v grep | cut -b8-20 | xargs kill -9`
+        - 杀死所有fpm：`ps -ef | grep php-fpm | awk -F ' ' '{print $2}' | xargs kill -9`
+1. 特点
+   - linux对后缀不敏感
+   - 输出语句中有空格需加双引号
+   - man：查看命令手册
+   - logout、exit：退出
+1. 参数
+   -i       忽略大小写
+   -n       显示行号
+   -r/-R    一般没区别
 1. 系统
    - uname -a 显示系统信息
    - uptime：当前系统时间、开机到现在运行时间、用户在线数、系统平均负载
@@ -156,6 +172,10 @@
     echo "pleasant taste"
     EOF
     ```
+   - 输入输出方式
+     1. 标准输入文件stdin 0
+     1. 标准输出文件stdout 1
+     1. 标准错误输出文件stderr 2
 1. 通配符
    - 分类
      1. * 一个或多个
@@ -203,6 +223,14 @@
      1. -h：关机
      1. -r：重启
      1. -c：取消前一个关机命令
+   - 运行级别
+     1. 0  关机
+     1. 1  单用户，即window的安全模式，启动最小的程序模式，多用于修复系统
+     1. 2  不完全多用户，不含NFS服务。NFS是linux的文件共享服务
+     1. 3  完全多用户，标准的运行级
+     1. 4  未分配
+     1. 5  图形界面
+     1. 6  重启
 1. 知识
    - 整个桌面进程都拖死，因为linux运行着7个工作台的，切到第一个工作台，杀死那个进程，ctrl+alt+1
 ### 网络
@@ -299,38 +327,3 @@
 1. mac环境变量默认地址
    - /bin、/sbin：系统命令目录
    - /usr/bin、/usr/sbin：用户程序命令目录，如php、php-config、phpize、php-fpm
-1. 输入输出方式
-   - 标准输入文件stdin 0
-   - 标准输出文件stdout 1
-   - 标准错误输出文件stderr 2
-1. 运行级别
-   - 0  关机
-   - 1  单用户，即window的安全模式，启动最小的程序模式，多用于修复系统
-   - 2  不完全多用户，不含NFS服务。NFS是linux的文件共享服务
-   - 3  完全多用户，标准的运行级
-   - 4  未分配
-   - 5  图形界面
-   - 6  重启
-1. 特点
-   - linux对后缀不敏感
-   - 输出语句中有空格需加双引号
-   - man：查看命令手册
-   - logout、exit：退出
-1. 参数
-   -i       忽略大小写
-   -n       显示行号
-   -r/-R    一般没区别
-1. SELinux：Security Enhanced Linux，安全强化Linux，是强制访问控制系统的一种实现，用于指明进程可以访问的资源，增强系统抵御0-Day的攻击
-   - 特点：可查看、热更改、进程初始化/继承/执行三方面进行策略控制、控制范围包括文件系统/目录/文件/文件启动描述符/端口/消息接口/网络接口
-   - 使用
-     1. getenforce、/usr/sbin/sestatus -v：运行状态，Enforcing/Permissive/Disabled，记录警告并阻止/记录警告不阻止/禁用
-     1. setenforce：Enforcing|Permissive|1|0，切换状态保持至关机，从Disabled切出时，要重启并重新创建安全标签(touch /.autorelabel && reboot)
-     1. /etc/sysconfig/selinux、/etc/selinux/config：永久修改，修改后重启
-1. 快捷键
-   - ctrl+s     暂停该终端，ctrl+q恢复
-   - ctrl+z     把当前进程转到后台运行，使用 fg 命令恢复
-   - ctrl+u     清除光标前至行首间的内容
-   - ctrl+k     清除光标后至行尾的内容
-   - ctrl+y     粘贴或者恢复上次的删除
-   - ctrl+l     清屏，相当于clear
-1. tumx：多个界面，断网保存用户操作的界面

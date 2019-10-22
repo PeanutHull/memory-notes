@@ -76,6 +76,13 @@
    - 命令行模式：: / ?
    - 查找和替换
    - 配置：:setnu、:setnonu
+1. 快捷键
+   - ctrl+s     暂停该终端，ctrl+q恢复
+   - ctrl+z     把当前进程转到后台运行，使用 fg 命令恢复
+   - ctrl+u     清除光标前至行首间的内容
+   - ctrl+k     清除光标后至行尾的内容
+   - ctrl+y     粘贴或者恢复上次的删除
+   - ctrl+l     清屏，相当于clear
 ### 优化
 1. 查看系统性能
    - ps
@@ -89,6 +96,12 @@
 1. 问题定位
 1. 问题解决
 ### 解决方案
+1. SELinux：Security Enhanced Linux，安全强化Linux，是强制访问控制系统的一种实现，用于指明进程可以访问的资源，增强系统抵御0-Day的攻击
+   - 特点：可查看、热更改、进程初始化/继承/执行三方面进行策略控制、控制范围包括文件系统/目录/文件/文件启动描述符/端口/消息接口/网络接口
+   - 使用
+     1. getenforce、/usr/sbin/sestatus -v：运行状态，Enforcing/Permissive/Disabled，记录警告并阻止/记录警告不阻止/禁用
+     1. setenforce：Enforcing|Permissive|1|0，切换状态保持至关机，从Disabled切出时，要重启并重新创建安全标签(touch /.autorelabel && reboot)
+     1. /etc/sysconfig/selinux、/etc/selinux/config：永久修改，修改后重启
 1. 进程守护
    - supervisor、systemd、monit(还能性能监控等等)
      1. supervisor：进程管理器，用于保证进程的自动重启等。通过fork/exec的方式将这些被管理的进程当作supervisor的子进程来启动，配置进程命令即可，python写的
@@ -218,6 +231,7 @@
           1. ddos
           1. 放大攻击：dns服务器被作为肉鸡
      1. CDN：：内容分发网络，部署大量网络节点通过服务器缓存加速，让用户就近更快访问网络。指标有带宽、命中率、请求数
+1. tumx：多个界面，断网保存用户操作的界面
 ### shell
 1. 理解：壳，命令行解释器，利用ASCII码表转换将命令传给内核，敲命令的界面就是shell。支持命令执行、条件判断、循环控制
 1. 运算符：expr、let
