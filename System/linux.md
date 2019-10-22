@@ -1,59 +1,4 @@
-### 基础
-1. 环境变量：系统预定义的参数。window也有。作用：在程序里可以获得环境变量的值，根据值决定如何操作，运行，找路径，文件夹等等
-   - /etc/profile：全局
-   - .bash_profile：个人
-   - source .bash_profile：使生效
-   - export PATH=：书写格式
-1. 重定向
-   - 管道：|，前面输出作为后面输入，依次类推。`cat file.txt | uniq | grep txt | sort`
-   - 输出：>，>>
-     1. more file1 file2 file3 > file2：清空file2
-     1. cat file1 1 >> file2：追加，1标准输出流
-   - 输入：>/< <<(表示当前命令的标准输入为来自命令行中一对分隔号之间的内容)
-    ```shell
-    cat > ~/xjj <<EOF
-    echo "pleasant taste"
-    EOF
-    ```
-1. 通配符
-   - 分类
-     1. * 一个或多个
-     1. ? 单一字符
-     1. [] 包含在其中的任意字符
-   - 举例
-     1. ls /dev/sda[12345]：出现/dev/sda1  /dev/sda2  /dev/sda3
-     1. ls [0-9]?.conf：以数字开头，随后一个是任意字符，接着以.conf结尾的所有文件
-1. 输出
-   - echo：输出，-e 支持反斜线控制的字符转换，\a 警告音 \n 换行键 \r 回车键 \t 制表符，Tan键 \v 垂直制表符
-   - print 默认带换行符，printf 没有
-   - awk：每一行扫描显示文件内容，命令+正则+文件，`awk '条件{命令}' 文件`
-     1. `awk '{print $0}' /etc/passwd`：等于`cat /etc/passwd`
-     1. `awk -F":" '{ print $1 }' /etc/passwd`：以:作为分隔符，显示第一个
-   - sed：实现数据的替换c，删除d，增加a，选取p等，`sed '命令' 文件`
-     1. `sed '2,4d' file`：删除2到4行
-     1. `sed  '2a liu .....\`
-        `>shengxi is shuai !!!'  file_name `：第2行新增2行
-   - grep：过滤，`grep '字符' file`
-     1. 使用
-        - 正则：`grep 'w[ea]ll' a.log`，显示e或a
-     1. 命令行
-        - -n：显示行号
-   - cut：内容查看、删除指定部分
-     1. -b：指定范围
-     1. -c：指定行显示，如-c1-3为1到3行
-     1. -d：指定字段分隔符
-     1. -f：显示指定字段
-   - wc：Word Count，统计文件或输入
-     1. -c：字节数
-     1. -l：行数
-     1. -m：字符数
-     1. -w：字数
-1. 运行
-   - command1 && command2，可以一次执行两个命令，前一个报错则停止运行
-   - 将程序后台执行：&
-   - echo &?：获取上一条命令的错误码
-   - tee：将程序的输出结果重定向，同时显示和保存。`echo "127.0.0.1 foobar" | sudo tee -a /etc/hosts`
-### 文件和目录
+### 文件、目录
 1. 查看
    - ls
      1. -ld：查看目录详细
@@ -103,6 +48,17 @@
    - 链接，ln，文件或目录
      1. 硬链接：多个路径指向一个inode号，最后inode号删除才删除文件，可防止误删除，默认硬链接
      1. 软连接：-s，即符号链接，类似快捷方式
+   - 压缩、解压缩
+     1. tar
+        - tar.gz
+          1. zxvf       解压缩
+          1. zcvf       压缩
+        - tar.bz2
+          1. jxvf       解压缩
+          1. jxvf       压缩
+     1. bzip2/bunzip2
+     1. gzip/gunzip
+     1. zip/unzip
 1. 知识
    - .开头的文件和目录都是隐藏的
    - 只显示目录，目录为蓝色，-l参数下-为文件、d为目录、l为符号链接
@@ -138,13 +94,6 @@
      1. setfacl
      1. chgrp
 ### 进程、系统
-1. 系统
-   - uname -a 显示系统信息
-   - uptime：当前系统时间、开机到现在运行时间、用户在线数、系统平均负载
-   - free
-     1. -m 以兆显示内存状态
-   - runlevel：查看系统运行级别，修改系统默认运行级别`cat /etc/inittab id:3:initdefault:`
-   - sudo、su、setfacl
 1. 进程
    - 查看
      1. ps：显示系统运行状态
@@ -168,6 +117,92 @@
         - -QUIT：从容
         - -TERM：快速
         - -9 pid：强制
+        - 杀死僵死进程：ps -ef | grep defunct | grep -v grep | cut -b8-20 | xargs kill -9
+1. 系统
+   - uname -a 显示系统信息
+   - uptime：当前系统时间、开机到现在运行时间、用户在线数、系统平均负载
+   - free
+     1. -m 以兆显示内存状态
+   - runlevel：查看系统运行级别，修改系统默认运行级别`cat /etc/inittab id:3:initdefault:`
+   - sudo、su、setfacl
+1. 时间
+   - date
+     1. -s：设置系统时间
+1. 定时任务
+   - crontab：linux原生定时器
+     1. -l
+     1. -e： 添加，* * * * *(分时日月周) php index.php >> index.log
+     1. at：执行一次，`at 2:00 tomorrow`
+   - 运维
+     1. service crond start/stop/restart/reload/status
+     1. chkconfig -level 35 crond on       加入开机启动
+     1. ntsysv                             查看是否开机启动
+1. 环境变量：系统预定义的参数。window也有。作用：在程序里可以获得环境变量的值，根据值决定如何操作，运行，找路径，文件夹等等
+   - /etc/profile：全局
+   - .bash_profile：个人
+   - source .bash_profile：使生效
+   - export PATH=：书写格式
+1. 重定向
+   - 管道：|，前面输出作为后面输入，依次类推。`cat file.txt | uniq | grep txt | sort`
+   - 输出：>，>>
+     1. more file1 file2 file3 > file2：清空file2
+     1. cat file1 1 >> file2：追加，1标准输出流
+   - 输入：>/< <<(表示当前命令的标准输入为来自命令行中一对分隔号之间的内容)
+   - 2>&1 > /dev/null，Shell会自动打开和关闭0、1、2这三个文件描述符
+     1. /dev/null是黑洞，只写文件，写进去找不回来
+     1. 2>&1：&表示等同于，2等同于1
+    ```shell
+    cat > ~/xjj <<EOF
+    echo "pleasant taste"
+    EOF
+    ```
+1. 通配符
+   - 分类
+     1. * 一个或多个
+     1. ? 单一字符
+     1. [] 包含在其中的任意字符
+   - 举例
+     1. ls /dev/sda[12345]：出现/dev/sda1  /dev/sda2  /dev/sda3
+     1. ls [0-9]?.conf：以数字开头，随后一个是任意字符，接着以.conf结尾的所有文件
+1. 输出
+   - echo：输出，-e 支持反斜线控制的字符转换，\a 警告音 \n 换行键 \r 回车键 \t 制表符，Tan键 \v 垂直制表符
+   - print 默认带换行符，printf 没有
+   - awk：每一行扫描显示文件内容，命令+正则+文件，`awk '条件{命令}' 文件`
+     1. `awk '{print $0}' /etc/passwd`：等于`cat /etc/passwd`
+     1. `awk -F":" '{ print $1 }' /etc/passwd`：以:作为分隔符，显示第一个
+   - sed：实现数据的替换c，删除d，增加a，选取p等，`sed '命令' 文件`
+     1. `sed '2,4d' file`：删除2到4行
+     1. `sed  '2a liu .....\`
+        `>shengxi is shuai !!!'  file_name `：第2行新增2行
+   - grep：过滤，`grep '字符' file`
+     1. 使用
+        - 正则：`grep 'w[ea]ll' a.log`，显示e或a
+     1. 命令行
+        - -n：显示行号
+   - cut：内容查看、删除指定部分
+     1. -b：指定范围
+     1. -c：指定行显示，如-c1-3为1到3行
+     1. -d：指定字段分隔符
+     1. -f：显示指定字段
+   - wc：Word Count，统计文件或输入
+     1. -c：字节数
+     1. -l：行数
+     1. -m：字符数
+     1. -w：字数
+1. 运行
+   - command1 && command2，可以一次执行两个命令，前一个报错则停止运行
+   - 将程序后台执行：&
+   - echo &?：获取上一条命令的错误码
+   - tee：将程序的输出结果重定向，同时显示和保存。`echo "127.0.0.1 foobar" | sudo tee -a /etc/hosts`
+1. 启动
+   - chkconfig：开机启动项
+     1. --list
+     1. --add/--del name
+     1. --level 2345 name on/off
+   - shutdown：关机、重启，是最安全的会保存用户的配置和服务。halt、poweroff、init 0：关机，reboot init 6：重启
+     1. -h：关机
+     1. -r：重启
+     1. -c：取消前一个关机命令
 1. 知识
    - 整个桌面进程都拖死，因为linux运行着7个工作台的，切到第一个工作台，杀死那个进程，ctrl+alt+1
 ### 网络
@@ -198,7 +233,7 @@
      1. 添加端口：firewall-cmd --zone=public --add-port=80/tcp --permanent
      1. 查看端口：firewall-cmd --zone=public --list-ports
      1. 开关：systemctl start/disable/restart firewalld
-1. 操作
+1. 功能
    - telnet：使用telnet协议通信
    - curl
    - elinks
@@ -217,6 +252,7 @@
      1. ftp
      1. ssh
         - ssh addr@ip
+     1. sz/rz
 ### 磁盘
 1. mount/umount：挂载
    - /dev/sd*：设备文件，`mount /dev/sda1 /mnt/sda1`
@@ -238,99 +274,6 @@
         - swapoff：关闭/回收
         - mkswap：格式化
    - 挂载点：把sda1挂载到根目录/上，则所有数据都在sda1分区。当sda2挂载到/home，则数据到了sda2的分区下 
-### 应用
-1. 压缩、解压缩
-   - tar
-     1. tar.gz
-        - zxvf       解压缩
-        - zcvf       压缩
-     1. tar.bz2
-        - jxvf       解压缩
-        - jxvf       压缩
-   - bzip2/bunzip2
-   - gzip/gunzip
-   - zip/unzip
-1. 时间
-   - date
-     1. -s：设置系统时间
-1. 定时任务
-   - crontab：linux原生定时器
-     1. -l
-     1. -e： 添加，* * * * *(分时日月周) php index.php >> index.log
-     1. at：执行一次，`at 2:00 tomorrow`
-   - 运维
-     1. service crond start/stop/restart/reload/status
-     1. chkconfig -level 35 crond on       加入开机启动
-     1. ntsysv                             查看是否开机启动
-### 操作
-1. 软件安装
-   - RedHat
-     1. rpm：以.rpm结尾的软件包名称，方便安装/升级/卸载，不能处理包依赖
-        - -i：安装
-        - -ivh：安装，显示文件信息，显示安装进度
-        - -q：查询
-        - -q afilcdR：查询已安装的，文件名绝对路径，安装包信息，安装目录，配置文件，文档位置，所依赖的文件
-        - -qpi：查询未安装的，版本信息
-        - -e：卸载，先用-q查询名称
-        - -U：升级
-        - -Uvh：升级，显示文件信息，显示安装进度
-        - –requires：显示依赖信息
-        - --import：签名导入
-     1. yum：Yellow dog Updater Modified，包管理工具，基于rpm，epel是yum的扩展源
-        - 参数
-          1. search
-          1. install/update/remove
-          1. list/info installed/updates
-        - 查看安装的服务：`rpm -qa | grep bind`
-        - 查看安装的位置：`rpm -ql bind`
-        - 配置yum源：配置分两部分，全局配置项为/etc/yum.conf，定义每个源/服务器的具体配置在/etc/yum.repo.d的rep文件
-   - Debian
-     1. deb/dpkg：软件包名称，比rpm晚，`dpkg -l`
-     1. apt-get：包管理工具，基于deb。`install/remove/purge`
-1. 启动
-   - chkconfig：开机启动项
-     1. --list
-     1. --add/--del name
-     1. --level 2345 name on/off
-   - shutdown：关机、重启，是最安全的会保存用户的配置和服务。halt、poweroff、init 0：关机，reboot init 6：重启
-     1. -h：关机
-     1. -r：重启
-     1. -c：取消前一个关机命令
-### 运维
-1. 组成
-   - 基础：配机器
-   - 私有云：openstack
-   - 监控
-   - 网络
-   - 开发：配套工具和功能开发
-1. 分类
-   - 监控
-   - 部署
-     1. openstack
-        - 网络：neutron：flat\flatdhcp\vlan
-        - 可视化：horizon
-        - 块存储：cinder
-        - 计算：nova
-        - 镜像：glance
-        - 认证：keystone
-     1. 远程控制：saltstack，分主从，salt-master和salt-minion
-   - cmdb
-1. 技术
-   - nat：网络地址转换服务，可基于状态过滤连接（就是内网出去的能回来，其他进不来），可做对外网的口子
-   - lvm：逻辑卷管理，动态扩缩容
-   - DNS：智能dns，DNS view，可根据用户ip返回不同的ip，解决了同域名不同解析地址问题，使用bind 9
-### 优化
-1. 查看系统性能
-   - ps
-   - top：`man top`
-     1. shift+p：占用cpu最高的进程
-     1. top -Hp 进程号：占用CPU最高的线程
-   - free：-m
-   - vmstat：3 3秒更新一次
-   - sar
-   - mpstat
-1. 问题定位
-1. 问题解决
 ### wiki
 1. linux分类
    - RedHat系列：Redhat、Centos、Fedora等
@@ -357,9 +300,9 @@
    - /bin、/sbin：系统命令目录
    - /usr/bin、/usr/sbin：用户程序命令目录，如php、php-config、phpize、php-fpm
 1. 输入输出方式
-   - 标准输入文件stdin0
-   - 标准输出文件stdout1
-   - 标准错误输出文件stderr2
+   - 标准输入文件stdin 0
+   - 标准输出文件stdout 1
+   - 标准错误输出文件stderr 2
 1. 运行级别
    - 0  关机
    - 1  单用户，即window的安全模式，启动最小的程序模式，多用于修复系统
@@ -390,9 +333,4 @@
    - ctrl+k     清除光标后至行尾的内容
    - ctrl+y     粘贴或者恢复上次的删除
    - ctrl+l     清屏，相当于clear
-1. iTerm快捷键设置：Profiles->Keys
-   - ctrl + a/e：移动到行首尾
-   - ctrl + ←/→：单词移动，需设置`Send Escape Sequence + d/f`
-   - shift + ←/→：单词选择，需设置`Move Start of Selection Left By Word`，`Move End of Selection Right By Word`
-   - ctrl + w：单词删除
 1. tumx：多个界面，断网保存用户操作的界面
