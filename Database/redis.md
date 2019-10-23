@@ -1,4 +1,4 @@
-#### 认识和使用
+#### 认识
 1. 理解：开源使用ANSI C编写，基于内存，可持久化的日志型、Key-Value数据库。对关系型数据库起到补充作用，多客户端支持。常用作缓存、数据库、消息中间件
    - 速度快，性能高：读11万次/秒，写8万次/秒
    - 多数据结构，发布/订阅模式，key过期
@@ -29,9 +29,9 @@
    - hyperloglogs：2.8.9新增，是做基数统计的算法，即快速计算基数(集中不重复元素数量)。输入元素的数量或者体积非常非常大时，计算基数所需的空间总是固定的、很小的。每个HyperLogLog键只需要花费12KB内存，就可以计算接近2^64个不同元素的基数
      1. pfadd/pfcount/pfmerge
    - geospatial：地理空间，索引半径查找，如附近的人
-1. 功能
+1. 特性
    - 超时：expire，设置超时时间，超时后不删除，只有对值进行改变才会删除，过期是不可靠的
-    ```
+    ```lua
     SET mykey "Hello"
     EXPIRE mykey 10
     ```
@@ -39,31 +39,30 @@
      1. pubsub：查看订阅和发布系统状态
      1. subscribe：订阅一个或多个，unsubscribe退订。psubscribe/punsubscribe用于给定模式的频道，即使用通配符啥的
      1. publish：发布
+   - 管道
+     1. 理解：pipelining，通常客户端请求都是socket阻塞的，管道是请求未响应时继续发送请求，然后一次性读取所有响应，节省了多次的网络传输时间
+     1. 好处：减少了往返时延，提高了效率，提高了服务端的利用率
+     1. 使用
+        ```php
+        # php，开始和结束
+        $redis->pipeline();
+        $redis->exec();
+        ```
+   - 锁
+     1. set nx ex val lua：排他，过期，一段时间内唯一的特性
+        - 存在执行时间超出锁时间，造成同时拥有锁，这就是setnx陷阱
+        - 删除锁时，锁已过期，这个间隔他人拿到了锁，会误删他人锁：利用lua脚本，拿锁和删锁原子操作，解决了此问题
+     1. 分布式锁
+        - 分类
+          1. RedLock：一个集群中依次在大多数节点建锁(5个节点就需要建3个锁)，建锁时间小于超时时间则成功，否则就删掉锁重抢。轮询重试抢锁，利用key的过期和nx特性，删除锁时使用事务和对比内容是否一致判断是否误删他人锁
+          1. zk：抢锁就是节点尝试创建临时znode，建锁失败则注册监听器，放锁就是删除znode，然后zk通知客户端抢锁，也可以弄成顺序节点，多个抢锁就依次监听上一个znode
+        - 比较：zk注册监听器即可，比redis的轮询性能开销小
    - 事务：一组命令在一个步骤里执行，具有原子性
      1. multi：开始
      1. exec：执行
      1. discard：取消
      1. watch：监视一个多个key，值被改变则取消事务
      1. unwatch：取消监视
-   - 管道
-     1. 理解：pipelining，通常客户端请求都是socket阻塞的，管道是请求未响应时继续发送请求，然后一次性读取所有响应，节省了多次的网络传输时间
-     1. 好处：减少了往返时延，提高了效率，提高了服务端的利用率
-     1. 使用
-        ```
-        # php，开始和结束
-        $redis->pipeline();
-        $redis->exec();
-        ```
-   - 分区
-     1. 理解：即分割数据到多个Redis实例的过程，每个实例只保存key的一个子集。
-     1. 优点：提高容量，扩展计算能力和带宽
-     1. 缺点
-        - 不支持多个key同时操作，事务中也不行
-        - 多实体数据库维护复杂，容量调整复杂，用presharding解决
-     1. 分区类型
-        - 范围分区：不同范围放到不同实例中，需要维护范围表
-        - hash分区：使用crc32将key转为数字，然后取模(模为实例数量)确定实例
-     1. 自动分区：Cluster
 #### 应用
 1. 命令
    - 服务器命令
@@ -91,63 +90,71 @@
    - evalsha sha1 numkeys key：根据给定sha1码执行缓从的脚本
    - script flush：移除缓冲脚本
    - script kill：杀死脚本
-1. 锁
-   - set nx ex val lua：排他，过期，一段时间内唯一的特性
-     1. 存在执行时间超出锁时间，造成同时拥有锁，这就是setnx陷阱
-     1. 删除锁时，锁已过期，这个间隔他人拿到了锁，会误删他人锁：利用lua脚本，拿锁和删锁原子操作，解决了此问题
-   - 分布式锁
-     1. 分类
-        - RedLock：一个集群中依次在大多数节点建锁(5个节点就需要建3个锁)，建锁时间小于超时时间则成功，否则就删掉锁重抢。轮询重试抢锁，利用key的过期和nx特性，删除锁时使用事务和对比内容是否一致判断是否误删他人锁
-        - zk：抢锁就是节点尝试创建临时znode，建锁失败则注册监听器，放锁就是删除znode，然后zk通知客户端抢锁，也可以弄成顺序节点，多个抢锁就依次监听上一个znode
-     1. 比较：zk注册监听器即可，比redis的轮询性能开销小
+1. 分区
+   - 理解：即分割数据到多个Redis实例的过程，每个实例只保存key的一个子集。
+   - 优点：提高容量，扩展计算能力和带宽
+   - 缺点
+     1. 不支持多个key同时操作，事务中也不行
+     1. 多实体数据库维护复杂，容量调整复杂，用presharding解决
+   - 分区类型
+     1. 范围分区：不同范围放到不同实例中，需要维护范围表
+     1. hash分区：使用crc32将key转为数字，然后取模(模为实例数量)确定实例
+   - 自动分区：Cluster
+1. 哨兵机制：sentinel，做redis的存活性检测，提供高可用
+1. 守护进程
+   - daemonize no：yes
+   - pidfile /var/run/redis.pid：pid位置
+1. 主从：从机的配置文件中指定slaveof参数为主机的ip和port即可
+   - slaveof <masterip> <masterport>
+   - masterauth <master-password>
 1. 集群
-   - TwemProxy
+   - 数据分片：hash slot，引入哈希槽和节点的对应关系确定key的位置，存放哈希槽的Bitmap通过Gossip协议，在结点之间传递
+   - TwemProxy：twitter开源的redis/memcache的快速、轻量级的单线程代理服务器，可进行统一管理
    - Codis
-   - pika
+   - Pika
 #### 运维
-1. 默认端口6379
-1. 安装和启动
-   - 启动server：`src/redis-server|redis-server.exe`
-   - 停止server：`src/redis-cli|redis-server.exe shutdown`
-   - 连接本地server：`src/redis-cli`
-   - 连接远程server：`src/redis-cli|redis-cli.exe -h host -p port -a password`
+1. 使用
+   - 服务端
+     1. 启动：`src/redis-server|redis-server.exe`
+     1. 停止：`src/redis-cli|redis-server.exe shutdown`
+   - 客户端
+     1. 连接：`src/redis-cli|redis-cli.exe -h host -p port -a password`
 1. 配置
-   - 配置操作：config get/set/rewrite/ */configName configValue
-   - 配置分类
+   - 操作：config get/set/rewrite/ */configName configValue
+   - 分类
+     1. 端口：6379
      1. 常规
         - port/bind/timeout：超时断掉连接，为0不断
         - requirepass foobared：密码
         - maxclients 128
         - maxmemory <bytes>：内存限制
         - include /path/to/local.conf：子配置文件
-     1. 日志
-        - loglevel verbose：debug、verbose、notice、warning
-        - logfile stdout：日志记录方式，默认标准输出。守护进程方式运行时日志发送给/dev/null
-        - appendonly no：是否每次更新数据后进行日志记录，本身按照save条件来同步，断电可能导致数据丢失
-        - appendfilename appendonly.aof：更新日志文件名
-        - appendfsync everysec：更新日志条件，no等待系统将数据同步到磁盘(快)，always每次更新后手动调用fsync()将数据写到磁盘(慢，安全)，everysec每秒一次(折衷)
+     1. 密码
+        - 获得/设置密码：config get/set requirepass
+        - 检验密码是否正确：auth password
      1. 数据
         - dbfilename dump.rdb：本地数据库名
         - databases 16：数据库数量
         - dir ./：数据库目录
         - save <seconds> <changes>：n时间内，n次更新操作，就将数据同步到数据文件
         - rdbcompression yes：是否压缩数据，关闭节约cpu，但是文件变的巨大
+     1. 日志
+        - loglevel verbose：debug、verbose、notice、warning
+        - logfile stdout：日志记录方式，默认标准输出。守护进程方式运行时日志发送给/dev/null
+        - appendonly no：是否每次更新数据后进行日志记录，本身按照save条件来同步，断电可能导致数据丢失
+        - appendfilename appendonly.aof：更新日志文件名
+        - appendfsync everysec：更新日志条件，no等待系统将数据同步到磁盘(快)，always每次更新后手动调用fsync()将数据写到磁盘(慢，安全)，everysec每秒一次(折衷)
      1. 内存
         - vm-enabled no：是否启用虚拟内存机制
         - vm-swap-file /tmp/redis.swap：虚拟内存文件路径，多个Redis实例不可共享
         - vm-max-memory 0/vm-page-size 32/vm-pages 134217728/vm-max-threads 4
-     1. 守护进程的方式
-        - daemonize no：yes
-        - pidfile /var/run/redis.pid：pid位置
-     1. 主从配置：从机的配置文件中指定slaveof参数为主机的ip和port即可
-        - slaveof <masterip> <masterport>
-        - masterauth <master-password>
 1. 持久化
-   - RDB
-   - AOF：fsync
-1. 安全
-   - 获得/设置密码：config get/set requirepass
-   - 检验密码是否正确：auth password
+   - 分类
+     1. RDB
+     1. AOF：fsync
+   - 备份恢复
+     1. 备份：save/bgsave，产生dump.rdb文件，即备份成功
+     1. 恢复：将dump.rdb文件放到redis目录并启动即可，config get dir获得目录
 1. 性能测试
    - redis-benchmark [option] [option value]
      1. -h/-p：地址端口
@@ -156,12 +163,6 @@
      1. -n：请求数
      1. -d：字节形式指定set/get大小
      1. -k：1=keep alive 0=reconnect
-1. 备份恢复
-   - 备份：save/bgsave，产生dump.rdb文件，即备份成功
-   - 恢复：将dump.rdb文件放到redis目录并启动即可，config get dir获得目录
-1. 集群配置
-   - 数据分片：hash slot，引入哈希槽和节点的对应关系确定key的位置，存放哈希槽的Bitmap通过Gossip协议，在结点之间传递
-1. 哨兵机制：sentinel，做redis的存活性检测，提供高可用
 #### 原理
 1. 复杂的数据结构在内存中操作非常简单，redis可以做很复杂的操作
 1. 磁盘中是紧凑追加方式存在，不存在随机io
