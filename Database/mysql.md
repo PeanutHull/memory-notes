@@ -256,6 +256,15 @@
           1. Serializable：可序列化，事务串行化顺序执行，性能问题并增加死锁的机率
      1. 在读取数据的时候,innodb几乎不用获得任何锁, 每个查询都通过版本检查,只获得自己需要的数据版本,从而大大提高了系统的并发度
    - 分布式事务
+     1. CAP理论：Consistency 一致性，Availability 可用性，Partition tolerance 分区容错性，不可兼得
+     1. BASE方案：Basically Available 基本可用，Soft state 软状态，Eventually Consistent 最终一致，牺牲某时刻一致性保证最终一致性
+     1. 分布式事务实现：只能实现弱一致性，TCC、高可用消息服务、最大努力通知
+        - 两阶段提交/XA：事务管理器协调，先问问ok不，再判断是否全部ok，https://github.com/yu199195/happylifeplat-transaction
+        - TCC：Try-Confirm-Cancel：https://github.com/yu199195/happylifeplat-tcc
+        - 基于消息中间件的解决分布式事务框架：https://github.com/yu199195/myth
+        - 消息中间件支持：jms(activimq),amqp(rabbitmq),kafka,roceketmq。
+        - rpc框架支持 : dubbo(可用Fescar保持数据一致性),motan,springcloud
+        - 本地事务日志存储支持 : redis,mogondb,zookeeper,file,mysql
 1. 锁
    - 分类
      1. 基于数据操作
@@ -488,8 +497,22 @@
      1. 高可用，故障切换
 1. 读写分离
 1. 分表分区
-   - 分区：对用户透明，底层分为多个物理子表。用partition by定义每个分区存放的数据，优化器自动使用。适用于数据多，只在表最后有热点数据，其他都是历史数据。分区可以分布在不同机器上独立维护，有很多功能不能用
-   - 分表：通过hash算法或工具将表垂直或水平切分。水平拆分用于数据本身有独立性，可以拆分，逻辑分层算法无法变更。垂直拆分用于某些列常用某些不常用，查询时减少io次数。应用增加复杂度
+   - 认识
+     1. 分区：对用户透明，底层分为多个物理子表。用partition by定义每个分区存放的数据，优化器自动使用。适用于数据多，只在表最后有热点数据，其他都是历史数据。分区可以分布在不同机器上独立维护，有很多功能不能用
+     1. 分表
+        - 水平拆分：用于数据本身有独立性，可以拆分，逻辑分层算法无法变更，关键字段取模方式拆到多个表中，降低单表大小
+        - 垂直拆分：把属性较多、数据较大的表某些字段拆分到不同的表中，查询时可减少io次数，但是应用增加复杂度。分主表、扩展表。因为数据库的内存buffer存row
+   - 跨表分页
+     1. 全局视野法：改造分页sql，每个表都取出来，然后放一起再排序。`offset X limit Y`改为`offset 0 limit X+Y`。精准返回，页码增加性能急剧下降
+     1. 业务折衷
+        - 禁止跳页查询：第一页作为第二页的查询条件，再全局视野
+        - 允许数据精度损失：认定数据足够随机，取模去取数据
+     1. 二次查询法
+        - 将order by time offset X limit Y，改写成order by time offset X/N limit Y
+        - 找到所有表中的最小值time_min
+        - between二次查询，order by time between $time_min and $time_N_max
+        - 拿time_min在各个分库中比较，得出每个表的虚拟offset，相加从而得到time_min在全局的offset
+        - 得到了time_min在全局的offset，自然得到了全局的offset X limit Y，要什么从后推着拿就行
 1. 数据库中间件
    - 故障切换
    - mycat：开源分布式数据库中间件
