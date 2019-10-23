@@ -95,28 +95,11 @@
    - set nx ex val lua：排他，过期，一段时间内唯一的特性
      1. 存在执行时间超出锁时间，造成同时拥有锁，这就是setnx陷阱
      1. 删除锁时，锁已过期，这个间隔他人拿到了锁，会误删他人锁：利用lua脚本，拿锁和删锁原子操作，解决了此问题
-   - RedLock：分布式锁，watch，multi事务
-```
-do {
-    $microtime = microtime(true) * 1000;
-    $microtimeout = $microtime+$timeout+1;
-    
-    $isLock = $redis->setnx('lock.count', $microtimeout);                   // 上锁
-    if (!$isLock) {
-        $getTime = $redis->get('lock.count');
-        if ($getTime > $microtime) {
-            usleep(5000);                                                   // 睡眠 降低抢锁频率　缓解redis压力
-            continue;                                                       // 未超时继续等待
-        }
-        
-        $previousTime = $redis->getset('lock.count', $microtimeout);        // 超时,抢锁,可能有几毫秒级时间差可忽略
-        if ((int)$previousTime < $microtime) {
-            break;                                                          // 已获得锁
-        }
-    }
-} while (!$isLock);
-$count = $redis->get('count')? : 0;
-```
+   - 分布式锁
+     1. 分类
+        - RedLock：一个集群中依次在大多数节点建锁(5个节点就需要建3个锁)，建锁时间小于超时时间则成功，否则就删掉锁重抢。轮询重试抢锁，利用key的过期和nx特性，删除锁时使用事务和对比内容是否一致判断是否误删他人锁
+        - zk：抢锁就是节点尝试创建临时znode，建锁失败则注册监听器，放锁就是删除znode，然后zk通知客户端抢锁，也可以弄成顺序节点，多个抢锁就依次监听上一个znode
+     1. 比较：zk注册监听器即可，比redis的轮询性能开销小
 1. 集群
    - TwemProxy
    - Codis

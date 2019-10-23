@@ -80,6 +80,8 @@
      1. memory；内存表存储在内存中，并使用散列索引，使其比MyISAM表格快，服务器停止数据丢失
      1. Archive、Blackhole、CSV
      1. merge：将具有相似结构的多个MyISAM表组合到一个表中的虚拟表
+     1. 对比
+        - nodb不支持全文索引，MyISAM支持
 1. 库
    - 组成
      1. mysql：用户/权限相关，user表存储用户和权限
@@ -219,6 +221,7 @@
    - 特点
      1. 表只有一个主键索引，可有多个唯一索引
      1. key和index都是索引，为兼容其他系统，key多了一层约束层含义
+     1. hash索引，重复数据多了性能下降，hash碰撞
 1. 事务
    - 理解：保证所有操作全部执行，由InnoDB提供，服务层不管理，由下边的引擎实现，在一个事务中，使用多个引擎不靠谱。再开启一个事务会隐式提交上一个事务
    - 特性：ACID
@@ -251,9 +254,9 @@
           1. 使用一致性数据快照：MVCC
         - 隔离级别：由低到高
           1. Read Uncommitted：未提交读，会导致数据完整性的严重问题，3种问题都存在
-          1. Read committed：已提交读，本事务中可以看到其他事务提交的数据，导致不可重复读、幻读
-          1. Repeatable Read：可重复读，默认，一个事务开始后其他session对数据库的修改在本事务中不可见，只针对修改，不针对insert
-          1. Serializable：可序列化，事务串行化顺序执行，性能问题并增加死锁的机率
+          1. Read committed：已提交读，避免脏读，本事务中可以看到其他事务提交的数据，导致不可重复读、幻读
+          1. Repeatable Read：可重复读，默认，一个事务开始后其他session对数据库的修改在本事务中不可见，只针对修改不针对插入，避免脏读/不可重复读
+          1. Serializable：可序列化，事务串行化顺序执行，性能问题并增加死锁的机率，避免脏读/不可重复读/幻读
      1. 在读取数据的时候,innodb几乎不用获得任何锁, 每个查询都通过版本检查,只获得自己需要的数据版本,从而大大提高了系统的并发度
    - 分布式事务
      1. CAP理论：Consistency 一致性，Availability 可用性，Partition tolerance 分区容错性，不可兼得
@@ -346,21 +349,23 @@
    - 设置字符集：`vim /etc/my.cnf` ([mysqld]下添加)
      1. `character-set-server=utf8`
      1. `default-character-set=utf8`
-1. 配置
-   - 查看配置：`show variables like 'slow_query%';`
-   - 变量配置：`set global slow_query_log='ON';`
-   - 配置文件配置：my.cnf，`slow_query_log = ON`
 1. 使用
    - 启动：`mysqld_safe &`
    - 关闭：`mysqladmin -u -p shutdown`
    - 重启：`service mysqld restart`
    - 查看：`ps -ef | grep mysqld`
-1. 安全
-   - sql安全：防注入(预处理)、特殊字符转义、错误信息屏蔽
-   - 权限分开、定期修改密码
-   - 备份恢复
-     1. 定期备份：物理备份、逻辑备份
-     1. 恢复：binlog增量恢复
+1. 配置
+   - 查看
+     1. `show variables;`
+     1. `show variables like 'slow_query%';`
+   - 修改
+     1. 变量方式：`set global slow_query_log='ON';`
+     1. 配置文件方式：my.cnf，`slow_query_log = ON`
+   - 安全
+     1. sql安全：防注入(预处理)、特殊字符转义、错误信息屏蔽。权限分开、定期修改密码
+     1. 备份恢复
+        - 定期备份：物理备份、逻辑备份
+        - 恢复：binlog增量恢复
    - 导出导入
      1. 导出
         ```sql
@@ -371,12 +376,42 @@
         ```sql
         mysqlimport -u -p --local databaseName dump.sql
         source xx.sql
-        mysql -u -p [databaseName] < data.sql
+        mysql -u -p databaseName < data.sql
         load data local infile 'xx.txt' into table tableName;
         ```
-1. 性能测试
-   - 原则：数据多才有参考价值，数据总量超过内存总量，如几百条数据第一条命令下去就全部加载到内存了，没有参考意义
+1. 日志
+   - 分类
+     1. 错误：启动、运行、停止遇到的问题
+     1. 通用查询：客户端连接和执行的语句
+     1. 二进制：记录更改数据的语句
+     1. 中继：从接收的主的数据
+     1. 慢查询：执行时间超过long_query_time的查询或不使用索引的查询
+     1. DDL：元数据操作的语句
+   - frm,myd,myi
+   - binlog
+     1. 认识：记录所有除查询的DDL和DML语句，以事件形式记录、包含执行的时间、事务安全型的二进制文件集合。分为本身和索引文件(记录有效的文件)，开启1%的性能损耗
+        - 生成新的日志文件的情况：重启时、执行`flush logs`、大小超过`max_binlog_size`
+        - 记录的格式
+          1. STATEMENT：基于SQL语句。不记录每行变化，减少了日志量节约了IO，为了slave正确运行需要记录相关信息
+          1. ROW：基于行，5.7.7及以上默认，之前是STATEMENT。只记录行的修改点，避免了存储过程/function/trigger的调用和触发无法被正确复制的问题，日志量大
+          1. MIXED：混合模式，一般用statment，无法完成主从复制的操作用row
+        - 配置
+          1. sync_binlog：刷新到磁盘的事务执行次数，为1最安全在系统故障时最多丢失一个事务的更新
+        - 事件类型：QUERY_EVENT、STOP_EVENT等
+     1. 用途
+        - 主从复制：传输binlog
+        - 数据恢复：使用mysqlbinlog工具
+     1. 使用
+        - sql
+          1. `show binary logs;`：查看二进制文件列表和大小，如mysql-bin.*
+          1. `show binlog events in '' from pos limit [offset,]count;`：查看某个binlog
+          1. `reset master;`：清空所有
+        - 工具：mysqlbinlog，直接恢复：`mysqlbinlog /var/lib/mysql/mysqld-bin.000001 | mysql -uroot`
+          1. --database DB_name
+          1. --no-defaults 
+          1. --start/stop-datetime、--start/stop-position
 1. 监控
+   - 性能测试：数据多才有参考价值，数据总量超过内存总量，如几百条数据第一条命令下去就全部加载到内存了，没有参考意义
    - 性能：连接数、qps
      1. `show status like 'Threads%';`：查看连接数
      1. `show processlist;`：查看所有连接
@@ -423,9 +458,13 @@
      1. 长数字使用string
      1. 用枚举代替常用字符串类型
      1. 尽量用timestamp，比datetime效率高
+     1. 给文本字段留足余量
+     1. 不能为null
    - 列设计
      1. 一定有主键，最好是自增，否则多次读写后更离散，更多随机io
      1. 增加create_time/update_time字段，用于数据归档/自定义差异备份
+     1. 大数据字段独立表进行存储，提交表性能
+     1. 名称不要和关键字碰撞
    - 索引
      1. 建立原则
         - 数据量少的、数据经常改变的、数据差别不大的不能建立
@@ -454,6 +493,7 @@
      1. 使用count(*)忽略所有列，不用列名
      1. 尽量inner join让优化器自动选择驱动表
      1. 一个大查询可以分解为小查询，内部每秒能扫描百万行
+     1. 开启查询缓存
    - 运维
      1. 慢查询日志，不要直接打开，使用pt-query-digest工具分析
      1. set profile = 1;show profile;show profile for query 1;获取sql执行时间
@@ -495,10 +535,16 @@
    - 原理：主库将更改记录到二进制日志binlog，从库复制到中继日志，读取中继重新放到库中
      1. 负载均衡，降低压力
      1. 高可用，故障切换
+   - 查看
+     1. `show master status;`
 1. 读写分离
 1. 分表分区
    - 认识
-     1. 分区：对用户透明，底层分为多个物理子表。用partition by定义每个分区存放的数据，优化器自动使用。适用于数据多，只在表最后有热点数据，其他都是历史数据。分区可以分布在不同机器上独立维护，有很多功能不能用
+     1. 分区：对用户透明，底层分为多个物理分区。用partition by定义每个分区存放的数据，优化器自动使用。适用于数据多，只在表最后有热点数据，其他都是历史数据。分区可以分布在不同机器上独立维护，有很多功能不能用
+        - 存储更多数据：可分布在不同的物理设备
+        - 优化查询：where语句中包含分区条件时，只会使用某几个分区
+        - 类型：RANGE、LIST、HASH、KEY
+        - 适用于所有数据和索引，两者不能分开
      1. 分表
         - 水平拆分：用于数据本身有独立性，可以拆分，逻辑分层算法无法变更，关键字段取模方式拆到多个表中，降低单表大小
         - 垂直拆分：把属性较多、数据较大的表某些字段拆分到不同的表中，查询时可减少io次数，但是应用增加复杂度。分主表、扩展表。因为数据库的内存buffer存row

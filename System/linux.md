@@ -135,6 +135,8 @@
    -n       显示行号
    -r/-R    一般没区别
 1. 系统
+   - `cat /etc/redhat-release`：查看centos版本
+   - `getconf LONG_BIT`：查看centos位数
    - uname -a 显示系统信息
    - uptime：当前系统时间、开机到现在运行时间、用户在线数、系统平均负载
    - free
@@ -305,8 +307,6 @@
 ### wiki
 1. linux分类
    - RedHat系列：Redhat、Centos、Fedora等
-     1. cat /etc/redhat-release：查看centos版本
-     1. getconf LONG_BIT：查看centos位数
    - Debian系列：Debian、Ubuntu等 
 1. 目录结构
    - 系统目录
@@ -327,3 +327,4 @@
 1. mac环境变量默认地址
    - /bin、/sbin：系统命令目录
    - /usr/bin、/usr/sbin：用户程序命令目录，如php、php-config、phpize、php-fpm
+1. 数据恢复工具：ext3grep
