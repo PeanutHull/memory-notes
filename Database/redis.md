@@ -137,6 +137,7 @@
      1. monitor：实时打印接收到的命令，调试用
      1. debug segfault：让redis崩溃
    - 数据
+     1. save/bgsave/lastsave：默认生成dump.rdb文件，查看最后一次保存确认是否后台保存成功
      1. flushdb/flushall：删除当前/所有数据库的所有key
    - 其他
      1. slowlog subcommand：管理慢日志
@@ -161,24 +162,42 @@
           1. dbfilename：名称
           1. databases：数量
           1. dir：目录
-          1. save <seconds> <changes>：n时间内，n次更新操作，就将数据同步到数据文件
+          1. save <seconds> <changes>：n时间内，n次更新操作，就将数据同步到数据文件，可存在多条，或的关系
           1. rdbcompression：是否压缩，关闭节约cpu，但是文件变的巨大
         - 日志
           1. loglevel：debug/verbose/notice/warning
           1. logfile：文件地址，守护进程方式运行时日志发送给/dev/null
-          1. appendonly：是否更新数据后追加日志记录，本身按照save条件来同步，设置为no断电可能导致数据丢失
+          1. appendonly
           1. appendfilename
           1. appendfsync：记录方式，no等待系统将数据同步到磁盘(快)，always更新后将数据写到磁盘(慢，安全)，everysec每秒一次(折衷)
+          1. auto-aof-rewrite-percentage：aof重写触发机制，当前aof大小超过上一次重写时大小的百分比时，进行重写
+          1. auto-aof-rewrite-min-size：aof重写的最小文件大小
         - 内存
           1. vm-enabled：是否启用虚拟内存机制
           1. vm-swap-file：虚拟内存文件路径，多Redis实例不可共享
           1. vm-max-memory 0/vm-page-size 32/vm-pages 134217728/vm-max-threads 4
 1. 持久化
-   - 分类
-     1. RDB
-     1. AOF：fsync
+   - 方式分类：二者结合使用
+     1. RDB：通过快照(内存中数据的副本)定时将数据存储在硬盘
+        - 触发条件
+          1. 根据规则自动快照：save的配置
+          1. 执行save、bgsave：save会阻塞所有客户端请求，避免生产环境使用
+          1. 执行flushall
+          1. 执行replication：设置了主从时，复制初始化会自动快照
+        - 快照生成原理：fork出子进程进行数据存储，完成后替换旧的rdb文件
+          1. 快照结束时才替换rdb文件，说明任何时候rdb文件都是完整的
+          1. unix使用写时复制功能，fork之后到进程结束前的修改/新增不会被记录
+          1. 一旦redis异常，rdb方式会丢失最后一次快照之后的数据
+        - 运维
+          1. 如果修改/新增较多较大时，占用内存可能显著增大，因为写时复制会增加内存占用，需要设置linux的应用申请内存超过可用内存
+          1. rdb文件是默认设置被压缩的，1000万键值对，大小1G的rdb，载入内存花费20多秒
+     1. AOF
+        - 认识：append only file，更新数据后追加记录命令，搭配AOF降低数据丢失的可能性，默认不开启，和rdb文件位置相同，默认appendonly.aof文件
+          1. redis启动时，相比于rdb，优先使用aof恢复数据，逐个执行aof命令来载入数据，比rdb方式慢
+          1. 由于操作系统的缓存机制，aof记录后没有真正写入硬盘，系统默认30秒同步一次，如果系统异常则数据丢失，可设置appendfsync同步硬盘的时机
+        - 实现：纯文本记录，是redis的原始通信协议内容，会按照一定条件进行aof优化重写，不和之前的aof相关，比如三条合一条，手动触发 bgrewriteaof
    - 备份恢复
-     1. 备份：save/bgsave，[后台]异步保存数据到硬盘，即产生dump.rdb
+     1. 备份：save/bgsave
      1. 恢复：将dump.rdb文件放到redis目录并启动即可
 1. 分区
    - 理解：分割数据到多个Redis实例。提高容量，扩展计算能力和带宽
