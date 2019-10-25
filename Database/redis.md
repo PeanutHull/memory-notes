@@ -1,50 +1,121 @@
-#### 认识
-1. 理解：开源使用ANSI C编写，基于内存，可持久化的日志型、Key-Value数据库。对关系型数据库起到补充作用，多客户端支持。常用作缓存、数据库、消息中间件
+### 认识
+1. 理解：开源、基于内存、可持久化的日志型、Key-Value的数据库，多客户端支持。对关系型数据库起到补充作用。常用作缓存、数据库、消息中间件，使用ANSI C编写
    - 速度快，性能高：读11万次/秒，写8万次/秒
-   - 多数据结构，发布/订阅模式，key过期
-   - 原子操作、事务、数据持久化、Lua脚本、LRU收回
+   - 多数据结构，key过期，发布/订阅模式
+   - 所有操作都是原子的、事务、Lua脚本
+   - 数据持久化、LRU收回
    - 主从同步、Sentinel提供高可用，Cluster提供自动分区
+1. key
+   - 库
+     1. select index：切换某个库，更像命名空间，隔离key名冲突。索引号只能是数字不能自定义，可设置数量，开始和默认是0
+     1. move：移动key到某个库中
+   - 查看
+     1. dbsize：key的数量
+     1. keys：查找符合给定模式的key
+     1. exists：是否存在
+     1. type：查看类型
+     1. sort by xx*->xx desc get xx*->xx get # store xx：对队列、集合按照某些规则排序，by可用通配符，get用于获取指定键值，store结果存储
+   - 过期时间
+     1. expire/pexpire：[用毫秒]设置过期时间
+     1. expireat/pexpireat：用[毫秒]时间戳设置过期时间
+     1. ttl/pttl：用[毫]秒返回剩余时间，time to live
+     1. persist：移除过期时间
+   - 修改
+     1. rename/renamenx：[key不存在时]重命名
+     1. del
+   - 其他
+     1. randomkey：随机返回
+     1. dump：序列化
+     1. echo string：打印字符串
 1. 数据类型
-   - string：字符串，键值对类型，二进制安全，意味着可以包含任意对象(比如一个图片的内容)，最大512MB
-     1. set/get/del/exists/append/rename/expire/pexpire/ttl/pttl
-        - 2.6版本开始，set命令增加了键存在与否的判断和过期时间的设置
-     1. 利用INCR命令簇（INCR, DECR, INCRBY）来把字符串当作原子计数器使用，incr提供了原子操作
-     1. 将字符串作为GETRANGE 和 SETRANGE的随机访问向量
-     1. 在小空间里编码大量数据，或者使用 GETBIT 和 SETBIT创建一个Redis支持的Bloom过滤器
-   - hash：哈希类型键值对的集合，用来表示对象，最多40亿对
-     1. hset/hmset/hget/hmget/hgetall
-     1. hkeys/hvals/hlen/hscan
-     1. hdel/hexists
-   - list：列表，双向链表，按照插入顺序排序，最多40亿个，访问中间的数据时间复杂度为O(N)
-     1. lpush/lpop/lrange/rpush/rpop/rpoplpush
-     1. blpop/brpop/brpoplpush
-     1. linsert/lrem/lset/lindex/ltrim/llen
-   - set：无序集合，是string类型的集合，通过hash表实现，无论多少数据添加/删除/查找的复杂度都是O(1)。成员唯一性
-     1. sadd/spop/srem/smove/scard/smembers
-     1. sdiff/sinter/sunion/sscan
-     1. sismember
-   - zset：有序集合，每个元素会关联一个double类型的分数，通过分数为成员进行排序，并且插入有序，适用于有序且不重复
-     1. zadd/zrem/zrange/zrank/zcard/zcount/zscore/zscan
-   - bitmaps：位图，即位的数组
-   - hyperloglogs：2.8.9新增，是做基数统计的算法，即快速计算基数(集中不重复元素数量)。输入元素的数量或者体积非常非常大时，计算基数所需的空间总是固定的、很小的。每个HyperLogLog键只需要花费12KB内存，就可以计算接近2^64个不同元素的基数
-     1. pfadd/pfcount/pfmerge
+   - string
+     1. 认识：字符串，键值对类型、二进制安全的字符串，意味着可包含任意对象(如一个图片)，最大512MB
+     1. 命令
+        - set/get、mset/mget、setbit/getbit：单个、多个、按照偏移量设置位(可做Bloom过滤器)
+        - setex/psetex、setnx/msetnx、setrange/getrange：设置过期时间、存在才设置、按照偏移量设置
+        - incr/incrby/incrbyfloat、decr/decrby：加/减、一/N，可当原子计数器
+        - getset、strlen、append：设置并返回旧值、长度、追加到末尾
+   - hash
+     1. 认识：哈希，哈希类型的键值对集合，field为string类型，可存储对象，最多40亿对
+     1. 命令
+        - hset/hmset/hsetnx：设置
+        - hget/hmget/hgetall：获取
+        - hkeys/hvals/hlen/hscan：键值对数量、迭代键值对
+        - hincrby/hincrbyfloat：加一
+        - hdel/hexists：删除n个字段、是否存在某个字段
+   - list
+     1. 认识：双向链表，首尾插入的按照插入顺序排序的字符串列表，访问中间的时间复杂度为O(N)，双向链表，最多40亿个(2^232-1)
+     1. 命令
+        - lpush/rpush/lpop/rpop/rpoplpush/lpushx/rpushx：压入、弹出、存在时才压入
+        - blpop/brpop/brpoplpush：带超时时间的弹出数据，单位秒
+        - lset/linsert：索引设置、在前/后插入元素
+        - lrem/ltrim：删除、范围删除
+        - lrange/lindex/llen：范围查看、索引查看、长度。`lrange xx 0 -1` 查看所有
+   - set
+     1. 认识：无序集合，string类型的成员唯一的无序集合。通过hash表实现，所有操作复杂度都是O(1)
+     1. 命令
+        - sadd/spop/smove/srem：移除某一随机元素、移到另一集合、移除n个
+        - sdiff/sdiffstone/sinter/sinterstone/sunion/sunionstone：求差集、求交集、求并集。[并储存到另一个集合]
+        - scard/sismember/smembers/sscan：成员数量、是否成员、返回所有成员、迭代元素
+   - zset
+     1. 认识：有序集合，string类型的成员唯一的有序集合，每个元素关联一个double类型的分数
+        - 适用于有序且不重复
+        - 成员唯一，分数可重复
+        - 可通过分数进行排序，通过哈希表实现，最多40亿个(2^232-1)
+     1. 命令
+        - zadd/zrem/zremrangebylex/zremrangebyscore/zremrangebyrank
+        - zcard/zcount/zlexcount/zscan：成员数、指定分数区间的成员数、指定字典区间的成员数
+        - zrange/zrangebylex/zrangebyscore：通过索引区间、字典区间、分数返回成员
+        - zrevrange/zrevrangebyscore/zrevrank：通过索引、分数返回指定区间成员、返回排名。分数都是从高到底
+        - zscore/zrank：返回分数值、返回指定成员索引
+        - zincrby/zinterstore/zunionstore
+   - HyperLogLog
+     1. 认识：基数统计的算法(集中不重复元素数量)
+        - 输入元素数量非常大时，计算基数所需的空间总是固定的、很小的。每个HyperLogLog键只需要花费12KB内存，就可以计算接近2^64个不同元素的基数
+        - 只计算基数，不储存输入元素
+        - 比如数据集{1,3,5,7,5,7,8}，那么基数集为{1,3,5,7,8}, 基数(不重复元素数量)为5
+     1. 命令
+        - pfadd/pfcount/pfmerge：添加、返回基数估算值、合并
    - geospatial：地理空间，索引半径查找，如附近的人
+   - bitmaps：位图，即位的数组
 1. 特性
-   - 超时：expire，设置超时时间，超时后不删除，只有对值进行改变才会删除，过期是不可靠的
-    ```lua
-    SET mykey "Hello"
-    EXPIRE mykey 10
-    ```
-   - 发布订阅：pub/sub，一种消息通信模式，发送者(pub)发送消息，订阅者(sub)接收消息，是原子的
-     1. pubsub：查看订阅和发布系统状态
-     1. subscribe：订阅一个或多个，unsubscribe退订。psubscribe/punsubscribe用于给定模式的频道，即使用通配符啥的
-     1. publish：发布
+   - 超时
+     1. 认识：expire，设置超时时间，超时后不删除，只有对值进行改变才会删除，过期是不可靠的
+        ```lua
+        SET mykey "Hello"
+        EXPIRE mykey 10
+        ```
+   - 发布订阅
+     1. 认识：pub/sub，一种消息通信模式，发送者发送消息，订阅者接收消息，是原子的
+     1. 使用
+        - subscribe/unsubscribe/psubscribe/punsubscribe：订阅/退订n个，[给定模式(通配符等)]
+        - publish：发布
+        - pubsub：查看订阅和发布系统状态
+   - 事务
+     1. 认识：一组命令在一个步骤里执行，具有原子性
+        - 不具备回滚机制，需要自己收拾烂摊子
+        - 事务中不能获取事务中其他命令执行的结果
+        - 错误处理：语法错误所有命令不执行，运行错误不影响其他命令执行(会造成问题)
+     1. 使用
+        - multi：标记开始
+        - watch：监视n个key，exec前值被改变则取消事务
+        - unwatch：取消所有key的监视
+        - exec：执行事务
+        - discard：取消
+   - 脚本
+      - 认识：执行lua脚本，内嵌lua解释器
+      - 命令
+        1. `eval script numkeys key`：执行，会缓存sha1以便下次用evalsha调用
+           - 如`eval "return {KEYS[1],KEYS[2],ARGV[1],ARGV[2]}" 2 key1 key2 first second`
+        1. `evalsha sha1 numkeys key`：指定sha1码执行，可以第一次eval，之后省传输用evalsha
+        1. `script load script`：加载，不执行
+        1. `script exists script`：是否已加载
+        1. `script kill`：杀死脚本
+        1. `script flush`：移除
    - 管道
-     1. 理解：pipelining，通常客户端请求都是socket阻塞的，管道是请求未响应时继续发送请求，然后一次性读取所有响应，节省了多次的网络传输时间
-     1. 好处：减少了往返时延，提高了效率，提高了服务端的利用率
+     1. 认识：pipeline，不直接响应，一次性发送多条命令，一次性返回所有响应。减少了多次数据往返时间，提高服务端利用率
      1. 使用
         ```php
-        # php，开始和结束
         $redis->pipeline();
         $redis->exec();
         ```
@@ -57,48 +128,65 @@
           1. RedLock：一个集群中依次在大多数节点建锁(5个节点就需要建3个锁)，建锁时间小于超时时间则成功，否则就删掉锁重抢。轮询重试抢锁，利用key的过期和nx特性，删除锁时使用事务和对比内容是否一致判断是否误删他人锁
           1. zk：抢锁就是节点尝试创建临时znode，建锁失败则注册监听器，放锁就是删除znode，然后zk通知客户端抢锁，也可以弄成顺序节点，多个抢锁就依次监听上一个znode
         - 比较：zk注册监听器即可，比redis的轮询性能开销小
-   - 事务：一组命令在一个步骤里执行，具有原子性
-     1. multi：开始
-     1. exec：执行
-     1. discard：取消
-     1. watch：监视一个多个key，值被改变则取消事务
-     1. unwatch：取消监视
-#### 应用
+### 应用
 1. 命令
-   - 服务器命令
+   - 服务器
      1. info：服务器信息
-     1. save：异步保存数据到硬盘
-     1. bgsave：后台异步保存数据到磁盘
      1. client list：客户端列表
-     1. keys：查看所有keys
-     1. dbsize：key的数量
-     1. type：查看key类型
-     1. flushall：删除所有数据库的所有key
-     1. flushdb：删除当前数据库的所有key
-     1. debug segfault：让redis崩溃
+     1. ping：查看是否运行
      1. monitor：实时打印接收到的命令，调试用
+     1. debug segfault：让redis崩溃
+   - 数据
+     1. flushdb/flushall：删除当前/所有数据库的所有key
+   - 其他
      1. slowlog subcommand：管理慢日志
      1. sync：用于复制功能的内部
-   - ping：查看是否运行
-   - select index：切换到指定数据库，更像命名空间，隔离key名冲突，索引号只能是数字不能自定义，可以设置数据库数量，以0开始，默认使用0
-   - auth password：验证密码
-   - echo string：打印字符串
-1. 脚本：eval，执行lua脚本，内嵌lua环境
-   - eval script numkeys key：使用解释器执行脚本
-   - script load script：缓冲脚本
-   - script exists script：脚本是否存在
-   - evalsha sha1 numkeys key：根据给定sha1码执行缓从的脚本
-   - script flush：移除缓冲脚本
-   - script kill：杀死脚本
+     1. `src/redis-cli -h host -p port -a password`：客户端发起连接
+   - 配置
+     1. 操作：`config get/set/rewrite */configName configValue`
+     1. 分类
+        - 基础
+          1. port/bind/timeout(无操作连接超时时间，为0不断)
+          1. maxclients：最大连接数
+          1. maxmemory：最大占用内存，单位字节
+          1. maxmemory-policy：超最大内存后策略
+             - volatile-lru、allkeys-lru：根据lru算法(Least Recently Used)，删除过期/一个键。并不准确，随机取n(maxmemory-samples)个找最久未被使用
+             - volatile-random、allkeys-random：随机删除过期/一个键
+             - volatile-ttl：删除过期时间最近的一个键
+             - noeviction：不删除，只报错
+          1. maxmemory-samples
+          1. include：子配置文件地址
+          1. requirepass：设置密码，`auth` 检验密码是否正确
+        - 数据库
+          1. dbfilename：名称
+          1. databases：数量
+          1. dir：目录
+          1. save <seconds> <changes>：n时间内，n次更新操作，就将数据同步到数据文件
+          1. rdbcompression：是否压缩，关闭节约cpu，但是文件变的巨大
+        - 日志
+          1. loglevel：debug/verbose/notice/warning
+          1. logfile：文件地址，守护进程方式运行时日志发送给/dev/null
+          1. appendonly：是否更新数据后追加日志记录，本身按照save条件来同步，设置为no断电可能导致数据丢失
+          1. appendfilename
+          1. appendfsync：记录方式，no等待系统将数据同步到磁盘(快)，always更新后将数据写到磁盘(慢，安全)，everysec每秒一次(折衷)
+        - 内存
+          1. vm-enabled：是否启用虚拟内存机制
+          1. vm-swap-file：虚拟内存文件路径，多Redis实例不可共享
+          1. vm-max-memory 0/vm-page-size 32/vm-pages 134217728/vm-max-threads 4
+1. 持久化
+   - 分类
+     1. RDB
+     1. AOF：fsync
+   - 备份恢复
+     1. 备份：save/bgsave，[后台]异步保存数据到硬盘，即产生dump.rdb
+     1. 恢复：将dump.rdb文件放到redis目录并启动即可
 1. 分区
-   - 理解：即分割数据到多个Redis实例的过程，每个实例只保存key的一个子集。
-   - 优点：提高容量，扩展计算能力和带宽
-   - 缺点
+   - 理解：分割数据到多个Redis实例。提高容量，扩展计算能力和带宽
      1. 不支持多个key同时操作，事务中也不行
      1. 多实体数据库维护复杂，容量调整复杂，用presharding解决
-   - 分区类型
-     1. 范围分区：不同范围放到不同实例中，需要维护范围表
-     1. hash分区：使用crc32将key转为数字，然后取模(模为实例数量)确定实例
+   - 类型
+     1. 范围：不同范围放到不同实例中，需要维护范围表
+     1. hash：使用crc32将key转为数字，然后取模(模为实例数量)确定实例
    - 自动分区：Cluster
 1. 哨兵机制：sentinel，做redis的存活性检测，提供高可用
 1. 守护进程
@@ -107,54 +195,20 @@
 1. 主从：从机的配置文件中指定slaveof参数为主机的ip和port即可
    - slaveof <masterip> <masterport>
    - masterauth <master-password>
+   - 复制原理
+     1. Redis复制中断后，Slave会立即发起psync，psync尝试部署同步，但是不成功，就会全量同步RDB并发送至Slave节点
+     1. 主节点执行全量备份，进程 Fork，可造成主节点达到毫秒或秒级的卡顿，导致Copy-On-Write带来的主节点内存消耗，生成备份文件导致服务器磁盘IO和CPU资源消耗
+     1. 发送GB级别大小的备份文件，会导致服务器网络出口爆增，磁盘顺序IO吞吐量高，期间会影响业务正常请求响应时间，并产生其他连锁影响
 1. 集群
    - 数据分片：hash slot，引入哈希槽和节点的对应关系确定key的位置，存放哈希槽的Bitmap通过Gossip协议，在结点之间传递
    - TwemProxy：twitter开源的redis/memcache的快速、轻量级的单线程代理服务器，可进行统一管理
    - Codis
    - Pika
-#### 运维
-1. 使用
-   - 服务端
-     1. 启动：`src/redis-server|redis-server.exe`
-     1. 停止：`src/redis-cli|redis-server.exe shutdown`
-   - 客户端
-     1. 连接：`src/redis-cli|redis-cli.exe -h host -p port -a password`
-1. 配置
-   - 操作：config get/set/rewrite/ */configName configValue
-   - 分类
-     1. 端口：6379
-     1. 常规
-        - port/bind/timeout：超时断掉连接，为0不断
-        - requirepass foobared：密码
-        - maxclients 128
-        - maxmemory <bytes>：内存限制
-        - include /path/to/local.conf：子配置文件
-     1. 密码
-        - 获得/设置密码：config get/set requirepass
-        - 检验密码是否正确：auth password
-     1. 数据
-        - dbfilename dump.rdb：本地数据库名
-        - databases 16：数据库数量
-        - dir ./：数据库目录
-        - save <seconds> <changes>：n时间内，n次更新操作，就将数据同步到数据文件
-        - rdbcompression yes：是否压缩数据，关闭节约cpu，但是文件变的巨大
-     1. 日志
-        - loglevel verbose：debug、verbose、notice、warning
-        - logfile stdout：日志记录方式，默认标准输出。守护进程方式运行时日志发送给/dev/null
-        - appendonly no：是否每次更新数据后进行日志记录，本身按照save条件来同步，断电可能导致数据丢失
-        - appendfilename appendonly.aof：更新日志文件名
-        - appendfsync everysec：更新日志条件，no等待系统将数据同步到磁盘(快)，always每次更新后手动调用fsync()将数据写到磁盘(慢，安全)，everysec每秒一次(折衷)
-     1. 内存
-        - vm-enabled no：是否启用虚拟内存机制
-        - vm-swap-file /tmp/redis.swap：虚拟内存文件路径，多个Redis实例不可共享
-        - vm-max-memory 0/vm-page-size 32/vm-pages 134217728/vm-max-threads 4
-1. 持久化
-   - 分类
-     1. RDB
-     1. AOF：fsync
-   - 备份恢复
-     1. 备份：save/bgsave，产生dump.rdb文件，即备份成功
-     1. 恢复：将dump.rdb文件放到redis目录并启动即可，config get dir获得目录
+   - 阿里云架构：百万QPS，最好性能512G内存、最大连载数320000、最大吞吐1536M
+     1. 负载均衡
+     1. 多个proxy，负责故障转移
+     1. 分片服务器，单节点，不需同步数据，不提供数据持久化和备份策略，节点故障会丢失数据。集群版是双节点
+     1. 配置服务器，即Configserver，存储集群配置信息及分区策略，采用双副本的高可用架构
 1. 性能测试
    - redis-benchmark [option] [option value]
      1. -h/-p：地址端口
@@ -163,7 +217,7 @@
      1. -n：请求数
      1. -d：字节形式指定set/get大小
      1. -k：1=keep alive 0=reconnect
-#### 原理
+### 原理
 1. 复杂的数据结构在内存中操作非常简单，redis可以做很复杂的操作
 1. 磁盘中是紧凑追加方式存在，不存在随机io
 1. 达到最大内存后，Redis会先尝试清除已到期或即将到期的Key，当此方法处理后，仍然到达最大内存设置，将无法再进行写入操作，但仍然可以进行读取操作。Redis新的vm机制，会把Key存放内存，Value会存放在swap区
@@ -176,30 +230,121 @@
 1. 主从同步原理：主准备所有的命令，利用redis协议，发送到从，执行并且放入到内存中
 1. 哨兵机制：通过多个sentinel的订阅和发布，实现对主的监视
 1. 探索方向：中文网的知识点梳理掌握（主要每个点都掌握，否则过不了关），各个文章的配置和讲解，云栖论坛的相关帖子搜索
-#### wiki
+1. Redis是单进程单线程的网络模型，命令是一个接着一个执行的，不存在并行执行的情况
+   - 用的是epoll,poll,select网络模型
+   - 单线程处理所有的客户端连接请求，命令读写请求
+   - 2个命令组合起来才算是完成一个业务，但是2个命令组合起来就不具备原子性，所有在两个命令之间其他客户端会出现读写脏数据的情况
+### wiki
+1. 历史
+   - 2009年，开源
+   - 2.6，set命令增加键存在与否的判断和过期时间的设置，新增lua环境
+   - 2.8.9，新增，HyperLogLog
+   - 3.0，2015年
 1. 数据类型应用场景
    - string：可持久化的缓存，如session_id为key的session，二进制安全，图片、文件什么的，原子计数器做粉丝数、关注数、ip封锁次数啥的
    - hash：存对象数据，如用户基本信息，直接更新即可
    - list：消息排行，消息队列，日志收集器，配合发布订阅
    - set：做不重复的集合，存不重复用户名啦、每日投票一次啦
    - zset：有序的不重复集合，如热门内容的排序，只需修改score，排行榜
-1. Redis是单进程单线程的网络模型，命令是一个接着一个执行的，不存在并行执行的情况
-   - 用的是epoll,poll,select网络模型
-   - 单线程处理所有的客户端连接请求，命令读写请求
-   - 2个命令组合起来才算是完成一个业务，但是2个命令组合起来就不具备原子性，所有在两个命令之间其他客户端会出现读写脏数据的情况
+1. 编程语言和redis
+   - php：官方推荐两个
+     1. Predis：php代码实现的原生客户端
+     1. phpredis：c编写的php扩展，性能更好
+   - ruby：redis-rb，最稳定的客户端
+   - python：redis-py
+   - node：node_redis、ioredis，前者早，后者功能丰富
+1. lua
+   - 认识：高效的轻量级动态类型的脚本语言，lua是葡萄牙语月亮的意思，是卫星语言，能够方便嵌入其他语言中
+     1. redis内嵌lua就是为了提供给用户无限可能，因为命令不可能无限提供
+   - 基础
+     1. 不要求缩进，结尾可以省略;
+     1. 注释：-- 单行，--[[]] 多行
+     1. 操作符
+        - + - * / % ^
+        - == ~=(不等于) > < >=
+        - not and or：支持短路，只要不是nil或false就是真，0和空字符串也是真
+        - ..：连接符
+        - #：字符串/表长度计算符
+   - 数据类型
+     1. 分类
+        - nil：空
+        - boolean：true、false
+        - number：整数和浮点数
+        - string：字符串，二进制安全，单双引号定义，支持换行符
+        - table：表，数组或者字典，唯一数据结构，索引为整数时和数组一样，数组从1开始
+        - function：是一等值，可存变量、作为返回值等
+     1. 操作
+        - 转换：tonumber、tostring
+     1. 详细
+        - table
+            ```lua
+            -- 表
+            a = []                          -- 定义
+            a = {                           -- 定义
+                k = 'v'
+            }
+
+            a['k'] = 'v'                    -- 赋值
+
+            a.k                             -- 访问
+            for k,v in pairs(a) do          -- 遍历，pairs类似迭代器，ipairs用于数组，前者遍历不为nil的，后者只会遍历整数
+            end
+            ```
+        - 函数
+            ```lua
+            local a = function (...)        -- 定义，可变参数
+            end
+            local function a ()             -- 语法糖
+            end
+            ```
+   - 变量
+     1. 全局变量：`a = 1`
+     1. 局部变量
+        ```lua
+        local a = 1
+        local e,f
+        ```
+   - 流程控制
+     1. if
+        ```lua
+        if xx then
+        elseif xx then
+        else
+        end
+        ```
+     1. 循环
+        ```lua
+        for 初值，终止，步长 do
+        end
+
+        while xx do
+        end
+
+        repeat 
+        until xx
+        ```
+   - 标准库
+     1. 分类：Base、String、Table、Math、Debug、cJson、cmsgpack
+     1. 使用：`string.len(str)`
+   - 和redis的交互
+     1. lua脚本使用redis
+        - call：`redis.call('get', 'a')`，直接返回错误不继续
+        - pcall：记录错误并继续执行
+     1. 类型转换：redis类型 ===> lua类型，反转即反过来
+        - 整数 => 数字、字符串 => 字符串
+        - 多行字符串 => 表(数组形式)
+        - 状态/错误 => 表(ok/err)
+        - 空 => false
+     1. 特点
+        - 禁用全局变量，保证脚本隔离
+        - 禁止使用lua标准库中和文件、系统调用相关的函数，一是防止拉低性能，二是防止依赖外部条件(系统时间、文件内容等)，因为日志和持久化只能记录脚本内容，内容和参数都一样才能保证执行结果一样
+        - 对随机数和随机结果进行了特殊处理，可以生成了当参数传递进去
+        - 脚本执行是原子的，单线程的，lua-time-limit限制脚本最长执行时间，之后接受其他指令不执行返回busy，只执行两个指令：script kill和shutdown nosave。kill还是等到脚本执行完毕，因为要原子性，nosave可以立即终止，但是丢数据
+        - 不应该在脚本中执行耗时的操作，因为redis单线程，程序却是多进/线程
 1. list的安全性
    - 不安全队列：一旦pop出去客户端崩溃，消息丢失
    - 安全队列：rpoplpush，弄个备份队列，数据丢了再去备份队列取一下
 1. Memcache：高性能分布式内存对象缓存系统，内存里维护一个统一的巨大的hash表，能够存储图像等数据
-1. 阿里云Redis集群版
-   - 表现
-     1. 突破百万QPS，最好性能512G内存、最大连载数320000、最大吞吐1536M
-     1. 功能支持：slots槽数
-   - 组成
-     1. 代理服务器：多台代理服务器，负载均衡、故障转移
-     1. 分片服务器：多台分片服务器，双副本高可用架构，主动主备切换
-     1. 配置服务器：存储集群配置信息和分区策略，双副本高可用架构
-   - 双机热备是指双副本吗？双副本是指两台备份机器吗？
 1. 数据库缓存一致性方案
    - key过期，mysql更新不更新redis
      1. 开发成本低，管理成本低
