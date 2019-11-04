@@ -1,4 +1,4 @@
-###Apache
+### Apache
 1. 特点
    - 模块化，模块多
    - 支持虚拟主机
@@ -13,12 +13,12 @@
    - FastCGI模式
      1. 下载fastcgi模块mod_fcgid.so/mod_fcgid.pd
      2. 添加配置
-###常用命令
+### 常用命令
 1. windows下
    - httpd.exe -t // 检测配置文件是否正确
    - httpd.exe -k install
    - httpd.exe -k start/stop/restart
-###window下安装apache+php
+### window下安装apache+php
 1. 安装目录
    - Apache：C://http/http/Apache24
    - PHP：C://http/php
