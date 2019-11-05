@@ -6,11 +6,10 @@
 1. 问题
    - 高可用：确保消息的可靠传递，数据不丢失、不重复
 ### RabbitMQ
-1. 认识：热门的消息中间件。是生产者/消费者模型，主要负责消息的接收、存储、转发。erlang编写，因为兔子敏捷并且繁殖很疯狂
-   - 灵活路由：交换器
+1. 认识：热门的消息中间件。是生产者/消费者模型，主要负责消息的接收、存储、转发，支持AMQP、STOMP、MQTT协议。erlang编写，因为兔子敏捷并且繁殖很疯狂
    - 高可靠：持久化、传输确认、发布确认、跟踪机制
    - 高可用：内建消息集群，集群镜像
-   - 功能多：多协议(AMQP、STOMP、MQTT)、多客户端、管理界面、易扩展、插件机制
+   - 功能多：灵活路由、多协议、多客户端、管理界面、易扩展、插件机制
 1. 组成
     1. 生产者：publisher，消息体payload、标签label。根据标签路由消息
     1. 消费者：consumer，获取生产者消息体，不关心生产者是谁
@@ -21,7 +20,7 @@
     1. 交换器：exchange，用于和队列关联，接收消息并路由给队列
        - 属性
          1. 持久化
-         1. 自动删除：没有绑定的队列时触发
+         1. 自动删除：？？？
          1. 内置：只接受交换器不接受生产者过来的消息
        - 类型
          1. fanout：广播，发给所有绑定的队列，最快
@@ -29,51 +28,110 @@
          1. topic：加了匹配规则的direct，用bindingKey匹配routingKey，用.切分一个个单词，通配符#和*，如`#.usa`，*匹配单个单词，#匹配多个单词
          1. headers：匹配header属性的键值对，一致才会传过去，慢，不用了
     1. 绑定键：binding，通过绑定将交换器和队列关联，当路由键和绑定键相同时，会被传递到某个队列。可以和路由键看作一个东西，一个交换器前，一个后
-    1. 消息队列：queue，用于存储消息，多消费者同一队列消息被均摊即轮询
+    1. 消息队列：queue，用于存储消息
        - 属性
-         1. 排他：仅对首次连接可见，其他排他队列不可新建，连接断开自动删除队列，不管持久化，基于连接
+         1. 排他：仅对首次连接可见，其他排他队列不可新建，连接断开自动删除队列，不能持久化，基于连接
          1. 持久化：重启不丢失
          1. 自动删除：？？？
-         1. 优先级：priority
-    1. 信道：Channel，建立在连接上的双向数据流的虚拟连接，所有消息通过信道发送，多路复用一个tcp连接，避免tcp高额的新建销毁成本    
-1. 高级特性
-   - TTL
-   - 死信
-     1. 被拒绝、未送达的消息
-   - 延迟队列
-   - 优先级队列
-   - RPC
-   - 消息持久化
+         1. 优先级
+    1. 信道：channel，建立在连接上的双向数据流的虚拟连接，所有消息通过信道发送，多路复用一个tcp连接，避免tcp高额的新建销毁成本    
+1. 特性
+   - TTL：过期时间，time to live，两者都有取最小，超过后变死信，不设置不过期，设置为0表示不能直接投递则立即丢弃。分为消息自身、队列
+   - 死信：DLX 死信交换器，与之匹配的是死信队列，消息变死信后发送到这个交换器，可手动设置。产生条件：被拒绝、未送达、过期、队列达到最大长度
+   - 延迟队列：消息发出后，等待特定时间后，消费者才能拿到消息。使用DLX和TTL模拟效果，即消费者订阅某个队列对应的死信队列，队列设置有过期时间，过期后实现延迟效果
+   - 优先级队列：优先级高的队列有优先权，优先级高的消息优先被消费。消息的最大优先级不能超过队列的，当消费速度大于生产速度时没意义，因为同时就一条消息
+   - 持久化：需要设置交换器和队列的持久化，才能保证消息的持久化有用，所有消息持久化极大影响性能。分类：交换器、队列、消息
    - 消息确认
-     1. 等待消费者显示回复ack信号才会删除消息，否则发出去就删除。连接断开会安排未确认的消息重入队列
-     1. 回复拒绝，可设置重新入队或者删除
-   - 事务
+     1. 生产者确认：可通过事务、发送方确认机制，都能保证消息已正确送达。后者更轻量级，二者互斥。持久化的话落盘后rabbitmq才会回复确认，是指确认发往交换器
+        - 发送方确认：confirmSelect不阻塞，可以继续发送下一条，可用waitForConfirm的返回结果进行失败的逻辑处理。原理是开启确认模式后，当前信道每个消息被指派一个唯一id，然后确认时返回这个id。批量confirm和异步confirm性能更高，一个一个的confirm性能只比事务少了一个tcp的ack
+        - 事务：一条消息一个commit，发送消息后commit会一直阻塞，直到消息成功被接收，事务才能提交成功
+          1. select、commit、rollback：开启事务模式、提交、回滚，提交成功则消息一定到达了rabbitMQ
+     1. 消费者确认
+        - 等待消费者显式回复ack信号才会删除消息，否则发出去就删除。连接断开会安排未确认的消息重入队列
+        - 回复拒绝，可设置重新入队或者删除
+        - 消息分发
+          1. 多消费者同一队列消息被均摊即轮询
+          1. 推模式下，某消费者未确认的消息数量达到阈值，则停止向其派送消息。因为消费者之间的差异，防止消息堆积
+          1. 一个信道多个队列情况下，最大未确认消息数？？？
+   - RPC：可以和客户端进行RPC通信
 1. 集群
+   - 认识：保证节点崩溃后继续可用，提高消息吞吐量。共享user/vhost/exchange等，v2.6支持镜像队列，最少一个磁盘节点，其他为内存节点
    - 虚拟主机：Virtual Host，一个独立的虚拟的包含交换器、队列等rabbitMQ服务器
    - 代理：Broker，表示消息队列服务器实体
+   - 镜像队列：可以主从切换，防止数据丢失
+   - 节点配置
+     1. rabbitmqctl -n rabbit_1 join_cluster rab@rab：加入cluster
+     1. RABBITMQ_NODENAME=rabbit_1 RABBITMQ_NODE_PORT=5672 ./sbin/rabbitmq-server -detached
 1. 网络分区
 1. 使用
    - 资源创建方式
      1. 提前静态
      1. 用时动态
    - 配置
+   - 消息顺序性：无法保证，由于接收多个生产者消息先后、事务可能回滚、消息优先级、过期时间都会影响
+   - 消息传输保障：rabbitMQ支持最多一次和最少一次，因为消息确认环节可能中断导致误解
+     1. 层级
+        - 最多一次：可能丢失，不会重复
+        - 最少一次：不会丢失，可能重复
+        - 恰好一次：不会丢失，不会重复正好一次
+     1. 最少一次需要做到的，最多一次就随便发，随便接收了
+        - 要有发送方确认
+        - 交换器、队列、消息要持久化、备份
+        - 消费者设置手动确认
+   - 保障消息安全
+     1. 要有发送方确认
+     1. 交换器、队列、消息要持久化、备份
+     1. 消费者设置手动确认
 1. 运维
    - 安装
      1. 安装erlang
      1. 下载rabbitmq包解压，直接运行
-     1. 启动：`rabbitmq-server -detached`
-   - 管理：rabbitmqctl
-     1. `status/cluster_status`：信息、集群信息
-     1. `add_user/add_permissions/set_user_tag xx administrator`：添加用户、添加权限
-     1. `stop`：关闭erlang节点
-     1. `start_app、stop_app、reset`：针对rabbitMQ程序
-     1. `list_exchanges、list_bindings、list_queues [name type durable auto_delete]`：是否持久化、是否自动删除
-     1. `list_queues xx message_ready/unacknowledged`：等待投递/未确认消息数
-   - 集群
-     1. 认识：保证节点崩溃后继续可用，提高消息吞吐量。共享user/vhost/exchange等，v2.6支持镜像队列，最少一个磁盘节点，其他为内存节点
-     1. 节点配置
-        - rabbitmqctl -n rabbit_1 join_cluster rab@rab：加入cluster
-        - RABBITMQ_NODENAME=rabbit_1 RABBITMQ_NODE_PORT=5672 ./sbin/rabbitmq-server -detached
+     1. 启动：`rabbitmq-server -detached`，端口5672
+   - 配置
+     1. 认识：交换器和队列一旦设置属性不能修改
+     1. 分类
+        - 环境变量：rabbitmq-env.conf
+        - 配置文件：rabbitmq.config
+        - 运行时参数：不会同步到集群中，运行时可更改，不用重启。分vhost级别、globle级别。Policies支持批量动态修改属性参数
+1. 管理
+   - 命令行：rabbitmqctl
+     1. vhost：虚拟主机，多租户。拥有独立的交换器、队列、权限，逻辑、数据分离，避免命名冲突，易扩展，vhost是AMQP的概念基础，默认/，账号密码guest/guest
+        - `list_vhosts`
+        - `add_vhost、delete_vhost xx`
+        - `list/set/clear_parametyer`：运行参数操作
+     1. user：跨越vhost存在，
+        - `list_user、authentiçate_user`：验证用户
+        - `add_user、delete_user`
+        - `change_password、clear_password`
+        - `set_user_tag xx none/management/policymaker/monitoring/administrator`：授予角色，访问管理页面/策略参数设置/监控连接等/最高权限
+        - `set/clear/list_permissions -p vhost user {conf}{write}{read}`：权限是vhost级别的，可配置/写/读权限的正则，可读包含清空队列
+        - `list_user_permissions`
+     1. app：应用
+        - `stop/shutdown/stop_app`
+        - `start_app/wait/reset/force_reset`：针对rabbitMQ程序
+        - `list/set/clear_global_parameters`：全局参数
+     1. server：服务端
+        - `status`
+        - `environment/report`：显示变量、生成状态报告
+        - `node_health_check`：队列和交换器是否能够正常返回
+        - `eval`：执行erlang语句
+        - `list_exchanges [name type durable auto_delete]`：是否持久化、是否自动删除
+        - `list_bindings`：绑定关系
+        - `list_queues xx message_ready/unacknowledged`：等待投递/未确认消息数
+        - `list_consumers`
+        - `lìst_connectìons`
+        - `list_channels`
+     1. cluster：集群
+        - `cluster_status`：集群信息
+        - `joio_cluster/forget_cluster_node/update_cluster_nodes/set_cluster_name`
+        - `sync_queue/cancel_sync_queue`：同步master
+        - `change_cluster_node_type/force_boot`
+   - 插件：rabbitmq-plugins
+     1. `enable/disable rabbitmq_management`
+     1. `lists`
+   - management：端口15672
+     1. web页面：各种功能
+     1. API接口：如`http://xx:15672/api/overview`
 1. 原理
    - 集群内部利用erlang的分布式通信框架OTP
    - 存储机制
