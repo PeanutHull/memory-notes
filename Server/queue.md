@@ -10,6 +10,7 @@
    - 高可靠：持久化、传输确认、发布确认、跟踪机制
    - 高可用：内建消息集群，集群镜像
    - 功能多：灵活路由、多协议、多客户端、管理界面、易扩展、插件机制
+   - 无法实现消息恰好一次，不会丢也不会多
 1. 组成
     1. 生产者：publisher，消息体payload、标签label。根据标签路由消息
     1. 消费者：consumer，获取生产者消息体，不关心生产者是谁
@@ -55,13 +56,22 @@
           1. 一个信道多个队列情况下，最大未确认消息数？？？
    - RPC：可以和客户端进行RPC通信
 1. 集群
-   - 认识：保证节点崩溃后继续可用，提高消息吞吐量。共享user/vhost/exchange等，v2.6支持镜像队列，最少一个磁盘节点，其他为内存节点
-   - 虚拟主机：Virtual Host，一个独立的虚拟的包含交换器、队列等rabbitMQ服务器
-   - 代理：Broker，表示消息队列服务器实体
+   - 认识：保证节点崩溃后继续可用，提高消息吞吐量。v2.6支持镜像队列。代理：broker，表示消息队列服务器实体
+     1. 共享user/vhost/exchange等
+     1. 不能共享消息
+     1. 不能自动故障切换，需要手动删除节点
+   - 分类：可手动设置类型，至少要有一个磁盘节点，否则无法新建修改
+     1. 内存节点
+     1. 磁盘节点
+   - 配置步骤
+     1. 交换秘钥令牌cookie：以获得相互认证
+     1. stop_app - reset - joio_cluster/forget_cluster_node - start_app：关闭所有节点，启动时需要先启动最后关闭的节点，否则启动不了，可以删除节点解决
+   - 分布式部署
+     1. federation：可使不同broker进行消息传递，而无须建立集群。支持不同管理域。要合理设置拓扑，可以做成环状和数据来回性。内部基于AMQP协议传递数据
+        - 联邦交换器：给不同的broker同步交换器数据，转发交换器上的消息到队列
+        - 联邦队列：队列间的负载均衡，联邦队列间某个没消息了就去拿别人的帮忙，提升单队列的容量
+     1. shovel：
    - 镜像队列：可以主从切换，防止数据丢失
-   - 节点配置
-     1. rabbitmqctl -n rabbit_1 join_cluster rab@rab：加入cluster
-     1. RABBITMQ_NODENAME=rabbit_1 RABBITMQ_NODE_PORT=5672 ./sbin/rabbitmq-server -detached
 1. 网络分区
 1. 使用
    - 资源创建方式
@@ -86,13 +96,20 @@
    - 安装
      1. 安装erlang
      1. 下载rabbitmq包解压，直接运行
-     1. 启动：`rabbitmq-server -detached`，端口5672
+     1. 启动：`rabbitmq-server -detached`，端口5672，会启动erlang虚拟机和rabbitmq服务
    - 配置
      1. 认识：交换器和队列一旦设置属性不能修改
      1. 分类
         - 环境变量：rabbitmq-env.conf
         - 配置文件：rabbitmq.config
         - 运行时参数：不会同步到集群中，运行时可更改，不用重启。分vhost级别、globle级别。Policies支持批量动态修改属性参数
+   - 运行指标
+     1. 消息：发送速度、确认速度、消费速度、消息总数
+     1. 磁盘读写速度、句柄数
+     1. socket连接数、connection数、channel数
+   - 持久化数据
+     1. mnesia：数据库
+     1. metadata.json：元数据，就是vhost、交换器那一堆的数据文件
 1. 管理
    - 命令行：rabbitmqctl
      1. vhost：虚拟主机，多租户。拥有独立的交换器、队列、权限，逻辑、数据分离，避免命名冲突，易扩展，vhost是AMQP的概念基础，默认/，账号密码guest/guest
@@ -107,8 +124,8 @@
         - `set/clear/list_permissions -p vhost user {conf}{write}{read}`：权限是vhost级别的，可配置/写/读权限的正则，可读包含清空队列
         - `list_user_permissions`
      1. app：应用
-        - `stop/shutdown/stop_app`
-        - `start_app/wait/reset/force_reset`：针对rabbitMQ程序
+        - `stop/shutdown`：关闭erlang虚拟机、关闭rabbitmq服务
+        - `start_app/stop_app/wait/reset/force_reset`：针对rabbitMQ服务，reset 清空节点状态
         - `list/set/clear_global_parameters`：全局参数
      1. server：服务端
         - `status`
@@ -127,7 +144,7 @@
         - `sync_queue/cancel_sync_queue`：同步master
         - `change_cluster_node_type/force_boot`
    - 插件：rabbitmq-plugins
-     1. `enable/disable rabbitmq_management`
+     1. `enable/disable rabbitmq_management、rabbitmq_federation/rabbitmq_management_federation`
      1. `lists`
    - management：端口15672
      1. web页面：各种功能
