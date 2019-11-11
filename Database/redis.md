@@ -448,3 +448,58 @@
    - 用的是epoll,poll,select网络模型
    - 单线程处理所有的客户端连接请求，命令读写请求
    - 2个命令组合起来才算是完成一个业务，但是2个命令组合起来就不具备原子性，所有在两个命令之间其他客户端会出现读写脏数据的情况
+   
+1. #主库重启 checklist 
+
+1. 世纪互联主从库节点 zabbix 关闭报警
+
+2. 世纪互联主从库节点 注释脉搏脚本
+
+3.  切换Master到从库，修改参数并重启
+
+redis-cli -h 10.20.52.245 -p 1379 sentinel failover jy-app-redis
+redis-cli -h 10.20.52.245 -p 2379 sentinel failover jy-appapimanager-redis
+redis-cli -h 10.20.52.245 -p 4379 sentinel failover jy-handout-redis
+redis-cli -h 10.20.52.245 -p 5379 sentinel failover jy-material-redis
+redis-cli -h 10.20.52.245 -p 6379 sentinel failover jy-workflow-redis
+redis-cli -h 10.20.52.245 -p 7379 sentinel failover jy-wordlibrary-redis
+redis-cli -h 10.20.52.245 -p 8379 sentinel failover jy-courseware-redis
+redis-cli -h 10.20.52.245 -p 9379 sentinel failover jy-tnt-redis
+
+
+vim /boot/grub/grub.conf
+isolcpus=10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29 
+
+for i in {1..9}; do /etc/init.d/${i}379redis stop; done 
+
+init 6
+
+5. 重启完成后sysbench验证,重启redis服务
+/bin/rm -rf /root/scripts/sysbench.sh
+cd /root/scripts && wget -N --http-user=XueRs --http-passwd=xueersi123 http://soft.xesv5.com:88/dell/sysbench.sh
+./sysbench.sh  --test=cpu --num-threads=${v_cpu_num} --max-requests=600000 run
+
+for i in {1..9}; do /etc/init.d/${i}379redis start;sleep 60; done 
+
+for i in {1..9};do sed -i '/slaveof/d' /data/${i}379redis/etc/redis.conf;done
+
+for i in {1..9};do cat /data/${i}379redis/etc/redis.conf |grep slaveof;done
+
+6. 同步完成后，切回原主
+
+redis-cli -h 10.20.52.245 -p 3379 sentinel failover jy-app-redis
+redis-cli -h 10.20.52.245 -p 3379 sentinel failover jy-appapimanager-redis
+redis-cli -h 10.20.52.245 -p 4379 sentinel failover jy-handout-redis
+redis-cli -h 10.20.52.245 -p 5379 sentinel failover jy-material-redis
+redis-cli -h 10.20.52.245 -p 6379 sentinel failover jy-workflow-redis
+redis-cli -h 10.20.52.245 -p 7379 sentinel failover jy-wordlibrary-redis
+redis-cli -h 10.20.52.245 -p 8379 sentinel failover jy-courseware-redis
+redis-cli -h 10.20.52.245 -p 9379 sentinel failover jy-tnt-redis
+
+7. 开启zabbix报警和脉搏，sentinel reset 
+
+8. yf的同步节点挂到sjhl从库
+
+9. 
+/etc/init.d/irqbalance restart
+chkconfig irqbalance on

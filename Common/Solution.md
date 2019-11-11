@@ -67,8 +67,28 @@
    - 执行效率
 ### 高可用
 1. 认识：HA，就是冗余 + 自动故障转移
-1. keepalived：双主模式，虚拟IP地址会自动漂移到备份服务器，以VRRP协议为实现基础，自动完成切换，可根据ip、端口、get请求判断是否正常，可执行切换脚本
+1. keepalived
+   - 认识：以VRRP协议为基础实现服务热备
+     1. 可根据ip、端口、http请求判断是否正常，即工作在OSI的3、4、7层
+        - 3：发送ICMP数据包判断是否故障(ping)
+        - 4：端口
+        - 7：自定义检测脚本
+     1. 可自动完成切换，主恢复后可抢占回备占用的vip
+     1. 支持自身健康检查
+   - 组成模块
+     1. core：负责主进程的启动、维护，全局配置文件的加载和解析
+     1. check：负责健康检查、各种检查方式
+     1. vrrp：实现VRRP协议
+   - 应用：如LVS+Keepalived、Nginx+Keepalived、HAproxy+Keepalived
+     1. 主备都部署服务+keepalived
+     1. 主备的keepalived之间通过vrrp交互，虚拟出一个vip，并落在主上
+     1. 主备的keepalived设置为：当检测服务不可用时尝试重启服务，不成功则关闭keepalived，实现服务转移
+   - wiki
+     1. VRRP协议：虚拟路由冗余协议，是实现路由器冗余的协议，是为了消除在静态默认路由环境下路由器单点故障引起的网络失效而设计的主备模式的协议
+        - 一主一备，同时只有一个提供服务。即将n台设备虚拟成一个设备，对外提供一个或多个虚拟IP
+        - 检测到故障，虚拟IP地址会自动漂移到备份服务器，即keepalived广播vip对应的mac由主切换到备用，其他客户端更新ARP表，实现故障转移
 1. corosync+pacemaker：用于传递信息，提供心跳信息，集群框架引擎程序，高可用集群资源管理器，crmsh是pacemaker的命令行工具
+1. heartbeat：和corosync一类，
 1. mysql
    - 主主热备：都可读写，keepalived + virtual ip转移
    - 每个主带多个从，读通过连接池(会自动故障转移)走从
@@ -117,7 +137,7 @@
      1. 随机
      1. 最小响应时间
      1. 最小并发数
-     1. 轮询：实现简单、但是不考虑每台服务器的处理能力
+     1. 轮询：实现简单、不考虑每台服务器的处理能力
      1. 权重：考虑了服务器的处理能力
      1. 地址散列：保证同一个用户访问同一台服务器
         - 原ip地址
@@ -128,15 +148,30 @@
      1. 四层代理：ip加port，不能理解应用层协议，在接受SYN请求时转发，不会进行三次握手
      1. 七层代理：可区分http、mysql，进行了前后两次握手
    - 实现方式
-     1. 硬件：F5
+     1. 硬件：F5、Netscaler
      1. 软件
-        - LVS：基于linux操作系统实现，只工作在四层，NAT、DR、TUN三种方式
-        - HAproxy：不是web服务器，可基于tcp和http
-        - Nginx Upstream
+        - LVS
+        - HAProxy：不是web服务器，可基于tcp和http
+        - Nginx：upstream
         - varnish：高性能、开源的反向代理服务器和缓存服务器，比squid先进
         - squid：代理缓存服务器
         - apache trafficserver
         - envoy：微服务下nginx替代者，非侵入架构，C++11编写，L3L4L7层过滤器，支持http2/gprc，支持DNS/EDS多种服务发现机制，内置健康检查，支持api配置
+   - 应用场景
+     1. 四层：Redis、MySQL、RabbitMQ
+     1. 七层：Nginx、Tomcat、Apache、PHP、图片、API
+1. LVS
+   - 认识：Linux Virtual Server，基于linux操作系统实现的负载均衡
+      - 是linux标准内核的一部分
+      - 只工作在4层
+   - 组成
+      - 负载均衡器：
+      - 服务器池
+      - 共享存储
+   - 方式
+      - NAT
+      - DR
+      - TUN
 ### CDN
 1. 认识：Content Delivery Network，内容分发网络，在网络各处放置节点服务器构成一层智能虚拟网络，尽可能避开可能影响传输速度和稳定的瓶颈和环节，使内容传输更快、更稳定。能够实时根据节点的流量/连接数/负载状况/响应时间，用户的距离，等将用户请求导向最近的负载最轻的服务节点
    - 本地缓存加速，提高访问速度
