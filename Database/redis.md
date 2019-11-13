@@ -406,7 +406,21 @@
    - 避免产生big-key，导致网卡撑爆、慢查询等
 ### 架构
 1. TwemProxy
-   -- 认识：twitter开源的redis/memcache的快速、轻量级的单线程代理服务器，可进行统一管理
+   - 认识：twitter开源的redis/memcache的快速、轻量级的单线程代理服务器，可对多台redis/memcache进行管理和分配。就是分片、分布式方案
+     1. 支持失败节点自动删除
+     1. 支持设置HashTag：将两个key哈希到同一个实例
+     1. 和redis、客户端采用长链接，减少连接数
+     1. 数据自动分片
+        - hash：MD5、CRC16、CRC32、CRC32a、hsieh、murmur、Jenkins
+        - 分片：ketama、modular、random
+        - 可设置权重
+     1. 支持集群部署，上边接负载均衡
+     1. 支持状态监控：监控ip、端口、刷新间隔时间
+     1. 使用pipelining处理请求和响应
+     1. 不支持redis事务
+     1. 使用某些命令需要保证key都在同一个分片上：SIDFF,SDIFFSTORE,SINTER,SINTERSTORE,SMOVE,SUNION and SUNIONSTORE
+     1. 相对于官方较新的Redis Cluster架构，容量伸缩较麻烦
+     1. 支持memcached ASCII协议和redis协议
 1. Codis
 1. Pika
 ### wiki
