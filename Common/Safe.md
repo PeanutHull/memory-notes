@@ -56,6 +56,8 @@
 1. 通信截取方式
    - 中间人攻击：在数据被截获的情况下，如果不采用https或者用了不验证证书的话，数据都是会被获取，篡改等，其中dns可以伪装正版页面和请求，控制软件升级进一步控制：开放wifi，使用tcpdump获取数据
    - 挂马
+1. 域名劫持
+1. 流量劫持
 ### 路由器
 1. 密码破解：WPA2加密的用BT5或者奶瓶（Beni），先搞到握手包，然后要有一个强大的字典（字典十分重要，是否能破解主要靠字典），然后爆破出密码。WEP加密的也用BT3或BT5抓包破解
 1. 数据抓取
@@ -69,7 +71,7 @@
 1. 数据抓取
    - wifi密码破解：http://blog.csdn.net/zero9988/article/details/51866882
      1. CDlinux.iso  ：一个Linux系统，集成了wifi密码的PIN码破解软件。
-     1. UltraISO：把CDlinux.iso写入U盘 
+     1. UltraISO：把CDlinux.iso写入U盘
      1. grub4dos：取出其中的grldr、grub.exe、menu.lst三个文件
      1. grubinst_gui2：U盘启动引导安装
      1. BOOTICE：U盘启动引导安装
