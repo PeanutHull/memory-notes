@@ -622,6 +622,9 @@
 1. 非阻塞服务器
    - 阻塞IO通道的优/缺点：实现简单，必须为每个数据数量分配一个单独的线等待IO数据的返回，造成内存暴增，缺乏伸缩性，线程池也不能有效解决。
    - 非阻塞IO通道：通过Message Reader/Write协议组织碎片化的channel数据，组成完整一个数据，提供给其他组件。用可伸缩的buffer存储不完整的Message，有拷贝扩容/追加扩容/TLV编码消息等方式
+1. selector背后：epoll
+1. nio的selector背后：select并非iocp
+1. nio2背后：iocp
 ### 网络编程
 1. 理解：java.net包中，有接口和类提供底层通信细节
 1. Socket编程

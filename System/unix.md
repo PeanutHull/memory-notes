@@ -195,6 +195,12 @@
 1. readv/writev/readn/writen
    - readv/writev：用于一次函数中读写多个非连续缓冲区
    - readn/writen：读写指定的n字节数据，并处理返回值可能小于要求值的情况，apue自定义
+1. io模型：epoll兼容3和4的特性
+   - 阻塞io
+   - 非阻塞io
+   - io多路复用
+   - 信号驱动io
+   - 异步io：iocp支持
 ### 进程
 1. 运行背景
 1. 命令行参数
