@@ -1,18 +1,17 @@
 ### ElasticSearch
 1. 认识
-   - 基于Apache Lucene构建的开源搜索引擎，用于数据搜索、数据仓库、数据分析
+   - 基于apache lucene构建的开源搜索引擎，用于数据搜索、数据仓库、数据分析
    - 支持集群部署，支持PB级结构化/非结构化数据处理，速度超快
    - java编写，提供简单的RESTFul API
 1. 组成
-   - 索引、类型、文档，文档是最小存储单位，必须属于一个类型。索引名称必须小写，无下划线，分为结构化/非结构化，就是没有那些字段吧。结构化/非结构化：无法用统一结构表示的，可称为全文数据
-     1. 索引：库
-     1. 类型：表
-     1. 文档：数据
-   - 集群和节点
-   - 分片、备份
-     1. 分片：每个索引都有多个分片，每个分片是一个Lucene索引。分担索引压力，提高搜索效率，可以进行水平拆分，默认5个
-     1. 备份：即备份分片，默认1个
-### 使用
+   - 索引：库，分为结构化/非结构化，名称必须小写/无下划线
+   - 类型：表
+   - 文档：数据，最小存储单位，必须属于一个类型
+1. 分片、备份
+   - 分片：每个索引都有多个分片(lucene索引)，分担索引压力，提高搜索效率，可以进行水平拆分，默认5个
+   - 备份：即备份分片，默认1个
+1. 集群和节点
+### http api
 1. 使用
    - http方式：http://ip/索引/类型/文档，get/post/put/delete
 1. 查询
@@ -124,43 +123,14 @@
         }
         ```
      1. search after：动态指针的方案，基于上一页排序值检索下一页实现动态分页。search_after操作需要指定一个支持排序且值唯一的字段用来做下一页拉取的指针，这种翻页方式也可以通过bool查询的range filter实现。`"search_after": [1463538857, "654323"],`
-1. 创建/指定索引：`http://ip/索引名`
-```json
-{
-    setting: {
-        number_of_shards: 5,
-        number_of_replicas: 1,
-    }
-    mappings: {
-        man: {                                      // 索引类型的映射
-            properties: {
-                name: {
-                    type: test
-                }
-                description: {
-                    type: keyword
-                }
-                age: {
-                    type: integer
-                }
-                date：{
-                    type: date
-                    format: yyyy-MM-dd HH:mm:ss || epoch_millis
-                }
-            }
-        }
-        woman: {}
-    }
-}
-```
 1. 插入：`http://ip/索引名/类型/文档id，默认put方法，不传id会自动生成，使用post方法`
-```json
-{
-    name: name,
-    age: 1,
-    date: 2000-01-01
-}
-```
+    ```json
+    {
+        name: name,
+        age: 1,
+        date: 2000-01-01
+    }
+    ```
 1. 修改：`http://ip/索引名/类型/文档id/_update`，post方法
    - restful
    - 脚本
@@ -174,24 +144,35 @@
     }
     ```
 1. 删除：http地址定位到哪级执行哪级的，delete方法
-1. 运维
-   - 安装：wget es.tar && tar -vxf es.tar && cd es
-   - 运行：./bin/elasticsearch (-d 后台启动)
-   - 配置主从
-     1. master
-        - cluster.name: clusterName     // 集群名称
-        - node.name: master
-        - node.master: 
-     1. slave
-        - cluster.name: clusterName
-        - node.name: slave1
-        - network.host: ip
-        - http.port: 9201
-        - discovery.zen.ping.unicast.hosts: ["ip"]        // 主节点ip
-1. wiki
-   - 默认端口：9200
-   - 版本历史：1.x->2.x->5.x
-   - ELK：elasticSearch、logstash、kibana
+1. 创建索引：`http://ip/索引名`
+    ```json
+    {
+        setting: {
+            number_of_shards: 5,
+            number_of_replicas: 1,
+        }
+        mappings: {
+            man: {                                      // 索引类型的映射
+                properties: {
+                    name: {
+                        type: test
+                    }
+                    description: {
+                        type: keyword
+                    }
+                    age: {
+                        type: integer
+                    }
+                    date：{
+                        type: date
+                        format: yyyy-MM-dd HH:mm:ss || epoch_millis
+                    }
+                }
+            }
+            woman: {}
+        }
+    }
+    ```
 ### 应用
 1. elasticsearch-head：web管理工具。粗线框为主分片，细的为备份分片
    - 安装
@@ -202,6 +183,27 @@
 1. elasticsearch-ik：中文分词插件
 1. elasticsearch-jdbc：mysql数据导入和计划任务，编写脚本即可实现
 1. logstash-input-jdbc：mysql数据同步更新，可做全量同步和增量同步，数据表中定义订阅的update_time字段即可，其他的可以订阅binlog
+### 运维
+1. 安装/运行
+   - wget es.tar && tar -vxf es.tar && cd es
+   - ./bin/elasticsearch (-d 后台启动)
+1. 配置主从
+   - master
+     1. cluster.name: clusterName
+     1. node.name: master
+     1. node.master: 
+   - slave
+     1. cluster.name: clusterName
+     1. node.name: slave1
+     1. network.host: ip
+     1. http.port: 9201
+     1. discovery.zen.ping.unicast.hosts: ["ip"]        // 主节点ip
+### wiki
+1. 相关
+   - 默认端口：9200
+   - 版本历史：1.x->2.x->5.x
+   - ELK：elasticsearch、logstash、kibana
+   - 结构化/非结构化数据：无法用统一结构表示的，可称为全文数据
 ### pro
 1. 顺序扫描法/索引扫描法：将全文数据一部分提取出来变成一定结构，加快搜索速度
 1. 原理：将文档传给分词组件，将每一个词排序、记录位置并形成链表，搜索的时候直接查索引。lucene被认为是最好的搜索引擎
