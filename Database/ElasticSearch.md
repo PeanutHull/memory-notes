@@ -1,16 +1,54 @@
 ### ElasticSearch
-1. 认识
-   - 基于apache lucene构建的开源搜索引擎，用于数据搜索、数据仓库、数据分析
-   - 支持集群部署，支持PB级结构化/非结构化数据处理，速度超快
-   - java编写，提供简单的RESTFul API
+1. 认识：基于apache lucene构建的开源分布式数据搜索和分析引擎。java编写
+   - 近实时存储/检索数据
+   - 支持PB级结构化/非结构化/地理位置/指标数据处理，速度超快
+   - 提供简单的RESTFul API
+   - 支持集群部署：水平扩展、跨集群复制作热备
+1. 适用场景
+   - 实时数据搜索：作为关系型数据库全文、多词条搜索的功能补充，将进行全文搜索的数据缓存一份到elasticSearch上，达到处理复杂的业务与提高查询速度的目的
+   - 数据仓库
+   - 数据分析：日志处理与分析
 1. 组成
    - 索引：库，分为结构化/非结构化，名称必须小写/无下划线
    - 类型：表
    - 文档：数据，最小存储单位，必须属于一个类型
+1. 设计
+   - 多词条查询、匹配度与权重、自动联想、拼写纠错
 1. 分片、备份
    - 分片：每个索引都有多个分片(lucene索引)，分担索引压力，提高搜索效率，可以进行水平拆分，默认5个
    - 备份：即备份分片，默认1个
 1. 集群和节点
+### 应用
+1. elasticsearch-head：web管理工具。粗线框为主分片，细的为备份分片
+   - 安装
+     1. `wget github/elasticsearch-head && cd head`
+     1. `npm install`
+     1. `npm run start`
+     1. `http.cors.enabled: true`，`http.cors.allow-origin: "*"`：最下边添加es配置，解决两个进程跨域问题，
+1. elasticsearch-ik：中文分词插件
+1. elasticsearch-jdbc：mysql数据导入和计划任务，编写脚本即可实现
+1. logstash-input-jdbc：mysql数据同步更新，可做全量同步和增量同步，数据表中定义订阅的update_time字段即可，其他的可以订阅binlog
+1. ELK：elasticsearch、logstash、kibana三个组件，包含日志收集、聚合、多维度查询、可视化显示
+### 运维
+1. 安装/运行
+   - `wget es.tar && tar -vxf es.tar && cd es`
+   - `./bin/elasticsearch (-d 后台启动)`
+1. 配置主从
+   - master
+     1. cluster.name: clusterName
+     1. node.name: master
+     1. node.master: 
+   - slave
+     1. cluster.name: clusterName
+     1. node.name: slave1
+     1. network.host: ip
+     1. http.port: 9201
+     1. discovery.zen.ping.unicast.hosts: ["ip"]        // 主节点ip
+### wiki
+1. 相关
+   - 默认端口：9200
+   - 版本历史：1.x->2.x->5.x->7.4
+   - 结构化/非结构化数据：无法用统一结构表示的，可称为全文数据
 ### http api
 1. 使用
    - http方式：http://ip/索引/类型/文档，get/post/put/delete
@@ -173,38 +211,11 @@
         }
     }
     ```
-### 应用
-1. elasticsearch-head：web管理工具。粗线框为主分片，细的为备份分片
-   - 安装
-     1. wget github/elasticsearch-head && cd head
-     1. npm install
-     1. npm run start
-     1. 最下边添加es配置，解决两个进程跨域问题，`http.cors.enabled: true`，`http.cors.allow-origin: "*"`
-1. elasticsearch-ik：中文分词插件
-1. elasticsearch-jdbc：mysql数据导入和计划任务，编写脚本即可实现
-1. logstash-input-jdbc：mysql数据同步更新，可做全量同步和增量同步，数据表中定义订阅的update_time字段即可，其他的可以订阅binlog
-### 运维
-1. 安装/运行
-   - wget es.tar && tar -vxf es.tar && cd es
-   - ./bin/elasticsearch (-d 后台启动)
-1. 配置主从
-   - master
-     1. cluster.name: clusterName
-     1. node.name: master
-     1. node.master: 
-   - slave
-     1. cluster.name: clusterName
-     1. node.name: slave1
-     1. network.host: ip
-     1. http.port: 9201
-     1. discovery.zen.ping.unicast.hosts: ["ip"]        // 主节点ip
-### wiki
-1. 相关
-   - 默认端口：9200
-   - 版本历史：1.x->2.x->5.x
-   - ELK：elasticsearch、logstash、kibana
-   - 结构化/非结构化数据：无法用统一结构表示的，可称为全文数据
 ### pro
 1. 顺序扫描法/索引扫描法：将全文数据一部分提取出来变成一定结构，加快搜索速度
 1. 原理：将文档传给分词组件，将每一个词排序、记录位置并形成链表，搜索的时候直接查索引。lucene被认为是最好的搜索引擎
 1. 优化方式：集群规划、索引配置、存储策略、索引拆分、冷热分区、段合并等几个维度优化
+1. 通过有限状态转换器实现全文检索的倒排索引：用于存储数值数据的BKD树，和用于分析的列存储
+   - 存储数据时按有序存储
+   - 将数据和索引分离；
+   - 压缩数据

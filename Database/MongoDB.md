@@ -1,8 +1,19 @@
 ### MongoDB
-1. 认识
-   - 解释：基于文档的非关系型数据库。文档按照BSON(json的轻量化二进制格式)存储，增删改查等命令和js语法很像。
-   - 组成：集合(collection)和文档(document)来描述和存储数据，collection相当于表，document相当于行，但是一个集合里的文档可以有不同的结构。
-1. 连接：mongo默认启动无鉴权，可以配置
+1. 认识：基于文档的非关系型数据库，是可扩展性的表结构。文档按照BSON存储，增删改查等命令和js语法很像
+   - 索引：地理位置、文本、TTL索引
+   - 事务：只支持单文档事务
+   - 灵活的文档模型
+   - 高性能：mmapv1、wiredtiger、mongorocks（rocksdb）、in-memory等引擎
+   - 高可用：故障自动切换
+   - 可扩展分片集群：海量数据存储，水平扩展
+   - Gridfs	解决文件存储的需求
+   - aggregation & mapreduce：数据分析，用户可以自己写查询语句或脚本，将请求都分发到 MongoDB 上完成
+1. 适用场景
+   - 表结构可能会不断扩展的MySQL表结构，可通过mongoDB存储，可保证表结构扩展性
+   - 存储日志，利用分片集群支持海量数据，同时使用聚集分析和MapReduce的能力
+1. 组成
+   - 集合：collection，表，一个集合里的文档可有不同结构
+   - 文档：document：行
 1. 集合操作
    - 查
     ```sql
@@ -65,7 +76,12 @@
     coll.remove({}) // 删除所有
     coll.find()
     ```
+1. 应用
+   - GridFS：基于mongoDB的分布式文件存储系统，也是存储和查询超过BSON文件大小限制(16M)的规范，采用分片存储
+1. 运维
+   - 连接：mongo默认启动无鉴权，可以配置
 ### wiki
+1. bson：json的轻量化二进制格式
 1. NoSql分类
    - 按照存储方式
      1. 列：Hbase、Cassandra、Hypertable
