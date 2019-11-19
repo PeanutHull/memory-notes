@@ -1,33 +1,47 @@
 ### ElasticSearch
 1. 认识：基于apache lucene构建的开源分布式数据搜索和分析引擎。java编写
-   - 近实时存储/检索数据
-   - 支持PB级结构化/非结构化/地理位置/指标数据处理，速度超快
-   - 提供简单的RESTFul API
-   - 支持集群部署：水平扩展、跨集群复制作热备
-1. 适用场景
-   - 实时数据搜索：作为关系型数据库全文、多词条搜索的功能补充，将进行全文搜索的数据缓存一份到elasticSearch上，达到处理复杂的业务与提高查询速度的目的
-   - 数据仓库
-   - 数据分析：日志处理与分析
+   - 特点
+     1. 支持结构化、非结构化搜索，不需要提前定义模式
+     1. 近实时存储/检索数据
+     1. 支持PB级结构化/非结构化/地理位置/指标数据处理，速度超快
+     1. 分布式存储：索引拆分为分片，分片多副本
+     1. 提供简单的RESTFul API
+     1. 支持集群部署：水平扩展、跨集群复制热备
+     1. 支持插件机制：分词/同步/Hadoop/可视化
+   - 设计
+     1. 全文索引
+     1. 多词条查询、匹配度与权重、自动联想、拼写纠错
+     1. 负载再平衡和路由大多自动完成
+1. 场景
+   - 适用
+     1. 实时数据搜索：作为关系型数据库全文、多词条搜索的功能补充，将进行全文搜索的数据缓存一份到elasticSearch上，达到处理复杂的业务与提高查询速度的目的
+     1. 数据仓库
+     1. 数据分析：数据聚合、日志处理与分析
+   - 不适用
+     1. 事务性、强一致
+     1. 权限划分
 1. 组成
-   - 索引：库，分为结构化/非结构化，名称必须小写/无下划线
-   - 类型：表
-   - 文档：数据，最小存储单位，必须属于一个类型
-1. 设计
-   - 多词条查询、匹配度与权重、自动联想、拼写纠错
-1. 分片、备份
-   - 分片：每个索引都有多个分片(lucene索引)，分担索引压力，提高搜索效率，可以进行水平拆分，默认5个
-   - 备份：即备份分片，默认1个
-1. 集群和节点
+   - Term：索引，库，分为结构化/非结构化，名称必须小写/无下划线，可精确搜索
+     1. 分片：索引被分为多个分片，es汇总每个分片的查询结果，可水平拆分，默认5个
+        - 副本：是某个分片的复制，提高吞吐量、实现高可用
+          1. 主分片
+   - Type：类型，表，属于term
+   - Field：列，属于type
+   - Document：行，最小存储单位，属于type
+   - Mapping：关系描述。term类型，type处理规则，分词处理规则
+1. 集群、节点
 ### 应用
-1. elasticsearch-head：web管理工具。粗线框为主分片，细的为备份分片
-   - 安装
-     1. `wget github/elasticsearch-head && cd head`
-     1. `npm install`
-     1. `npm run start`
-     1. `http.cors.enabled: true`，`http.cors.allow-origin: "*"`：最下边添加es配置，解决两个进程跨域问题，
-1. elasticsearch-ik：中文分词插件
-1. elasticsearch-jdbc：mysql数据导入和计划任务，编写脚本即可实现
-1. logstash-input-jdbc：mysql数据同步更新，可做全量同步和增量同步，数据表中定义订阅的update_time字段即可，其他的可以订阅binlog
+1. 工具
+   - elasticsearch-head：web管理工具。粗线框为主分片，细的为备份分片
+     1. 安装
+        - `wget github/elasticsearch-head && cd head`
+        - `npm install`
+        - `npm run start`
+        - `http.cors.enabled: true`，`http.cors.allow-origin: "*"`：最下边添加es配置，解决两个进程跨域问题，
+   - elasticsearch-ik：中文分词插件
+   - elasticsearch-jdbc：mysql数据导入和计划任务，编写脚本即可实现
+   - logstash-input-jdbc：mysql数据同步更新，可做全量同步和增量同步，数据表中定义订阅的update_time字段即可，其他的可以订阅binlog
+   - esrally：es压测工具
 1. ELK：elasticsearch、logstash、kibana三个组件，包含日志收集、聚合、多维度查询、可视化显示
 ### 运维
 1. 安装/运行
