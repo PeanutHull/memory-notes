@@ -185,7 +185,8 @@
      1. 同源策略：检测Referer字段，非法的Reffer来源直接拒绝访问
      1. 当前session构造唯一token放入请求头、参数中，攻击者不能拿到这个token
 ### 加密方式
-1. AES：Advanced Encryption Standard，对称加密标准，又称Rijndael加密法，美国联邦政府采用的一种区块加密标准。AES-128、AES-192、AES-256
 1. DES：Data Encryption Standard，对称加密标准，被AES替代
+1. AES：Advanced Encryption Standard，对称加密标准，又称Rijndael加密法，美国联邦政府采用的一种区块加密标准。AES-128、AES-192、AES-256
+1. RSA
 1. SHA：单向加密，SHA-256、SHA-1
-1. MD5
+1. MD5：单向加密
