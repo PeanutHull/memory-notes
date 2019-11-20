@@ -21,14 +21,15 @@
      1. 事务性、强一致
      1. 权限划分
 1. 组成
-   - Term：索引，库，分为结构化/非结构化，名称必须小写/无下划线，可精确搜索
-     1. 分片：索引被分为多个分片，es汇总每个分片的查询结果，可水平拆分，默认5个
+   - index：索引，库，相同属性的文档集合。分为结构化/非结构化，名称必须小写/无下划线，可精确搜索
+     1. shards：分片，索引被分为多个分片，es汇总每个分片的查询结果，可水平拆分，默认5个
         - 副本：是某个分片的复制，提高吞吐量、实现高可用
           1. 主分片
-   - Type：类型，表，属于term
+   - Type：类型，表，属于index
    - Field：列，属于type
    - Document：行，最小存储单位，属于type
-   - Mapping：关系描述。term类型，type处理规则，分词处理规则
+   - Mapping：关系描述。index类型，type处理规则，分词处理规则
+     1. 为空为非结构化
 1. 集群、节点
 ### 应用
 1. 工具
@@ -61,97 +62,194 @@
 ### wiki
 1. 相关
    - 默认端口：9200
-   - 版本历史：1.x->2.x->5.x->7.4
+   - 版本历史
+     1. 1.x
+     1. 2.x
+     1. 5.x：直接从2到6，支持lucene6性能大幅提升，磁盘空间少一半，索引建立时间少一半，查询性能提升25%，支持ipv6
+     1. 7.4
    - 结构化/非结构化数据：无法用统一结构表示的，可称为全文数据
 ### http api
-1. 使用
-   - http方式：http://ip/索引/类型/文档，get/post/put/delete
+1. 使用：http://ip/索引/类型/文档，restful形式，get/post/put/delete
+1. 创建索引
+    ```json
+    // http://ip/index
+    {
+        "setting": {                                            // 设置
+            "number_of_shards": 5,                                      // 分片数
+            "number_of_replicas": 1,                                    // 副本数
+        },
+        "mappings": {
+            "man": {                                            // 类型
+                "properties": {                                         // 属性
+                    "xx": {                                             // 名称
+                        "type": "integer/test/keyword"                  // 字段类型
+                    },
+                    "date": {
+                        "type": "date",
+                        "format": "yyyy-MM-dd HH:mm:ss || epoch_millis" // || 或的意思
+                    }
+                }
+            }
+        }
+    }
+    ```
+1. 插入文档
+    ```json
+    // http://ip/index/type/doc_id，使用put指定id，使用post不传id自动生成
+    {
+        "xx": "name",                                         // 要写入的字段即可
+        "date": "2000-01-01"
+    }
+
+    // 文档数据结构
+    {
+        "_index": "xx",
+        "_type": "xx",
+        "_id": "xx",
+        "_version": x,
+        "result": "created/updated",
+        "_shards": {
+            "total": x,
+            "successful": x,
+            "failed": x,
+        },
+    }
+    ```
+1. 更新
+    ```json
+    // restful方式：http://ip/index/type/doc_id/_update，post方法
+    {
+        "doc": {
+            "xx": "xx",                                         // 要更新的字段
+        }
+    }
+    
+    // 脚本方式
+    {
+        "script": {
+            "lang": "painless/python",                          // painless为es内置脚本语言
+            "inline": "ctx._source.age (+= 10/params.age)",     // 脚本内容
+            "params": {
+                "age": 11
+            }
+        }
+    }
+    ```
+1. 删除：`http://ip/index/type/doc_id`，http地址最后到哪级删哪级，delete方法
 1. 查询
-   - 简单查询：`http://ip/索引名/类型/文档id`，get方法
+   - 简单查询：`http://ip/index/type/doc_id`，get方法
    - 条件查询
-     1. `http://ip/索引名/_search`，post方法
         ```json
-        query: {
-            // Query Context，判断是否满足查询条件，同时提供_score标识匹配程度            
-            // 全文本查询：文本类型
-            match_all: {}                       // 查询所有
-            match_phrase: {}                    // 精确匹配
-            match: {                            // 模糊匹配
-                description: ""
-            }
-            mult_match: {                       // 多个字段同时模糊匹配
-                query: ""
-                field: {
-                    name: ""
-                    description: ""
-                }
-            }
-            query_string: {                     // 语法查询，表达的比较丰富
-                query: "(xx AND xx) OR xx"
-                field: {
-                    name: ""
-                    description: ""
-                }
-            }
-            // 字段级别查询：结构化数据，如数字、日期
-            term: {
-                age: 1
-            }
-            range: {                            // 范围查询
-                date: {
-                    gt: 2017-01-01
-                    lte: now
-                }
-            }
-            // Filter Context：查询中只判断是否满足条件，只有是或否，会将结果缓存，比Query快点
-            bool: {                             // 布尔查询
-                should: {
-                    match: {
+        // `http://ip/index/_search`，post方法
+        {
+            // Query Context，判断是否满足查询条件，同时提供_score标识匹配程度
+
+
+            "query": {
+
+                // 全文本查询：文本类型
+                "match_phrase": {                       // 精确匹配
+                    "xx": "xx"
+                },                    
+                "match": {                              // 模糊匹配
+                    "xx": "xx"
+                },
+                "mult_match": {                         // 多字段同时模糊匹配
+                    "query": "",
+                    "field": {
+                        "xx": ""
+                    }
+                },
+                "match_all": {},                        // 查询所有
+                query_string: {                         // 语法查询，表达的比较丰富
+                    query: "(xx AND xx) OR xx"
+                    field: {
                         name: ""
-                    }
-                    match: {
-                        age: 1
+                        description: ""
                     }
                 }
-                must: {
-                    match: {
-                        name: ""
+
+                // 字段级别查询：结构化数据，如数字、日期
+                term: {
+                    age: 1
+                }
+                range: {                            // 范围查询
+                    date: {
+                        gt: 2017-01-01
+                        lte: now
                     }
                 }
-                must_not: {}                
-                filter: {
-                    term: {
-                        age: 1
+
+                // Filter Context：查询中只判断是否满足条件，只有是或否，会将结果缓存，比Query快点
+                bool: {                             // 布尔查询
+                    should: {
+                        match: {
+                            name: ""
+                        }
+                        match: {
+                            age: 1
+                        }
+                    }
+                    must: {
+                        match: {
+                            name: ""
+                        }
+                    }
+                    must_not: {}                
+                    filter: {
+                        term: {
+                            age: 1
+                        }
                     }
                 }
-            }
-            constant_score: {                   // 固定分数查询
-                filter: {
-                    match: {
-                        age: 1
+                constant_score: {                   // 固定分数查询
+                    filter: {
+                        match: {
+                            age: 1
+                        }
                     }
+                    boost: 2
                 }
-                boost: 2
-            }
+            },
+            "sort": [
+                {"date": {"order": "desc"}}         // 排序
+            ],
+            "from": 1,                              // 分页
+            "size": 1,
         }
-        sort: {
-            date: {order: desc}
+
+        // 结果解析
+        {
+            "took": x,                              // 花费时间，毫秒
+            "timed_out": false,
+            "_shards": ...,
+            "hits": {
+                "total": x,
+                "max_score": 1,
+                "hits": [                           // 结果集合
+                    {
+                        "_index": "xx",
+                        "_type": "xx",
+                        "_id": "xx",
+                        "_score": x|null,           // 指定排序返回null
+                        "_source": {
+                            "xx": "xx",
+                            "date": "xx",
+                        },
+                    }
+                ]
+            },
         }
-        from: 1,
-        size: 1,
         ```
    - 聚合查询
     ```json
-    aggs: {
-        aggs_name1: {                           // 聚合名称
-            terms: {                            // 关键词
-                field: ""                       // 聚合的类型
-            }
-            stats/min/max: {field: ""}          // 统计计算
-        }
-        aggs_name2: {
-            terms: {
-                field: ""
+    {
+        "aggs": {                                     // 聚合查询关键词
+            "xx": {                                       // 聚合查询名称
+                "terms": {                                // 关键词
+                    "field": "word_count/publish_date"    // 聚合类型，如字数统计，发布时间等
+                },
+                "stats/min/max": {"field": ""}            // 进行统计计算，如统计/最小/最大
             }
         }
     }
@@ -175,56 +273,6 @@
         }
         ```
      1. search after：动态指针的方案，基于上一页排序值检索下一页实现动态分页。search_after操作需要指定一个支持排序且值唯一的字段用来做下一页拉取的指针，这种翻页方式也可以通过bool查询的range filter实现。`"search_after": [1463538857, "654323"],`
-1. 插入：`http://ip/索引名/类型/文档id，默认put方法，不传id会自动生成，使用post方法`
-    ```json
-    {
-        name: name,
-        age: 1,
-        date: 2000-01-01
-    }
-    ```
-1. 修改：`http://ip/索引名/类型/文档id/_update`，post方法
-   - restful
-   - 脚本
-    ```json
-    script: {
-        lang: painless/python           // painless为es内置脚本语言
-        inline: ctx.source.age (+= 10/params.age)
-        params: {
-            age: 11
-        }
-    }
-    ```
-1. 删除：http地址定位到哪级执行哪级的，delete方法
-1. 创建索引：`http://ip/索引名`
-    ```json
-    {
-        setting: {
-            number_of_shards: 5,
-            number_of_replicas: 1,
-        }
-        mappings: {
-            man: {                                      // 索引类型的映射
-                properties: {
-                    name: {
-                        type: test
-                    }
-                    description: {
-                        type: keyword
-                    }
-                    age: {
-                        type: integer
-                    }
-                    date：{
-                        type: date
-                        format: yyyy-MM-dd HH:mm:ss || epoch_millis
-                    }
-                }
-            }
-            woman: {}
-        }
-    }
-    ```
 ### pro
 1. 顺序扫描法/索引扫描法：将全文数据一部分提取出来变成一定结构，加快搜索速度
 1. 原理：将文档传给分词组件，将每一个词排序、记录位置并形成链表，搜索的时候直接查索引。lucene被认为是最好的搜索引擎
