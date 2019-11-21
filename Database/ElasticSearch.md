@@ -115,6 +115,7 @@
         },
     }
     ```
+
 1. 更新
     ```json
     // restful方式：http://ip/index/type/doc_id/_update，post方法
