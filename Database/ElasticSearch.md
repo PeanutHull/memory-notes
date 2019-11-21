@@ -59,19 +59,31 @@
             "setting": {                                            // 设置
                 "number_of_shards": 5,                                      // 分片数
                 "number_of_replicas": 1,                                    // 副本数
+                // 分词设置
+                "analysis": {
+                    "char_filter": {},
+                    "tokenizer": {},
+                    "filter": {},
+                    "analyzer": {
+                        "xx": {
+                            ...
+                        }
+                    },
+                }
             },
             "mappings": {
-                "man": {                                            // 类型
+                "xx": {                                             // 类型
                     "properties": {                                         // 属性
                         "xx": {                                             // 名称
-                            "type": "integer/test/keyword"                  // 字段类型
+                            "type": "integer/test/keyword",                 // 字段类型
+                            "analyzer": "xx"                                // 指定分词器
                         },
-                        "date": {
+                        "xx": {
                             "type": "date",
                             "format": "yyyy-MM-dd HH:mm:ss || epoch_millis" // || 或的意思
                         }
                     }
-                }
+                },
             }
         }
         ```
@@ -357,6 +369,85 @@
 1. 问题
    - term是模糊还是精确匹配？
 ### pro
+1. 搜索引擎
+   - 认识：先分词，通过倒排索引获取文档id，再用正排索引获取完整内容
+   - 索引类型
+     1. 倒排索引：单词到文档id，即书后边的索引
+        - 单词词典：Term Dictionary，一般使用B+Tree数实现
+          1. 记录所有文档的单词，比较大
+          1. 记录单词到倒排列表的偏移
+        - 倒排列表：Posting List，记录单词对应文档的集合，由倒排索引项组成。es中每个字段都有自己的倒排索引
+          1. 文档id：查最终内容
+          1. 单词频率：出现次数，用于相关性算分
+          1. 位置：记录文档中的分词位置，用于词语搜索
+          1. 偏移：在文档中的开始和结束位置，用于高亮显示
+     1. 正排索引：文档id到内容/单词
+   - 分词器
+     1. 认识：Analyzer，es中处理分词的组件，在查询、新增和更新时使用
+        - 分词：analysis，将文本转换成一系列term(单词)，也叫文本分析
+     1. 组成
+        - character filters：原始文本处理
+          1. html strip：去除html标签、转换html实体
+          1. 根据mapping进行字符替换
+          1. 正则匹配替换
+        - tokenizer：按照一定规则切分为term
+          1. standard：按照单词
+          1. letter：按照非字符类
+          1. whitespace：按照空格
+          1. UAX URL Email：按照standard，不会分割邮箱和url
+          1. NGram/Edge NGram：按照连词，自动提示用到，即结果都是相近的
+          1. Path Hierarchy：按照文件路径
+        - token filters：对切分后的term再加工，如转小写/删除/近义词/同义词，的/这等语义词处理
+          1. lowercase
+          1. stop：删除stop word
+          1. NGram/Edge NGram
+          1. Synonym：添加近义词
+     1. 分类
+        - standard：默认，按词切分，支持多语言，小写处理
+        - simple：非字母切分，小写处理
+        - whitespace：空格切分
+        - stop：比simple多了stop word处理(指语气助词)
+        - keyword：不分词，作为一个单词输出
+        - pattern：通过正则自定义分隔符，默认\W+，即非单词，小写处理
+        - language：提供常见30种语言的分词器
+     1. 中文分词：没有形式上的分隔符(如空格)，一句话多歧义的问题
+        - IK：支持中英文切分，可自定义词库，支持热更新分词词典
+        - jieba：python中最流行的分词系统，支持词性标注、自定义词典、并行分词、繁体分词
+        - 基于自然语言处理的分词系统：HanLp，一系列模型和算法组成的java工具包。THULAC
+     1. 调试
+        - 认识：es提供验证分词效果的api
+        ```json
+        // 指定Analyzer
+        POST _analyze
+        {
+            "analyzer": "standard",                 // 分词器
+            "text": "xx"                            // 测试文本
+        }
+        // 指定索引中的字段
+        POST index/_analyze
+        {
+            "field": "xx",                          // 测试字段
+            "text": "xx"
+        }
+        // 自定义分词器
+        POST _analyze
+        {
+            "tokenizer": "standard",                // 分词
+            "char_filter": ["html_strip"],          // 原始文本处理
+            "filter": [                             // 指定token filters
+                "lowercase",
+                {
+                    "type": "ngram",
+                    "min_gram": x,
+                    "max_gram": x,
+                }
+            ],
+            "text": "xx"
+        }
+        ```
+     1. 最佳实践
+        - 不需要分词的将type设置为keyword，以节省空间和提高写性能
+        - 多用分词api查看结果，多测试
 1. 顺序扫描法/索引扫描法：将全文数据一部分提取出来变成一定结构，加快搜索速度
 1. 原理：将文档传给分词组件，将每一个词排序、记录位置并形成链表，搜索的时候直接查索引。lucene被认为是最好的搜索引擎
 1. 优化方式：集群规划、索引配置、存储策略、索引拆分、冷热分区、段合并等几个维度优化
