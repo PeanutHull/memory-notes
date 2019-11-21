@@ -25,13 +25,20 @@
      1. shards：分片，索引被分为多个分片，es汇总每个分片的查询结果，可水平拆分，默认5个。提高吞吐量、实现高可用
         - 副本：是某个分片的复制
           1. 主分片
+     1. mapping：属性描述，类似表结构定义。定义了字段名称/类型，倒排索引的配置，分词处理规则。为空则为非结构化
+        - 特性
+          1. 修改：字段类型一旦设定禁止修改。需要建立新的索引，然后reindex(就是重新导入)。因为lucene的倒排索引为了提高效率生成后不允许修改
+          1. 新增：允许新增字段，参数dynamic控制，默认true允许，false不允许但是可以写入到文档不能查询，strict写入报错。推荐false，不会将字段随意更改
+        - 属性
+          1. copy_to：针对字段，将该字段所有值复制到目标字段，类似_all，不出现在_source中，只用来搜索。用于满足特殊搜索
+          1. index：字段是否索引，默认true，false则不可搜索，用于不用搜索的字段，节省空间，加快速度
    - Type：类型，表，属于index，新版本会干掉
    - Document：文档，行，最小存储单位，属于type
      1. Field：列，属于document。数据类型为
         - 布尔：boolean
         - 二进制：binary
         - 数值：byte、integer、short、long、float、double、half_float(节省空间)、scaled_float
-        - 字符串：text、keyword
+        - 字符串：text、keyword(不分词)
         - 日期：date
         - 范围类型：integer_range|long_range、float_range|double_range、date_range，新增
      1. MetaData：元数据，用于标注文档信息
@@ -40,9 +47,7 @@
         - _id：唯一id
         - _uid：组合id，由_type和_id组成(6.x，那俩都不起作用)
         - _source：原始json数据
-        - _all：组合所有字段内容，占空间，查询慢，新版本默认禁用
-   - Mapping：关系描述。index类型，type处理规则，分词处理规则
-     1. 为空则为非结构化
+        - _all：组合所有字段值，占空间，查询慢，新版本默认禁用
 1. 集群、节点
 1. Query DSL
 ### Restful Api
@@ -51,7 +56,7 @@
      1. 匹配：xx|,|*|_all，单个|多个|通配符|所有
    - Kibana DevTools
 1. 索引
-   - 查看：`http://ip/index/_settings`，get
+   - 查看：`http://ip/index/_settings|_mapping`，get
    - 创建
         ```json
         // http://ip/index put
@@ -73,10 +78,12 @@
             },
             "mappings": {
                 "xx": {                                             // 类型
+                    "dynamic": false,
                     "properties": {                                         // 属性
                         "xx": {                                             // 名称
-                            "type": "integer/test/keyword",                 // 字段类型
-                            "analyzer": "xx"                                // 指定分词器
+                            "type": "integer/text/keyword",                 // 字段类型
+                            "analyzer": "xx",                               // 指定分词器
+                            "copy_to": "xxx"                                // 复制内容
                         },
                         "xx": {
                             "type": "date",
@@ -193,7 +200,11 @@
                     "xx": "xx"
                 },                    
                 "match": {                              // 模糊匹配，会进行分词查询
-                    "xx": "xx"
+                    "xx": "xx",
+                    "xx": {
+                        "query": "xx xx",
+                        "operator": "and"
+                    }
                 },
                 "mult_match": {                         // 多字段同时模糊匹配某一内容
                     "query": "",
