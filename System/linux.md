@@ -37,7 +37,7 @@
      1. pwd
    - 复制/移动/删除
      1. cp -r dir1 dir2
-     1. mv file dir/
+     1. mv file|dir dir/
      1. rm -r dir
      1. rename
      1. unlink
