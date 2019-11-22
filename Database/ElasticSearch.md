@@ -20,6 +20,27 @@
    - 不适用
      1. 事务性、强一致
      1. 权限划分
+1. 数据类型
+   - 布尔：boolean
+   - 二进制：binary
+   - 数值：byte、integer、short、long、float、double、half_float(节省空间)、scaled_float
+   - 字符串：text(分词)、keyword(不分词)
+   - 日期：date
+   - 范围：integer_range|long_range、float_range|double_range、date_range，5.x新增
+   - 复杂类型
+     1. 数组：array
+     1. 对象：object
+     1. 嵌套对象：nested object
+   - 地理位置
+     1. geo_point：点
+     1. geo_shape：形状
+   - 专用类型
+     1. ip地址：ip
+     1. 自动补全：completion
+     1. 分词数量：token_count
+     1. 字符串hash：murmur3
+     1. percolator
+     1. join：父子查询
 1. 组成
    - index：索引，库，相同属性的文档集合。分为结构化/非结构化，名称必须小写/无下划线(es关键字前缀为_)，可精确搜索
      1. shards：分片，索引被分为多个分片，es汇总每个分片的查询结果，可水平拆分，默认5个。提高吞吐量、实现高可用
@@ -29,18 +50,58 @@
         - 特性
           1. 修改：字段类型一旦设定禁止修改。需要建立新的索引，然后reindex(就是重新导入)。因为lucene的倒排索引为了提高效率生成后不允许修改
           1. 新增：允许新增字段，参数dynamic控制，默认true允许，false不允许但是可以写入到文档不能查询，strict写入报错。推荐false，不会将字段随意更改
+          1. multi-fields：多字段特性，允许对同一字段采用不同的配置
+            ```json
+            // 定义
+            {
+                "mappings": {
+                    "xx": {
+                        "properties": {
+                            "xx": {
+                                "type": "text",
+                                "fields": {                         // 子字段
+                                    "type": "text",
+                                    "analyzer": "xx"
+                                },
+                            },
+                        }
+                    },
+                }
+            }
+            // 查询
+            GET index/_search
+            {
+                "query": {
+                    "match": {
+                        "xx.xx": "xx"
+                    }
+                }
+            }
+            ```
+          1. 动态设置类型：dynamic mapping，es根据json的类型实现自动识别字段类型。如boolean为boolean，整数为long，string匹配日期/数字，匹配为text附加keyword子字段
+          1. 动态模板：`dynamic_templates`属性，支持按照设定的规则设置字段类型，如所有message开头的设置为text，所有自动匹配为double的都设定为float
         - 属性
-          1. copy_to：针对字段，将该字段所有值复制到目标字段，类似_all，不出现在_source中，只用来搜索。用于满足特殊搜索
+          1. copy_to：将该字段所有值复制到目标字段，类似_all，不出现在_source中，只用来搜索。用于满足特殊搜索
           1. index：字段是否索引，默认true，false则不可搜索，用于不用搜索的字段，节省空间，加快速度
+          1. index_options：控制字段的倒排索引记录的内容。text默认positions，其他默认docs。记录越多，占用索引越大
+             - docs：只记录doc id
+             - freqs：加个term frequencies，词频
+             - positions：再加个term position，出现位置，可支持词语查询，因为有位置
+             - offsets：再加个character offset，开始和结束位置，可支持高亮
+          1. null_value：字段的null值处理策略，即设定默认值如设定为字符串"null"
+     1. 索引模板：index template，新建索引时自动应用预先设定的配置，简化索引创建步骤
+        ```json
+        PUT _template/xx
+        {
+            "index_patterns": ["", ""],
+            "order": x,                                 // 优先级
+            "settings": {},
+            "mappings": {},
+        }
+        ```
    - Type：类型，表，属于index，新版本会干掉
    - Document：文档，行，最小存储单位，属于type
-     1. Field：列，属于document。数据类型为
-        - 布尔：boolean
-        - 二进制：binary
-        - 数值：byte、integer、short、long、float、double、half_float(节省空间)、scaled_float
-        - 字符串：text、keyword(不分词)
-        - 日期：date
-        - 范围类型：integer_range|long_range、float_range|double_range、date_range，新增
+     1. Field：列，属于document
      1. MetaData：元数据，用于标注文档信息
         - _index：所在索引名
         - _type：所在类型名
@@ -79,6 +140,16 @@
             "mappings": {
                 "xx": {                                             // 类型
                     "dynamic": false,
+                    "dynamic_templates": [                                  // 动态模板，创建字段省事
+                        {
+                            "string": {
+                                "match_mapping_type": "string",             // 当识别为string时，都设置为keyword类型
+                                "mapping": {
+                                    "type": "keyword",
+                                }
+                            }
+                        }
+                    ],
                     "properties": {                                         // 属性
                         "xx": {                                             // 名称
                             "type": "integer/text/keyword",                 // 字段类型
@@ -377,6 +448,8 @@
      1. 5.x：直接从2到6，支持lucene6性能大幅提升，磁盘空间少一半，索引建立时间少一半，查询性能提升25%，支持ipv6
      1. 7.4
    - 结构化/非结构化数据：无法用统一结构表示的，可称为全文数据
+   - es构建于json数据格式之上
+   - 更全的配置可以在官网上查询到
 1. 问题
    - term是模糊还是精确匹配？
 ### pro
