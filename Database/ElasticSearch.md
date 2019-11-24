@@ -90,6 +90,41 @@
         - _uid：组合id，由_type和_id组成(6.x，那俩都不起作用)
         - _source：原始json数据
         - _all：将所有字段值连接起来，一起搜索关键字，占空间，查询慢，新版本默认禁用
+1. 表现
+   - 排序
+     1. 认识：对字段原始内容进行排序的过程，这个过程倒排索引无法发挥作用，需要用到正排索引。除了text。会采用列示存储和很多压缩算法节省空间
+        - 默认按照算分，采用其他字段排序不会算分
+        - text不能排序，keyword可以
+     1. 实现方案
+        - fielddata：默认禁用，只针对text类型，按照分词后的term排序，结果很难符合预期。搜索时即使创建，占用jvm heap，文档多时耗时长，内存占用大。针对字段配置 `"fielddata":true`。一般对分词做聚合分析时开启，可随时开启关闭
+        - doc values：默认启用，索引时创建和倒排的时机一样，占用磁盘，会减慢创建索引速度。针对字段配置，可在创建索引时关闭 `"doc_values": false`
+   - 分页与遍历
+     1. from + size：开始位置/文档数，从0开始，分页就是数据分片存储下，会在所有分片取出0到size个文档再汇总处理，深分页配置 `index.max_result_window`为10000。搜索引擎是为了让你尽快找到结果，而不是深分页
+     1. scroll
+        - 认识：遍历文档集的api，已快照方式避免深分页。指定快照保存时间，快照一个个查询
+          1. 不能用来实时搜索，数据不实时。因为建立快照需要时间，是建立快照时的数据
+          1. 尽量不要复杂sort，使用_doc最高效
+        - 使用
+          1. 发起scroll search
+            ```json
+            // GET _search?scroll=1m        // 指定快照有效时间
+            {
+                "slice": {                  // sliced scroll：切片方式指定多scroll并行查询，指定上下文保留时间、最大切片、当前切片
+                    "id": 1,
+                    "max": 2
+                },
+                "size": n                   // 每次scorll返回的文档数
+            }
+            ```
+          1. 利用scroll_id获取文档，当hits为空时可停止
+            ```json
+            // POST _search/scroll
+            {
+                "scroll": "5m",             // 刷新快照存活时间
+                "scroll_id": "xx"
+            }
+            ```
+     1. search after：动态指针的方案，基于上一页排序值检索下一页实现动态分页。search_after操作需要指定一个支持排序且值唯一的字段用来做下一页拉取的指针，这种翻页方式也可以通过bool查询的range filter实现。`"search_after": [1463538857, "654323"],`
 1. 集群
    - 特点
      1. 通过集群名称区分，`cluster.name`
@@ -329,25 +364,6 @@
         - Filter Context：直接匹配，不算分
           1. bool中的filter、must_not
           1. constant_score中的filter
-1. 分页方式
-   - from + size
-   - scroll：指定保存时间，快照一个个查询
-   - sliced scroll：切片方式指定多scroll并行查询，指定上下文保留时间、最大切片、当前切片
-    ```json
-    // GET _search?scroll=1m
-    {
-        "slice": {
-            "id": 1,
-            "max": 2
-        },
-        "query": {
-            "match" : {
-                "xx" : ""
-            }
-        }
-    }
-    ```
-   - search after：动态指针的方案，基于上一页排序值检索下一页实现动态分页。search_after操作需要指定一个支持排序且值唯一的字段用来做下一页拉取的指针，这种翻页方式也可以通过bool查询的range filter实现。`"search_after": [1463538857, "654323"],`
 1. 查询
    - 方式
      1. `GET index/_search`：发送get参数，使用_all字段，仅包含部分语法，操作简单
@@ -454,21 +470,24 @@
    - 查询配置
     ```json
     {
+        "_source": ["xx"],                          // 只取某个字段
+
+        "sort": {                                   // 排序
+            "xx": "desc" 
+        },
+        "sort": [                                   // 多个排序条件，从上到下依次比较
+            {"xx": "desc"},
+            {"xx": "desc"}
+        ],
+
+        "from": 1,                                  // 分页
+        "size": 1,
+
         "highlight": {                              // 高亮
             "field": {
                 "name": {}
             }
         },
-        "_source": ["xx"],                          // 只取某个字段
-        "sort": {                                   // 排序，默认按照算分，采用其他条件排序会关掉算分
-            "xx": "desc" 
-        },
-        "sort": [                                   // 多个排序条件
-            {"xx": "desc"},
-            {"xx": "desc"}
-        ],
-        "from": 1,                                  // 分页
-        "size": 1,
     }
     ```
 ### 运维
