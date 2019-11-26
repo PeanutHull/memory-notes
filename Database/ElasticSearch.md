@@ -101,7 +101,7 @@
    - 分页与遍历
      1. from + size：开始位置/文档数，从0开始，分页就是数据分片存储下，会在所有分片取出0到size个文档再汇总处理，深分页配置 `index.max_result_window`为10000。搜索引擎是为了让你尽快找到结果，而不是深分页
      1. scroll
-        - 认识：遍历文档集的api，已快照方式避免深分页。指定快照保存时间，快照一个个查询
+        - 认识：遍历文档集的api，以快照方式避免深分页。指定快照保存时间，快照一个个查询，会占用内存
           1. 不能用来实时搜索，数据不实时。因为建立快照需要时间，是建立快照时的数据
           1. 尽量不要复杂sort，使用_doc最高效
         - 使用
@@ -124,7 +124,125 @@
                 "scroll_id": "xx"
             }
             ```
-     1. search after：动态指针的方案，基于上一页排序值检索下一页实现动态分页。search_after操作需要指定一个支持排序且值唯一的字段用来做下一页拉取的指针，这种翻页方式也可以通过bool查询的range filter实现。`"search_after": [1463538857, "654323"],`
+          1. 删除：`DELETE _search/scorll {"scroll_id":["",""]}`、`DELETE _search/scroll/_all`
+     1. search after
+        - 认识：可避免深分页的性能问题，提供实时的下一页文档获取
+          1. 不能指定页数
+          1. 只能下一页，不能上一页
+        - 原理：基于上一页排序值检索下一页实现动态分页。需要指定支持排序且值唯一的n个字段做下一页拉取的指针。因为只需找各个分片要这个排序值之后size个数据然后组合即可，性能也是极高的
+        - 实现：可用bool查询的range filter实现
+        - 使用
+            ```json
+            // GET _search
+            {
+                "search_after": [],         // 填入上一页返回的排序结果
+                "sort": {}
+            }
+            ```
+1. 聚合分析
+   - 认识：aggregation，是除搜索功能外提供的数据统计分析功能。
+     1. 支持bucket、metric、pipeline等分析方式
+     1. 计算结果实时返回，实时性高
+   - 分析方式
+     1. metric：指标分析，如计算最大、最小、平均值
+        - 单值：输出结果只有一个
+          1. min/max/avg/sum
+          1. cardinality：基数，不同数值的个数。类似distint count
+        - 多值
+          1. stats/extended_stats：一次性返回min/max/avg/sum的统计值，extended stats多了方差、标准差
+          1. percentile/percentile rank：百分位数统计，rank可获取指定值的位置
+          1. top hits：一般用于分桶后获取该桶内最匹配的顶部文档数据
+     1. bucket：分桶，类似group by，按照一定规则将文档放入不同桶中，用于分类
+        - 分桶规则
+          1. terms：text类型则按照分词结果分桶
+          1. range/date range：指定范围来设定分桶规则，加`ranges`字段
+          1. histogram：以固定间隔设定，`interval`间隔大小，`extended_bounds`被间隔的数据范围
+          1. date histogram：针对日期的直方图或柱状图，时序数据分析中常用
+     1. pipeline：管道分析，基于上级聚合分析再进行分析，支持链式调用，会输出到原结果中
+        - 输出位置
+          1. parent：内嵌到现有结果
+             - derivative：求导，导数
+             - moving average：移动平均值
+             - cumulative sum：累积加和
+          1. sibling：与现有结果同级
+             - max/min/avg/sum bucket
+             - stats/extended stats bucket
+             - percentiles bucket
+     1. matrix：矩阵分析
+   - 作用范围：默认query结果集，可通过以下修改
+     1. filter：为聚合分析设定过滤条件，不改变query的结果
+     1. post-filter：在聚合分析后生效，作用于文档过滤
+     1. global：无视过滤条件，基于全部文档分析
+   - 排序
+     1. `_count`：文档数
+     1. `_key`：分析后的key值排序，.用于多值中的某一个值
+     1. 用子聚合的结果
+   - 应用
+     1. bucket + metric：相互结合进行子分析，变的强大
+     1. 精准度
+        - min：精确
+        - terms：不一定准确，因为数据分散在不同的分片，无法查看数据全貌
+          1. 可设置分片为1，或者合理设置shard-size大小，`show_term_doc_count_error`可查看每个bucket误算的最大值。尽量保证每个shard都把文档返回
+        - 
+   - 使用
+    ```json
+    GET index/_search
+    {
+        "size": 0,                                          // 不需要返回文档列表
+
+        "aggs": {
+            "xx": {                                         // 查询名称
+                "terms/stats/min/max": {                    // 关键词
+                    "field": "",
+                    "size":n                                // 返回数量
+                },
+            },
+            "xx": {
+                "min_bucket/stats_bucket": {                // pipeline关键词
+                    "buckets_path": "xx>xx",
+                },
+            },
+
+            // 作用范围
+            "xx": {
+                "filter/post_filter/global": {              // 和某个aggs同级后，修改为filter之后的聚合范围
+                    "range": {
+                        "xx": {
+                            "to": n
+                        }
+                    }
+                },
+                "aggs": {}
+            },
+
+            "aggs": {                                       // 子查询
+                "xx": {
+                    "top_hits": {                           // top_hits
+                        "size": n,
+                        "sort": [
+                            {
+                                "xx": {
+                                    "order": "desc"
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+        },
+        "order": [                                          // 排序
+            {
+                "_count": "asc"
+            },
+            {
+                "xx.xx": "asc"
+            },
+        ],
+        "order": {                                          // 排序，按照子聚合结果
+            "xx>xx": "desc"
+        }
+    }
+    ```
 1. 集群
    - 特点
      1. 通过集群名称区分，`cluster.name`
@@ -454,19 +572,6 @@
             }
         }
         ```
-   - 聚合查询
-    ```json
-    {
-        "aggs": {                                       // 聚合查询关键词
-            "xx": {                                         // 聚合查询名称
-                "terms": {                                  // 关键词
-                    "field": ""                             // 聚合类型
-                },
-                "stats/min/max": {"field": ""}              // 进行统计计算，如统计/最小/最大
-            }
-        }
-    }
-    ```
    - 查询配置
     ```json
     {
