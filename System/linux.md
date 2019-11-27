@@ -125,6 +125,22 @@
      1. 命令
         - 杀死僵死进程：`ps -ef | grep defunct | grep -v grep | cut -b8-20 | xargs kill -9`
         - 杀死所有fpm：`ps -ef | grep php-fpm | awk -F ' ' '{print $2}' | xargs kill -9`
+   - 运行
+     1. 后台运行：xx &
+     1. 断开shell继续运行：因为shell断开进程收到SIGHUP，该信号的默认处理导致进程终止，进程不终止主要是处理SIGHUP信号
+        - 未运行
+          1. `nohup xx &`
+          1. `setsid xx &`
+        - 已运行
+          1. disown
+            ```shell
+            $ xx &
+            [1] 2222
+            $ disown -h %1
+            ```
+          1. `screen -dmS|-r xx`
+          1. subshell：实质为子进程执行方式，通常为fork
+          1. `trap "" SIGHUP SIGINT | trap SIGHUP SIGINT | trap "" 1 2 | trap : 1 2`
 1. 特点
    - linux对后缀不敏感
    - 输出语句中有空格需加双引号

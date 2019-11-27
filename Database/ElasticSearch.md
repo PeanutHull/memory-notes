@@ -632,7 +632,7 @@
    - elasticsearch-jdbc：mysql数据导入和计划任务，编写脚本即可实现
    - logstash-input-jdbc：mysql数据同步更新，可做全量同步和增量同步，数据表中定义订阅的update_time字段即可，其他的可以订阅binlog
    - esrally：es压测工具
-   - cerebor：比head好用多的界面，可以管理
+   - cerebro：比head好用多的界面，可以管理
 1. Elastic Stack：新一代ELK
    - elasticsearch：存储、查询、分析
    - logstash：数据收集、聚合
