@@ -382,6 +382,41 @@
         }
         ```
    - 更新
+     1. 新增字段
+        ```json
+        PUT aa/bb/_mapping
+        {
+        "properties": {
+            "ee": {
+                "type": "keyword"
+            }
+        }
+        }
+        ```
+     1. 修改字段
+        - 创建新索引：字段名称和原来的一致
+        - 同步数据
+            ```json
+            // POST _reindex
+            {
+                "source": {
+                    "index": "xx1"
+                },
+                "dest": {
+                    "index": "xx2"
+                }
+            }
+            ```
+        - 删除原索引
+        - 设置别名
+            ```json
+            // POST _aliases
+            {
+                "actions": [
+                    {"add": {"index": "xx2", "alias": "xx1"}}
+                ]
+            }
+            ```
 1. 文档
    - 查看
      1. 单个：`GET index/type/doc_id`
@@ -427,7 +462,7 @@
         {
             "script": {
                 "lang": "painless/python",                          // painless为es内置脚本语言
-                "inline": "ctx._source.age (+= 10/params.age)",     // 脚本内容
+                "source": "ctx._source.age (+= 10/params.age)",     // 脚本内容
                 "params": {
                     "age": 11
                 }
@@ -645,7 +680,10 @@
    - kibana：可视化显示
 1. 问题
    - 为什么otms的都是text，而不是其他类型？
-   - 索引是如何更新的？如何新加字段？字段不能修改那如何修改？
+   - painless？
+   - reindex？
+   - conflicts=proceed？
+   - _update_by_query?
 ### pro
 1. 调优
     ```json
