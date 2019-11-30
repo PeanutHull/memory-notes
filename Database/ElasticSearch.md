@@ -160,10 +160,123 @@
             }
             ```
    - 关联关系处理
-     1. 认识：不擅长处理关联关系，因为倒排索引不能做动态数据联合
-     1. 解决
-        - Nested Object
-        - Parent/Child
+     1. 认识：不擅长处理关联关系，因为倒排索引不能做动态数据联合，适用于某些关联关系查询等操作的，可以使用
+     1. api
+        - Nested Object：是独立存储的，所以查询的时候可以横跨多个字段，获取每个array中符合的，普通的object array则不支持这么查，因为它必须在一个数组里
+            ```json
+            // 创建
+            type为nested
+            // 查询
+            GET _search
+            {
+                "query": {
+                    "nested": {
+                        "path": "xx",
+                        "query": {},
+                    }
+                }
+            }
+            ```
+        - Parent/Child：类似join，6.x之前用多type方式实现
+            ```json
+            // 创建索引
+            PUT xx
+            {
+                "mappings": {
+                    "xx": {
+                        "properties": {
+                            "xx": {
+                                "type": "join",
+                                "relations": {                  // 指明父子关系
+                                    "xx_parent": "xx_child"
+                                }
+                            }
+                        }
+                    }
+                },
+            }
+            // 创建父文档
+            PUT xx
+            {
+                "xx": "xx",
+                "join": "xx",                   // 指明父类型
+            }
+            // 创建子文档
+            PUT xx?routing=1                    // 指明route值，确保父子文档在一个分片上，一般使用父文档id
+            {
+                "xx": "xx",
+                "join": {
+                    "xx": "xx",                 // 指明子类型
+                    "parent": n,                // 指明父文档id
+                },
+            }
+            
+            // 查询
+            GET _search
+            {
+                "query": {
+                    // 获取某父文档的子文档
+                    "parent_id": {
+                        "type": "xx",           // 指定子文档类型
+                        "id": n,                // 指明父文档id
+                    },
+                    // 获取包含某子文档的父文档
+                    "has_child": {
+                        "type": "xx",           // 指定子文档类型
+                        "query": {},            // 指明子文档的查询条件
+                    },
+                    // 获取某父文档的子文档
+                    "has_parent": {
+                        "parent_type": "xx",    // 指定父文档类型
+                        "query": {},            // 指明父文档查询条件
+                    }
+                }
+            }
+            ```
+     1. 对比
+        - nested object：尽量选择这个，
+          1. 文档存储在一起，读性能高
+          1. 更新父子时需更新整个文档
+          1. 适用于读多改少
+        - parent/Child
+          1. 父子文档可独立更新互不影响
+          1. 为维护json关系，需要占用内存，读取时候在内存中做join性能差
+          1. 适用于子文档更新频繁
+   - reindex
+     1. 认识：即重建数据，用于mapping设置变更，index设置变更(如分片数修改)，迁移数据。重建更更新数据版本号
+     1. 方案：都是基于scroll，以后新增的、修改的无法感知，一般索引不变的时候才做重建操作
+        - _update_by_query：在现有索引上重建
+            ```json
+            POST _update_by_query
+            {
+                "script": {
+                    "source": "如xx.xx++",                      // 更新字段值
+                    "lang": "painless"
+                },
+                "query": {}                                     // 可以更新部分文档
+            }
+            ```
+        - _reindex：在其他索引上重建，允许将数据重建到其他索引上，也支持远程es集群
+            ```json
+            POST _reindex
+            {
+                "conflicts": "proceed",
+                "source": {                                     // 原索引名称
+                    "index": "xx",
+                    "query": {},
+                },
+                "dest": {                                       // 目标索引
+                    "index": "xx"
+                },
+                "script": {
+                    "source" : "xx.xx1 = xx.xx2"
+                }
+            }
+            ```
+     1. 配置
+        - `wait_for_completion`：false，改为异步重建，使用task api查看任务的执行进度和相关数据`GET _tasks/xx`，`POST _tasks/_cancel`
+        - `conflicts`：proceed，重建过程中有更新则会版本冲突，那么设置为覆盖并继续执行，否则报错并停止
+        - `requests_per_second`：限流
 1. 聚合分析
    - 认识：aggregation，是除搜索功能外提供的数据统计分析功能。
      1. 支持bucket、metric、pipeline等分析方式
@@ -666,6 +779,31 @@
    - `npm run start`
    - `http.cors.enabled: true`，`http.cors.allow-origin: "*"`：最下边添加es配置，解决两个进程跨域问题，
 1. 配置集群
+   - 注意事项
+     1. 按照官网建议设置所有系统参数：日志、安全、系统参数(jvm option等)。静态参数(只能在yml中设置)和动态参数
+        - cluster.name
+        - node.name/node.master/node.data/node.ingest
+        - network.host：指定为内网ip，外界通过代理访问，不能为0.0.0.0，否则被窃取连接不知道
+        - discovery.zen.ping.unicast.hosts/discovery.zen.minimum_master_nodes一般为2
+        - path.data/path.log
+        - jvm 内存
+          1. 不要超过31GB
+          1. 预留一半内存给操作系统，用来做文件缓存，否则反而性能不好
+          1. 具体大小根据node的数据量决定，建议搜索类比例在1:16之内，日志类在1:48~1:96。这是经验推算，具体要不断测试
+          1. 如1TB数据，3个node，1个副本。每个node存储666GB即700，预留20%则为850GB，搜索类内存大小为850GB/16=53GB，超了31GB，倒推，31*16=496，至少需要5个node；日志类，850/48=18GB,3个node足够
+     1. yml配置文件尽量简洁，通过api设置，因为版本迭代很多配置不支持
+        - 动态设定参数：都会覆盖elasticsearch.yml的相应配置
+            ```json
+            PUT _cluster/settings
+            {
+                "persistent" : {                // 重启不丢失
+                    "xx": n
+                },
+                "transient" : {                 // 重启丢失
+                    "xx": n
+                }
+            }
+            ```
    - master
      1. `cluster.name: clusterName`
      1. `node.name: master`
@@ -675,7 +813,55 @@
      1. `node.name: slave1`
      1. `network.host: ip`
      1. `http.port: 9201`
-     1.` discovery.zen.ping.unicast.hosts: ["ip"]`：主节点ip
+     1. `discovery.zen.ping.unicast.hosts: ["ip"]`：主节点ip
+### pro
+1. 调优
+    ```json
+    GET index/_search?q=xx
+    {
+        "profile":true,             // 返回执行信息
+        "explain":true              // 返回算分方法，es的算分按照shard进行，使用时注意分片数
+    }
+    ```
+1. 写性能优化：增大写吞吐量EPS，events per second，越高越好
+   - 客户端：多线程写，批量写
+   - es：高质量数据建模的前提下，在refresh、translog、flush做文章
+     1. refresh：降低refresh的频率
+        - 增大refresh_interval，降低实时性，以增大每次refresh处理的文档数，默认1s
+        - 增大index buffer size，`indices.memory.index_buffer_size`，默认为10%
+     1. translog：降低translog写磁盘的频率，会降低容灾能力
+        - `index.translog.durability`设置为async，`index.translog.sync_interval`设置需要的大小
+        - `index.translog.flush_threshold_size`：默认512mb，往大调
+     1. flush：降低flush的次数，6.x后可优化不多，多为es自动完成
+     1. 合理设置shard数，保证shard均匀分配在所有node中，充分利用node资源。`index.routing.allocation.total_shards_per_node`设定每个node可分配的总主副分片数，实际要比可能分到的多1个，防止某个node下线，分片迁移失败
+     1. 主要为index级别优化
+        ```json
+        {
+            "settings": {
+                "index": {
+                    "refresh_interval": "30s",
+                    "routing": {
+                        "allocation": {
+                            "total_shards_per_node": "n"
+                        }
+                    },
+                    "translog": {
+                        "sync_interval": "30s",
+                        "durability": "async"
+                    },
+                    "number_of_replicas": "0"
+                }
+            },
+            "mappings": {
+                "xx": {
+                    "dynamic": false
+                }
+            }
+        }
+        ```
+     1. 副本设置为0，写入完毕再增加
+1. 读性能优化
+1. 优化方式：集群规划、索引配置、存储策略、索引拆分、冷热分区、段合并等几个维度优化
 ### wiki
 1. 相关
    - 默认端口：9200
@@ -683,6 +869,7 @@
      1. 1.x
      1. 2.x
      1. 5.x：直接从2到5，支持lucene6性能大幅提升，磁盘空间少一半，索引建立时间少一半，查询性能提升25%，支持ipv6
+     1. 6.x：新增join类型
      1. 7.4：不再支持索引类型，新建时不要指定类型会报错(可设置开启，不建议，因为8会直接删除)
    - 结构化/非结构化数据：无法用统一结构表示的，可称为全文数据
    - es构建于json数据格式之上
@@ -706,20 +893,7 @@
    - kibana：可视化显示
 1. 问题
    - 为什么otms的都是text，而不是其他类型？
-   - painless？
-   - reindex？
    - conflicts=proceed？
-   - _update_by_query?
-### pro
-1. 调优
-    ```json
-    GET index/_search?q=xx
-    {
-        "profile":true,             // 返回执行信息
-        "explain":true              // 返回算分方法，es的算分按照shard进行，使用时注意分片数
-    }
-    ```
-1. 优化方式：集群规划、索引配置、存储策略、索引拆分、冷热分区、段合并等几个维度优化
 ### deep
 1. 搜索引擎
    - 认识：先分词，通过倒排索引获取文档id，再用正排索引获取完整内容
@@ -812,6 +986,9 @@
         - text设置一个keyword的子字段，用这个可以用于全匹配
         - 做简单匹配不考虑算分，推荐filter替代query
         - 多用分词api查看结果，多测试
+        - 多看文档
+        - 将mapping进行版本管理，添加好注释，可以加个metadata，维护一些文档相关的元数据，方便数据管理，加版本字段可区分老的数据文档
+        - 防止字段过多，设置dynamic为true，可拆分多个索引
 1. Lucene：被认为是最好的搜索引擎
    - index：倒排索引，多个segment信息用于同时查，commit point记录多个segment信息，为了提高查询实时性
      1. segment：单个倒排索引
