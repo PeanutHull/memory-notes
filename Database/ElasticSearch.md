@@ -62,14 +62,34 @@
           1. 动态设置类型：dynamic mapping，es根据json的类型实现自动识别字段类型。如boolean为boolean，整数为long，string匹配日期/数字，匹配为text附加keyword子字段
           1. 动态模板：`dynamic_templates`属性，支持按照设定的规则设置字段类型，如所有message开头的设置为text，所有自动匹配为double的都设定为float
         - 属性
-          1. copy_to：将该字段所有值复制到目标字段，类似_all，不出现在_source中，只用来搜索。用于满足特殊搜索
-          1. index：字段是否索引，默认true，false则不可搜索，用于不用搜索的字段，节省空间，加快速度
+          1. enabled：是否仅存储，不搜索或聚合分析，返回时就没有_source字段了
+          1. index：字段是否建立倒排索引，默认true，false则不可搜索，用于不用搜索的字段，节省空间，加快速度
           1. index_options：控制字段的倒排索引记录的内容。text默认positions，其他默认docs。记录越多，占用索引越大
              - docs：只记录doc id
              - freqs：加个term frequencies，词频
              - positions：再加个term position，出现位置，可支持词语查询，因为有位置
              - offsets：再加个character offset，开始和结束位置，可支持高亮
+          1. norms：是否存储归一化参数，即算分排序。如果仅用于过滤和聚合分析，可关闭
+          1. doc_values：是否开启自动数据类型转换
+          1. fields：多字段
+          1. copy_to：将该字段所有值复制到目标字段，类似_all，不出现在_source中，只用来搜索。用于满足特殊搜索
           1. null_value：字段的null值处理策略，即设定默认值如设定为字符串"null"
+        - 设定流程
+          1. 确定类型
+             - 字符串：需要分词为text，否则为keyword
+             - 枚举：基于性能考虑设定为keyword，即使为整形
+             - 数值：能用byte不用long
+             - 其他：bool、日期、地理位置
+          1. 是否需要搜索
+             - 完全不需要：enabled为false
+             - 不需要搜索：index为false
+             - 需要搜索：设定存储粒度，index_options/norms
+          1. 是否需要排序和聚合分析
+             - doc_values为false，节省磁盘空间
+             - fielddata为false，节省磁盘空间
+          1. 是否需要另行存储
+             - store：是否另行存储，因为如果原字段很大，即使使用字段过滤搜索，内部节点还是会取出来进行数据交换，只是返回用户时去掉了，用这个搭配store_fields，用于解决如几十万文字搜索的性能问题
+             - 一般用于enabled为false时使用
      1. 索引模板：index template，新建索引时自动应用预先设定的配置，简化索引创建步骤
         ```json
         PUT _template/xx
@@ -139,6 +159,11 @@
                 "sort": {}
             }
             ```
+   - 关联关系处理
+     1. 认识：不擅长处理关联关系，因为倒排索引不能做动态数据联合
+     1. 解决
+        - Nested Object
+        - Parent/Child
 1. 聚合分析
    - 认识：aggregation，是除搜索功能外提供的数据统计分析功能。
      1. 支持bucket、metric、pipeline等分析方式
@@ -147,10 +172,10 @@
      1. metric：指标分析，如计算最大、最小、平均值
         - 单值：输出结果只有一个
           1. min/max/avg/sum
-          1. cardinality：基数，不同数值的个数。类似distint count
+          1. cardinality：基数，不同数值的个数。类似distint count，结果近似准确的，不是精准
         - 多值
           1. stats/extended_stats：一次性返回min/max/avg/sum的统计值，extended stats多了方差、标准差
-          1. percentile/percentile rank：百分位数统计，rank可获取指定值的位置
+          1. percentile/percentile rank：百分位数统计，rank可获取指定值的位置，结果是近似准确的，不是精准
           1. top hits：一般用于分桶后获取该桶内最匹配的顶部文档数据
      1. bucket：分桶，类似group by，按照一定规则将文档放入不同桶中，用于分类
         - 分桶规则
@@ -179,11 +204,11 @@
      1. 用子聚合的结果
    - 应用
      1. bucket + metric：相互结合进行子分析，变的强大
-     1. 精准度
+     1. 精准度：
         - min：精确
         - terms：不一定准确，因为数据分散在不同的分片，无法查看数据全貌
           1. 可设置分片为1，或者合理设置shard-size大小，`show_term_doc_count_error`可查看每个bucket误算的最大值。尽量保证每个shard都把文档返回
-        - 
+        - 近似统计算法：海量数据/精确度/实时性，只能同时满足其二，es是牺牲精准度
    - 使用
     ```json
     GET index/_search
@@ -368,7 +393,7 @@
                                 "xx": {
                                     "type": "keyword",
                                     "analyzer": "xx",
-                                    "ignore_above": n
+                                    "ignore_above": n                       // 只存储特定长度字符
                                 }
                             },
                         },
@@ -611,6 +636,7 @@
     ```json
     {
         "_source": ["xx"],                          // 只取某个字段
+        "store_fields": ["xx"],                     // 只取某个store字段
 
         "sort": {                                   // 排序
             "xx": "desc" 
@@ -783,6 +809,7 @@
         ```
      1. 最佳实践
         - 不需要分词的将type设置为keyword，以节省空间和提高写性能
+        - text设置一个keyword的子字段，用这个可以用于全匹配
         - 做简单匹配不考虑算分，推荐filter替代query
         - 多用分词api查看结果，多测试
 1. Lucene：被认为是最好的搜索引擎
