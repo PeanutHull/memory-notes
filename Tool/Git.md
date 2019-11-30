@@ -312,3 +312,12 @@
 1. 工具
    - Jenkins
      1. 2.0：精髓Pipeline as Code，使用Groovy脚本构建code工作流，包含阶段、节点、步骤
+### SVN
+1. 获取：svn checkout address localDir --username 用户名 --password 密码
+1. 更新：svn update
+2. 信息：svn info
+3. 代码回滚：svn revert fileName
+4. 查看日志：svn log fileName
+5. 忽略目录：svn propedit svn:ignore dirName
+5. 添加文件：svn add fileName
+6. 提交文件：svn commit fileName1 fileName2 -m ''
