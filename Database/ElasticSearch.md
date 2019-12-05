@@ -111,6 +111,45 @@
         - _source：原始json数据
         - _all：将所有字段值连接起来，一起搜索关键字，占空间，查询慢，新版本默认禁用
 1. 表现
+   - 查询语法
+     1. Query String Syntax
+        - 泛查询：所有字段查询，即啥也不写所有字段查找 `xx`
+        - 指定字段：xx:xx
+        - term、phrase：单词和词语，区别在于顺序。空格表示or，词语查询用""来要求前后顺序
+        - 分组：括号，如`status:(xx OR xx) title:(xx)`
+        - 布尔操作符：AND OR NOT + -，不能小写，后俩对应must和must not，+在url中应该写为%2B
+        - 范围：支持数值和日期
+          1. `xx:[1 TO 10]、xx:[1 TO 10}、xx:[1 TO ]、xx:[* TO 10]`：区间写法，闭区间用[]，开区间用{}
+          1. `xx:(>=1 && <=10)、xx:>=1`：算术符号写法
+        - 通配符：? *，如`xx:t?m`，执行效率低，占内存多，以?*开头的效率最低，因为匹配所有文档
+        - 正则：//，`xx:/preg/`
+        - 模糊/相似度：~，允许n个char可增删改查
+          1. `xx:xx~n`，单词级别，
+          1. `xx:"x x"~n`，词语级别
+     1. Query DSL：Domain Specific Language
+        - 查询类型
+          1. 字段
+             - 全文匹配：针对text类型，会先分词，再查找，然后再相关性算分。match、query_string
+             - 字段搜索：不分词，直接比较倒排索引，提供评分。term
+          1. 复合：n个字段或复合查询
+             - constant_score：将内部查询结果得分都设为1或boost的值，多用于结合bool实现自定义得分
+             - bool：由bool子句组成
+               1. filter：只过滤符合条件的，不算得分。有智能缓存，执行效率高
+               1. must：必须符合must中的所有条件，会影响得分
+               1. must not：相反
+               1. should：可以符合
+                  - 只有should：或的意思
+                  - 有should和must：不要求满足should条件，但是满足增加得分，可以用于将某种结果往前排
+             - dis_max
+             - function_score
+             - boosting
+        - 查询和过滤上下文
+          1. Query Context：进行算分
+             - query
+             - bool中的must、should
+          1. Filter Context：直接匹配，不算分
+             - bool中的filter、must_not
+             - constant_score中的filter
    - 排序
      1. 认识：对字段原始内容进行排序的过程，这个过程倒排索引无法发挥作用，需要用到正排索引。除了text。会采用列示存储和很多压缩算法节省空间
         - 默认按照算分，采用其他字段排序不会算分
@@ -278,7 +317,7 @@
         - `conflicts`：proceed，重建过程中有更新则会版本冲突，那么设置为覆盖并继续执行，否则报错并停止
         - `requests_per_second`：限流
 1. 聚合分析
-   - 认识：aggregation，是除搜索功能外提供的数据统计分析功能。
+   - 认识：aggregation，是除搜索功能外提供的数据统计分析功能
      1. 支持bucket、metric、pipeline等分析方式
      1. 计算结果实时返回，实时性高
    - 分析方式
@@ -616,45 +655,6 @@
           1. create：文档已存在报错
           1. delete
 1. 删除：`DELETE index/type/doc_id`，http地址最后到哪级删哪级
-1. 查询语法
-   - Query String Syntax
-     1. 泛查询：所有字段查询，即啥也不写所有字段查找 `xx`
-     1. 指定字段：xx:xx
-     1. term、phrase：单词和词语，区别在于顺序。空格表示or，词语查询用""来要求前后顺序
-     1. 分组：括号，如`status:(xx OR xx) title:(xx)`
-     1. 布尔操作符：AND OR NOT + -，不能小写，后俩对应must和must not，+在url中应该写为%2B
-     1. 范围：支持数值和日期
-        - `xx:[1 TO 10]、xx:[1 TO 10}、xx:[1 TO ]、xx:[* TO 10]`：区间写法，闭区间用[]，开区间用{}
-        - `xx:(>=1 && <=10)、xx:>=1`：算术符号写法
-     1. 通配符：? *，如`xx:t?m`，执行效率低，占内存多，以?*开头的效率最低，因为匹配所有文档
-     1. 正则：//，`xx:/preg/`
-     1. 模糊/相似度：~，允许n个char可增删改查
-        - `xx:xx~n`，单词级别，
-        - `xx:"x x"~n`，词语级别
-   - Query DSL：Domain Specific Language
-     1. 查询类型
-        - 字段
-          1. 全文匹配：针对text类型，会先分词，再查找，然后再相关性算分。match、query_string
-          1. 字段搜索：不分词，直接比较倒排索引，提供评分。term
-        - 复合：n个字段或复合查询
-          1. constant_score：将内部查询结果得分都设为1或boost的值，多用于结合bool实现自定义得分
-          1. bool：由bool子句组成
-             - filter：只过滤符合条件的，不算得分。有智能缓存，执行效率高
-             - must：必须符合must中的所有条件，会影响得分
-             - must not：相反
-             - should：可以符合
-               1. 只有should：或的意思
-               1. 有should和must：不要求满足should条件，但是满足增加得分，可以用于将某种结果往前排
-          1. dis_max
-          1. function_score
-          1. boosting
-     1. 查询和过滤上下文
-        - Query Context：进行算分
-          1. query
-          1. bool中的must、should
-        - Filter Context：直接匹配，不算分
-          1. bool中的filter、must_not
-          1. constant_score中的filter
 1. 查询
    - 方式
      1. `GET index/_search`：发送get参数，使用_all字段，仅包含部分语法，操作简单
@@ -778,32 +778,7 @@
    - `npm install`
    - `npm run start`
    - `http.cors.enabled: true`，`http.cors.allow-origin: "*"`：最下边添加es配置，解决两个进程跨域问题，
-1. 配置集群
-   - 注意事项
-     1. 按照官网建议设置所有系统参数：日志、安全、系统参数(jvm option等)。静态参数(只能在yml中设置)和动态参数
-        - cluster.name
-        - node.name/node.master/node.data/node.ingest
-        - network.host：指定为内网ip，外界通过代理访问，不能为0.0.0.0，否则被窃取连接不知道
-        - discovery.zen.ping.unicast.hosts/discovery.zen.minimum_master_nodes一般为2
-        - path.data/path.log
-        - jvm 内存
-          1. 不要超过31GB
-          1. 预留一半内存给操作系统，用来做文件缓存，否则反而性能不好
-          1. 具体大小根据node的数据量决定，建议搜索类比例在1:16之内，日志类在1:48~1:96。这是经验推算，具体要不断测试
-          1. 如1TB数据，3个node，1个副本。每个node存储666GB即700，预留20%则为850GB，搜索类内存大小为850GB/16=53GB，超了31GB，倒推，31*16=496，至少需要5个node；日志类，850/48=18GB,3个node足够
-     1. yml配置文件尽量简洁，通过api设置，因为版本迭代很多配置不支持
-        - 动态设定参数：都会覆盖elasticsearch.yml的相应配置
-            ```json
-            PUT _cluster/settings
-            {
-                "persistent" : {                // 重启不丢失
-                    "xx": n
-                },
-                "transient" : {                 // 重启丢失
-                    "xx": n
-                }
-            }
-            ```
+1. 集群配置
    - master
      1. `cluster.name: clusterName`
      1. `node.name: master`
@@ -821,6 +796,30 @@
     {
         "profile":true,             // 返回执行信息
         "explain":true              // 返回算分方法，es的算分按照shard进行，使用时注意分片数
+    }
+    ```
+1. 生产环境部署
+   - 按照官网文档建议设置所有系统参数：日志、安全、系统参数(jvm option等)。静态参数(只能在yml中设置)和动态参数
+     1. cluster.name
+     1. node.name/node.master/node.data/node.ingest
+     1. network.host：指定为内网ip，外界通过代理访问，不能为0.0.0.0，否则被窃取连接不知道
+     1. discovery.zen.ping.unicast.hosts/discovery.zen.minimum_master_nodes一般为2
+     1. path.data/path.log
+     1. jvm 内存
+        - 不要超过31GB
+        - 预留一半内存给操作系统，用来做文件缓存，否则反而性能不好
+        - 具体大小根据node的数据量决定，建议搜索类比例在1:16之内，日志类在1:48~1:96。这是经验推算，具体要不断测试
+        - 如1TB数据，3个node，1个副本。每个node存储666GB即700，预留20%则为850GB，搜索类内存大小为850GB/16=53GB，超了31GB，倒推，31*16=496，至少需要5个node；日志类，850/48=18GB,3个node足够
+   - yml配置文件尽量简洁，通过api设置，因为版本迭代很多配置不支持。动态设定参数：都会覆盖elasticsearch.yml的相应配置
+    ```json
+    PUT _cluster/settings
+    {
+        "persistent" : {                // 重启不丢失
+            "xx": n
+        },
+        "transient" : {                 // 重启丢失
+            "xx": n
+        }
     }
     ```
 1. 写性能优化：增大写吞吐量EPS，events per second，越高越好
@@ -861,9 +860,25 @@
         ```
      1. 副本设置为0，写入完毕再增加
 1. 读性能优化
+   - 没有万金油，实战出真知
+   - 兵来将挡，水来土掩
+   - 数据模型是否符合业务模型
+     1. 因为script无法用到倒排索引，使用成本很大，需要计算的提前计算好写入字段中
+   - 数据是否过大
+   - 索引是否优化：合理的分片数和副本
+   - 查询语句是否优化
+     1. 尽量使用filter上下文，减少算分，同时有缓存机制，极大提高性能
+     1. 尽量不使用script进行计算
+     1. 结合profile、explain分析慢查询
 1. 优化方式：集群规划、索引配置、存储策略、索引拆分、冷热分区、段合并等几个维度优化
+   - shard数：由于es性能是线性扩展，只要测出1个shard性能指标，单不要超过15G，日志的不超过50G，越大查询性能越低，估算总数据大小，除以单shard大小，就是分片数，测试方法如下
+     1. 搭建和生产环境相同配置的单节点集群
+     1. 设定一个单分片零副本的索引
+     1. 写入实际生产数据进行测试，获取写指标
+     1. 进行实际查询请求，获取读指标
+     1. 工具可用esrally
 ### wiki
-1. 相关
+1. 相关 
    - 默认端口：9200
    - 版本历史
      1. 1.x
