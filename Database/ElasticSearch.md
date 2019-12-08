@@ -896,6 +896,7 @@
    - logstash-input-jdbc：mysql数据同步更新，可做全量同步和增量同步，数据表中定义订阅的update_time字段即可，其他的可以订阅binlog
    - esrally：es压测工具
    - cerebro：比head好用多的界面，可以管理
+   - x-pack monitor：官方推出的免费集群监控功能，可以看读写的性能/jvm/luceue等指标。`bin/elasticsearch/kibana-plugin install x-pack`
 1. Elastic Stack：新一代ELK
    - elasticsearch：存储、查询、分析
    - logstash：数据收集、聚合
