@@ -1,100 +1,3 @@
-### 运维
-1. 软件安装
-   - RedHat
-     1. rpm：以.rpm结尾的软件包名称，方便安装/升级/卸载，不能处理包依赖
-        - -q：查询
-        - -q afilcdR：查询已安装的，文件名绝对路径，安装包信息，安装目录，配置文件，文档位置，所依赖的文件
-        - -qpi：查询未安装的，版本信息
-        - –requires：显示依赖信息
-        - -i：安装
-        - -ivh：安装，显示文件信息，显示安装进度
-        - -U：升级
-        - -Uvh：升级，显示文件信息，显示安装进度
-        - -e：卸载，先用-q查询名称
-        - --import：签名导入
-     1. yum：Yellow dog Updater Modified，包管理工具，基于rpm，epel是yum的扩展源
-        - 参数
-          1. search
-          1. install/update/remove
-          1. list/info installed/updates
-        - 查看安装的服务：`rpm -qa | grep bind`
-        - 查看安装的位置：`rpm -ql bind`
-        - 配置yum源：配置分两部分，全局配置项为/etc/yum.conf，定义每个源/服务器的具体配置在/etc/yum.repo.d的rep文件
-   - Debian
-     1. deb/dpkg：软件包名称，比rpm晚，`dpkg -l`
-     1. apt-get：包管理工具，基于deb。`install/remove/purge`
-1. VirtualBox安装虚拟机、连接网络
-   - 安装：blog.csdn.net/risingsun001/article/details/37934975
-   - 调通网络
-     1. vi /etc/sysconfig/network-scripts/ifcfg-eth0
-        ```
-        NM_CONTROLLED=no
-        ONBOOT=yes  #自动启动
-        BOOTPROTO=dhcp  #动态IP
-        ```
-     1. service network start
-   - 调通ssh：blog.csdn.net/risingsun001/article/details/38040451
-1. 运维
-   - 组成
-     1. 基础：配机器
-     1. 私有云：openstack
-     1. 监控
-     1. 网络
-     1. 开发：配套工具和功能开发
-   - 分类
-     1. 监控
-     1. 部署
-        - openstack：用于管理基础设施的一系列开源项目组成的平台
-          1. Neutron：flat\flatdhcp\vlan，网络服务
-          1. Horizon：可视化、ui服务
-          1. Cinder/Swift：存储服务
-          1. Nova：计算服务
-          1. Glance：镜像服务
-          1. Keystone：认证、身份服务
-          1. Heat：编排组织服务
-          1. Ceilometer：监控计量服务
-        - 远程控制：saltstack，分主从，salt-master和salt-minion
-     1. cmdb
-   - 技术
-     1. nat：网络地址转换服务，可基于状态过滤连接（就是内网出去的能回来，其他进不来），可做对外网的口子
-     1. lvm：逻辑卷管理，动态扩缩容
-     1. DNS：智能dns，DNS view，可根据用户ip返回不同的ip，解决了同域名不同解析地址问题，使用bind 9
-### 应用
-1. ssh省去输入密码
-   - ssh -kengen
-   - cd ~/.ssh
-   - ssh -copy-id peter@happypeter.net       // 把公钥复制到服务器上
-1. vim
-   - yy 复制当前行
-   - dd 删除当前行，并复制
-   - p 当前位置之后粘贴，之前粘贴P
-   - :20 跳到20行
-   - . 重复上一次命令
-   - x、X、ndd、nyy、p、P、ctrl+r
-   - 视图模式：v、V、ctrl+v、y、d
-   - 编辑模式：i、a、r
-   - 命令行模式：: / ?
-   - 查找和替换
-   - 配置：:setnu、:setnonu
-1. 快捷键
-   - ctrl+s     暂停该终端，ctrl+q恢复
-   - ctrl+z     把当前进程转到后台运行，使用 fg 命令恢复
-   - ctrl+u     清除光标前至行首间的内容
-   - ctrl+k     清除光标后至行尾的内容
-   - ctrl+y     粘贴或者恢复上次的删除
-   - ctrl+l     清屏，相当于clear
-### 优化
-1. 查看系统性能
-   - ps
-   - top：`man top`
-     1. shift+p：占用cpu最高的进程
-     1. top -Hp 进程号：占用CPU最高的线程
-   - free：-m
-   - vmstat：3 3秒更新一次
-   - sar
-   - mpstat
-1. 问题定位
-1. 问题解决
 ### 解决方案
 1. SELinux：Security Enhanced Linux，安全强化Linux，是强制访问控制系统的一种实现，用于指明进程可以访问的资源，增强系统抵御0-Day的攻击
    - 特点：可查看、热更改、进程初始化/继承/执行三方面进行策略控制、控制范围包括文件系统/目录/文件/文件启动描述符/端口/消息接口/网络接口
@@ -233,3 +136,89 @@
      1. CDN：：内容分发网络，部署大量网络节点通过服务器缓存加速，让用户就近更快访问网络。指标有带宽、命中率、请求数
 1. tumx：多个界面，断网保存用户操作的界面
 1. 数据恢复工具：ext3grep
+### 优化
+1. 查看系统性能
+   - ps
+   - top：`man top`
+     1. shift+p：占用cpu最高的进程
+     1. top -Hp 进程号：占用CPU最高的线程
+   - free：-m
+   - vmstat：3 3秒更新一次
+   - sar
+   - mpstat
+1. 问题定位
+1. 问题解决
+### 软件安装调试
+1. 软件安装
+   - RedHat
+     1. rpm：以.rpm结尾的软件包名称，方便安装/升级/卸载，不能处理包依赖
+        - -q：查询
+        - -q afilcdR：查询已安装的，文件名绝对路径，安装包信息，安装目录，配置文件，文档位置，所依赖的文件
+        - -qpi：查询未安装的，版本信息
+        - –requires：显示依赖信息
+        - -i：安装
+        - -ivh：安装，显示文件信息，显示安装进度
+        - -U：升级
+        - -Uvh：升级，显示文件信息，显示安装进度
+        - -e：卸载，先用-q查询名称
+        - --import：签名导入
+     1. yum：Yellow dog Updater Modified，包管理工具，基于rpm，epel是yum的扩展源
+        - 参数
+          1. search
+          1. install/update/remove
+          1. list/info installed/updates
+        - 查看安装的服务：`rpm -qa | grep bind`
+        - 查看安装的位置：`rpm -ql bind`
+        - 配置yum源：配置分两部分，全局配置项为/etc/yum.conf，定义每个源/服务器的具体配置在/etc/yum.repo.d的rep文件
+   - Debian
+     1. deb/dpkg：软件包名称，比rpm晚，`dpkg -l`
+     1. apt-get：包管理工具，基于deb。`install/remove/purge`
+1. VirtualBox安装虚拟机、连接网络
+   - 安装：blog.csdn.net/risingsun001/article/details/37934975
+   - 调通网络
+     1. vi /etc/sysconfig/network-scripts/ifcfg-eth0
+        ```
+        NM_CONTROLLED=no
+        ONBOOT=yes  #自动启动
+        BOOTPROTO=dhcp  #动态IP
+        ```
+     1. service network start
+   - 调通ssh：blog.csdn.net/risingsun001/article/details/38040451
+1. ssh省去输入密码
+   - ssh -kengen
+   - cd ~/.ssh
+   - ssh -copy-id peter@happypeter.net       // 把公钥复制到服务器上
+### 运维
+1. 运维
+   - 组成
+     1. 基础：配机器
+     1. 私有云：openstack
+     1. 监控
+     1. 网络
+     1. 开发：配套工具和功能开发
+   - 分类
+     1. 监控
+     1. 部署
+        - openstack：用于管理基础设施的一系列开源项目组成的平台
+          1. Neutron：flat\flatdhcp\vlan，网络服务
+          1. Horizon：可视化、ui服务
+          1. Cinder/Swift：存储服务
+          1. Nova：计算服务
+          1. Glance：镜像服务
+          1. Keystone：认证、身份服务
+          1. Heat：编排组织服务
+          1. Ceilometer：监控计量服务
+        - 远程控制：saltstack，分主从，salt-master和salt-minion
+     1. cmdb
+   - 技术
+     1. nat：网络地址转换服务，可基于状态过滤连接（就是内网出去的能回来，其他进不来），可做对外网的口子
+     1. lvm：逻辑卷管理，动态扩缩容
+     1. DNS：智能dns，DNS view，可根据用户ip返回不同的ip，解决了同域名不同解析地址问题，使用bind 9
+### wiki
+1. 快捷键
+   - ctrl+s     暂停该终端，ctrl+q恢复
+   - ctrl+z     把当前进程转到后台运行，使用 fg 命令恢复
+   - ctrl+u     清除光标前至行首间的内容
+   - ctrl+k     清除光标后至行尾的内容
+   - ctrl+y     粘贴或者恢复上次的删除
+   - ctrl+l     清屏，相当于clear

@@ -4,40 +4,19 @@
    - linux对后缀不敏感
    - 输出语句中有空格需加双引号
    - logout、exit：退出
-1. 参数
-   -i       忽略大小写
-   -n       显示行号
-   -r/-R    一般没区别
 1. 系统
    - `cat /etc/redhat-release`：查看centos版本
    - `getconf LONG_BIT`：查看centos位数
    - uname -a 显示系统信息
    - uptime：当前系统时间、开机到现在运行时间、用户在线数、系统平均负载
-   - free
-     1. -m 以兆显示内存状态
    - runlevel：查看系统运行级别，修改系统默认运行级别`cat /etc/inittab id:3:initdefault:`
-   - sudo、su、setfacl
-   - tee：将程序的输出结果重定向，同时显示和保存。`echo "127.0.0.1 foobar" | sudo tee -a /etc/hosts`
-   - command1 && command2，可以一次执行两个命令，前一个报错则停止运行
-   - echo &?：获取上一条命令的错误码
-1. 时间
-   - date
-     1. -s：设置系统时间
-1. 定时任务
-   - crontab：linux原生定时器
-     1. -l
-     1. -e： 添加，* * * * *(分时日月周) php index.php >> index.log
-     1. at：执行一次，`at 2:00 tomorrow`
-   - 运维
-     1. service crond start/stop/restart/reload/status
-     1. chkconfig -level 35 crond on       加入开机启动
-     1. ntsysv                             查看是否开机启动
 1. 环境变量：系统预定义的参数。window也有。作用：在程序里可以获得环境变量的值，根据值决定如何操作，运行，找路径，文件夹等等
    - /etc/profile：全局
    - .bash_profile：个人
    - source .bash_profile：使生效
    - export PATH=：书写格式
 1. 重定向
+   - tee：将程序的输出结果重定向，同时显示和保存。`echo "127.0.0.1 foobar" | sudo tee -a /etc/hosts`
    - 管道：|，前面输出作为后面输入，依次类推。`cat file.txt | uniq | grep txt | sort`
    - 输出：>，>>
      1. more file1 file2 file3 > file2：清空file2
@@ -88,6 +67,10 @@
      1. -l：行数
      1. -m：字符数
      1. -w：字数
+1. 命令执行
+   - sudo、su、setfacl
+   - command1 && command2，可以一次执行两个命令，前一个报错则停止运行
+   - echo &?：获取上一条命令的错误码
 1. 启动
    - chkconfig：开机启动项
      1. --list
@@ -107,6 +90,8 @@
      1. 6  重启
 1. 知识
    - 整个桌面进程都拖死，因为linux运行着7个工作台的，切到第一个工作台，杀死那个进程，ctrl+alt+1
+   - date
+     1. -s：设置系统时间
 ### 文件、目录
 1. 查看
    - 目录
@@ -138,7 +123,6 @@
      1. -exec：执行操作。如`find . -type f -exec grep -n 内容 '{}' ';' -print` 显示行号-n，显示文件名-print(默认)
    - locate：系统全局范围定位文件，从database中查找数据。一般一天更新一次，更新文件数据库`updatedb`
      1. -r：正则
-   - which：查看程序安装位置
    - whereis
 1. 操作
    - 目录切换
@@ -226,6 +210,7 @@
         - subshell：实质为子进程执行方式，通常为fork
         - `trap "" SIGHUP SIGINT | trap SIGHUP SIGINT | trap "" 1 2 | trap : 1 2`
 1. 查看
+   - which：查看程序安装位置
    - ps：显示系统运行状态
      1. aux：pid，process ID，进程号
    - top：查看活跃进程
@@ -303,6 +288,9 @@
      1. ssh
         - ssh addr@ip
      1. sz/rz
+### 内存
+1. free
+   - -m 以兆显示内存状态
 ### 磁盘
 1. mount/umount：挂载
    - /dev/sd*：设备文件，`mount /dev/sda1 /mnt/sda1`
@@ -323,7 +311,29 @@
         - swapon：启用，-s，查看swap相关信息
         - swapoff：关闭/回收
         - mkswap：格式化
-   - 挂载点：把sda1挂载到根目录/上，则所有数据都在sda1分区。当sda2挂载到/home，则数据到了sda2的分区下 
+   - 挂载点：把sda1挂载到根目录/上，则所有数据都在sda1分区。当sda2挂载到/home，则数据到了sda2的分区下
+### Tools
+1. 定时任务
+   - crontab：linux原生定时器
+     1. -l
+     1. -e： 添加，* * * * *(分时日月周) php index.php >> index.log
+     1. at：执行一次，`at 2:00 tomorrow`
+   - 运维
+     1. service crond start/stop/restart/reload/status
+     1. chkconfig -level 35 crond on       加入开机启动
+     1. ntsysv                             查看是否开机启动
+1. vim
+   - yy 复制当前行
+   - dd 删除当前行，并复制
+   - p 当前位置之后粘贴，之前粘贴P
+   - :20 跳到20行
+   - . 重复上一次命令
+   - x、X、ndd、nyy、p、P、ctrl+r
+   - 视图模式：v、V、ctrl+v、y、d
+   - 编辑模式：i、a、r
+   - 命令行模式：: / ?
+   - 查找和替换
+   - 配置：:setnu、:setnonu
 ### shell
 1. 理解：壳，命令行解释器，利用ASCII码表转换将命令传给内核，敲命令的界面就是shell。支持命令执行、条件判断、循环控制
 1. 运算符：expr、let
@@ -629,3 +639,7 @@
 1. 命令
    - 帮助一般为：-h/-help/--help
    - man：查看命令手册
+1. 参数
+   -i       忽略大小写
+   -n       显示行号
+   -r/-R    一般没区别

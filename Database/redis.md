@@ -425,6 +425,7 @@
      1. 使用某些命令需要保证key都在同一个分片上：SIDFF,SDIFFSTORE,SINTER,SINTERSTORE,SMOVE,SUNION and SUNIONSTORE
      1. 相对于官方较新的Redis Cluster架构，容量伸缩较麻烦
      1. 支持memcached ASCII协议和redis协议
+   - 如何一份数据复制两份发到两个实例？
 1. Codis
    - 没有pipeline
 1. Pika
