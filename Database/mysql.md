@@ -525,7 +525,7 @@
     ```
 1. gist
    - 查询这个数据是否存在，存在则存到另一张表里：`create table temp as select * from admin a where exists (select uid from user u where a.userName = u.account);`
-   - 查询两张表中是否有相同数据：`select * from admin wherer uid IN(select uid from temp);`
+   - 查询两张表中是否有相同数据：`select * from admin where uid IN(select uid from temp);`
    - 求差集：`SELECT * FROM A LEFT JOIN B ON A.xx = B.xx WHERE B.id IS NULL union SELECT * FROM A RIGHT JOIN B ON A.xx = B.xx WHERE A.id IS NULL;`
    - 求全集：`SELECT * FROM A LEFT JOIN B ON A.xx = B.xx union SELECT * FROM A RIGHT JOIN B ON A.xx = B.xx;`
    - 原所有id增加5万，必须倒叙操作：`update user SET uid=uid+50000 order by uid desc;`

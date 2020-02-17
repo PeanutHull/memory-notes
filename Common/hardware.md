@@ -22,6 +22,10 @@
 1. 磁盘
    - JBOD：just bunch of disks，一堆普通磁盘
    - RAID：磁盘阵列
+1. 分类
+   - IDE
+   - SCSI
+   - SATA
 ### CPU
 1. 认识：1GHz的cpu一秒执行大约10亿次
 1. 组成

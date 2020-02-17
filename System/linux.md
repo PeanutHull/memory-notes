@@ -1,9 +1,11 @@
 ### Linux
 1. 特点
    - 一切皆文件
-   - linux对后缀不敏感
+   - 对后缀不敏感
+   - 对unix有借鉴
+### 系统
+1. logout、exit：退出
    - 输出语句中有空格需加双引号
-   - logout、exit：退出
 1. 系统
    - `cat /etc/redhat-release`：查看centos版本
    - `getconf LONG_BIT`：查看centos位数
@@ -34,11 +36,12 @@
      1. 标准输入文件stdin 0
      1. 标准输出文件stdout 1
      1. 标准错误输出文件stderr 2
+1. 命令、目录有自动补全
 1. 通配符
    - 分类
      1. * 一个或多个
      1. ? 单一字符
-     1. [] 包含在其中的任意字符
+     1. [] 包含在其中的任意字符，- 字符范围
    - 举例
      1. ls /dev/sda[12345]：出现/dev/sda1  /dev/sda2  /dev/sda3
      1. ls [0-9]?.conf：以数字开头，随后一个是任意字符，接着以.conf结尾的所有文件
@@ -57,6 +60,7 @@
         - 正则：`grep 'w[ea]ll' a.log`，显示e或a
      1. 命令行
         - -n：显示行号
+     1. 命令：grep -rn xxx，目录下查找内容
    - cut：内容查看、删除指定部分
      1. -b：指定范围
      1. -c：指定行显示，如-c1-3为1到3行
@@ -92,10 +96,17 @@
    - 整个桌面进程都拖死，因为linux运行着7个工作台的，切到第一个工作台，杀死那个进程，ctrl+alt+1
    - date
      1. -s：设置系统时间
+1. 命令
+   - 帮助一般为：-h/-help/--help
+   - man：查看命令手册
+1. 参数
+   - i       忽略大小写
+   - n       显示行号
+   - r/-R    一般没区别
 ### 文件、目录
 1. 查看
    - 目录
-     1. ls
+     1. ls xx：查看某一目录
         - -l：列表详细查看
           1. -lh：以兆查看文件大小
         - -d：查看目录本身详细
@@ -108,8 +119,10 @@
         - `cat file > xxx.txt`：将显示结果保存到文件
         - `cat -n file | tail -n +92 | head -n 20`：92行之后的查询结果中显示前20
      1. less/more：分页查看内容，less在另一屏打开，不占用当前屏幕内容
+        - -M：显示更多文件信息：页码等
         - enter：下一行
         - space：下一屏
+        - B：上一屏
         - /：字符查找，n查找下一次，gg到文件头，G到文件尾，q退出
      1. head/tail：输出文件头/尾
         - -n：行数
@@ -159,6 +172,8 @@
           1. jxvf：压缩
      1. zip/unzip
      1. gzip/gunzip
+        - gz
+          1. -d：解压缩
      1. bzip2/bunzip2
 1. wiki
    - .开头的文件和目录都是隐藏的
@@ -256,6 +271,7 @@
    - host
    - dig
      1. 认识：从DNS域名服务器查询主机地址信息
+   - telnet ip port：检测端口是否打开
 1. 配置
    - /etc/sysconfig/network-scripts/ifcfg-eth0
    - hostname
@@ -312,7 +328,8 @@
         - swapoff：关闭/回收
         - mkswap：格式化
    - 挂载点：把sda1挂载到根目录/上，则所有数据都在sda1分区。当sda2挂载到/home，则数据到了sda2的分区下
-### Tools
+1. linux规定，硬盘用sda/sdb/sdc依次命名，一块硬盘只能存在4个主分区，为sda1/sda2/sda3/sda4，逻辑分区不限制数量，从5开始
+### tools
 1. 定时任务
    - crontab：linux原生定时器
      1. -l
@@ -614,9 +631,21 @@
     git push origin tag $newTag;
     ```
 ### wiki
-1. linux分类
+1. 操作系统分类
+   - 硬实时：RT-Linux
+   - 软实时
+   - 嵌入式/专用操作系统：vxWorks、ucos
+1. linux的发行版本
    - RedHat系列：Redhat、Centos、Fedora等
-   - Debian系列：Debian、Ubuntu等 
+     1. Redhat Enterprise：红帽的企业级商业化版本
+     1. Fedora：红帽赞助的社区免费版本
+     1. Centos：模仿红帽企业版的免费版本
+   - SUSE系列
+     1. SUSE Linux Enterprise：novell公司的商业化版本
+     1. openSUSE：novell公司的社区版本
+   - Debian系列：Debian、Ubuntu等
+     1. Debian：免费版本
+     1. Ubuntu：类似Debian的免费版本
 1. 目录结构
    - 系统目录
      1. /：根目录，不要存放文件，/etc、/bin、/dev、/lib、/sbin应该和根目录在一个分区中
@@ -636,10 +665,13 @@
 1. mac环境变量默认地址
    - /bin、/sbin：系统命令目录
    - /usr/bin、/usr/sbin：用户程序命令目录，如php、php-config、phpize、php-fpm
-1. 命令
-   - 帮助一般为：-h/-help/--help
-   - man：查看命令手册
-1. 参数
-   -i       忽略大小写
-   -n       显示行号
-   -r/-R    一般没区别
+1. 历史
+   - linux
+     1. 1991，linus开源
+     1. 1994，内核1.0发布
+     1. 2010，内核2.6发布
+   - unix
+     1. 1969，AT&T实验室一个研究项目
+     1. 1979，无偿提供使用
+        - BSD：伯克利软件发行版，伯克利分校修改的unix版本。1989，无unix代码的完全开源的BSD诞生，后续有FreeBSD、OpenBSD
+   - GUN：GUN's Not UNIX，GUN计划，自由软件计划，参与者包括emacs、gcc、linux

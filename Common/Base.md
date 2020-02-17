@@ -199,17 +199,9 @@
    - mac：<回车>，\r
    - unix/mac的文件windows打开，所有文字变成一行
    - windows的文件在unix/mac打开，每行结尾可能会多出一个^M符号
-1. 许可协议
-   - Apache-2.0
-   - BSD-2-Clause
-   - BSD-3-Clause
-   - BSD-4-Clause
-   - GPL-2.0
-   - GPL-2.0+
-   - GPL-3.0
-   - GPL-3.0+
-   - LGPL-2.1
-   - LGPL-2.1+
-   - LGPL-3.0
-   - LGPL-3.0+
+1. 开源许可协议
+   - BSD
+   - Apache
    - MIT
+   - GPL：GUN Public License，包括linux。为最初的作者保留版权，可以改但是得开源
+   - LGPL
