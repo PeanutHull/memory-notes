@@ -222,6 +222,7 @@
      1. 表只有一个主键索引，可有多个唯一索引
      1. key和index都是索引，为兼容其他系统，key多了一层约束层含义
      1. hash索引，重复数据多了性能下降，hash碰撞
+     1. 使用了索引：意思是使用索引的快速搜索功能，有效的减少了扫描行数。对应的有全索引扫描，是不够快的
 1. 事务
    - 理解：保证所有操作全部执行，由InnoDB提供，服务层不管理，由下边的引擎实现，在一个事务中，使用多个引擎不靠谱。再开启一个事务会隐式提交上一个事务
    - 特性：ACID
@@ -537,7 +538,6 @@
      1. 高可用，故障切换
    - 查看
      1. `show master status;`
-1. 读写分离
 1. 分表分区
    - 认识
      1. 分区：对用户透明，底层分为多个物理分区。用partition by定义每个分区存放的数据，优化器自动使用。适用于数据多，只在表最后有热点数据，其他都是历史数据。分区可以分布在不同机器上独立维护，有很多功能不能用
@@ -545,7 +545,7 @@
         - 优化查询：where语句中包含分区条件时，只会使用某几个分区
         - 类型：RANGE、LIST、HASH、KEY
         - 适用于所有数据和索引，两者不能分开
-     1. 分表
+     1. 分表：可以将两种方式结合使用
         - 水平拆分：用于数据本身有独立性，可以拆分，逻辑分层算法无法变更，关键字段取模方式拆到多个表中，降低单表大小
         - 垂直拆分：把属性较多、数据较大的表某些字段拆分到不同的表中，查询时可减少io次数，但是应用增加复杂度。分主表、扩展表。因为数据库的内存buffer存row
    - 跨表分页
@@ -560,9 +560,13 @@
         - 拿time_min在各个分库中比较，得出每个表的虚拟offset，相加从而得到time_min在全局的offset
         - 得到了time_min在全局的offset，自然得到了全局的offset X limit Y，要什么从后推着拿就行
 1. 数据库中间件
-   - 故障切换
    - mycat：开源分布式数据库中间件
+1. 集群
+   - mycat
+     1. 高可用：采用去中心化的集群，在虚拟ip下，在不同的节点部署多个mycat，根据某种策略(ip选举策略)选举某一个为临时master，之间采用心跳机制进行通信维持故障切换。可使用zk、haproxy、keepalived等组件，可以有选举、心跳、切换ip等功能
+   - 读写分离：采用数据库主从方式，多个从库分担读，主库负责写
 ### WIKI
+1. 当系统遇到无法解决的技术难题时，可以通过变换业务逻辑实现功能
 1. 概念
    - 数据库：文件中读写数据不方便、速度慢，按照数据结构来组织、存储和管理数据的仓库，提供API进行数据操作
    - 关系型数据库：建立在关系模型基础上，由行、表、库等组成
@@ -619,13 +623,16 @@
         - Users/Hosts/Accounts 级别资源消耗 ：找出消耗资源最多的Users/Hosts/Accounts
         - Network I/O ： 网络还是应用程序？ 会话闲置多久？
         - 通过 thread, user, host, account, object聚合总结
+     1. 联合普通索引，过滤比较完所有的条件后，才去主键索引上查，有效减少回主键索引次数，提高了效率
    - 5.7
-    ```sql
-    # 查询json数据：json_column->"$.id"，和json_extract，是两种使用方式。->>表示去掉转义符
-    SELECT json_extract(json_data, '$.content.answer[*].group[*].value') FROM entity_question WHERE JSON_SEARCH (json_data,'all','行到水穷处',NULL,'$.content.answer[*].group[*].value') IS NOT NULL;
-    # 以下这条不能准确的搜索，因为不能遍历所有的type
-    SELECT json_extract(json_data,'$.content.answer') FROM entity_question WHERE JSON_EXTRACT(json_data, "$.content.answer[*].group[*].type") != 'text';
-    ```
+     1. json
+        ```sql
+        # 查询json数据：json_column->"$.id"，和json_extract，是两种使用方式。->>表示去掉转义符
+        SELECT json_extract(json_data, '$.content.answer[*].group[*].value') FROM entity_question WHERE JSON_SEARCH (json_data,'all','行到水穷处',NULL,'$.content.answer[*].group[*].value') IS NOT NULL;
+        # 以下这条不能准确的搜索，因为不能遍历所有的type
+        SELECT json_extract(json_data,'$.content.answer') FROM entity_question WHERE JSON_EXTRACT(json_data, "$.content.answer[*].group[*].type") != 'text';
+        ```
+     1. 虚拟列：可以根据逻辑抽出某个字段的某种数据，查的时候方便了，不像以前不用再新建汇总表了。`alter table xxx add xx char(1) generated always as (left(xx, 1));`
    - 8.0
 ### 原理
 1. 架构
@@ -689,7 +696,10 @@
           1. 写任务操作新克隆的数据，直至提交
           1. 并发读任务可以继续读取旧版本的数据，不至于阻塞
 1. 索引
-   - 分类
+   - 类型分类
+     1. 主键索引
+     1. 普通索引：如果查询普通索引获取本普通索引之外的数据，那么就需要找到主键id，然后去主键索引上拿数据，n个普通索引的记录，就需要重复n次去主键上取数据
+   - 属性分类
      1. Hash：由引擎根据情况自动创建，不能人为干涉。比较hash计算后的hash值会变得没有规律，只能等值过滤。只需一次定位检索效率很高，不像btree需要多次io跑节点
         - 不能范围查找，只能=/<>/in
         - 不支持索引的排序操作

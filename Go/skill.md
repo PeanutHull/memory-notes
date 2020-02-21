@@ -53,7 +53,6 @@
   - Socket 编程
   - WebSocket
   - REST
-  - RPC
 - 安全与加密
   - 预防 CSRF 攻击
   - 确保输入过滤
