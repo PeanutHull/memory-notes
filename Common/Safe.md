@@ -182,11 +182,20 @@
 1. CSRF
    - 认识：Cross-Site Request Forgeries，跨站点请求伪造，诱导触发别人利用别人自己的合法身份发送自己伪造的请求来实现攻击。即站点A会报据用户C的权限来处理恶意站点B所发起的请求，达到了目的
    - 防范方法
-     1. 同源策略：检测Referer字段，非法的Reffer来源直接拒绝访问
+     1. 同源策略：检测Referer和Origin字段，非法的Reffer来源直接拒绝访问
      1. 当前session构造唯一token放入请求头、参数中，攻击者不能拿到这个token
 ### 加密方式
 1. DES：Data Encryption Standard，对称加密标准，被AES替代
-1. AES：Advanced Encryption Standard，对称加密标准，又称Rijndael加密法，美国联邦政府采用的一种区块加密标准。AES-128、AES-192、AES-256
+1. AES
+   - 认识：Advanced Encryption Standard，对称加密标准，又称Rijndael加密法，美国联邦政府采用的一种区块加密标准。AES-128、AES-192、AES-256
+   - 理解：是基于数据块的加密方式，即分组密码（区别于基于比特位的流密码）
+   - 密钥长度（位）：128、192、256
+   - 加密模式
+     1. CBC：电码本
+     1. ECB：密码分组链接
+     1. CTR：计算器
+     1. OCF：密码反馈
+     1. CFB：输出反馈
 1. RSA
 1. SHA：单向加密，SHA-256、SHA-1
 1. MD5：单向加密

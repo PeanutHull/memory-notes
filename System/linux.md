@@ -2,141 +2,21 @@
 1. 特点
    - 一切皆文件
    - 对后缀不敏感
-   - 对unix有借鉴
-### 系统
-1. logout、exit：退出
-   - 输出语句中有空格需加双引号
-1. 系统
-   - `cat /etc/redhat-release`：查看centos版本
-   - `getconf LONG_BIT`：查看centos位数
-   - uname -a 显示系统信息
-   - uptime：当前系统时间、开机到现在运行时间、用户在线数、系统平均负载
-   - runlevel：查看系统运行级别，修改系统默认运行级别`cat /etc/inittab id:3:initdefault:`
-1. 环境变量：系统预定义的参数。window也有。作用：在程序里可以获得环境变量的值，根据值决定如何操作，运行，找路径，文件夹等等
-   - /etc/profile：全局
-   - .bash_profile：个人
-   - source .bash_profile：使生效
-   - export PATH=：书写格式
-1. 重定向
-   - tee：将程序的输出结果重定向，同时显示和保存。`echo "127.0.0.1 foobar" | sudo tee -a /etc/hosts`
-   - 管道：|，前面输出作为后面输入，依次类推。`cat file.txt | uniq | grep txt | sort`
-   - 输出：>，>>
-     1. more file1 file2 file3 > file2：清空file2
-     1. cat file1 1 >> file2：追加，1标准输出流
-   - 输入：>/< <<(表示当前命令的标准输入为来自命令行中一对分隔号之间的内容)
-   - 2>&1 > /dev/null，Shell会自动打开和关闭0、1、2这三个文件描述符
-     1. /dev/null是黑洞，只写文件，写进去找不回来
-     1. 2>&1：&表示等同于，2等同于1
-    ```shell
-    cat > ~/xjj <<EOF
-    echo "pleasant taste"
-    EOF
-    ```
-   - 输入输出方式
-     1. 标准输入文件stdin 0
-     1. 标准输出文件stdout 1
-     1. 标准错误输出文件stderr 2
-1. 命令、目录有自动补全
-1. 通配符
-   - 分类
-     1. * 一个或多个
-     1. ? 单一字符
-     1. [] 包含在其中的任意字符，- 字符范围
-   - 举例
-     1. ls /dev/sda[12345]：出现/dev/sda1  /dev/sda2  /dev/sda3
-     1. ls [0-9]?.conf：以数字开头，随后一个是任意字符，接着以.conf结尾的所有文件
-1. 输出
-   - echo：输出，-e 支持反斜线控制的字符转换，\a 警告音 \n 换行键 \r 回车键 \t 制表符，Tan键 \v 垂直制表符
-   - print 默认带换行符，printf 没有
-   - awk：每一行扫描显示文件内容，命令+正则+文件，`awk '条件{命令}' 文件`
-     1. `awk '{print $0}' /etc/passwd`：等于`cat /etc/passwd`
-     1. `awk -F":" '{ print $1 }' /etc/passwd`：以:作为分隔符，显示第一个
-   - sed：实现数据的替换c，删除d，增加a，选取p等，`sed '命令' 文件`
-     1. `sed '2,4d' file`：删除2到4行
-     1. `sed  '2a liu .....\`
-        `>shengxi is shuai !!!'  file_name `：第2行新增2行
-   - grep：过滤，`grep '字符' file`
-     1. 使用
-        - 正则：`grep 'w[ea]ll' a.log`，显示e或a
-     1. 命令行
-        - -n：显示行号
-     1. 命令：grep -rn xxx，目录下查找内容
-   - cut：内容查看、删除指定部分
-     1. -b：指定范围
-     1. -c：指定行显示，如-c1-3为1到3行
-     1. -d：指定字段分隔符
-     1. -f：显示指定字段
-   - wc：Word Count，统计文件或输入
-     1. -c：字节数
-     1. -l：行数
-     1. -m：字符数
-     1. -w：字数
-1. 命令执行
-   - sudo、su、setfacl
-   - command1 && command2，可以一次执行两个命令，前一个报错则停止运行
-   - echo &?：获取上一条命令的错误码
-1. 启动
-   - chkconfig：开机启动项
-     1. --list
-     1. --add/--del name
-     1. --level 2345 name on/off
-   - shutdown：关机、重启，是最安全的会保存用户的配置和服务。halt、poweroff、init 0：关机，reboot init 6：重启
-     1. -h：关机
-     1. -r：重启
-     1. -c：取消前一个关机命令
-   - 运行级别
-     1. 0  关机
-     1. 1  单用户，即window的安全模式，启动最小的程序模式，多用于修复系统
-     1. 2  不完全多用户，不含NFS服务。NFS是linux的文件共享服务
-     1. 3  完全多用户，标准的运行级
-     1. 4  未分配
-     1. 5  图形界面
-     1. 6  重启
-1. 知识
-   - 整个桌面进程都拖死，因为linux运行着7个工作台的，切到第一个工作台，杀死那个进程，ctrl+alt+1
-   - date
-     1. -s：设置系统时间
-1. 命令
-   - 帮助一般为：-h/-help/--help
-   - man：查看命令手册
-1. 参数
-   - i       忽略大小写
-   - n       显示行号
-   - r/-R    一般没区别
 ### 文件、目录
 1. 查看
    - 目录
-     1. ls xx：查看某一目录
-        - -l：列表详细查看
-          1. -lh：以兆查看文件大小
-        - -d：查看目录本身详细
      1. pwd
-     1. file：查看文件属性
+     1. ls [dir]：查看当前或指定目录。-l：列表详细查看，-lh：以兆查看文件大小
    - 文件
-     1. cat：查看文件内容
-        - `cat file1 file2`：同时查看两个文件
-        - `cat -n file | grep ''| more`：分页查看
-        - `cat file > xxx.txt`：将显示结果保存到文件
-        - `cat -n file | tail -n +92 | head -n 20`：92行之后的查询结果中显示前20
-     1. less/more：分页查看内容，less在另一屏打开，不占用当前屏幕内容
-        - -M：显示更多文件信息：页码等
-        - enter：下一行
-        - space：下一屏
-        - B：上一屏
-        - /：字符查找，n查找下一次，gg到文件头，G到文件尾，q退出
-     1. head/tail：输出文件头/尾
-        - -n：行数
-        - -f：tail不停显示
-     1. uniq：过滤重复再显示
-     1. sort：排序显示
-1. 搜索
-   - find：递归模糊查找文件名
-     1. -type：f文件，d目录
-     1. -name：精确匹配
-     1. -exec：执行操作。如`find . -type f -exec grep -n 内容 '{}' ';' -print` 显示行号-n，显示文件名-print(默认)
-   - locate：系统全局范围定位文件，从database中查找数据。一般一天更新一次，更新文件数据库`updatedb`
-     1. -r：正则
-   - whereis
+     1. stat：查看文件详情信息，修改时间、Inode、Links数等
+     1. file：查看文件属性
+   - 搜索
+     1. find：递归模糊查找文件名
+        - -type：f文件，d目录
+        - -name：精确匹配
+        - -exec：执行操作。如`find . -type f -exec grep -n 内容 '{}' ';' -print` 显示行号-n，显示文件名-print(默认)
+     1. locate：系统全局范围定位文件，从database中查找数据。一般一天更新一次，更新文件数据库`updatedb`。-r：正则
+     1. whereis
 1. 操作
    - 目录切换
      1. cd：回到用户主目录
@@ -162,19 +42,46 @@
         - 硬链接：多个路径指向一个inode号，最后inode号删除才删除文件，可防止误删除
         - 软连接：-s，即符号链接，类似快捷方式
      1. unlink
-   - 压缩/解压缩
-     1. tar
-        - tar.gz
-          1. zxvf：解压缩
-          1. zcvf：压缩
-        - tar.bz2
-          1. jxvf：解压缩
-          1. jxvf：压缩
-     1. zip/unzip
-     1. gzip/gunzip
-        - gz
-          1. -d：解压缩
-     1. bzip2/bunzip2
+1. 查看内容
+   - cat：查看文件内容
+     1. `cat file1 file2`：同时查看两个文件
+     1. `cat -n file | grep ''| more`：分页查看
+     1. `cat file > xxx.txt`：将显示结果保存到文件
+     1. `cat -n file | tail -n +92 | head -n 20`：92行之后的查询结果中显示前20
+   - head/tail：输出文件头/尾
+     1. -n：行数
+     1. -f：tail不停显示
+   - less/more：分页查看内容，less在另一屏打开，不占用当前屏幕内容
+     1. -M：显示更多文件信息：页码等
+     1. enter：下一行
+     1. space：下一屏
+     1. B：上一屏
+     1. /：字符查找，n查找下一次，gg到文件头，G到文件尾，q退出
+   - awk：每一行扫描显示文件内容，命令+正则+文件
+     1. `awk '{print $0}' /etc/passwd`：等于`cat /etc/passwd`
+     1. `awk -F":" '{ print $1 }' /etc/passwd`：以:作为分隔符，显示第一个
+   - sed：实现数据的替换c，删除d，增加a，选取p等，`sed '命令' 文件`
+     1. `sed '2,4d' file`：删除2到4行
+     1. `sed  '2a liu .....\`
+        `>shengxi is shuai !!!'  file_name `：第2行新增2行
+   - grep：过滤，`grep '字符' file`
+     1. 使用
+        - 正则：`grep 'w[ea]ll' a.log`，显示e或a
+     1. 命令行
+        - -n：显示行号
+     1. 命令：grep -rn xxx，目录下查找内容
+   - cut：内容查看、删除指定部分
+     1. -b：指定范围
+     1. -c：指定行显示，如-c1-3为1到3行
+     1. -d：指定字段分隔符
+     1. -f：显示指定字段
+   - wc：Word Count，统计文件或输入
+     1. -c：字节数
+     1. -l：行数
+     1. -m：字符数
+     1. -w：字数
+   - uniq：过滤重复再显示
+   - sort：排序显示
 1. wiki
    - .开头的文件和目录都是隐藏的
    - 目录为蓝色，-l参数下-为文件、d为目录、l为符号链接
@@ -351,6 +258,22 @@
    - 命令行模式：: / ?
    - 查找和替换
    - 配置：:setnu、:setnonu
+1. 解压缩
+   - tar
+     1. tar.gz
+        - zxvf：解压缩
+        - zcvf：压缩
+     1. tar.bz2
+        - jxvf：解压缩
+        - jxvf：压缩
+   - zip/unzip
+     1. `zip -r xx.zip dir/`
+     1. `unzip xx.zip`、`unzip -o xx.zip -d dir/`
+   - gzip/gunzip
+     1. gz
+        - -d：解压缩
+   - bzip2/bunzip2
+1. date -s：设置系统时间
 ### shell
 1. 理解：壳，命令行解释器，利用ASCII码表转换将命令传给内核，敲命令的界面就是shell。支持命令执行、条件判断、循环控制
 1. 运算符：expr、let
@@ -529,6 +452,7 @@
      1. C：包括csh、tcsh。C shell主要在Unix中使用，语法有较大区别
    - 指定解析器：#!/bin/bash #!/usr/bin/env bash/python/ruby
    - 语句即命令，命令就是语句
+   - 命令、目录自动补全
    - shell语法不重要，实现功能即可，不用考虑多人访问
    - $n 表示第n个参数，$#表示参数总个数
    - 脚本执行
@@ -630,6 +554,83 @@
     git tag $newTag;
     git push origin tag $newTag;
     ```
+### 系统
+1. 查看状态
+   - 系统信息
+     1. uname -a：显示系统信息
+     1. uptime：当前系统时间、开机到现在运行时间、用户在线数、系统平均负载
+     1. runlevel：查看系统运行级别，修改系统默认运行级别`cat /etc/inittab id:3:initdefault:`
+   - 系统版本
+     1. `cat /etc/redhat-release`：查看centos版本
+     1. `cat /proc/version`：查看内核版本
+     1. `getconf LONG_BIT`：查看centos位数
+1. 环境变量
+   - 认识：系统预定义的参数。window也有。作用：在程序里可以获得环境变量的值，根据值决定如何操作，运行，找路径，文件夹等等
+   - 组成
+     1. /etc/profile：全局
+     1. .bash_profile：个人
+   - 操作
+     1. export PATH=：书写格式
+     1. source .bash_profile：使生效
+1. 输入输出
+   - 分类
+     1. 标准输入文件stdin 0
+     1. 标准输出文件stdout 1
+     1. 标准错误输出文件stderr 2
+   - 命令
+     1. echo：输出，-e 支持反斜线控制的字符转换，\a 警告音 \n 换行键 \r 回车键 \t 制表符，Tan键 \v 垂直制表符
+     1. print 默认带换行符，printf 没有
+1. 命令
+   - 执行
+     1. sudo、su、setfacl
+     1. command1 && command2，可以一次执行两个命令，前一个报错则停止运行
+     1. echo &?：获取上一条命令的错误码
+   - 重定向
+     1. |：管道，前面输出作为后面输入。`cat file.txt | uniq | grep txt | sort`
+     1. > >>：输出
+        - `more file1 file2 file3 > file2`：清空file2
+        - `cat file1 1 >> file2`：追加，1标准输出流
+        - demo
+            ```shell
+            cat > ~/xjj <<EOF
+            echo "pleasant taste"
+            EOF
+            ```
+     1. < <<：输入，表示当前命令的标准输入为来自命令行中一对分隔号之间的内容
+     1. tee：将程序的输出结果重定向，同时显示和保存。`echo "127.0.0.1 foobar" | tee -a /etc/hosts`
+     1. `2>&1 > /dev/null`，shell会自动打开和关闭0、1、2这三个文件描述符
+        - /dev/null是黑洞，只写文件，写进去找不回来
+        - 2>&1：&表示等同于，2等同于1
+   - 通配符
+     1. 分类
+        - * 一个或多个
+        - ? 单一字符
+        - [] 包含在其中的任意字符，- 字符范围
+     1. 举例
+        - `ls /dev/sda[12345]`：出现/dev/sda1  /dev/sda2  /dev/sda3
+        - `ls [0-9]?.conf`：以数字开头，随后一个是任意字符，接着以.conf结尾的所有文
+   - wiki
+     1. man：查看命令手册。帮助一般为：-h/-help/--help
+     1. 输出语句中有空格需加双引号
+1. 开关机
+   - chkconfig：开机启动项
+     1. --list
+     1. --add/--del name
+     1. --level 2345 name on/off
+   - shutdown：关机、重启，是最安全的会保存用户的配置和服务。halt、poweroff、init 0：关机，reboot init 6：重启
+     1. -h：关机
+     1. -r：重启
+     1. -c：取消前一个关机命令
+   - 运行级别
+     1. 0  关机
+     1. 1  单用户，即window的安全模式，启动最小的程序模式，多用于修复系统
+     1. 2  不完全多用户，不含NFS服务。NFS是linux的文件共享服务
+     1. 3  完全多用户，标准的运行级
+     1. 4  未分配
+     1. 5  图形界面
+     1. 6  重启
+   - logout、exit、q：退出
+   - 整个桌面进程都拖死，因为linux运行着7个工作台的，切到第一个工作台，杀死那个进程，ctrl+alt+1
 ### wiki
 1. 操作系统分类
    - 硬实时：RT-Linux
@@ -669,9 +670,15 @@
    - linux
      1. 1991，linus开源
      1. 1994，内核1.0发布
-     1. 2010，内核2.6发布
+     1. 2010，centos6，内核2.6发布，ext4
+     1. 2017，centos7.4，内核3.1，xfs
+     1. 最新内核5.4
    - unix
      1. 1969，AT&T实验室一个研究项目
      1. 1979，无偿提供使用
         - BSD：伯克利软件发行版，伯克利分校修改的unix版本。1989，无unix代码的完全开源的BSD诞生，后续有FreeBSD、OpenBSD
    - GUN：GUN's Not UNIX，GUN计划，自由软件计划，参与者包括emacs、gcc、linux
+1. 命令
+   - i       忽略大小写
+   - n       显示行号
+   - r/-R    一般没区别
