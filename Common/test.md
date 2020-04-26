@@ -60,9 +60,11 @@
 1. 使用步骤
    - 新建Thead Group：所有任务由线程处理
    - 新建Http Request：填写相关参数，添加配置元件等
-   - 添加监视器：`View Results Tree`、`Summary Report`
+   - 添加监视器Listener：`View Results Tree`、`Summary Report`
    - 添加断言：`Assertion`、`Assert Results`
    - 点击运行、点击停止、点击清除结果等按钮：结果会累加，需要手动清楚
+1. qps
+1. tps
 1. 压测
    - 参数
      1. 线程数：N

@@ -26,6 +26,10 @@
    - IDE：电子集成驱动器，也称作"ATA硬盘"或"PATA硬盘"
    - SATA：Serial ATA，传输速度更快，更强纠错能力
    - SCSI：小型计算机系统接口，广泛应用在服务器。应用范围广、多任务、带宽大、CPU占用率低及热插拔等
+1. 指标
+   - MT/s：即Mbps，速率，多少次数据传输。LPDDR5速率为6400MT/s，LPDDR4速率为3200MT/s，intel的傲腾2代内存为3200MT/s，目前某些在售服务器为2666MT/s
+   - MHz：时钟频率
+1. DDR：dual data rate，双边沿传输数据，所以MT/S是MHz的两倍
 ### CPU
 1. 认识：1GHz的cpu一秒执行大约10亿次
 1. 组成
@@ -129,7 +133,7 @@
         - Ext3
         - Ext4
      1. 原理：由inode（包含有文件的所有信息）进行唯一标识
-   - xfs
+   - XFS
    - RAW：是一种磁盘未经处理或者未经格式化的文件系统。可能由于未格式化、格式化中途取消、硬盘出现坏道等
 1. Linux
    - 认识：启动时挂载根文件系统，之后可以挂载其他文件系统，要挂载到挂载点上，和虚拟文件系统、通用块设备层建立联系
@@ -170,3 +174,40 @@
         - 用户进程由内核态切换回用户态，解除阻塞状态，然后等待CPU的下一个执行时间钟
      1. 轮询
      1. DMA：Direct Memory Access，直接内存存取
+### 指标梳理
+1. 网络
+   - 阿里云到世纪互联带宽：5G
+   - 世纪互联IDC机房出口带宽
+     1. 71万，占用最高1.9G
+     1. 14G - 支持200万
+     1. 20G - 支持300万
+     1. 70G – 支持1000万
+   - 专线带宽：1G/根 * 2
+   - 阿里云CDN：1T
+1. 服务器
+   - 物理机
+     1. 品牌：dell、lenovo、hpe
+1. 云服务提供商
+   - aliyun
+   - window azure
+   - amazon aws
+1. 接口性能
+   - kvm：10台8核16G，5-6次redis，qps为5到6万
+### 服务梳理
+1. php+nginx
+   - php扩展、ini参数
+   - nginx的vhost，即server
+1. 配套服务
+   - rsync
+   - confd、confd-tw
+   - filebeat
+   - flcon-agent
+   - supervisor
+1. 网关upstream
+1. 发布系统
+1. 日志收集：php、nginx
+1. 机器监控
+   - mao.xesv5.com
+   - xesfalcon.xesv5.com
+   - datamap.xesv5.com
+   - fengniao.xesv5.com/admin/#/loadshow
