@@ -404,6 +404,7 @@
      1. composer config                               // 配置设置
      1. composer init                                 // 初始化项目依赖，自动生成json文件
      1. composer install/update (foo/bar:1.0.0)       // 安装/更新所有/单个依赖
+     1. composer show                                 // 查看安装的依赖和依赖的版本号
      1. composer dump-autoload --optimize             // 为生产环境做准备
    - 参数
      1. --prefer-dist：用于install/update，强制下载源代码，在修改文件后更新文件会给出提示

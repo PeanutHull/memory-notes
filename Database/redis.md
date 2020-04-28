@@ -488,13 +488,9 @@
 
    
 1. #主库重启 checklist 
-
 1. 世纪互联主从库节点 zabbix 关闭报警
-
 2. 世纪互联主从库节点 注释脉搏脚本
-
 3.  切换Master到从库，修改参数并重启
-
 redis-cli -h 10.20.52.245 -p 1379 sentinel failover jy-app-redis
 redis-cli -h 10.20.52.245 -p 2379 sentinel failover jy-appapimanager-redis
 redis-cli -h 10.20.52.245 -p 4379 sentinel failover jy-handout-redis
@@ -503,7 +499,6 @@ redis-cli -h 10.20.52.245 -p 6379 sentinel failover jy-workflow-redis
 redis-cli -h 10.20.52.245 -p 7379 sentinel failover jy-wordlibrary-redis
 redis-cli -h 10.20.52.245 -p 8379 sentinel failover jy-courseware-redis
 redis-cli -h 10.20.52.245 -p 9379 sentinel failover jy-tnt-redis
-
 
 vim /boot/grub/grub.conf
 isolcpus=10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29 

@@ -34,8 +34,6 @@
      1. enum：枚举，0~65535，如`enum('','')`
      1. set：集合，0~64，可以存一个集合，如`set('','')`
      1. json：5.7.8支持，与longtext大小差不多，不能有默认值，不能直接被编为索引，可以在虚拟列上创建
-1. 注释 ：--、#、/**/=
-1. 变量：基于会话，用户变量不区分大小写。定义 `set @a:=/=1`
 1. 函数
    - 数学：format/round/pow/abs/sin/cos/tan/bit_and
    - 字符串：char/concat/length  
@@ -190,6 +188,9 @@
    - replace：是标准sql的mysql扩展，使用primary key/unique key确定是否插入新行
      1. 注意：会抹掉其他未指定数据，应作为插入使用，而不是更新
      1. 原理：将数据插入，成功则结束；否则引发重复键错误，先删除原有记录，然后更新
+1. 其他
+   - 注释 ：--、#、/**/=
+   - 变量：基于会话，用户变量不区分大小写。定义 `set @a:=/=1`
 ### 特性
 1. 索引
    - 认识：为加快查询速度，对数据列进行排序的一种结构，包含所有记录的引用指针，查询时先查索引，引擎实现
@@ -419,6 +420,25 @@
      1. `show variables like '%connect%';`：查看连接的配置
    - 硬件：主频高处理快高吞吐低时延，L1/2/3的cache大速度快，内存大磁盘读写少TPS高，固态快机械配阵列卡，网卡好低时延，文件系统用xfs/ext4不用ext3
      1. 更大内存、更快磁盘：比业务服务器要求高
+1. 慢查询：记录超过一定时间的查询语句
+    ```
+    slow_query_log = ON
+    slow_query_log_file = /usr/local/mysql/data/slow.log
+    long_query_time = 1
+    ```
+1. 调优
+   - 参数
+     1. Innodb_buffer_pool
+     1. Innodb_buffer_pool_instances
+     1. innodb_flush_log_at_trx_commit
+     1. binlog-format
+     1. transaction-isolation
+     1. sync_binlog
+1. 基准测试：进行定量的、可复现的测试，不关心业务逻辑，对比于压力测试。mysql由于数据一致性的要求无法简单的水平扩展(即加机器)，主要评估qps和响应时间
+   - mysqlslap：简单，容易使用，无法生成数据，适合对既有数据库单个sql进行优化测试
+   - Sysbench：内嵌lua脚本，可生成指定规模数据，主流厂商(Oracle/Percona)使用，支持多线程，支持多种数据库
+     1. 建表，塞1百万数据：`sysbench --monitis=oltp --oltp-table-size=1000000 --mysql-db=xx --mysql-user=root --mysql-password=xx prepare`
+     1. 开始测试：`sysbench --monitis=oltp --oltp-table-size=1000000 --mysql-db=xx –mysql-user=root –mysql-password=xx –max-time=60 –oltp-read-only=on –max-requests=0 –num-threads=8 run`
 1. 用户和权限管理
    - user
     ```sql
@@ -526,12 +546,6 @@
      1. ref：另外表的数据列名字
      1. row：预计读出的数据行数，里面所有数字乘积代表需要处理的组合数
      1. extra：问题解决提示信息
-1. 慢查询：记录超过一定时间的查询语句
-    ```
-    slow_query_log = ON
-    slow_query_log_file = /usr/local/mysql/data/slow.log
-    long_query_time = 1
-    ```
 1. gist
    - 查询这个数据是否存在，存在则存到另一张表里：`create table temp as select * from admin a where exists (select uid from user u where a.userName = u.account);`
    - 查询两张表中是否有相同数据：`select * from admin where uid IN(select uid from temp);`
@@ -546,6 +560,7 @@
      1. 高可用，故障切换
    - 查看
      1. `show master status;`
+1. 读写分离：采用数据库主从方式，多个从库分担读，主库负责写
 1. 分表分区
    - 认识
      1. 分区：对用户透明，底层分为多个物理分区。用partition by定义每个分区存放的数据，优化器自动使用。适用于数据多，只在表最后有热点数据，其他都是历史数据。分区可以分布在不同机器上独立维护，有很多功能不能用
@@ -568,11 +583,9 @@
         - 拿time_min在各个分库中比较，得出每个表的虚拟offset，相加从而得到time_min在全局的offset
         - 得到了time_min在全局的offset，自然得到了全局的offset X limit Y，要什么从后推着拿就行
 1. 数据库中间件
-   - mycat：开源分布式数据库中间件
-1. 集群
    - mycat
+     1. 认识：开源分布式数据库中间件
      1. 高可用：采用去中心化的集群，在虚拟ip下，在不同的节点部署多个mycat，根据某种策略(ip选举策略)选举某一个为临时master，之间采用心跳机制进行通信维持故障切换。可使用zk、haproxy、keepalived等组件，可以有选举、心跳、切换ip等功能
-   - 读写分离：采用数据库主从方式，多个从库分担读，主库负责写
 ### WIKI
 1. 当系统遇到无法解决的技术难题时，可以通过变换业务逻辑实现功能
 1. 概念
@@ -730,10 +743,3 @@
      1. b-tree：多路搜索树，每个结点存储M/2到M个关键字，非叶子结点存储指向关键字范围的子结点；所有关键字在整颗树中出现，且只出现一次，非叶子结点可以命中
      1. b+tree：在B-树基础上，为叶子结点增加链表指针，所有关键字都在叶子结点中出现，非叶子结点作为叶子结点的索引；B+树总是到叶子结点才命中
      1. b*tree：在B+树基础上，为非叶子结点也增加链表指针，将结点的最低利用率从1/2提高到2/3
-1. 磁盘
-   - 数据数据交换：总用时9ms，500-MIPS的机器每秒可以执行5亿条指令，执行一次I/O的时间可以执行40万条指令。数据库动辄百万级甚至千万级的数据，每次9ms的时间，显然是一个灾难
-     1. 寻道时间：5ms
-     1. 旋转延迟：7200转，1/120/2=4.17ms
-     1. 传输时间：0.nms
-   - 磁盘访问的成本大概是内存访问成本的十万倍左右
-   - 内存读取数据的局部预读性，每一次I/O读取的数据我们称之为一页（Page）。具体一页的数据有多大，这个跟操作系统有关，一般为4K或8K

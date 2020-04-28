@@ -690,6 +690,7 @@
      1. \：屏蔽一个元字符的特殊含义
 ### application
 1. find
+   - 全局查找文件：`find / -name "nginx.conf"`
    - 查找txt结尾的文件并输出：`find -name "*.txt" -print`
    - 查找所有sh文件并输出：`find ".sh" -print`
    - 查找当前目前目录所有文件的指定内容
