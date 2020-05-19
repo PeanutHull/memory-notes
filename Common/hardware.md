@@ -6,8 +6,7 @@
      1. JBOD：just bunch of disks，一堆普通磁盘
      1. RAID：磁盘阵列
    - 接口类型：常见SATA、mSATA、M.2、PCIE
-     1. IDE：电子集成驱动器，也称作"ATA硬盘"或"PATA硬盘"
-     1. ATA
+     1. IDE/ATA：电子集成驱动器，也称作"ATA硬盘"或"PATA硬盘"
      1. SCSI：小型计算机系统接口，广泛应用在服务器。应用范围广、多任务、带宽大、CPU占用率低及热插拔等
      1. SAS：支持双向全双工模式，多用于企业级，比SATA快，更可靠
      1. SATA：Serial ATA，目前3.0，理论传输带宽6Gbps，传输速度600MB/s
@@ -46,6 +45,21 @@
    - UFS：硬盘标准，硬盘的存储读取速度
    - PCIe SSD：PCIe 4.0 SSD，读最高5GB/s，写最高4.4GB/s，随机读写750KIOPS、700KIOPS
    - 常见接口类型：SATA、MSATA、M.2
+1. RAID
+   - 认识：廉价冗余磁盘阵列，之后称为独立磁盘冗余阵列，由多个独立的高性能磁盘驱动器组成的磁盘子系统，从而提供比单个磁盘更高的存储性能和数据冗余的技术，是一种多磁盘管理技术。至少3块硬盘
+     1. 大容量：可达PB级
+     1. 高性能：可形成聚合I/O性能
+     1. 高可靠：若干磁盘出错时，不导致数据丢失，不影响系统连续运行
+     1. 可管理性
+   - 技术
+     1. 镜像
+     1. 数据条带
+     1. 数据校验
+   - 等级：RAID0-6级
+   - 实现方式
+     1. 软RAID：没有专用控制、I/O芯片，操作系统支持
+     1. 硬RAID：有专用控制、I/O芯片、阵列缓冲，支持热交换技术，在系统运行下更换故障磁盘
+1. NAS：Network Attached Storage，网络附属存储，实现大容量、高可靠、支持网络协议、可共享的进行数据传输的专用数据存储服务器，
 1. 块/簇：操作系统的最小逻辑存储单位，包含2的n次方个扇区。NTFS文件系统中叫做簇。4K对齐就是扇区为4096个字节
    - 因为扇区众多寻址困难，就将相邻扇区组合一起，进行整体操作
    - 分离对底层依赖：忽略对底层物理存储结构的设计
@@ -204,6 +218,25 @@
    - 认识：启动时挂载根文件系统，之后可以挂载其他文件系统，要挂载到挂载点上，和虚拟文件系统、通用块设备层建立联系
      1. 挂载点：是linux访问磁盘的入口
    - 深入：`linux的文件系统：https://blog.csdn.net/luyajun97/article/details/88801659`
+1. 分布式文件系统
+   - 认识：通过网络在多台主机上存储的文件系统。新手用fastdfs，淘宝tfs，七牛。阿里云nas用于存日志、小文件等，oss
+     1. 如同访问本地磁盘
+     1. 容错：部分节点损坏，数据不丢失，系统可继续运行
+     1. 海量存储
+     1. 扩展性强
+     1. 文件副本进行负载均衡
+     1. 进行特定索引文件计算
+   - 分类
+     1. 应用级：GFS、HDFS 、Ceph 、GridFS 、mogileFS、TFS、FastDFS、Ceph
+        - Lustre：存储量PB起步，万级节点
+        - HDFS：Hadoop内置，价格低廉，高可靠性，高容错性，小文件过多的情况HDFS不能很好的支持
+     1. 系统级
+   - 历史
+     1. 80年代：NFS、AFS
+     1. 90年代：SFS、Tiger Shark
+     1. 2000年：GFS
+     1. 最近：Lustre
+1. NAS(NFS、CIFS、SAMBA等文件系统)
 ### 操作系统
 1. 运行态
    - 理解：当一个进程执行系统调用而陷入内核代码中执行为内核态，其他为用户态
@@ -252,6 +285,23 @@
 1. 服务器
    - 物理机
      1. 品牌：dell、lenovo、hpe
+     1. 配置
+        - 联想：SR570
+          1. 3个PCIe 3.0
+          1. 2*4114：24核
+          1. 256G：2666MHz，ddr4
+          1. 4*960G：标配4个3.5英寸硬盘
+          1. 电口：2*1000M，光口：2*10G含模块
+          1. RAID10 5：标配raid软件，还有Raid卡
+          1. 2*550W 电源
+1. 架构
+   - 网关层
+     1. HA
+     1. API
+     1. HA lvs
+     1. API lvs
+     1. 切流网关：ECS+SLB
+     1. vanrish
 1. 云服务提供商
    - aliyun
    - window azure
@@ -271,10 +321,33 @@
 1. 网关upstream
 1. 发布系统
 1. 日志收集：php、nginx
+   - basiclog.xesv5.com
+   - logcenter.xesv5.com
 1. 机器监控
    - mao.xesv5.com
    - xesfalcon.xesv5.com
    - datamap.xesv5.com
-     1. 网关监控：http://xesmap.xesv5.com/d/api-gw/api-gw?orgId=1
-     1. k8s物理机：http://app.xesv5.com/k8s-core.grafana/d/fa49a4706d07a042595b664c87fb33ea/nodes?orgId=1
+     1. 网关监控：xesmap.xesv5.com/d/api-gw/api-gw?orgId=1
+     1. k8s物理机：app.xesv5.com/k8s-core.grafana/d/fa49a4706d07a042595b664c87fb33ea/nodes?orgId=1
    - fengniao.xesv5.com/admin/#/loadshow
+1. 耗时分析
+   - 网校网关：一半多在1ms及以下，2ms、3ms依次减少，三者占99%
+   - 容器网关：1ms以下
+   - pdo连接数据库：1.5ms
+   - redis连接：0.3ms
+   - 走索引单条sql查询：0.6ms
+   - 一次api请求：50ms、30ms等，几十毫秒，大于100ms的都是慢的
+     1. dns解析：0.8ms、1ms
+     1. connect_time：1.2ms
+     1. pretransfer_time：1.4ms
+   - 一次api请求：7ms
+     1. dns解析：0.01ms、0.02ms
+     1. connect_time：0.1ms
+     1. pretransfer_time：0.1ms
+     1. starttransfer_time：6.9ms
+   - 整个php返回字符串请求耗时：6ms
+     1. php处理时间：1.3ms
+1. 架构
+   - 配置：etcd+confd
+   - supervisor
+

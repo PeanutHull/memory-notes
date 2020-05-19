@@ -147,7 +147,10 @@
    - sar
    - mpstat
 1. 问题定位
+   - strace：跟踪系统调用的执行
+   - tcpdump
 1. 问题解决
+1. irqbalance
 ### 软件安装
 1. 软件安装
    - RedHat

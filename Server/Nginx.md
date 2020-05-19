@@ -84,7 +84,8 @@
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_redirect off;
+        proxy_redirect off;             # 当上游服务器返回的响应是重定向或刷新请求时，是否重设http头部的location或refresh字段
+        proxy_next_upstream off;        # 当请求服务器发生错误或超时时，转发到下一台服务器，默认off
     }
 
     error_page   500 502 503 504  /50x.html;                                    # 错误页面
@@ -104,46 +105,57 @@
         add_header headerName headerValue
     }
     ```
+1. 超时时间
+   - proxy_connect_timeout：设置与upstream server的连接超时时间
+   - proxy_send_timeout：发送请求给upstream服务器的超时时间
+   - proxy_read_timeout：与代理服务器的读超时时间
+1. 缓存大小
+   - proxy_buffer_size：缓存区大小
+   - proxy_buffers：缓存区大小和数量
+   - proxy_busy_buffers_size：高负荷下缓存大小
+   - proxy_temp_file_write_size：缓存临时文件大小
+   - 
+   - client_max_body_size 500m;              # 客户端请求服务器最大允许大小
+   - client_body_buffer_size     128k;       # nginx分配给请求数据的Buffer大小
+   - proxy_ignore_client_abort   on;         # 是否开启proxy忽略客户端中断
 1. 代理线上配置
     ```lua
-    server
-    {
+    server { 
         listen 80;
-        server_name tntapi.xesv5.com;
+        server_name tntapi.xesv5.com ;
         set_by_lua_block $request_trace_id {
             local mid = ngx.var.pid..ngx.var.server_addr..ngx.var.remote_addr..ngx.var.connection..ngx.var.connection_requests..ngx.var.bytes_sent..ngx.now()
-                return ngx.md5(mid)
+            return ngx.md5(mid)
         }
-        access_log  /home/nginx/logs/tntapi.xesv5.com_access.log  main;
-        location / {
+        access_log /home/nginx/logs/tntapi.xesv5.com_access.log main;
+        error_page 500 502 503 504  http://www.xueersi.com/wait.html;
+        location /  { 
             add_header 'Access-Control-Allow-Methods' 'GET,POST,OPTIONS';
             add_header 'Access-Control-Allow-Credentials' 'true';
             add_header 'Access-Control-Allow-Origin' '$http_origin';
-            add_header 'Access-Control-Allow-Headers' 'prelogid,Authorization,DNT,User-Agent,Keep-Alive,Content-Type,accept,origin,X-Requested-With';
+            add_header 'Access-Control-Allow-Headers' 'prelogid,Authorization,DNT,User-Agent,Keep-Alive,Content-Type,accept,origin,X-Requested-With,rpcid,traceid,jytoken';
             proxy_pass http://tntapi.xesv5.com;
-                proxy_redirect          off;
-                proxy_set_header        Host $host;
-                proxy_set_header        X-Real-IP $remote_addr;
-                proxy_set_header        X-Request-Id $request_trace_id;
-                proxy_set_header        X-Forwarded-For $proxy_add_x_forwarded_for;
-                client_max_body_size    500m;
-                client_body_buffer_size 128k;
-			proxy_ignore_client_abort on;
-                proxy_connect_timeout   60;
-                proxy_send_timeout      60;
-                proxy_read_timeout      60;
-                proxy_buffer_size       128k;
-                proxy_buffers           32 32k;
-                proxy_busy_buffers_size 128k;
-                proxy_temp_file_write_size 128k;
-                proxy_next_upstream off;
-                add_header X-Request-Id $request_trace_id;
-                add_header "Set-Cookie" "X-Request-Id=$request_trace_id; path=/";
-                add_header Xes-App $upstream_http_server;
-			include /home/openresty/nginx/conf/nconf/office_deny.conf;
-          }
-		error_page 500 502 503 504  http://www.xueersi.com/wait.html;
-    }
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Request-Id $request_trace_id;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_redirect off;
+            client_max_body_size 500m;
+            client_body_buffer_size 128k;
+            proxy_ignore_client_abort on;
+            proxy_connect_timeout 60;
+            proxy_send_timeout 60;
+            proxy_read_timeout 60;
+            proxy_buffer_size 128k;
+            proxy_buffers 32 32k;
+            proxy_busy_buffers_size 128k;
+            proxy_temp_file_write_size 128k;
+            proxy_next_upstream off;
+            add_header X-Request-Id $request_trace_id;
+            add_header "Set-Cookie" "X-Request-Id=$request_trace_id; path=/";
+            add_header Xes-App $upstream_http_server;
+        } 
+    } 
     ```
 1. 其他配置文件
    - mime.types：文件扩展名与文件类型映射表，找不到使用默认default_type
@@ -236,12 +248,32 @@
         }
     }
     ```
+1. 网关：应用服务管理、流量调度策略、业务监控告警，扩容铺机器就可以
+   - 权限校验
+   - vhost和upstream管理
+   - 流量控制和限流：可根据接口响应时间判断服务健康度制定限流值，也可根据某特征实现访问控制
+   - 分流：指定请求转发，用于A\B测试
+   - 缓存：vanish
+   - 放火：故障模拟，如500、502、504等故障和响应时长变长，可用于制定容灾方案
+   - 流量克隆：请求在网关层的完全复制，可用于业务重构时流量双写到新的b系统
+   - 防火墙
+   - 健康检查
+     1. 检查类型
+        - tcp检测
+        - http检测：基于检测接口，如php7fpmstatus
+     1. 检查项
+        - 超时时间
+        - 检查间隔时间
+        - 合法状态码
+        - 累计失败数：连续检测多少次失败后网关认为该节点已挂
+        - 累计成功数：连续检测多少次成功后网关认为该节点已恢复
+        - 是否通知
+        - 是否摘除
 ### 调优
 1. worker_processes
 1. worker_rlimit_nofile
 1. worker_connections
 1. tcp_max_syn_backlog
-1. 
 ### 运维
 1. 安装
    - linux

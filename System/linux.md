@@ -121,6 +121,7 @@
      1. -C，每个分割文件一行最多n字节
    - cut：截取显示
      1. -c n-m：截取的字符范围，单位字符
+   - diff：查看文件差异
 1. wiki
    - .开头的文件和目录都是隐藏的
    - 目录为蓝色，-l参数下-为文件、d为目录、l为符号链接
@@ -153,54 +154,10 @@
      1. group
      1. setfacl
      1. chgrp
-### 进程
-1. 运行
-   - 后台运行：xx &
-   - 断开shell继续运行：因为shell断开进程收到SIGHUP，该信号的默认处理导致进程终止，进程不终止主要是处理SIGHUP信号
-     1. 未运行
-        - `nohup xx &`
-        - `setsid xx &`
-     1. 已运行
-        - disown
-            ```shell
-            $ xx &
-            [1] 2222
-            $ disown -h %1
-            ```
-        - `screen -dmS|-r xx`
-        - subshell：实质为子进程执行方式，通常为fork
-        - `trap "" SIGHUP SIGINT | trap SIGHUP SIGINT | trap "" 1 2 | trap : 1 2`
-1. 查看
-   - which：查看程序安装位置
-   - ps：显示系统运行状态
-     1. aux：pid，process ID，进程号
-   - top：查看活跃进程
-     1. VIRT：virtual memory usage 虚拟内存
-        - 进程“需要的”虚拟内存大小，包括进程使用的库、代码、数据等
-        - 假如进程申请100m的内存，但实际只使用了10m，那么它会增长100m，而不是实际的使用量
-     1. RES：resident memory usage 常驻内存
-        - 进程当前使用的内存大小，但不包括swap out
-        - 包含其他进程的共享
-        - 如果申请100m的内存，实际使用10m，它只增长10m，与VIRT相反
-        - 关于库占用内存的情况，它只统计加载的库文件所占内存大小
-     1. SHR：shared memory 共享内存
-        - 计算某个进程所占的物理内存大小公式：RES – SHR
-        - pstree
-        - pidof：打印pid
-1. 杀死
-   - 分类
-     1. kill：发信号
-     1. killall：按照名字消灭进程
-     1. pkill：根据名字和其它属性查看、发出信号
-     1. skill：发送信号、报告进程状态
-   - 参数
-     1. -USR2 pid
-     1. -QUIT：从容
-     1. -TERM：快速
-     1. -9 pid：强制
-   - 应用
-     1. 杀死僵死进程：`ps -ef | grep defunct | grep -v grep | cut -b8-20 | xargs kill -9`
-     1. 杀死所有fpm：`ps -ef | grep php-fpm | awk -F ' ' '{print $2}' | xargs kill -9`
+     1. su/sudo
+### 内存
+1. free
+   - -m 以兆显示内存状态
 ### 网络
 1. 查看
    - ping
@@ -208,7 +165,7 @@
    - ifconfig：显示当前网络接口状态、配置网络
      1. -a：inet addr，ip地址
    - nethogs: 将进程按网络流量列表显示
-   - lsof
+   - lsof：list open files，列出打开文件。linux环境下任何事物都以文件的形式存在
      1. i:80：查看端口号，root用户查看
    - netstat：显示网络连接/运行端口/路由表等
      1. anpt：查看端口占用，`netstat anpt | grep 80`
@@ -254,9 +211,8 @@
      1. ssh
         - ssh addr@ip
      1. sz/rz
-### 内存
-1. free
-   - -m 以兆显示内存状态
+1. wiki
+   - 端口号1024以下是系统保留的，总共65526个
 ### 磁盘
 1. mount/umount：挂载
    - /dev/sd*：设备文件，`mount /dev/sda1 /mnt/sda1`
@@ -279,7 +235,65 @@
         - mkswap：格式化
    - 挂载点：把sda1挂载到根目录/上，则所有数据都在sda1分区。当sda2挂载到/home，则数据到了sda2的分区下
 1. linux规定，硬盘用sda/sdb/sdc依次命名，一块硬盘只能存在4个主分区，为sda1/sda2/sda3/sda4，逻辑分区不限制数量，从5开始
-### tools
+### 进程
+1. 运行
+   - 后台运行：xx &
+   - 断开shell继续运行：因为shell断开进程收到SIGHUP，该信号的默认处理导致进程终止，进程不终止主要是处理SIGHUP信号
+     1. 未运行
+        - `nohup xx &`
+        - `setsid xx &`
+     1. 已运行
+        - disown
+            ```shell
+            $ xx &
+            [1] 2222
+            $ disown -h %1
+            ```
+        - `screen -dmS|-r xx`
+        - subshell：实质为子进程执行方式，通常为fork
+        - `trap "" SIGHUP SIGINT | trap SIGHUP SIGINT | trap "" 1 2 | trap : 1 2`
+1. 查看
+   - which：查看程序安装位置
+   - ps：显示系统运行状态
+     1. aux：pid，process ID，进程号
+   - top：查看活跃进程
+     1. VIRT：virtual memory usage 虚拟内存
+        - 进程“需要的”虚拟内存大小，包括进程使用的库、代码、数据等
+        - 假如进程申请100m的内存，但实际只使用了10m，那么它会增长100m，而不是实际的使用量
+     1. RES：resident memory usage 常驻内存
+        - 进程当前使用的内存大小，但不包括swap out
+        - 包含其他进程的共享
+        - 如果申请100m的内存，实际使用10m，它只增长10m，与VIRT相反
+        - 关于库占用内存的情况，它只统计加载的库文件所占内存大小
+     1. SHR：shared memory 共享内存
+        - 计算某个进程所占的物理内存大小公式：RES – SHR
+        - pstree
+        - pidof：打印pid
+   - 查看/设置允许打开的最大文件句柄数：`ulimit -n xx`，重启或用户退出失效
+1. 杀死
+   - 分类
+     1. kill：发信号
+     1. killall：按照名字消灭进程
+     1. pkill：根据名字和其它属性查看、发出信号
+     1. skill：发送信号、报告进程状态
+   - 参数
+     1. -USR2 pid
+     1. -QUIT：从容
+     1. -TERM：快速
+     1. -9 pid：强制
+   - 应用
+     1. 杀死僵死进程：`ps -ef | grep defunct | grep -v grep | cut -b8-20 | xargs kill -9`
+     1. 杀死所有fpm：`ps -ef | grep php-fpm | awk -F ' ' '{print $2}' | xargs kill -9`
+1. systemctl
+1. 最大文件打开数
+   - 查看
+     1. 查看系统级最大限制：`cat /proc/sys/fs/file-max`
+     1. 查看用户级最大限制：`ulimit -n`
+     1. 查看某个进程已经打开的文件数：`cat /proc/pid/limits|fd`
+   - 修改
+     1. 临时修改：`ulimit -HSn 2048`
+     1. 永久修改：`vi /etc/security/limits.conf`
+### 工具
 1. 定时任务
    - crontab：linux原生定时器
      1. -l
@@ -290,17 +304,60 @@
      1. chkconfig -level 35 crond on       加入开机启动
      1. ntsysv                             查看是否开机启动
 1. vim
-   - yy 复制当前行
-   - dd 删除当前行，并复制
-   - p 当前位置之后粘贴，之前粘贴P
-   - :20 跳到20行
-   - . 重复上一次命令
-   - x、X、ndd、nyy、p、P、ctrl+r
-   - 视图模式：v、V、ctrl+v、y、d
-   - 编辑模式：i、a、r
-   - 命令行模式：: / ?
-   - 查找和替换
-   - 配置：:setnu、:setnonu
+   - 打开
+     1. vim +n file：打开文件，置于第n行首
+     1. vim + file：打开文件，置于最后一行首
+     1. vim +/pattern file：打开文件，光标到第一个匹配的地方
+     1. vim file file：打开多个，依次编辑
+   - 状态
+     1. 视图模式：v、V、ctrl+v、y、d
+     1. 编辑模式：i、a、r
+     1. 命令行模式：: / ?
+     1. :setnu：显示行号
+     1. :syntax on：语法高亮
+     1. ctrl+b：向上翻一屏
+     1. ctrl+f：向下翻一屏
+   - 跳转
+     1. :n/nG：跳到n行
+     1. nk：向上移动n行
+     1. nj：向下移动n行
+
+     1. space：右移一个字符
+     1. backSpace：左移一个字符
+
+     1. w：右移一个字到字首
+     1. b：左移一个字到字首
+     1. e：右移一个字到字尾
+
+     1. (：移到句首
+     1. )：移到句尾
+     1. {：移到段落开头
+     1. }：移到段落结尾
+
+     1. H：移至屏幕顶
+     1. L：移至屏幕底
+     1. gg：移至第一行
+     1. G：移至最后一行
+   - 操作
+     1. 插入
+        - i：在光标前
+        - a：在光标后
+     1. 删除
+        - d$：删至行尾
+        - do：删至行首
+        - dd：删除当前行，ndd删除当前和之后的n-1行
+     1. 复制粘贴
+        - yy：复制当前行，nyy复制n行
+        - p：之后粘贴，之前粘贴P
+     1. 撤销
+        - u：撤销
+     1. 查找替换
+        - /pattern：向文件尾搜索
+        - ?pattern：向文件首搜索
+        - n/N：向下上继续搜索
+     1. 书签
+        - m[a-z]：打书签，a-z26个字母
+        - `a-z：移动到书签
 1. 解压缩
    - tar
      1. tar.gz
@@ -316,7 +373,7 @@
      1. gz
         - -d：解压缩
    - bzip2/bunzip2
-1. date -s：设置系统时间
+   - rar/unrar
 ### shell
 1. 理解：壳，命令行解释器，利用ASCII码表转换将命令传给内核，敲命令的界面就是shell。支持命令执行、条件判断、循环控制
 1. 运算符：expr、let
@@ -607,13 +664,17 @@
      1. `cat /etc/redhat-release`：查看centos版本
      1. `cat /proc/version`：查看内核版本
      1. `getconf LONG_BIT`：查看centos位数
+   - 性能
+     1. `cat /proc/sys/kernel/threads-max`：查看内核所能打开的线程数
+   - 硬件
+     1. `cat /proc/cpuinfo`：cpu信息
 1. 环境变量
    - 认识：系统预定义的参数。window也有。作用：在程序里可以获得环境变量的值，根据值决定如何操作，运行，找路径，文件夹等等
    - 组成
      1. /etc/profile：全局
      1. .bash_profile：个人
    - 操作
-     1. export PATH=：书写格式
+     1. export PATH=：书写格式，也可查看环境变量
      1. source .bash_profile：使生效
 1. 输入输出
    - 分类
@@ -688,7 +749,8 @@
      1. [,]：只匹配[]内字符，,表示多字符序列，-表示字符序列范围
      1. \{n,m\}：字符重复次数的范围
      1. \：屏蔽一个元字符的特殊含义
-### application
+1. date -s：设置系统时间
+### 应用
 1. find
    - 全局查找文件：`find / -name "nginx.conf"`
    - 查找txt结尾的文件并输出：`find -name "*.txt" -print`
@@ -697,6 +759,8 @@
      1. `grep -rn "内容"`：查找精确，还带高亮
      1. `find . -type f -exec grep -n 内容 '{}' ';' -print`：查找精确
      1. `find . | xargs grep -rin "内容"`：查找出了重复内容
+   - 删除目录中的所有class文件：`find . | grep .class$ | xargs rm -rvf`
+   - 把所有的rmvb文件拷贝到目录：`ls *.rmvb | xargs -n1 -i cp {} /tmp`
 1. grep
    - 显示e或a：`grep 'w[ea]ll' a.log`
    - 匹配以非2、1、0开头的行：`grep ^[^210] file`

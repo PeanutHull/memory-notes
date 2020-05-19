@@ -190,6 +190,17 @@
         - `text/plain`：以纯文本形式进行编码，空格转换为加号，不对特殊字符编码。不含任何控件或格式字符
    - 断点续传：利用http请求头的Range确定传输的起点，响应头Content-Range返回大小。php使用fread/fseek确定读取文件的范围和小大从而实现功能
    - 缓存控制
+   - 获取客户端ip
+     1. 参数
+        - HTTP_CLIENT_IP：未成标准，不一定服务器都实现，一和二可以用来表示负载均衡后的真实ip
+        - HTTP_X_FORWARDED_FOR：有标准定义，用来识别经HTTP代理后的客户端IP地址，没有代理则为空，格式：clientip,proxy1,proxy2(因为可能多个代理)
+        - REMOTE_ADDR：是可靠的，是最后一个跟你握手的ip，因为否则reponse不会达到，这个可能为代理ip
+        - HTTP_VIA：代理服务器ip
+     1. 代理类型
+        - 透明代理：HTTP_X_FORWARDED_FOR传真实用户ip，HTTP_VIA如实
+        - 普通匿名代理：HTTP_X_FORWARDED_FOR传真实代理ip，HTTP_VIA如实
+        - 欺骗性代理：HTTP_X_FORWARDED_FOR传随机ip，HTTP_VIA如实
+        - 高匿名代理：HTTP_X_FORWARDED_FOR和HTTP_VIA无数值
 1. 请求过程：不止这些，基于浏览器的策略和长连接，nginx的策略肯定比这复杂的多
    - 建立tcp连接
    - 浏览器发送请求、头信息
