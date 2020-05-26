@@ -58,7 +58,7 @@
    - nginx开启gzip压缩
 1. 配置优化
    - php.ini：memory_limit、session.save_handler、output_buffering
-   - php-fpm：动态和静态的子进程管理，平衡cpu和内存，参数有pm、pm.max_children、pm.start_servers
+   - php-fpm：动态和静态的子进程管理，平衡cpu和内存
 1. 发挥PHP7的性能
    - 开启Opcache
      1. zend_extension=opcache.so

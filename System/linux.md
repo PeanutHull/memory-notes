@@ -169,8 +169,7 @@
      1. i:80：查看端口号，root用户查看
    - netstat：显示网络连接/运行端口/路由表等
      1. anpt：查看端口占用，`netstat anpt | grep 80`
-   - ss
-     1. 认识：Socket Statistics，用来获取socket统计信息，显示和netstat类似，优势在于能显示更详细的TCP和连接状态的信息，比netstat更快速更高效
+   - ss：Socket Statistics，用来获取socket统计信息，显示和netstat类似，优势在于能显示更详细的TCP和连接状态的信息，比netstat更快速更高效
    - host
    - dig
      1. 认识：从DNS域名服务器查询主机地址信息
@@ -211,6 +210,14 @@
      1. ssh
         - ssh addr@ip
      1. sz/rz
+1. 参数
+   - 查看
+     1. SYN queue：`/proc/sys/net/ipv4/tcp_max_syn_backlog`
+     1. Accept queue：`/proc/sys/net/core/somaxconn`或/etc/sysctl.conf的`net.core.somaxconn=128`
+     1. 重传SYN+ACK次数：`net.ipv4.tcp_synack_retries`：默认为5，表示重发5次，每次等待30~40秒，即半连接默认时间大约为180秒
+   - 操作
+     1. 查看SYN queue溢出：`netstat -s | grep LISTEN`
+     1. 查看Accept queue溢出：`netstat -s | grep TCPBacklogDrop`
 1. wiki
    - 端口号1024以下是系统保留的，总共65526个
 ### 磁盘
@@ -285,14 +292,16 @@
      1. 杀死僵死进程：`ps -ef | grep defunct | grep -v grep | cut -b8-20 | xargs kill -9`
      1. 杀死所有fpm：`ps -ef | grep php-fpm | awk -F ' ' '{print $2}' | xargs kill -9`
 1. systemctl
-1. 最大文件打开数
-   - 查看
-     1. 查看系统级最大限制：`cat /proc/sys/fs/file-max`
-     1. 查看用户级最大限制：`ulimit -n`
-     1. 查看某个进程已经打开的文件数：`cat /proc/pid/limits|fd`
-   - 修改
-     1. 临时修改：`ulimit -HSn 2048`
-     1. 永久修改：`vi /etc/security/limits.conf`
+1. 参数
+   - 查看内核所能打开的线程数：`cat /proc/sys/kernel/threads-max`
+   - 最大文件打开数
+     1. 查看
+        - 查看系统级最大限制：`cat /proc/sys/fs/file-max`
+        - 查看用户级最大限制：`ulimit -n`
+        - 查看某个进程已经打开的文件数：`cat /proc/pid/limits|fd`
+     1. 修改
+        - 临时修改：`ulimit -HSn 2048`
+        - 永久修改：`vi /etc/security/limits.conf`
 ### 工具
 1. 定时任务
    - crontab：linux原生定时器
@@ -664,8 +673,6 @@
      1. `cat /etc/redhat-release`：查看centos版本
      1. `cat /proc/version`：查看内核版本
      1. `getconf LONG_BIT`：查看centos位数
-   - 性能
-     1. `cat /proc/sys/kernel/threads-max`：查看内核所能打开的线程数
    - 硬件
      1. `cat /proc/cpuinfo`：cpu信息
 1. 环境变量

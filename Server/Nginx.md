@@ -274,6 +274,8 @@
 1. worker_rlimit_nofile
 1. worker_connections
 1. tcp_max_syn_backlog
+   - 太大：php-fpm处理不过来，nginx等待超时断开连接，报504 gateway timeout，同时php-fpm处理完准备write数据给nginx时发现TCP连接断开报Broken pipe
+   - 太小：进不了php-fpm的accept queue，报502 Bad Gateway
 ### 运维
 1. 安装
    - linux
@@ -335,9 +337,6 @@
    - use epoll;                                             # 不同系统不同模型
    - keepalive_timeout 60;
    - gzip on;
-1. backlog：用于存放处于挂起状态连接(已连接但未accept)的队列最大长度，如果满了，客户端会收到连接拒绝。计算方式最好为qps=backlog
-   - 太大：php-fpm处理不过来，nginx等待超时断开连接，报504 gateway timeout，同时php-fpm处理完准备write数据给nginx时发现TCP连接断开报Broken pipe
-   - 太小：进不了php-fpm的accept queue，报502 Bad Gateway
 ### wiki
 1. nginx依赖
    - pcre：Perl Compatible Regular Expressions，是Perl库。nginx的http模块使用pcre来解析正则表达式

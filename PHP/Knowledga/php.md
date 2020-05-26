@@ -508,7 +508,7 @@
         - 请求——创建子进程——处理，即fork-and-execute模式，请求数=cgi子进程数，子进程的反复加载是cgi性能低下的原因，会大量占用cpu和内存
         - 每个web请求都必须重新解析php.ini，重新载入全部扩展，初始化全部数据结构
    - FastCGI
-     1. 理解：类似常驻型cgi，先启一个master，cgi解释器保持在内存中并接受fastcgi的调度，类似线程池的技术特性
+     1. 理解：类似常驻型cgi，先启一个master，cgi解释器保持在内存中并接受fastcgi的调度，类似线程池的技术特性，也是一个协议
      1. 原理
         - web服务器载入fastcgi进程管理器
         - fastcgi自身初始化，启动多个cgi解释器进程等待调用
@@ -523,20 +523,82 @@
    - ISAPI
      1. 理解：微软提供的一套面向Internet服务的API接口，ISAPI的dll被请求激活后常驻内存，不停接受请求。dll和web服务器处于同一个进程中，5.3舍弃
      1. 特点：微软的排他性，只能在windows运行、效率高于CGI、稳定性不好，php出错，IIS或apache也死掉
-1. PHP-FPM：fastcgi Process Manager，fastcgi进程管理器，比spawn-fcgi更优秀，官方收录。fastcgi是一个协议，php-fpm实现了这个协议。v5.3.29自带fpm，之前需要另外加载模块
+1. PHP-FPM：fastcgi Process Manager，fastcgi进程管理器，比spawn-fcgi更优秀，官方收录。php-fpm实现了fastcgi这个协议
    - 特点
      1. 有效控制内存/进程
      1. 支持平滑停止/启动的高级进程管理功能
      1. 发生意外情况的时候能够重新启动并缓存被破坏的opcode
-   - 进程管理的三种方式
-     1. static：静态，固定子进程数
-     1. dynamic：动态，可配置启动数、最大小空闲数、最大数。灵活节省内存，fork过程有性能损耗
-     1. ondemand：按需，可配置最大数、子进程空闲时间后被kill
+   - 工作流程
+     1. 读取php.ini、php-fpm.conf
+     1. 创建master进程，监听9000端口，创建子进程
+        - 子进程管理的三种方式
+          1. static：静态，固定子进程数
+          1. dynamic：动态，可配置启动数、最大/小空闲数、最大数。灵活节省内存，fork过程有性能损耗
+          1. ondemand：按需，可配置最大数、子进程空闲时间后被kill
+     1. 当有连接9000的客户端时，空闲子进程accept，子进程全部忙碌的话，连接会被master放入队列，等待子进程空闲
    - 运维
      1. 杀掉主进程就是重启
      1. 有了pid文件后，可以理解信号：INT/TERM 立刻终止，QUIT 平滑终止，USR1 重新打开日志文件、USR2 平滑重载所有worker进程并重新载入配置和二进制模块
         - 关闭：`pkill php-fpm`
         - 重启：`kill -USR2 'cat /usr/local/php/var/run/php-fpm.pid'`
+   - 配置
+        ```conf
+        // 基础
+        pid = /usr/local/php7/var/run/php7-fpm.pid
+
+        // 请求设置
+        request_terminate_timeout = 600
+        request_slowlog_timeout = 600
+
+        listen = /dev/shm/php7-cgi.sock                         // 也可用ip:端口，socket性能更好(更少数据拷贝和上下文切换)，但需指定用户身份，文件建在哪儿都行，nginx有权限读就可以
+        listen.backlog = 4096                                   // 积压连接的队列长度，太短请求拒绝连接，太长nginx那边超时甚至连接断开，最大为系统的somaxconn
+        listen.owner = nobody
+        listen.group = nobody
+        listen.mode = 0666
+        listen.allowed_clients = 127.0.0.1                      // 设置允许连接fpm的地址，逗号分隔
+
+        pm = dynamic
+        pm.max_children = 144
+        pm.start_servers = 96                                   // 启动时创建数
+        pm.min_spare_servers = 72                               // 闲置时最少数
+        pm.max_spare_servers = 144                              // 闲置时最大数
+        pm.max_requests = 102400                                // 每个子进程最大处理请求数就被回收，可防止内存泄露
+        pm.status_path = /php7fpmstatus
+
+        pm = ondemand
+        pm.max_children = 144
+        pm.process_idle_timeout = 10s                           // 闲置10s后杀掉
+
+        // log
+        log_level = notice                                      // 可选：alert、error、warning、notice、debug
+        slowlog =  /usr/local/php7/var/log/php7-fpm.slow
+        request_slowlog_timeout = 2s                            // 写慢日志最小记录时间
+        error_log = /usr/local/php7/var/log/php7-fpm.log
+        access.format = %R - %u %t "%m %r%Q%q" %s %f %{mili}d %{kilo}M %C%%
+        syslog.facility = daemon                                // 将日志写进系统log
+        syslog.ident = php-fpm                                  // 系统日志标示，多个fpm下用于区分是哪个fpm
+
+        // 以什么身份运行
+        user = nobody
+        group = nobody
+
+        // 进程设置
+        process_control_timeout = 10                            // 子进程接受主进程复用信号的超时时间
+        process.max = 128                                       // 动态管理子进程时，最大子进程数
+        process.priority = -19                                  // 设置子进程的优先级，以root用户启动有效，不设置继承主进程的
+
+        // 重启设置，在interval时间内，出现SIGSEGV或SIGBUS的子进程数超过threshold数，fpm优雅重启
+        emergency_restart_threshold = 10
+        emergency_restart_interval = 10s                        // 0表示关闭，单位：s秒,m分,h时,d天
+
+        // 其他
+        rlimit_files = 1024                                     // 设置master进程最多能打开的文件，默认为系统的值
+        rlimit_core = 0                                         // 最多的核心使用数，默认为系统的值
+        events.mechanism = epoll                                // 事件处理机制，默认自动检测，可选值：select，poll，epoll(linux>=2.5.44)，kqueue，/dev/poll，port
+        systemd_interval = 10s                                  // 当fpm被设置为系统服务时，多久向服务器报告一次状态，单位有s,m,h。
+        daemonize = yes                                         // 设置成no用于调试bug，默认为yes
+        include=/usr/local/php7/etc/php-fpm.d/*.conf
+        ```
 1. TSRM
    - 理解：Thread Safe Resource Manager，线程安全资源管理器，保证在单线程和多线程模型下的线程安全，和代码一致性
 1. ts/nts
@@ -569,6 +631,7 @@
      1. Zend Engine 2.0
      1. 完全实现面向对象
      1. PDO
+     1. v5.3.29开始自带fpm，之前需要另外加载模块
    - 5.3
      1. 增加命名空间
    - 5.4
