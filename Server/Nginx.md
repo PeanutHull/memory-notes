@@ -157,6 +157,102 @@
         } 
     } 
     ```
+1. 线上业务机配置
+    ```lua
+    user  nobody nobody;
+    worker_processes auto;
+    error_log  /home/nginx/logs/error.log  error;
+    pid        /home/nginx/logs/nginx.pid;
+
+    worker_rlimit_nofile 51200;
+
+    events {
+        use epoll;
+        worker_connections 51200;
+    }
+
+    http {
+        include       mime.types;
+        default_type  application/octet-stream;
+
+        server_names_hash_bucket_size 128;
+        client_header_buffer_size 4k;
+        large_client_header_buffers 4 32k;
+        client_max_body_size 500m;
+
+        sendfile on;
+        tcp_nopush     on;
+
+        server_tag xes-app/bj-sjhl-api-jiaoyan-online-94-32;
+
+        keepalive_timeout 75;
+
+        tcp_nodelay on;
+
+        fastcgi_connect_timeout 300;
+        fastcgi_send_timeout 300;
+        fastcgi_read_timeout 300;
+        fastcgi_buffer_size 256k;
+        fastcgi_buffers 4 256k;
+        fastcgi_busy_buffers_size 512k;
+        fastcgi_temp_file_write_size 512k;
+
+        client_body_buffer_size 256k;
+        send_timeout 3m;
+        proxy_ignore_client_abort on;
+
+        gzip on;
+        gzip_min_length  1k;
+        gzip_buffers     4 16k;
+        gzip_http_version 1.0;
+        gzip_comp_level 2;
+        gzip_types text/plain text/css text/javascript application/json application/javascript application/x-javascript application/xml application/x-httpd-php image/jpeg image/gif image/png font/ttf font/otf image/svg+xml;
+        gzip_vary on;
+
+        server {
+                listen  80;
+                server_name 10.20.94.32;
+
+                location /nginx_status {
+                        stub_status on;
+                        access_log   off;
+                }
+                location ~ ^/(php56fpmstatus)$ {
+                        fastcgi_index index.php;
+                        fastcgi_pass  unix:/dev/shm/php56-cgi.sock;
+                        include fastcgi.conf;
+                }
+
+                location ~ ^/(php7fpmstatus)$ {
+                        fastcgi_index index.php;
+                        fastcgi_pass  unix:/dev/shm/php7-cgi.sock;
+                        include fastcgi.conf;
+                }
+        }
+
+        log_format main '{ "@timestamp": "$time_iso8601", '
+                '"hostname": "$hostname", '
+                '"server_name": "$server_name", '
+                '"xes-app": "$upstream_http_server", '
+                '"remote_addr": "$remote_addr", '
+                '"remote_user": "$remote_user", '
+                '"body_bytes_sent": $body_bytes_sent, '
+                '"request_time": $request_time, '
+                '"upstream_response_time": "$upstream_response_time", '
+                '"status": $status, '
+                '"upstream_status": "$upstream_status", '
+                '"connection_requests": $connection_requests, '
+                '"request": "$request", '
+                '"request_method": "$request_method", '
+               # '"request_body": "$request_body", '
+                '"http_referrer": "$http_referer", '
+                '"http_cookie": "$http_cookie", '
+                '"http_x_request_id": "$http_x_request_id", '
+                '"http_user_agent": "$http_user_agent" }';
+
+        include vhost/*.conf;
+    }
+    ```
 1. 其他配置文件
    - mime.types：文件扩展名与文件类型映射表，找不到使用默认default_type
    - fastcgi_params/uwsgi_params/scgi_params：使用对应cgi时，向cgi传递的变量
@@ -188,11 +284,12 @@
    - 内置策略：nginx的proxy
     ```lua
     http{
-        upstream somename {
+        upstream host {
             ip_hash;                                        # 加上几位ipHash策略，去掉为加权
             server 0.0.0.1:80 weight=3;
             server 0.0.0.2:80 weight=2;
             server 0.0.0.3:80 weight=3;
+            keepalive_timeout 5s;                           # nginx主动发起关闭tcp通道的时间，防止上游关闭连接的瞬间，下游来请求产生502
         }
         server {
             location / {

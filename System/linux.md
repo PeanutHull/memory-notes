@@ -54,6 +54,8 @@
      1. `cat -n file | grep ''| more`：分页查看
      1. `cat file > xxx.txt`：将显示结果保存到文件
      1. `cat -n file | tail -n +92 | head -n 20`：92行之后的查询结果中显示前20
+   - tac：反向查看文件内容
+     1. -s：到某一字符串停止
    - head/tail：输出文件头/尾
      1. -n：行数
      1. -f：tail不停显示
@@ -130,7 +132,7 @@
    - 查看
      1. /etc/passwd
      1. /etc/group
-     1. who、w：显示当前用户，w更加详细
+     1. who、w：显示当前用户，w更加详细(显示当前所有已登录的用户)
    - 管理
      1. id
      1. useradd/usermod
@@ -690,7 +692,8 @@
      1. 标准错误输出文件stderr 2
    - 命令
      1. echo：输出，-e 支持反斜线控制的字符转换，\a 警告音 \n 换行键 \r 回车键 \t 制表符，Tan键 \v 垂直制表符
-     1. print 默认带换行符，printf 没有
+     1. print：默认带换行符，printf 没有
+     1. write/wall：给同一台机器正在登录的其他用户发消息，历史上最古老的即时通信，wall给所有人发
 1. 命令
    - 执行
      1. sudo、su、setfacl
@@ -701,6 +704,7 @@
      1. > >>：输出
         - `more file1 file2 file3 > file2`：清空file2
         - `cat file1 1 >> file2`：追加，1标准输出流
+        - `> file3`：清空文件
         - demo
             ```shell
             cat > ~/xjj <<EOF
@@ -727,6 +731,36 @@
    - wiki
      1. man：查看命令手册。帮助一般为：-h/-help/--help
      1. 输出语句中有空格需加双引号
+1. 日志
+   - 认识：一般保存在/var/log目录下，linux日志守护进程为syslog，希望生成日志的程序都可以向syslog发送信息。发行版的日志系统都略有差异
+     1. 类别
+        - kern：系统内核
+        - local0.local7：由自定义程序使用
+        - auth/authpriv：用户认证日志，如login/su命令
+        - ftp：ftp服务
+        - cron：定时任务
+        - daemon：守护进程
+        - console：系统控制台
+        - lpr：打印机
+        - mail：邮件
+        - mark：产生时间戳，系统每隔一段时间向日志文件中输出当前时间，每行的格式类似于 May 26 11:17:09 rs2 -- MARK --，可以由此推断系统发生故障的大概时间
+        - news：网络新闻传输协议(nntp)
+        - ntp：网络时间协议(ntp)
+        - user：用户进程
+     1. 优先级：emerg、alert、crit、err、warning、notice、info、debug
+     1. 常用日志文件
+        - /var/log/boot.log：系统开机自检
+        - /var/log/syslog：只记录警告信息，常常是系统出问题的信息
+        - /var/log/messages ：常见的系统和服务
+        - /var/log/secure ：Linux系统安全日志，记录用户和工作组变坏情况、用户登陆认证情况
+        - /var/log/btmp ：记录Linux登陆失败的用户、时间以及远程IP地址
+        - /var/log/lastlog ：最后一次用户成功登陆的时间、ip等信息
+        - /var/log/wtmp：该日志文件永久记录每个用户登录、注销及系统的启动、停机的事件，使用last命令查看
+        - /var/run/utmp：该日志文件记录有关当前登录的每个用户的信息。如 who、w、users、finger等就需要访问这个文件
+   - 命令
+     1. journalctl：查看内存日志
+     1. last：显示所有登入系统的用户信息
+     1. lastlog：所有用户最后一次登录的时间信息
 1. 开关机
    - chkconfig：开机启动项
      1. --list
@@ -756,7 +790,11 @@
      1. [,]：只匹配[]内字符，,表示多字符序列，-表示字符序列范围
      1. \{n,m\}：字符重复次数的范围
      1. \：屏蔽一个元字符的特殊含义
-1. date -s：设置系统时间
+1. 时间
+   - date：查看时间
+     1. -s：设置系统时间
+   - timedatectl：查看时间详细信息，时区等
+   - chronyc：centos7.2开始用chrony同步时间
 ### 应用
 1. find
    - 全局查找文件：`find / -name "nginx.conf"`
@@ -823,3 +861,7 @@
    - n       显示行号
    - r/-R    一般没区别
    - 字符串参数最好采用是双引号括，一是以防被误解为shell命令，二是可以用来查找多个单词组成的字符串
+1. linux多网卡的7种bond模式原理：bond0~6。通过多张网卡绑定为一个逻辑网卡，实现本地网卡的冗余，带宽扩容和负载均衡
+   - mode=0：平衡负载模式，有自动备援，但需要”Switch”支援及设定
+   - mode=1：自动备援模式，其中一条线若断线，其他线路将会自动备援
+   - mode=6：平衡负载模式，有自动备援，不必”Switch”支援及设定
