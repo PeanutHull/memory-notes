@@ -345,6 +345,29 @@
         }
     }
     ```
+1. 改为长连接
+    ```lua
+    server {
+        location /api/wx1matrix/ {
+            rewrite ^.+api/wx1matrix/?(.*)$ /$1 break;
+            proxy_set_header Host wx1matrix.xueersi.com;
+
+            // 改为长连接用这俩
+            proxy_http_version 1.1;
+            proxy_set_header Connection "";
+
+            proxy_redirect off;
+            proxy_pass http://images;
+        }
+    }
+    upstream images {
+        server 10.20.27.13:80;
+        server 10.20.27.14:80;
+        
+        // 改为长连接同时需要搭配这个
+        keepalive 100;
+    }
+    ```
 1. 网关：应用服务管理、流量调度策略、业务监控告警，扩容铺机器就可以
    - 权限校验
    - vhost和upstream管理

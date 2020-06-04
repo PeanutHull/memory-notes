@@ -408,6 +408,7 @@
 1. 使用
    - 避免产生hot-key，导致主库节点成为系统的短板
    - 避免产生big-key，导致网卡撑爆、慢查询等
+   - zset服务器消耗最高，要排序还要去重，尽量少用
 ### 架构
 1. TwemProxy
    - 认识：twitter开源的redis/memcache的快速、轻量级的单线程代理服务器，可对多台redis/memcache进行管理和分配。就是分片、分布式方案
@@ -426,6 +427,8 @@
      1. 相对于官方较新的Redis Cluster架构，容量伸缩较麻烦
      1. 支持memcached ASCII协议和redis协议
    - 如何一份数据复制两份发到两个实例？
+   - 运维
+     1. 同时使用tw和pipeline时，如果对pipeline的执行顺序有要求，那么要设置tw对redis的server_connections数量为1，否则会导致顺序错乱。因为tw用epoll，每个连接有独立的队列，每个连接用完就会扔到队尾准备重复利用，就势必导致两个命令在两个不同的连接上进行，到了redis那里就有可能造成顺序错乱，如zadd和expire一起用
 1. Codis
    - 没有pipeline
 1. Pika

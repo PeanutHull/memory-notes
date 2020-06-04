@@ -124,6 +124,9 @@
    - cut：截取显示
      1. -c n-m：截取的字符范围，单位字符
    - diff：查看文件差异
+   - md5sum：查看校验和，32位小写
+     1. `md5sum a.sql`
+     1. `echo -n "hello world"|md5sum`
 1. wiki
    - .开头的文件和目录都是隐藏的
    - 目录为蓝色，-l参数下-为文件、d为目录、l为符号链接
@@ -176,6 +179,7 @@
    - dig
      1. 认识：从DNS域名服务器查询主机地址信息
    - telnet ip port：检测端口是否打开
+   - openssl：查看网站证书链`openssl s_client -connect github.com:443 -showcerts`
 1. 配置
    - /etc/sysconfig/network-scripts/ifcfg-eth0
    - hostname

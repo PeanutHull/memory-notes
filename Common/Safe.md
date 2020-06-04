@@ -198,4 +198,4 @@
      1. CFB：输出反馈
 1. RSA
 1. SHA：单向加密，SHA-256、SHA-1
-1. MD5：单向加密
+1. MD5：Message-Digest Algorithm 5，报文摘要算法，单向加密
