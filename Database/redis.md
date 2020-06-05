@@ -294,6 +294,13 @@
           1. vm-enabled：是否启用虚拟内存机制
           1. vm-swap-file：虚拟内存文件路径，多Redis实例不可共享
           1. vm-max-memory 0/vm-page-size 32/vm-pages 134217728/vm-max-threads 4
+1. 性能监控
+   - qps
+   - 客户端数
+   - cpu
+   - 内存
+   - 流量入和出
+1. 常见问题：连接数过多、慢查询、key或value较大、数据压缩处理、持久化写磁盘、短连接、长连接
 1. 性能测试
    - redis-benchmark [option] [option value]
      1. -h/-p：地址端口

@@ -136,35 +136,137 @@
      1. CDN：：内容分发网络，部署大量网络节点通过服务器缓存加速，让用户就近更快访问网络。指标有带宽、命中率、请求数
 1. tumx：多个界面，断网保存用户操作的界面
 1. 数据恢复工具：ext3grep
-### 优化
-1. 查看系统性能
+### 性能监控
+1. 工具
    - ps
-   - top：`man top`
-     1. shift+p：占用cpu最高的进程
-     1. top -Hp 进程号：占用CPU最高的线程
-   - free：-m
-   - vmstat：3 3秒更新一次
-   - sar：System Activity Reporter 系统活动情况报告，最全面的系统性能分析工具之一，可以看文件读写、系统调用情况、磁盘I/O、CPU效率、内存使用、进程活动及IPC等
-     1. -A：所有报告的总和
+     1. %CPU：cpu使用占比
+     1. %MEM：内存使用占比
+     1. VSZ：占用虚拟内存大小
+     1. RSS：占用内存大小
+     1. STAT：进程状态
+     1. TTY：命令所运行的位置(终端)
+     1. START：进程开始时间
+     1. TIME：占用CPU的时间
+     1. COMMAND：所执行的命令
+   - top
+     1. 功能
+        - 基础：系统时间，系统运行时间，登录用户数，平均负载
+          1. 平均负载：1、5、15分钟的指标，每5秒检查活跃进程数，特定算法算出，除以逻辑cpu数量高于5表示高负荷运转
+        - 进程数：总数、运行数、休眠数、停止数
+        - cpu使用率
+        - 内存使用率
+          1. total
+          1. free：内核还未纳入控制的大小，纳入内核管理的内存不一定都在使用中，还包括过去使用过的现在可以被重复利用的内存，内核并不把这些可被重新使用的内存交还到free中去，因此linux上free内存会越来越少，但不用担心
+          1. used：内核使用的内存
+          1. buff/cache：缓存的内存大小
+        - 内存交换率：swap
+          1. total
+          1. free
+          1. used
+          1. avail Mem
+     1. 参数解读
+        - USER：进程所有者
+        - PR：进程优先级
+        - NI：nice值
+        - VIRT：virtual memory usage，指进程使用的虚拟内存总量，单位kb，VIRT = SWAP + RES
+          1. 进程“需要的”虚拟内存大小，包括进程使用的库、代码、数据等
+          1. 假如进程申请100m的内存，但实际只使用了10m，那么它会增长100m，而不是实际的使用量
+        - RES：resident memory usage 指进程使用的、未被换出的内存大小，RES = CODE + DATA
+          1. 进程当前使用的内存大小，但不包括swap out
+          1. 包含其他进程的共享
+          1. 如果申请100m的内存，实际使用10m，它只增长10m，与VIRT相反
+          1. 关于库占用内存的情况，它只统计加载的库文件所占内存大小
+        - SHR：shared memory 共享内存。计算某个进程所占的物理内存大小公式：RES – SHR
+        - S：进程状态
+        - %MEM：进程使用的物理内存百分比
+        - TIME+：进程使用的CPU时间总计
+     1. 使用
+        - `shift+p`：占用cpu最高的进程
+        - `top -Hp pid`：占用CPU最高的线程
+        - `x`：高亮排序的列
+        - `shift >/shift <`：左右切换高亮排序的列
 
-     1. -P：报告每个CPU的状态
-     1. –u：输出cpu使用情况和统计信息
+   - free：分mem和swap两种，free和top中的一致
+   - vmstat
+     1. r：run queue，可运行队列的线程数，这些线程都是可运行状态，只不过CPU暂时不可用
+     1. b：被blocked的进程数，正在等待IO请求
 
-     1. -R：显示内存状态
-     1. -B：显示换页状态
-     1. -r：报告内存利用率的统计信息
-     1. -w：显示交换分区的状态
-
-     1. -b：显示I/O和传递速率的统计信息
-     1. -d：输出每一块磁盘的使用信息
-     
-     1. -x：显示给定进程的装
-
-     1. –v：显示索引节点、文件和其他内核表的状态
-     1. -e：设置显示报告的结束时间
-     1. -f：从制定的文件读取报告
-     1. -i：设置状态信息刷新的间隔时间
-   - mpstat
+   - sar -d 2 3
+     1. DEV
+     1. tps
+     1. rq
+     1. qu
+   - iotop
+     1. read/write_bytes/s
+     1. TID
+     1. PRIO
+     1. DISK READ/WRITE
+     1. SWAPIN
+     1. IO>
+   - iostat：cpu信息、读写速率、读写字节数大小
+1. 指标
+   - cpu
+     1. 缩写
+        - id：CPU完全空闲百分比，`idle`
+        - us：用户空间占用CPU百分比，`user space`
+        - sy：内核空间和中断占用CPU百分比，`system`
+        - wa：io等待占比，`io wait`
+        - cs：每秒做上下文切换的数，`context switch`
+        - hi：硬中断占比，`hardware interrupts`
+        - si：软中断占比，`software interrupts`
+        - in：每秒被中断数，`interrupts`
+        - ni：nice值，改变过优先级的进程占比，负值表示高优先级，正值表示低优先级
+        - st：被Hypervisor偷去给其它虚拟机使用的CPU时间占比，steal time
+     1. 认识：如sy高us低，以及高cs，说明应用程序进行了大量的系统调用
+        - CPU利用率
+          1. User Time <= 70%
+          1. System Time <= 35%
+          1. User Time + System Time <= 70%
+        - 上下文切换：与CPU利用率相关联，如果CPU利用率状态良好，大量的上下文切换可接受
+        - 可运行队列：每个处理器不超过3个线程
+   - 内存
+     1. 指标
+        - memory
+          1. total
+          1. used
+          1. free：可用/自由物理内存大小，单位kb
+          1. buff：物理内存用来缓存读写操作的大小，做磁盘缓存
+          1. cache：物理内存用来缓存进程地址空间的大小，做文件缓存区
+        - swap
+          1. swpd：已使用的swap空间大小
+          1. si：swap in，到内存
+          1. so：swap out，从内存出
+     1. 认识
+        - 留30%的内存
+        - swap大小越少内存越够，如果swap的used不断变化，说明内存不够用，cpu在频繁进行内存和swap的数据交换
+        - swap操作可导致io性能下降
+   - 硬盘：busy-percent、msec-weighted-total(io完成时间和积压)
+     1. 指标
+        - read/write_bytes：大小
+        - read/write-ms&num：速率
+        - await：每次io操作的平均等待时间，单位ms
+        - svctm：每次io操作的平均服务时间，单位ms
+        - %util：用于io操作的每秒时间占比，
+        - free-mount：剩余空间
+        - inodes-free：inode空余
+     1. 认识
+        - 和svctm接近则性能很好，高的话就io等待了呗
+        - iowait % < 20%
+        - 如果%util接近100%，则已满负荷，越高负荷越重
+        - 提高性能可以提高命中率，一个方法为增大文件缓存区面积，缓存区越大预存的页面就越多，命中率也越高。内核希望尽可能产生次缺页中断（从文件缓存区读）并避免主缺页中断（从硬盘读），随着次缺页中断的增多文件缓存区也越大，直到系统只有少量可用物理内存的时候linux才开始释放一些不用的页
+   - 网卡：received、transmitted、drop、time-wait数量、reqTime、5xx次数、out/in/dropped_bytes、out/in/dropped_packets、abort-ontimeout(达到最大重试时间/次数的次数)、time-outs(超时重传时间)
+   - 进程：fpm active processes
+     1. 进程状态
+        - R：正在执行中，run
+        - S：静止状态，sleep
+        - T：暂停执行，traced
+        - D：无法中断的休眠状态(通常io等待的进程)
+        - Z：不存在但暂时无法消除，僵尸进程
+        - <：高优先序的行程
+        - N：低优先序的行程
+        - W：没有足够的记忆体分页可分配
+        - L：有记忆体分页分配并锁在记忆体内 (实时系统或I/O)
+### 优化
 1. 问题定位
    - strace：跟踪系统调用的执行
    - tcpdump
@@ -189,8 +291,8 @@
           1. search
           1. install/update/remove
           1. list/info installed/updates
-        - 查看安装的服务：`rpm -qa | grep bind`
-        - 查看安装的位置：`rpm -ql bind`
+        - 查看安装的服务：`rpm -qa | grep xx`
+        - 查看安装的位置：`rpm -ql xx`
         - 配置yum源：配置分两部分，全局配置项为/etc/yum.conf，定义每个源/服务器的具体配置在/etc/yum.repo.d的rep文件
    - Debian
      1. deb/dpkg：软件包名称，比rpm晚，`dpkg -l`

@@ -412,6 +412,7 @@
           1. --database DB_name
           1. --no-defaults 
           1. --start/stop-datetime、--start/stop-position
+1. 单表不能超过20G
 1. 监控
    - 性能测试：数据多才有参考价值，数据总量超过内存总量，如几百条数据第一条命令下去就全部加载到内存了，没有参考意义
    - 性能：连接数、qps
@@ -420,6 +421,70 @@
      1. `show variables like '%connect%';`：查看连接的配置
    - 硬件：主频高处理快高吞吐低时延，L1/2/3的cache大速度快，内存大磁盘读写少TPS高，固态快机械配阵列卡，网卡好低时延，文件系统用xfs/ext4不用ext3
      1. 更大内存、更快磁盘：比业务服务器要求高
+   - 指标
+     1. qps：select、delete、insert、update，物理机qps30000，tps10000，虚拟机qps5000，tps1000
+     1. sort
+        - sort_range：使用范围完成的排序数
+        - sort_rows：排序的行数，sort_merge_passes：排序算法必须执行的合并传递的数量。 如果此值很大，则应考虑增加sort_buffer_size系统变量的值。
+        - sort_scan：通过扫描表格完成的排序数量
+     1. thread：单用户2000，单实例5000
+        - conneted
+        - cached
+        - created
+        - running
+     1. threadpool_used_percent：连接数占比
+     1. seconds_behind_master：主从延迟
+     1. slave_status：slave_io_running，从库IO线程状态
+     1. innodb_rows：每秒增删改查的行数
+     1. innodb_row_lock
+        - innodb_row_lock_waits：等待行锁的总次数
+        - innodb_row_lock_time：等待行锁的总时间
+     1. mysql_locks
+        - table_locks_immediate：申请时立刻获得表锁次数
+        - table_locks_waited：申请表锁时等待的次数
+     1. mysql_handler
+        - Handler_commit：内部提交语句数
+        - Handler_delete：请求从表中删除行的次数
+        - Handler_read_prev：按照键顺序读取一行的请求数。该方法主要用于优化Order By DESC
+        - Handler_read_rnd_next：在数据文件中读下一行的请求数，如果你正在进行大量的表扫描，该值较高。同城说明你的表索引不正确或写入的查询没有利用索引。
+        - Handler_read_last：根据键读最后一行的请求数
+        - Handler_read_first：索引中第一条被读的次数。如果较高，建议服务器正执大量全索引扫描。例如 SELECT col1 From foo 假定col1有索引
+        - Handler_read_next：按照键顺序读取下一行的请求数。如果你用范围约束或如果执行搜索扫描来查询索引列，该值增加。
+        - Handler_update：请求更新表中一行的次数
+        - Handler_read_rnd：根据固定位置读一行的请求数，如果你正执行大量查询并需要对结果进行排序该值较高。你可能使用了大量需要MySQL扫描整个表的查询或你的连接没有正确使用索引。
+        - Handler_write：请求向表中插入一行的次数
+     1. innodb_pages 
+        - innodb_pages_created：buffer pool创建页的数
+        - innodb_pages_read：从buffer pool中读取的页数
+        - innodb_pages_written：写buffer pool的页数
+     1. innodb_bytes
+        - bytes_sent：发送给所有客户端的字节数
+        - bytes_received：从所有客户端接收的字节数
+     1. innodb_buffer_pool_bytes
+        - buffer_pool_bytes_data：buffer pool中数据页的大小
+        - buffer_pool_bytes_dirty：buffer pool中脏页的大小
+     1. innodb_buffer_pool_pages
+        - buffer_pool_pages_misc：用于存储行锁，自适应哈希索引等信息的管理层的页数
+        - buffer_pool_pages_free：buffer pool中空闲的页书目
+        - buffer_pool_pages_made_young：标记为young的页数目
+        - buffer_pool_pages_old：在buffer pool LRU old段的页数
+        - buffer_pool_pages_flushed：请求flush pages的次数
+        - buffer_pool_pages_total：buffer pool包含的总页数
+        - buffer_pool_pages_data：buffer pool包含数据的页数(包括dirty和clean页)
+        - buffer_pool_pages_made_not_young：进入buffer pool后未被标记为young的页数
+        - buffer_pool_pages_dirty：buffer pool中脏页数目
+     1. innodb_data
+        - data_written：innodb写入的总数据量，单位字节
+        - data_writes：innodb数据写入的总次数
+        - data_fsyncs：innodb进行fsync的次数
+        - data_read：innodb读取的总数据量
+        - data_reads：innodb数据读取的总次数
+     1. mysql_innodb_log
+        - innodb_os_log_fsyncs：调用fsync() writes写redo log的次数
+        - innodb_log_waits：log buffer 空闲空间不足，必须等待其被写入所造成的等待数
+        - innodb_log_write_requests：写redo log的请求次数
+        - innodb_log_writes：redo log的物理写次数
+        - innodb_os_log_written：写入redo log的bytes
 1. 慢查询：记录超过一定时间的查询语句
     ```
     slow_query_log = ON

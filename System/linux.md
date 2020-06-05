@@ -160,18 +160,17 @@
      1. setfacl
      1. chgrp
      1. su/sudo
-### 内存
-1. free
-   - -m 以兆显示内存状态
 ### 网络
 1. 查看
    - ping
    - traceroute：显示网络数据包传输到指定主机的路径信息，追踪数据传输路由状况
    - ifconfig：显示当前网络接口状态、配置网络
      1. -a：inet addr，ip地址
-   - nethogs: 将进程按网络流量列表显示
+   - nethogs：将进程按网络流量列表显示
+   - iftop：网络带宽监控
    - lsof：list open files，列出打开文件。linux环境下任何事物都以文件的形式存在
      1. i:80：查看端口号，root用户查看
+   - tcpdump：网络数据包分析器
    - netstat：显示网络连接/运行端口/路由表等
      1. anpt：查看端口占用，`netstat anpt | grep 80`
    - ss：Socket Statistics，用来获取socket统计信息，显示和netstat类似，优势在于能显示更详细的TCP和连接状态的信息，比netstat更快速更高效
@@ -238,6 +237,7 @@
 1. parted
 1. lvreduce
 1. iotop: 将进程按磁盘写次数排序，并且显示程序写磁盘的次数和频率
+1. iostat
 1. 文件系统
    - 文件树：一根文件数，根目录为/
    - 分区：sda1、sda2
@@ -248,6 +248,9 @@
         - mkswap：格式化
    - 挂载点：把sda1挂载到根目录/上，则所有数据都在sda1分区。当sda2挂载到/home，则数据到了sda2的分区下
 1. linux规定，硬盘用sda/sdb/sdc依次命名，一块硬盘只能存在4个主分区，为sda1/sda2/sda3/sda4，逻辑分区不限制数量，从5开始
+### 内存
+1. free：-m 以兆显示内存状态
+1. vmstat：虚拟内存统计，`vmstat 3` 3秒更新一次
 ### 进程
 1. 运行
    - 后台运行：xx &
@@ -266,22 +269,14 @@
         - subshell：实质为子进程执行方式，通常为fork
         - `trap "" SIGHUP SIGINT | trap SIGHUP SIGINT | trap "" 1 2 | trap : 1 2`
 1. 查看
+   - ps：显示进程状态
+     1. `ps -aux --sort -pcpu,+pmem | less`，所有进程并且详细模式，按cpu升序、内存降序。x显示没有控制终端的进程。less可换成`head -n 10`显示前10个
+     1. `ps -f -C php-fpm`：查看某进程详细信息
+     1. `ps -L pid`：查看某进程的线程
+   - pstree：树状显示所有进程，`pstree | grep php`
    - which：查看程序安装位置
-   - ps：显示系统运行状态
-     1. aux：pid，process ID，进程号
-   - top：查看活跃进程
-     1. VIRT：virtual memory usage 虚拟内存
-        - 进程“需要的”虚拟内存大小，包括进程使用的库、代码、数据等
-        - 假如进程申请100m的内存，但实际只使用了10m，那么它会增长100m，而不是实际的使用量
-     1. RES：resident memory usage 常驻内存
-        - 进程当前使用的内存大小，但不包括swap out
-        - 包含其他进程的共享
-        - 如果申请100m的内存，实际使用10m，它只增长10m，与VIRT相反
-        - 关于库占用内存的情况，它只统计加载的库文件所占内存大小
-     1. SHR：shared memory 共享内存
-        - 计算某个进程所占的物理内存大小公式：RES – SHR
-        - pstree
-        - pidof：打印pid
+   - pidof：打印pid
+   - jstack：查看进程
    - 查看/设置允许打开的最大文件句柄数：`ulimit -n xx`，重启或用户退出失效
 1. 杀死
    - 分类
@@ -589,7 +584,7 @@
      1. 在命令行输入top，然后shift+p查看占用CPU最高的进程，记下进程号
      1. 在命令行输入top -Hp 进程号，查看占用CPU最高的线程
      1. 使用printf 0x%x 线程号，得到其16进制线程号
-     1. 使用jstack 进程号得到java执行栈，然后grep16进制找到相应的信息
+     1. 使用jstack pid得到java执行栈，然后grep16进制找到相应的信息
 1. demo
    - 判断是否是root用户
         ```bash
@@ -681,14 +676,45 @@
      1. `getconf LONG_BIT`：查看centos位数
    - 硬件
      1. `cat /proc/cpuinfo`：cpu信息
+   - 硬盘
+     1. `cat /proc/meminfo`：查看物理内存和文件缓存情况
+   - 状态
+     1. mpstat
+     1. top/htop：查看系统性能，htop高亮，3秒刷新一次
+     1. sar：System Activity Reporter 系统活动情况报告，最全面的系统性能分析工具之一，可以看文件读写、系统调用情况、磁盘I/O、CPU效率、内存使用、进程活动及IPC等
+        - -A：所有报告的总和
+
+        - -P：报告每个CPU的状态
+        - –u：输出cpu使用情况和统计信息
+
+        - -R：显示内存状态
+        - -B：显示换页状态
+        - -r：报告内存利用率的统计信息
+        - -w：显示交换分区的状态
+
+        - -b：显示I/O和传递速率的统计信息
+        - -d：输出每一块磁盘的使用信息
+     
+        - -x：显示给定进程的装
+
+        - –v：显示索引节点、文件和其他内核表的状态
+        - -e：设置显示报告的结束时间
+        - -f：从制定的文件读取报告
+        - -i：设置状态信息刷新的间隔时间
 1. 环境变量
    - 认识：系统预定义的参数。window也有。作用：在程序里可以获得环境变量的值，根据值决定如何操作，运行，找路径，文件夹等等
+     1. SHELL：当前用户使用的Shell
+     1. HOSTNAME：主机名
    - 组成
-     1. /etc/profile：全局
-     1. .bash_profile：个人
+     1. `/etc/bashrc或/etc/profile或vim /etc/environment`：全局
+     1. `~/.bashrc或~/.bash_profile或~/.bash_login`：个人
    - 操作
-     1. export PATH=：书写格式，也可查看环境变量
-     1. source .bash_profile：使生效
+     1. `set`
+     1. `env`：显示当前用户所有变量
+     1. `export`：显示系统定义的所有环境变量
+     1. `echo $SHELL`：查看
+     1. `export PATH=xx:$PATH`：临时修改PATH，用:连接，用$PATH防止覆盖。仅对当前用户立即生效，关闭窗口后无效，
+     1. `source .bash_profile`：使生效，修改后要么重新登录要么用source
 1. 输入输出
    - 分类
      1. 标准输入文件stdin 0
@@ -703,6 +729,9 @@
      1. sudo、su、setfacl
      1. command1 && command2，可以一次执行两个命令，前一个报错则停止运行
      1. echo &?：获取上一条命令的错误码
+     1. watch：可以重复执行命令，默认2秒间隔
+        - -n：执行间隔时间
+        - -d：高亮显示变化的区域
    - 重定向
      1. |：管道，前面输出作为后面输入。`cat file.txt | uniq | grep txt | sort`
      1. > >>：输出
@@ -733,7 +762,7 @@
         - `ls /dev/sda[12345]`：出现/dev/sda1  /dev/sda2  /dev/sda3
         - `ls [0-9]?.conf`：以数字开头，随后一个是任意字符，接着以.conf结尾的所有文
    - wiki
-     1. man：查看命令手册。帮助一般为：-h/-help/--help
+     1. man/info：查看命令手册。帮助一般为：-h/-help/--help
      1. 输出语句中有空格需加双引号
 1. 日志
    - 认识：一般保存在/var/log目录下，linux日志守护进程为syslog，希望生成日志的程序都可以向syslog发送信息。发行版的日志系统都略有差异
@@ -865,6 +894,10 @@
    - n       显示行号
    - r/-R    一般没区别
    - 字符串参数最好采用是双引号括，一是以防被误解为shell命令，二是可以用来查找多个单词组成的字符串
+1. 命令的语法风格
+   - UNIX 风格：选项可组合，选项前必有“-”连字符
+   - BSD 风格：选项可组合，选项前不能有“-”连字符
+   - GNU 风格：选项前有两个“-”连字符
 1. linux多网卡的7种bond模式原理：bond0~6。通过多张网卡绑定为一个逻辑网卡，实现本地网卡的冗余，带宽扩容和负载均衡
    - mode=0：平衡负载模式，有自动备援，但需要”Switch”支援及设定
    - mode=1：自动备援模式，其中一条线若断线，其他线路将会自动备援
