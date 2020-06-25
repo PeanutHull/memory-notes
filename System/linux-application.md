@@ -59,7 +59,7 @@
             supervisord -c supervisor.conf                                                       // 通过配置文件启动supervisor
             supervisorctl -c supervisor.conf status/reload/start/stop [all]|[x|zzg_worker]       // 查看状态/重新载入配置文件/启动停止所有一个
             ```
-        - 其他配置
+        - 实际应用配置
             ```conf
             [program:zzg_worker]
             process_name=%(program_name)s_%(process_num)02d
@@ -70,6 +70,20 @@
             numprocs=1
             redirect_stderr=true
             stdout_logfile=/tmp/zzg_worker.log
+            ```
+        - xes的tw配置
+            ```conf
+            [program:confd-tw]
+            command=/usr/local/bin/confd -config-file /home/www/confd-tw/etc/confd-tw.toml
+            autostar=true
+            autorestart=true
+            redirect_stderr=true
+            stdout_logfile =/dev/stdout
+            stderr_logfile=/dev/stdout
+            loglevel=info
+            startretries=3000
+            stopwaitsecs=300
+            startsecs=10
             ```
      1. Systemd
         - 背景：linux采用init进程启动服务，如`/etc/init.d/apache2 start`或`service apache2 start`，缺点为只能串行启动，只启动脚本，不管其他事情，如session信号通知
@@ -85,6 +99,18 @@
      1. 使用：编写.service文件，通过设置参数决定某一命令的守护
    - 命令(nohup/Screen/Tmux)、Node工具(forever/nodemon/pm2)
    - 写锁(让工作进程和守护进程争抢写锁，当守护获得写锁时重启工作进程并放弃写锁))
+1. confd
+   - xes配置文件
+    ```conf
+    backend = "etcdv3"
+    confdir = "/home/www/confd-tw"
+    log-level = "debug"
+    watch = true # watch 模式 实时更新 设置为interval = xxx 时为轮询模式，定时查询
+    nodes = [
+        "http://10.20.52.125:2379",
+        "http://10.20.52.126:2379",
+    ]
+    ```
 1. DNS
    - 理解：域名解析服务，域名和ip的绑定查询，一级级的往上查询
      1. 域名：.(根域)，com(一级域名)，二级三级...
@@ -137,7 +163,7 @@
 1. tumx：多个界面，断网保存用户操作的界面
 1. 数据恢复工具：ext3grep
 ### 性能监控
-1. 工具
+1. cpu工具
    - ps
      1. %CPU：cpu使用占比
      1. %MEM：内存使用占比
@@ -185,17 +211,20 @@
         - `top -Hp pid`：占用CPU最高的线程
         - `x`：高亮排序的列
         - `shift >/shift <`：左右切换高亮排序的列
-
+1. 内存工具
    - free：分mem和swap两种，free和top中的一致
    - vmstat
      1. r：run queue，可运行队列的线程数，这些线程都是可运行状态，只不过CPU暂时不可用
      1. b：被blocked的进程数，正在等待IO请求
-
+1. 硬盘工具
    - sar -d 2 3
-     1. DEV
-     1. tps
-     1. rq
-     1. qu
+     1. DEV：设备编号
+     1. tps：实际每秒的io次数，多个逻辑请求可能合成一个io请求
+     1. avgrq：请求的平均大小
+     1. avgqu：请求的平均队列长度
+     1. await：每次io操作的平均等待时间，包括队列和服务的时间，单位ms。和svctm接近则性能很好，高的话就io等待了
+     1. svctm：每次io操作的平均服务时间，单位ms
+     1. %util：向设备发送io操作的时间占比(设备的带宽利用率)，接近100%，则已满负荷，越高负荷越重
    - iotop
      1. read/write_bytes/s
      1. TID
@@ -204,6 +233,23 @@
      1. SWAPIN
      1. IO>
    - iostat：cpu信息、读写速率、读写字节数大小
+1. 网络工具
+   - netstat
+     1. Active Internet connections
+        - Proto：协议，tcp
+        - Recv-Q
+        - Send-Q
+        - Local Address
+        - Foreign Address：ip:port
+        - State：ESTABLISHED
+     1. Active UNIX domain sockets
+        - Proto
+        - RefCnt
+        - Flags
+        - Type：DGRAM、STREAM
+        - State：CONNECTED
+        - I-Node
+        - Path：执行的命令
 1. 指标
    - cpu
      1. 缩写
@@ -244,17 +290,14 @@
      1. 指标
         - read/write_bytes：大小
         - read/write-ms&num：速率
-        - await：每次io操作的平均等待时间，单位ms
-        - svctm：每次io操作的平均服务时间，单位ms
-        - %util：用于io操作的每秒时间占比，
         - free-mount：剩余空间
         - inodes-free：inode空余
      1. 认识
-        - 和svctm接近则性能很好，高的话就io等待了呗
         - iowait % < 20%
-        - 如果%util接近100%，则已满负荷，越高负荷越重
         - 提高性能可以提高命中率，一个方法为增大文件缓存区面积，缓存区越大预存的页面就越多，命中率也越高。内核希望尽可能产生次缺页中断（从文件缓存区读）并避免主缺页中断（从硬盘读），随着次缺页中断的增多文件缓存区也越大，直到系统只有少量可用物理内存的时候linux才开始释放一些不用的页
    - 网卡：received、transmitted、drop、time-wait数量、reqTime、5xx次数、out/in/dropped_bytes、out/in/dropped_packets、abort-ontimeout(达到最大重试时间/次数的次数)、time-outs(超时重传时间)
+     1. 认识
+        - 接收/发送缓冲区等待处理的网络包耗时较少
    - 进程：fpm active processes
      1. 进程状态
         - R：正在执行中，run
@@ -288,7 +331,7 @@
         - --import：签名导入
      1. yum：Yellow dog Updater Modified，包管理工具，基于rpm，epel是yum的扩展源
         - 参数
-          1. search
+          1. search/info
           1. install/update/remove
           1. list/info installed/updates
         - 查看安装的服务：`rpm -qa | grep xx`

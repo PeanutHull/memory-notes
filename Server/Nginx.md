@@ -59,8 +59,8 @@
     location ~ \.php$ {                                                         # php-fpm
         fastcgi_pass   127.0.0.1:9000;
         fastcgi_index  index.php;
-        fastcgi_param  SCRIPT_FILENAME  $document_root$fastcgi_script_name;
-        include        fastcgi_params;
+        fastcgi_param  SCRIPT_FILENAME  $document_root$fastcgi_script_name;     # 以下两句也可替换为include fastcgi.conf;
+        include        fastcgi_params;                                          # 这是个文件
     }
 
     location ~* .(gif|png|jpg|jpeg|zip|apk)$ {                                  # 定向文件
@@ -118,6 +118,34 @@
    - client_max_body_size 500m;              # 客户端请求服务器最大允许大小
    - client_body_buffer_size     128k;       # nginx分配给请求数据的Buffer大小
    - proxy_ignore_client_abort   on;         # 是否开启proxy忽略客户端中断
+1. fastcgi的配置：`fastcgi.conf`
+    ```conf
+    fastcgi_param  SCRIPT_FILENAME    $document_root$fastcgi_script_name;
+    fastcgi_param  QUERY_STRING       $query_string;
+    fastcgi_param  REQUEST_METHOD     $request_method;
+    fastcgi_param  CONTENT_TYPE       $content_type;
+    fastcgi_param  CONTENT_LENGTH     $content_length;
+
+    fastcgi_param  SCRIPT_NAME        $fastcgi_script_name;
+    fastcgi_param  REQUEST_URI        $request_uri;
+    fastcgi_param  DOCUMENT_URI       $document_uri;
+    fastcgi_param  DOCUMENT_ROOT      $document_root;
+    fastcgi_param  SERVER_PROTOCOL    $server_protocol;
+    fastcgi_param  REQUEST_SCHEME     $scheme;
+    fastcgi_param  HTTPS              $https if_not_empty;
+
+    fastcgi_param  GATEWAY_INTERFACE  CGI/1.1;
+    fastcgi_param  SERVER_SOFTWARE    nginx/$nginx_version;
+
+    fastcgi_param  REMOTE_ADDR        $remote_addr;
+    fastcgi_param  REMOTE_PORT        $remote_port;
+    fastcgi_param  SERVER_ADDR        $server_addr;
+    fastcgi_param  SERVER_PORT        $server_port;
+    fastcgi_param  SERVER_NAME        $server_name;
+
+    # PHP only, required if PHP was built with --enable-force-cgi-redirect
+    fastcgi_param  REDIRECT_STATUS    200;
+    ```
 1. 代理线上配置
     ```lua
     server { 
@@ -255,7 +283,7 @@
     ```
 1. 其他配置文件
    - mime.types：文件扩展名与文件类型映射表，找不到使用默认default_type
-   - fastcgi_params/uwsgi_params/scgi_params：使用对应cgi时，向cgi传递的变量
+   - fastcgi.conf/fastcgi_params/uwsgi_params/scgi_params：使用对应cgi时，向cgi传递的变量
    - koi-utf/koi-win/win-utf：编码转换映射文件
 ### 应用
 1. gzip压缩：可在任何层级定义，越细优先级越高

@@ -161,24 +161,25 @@
      1. chgrp
      1. su/sudo
 ### 网络
-1. 查看
+1. 检测
    - ping
+   - host
+   - telnet ip port：检测端口是否打开
+   - dig
+     1. 认识：从DNS域名服务器查询主机地址信息
    - traceroute：显示网络数据包传输到指定主机的路径信息，追踪数据传输路由状况
-   - ifconfig：显示当前网络接口状态、配置网络
-     1. -a：inet addr，ip地址
-   - nethogs：将进程按网络流量列表显示
-   - iftop：网络带宽监控
+   - openssl：查看网站证书链`openssl s_client -connect github.com:443 -showcerts`
    - lsof：list open files，列出打开文件。linux环境下任何事物都以文件的形式存在
      1. i:80：查看端口号，root用户查看
+1. 查看
+   - ifconfig：显示当前网络接口状态、配置网络
+     1. -a：inet addr，ip addr
+   - nethogs：将进程按网络流量列表显示
+   - iftop：网络带宽监控
    - tcpdump：网络数据包分析器
    - netstat：显示网络连接/运行端口/路由表等
      1. anpt：查看端口占用，`netstat anpt | grep 80`
    - ss：Socket Statistics，用来获取socket统计信息，显示和netstat类似，优势在于能显示更详细的TCP和连接状态的信息，比netstat更快速更高效
-   - host
-   - dig
-     1. 认识：从DNS域名服务器查询主机地址信息
-   - telnet ip port：检测端口是否打开
-   - openssl：查看网站证书链`openssl s_client -connect github.com:443 -showcerts`
 1. 配置
    - /etc/sysconfig/network-scripts/ifcfg-eth0
    - hostname
@@ -226,18 +227,8 @@
 1. wiki
    - 端口号1024以下是系统保留的，总共65526个
 ### 磁盘
-1. mount/umount：挂载
-   - /dev/sd*：设备文件，`mount /dev/sda1 /mnt/sda1`
-1. df：查看磁盘占用情况
-1. dlkid
-1. du
-1. fsck：检查文件系统，并尝试修复
-1. mkfs
-1. fdisk
-1. parted
-1. lvreduce
-1. iotop: 将进程按磁盘写次数排序，并且显示程序写磁盘的次数和频率
-1. iostat
+1. 认识
+   - linux规定，硬盘用sda/sdb/sdc依次命名，一块硬盘只能存在4个主分区，为sda1/sda2/sda3/sda4，逻辑分区不限制数量，从5开始
 1. 文件系统
    - 文件树：一根文件数，根目录为/
    - 分区：sda1、sda2
@@ -247,7 +238,20 @@
         - swapoff：关闭/回收
         - mkswap：格式化
    - 挂载点：把sda1挂载到根目录/上，则所有数据都在sda1分区。当sda2挂载到/home，则数据到了sda2的分区下
-1. linux规定，硬盘用sda/sdb/sdc依次命名，一块硬盘只能存在4个主分区，为sda1/sda2/sda3/sda4，逻辑分区不限制数量，从5开始
+1. 操作
+   - mount/umount：挂载
+     1. /dev/sd*：设备文件，`mount /dev/sda1 /mnt/sda1`
+   - df：查看磁盘占用情况
+   - dlkid
+   - du
+   - fsck：检查文件系统，并尝试修复
+   - mkfs
+   - fdisk
+   - parted
+   - lvreduce
+1. 查看
+   - iotop: 进程和磁盘，将进程按磁盘读写次数、频率排序，无法统计内核的io
+   - iostat
 ### 内存
 1. free：-m 以兆显示内存状态
 1. vmstat：虚拟内存统计，`vmstat 3` 3秒更新一次
