@@ -99,18 +99,6 @@
      1. 使用：编写.service文件，通过设置参数决定某一命令的守护
    - 命令(nohup/Screen/Tmux)、Node工具(forever/nodemon/pm2)
    - 写锁(让工作进程和守护进程争抢写锁，当守护获得写锁时重启工作进程并放弃写锁))
-1. confd
-   - xes配置文件
-    ```conf
-    backend = "etcdv3"
-    confdir = "/home/www/confd-tw"
-    log-level = "debug"
-    watch = true # watch 模式 实时更新 设置为interval = xxx 时为轮询模式，定时查询
-    nodes = [
-        "http://10.20.52.125:2379",
-        "http://10.20.52.126:2379",
-    ]
-    ```
 1. DNS
    - 理解：域名解析服务，域名和ip的绑定查询，一级级的往上查询
      1. 域名：.(根域)，com(一级域名)，二级三级...
