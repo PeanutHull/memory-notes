@@ -106,9 +106,9 @@
     }
     ```
 1. 超时时间
-   - proxy_connect_timeout：设置与upstream server的连接超时时间
-   - proxy_send_timeout：发送请求给upstream服务器的超时时间
-   - proxy_read_timeout：与代理服务器的读超时时间
+   - proxy_connect_timeout：和后端服务器的连接(发起握手后的)等待超时时间
+   - proxy_read_timeout：等待后端服务器的响应超时时间
+   - proxy_send_timeout：发送请求给后端服务器的超时时间，规定时间之内后端服务器接收完所有的数据
 1. 缓存大小
    - proxy_buffer_size：缓存区大小
    - proxy_buffers：缓存区大小和数量

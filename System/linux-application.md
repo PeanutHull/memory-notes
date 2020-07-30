@@ -100,7 +100,7 @@
    - 命令(nohup/Screen/Tmux)、Node工具(forever/nodemon/pm2)
    - 写锁(让工作进程和守护进程争抢写锁，当守护获得写锁时重启工作进程并放弃写锁))
 1. DNS
-   - 理解：域名解析服务，域名和ip的绑定查询，一级级的往上查询
+   - 理解：域名解析服务，域名和ip的绑定查询，一级级的往上查询，使用UDP协议，53端口
      1. 域名：.(根域)，com(一级域名)，二级三级...
      1. 解析记录分类
         - A记录：单一指向ip
@@ -148,6 +148,7 @@
           1. ddos
           1. 放大攻击：dns服务器被作为肉鸡
      1. CDN：：内容分发网络，部署大量网络节点通过服务器缓存加速，让用户就近更快访问网络。指标有带宽、命中率、请求数
+   - httpDNS：指通过ip和http协议直接访问dns服务器获取解析，绕过本地运营商。因为智能dns有很多弊端，如nat转换导致解析链路加长等原因，移动端用的多
 1. tumx：多个界面，断网保存用户操作的界面
 1. 数据恢复工具：ext3grep
 ### 性能监控
@@ -155,8 +156,8 @@
    - ps
      1. %CPU：cpu使用占比
      1. %MEM：内存使用占比
-     1. VSZ：占用虚拟内存大小
-     1. RSS：占用内存大小
+     1. VSZ：虚拟内存大小
+     1. RSS：占用物理内存大小，kb
      1. STAT：进程状态
      1. TTY：命令所运行的位置(终端)
      1. START：进程开始时间
@@ -199,11 +200,24 @@
         - `top -Hp pid`：占用CPU最高的线程
         - `x`：高亮排序的列
         - `shift >/shift <`：左右切换高亮排序的列
+   - mpstat
+        - usr：用户态的cpu时间百分比，不包含nice值为负进程
+        - nice：nice值为负进程的cpu时间百分比
+        - sys：核心时间百分比
+        - iowait：硬盘IO等待时间百分比
+        - irq：硬中断时间百分比
+        - soft：软中断时间百分比
+        - steal：显示虚拟机管理器在服务另一个虚拟处理器时虚拟cpu处在非自愿等待下花费时间的百分比
+        - guest：显示运行虚拟处理器时cpu花费时间的百分比
+        - gnice
+        - idle：cpu除去等待磁盘IO操作外的因为任何原因而空闲的时间闲置时间百分比
+        - intr/s：每秒cpu接收的中断总数
 1. 内存工具
-   - free：分mem和swap两种，free和top中的一致
+   - free：分mem和swap两种，free的数据和top中的一致
    - vmstat
-     1. r：run queue，可运行队列的线程数，这些线程都是可运行状态，只不过CPU暂时不可用
-     1. b：被blocked的进程数，正在等待IO请求
+     1. 参数解读
+        - r：run queue，运行队列里等待cpu的个数
+        - b：被资源阻塞(blocked)的任务数(io/页面调度等)，通常接近0
 1. 硬盘工具
    - sar -d 2 3
      1. DEV：设备编号
@@ -221,6 +235,15 @@
      1. SWAPIN
      1. IO>
    - iostat：cpu信息、读写速率、读写字节数大小
+     1. rrqm/s、wrqm/s：进行merge的读写操作数量/每秒
+     1. r/s、 w/s：完成读写io设备次数/每秒
+     1. rsec/s、wsec/s：读写扇区数/每秒
+     1. rkB/s、wkB/s：每秒读写kb/每秒。是rsect/s的一半，因为每扇区大小为512字节
+     1. avgrq-sz：平均每次设备io操作的数据大小 (扇区)
+     1. avgqu-sz：平均io队列长度
+     1. await：平均每次设备io操作的等待时间 (毫秒)
+     1. svctm：平均每次设备io操作的服务时间 (毫秒)
+     1. %util：一秒中有百分之多少的时间用于 io 操作，或者说一秒中有多少时间io队列是非空的
 1. 网络工具
    - netstat
      1. Active Internet connections
@@ -238,17 +261,31 @@
         - State：CONNECTED
         - I-Node
         - Path：执行的命令
+   - nicstat：solaris平台下的，需要安装
+1. 进程
+   - pidstat
+     1. CPU：处理进程的cpu编号
+     1. Minflt/s：任务每秒发生的次要错误，不需要从磁盘中加载页
+     1. Majflt/s：任务每秒发生的主要错误，需要从磁盘中加载页
+     1. kB_rd/s：每秒从磁盘读取的kb
+     1. kB_wr/s：每秒写入磁盘kb
+     1. kB_ccwr/s：任务取消写入磁盘的kb。当任务截断脏的pagecache的时候会发生
+     1. Cswch/s：每秒主动任务上下文切换数量
+     1. Nvcswch/s：每秒被动任务上下文切换数量
+     1. TGID：主线程的表示
+     1. TID：线程id
 1. 指标
    - cpu
      1. 缩写
-        - id：CPU完全空闲百分比，`idle`
-        - us：用户空间占用CPU百分比，`user space`
+        - id：CPU完全空闲百分比，不包括i/o等待时间，`idle`
         - sy：内核空间和中断占用CPU百分比，`system`
+        - us：用户空间占用CPU百分比，`user space`
         - wa：io等待占比，`io wait`
+
         - cs：每秒做上下文切换的数，`context switch`
+        - in：每秒被中断数，`interrupts`
         - hi：硬中断占比，`hardware interrupts`
         - si：软中断占比，`software interrupts`
-        - in：每秒被中断数，`interrupts`
         - ni：nice值，改变过优先级的进程占比，负值表示高优先级，正值表示低优先级
         - st：被Hypervisor偷去给其它虚拟机使用的CPU时间占比，steal time
      1. 认识：如sy高us低，以及高cs，说明应用程序进行了大量的系统调用
@@ -261,25 +298,29 @@
    - 内存
      1. 指标
         - memory
-          1. total
-          1. used
-          1. free：可用/自由物理内存大小，单位kb
-          1. buff：物理内存用来缓存读写操作的大小，做磁盘缓存
-          1. cache：物理内存用来缓存进程地址空间的大小，做文件缓存区
+          1. total：不包括内核使用的总内存大小
+          1. used：被使用的内存总额
+          1. free：自由物理内存大小，单位kb
+          1. buff：被用来缓存读写操作的大小，做磁盘缓存
+          1. cache：被用来缓存进程地址空间的大小，做文件缓存区  
+          1. share：多进程共享的内存总额
         - swap
           1. swpd：已使用的swap空间大小
-          1. si：swap in，到内存
-          1. so：swap out，从内存出
+          1. si：swap in，到内存的速率，单位block/s
+          1. so：swap out，从内存出的速率
      1. 认识
         - 留30%的内存
         - swap大小越少内存越够，如果swap的used不断变化，说明内存不够用，cpu在频繁进行内存和swap的数据交换
         - swap操作可导致io性能下降
+        - 延迟、冲突、阻塞等因素影响机器性能
    - 硬盘：busy-percent、msec-weighted-total(io完成时间和积压)
      1. 指标
         - read/write_bytes：大小
         - read/write-ms&num：速率
         - free-mount：剩余空间
         - inodes-free：inode空余
+        - bi：每秒读取的块数，块大小为1024bytes
+        - bo：每秒写入的块数
      1. 认识
         - iowait % < 20%
         - 提高性能可以提高命中率，一个方法为增大文件缓存区面积，缓存区越大预存的页面就越多，命中率也越高。内核希望尽可能产生次缺页中断（从文件缓存区读）并避免主缺页中断（从硬盘读），随着次缺页中断的增多文件缓存区也越大，直到系统只有少量可用物理内存的时候linux才开始释放一些不用的页
@@ -297,6 +338,15 @@
         - N：低优先序的行程
         - W：没有足够的记忆体分页可分配
         - L：有记忆体分页分配并锁在记忆体内 (实时系统或I/O)
+     1. cpu相关
+        - %guest：进程在虚拟机占用cpu的百分比
+1. 分析
+   - 很多参数可以看到系统从重启以来的数据，这个可用于分析系统平均负载
+   - 内存
+     1. VSZ：当程序真正用到内存时，内核再映射到物理内存
+     1. 内存够用，si和so基本都是0，长期大于0，磁盘和cpu都被消耗，系统性能受影响
+     1. free要和si、so一起看，free很少，si和so也很少、不代表系统性能不足
+   - vmstat/mpstat差别：mpstat可显示每个处理器的统计，而vmstat显示所有。可用于分析程序运行的cpu均衡性
 ### 优化
 1. 问题定位
    - strace：跟踪系统调用的执行
@@ -343,7 +393,7 @@
    - ssh -kengen
    - cd ~/.ssh
    - ssh -copy-id peter@happypeter.net       // 把公钥复制到服务器上
-### 运维
+### 运维相关
 1. 运维
    - 组成
      1. 基础：配机器

@@ -231,7 +231,8 @@
    - linux规定，硬盘用sda/sdb/sdc依次命名，一块硬盘只能存在4个主分区，为sda1/sda2/sda3/sda4，逻辑分区不限制数量，从5开始
 1. 文件系统
    - 文件树：一根文件数，根目录为/
-   - 分区：sda1、sda2
+   - 分区
+     1. 分区名称：sda1、sda2
      1. swap分区：交换区，物理内存不够时，将不用的内存数据放到这个分区。分的大了浪费小了影响性能，小内存为2倍，大内存(8G)相等
         - swappiness：使用权重，复杂算法
         - swapon：启用，-s，查看swap相关信息
@@ -251,10 +252,12 @@
    - lvreduce
 1. 查看
    - iotop: 进程和磁盘，将进程按磁盘读写次数、频率排序，无法统计内核的io
-   - iostat
+   - iostat：`iostat/iostat 3/iostat 3 3`：用法和mpstat一致
 ### 内存
 1. free：-m 以兆显示内存状态
-1. vmstat：虚拟内存统计，`vmstat 3` 3秒更新一次
+1. vmstat：Virtual Meomory Statistics，虚拟内存统计信息，是实时系统监控工具，包括进程情况、内存情况、交换页、I/O、系统中断、CPU。`vmstat/vmstat 3/vmstat 3 3`：用法和mpstat一致
+   - `vmstat -a`：查看活动和非活动内存
+1. pmap：查看进程内存占用信息。`pmap -d xx`
 ### 进程
 1. 运行
    - 后台运行：xx &
@@ -278,9 +281,15 @@
      1. `ps -f -C php-fpm`：查看某进程详细信息
      1. `ps -L pid`：查看某进程的线程
    - pstree：树状显示所有进程，`pstree | grep php`
-   - which：查看程序安装位置
    - pidof：打印pid
    - jstack：查看进程
+   - pidstat：进程信息，默认显示进程的cpu使用信息
+     1. -r：显示内存使用信息
+     1. -d：显示IO使用信息
+     1. -w：显示上下文切换信息
+     1. -t：显示线程信息
+     1. -p：指定进程号
+   - which：查看程序安装位置
    - 查看/设置允许打开的最大文件句柄数：`ulimit -n xx`，重启或用户退出失效
 1. 杀死
    - 分类
@@ -383,9 +392,8 @@
    - zip/unzip
      1. `zip -r xx.zip dir/`
      1. `unzip xx.zip`、`unzip -o xx.zip -d dir/`
-   - gzip/gunzip
-     1. gz
-        - -d：解压缩
+   - gzip/gunzip：gz结尾
+     1. -d：解压缩
    - bzip2/bunzip2
    - rar/unrar
 ### shell
@@ -683,12 +691,22 @@
    - 硬盘
      1. `cat /proc/meminfo`：查看物理内存和文件缓存情况
    - 状态
+     1. vmstat
+     1. iostat
+     1. netstat
+     1. nicstat
+     1. pidstat
      1. mpstat
+        - 认识：Multiprocessor Statistics，实时系统监控工具，查看cpu信息
+        - 使用
+          1. `mpstat`：从启动以来的平均值
+          1. `mpstat 5 2`：生成2个间隔5秒的报告
+          1. `mpstat -P ALL 5 2`：分别查看每个cpu
      1. top/htop：查看系统性能，htop高亮，3秒刷新一次
      1. sar：System Activity Reporter 系统活动情况报告，最全面的系统性能分析工具之一，可以看文件读写、系统调用情况、磁盘I/O、CPU效率、内存使用、进程活动及IPC等
         - -A：所有报告的总和
 
-        - -P：报告每个CPU的状态
+        - -p：报告每个CPU的状态
         - –u：输出cpu使用情况和统计信息
 
         - -R：显示内存状态
@@ -709,8 +727,9 @@
    - 认识：系统预定义的参数。window也有。作用：在程序里可以获得环境变量的值，根据值决定如何操作，运行，找路径，文件夹等等
      1. SHELL：当前用户使用的Shell
      1. HOSTNAME：主机名
+     1. LANG：系统所用语言，`echo $LANG`
    - 组成
-     1. `/etc/bashrc或/etc/profile或vim /etc/environment`：全局
+     1. `/etc/bashrc或/etc/profile或/etc/environment`：全局
      1. `~/.bashrc或~/.bash_profile或~/.bash_login`：个人
    - 操作
      1. `set`

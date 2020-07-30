@@ -449,9 +449,9 @@
         - Handler_read_rnd_next：在数据文件中读下一行的请求数，如果你正在进行大量的表扫描，该值较高。同城说明你的表索引不正确或写入的查询没有利用索引。
         - Handler_read_last：根据键读最后一行的请求数
         - Handler_read_first：索引中第一条被读的次数。如果较高，建议服务器正执大量全索引扫描。例如 SELECT col1 From foo 假定col1有索引
-        - Handler_read_next：按照键顺序读取下一行的请求数。如果你用范围约束或如果执行搜索扫描来查询索引列，该值增加。
+        - Handler_read_next：按照键顺序读取下一行的请求数。如果你用范围约束或如果执行搜索扫描来查询索引列，该值增加
         - Handler_update：请求更新表中一行的次数
-        - Handler_read_rnd：根据固定位置读一行的请求数，如果你正执行大量查询并需要对结果进行排序该值较高。你可能使用了大量需要MySQL扫描整个表的查询或你的连接没有正确使用索引。
+        - Handler_read_rnd：根据固定位置读一行的请求数，如果你正执行大量查询并需要对结果进行排序该值较高。你可能使用了大量需要MySQL扫描整个表的查询或你的连接没有正确使用索引
         - Handler_write：请求向表中插入一行的次数
      1. innodb_pages 
         - innodb_pages_created：buffer pool创建页的数
@@ -618,6 +618,17 @@
    - 求全集：`SELECT * FROM A LEFT JOIN B ON A.xx = B.xx union SELECT * FROM A RIGHT JOIN B ON A.xx = B.xx;`
    - 原所有id增加5万，必须倒叙操作：`update user SET uid=uid+50000 order by uid desc;`
    - 插入不重复数据行，mysql特有不是标准sql语法：`INSERT token(udid) values ('{$udid}') ON DUPLICATE KEY UPDATE activetime ='{$time}'`
+1. 问题排查思路
+   - 查看现场：`show full processlist`
+   - 分析情况：`explain xx`
+   - 查看信息
+     1. 正在执行的事务：`select * from information_schema.innodb_trx`
+     1. 锁等待：`select * from information_schema.innodb_lock_waits w inner join information_schema.innodb_trx b on b.trx_id=w.blocking_trx_id inner join information_schema.innodb_trx r on r.trx_id=w.requesting_trx_id`
+     1. 锁表情况：`show open tables where In_use > 0`
+     1. 锁定的事务：`select * from information_schema.innodb_locks`
+     1. 锁等待的事务：`select * from information_schema.innodb_lock_waits`
+     1. 死锁：``
+   - 日志分析：general.log
 ### 高级
 1. 主从，主主，amoeba
    - 原理：主库将更改记录到二进制日志binlog，从库复制到中继日志，读取中继重新放到库中
