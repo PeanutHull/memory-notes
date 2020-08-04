@@ -219,14 +219,31 @@
         - r：run queue，运行队列里等待cpu的个数
         - b：被资源阻塞(blocked)的任务数(io/页面调度等)，通常接近0
 1. 硬盘工具
-   - sar -d 2 3
-     1. DEV：设备编号
-     1. tps：实际每秒的io次数，多个逻辑请求可能合成一个io请求
-     1. avgrq：请求的平均大小
-     1. avgqu：请求的平均队列长度
-     1. await：每次io操作的平均等待时间，包括队列和服务的时间，单位ms。和svctm接近则性能很好，高的话就io等待了
-     1. svctm：每次io操作的平均服务时间，单位ms
-     1. %util：向设备发送io操作的时间占比(设备的带宽利用率)，接近100%，则已满负荷，越高负荷越重
+   - sar
+     1. -r：内存
+        - kbmemfree：类似free命令的free，所以不包括buffer和cache
+        - kbmemused：类似free命令的used，所以包括buffer和cache
+        - %memused：kbmemused和内存总量(不包括swap)的百分比
+        - kbbuffers和kbcached：free命令的buffer和cache
+        - kbcommit：保证当前系统所需要的内存，即为了确保不溢出而需要的内存(RAM+swap)
+        - %commit：kbcommit与内存总量(包括swap)的百分比
+     1. -d 2 3：io
+        - DEV：设备编号
+        - tps：实际每秒的io次数，多个逻辑请求可能合成一个io请求
+        - avgrq：请求的平均大小
+        - avgqu：请求的平均队列长度
+        - await：每次io操作的平均等待时间，包括队列和服务的时间，单位ms。和svctm接近则性能很好，高的话就io等待了
+        - svctm：每次io操作的平均服务时间，单位ms
+        - %util：向设备发送io操作的时间占比(设备的带宽利用率)，接近100%，则已满负荷，越高负荷越重
+     1. -n：network
+        - IFACE：网络设备名称
+        - rxpck/s：接收包数/每秒钟
+        - txpck/s：发送包数/每秒钟
+        - rxkB/s：接收字节数/每秒钟
+        - txkB/s：发送字节数/每秒钟
+        - rxcmp/s：接收压缩包数/每秒钟
+        - txcmp/s：发送压缩包数/每秒钟
+        - rxmcst/s：接收的多播包包数/每秒钟
    - iotop
      1. read/write_bytes/s
      1. TID
@@ -237,6 +254,8 @@
    - iostat：cpu信息、读写速率、读写字节数大小
      1. rrqm/s、wrqm/s：进行merge的读写操作数量/每秒
      1. r/s、 w/s：完成读写io设备次数/每秒
+     1. Blk_read/s、Blk_wrtn/s：块数/每秒
+     1. Blk_read/Blk_wrtn：取样时间间隔内 读写扇区数量
      1. rsec/s、wsec/s：读写扇区数/每秒
      1. rkB/s、wkB/s：每秒读写kb/每秒。是rsect/s的一半，因为每扇区大小为512字节
      1. avgrq-sz：平均每次设备io操作的数据大小 (扇区)
@@ -295,24 +314,30 @@
           1. User Time + System Time <= 70%
         - 上下文切换：与CPU利用率相关联，如果CPU利用率状态良好，大量的上下文切换可接受
         - 可运行队列：每个处理器不超过3个线程
-   - 内存
+   - 内存：数据源头在/proc/meminfo
      1. 指标
         - memory
           1. total：不包括内核使用的总内存大小
           1. used：被使用的内存总额
           1. free：自由物理内存大小，单位kb
-          1. buff：被用来缓存读写操作的大小，做磁盘缓存
-          1. cache：被用来缓存进程地址空间的大小，做文件缓存区  
+          1. buff：被用来缓存读写操作的大小，做磁盘缓存。缓存满了一次写，提高io性能(内存 -> 磁盘)
+          1. cache：被用来缓存进程地址空间的大小，做文件缓存区。读取过的数据缓存起来，减少io(磁盘 -> 内存)，会动态调整
           1. share：多进程共享的内存总额
         - swap
           1. swpd：已使用的swap空间大小
           1. si：swap in，到内存的速率，单位block/s
           1. so：swap out，从内存出的速率
+        - /proc/meminfo
+          1. MemAvailable：MemFree不能代表全部可用的内存，有些内存虽被使用但可回收。MemAvailable = MemFree + 可回收的cache/buffer/slab等，这是系统估算值，不准确
+          1. Buffers：直接访问块设备时缓冲区的总大小，有时对文件系统元数据的操作也会用到buffers。这部分内存不好直接对应到某个用户进程，应该算作kernel占用
+          1. Cached：包括所有file-backed pages
+          1. Mapped/LRU/Hugepages
      1. 认识
         - 留30%的内存
         - swap大小越少内存越够，如果swap的used不断变化，说明内存不够用，cpu在频繁进行内存和swap的数据交换
         - swap操作可导致io性能下降
         - 延迟、冲突、阻塞等因素影响机器性能
+        - 内存黑洞：kernel没有统计所有内存分配，如动态分配的一部分，所以用量总和物理内存对不上
    - 硬盘：busy-percent、msec-weighted-total(io完成时间和积压)
      1. 指标
         - read/write_bytes：大小

@@ -251,8 +251,8 @@
    - parted
    - lvreduce
 1. 查看
-   - iotop: 进程和磁盘，将进程按磁盘读写次数、频率排序，无法统计内核的io
-   - iostat：`iostat/iostat 3/iostat 3 3`：用法和mpstat一致
+   - iotop: 查看进程和磁盘，将进程按磁盘读写次数、频率排序，无法统计内核的io
+   - iostat：查看io状态，`iostat/iostat 3/iostat 3 3`：用法和mpstat一致。`iostat -dxm 3`
 ### 内存
 1. free：-m 以兆显示内存状态
 1. vmstat：Virtual Meomory Statistics，虚拟内存统计信息，是实时系统监控工具，包括进程情况、内存情况、交换页、I/O、系统中断、CPU。`vmstat/vmstat 3/vmstat 3 3`：用法和mpstat一致
@@ -688,6 +688,7 @@
      1. `getconf LONG_BIT`：查看centos位数
    - 硬件
      1. `cat /proc/cpuinfo`：cpu信息
+     1. `lscpu`：cpu信息
    - 硬盘
      1. `cat /proc/meminfo`：查看物理内存和文件缓存情况
    - 状态
