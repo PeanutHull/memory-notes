@@ -267,19 +267,47 @@
    - netstat
      1. Active Internet connections
         - Proto：协议，tcp
-        - Recv-Q
-        - Send-Q
+        - Recv-Q：接收队列
+        - Send-Q：发送队列
         - Local Address
-        - Foreign Address：ip:port
+        - Foreign Address
         - State：ESTABLISHED
-     1. Active UNIX domain sockets
+     1. Active UNIX domain sockets：域套接字，和网络套接字一样，但是只能用于本机通信，性能可以提高一倍
         - Proto
-        - RefCnt
+        - RefCnt：进程号
         - Flags
-        - Type：DGRAM、STREAM
-        - State：CONNECTED
+        - Type：套接字类型，DGRAM、STREAM
+        - State：状态，CONNECTED
         - I-Node
         - Path：执行的命令
+     1. -s
+        - Ip
+        - Icmp
+        - IcmpMsg
+        - Tcp
+        - Udp
+        - UdpLite
+        - TcpExt
+        - IpExt
+        - Sctp
+   - iftop
+     1. h 切换是否显示帮助
+     1. t 切换显示格式为2行/1行/只显示发送流量/只显示接收流量
+     1. l 打开屏幕过滤功能，输入要过滤的字符，比如ip,按回车后，屏幕就只显示这个IP相关的流量信息
+     1. N 切换显示端口号或端口服务名称
+     1. S 切换是否显示本机的端口信息
+     1. D 切换是否显示远端目标主机的端口信息
+     1. p 切换是否显示端口信息
+     1. P 切换暂停/继续显示
+     1. b 切换是否显示平均流量图形条
+     1. B 切换计算2秒或10秒或40秒内的平均流量
+     1. T 切换是否显示每个连接的总流量
+     1. L 切换显示画面上边的刻度刻度不同，流量图形条会有变化
+     1. j 或 k 可以向上或向下滚动屏幕显示的连接记录
+     1. 1 或 2 或 3 可以根据右侧显示的三列流量数据进行排序
+     1. < 根据左边的本机名或IP排序
+     1. > 根据远端目标主机的主机名或IP排序
+     1. o 切换是否固定只显示当前的连接
    - nicstat：solaris平台下的，需要安装
 1. 进程
    - pidstat
@@ -352,6 +380,11 @@
    - 网卡：received、transmitted、drop、time-wait数量、reqTime、5xx次数、out/in/dropped_bytes、out/in/dropped_packets、abort-ontimeout(达到最大重试时间/次数的次数)、time-outs(超时重传时间)
      1. 认识
         - 接收/发送缓冲区等待处理的网络包耗时较少
+     1. Iface
+     1. MTU
+     1. RX-OK/RX-ERR/RX-DRP/RX-OVR
+     1. TX-OK/TX-ERR/TX-DRP/TX-OVR
+     1. Flg
    - 进程：fpm active processes
      1. 进程状态
         - R：正在执行中，run
@@ -444,6 +477,33 @@
      1. nat：网络地址转换服务，可基于状态过滤连接（就是内网出去的能回来，其他进不来），可做对外网的口子
      1. lvm：逻辑卷管理，动态扩缩容
      1. DNS：智能dns，DNS view，可根据用户ip返回不同的ip，解决了同域名不同解析地址问题，使用bind 9
+1. 监控
+   - 意义
+     1. 运行状态展示
+     1. 故障发现、故障预警、故障定位
+   - 如何使用
+     1. 了解监控对象的运行过程、工作原理
+     1. 确立监控指标
+     1. 确立报警范围、报警阈值、报警等级
+     1. 完善故障处理流程
+   - 监控流程
+     1. 收集数据：收集什么，怎么收集
+     1. 存储数据：怎么存，保留多久
+     1. 展示数据
+     1. 故障报警：电话、短信、钉钉
+     1. 报警处理：预案
+   - 监控方面
+     1. cpu使用情况
+     1. 内存：已用、可用
+     1. 磁盘：容量、io、读写效率
+     1. 网络：出入流量、tcp状态
+     1. 进程：运行状态、运行开销
+     1. 服务：个性化需要
+     1. api：可用性、响应时间
+     1. 硬件：服务器、路由器、交换机
+     1. 安全：攻击、漏洞
+   - 监控工具
+     1. 开源：zabbix(最常用)、grafana(可视化非常强大，导入数据源即可用)、Open-falcon、nagios
 ### wiki
 1. 快捷键
    - ctrl+s     暂停该终端，ctrl+q恢复

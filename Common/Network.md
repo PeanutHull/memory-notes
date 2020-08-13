@@ -253,9 +253,17 @@
      1. Sec-WebSocket-Key 校验key，校验原理是什么？？？
      1. Sec-WebSocket-Protocol 需要的服务名称
      1. Sec-WebSocket-Version 版本号
+### TCP/IP
+1. 认识：指由FTP、SMTP、TCP、UDP、IP、ARP、ICMP等协议构成的协议簇，因为TCP协议和IP协议最具代表性所以命名
+1. 组成：四层网络
+   - 应用层
+   - 运输层：tcp、udp
+   - 网络层：ip协议、arp协议、icmp协议
+   - 网络接口层
 ### TCP
 1. tcp过程
    - 3次握手
+     1. 服务端：进入LISTEN状态
      1. 客户端：发送SYN包(seq=x)，进入SYN_SEND状态
      1. 服务端：返回SYN(seq=y)+ACK(x+1)应答包，进入SYN_RECV状态
      1. 客户端：收到服务端包后，发送ACK(y+1)，双方进入ESTABLISHED状态
@@ -269,7 +277,7 @@
      1. 被动关闭方：发送ACK(seq=y,ack=x+1)，进入CLOSE-WAIT状态
      1. 主动关闭方：收到ACK后，进入FIN-WAIT-2状态
      1. 被动关闭方：发送FIN(seq=z,ack=x+1)，进入LAST-ACK状态，并关闭连接。告诉主动关闭方，我的数据也发送完了，不会再给你发数据了
-     1. 主动关闭方：收到FIN后，发送ACK(seq=x+1,ack=z+1)，进入TIME-WAIT状态，等待2MSL后，关闭连接
+     1. 主动关闭方：收到FIN后，发送ACK(seq=x+1,ack=z+1)，进入TIME-WAIT状态，等待2MSL后，关闭连接，进入CLOSED状态
    - 理解
      1. MSL：Max Segment Lifetime，最长报文段寿命
      1. TIME_WAIT的意义
@@ -287,6 +295,26 @@
         - 客户端误以为连接已建立，开始调用等待至超时
         - 服务器则等待ACK超时，会重传SYN+ACK给客户端
    - TIME_WAIT巨大：可能是短连接太多占用了TW，尽量使用长连接，否则会有TCP drop风险
+### ARP
+1. 认识：Address Resolution Protocol，地址解析协议，通过ip拿mac地址，先局域网广播询问物理地址，之后缓存一段时间，ipV6中用NDP代替
+   - RARP：反向地址转换协议
+   - ARP欺骗：由于建立在互相信任基础上，攻击者可伪造目标机器的ARP信息，导致数据会通过攻击者转发
+### ICMP
+1. 认识：Internet Control Message Protocol，Internet控制报文协议
+   - 用于在IP主机、路由器之间传递控制消息
+   - 面向无连接的协议，是网络层协议
+1. 功能
+   - 确认IP包是否成功到达目标地址
+   - 通知在发送过程中IP包被丢弃的原因
+   - 控制发送速率，改变路由路径
+1. 组成
+   - 报错报文
+   - 控制报文
+     1. 拥塞控制、源站抑制
+     1. 路由控制与重定向报文
+1. wiki
+   - 基于IP协议工作，并不是传输层的功能，因此仍然归结为网络层协议
+   - IPv6要用ICMPv6
 ### wiki
 1. ASCII码：美国信息交换标准代码，基于拉丁字母的主要用于显示现代英语和其他西欧语言现今最通用的单字节编码系统，等同于国际标准ISO/IEC646
    - 标准ASCII码：使用7 位二进制数（剩下的1位二进制为0）来表示

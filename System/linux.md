@@ -163,23 +163,76 @@
 ### 网络
 1. 检测
    - ping
-   - host
    - telnet ip port：检测端口是否打开
-   - dig
-     1. 认识：从DNS域名服务器查询主机地址信息
+
+   - host
+   - dig：从DNS域名服务器查询主机地址信息
    - traceroute：显示网络数据包传输到指定主机的路径信息，追踪数据传输路由状况
    - openssl：查看网站证书链`openssl s_client -connect github.com:443 -showcerts`
    - lsof：list open files，列出打开文件。linux环境下任何事物都以文件的形式存在
      1. i:80：查看端口号，root用户查看
 1. 查看
+   - route
    - ifconfig：显示当前网络接口状态、配置网络
      1. -a：inet addr，ip addr
    - nethogs：将进程按网络流量列表显示
-   - iftop：网络带宽监控
-   - tcpdump：网络数据包分析器
+   - iftop：实时流量监控工具
+     1. TX：发送流量
+     1. RX：接收流量
+     1. TOTAL：总流量
+     1. Cumm：运行iftop到目前时间的总流量
+     1. peak：流量峰值
+     1. rates：分别表示过去 2s 10s 40s 的平均流量
    - netstat：显示网络连接/运行端口/路由表等
-     1. anpt：查看端口占用，`netstat anpt | grep 80`
+     1. -i：网卡列表
+     1. -g：组播组关系
+     1. -s：网络详细统计
+     1. –e：网络统计
+     1. -r：路由信息
    - ss：Socket Statistics，用来获取socket统计信息，显示和netstat类似，优势在于能显示更详细的TCP和连接状态的信息，比netstat更快速更高效
+   - tcpdump
+     1. 认识：网络数据包分析器，是网络分析和问题排查的首选工具。支持针对网络层/协议/主机/网络或端口的过滤，并提供and/or/not等逻辑语句去掉无用信息
+        - 使用tcpdump抓到包后，往往需要再借助其他的工具进行分析，比如常见的wireshark
+     1. 用法：tcpdump [option] [not] proto dir type
+        - option
+          1. 抓包选项
+             - -c：指定要抓取包数量
+             - -i：指定监听网卡。如eth0
+             - -n：不把ip转化成域名直接显示ip，也就是说不做主机名解析，避免执行DNS lookups的过程，速度会快很多
+             - -nn：除了-n的作用外，还把端口显示为数值，否则显示端口服务名
+             - -P：指定要抓取的包是流入还是流出的包。可以给定的值为"in"、"out"和"inout"，默认为"inout"
+             - -X/-XX：输出包的头部数据，越来越详细
+             - -s x：设置数据包抓取长度
+          1. 输出选项
+             - -e：显示数据链路层头部信息，如mac地址
+             - -v/-vv/-vvv：越来越详细的输出
+          1. 其他
+             - -D：显示可抓包的网卡
+        - proto：tcp、udp、ip、ether、arp、icmp
+        - dir：src、dst、src and dst、src or dst(默认这个)
+        - type：host(ip地址)、net(网段如ip/xx)、port、portrange(xx-xx)
+     1. 结果解析
+        - Flags标识符
+          1. [S] : SYN（开始连接）
+          1. [P] : PSH（推送数据）
+          1. [F] : FIN （结束连接）
+          1. [R] : RST（重置连接）
+          1. [.] : 没有 Flag，由于除了SYN包外所有的数据包都有ACK，所以一般这个标志也可表示ACK
+     1. 实操
+        - `tcpdump -c 10 -nn not port 10088 and not port 8080 and src host xx`：抓10个来自xx ip的数据包
+        - `tcpdump -c 10 -nn -v port 80`：抓10个80端口上来回交互的包，并详细显示
+        - `tcpdump -nn 'tcp port 80 and (((ip[2:2] - ((ip[0]&0xf)<<2)) - ((tcp[12]&0xf0)>>2)) != 0)'`：源或目的端口是80, 网络层协议为IPv4, 并且含有数据,而不是SYN,FIN以及ACK-only等不含数据的数据包
+        - `tcpdump -nn 'tcp[tcpflags] & (tcp-syn|tcp-fin) != 0 and not src and dst net 10.90.100.46'`：打印TCP会话中的的开始和结束数据包，不包括本地的
+        - 抓syn包
+          1. `tcpdump -i eth0 "tcp[13] & 2 != 0"`
+          1. `tcpdump -i eth0 "tcp[tcpflags] & tcp-syn != 0"`
+        - 抓syn+ack包
+          1. `tcpdump -i eth0 'tcp[13] == 2 or tcp[13] == 16'`
+          1. `tcpdump -i eth0 'tcp[tcpflags] == tcp-syn or tcp[tcpflags] == tcp-ack'`
+        - 抓post请求的包：`tcpdump -s 0 -A -vv 'tcp[((tcp[12:1] & 0xf0) >> 2):4]'`，判断tcp报文内容来过滤，不能保证post的都抓到因post分了多个tcp包
+        - 抓get的包：`tcpdump -s 0 -A -vv 'tcp[((tcp[12:1] & 0xf0) >> 2):4] = 0x47455420'# or$ tcpdump -vvAls0 | grep 'GET'`
+        - 提取请求头：` tcpdump -nn -A -s1500 -l | grep "User-Agent:"`
+        - 找出发包最多的ip：`tcpdump -nnn -t -c 200 | cut -f 1,2,3,4 -d '.' | sort | uniq -c | sort -nr | head -n 20`
 1. 配置
    - /etc/sysconfig/network-scripts/ifcfg-eth0
    - hostname
@@ -221,9 +274,15 @@
      1. SYN queue：`/proc/sys/net/ipv4/tcp_max_syn_backlog`
      1. Accept queue：`/proc/sys/net/core/somaxconn`或/etc/sysctl.conf的`net.core.somaxconn=128`
      1. 重传SYN+ACK次数：`net.ipv4.tcp_synack_retries`：默认为5，表示重发5次，每次等待30~40秒，即半连接默认时间大约为180秒
-   - 操作
+     1. 查看进程连接、排队状况：`netstat -lntup`
+     1. 查看tcp状态数量：`netstat -an | awk '/^tcp/ {++S[$NF]}  END {for (a in S) print a,S[a]}'`
+   - 队列
      1. 查看SYN queue溢出：`netstat -s | grep LISTEN`
      1. 查看Accept queue溢出：`netstat -s | grep TCPBacklogDrop`
+   - keepalive
+     1. tcp_keepalive_time：从连接开始到发送探测数据包之间的空闲时间
+     1. tcp_keepalive_probes：发送探测数据包的最大数量，之后关闭连接
+     1. tcp_keepalive_intvl：发送两个探测数据包的间隔时间
 1. wiki
    - 端口号1024以下是系统保留的，总共65526个
 ### 磁盘
@@ -703,6 +762,7 @@
           1. `mpstat`：从启动以来的平均值
           1. `mpstat 5 2`：生成2个间隔5秒的报告
           1. `mpstat -P ALL 5 2`：分别查看每个cpu
+   - 全局监控
      1. top/htop：查看系统性能，htop高亮，3秒刷新一次
      1. sar：System Activity Reporter 系统活动情况报告，最全面的系统性能分析工具之一，可以看文件读写、系统调用情况、磁盘I/O、CPU效率、内存使用、进程活动及IPC等
         - -A：所有报告的总和
@@ -724,6 +784,16 @@
         - -e：设置显示报告的结束时间
         - -f：从制定的文件读取报告
         - -i：设置状态信息刷新的间隔时间
+     1. dstat
+        - -tpcdrmgln 2 2：刷新
+        - --output xx.csv：输出，用excel生成趋势图
+        - -m：内存
+        - -s：交换分区
+        - -r：io
+        - -p：进程
+        - -ipc：ipc消息队列、信号
+        - lock
+        - --socket/--udp/--tcp：tcp、udp端口状态
 1. 环境变量
    - 认识：系统预定义的参数。window也有。作用：在程序里可以获得环境变量的值，根据值决定如何操作，运行，找路径，文件夹等等
      1. SHELL：当前用户使用的Shell
