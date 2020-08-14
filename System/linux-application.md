@@ -6,9 +6,19 @@
      1. setenforce：Enforcing|Permissive|1|0，切换状态保持至关机，从Disabled切出时，要重启并重新创建安全标签(touch /.autorelabel && reboot)
      1. /etc/sysconfig/selinux、/etc/selinux/config：永久修改，修改后重启
 1. 进程守护
-   - supervisor、systemd、monit(还能性能监控等等)
+   - 工具：supervisor、systemd、monit(还能性能监控)
      1. supervisor：进程管理器，用于保证进程的自动重启等。通过fork/exec的方式将这些被管理的进程当作supervisor的子进程来启动，配置进程命令即可，python写的
-        - 配置
+        - 操作
+          1. `start/stop/restart all/xx`       //  开始停止xx
+          1. `status`        //查看所有进程的状态
+          1. `update`        //配置文件修改后使用该命令加载新的配置
+          1. `reload`        //重新启动配置中的所有程序
+        - 启动
+            ```
+            supervisord -c supervisor.conf                                              // 通过配置文件启动supervisor
+            supervisorctl -c supervisor.conf start/stop [all]|[x|zzg_worker]            // 启动停止所有/一个
+            ```
+        - supervisor的配置文件：supervisor.conf
             ```conf
             [unix_http_server]
             file=/tmp/supervisor_zzg.sock                   ; UNIX socket 文件，supervisorctl 会使用
@@ -54,12 +64,7 @@
             [include]
             ;files = /xdfapp/_zzg/*.conf
             ```
-        - 启动
-            ```
-            supervisord -c supervisor.conf                                                       // 通过配置文件启动supervisor
-            supervisorctl -c supervisor.conf status/reload/start/stop [all]|[x|zzg_worker]       // 查看状态/重新载入配置文件/启动停止所有一个
-            ```
-        - 实际应用配置
+        - 子进程配置文件：/etc/supervisor.d/*.ini
             ```conf
             [program:zzg_worker]
             process_name=%(program_name)s_%(process_num)02d
@@ -92,11 +97,16 @@
           1. 挂载文件系统
           1. 监控网络套接字(如动态开关进程)
           1. 运行时系统
-     1. 功能：处理时称之为单元，有单元类型
-          1. 服务单元：控制unix上的传统服务守护进程
-          1. 挂载单元：控制文件系统的挂载
-          1. 目标单元：控制其余的单元，通常是通过将他们分组的方式
-     1. 使用：编写.service文件，通过设置参数决定某一命令的守护
+        - systemctl
+          1. 认识：是systemd的进程管理命令
+          1. 使用
+             - `systemctl xx start`：兼容service启停
+             - `systemctl enable xx`：开机启动
+        - 功能：处理时称之为单元，有单元类型
+          1. 服务单元：.service文件，控制unix上的传统服务守护进程，编写.service文件，通过设置参数决定某一命令的守护
+          1. 挂载单元：.mount文件，控制文件系统的挂载，类似mount命令
+          1. 目标单元：.target文件，控制其余的单元，通常是通过将他们分组的方式
+          1. 文件单元：.wants文件，定义要执行的文件集合
    - 命令(nohup/Screen/Tmux)、Node工具(forever/nodemon/pm2)
    - 写锁(让工作进程和守护进程争抢写锁，当守护获得写锁时重启工作进程并放弃写锁))
 1. DNS

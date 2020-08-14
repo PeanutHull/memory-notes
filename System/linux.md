@@ -164,18 +164,52 @@
 1. 检测
    - ping
    - telnet ip port：检测端口是否打开
-
    - host
    - dig：从DNS域名服务器查询主机地址信息
+   - route
+     1. 认识：可显示、操作ip路由表，可设置网关来访问Internet
+     1. 操作
+        - 查看
+          1. -n：不显示主机名，直接显示ip、port
+        - 操作：`route add/del [-net|-host] [网域或主机] netmask [mask] [gw|dev]`
+          1. -net    ：表示后面接的路由为一个网域
+          1. -host   ：表示后面接的为连接到单部主机的路由
+          1. netmask ：与网域有关，可以设定netmask决定网域的大小
+          1. gw      ：指定网关ip
+          1. dev     ：指定发送网卡，如eth0
+     1. 实操：`route add -net 192.168.62.0 netmask 255.255.255.0 gw 192.168.1.1`
+     1. 结果解析
+        - Destination：目标网络或目标主机
+        - Gateway：网关地址，没有显示星号
+        - Genmask：网络掩码
+        - Flags：总共有多个旗标，代表的意义如下：                        
+          1. U：该路由是启动的                      
+          1. H：目标是主机而非网域                      
+          1. G：需要透过外部的主机来转递封包                      
+          1. R：使用动态路由时，恢复路由资讯的旗标                      
+          1. D：已经由服务或转port功能设定为动态路由                       
+          1. M：路由已经被修改了                      
+          1. !：这个路由将不会被接受
+        - Metric 距离、跳数。暂无用。
+        - Ref：恒为0，Number of references to this route. (Not used in the Linux  ker-nel.)
+        - Use：该路由被使用的次数，可以粗略估计通向指定网络地址的网络流量。
+        - Iface：网络接口名
    - traceroute：显示网络数据包传输到指定主机的路径信息，追踪数据传输路由状况
    - openssl：查看网站证书链`openssl s_client -connect github.com:443 -showcerts`
    - lsof：list open files，列出打开文件。linux环境下任何事物都以文件的形式存在
      1. i:80：查看端口号，root用户查看
 1. 查看
-   - route
-   - ifconfig：显示当前网络接口状态、配置网络
+   - ifconfig：显示、设置网络
      1. -a：inet addr，ip addr
-   - nethogs：将进程按网络流量列表显示
+     1. 设置
+        - `ifconfig eth0 up/down`：开关网卡
+        - `ifconfig eth0 192.168.1.56 `：配置ip
+        - `ifconfig eth0 192.168.1.56 netmask 255.255.255.0 broadcast 192.168.1.255`：配置ip、子网掩码、广播地址
+        - `ifconfig eth0 add/del 33ffe:3240:800:1005::2/ 64`：增删IPv6地址
+        - `ifconfig eth0 hw ether 00:AA:BB:CC:DD:EE`：修改MAC地址
+        - `ifconfig eth0 arp/-arp`：开关arp
+        - `ifconfig eth0 mtu xx`：设置最大数据包，字节
+   - nethogs：实时将进程按网络流量列表显示
    - iftop：实时流量监控工具
      1. TX：发送流量
      1. RX：接收流量
@@ -245,6 +279,12 @@
      1. 添加端口：firewall-cmd --zone=public --add-port=80/tcp --permanent
      1. 查看端口：firewall-cmd --zone=public --list-ports
      1. 开关：systemctl start/disable/restart firewalld
+1. 路由
+   - 子网通信：两个子网想要通信，需要连接两个网络的路由器，或者同时位于两个网络的网关
+   - 永久保存路由
+     1. `/etc/rc.local`添加
+     1. `/etc/sysconfig/network`添加到末尾
+     1. `/etc/sysconfig/static-router`：`any net x.x.x.x/24 gw y.y.y.y`
 1. 功能
    - telnet：使用telnet协议通信
    - curl
