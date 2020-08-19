@@ -300,6 +300,10 @@
         - TcpExt
         - IpExt
         - Sctp
+   - ss
+     1. `ss -o state established '( dport = :smtp or sport = :smtp )'`：显示所有已建立的SMTP连接
+     1. `ss -o state established '( dport = :http or sport = :http )'`：显示所有已建立的HTTP连接
+     1. `ss -x src /tmp/.X11-unix/*`：找出所有连接X服务器的进程
    - iftop
      1. h 切换是否显示帮助
      1. t 切换显示格式为2行/1行/只显示发送流量/只显示接收流量
@@ -319,6 +323,17 @@
      1. > 根据远端目标主机的主机名或IP排序
      1. o 切换是否固定只显示当前的连接
    - nicstat：solaris平台下的，需要安装
+   - traceroute/tracert
+     1. 认识：利用IP数据包的ttl字段值 + tcmp，用于探测网络路径的数据包的IP之上的协议可以是udp、tcp或tcmp，显示经过的路由器ip和时间。ping只能显示终点
+        - ttl：数据包生存时间，每次转发都减1，为0就丢弃
+        - tcmp：产生一个主机不可达的tcmp数据报返回给主机
+     1. 原理：ttl=1开始，循环+1探测经过的路由器，依赖tcmp返回获取路由器数据，同时使用udp的大于30000的端口，利用目的主机只能发送端口不可达的tcmp数据识别终点
+        - tcmp：出于安全性考虑，大多数防火墙以及启用了防火墙功能的路由器缺省配置为不返回各种tcmp报文，其余路由器或交换机也可能被管理员主动修改配置变为不返回 tcmp报文，不一定能拿到所有的沿途网关地址
+        - UDP：UDP常被用来做网络攻击，因为UDP无需连接，因而没有任何状态约束它，方便攻击者伪造源IP、伪造目的端口发送任意多的UDP包，长度自定义。所以运营商为安全考虑，对于UDP端口常常采用白名单ACL，如允许DNS/DHCP/SNMP等
+     1. 使用模式
+        - UDP模式：UDP探测数据包（目标端口大于30000） + 中间网关发回 tcmp ttl 超时数据包 + 目标主机发回 tcmp Destination Unreachable 数据包
+        - TCP模式：TCP[SYN]探测数据包 + 中间网关发回tcmp ttl超时数据包 + 目标主机发回TCP[SYN ACK]数据包
+        - tcmp模式：tcmp Echo (ping) Request 探测数据包 + 中间网关发回tcmp ttl超时数据包 + 目标主机发回tcmp Echo (ping) reply 数据包
 1. 进程
    - pidstat
      1. CPU：处理进程的cpu编号
@@ -333,7 +348,7 @@
      1. TID：线程id
 1. 指标
    - cpu
-     1. 缩写
+     1. 指标
         - id：CPU完全空闲百分比，不包括i/o等待时间，`idle`
         - sy：内核空间和中断占用CPU百分比，`system`
         - us：用户空间占用CPU百分比，`user space`
@@ -345,6 +360,7 @@
         - si：软中断占比，`software interrupts`
         - ni：nice值，改变过优先级的进程占比，负值表示高优先级，正值表示低优先级
         - st：被Hypervisor偷去给其它虚拟机使用的CPU时间占比，steal time
+        - load：1min、5min、15min
      1. 认识：如sy高us低，以及高cs，说明应用程序进行了大量的系统调用
         - CPU利用率
           1. User Time <= 70%
@@ -378,23 +394,54 @@
         - 内存黑洞：kernel没有统计所有内存分配，如动态分配的一部分，所以用量总和物理内存对不上
    - 硬盘：busy-percent、msec-weighted-total(io完成时间和积压)
      1. 指标
-        - read/write_bytes：大小
-        - read/write-ms&num：速率
-        - free-mount：剩余空间
-        - inodes-free：inode空余
-        - bi：每秒读取的块数，块大小为1024bytes
-        - bo：每秒写入的块数
+        - 容量相关
+          1. df.bytes.free：磁盘可用量
+          1. df.bytes.free.percent：磁盘可用量占比
+          1. df.bytes.total：磁盘总大小
+          1. df.bytes.used：磁盘已用大小
+          1. df.bytes.used.percent：磁盘已用大小占比
+          1. df.inodes.total：inode总数
+          1. df.inodes.free：可用inode数目
+          1. df.inodes.free.percent：可用inode占比
+          1. df.inodes.used：已用的inode数据
+          1. df.inodes.used.percent：已用inode占比
+        - 性能相关
+          1. read/write_bytes：大小
+          1. read/write-ms&num：速率
+          1. free-mount：剩余空间
+          1. inodes-free：inode空余
+          1. bi：每秒读取的块数，块大小为1024bytes
+          1. bo：每秒写入的块数
+          1. df.bytes.free.percent/fstype=ext4,mount=/
+          1. df.inodes.free.percent/fstype=ext4,mount=/
+          1. df.statistics.total
+          1. df.statistics.used
+          1. df.statistics.used.percent
+        - 文件相关
+          1. kernel.files.allocated
      1. 认识
         - iowait % < 20%
         - 提高性能可以提高命中率，一个方法为增大文件缓存区面积，缓存区越大预存的页面就越多，命中率也越高。内核希望尽可能产生次缺页中断（从文件缓存区读）并避免主缺页中断（从硬盘读），随着次缺页中断的增多文件缓存区也越大，直到系统只有少量可用物理内存的时候linux才开始释放一些不用的页
-   - 网卡：received、transmitted、drop、time-wait数量、reqTime、5xx次数、out/in/dropped_bytes、out/in/dropped_packets、abort-ontimeout(达到最大重试时间/次数的次数)、time-outs(超时重传时间)
-     1. 认识
-        - 接收/发送缓冲区等待处理的网络包耗时较少
+   - 网卡：接收/发送缓冲区等待处理的网络包耗时较少
+     1. received、transmitted、drop、compressed、time-wait
+     1. fifo.errs、errors
+     1. reqTime
+     1. out/in/dropped_bytes
+     1. out/in/dropped_packets
+     1. abort-ontimeout(达到最大重试时间/次数的次数)、time-outs(超时重传时间)
      1. Iface
      1. MTU
      1. RX-OK/RX-ERR/RX-DRP/RX-OVR
      1. TX-OK/TX-ERR/TX-DRP/TX-OVR
      1. Flg
+     1. 端口：net.port.listen
+     1. ss
+        - ss.orphaned
+        - ss.estab：tcp的estab状态的数量
+        - ss.closed
+        - ss.synrecv
+        - ss.timewait：timewait数量
+        - ss.slabinfo.timewait
    - 进程：fpm active processes
      1. 进程状态
         - R：正在执行中，run
@@ -408,6 +455,17 @@
         - L：有记忆体分页分配并锁在记忆体内 (实时系统或I/O)
      1. cpu相关
         - %guest：进程在虚拟机占用cpu的百分比
+   - php
+     1. accepted_conn
+	 1. active_processes
+	 1. idle_processes
+	 1. listen_queue
+	 1. listen_queue_len
+	 1. max_active_processes
+	 1. max_children_reached
+	 1. max_listen_queue
+	 1. slow_requests
+	 1. total_processes
 1. 分析
    - 很多参数可以看到系统从重启以来的数据，这个可用于分析系统平均负载
    - 内存

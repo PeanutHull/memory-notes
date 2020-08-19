@@ -224,6 +224,14 @@
      1. –e：网络统计
      1. -r：路由信息
    - ss：Socket Statistics，用来获取socket统计信息，显示和netstat类似，优势在于能显示更详细的TCP和连接状态的信息，比netstat更快速更高效
+     1. -s：socket详细信息
+     1. -l：显示本地打开的端口
+     1. -pl：每个进程具体打开的socket
+     1. -o state xx：显示端口状态为xx的连接，状态有estab，closed，orphaned，synrecv，timewait
+     1. -t -a：所有tcp socket
+     1. -u -a：所有udp Socekt
+     1. src/dst xx.xx.xx.xx：显示本地/远端某ip的连接
+     1. dport OP port：显示和端口的连接，OP为运算符，<=、==、!=、<
    - tcpdump
      1. 认识：网络数据包分析器，是网络分析和问题排查的首选工具。支持针对网络层/协议/主机/网络或端口的过滤，并提供and/or/not等逻辑语句去掉无用信息
         - 使用tcpdump抓到包后，往往需要再借助其他的工具进行分析，比如常见的wireshark

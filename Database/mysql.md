@@ -260,16 +260,6 @@
           1. Repeatable Read：可重复读，默认，一个事务开始后其他session对数据库的修改在本事务中不可见，只针对修改不针对插入，避免脏读/不可重复读
           1. Serializable：可序列化，事务串行化顺序执行，性能问题并增加死锁的机率，避免脏读/不可重复读/幻读
      1. 在读取数据的时候,innodb几乎不用获得任何锁, 每个查询都通过版本检查,只获得自己需要的数据版本,从而大大提高了系统的并发度
-   - 分布式事务
-     1. CAP理论：Consistency 一致性，Availability 可用性，Partition tolerance 分区容错性，不可兼得
-     1. BASE方案：Basically Available 基本可用，Soft state 软状态，Eventually Consistent 最终一致，牺牲某时刻一致性保证最终一致性
-     1. 分布式事务实现：只能实现弱一致性，TCC、高可用消息服务、最大努力通知
-        - 两阶段提交/XA：事务管理器协调，先问问ok不，再判断是否全部ok，https://github.com/yu199195/happylifeplat-transaction
-        - TCC：Try-Confirm-Cancel：https://github.com/yu199195/happylifeplat-tcc
-        - 基于消息中间件的解决分布式事务框架：https://github.com/yu199195/myth
-        - 消息中间件支持：jms(activimq),amqp(rabbitmq),kafka,roceketmq。
-        - rpc框架支持 : dubbo(可用Fescar保持数据一致性),motan,springcloud
-        - 本地事务日志存储支持 : redis,mogondb,zookeeper,file,mysql
 1. 锁
    - 分类
      1. 基于数据操作
