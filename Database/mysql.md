@@ -409,7 +409,7 @@
      1. `show status like 'Threads%';`：查看连接数
      1. `show processlist;`：查看所有连接
      1. `show variables like '%connect%';`：查看连接的配置
-   - 硬件：主频高处理快高吞吐低时延，L1/2/3的cache大速度快，内存大磁盘读写少TPS高，固态快机械配阵列卡，网卡好低时延，文件系统用xfs/ext4不用ext3
+   - 硬件：主频高处理快高吞吐低时延，L1/2/3的cache大速度快，内存大磁盘读写少TPS高，固态快机械配阵列卡，网卡好低时延
      1. 更大内存、更快磁盘：比业务服务器要求高
    - 指标
      1. qps：select、delete、insert、update，物理机qps30000，tps10000，虚拟机qps5000，tps1000
