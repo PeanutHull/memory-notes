@@ -100,4 +100,6 @@
      1. ab：`ab -n total -c runNum http://`，QPS/TPS=并发数/平均响应时间
      1. LoadRunner：收费
      1. http_load
+     1. wrk
+     1. webbench
    - 分布式压测

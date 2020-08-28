@@ -360,7 +360,11 @@
         - si：软中断占比，`software interrupts`
         - ni：nice值，改变过优先级的进程占比，负值表示高优先级，正值表示低优先级
         - st：被Hypervisor偷去给其它虚拟机使用的CPU时间占比，steal time
-        - load：1min、5min、15min
+        - load：1min、5min、15min：多核cpu需要除以核数才是正确答案
+          1. 0：完全空闲
+          1. 0.5：占用50%cpu，但是依然可以立即分配cpu给其他进程而无需等待
+          1. 1：100%，需要等待另一个进程释放cpu，或者等待cpu时间过期
+          1. 1.5：100%，并且15个任务只有5个请求CPU时间，超过1就是过载了，3极慢，5可能无法恢复正常
      1. 认识：如sy高us低，以及高cs，说明应用程序进行了大量的系统调用
         - CPU利用率
           1. User Time <= 70%
@@ -601,7 +605,8 @@
           1. Keystone：认证、身份服务
           1. Heat：编排组织服务
           1. Ceilometer：监控计量服务
-        - 远程控制：saltstack，分主从，salt-master和salt-minion
+        - saltstack，服务器管理方式，远程执行系统，用salt命令控制多台机器，用python函数执行
+          1. 结构：master中心控制，minion被管理客户端
      1. cmdb
    - 技术
      1. nat：网络地址转换服务，可基于状态过滤连接（就是内网出去的能回来，其他进不来），可做对外网的口子

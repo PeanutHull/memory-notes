@@ -161,11 +161,37 @@
      1. chgrp
      1. su/sudo
 ### 网络
+1. 应用
+   - wget
+   - curl
+     1. -X POST
+     1. -x '127.0.0.1：80'
+     1. -H 'CONTENT-TYPE:application/json' -H 'traceid:123abc'：多个就写多个-H
+     1. -d '{"id":xx}'
+     1. `curl ipinfo.io/curl cip.cc`：查看出口ip
+   - rsync
+     1. 认识：linux的文件备份、同步工具
+        - 计算源文件和目标文件的差异，仅同步差异（因为全量成本高）
+        - 压缩、解压数据以进一步提高速度
+     1. 参数
+        - -r：同步
+        - -av：同步文件，删除--delete
+   - scp
+     1. 上传：`scp [-r] local addr@ip:/addr`
+     1. 下载：`scp [-r] addr@ip:/addr local`
+   - rcp
+   - sz/rz
+   - ftp/sftp
+   - ssh
+   - telnet：用于远程登录，基于TCP/IP协议族一员的telnet协议，采用明文传送报文安全性不好，都用ssh
+   - nc
 1. 检测
-   - ping
+   - ping：连通性
    - telnet ip port：检测端口是否打开
+   - dig：域名检测，从DNS域名服务器查询主机地址信息
+   - nslookup：域名检测
    - host
-   - dig：从DNS域名服务器查询主机地址信息
+   - tracepath：端对端路由检测
    - route
      1. 认识：可显示、操作ip路由表，可设置网关来访问Internet
      1. 操作
@@ -217,7 +243,7 @@
      1. Cumm：运行iftop到目前时间的总流量
      1. peak：流量峰值
      1. rates：分别表示过去 2s 10s 40s 的平均流量
-   - netstat：显示网络连接/运行端口/路由表等
+   - netstat：显示网络连接/运行端口/路由表等，太慢淘汰
      1. -i：网卡列表
      1. -g：组播组关系
      1. -s：网络详细统计
@@ -278,45 +304,23 @@
 1. 配置
    - /etc/sysconfig/network-scripts/ifcfg-eth0
    - hostname
-1. 防火墙
-   - iptables
-     1. 编辑：`vim /etc/sysconfig/iptables`
-     1. 增加：`-A INPUT -m state --state NEW -m tcp -p tcp –-dport 80 -j ACCEPT`
-     1. 状态/重启/关闭：`/etc/init.d/iptables status/restart/stop`
-   - centos7防火墙配置
-     1. 添加端口：firewall-cmd --zone=public --add-port=80/tcp --permanent
-     1. 查看端口：firewall-cmd --zone=public --list-ports
-     1. 开关：systemctl start/disable/restart firewalld
+   - ifdown/ifup
+   - ethtool
+   - 防火墙
+     1. iptables
+        - 编辑：`vim /etc/sysconfig/iptables`
+        - 增加：`-A INPUT -m state --state NEW -m tcp -p tcp –-dport 80 -j ACCEPT`
+        - 状态/重启/关闭：`/etc/init.d/iptables status/restart/stop`
+     1. centos7防火墙配置
+        - 添加端口：firewall-cmd --zone=public --add-port=80/tcp --permanent
+        - 查看端口：firewall-cmd --zone=public --list-ports
+        - 开关：systemctl start/disable/restart firewalld
 1. 路由
    - 子网通信：两个子网想要通信，需要连接两个网络的路由器，或者同时位于两个网络的网关
    - 永久保存路由
      1. `/etc/rc.local`添加
      1. `/etc/sysconfig/network`添加到末尾
      1. `/etc/sysconfig/static-router`：`any net x.x.x.x/24 gw y.y.y.y`
-1. 功能
-   - telnet：使用telnet协议通信
-   - curl
-     1. -X POST
-     1. -x '127.0.0.1：80'
-     1. -H 'CONTENT-TYPE:application/json' -H 'traceid:123abc'：多个就写多个-H
-     1. -d '{"id":xx}'
-   - elinks
-   - 数据传输
-     1. rsync
-        - 认识：linux的文件备份、同步工具
-          1. 计算源文件和目标文件的差异，仅同步差异（因为全量成本高）
-          1. 压缩、解压数据以进一步提高速度
-        - 命令行
-          1. -r：同步
-          1. -av：同步文件，删除--delete
-     1. scp
-        - 上传：scp [-r] local addr@ip:/addr
-        - 下载：scp [-r] addr@ip:/addr local
-     1. rcp
-     1. ftp
-     1. ssh
-        - ssh addr@ip
-     1. sz/rz
 1. 参数
    - 查看
      1. SYN queue：`/proc/sys/net/ipv4/tcp_max_syn_backlog`
@@ -373,6 +377,8 @@
 1. vmstat：Virtual Meomory Statistics，虚拟内存统计信息，是实时系统监控工具，包括进程情况、内存情况、交换页、I/O、系统中断、CPU。`vmstat/vmstat 3/vmstat 3 3`：用法和mpstat一致
    - `vmstat -a`：查看活动和非活动内存
 1. pmap：查看进程内存占用信息。`pmap -d xx`
+### cpu
+1. nice：设置cpu使用优先级，如用来对付那些缓慢而且漫长的io进程
 ### 进程
 1. 运行
    - 后台运行：xx &
@@ -511,6 +517,9 @@
      1. -d：解压缩
    - bzip2/bunzip2
    - rar/unrar
+1. 相关库、框架
+   - OpenSSL：是用于TLS和SSL的工具包和加密库，可用来进行安全通信，包含了SSL协议库、应用程序、密码算法库
+   - Socket：应用层与各种网络协议通信的中间软件抽象层，是一组调用接口/API/封装。用socket组织数据，兼容多网络协议，负责程序通信，以符合指定的协议
 ### shell
 1. 理解：壳，命令行解释器，利用ASCII码表转换将命令传给内核，敲命令的界面就是shell。支持命令执行、条件判断、循环控制
 1. 运算符：expr、let
