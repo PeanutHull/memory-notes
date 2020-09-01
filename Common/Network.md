@@ -207,6 +207,18 @@
      1. Sec-WebSocket-Protocol 需要的服务名称
      1. Sec-WebSocket-Version 版本号
 1. 应用
+   - 压缩
+     1. 认识：内容编码的一种，内容即body请求体，也可以搅乱、加密。纯文本可压缩到40%，gzip对jpg支持不够好
+     1. 组成
+        - 请求头
+          1. `Accept-Encoding:gzip,deflate`：以下算法全部无损
+             - gzip：GNU zip格式压缩，就是找相同字符进行替换进行减小体积，所以html/css/js效果好
+             - compress：Unix的文件压缩程序
+             - deflate：zlib的格式压缩
+             - identity：没有编码
+        - 响应头
+          1. `Content-Encoding:gzip`
+          1. `Content-Length:xx`：这个指压缩后大小，字节
    - 表单提交
      1. enctype属性：表单数据的编码方式
         - `application/x-www-form-urlencoded`：名称/值，默认的编码方式

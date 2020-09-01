@@ -181,6 +181,7 @@
    - strtotime   字符串转为时间戳，啥都能转
    - mktime      日期转为时间戳
    - date        格式化时间/日期
+   - gmdate
 1. 文件/目录
    - 文件
      1. filetype/mime_content_type：类型
