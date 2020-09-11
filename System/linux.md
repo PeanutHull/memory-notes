@@ -176,6 +176,9 @@
      1. 参数
         - -r：同步
         - -av：同步文件，删除--delete
+   - samba
+     1. 认识：基于SMB协议的开源软件，linux上共享文件和打印机等资源，是client\server型，client(linux)访问server(windows)的资源，两个系统文件共享
+     1. 运维：`yum install samba`，配置：`/etc/samba/smb.conf`，即可开始共享文件
    - scp
      1. 上传：`scp [-r] local addr@ip:/addr`
      1. 下载：`scp [-r] addr@ip:/addr local`

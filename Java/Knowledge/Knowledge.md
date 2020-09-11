@@ -436,11 +436,6 @@ dumpStack()                                         将当前线程的堆栈跟�
      1. 连接池
      1. dubbo
      1. 分布式
-     1. Netty
-     1. CDN
-     1. Elasticsearch
-     1. solr
-     1. mysql集群
      1. JVM性能调优
 1. 关键功能具备
    - 异步任务
