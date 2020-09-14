@@ -5,6 +5,7 @@
    - 削峰
 1. 问题
    - 高可用：确保消息的可靠传递，数据不丢失、不重复
+1. kafkaVsRabbitmq：![avatar](../images/kafkaVsRabbitmq.png)
 ### RabbitMQ
 1. 认识：热门的消息中间件。是生产者/消费者模型，主要负责消息的接收、存储、转发，支持AMQP、STOMP、MQTT协议。erlang编写，因为兔子敏捷并且繁殖很疯狂
    - 高可靠：持久化、传输确认、发布确认、跟踪机制

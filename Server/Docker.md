@@ -140,3 +140,4 @@
         - 虚拟操作系统接口：更轻量，无法更深层次虚拟，不安全
    - kvm：Kernel-Based Virtual Machine，基于linux内核，KVM本身只关注虚拟机调度和内存管理这两个方面。IO外设的任务交给Linux内核和Qemu
    - 其他：Swarm、Mesos
+1. vagrant：基于Ruby的工具，用于创建和部署虚拟化开发环境。使用Oracle的开源VirtualBox，使用Chef创建自动化虚拟环境
