@@ -35,47 +35,23 @@
     }catch() {
     }finally {}
     ```
-###DOM
+### DOM
 1. dom：一组用来描述脚本怎样与结构性文档进行交互和访问的Web标准。DOM定义了一系列的对象、方法和属性，用于访问、操作和创建文档中的内容、结构、样式以及行为。
-###BOM
+### BOM
 1. 调用父级方法：`parent.method()`，parent为window.parent的简写
 1. 打开新窗口：`window.open`
-###NPM
-1. 理解：nodejs的包管理器npm是全球最大的开源库生态系统。就是给js赋予了更多底层的能力
-1. package.json
- - 理解：具有的版本管理的nodejs配置文件，运行 npm install 就会自动安装
- - 安装
-```
-npm init
-```
-1. npm
- - 查看当前插件
-```
-npm list
-```
- - 安装插件
-```
-npm install <name> [-g] [--save-dev]
--g 全局安装：将安装在C:\Users\Administrator\AppData\Roaming\npm，并写入环境变量。本地安装的话在定位目录的node_modules文件夹下，通过require()调用
---save 保存配置信息至nodejs的配置文件package.json中
---dev 保存至package.json的devDependencies节点，不指定-dev将保存至dependencies节点
-```
- - 卸载
-```
-// 不能直接删除
-npm uninstall <name> [-g] [--save-dev]
-```
- - 更新
-```
-npm update <name> [-g] [--save-dev]
-```
- - 选装cnpm
-```
-执行：   npm install cnpm -g --registry=https://registry.npm.taobao.org
-安装完成查看版本： cnpm -v
-使用和npm一致，npm更换为cnpm
-```
-###wiki
+### npm
+1. 认识：nodejs的包管理器，是全球最大的开源库生态系统。给js赋予了更多底层的能力
+   - package.json：具有的版本管理的nodejs配置文件，运行`npm install`就会自动安装。安装：`npm init`
+1. 操作
+   - 查看当前插件：`npm list`
+   - 安装/卸载/更新：`npm install/uninstall/update <name> [-g] [--save-dev]`
+     1. -g：全局安装，将安装在系统目录，并写入环境变量。本地安装则在定位目录的node_modules文件夹下，通过require()调用
+     1. --save：保存配置信息至nodejs的配置文件package.json中
+     1. --dev：保存至package.json的devDependencies节点，不指定-dev将保存至dependencies节点
+   - 选装cnpm：`npm install cnpm -g --registry=https://registry.npm.taobao.org`，查看版本：`cnpm -v`
+   - 自我升级：`npm install -g npm`
+### wiki
 1. 严格模式：修复部分语言不足，更强错误检查，增强安全性。`use strict`
 1. 历史版本：ECMAScript是JavaScript的标准规范，二者相同。ES6含义是5.1以后的JavaScript的下一代标准，包含ES2015、ES2016、ES2017等
    - ECMAScript 1.0： 96年，Netscape提交到ECMA(标准化组织)成为国际标准，即ECMA-262

@@ -435,11 +435,14 @@
    - 最大文件打开数
      1. 查看
         - 查看系统级最大限制：`cat /proc/sys/fs/file-max`
-        - 查看用户级最大限制：`ulimit -n`
+        - 查看一个进程的最大限制：`ulimit -n`
         - 查看某个进程已经打开的文件数：`cat /proc/pid/limits|fd`
      1. 修改
         - 临时修改：`ulimit -HSn 2048`
         - 永久修改：`vi /etc/security/limits.conf`
+   - 单机最大连接数
+     1. 进程的文件句柄限制，可以改配置变大
+     1. 端口号限制，根据tcp连接标识定义，连接数即客户端ip数×客户端port数，不考虑地址重用/地址分类，对于ipv4，server端单机最大tcp连接数约为2的48次方
 ### 工具
 1. 定时任务
    - crontab：linux原生定时器

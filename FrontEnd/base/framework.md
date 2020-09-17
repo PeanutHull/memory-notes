@@ -1,4 +1,4 @@
-###Vue
+### Vue
 1. 认识：web界面开发库，加上周边配套的工具，构成开发框架
    - 简洁轻量、快速、模块友好
    - 数据绑定：数据和视图双向绑定/数据驱动
@@ -9,7 +9,7 @@
    - vue-cli：脚手架工具，用来生成模板的vue工程，即按照设计图盖房子
 1. 同时从两方面入手：一是官网的语法熟悉教程，二是通过一个成熟的demo去理解构建一个实际使用的项目过程。同步进行，掌握速度应该会快
 1. 知识收集:http://gold.xitu.io/tag/Vue.js
-###Angular
+### Angular
 1. 认识：大而全，为html进行扩展，html是伟大的静态语言，但不适用动态展示，angular帮助html进行web开发，并且很好和其他类库合作，为web应用增强html的能力
 1. 组成
    - 模块 module
@@ -59,7 +59,7 @@
     parent.angular.offline();
     ```
    - 执行父窗口angular方法：`parent.angular.element('#task_btn_37').scope().offline()`
-###Jquery
+### Jquery
 1. 认识：learn more, write less
    - 完美浏览器兼容性
    - 强大选择器、DOM操作
@@ -327,3 +327,5 @@
                     each item in movies                 // 循环控制
                         a(href="/movie/#{item.id}")
     ```
+### day.js
+1. 轻量级时间日期处理库

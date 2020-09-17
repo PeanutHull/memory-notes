@@ -136,3 +136,6 @@
  - DOM断点：监听DOM修改情况，分为：子节点修改／自身属性修改，一旦DOM被修改，断点会定位到执行的代码
  - XML：是一个浏览器接口
  - WebSocket：定义了一种API，可建立套接字连接，即持久的连接，双方可以随时发送数据
+1. 全局搜索文件和关键字：ctrl+shift+F
+1. 执行命令：ctrl+shift+P
+1. 事件断点：Sources——右侧面板——Event Listener Breakpoints，会在事件产生时产生断点

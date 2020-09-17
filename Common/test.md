@@ -1,11 +1,11 @@
 ### 测试
 1. 自动化测试
    - Selenium
-     1. 理解：脚本控制浏览器
+     1. 理解：支持用脚本控制浏览器的工具，核心基于jsUnit，完全由js编写，运行在浏览器中
      1. 成员
         - IDE：脚本录制工具
-        - WebDriver
-        - Grid
+        - WebDriver：编写和运行
+        - Grid：并行处理
    - 接口自动化测试框架
      1. RobotFramework：python开发，
      1. jmeter

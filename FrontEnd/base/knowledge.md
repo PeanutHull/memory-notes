@@ -85,7 +85,7 @@
             $ws->push();
         });
         ```
-###应用
+### 应用
 1. js跳出最外层循环
 ```javascript
 outerloop:
@@ -154,7 +154,7 @@ alert(jsonobj.name);
  - 特点：
     1. 数据格式前后端无缝通用JSON数据格式
     1. 数据库对象即前后端对象，方便，前后端语法相同，还是方便
-####优化和技巧
+### 优化和技巧
 1. 内容、表现、行为相分离
 ```
 // 这是不对的，但是能运行
@@ -191,7 +191,7 @@ $('#select option:selected');
 或者
 $(~).find('option:selected');
 ```
-####实际的那些坑
+### 实际的坑
 1. 使用sco引入页面，多次引入页面，表单重复提交
    - 原理：使用了$(document).on("submit", "form", function(e){}绑定事件，因为document给整个页面绑了多次事件，才会多次提交。sco没有起另外一个iframe，只是把一些DOM放入了模态框，$(document)是把整个页面绑了多次事件
    - 解决办法：将事件绑在具体的模态框里，DOM消失时，事件也就没有了
@@ -212,3 +212,9 @@ html.push('<td class="col-sm-1"></td>');
 html.push('</tr>');
 tbody.append(html.join(''));
 ```
+### wiki
+1. 前端工具集
+   - nodejs：现代工业化前端的基础
+   - npm：前端工具/模块源。还有bower，前端模块源，维护模块的安装、升级、删除等
+   - gulp/webpack/fis：构建工具
+   - mock：接口服务、本地工具
