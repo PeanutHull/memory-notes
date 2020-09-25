@@ -453,7 +453,7 @@
         - metapackage：当一个空的包，包含依赖并且需要触发依赖的安装，这将不会对系统写入额外的文件。因此这种安装类型并不需要一个 dist 或 source
         - composer-plugin：自定义安装类型，可以继承接口写一个installler
      1. require-dev：root-only，开发或测试使用
-     1. repositories：资源库
+     1. repositories：资源库，设置某个库拉取的地址
         - 指定多个资源库，位置靠前的先使用
         ```json
         {

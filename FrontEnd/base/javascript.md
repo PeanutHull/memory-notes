@@ -53,11 +53,12 @@
    - 自我升级：`npm install -g npm`
 ### wiki
 1. 严格模式：修复部分语言不足，更强错误检查，增强安全性。`use strict`
-1. 历史版本：ECMAScript是JavaScript的标准规范，二者相同。ES6含义是5.1以后的JavaScript的下一代标准，包含ES2015、ES2016、ES2017等
-   - ECMAScript 1.0： 96年，Netscape提交到ECMA(标准化组织)成为国际标准，即ECMA-262
-   - ECMAScript 5.1： 11年
-   - ECMAScript 6.0： 15年，简称ES2015
-   - ECMAScript 6.1： 16年，新增了数组实例的includes方法和指数运算符
+1. ECMAScript
+   - 认识：是JavaScript的标准规范，二者相同。ES6含义是5.1以后的JavaScript的下一代标准，包含ES2015、ES2016、ES2017等
+     1. ECMAScript 1.0： 96年，Netscape提交到ECMA(标准化组织)成为国际标准，即ECMA-262
+     1. ECMAScript 5.1： 11年
+     1. ECMAScript 6.0： 15年，简称ES2015
+     1. ECMAScript 6.1： 16年，新增了数组实例的includes方法和指数运算符
 1. 版本更新情况
    - ES5 新功能：原生JSON对象、继承的方法、高级属性的定义、引入严格模式
      1. json
@@ -106,3 +107,4 @@
    - 支持情况
      1. 移动端ES5都支持
      1. PC端IE9以上ES5都支持，注意IE9的兼容
+1. json：Javascript Object Notation，具有自我描述性且易于阅读

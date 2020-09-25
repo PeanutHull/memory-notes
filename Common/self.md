@@ -45,7 +45,14 @@
      1. 运行时框架：封装不同小程序的语法差异为统一入口
      1. 发布自动化：selenium
    - CRN-web：按需打包(tree shaking)、按需加载(热加载)、懒加载、多级缓存、pwa。AST解析、DSL转换
-   - GLSB、CDN、CND
+   - node：做数据聚合、部署工具、SSR
+   - 用户接入
+     1. GLSB、CDN、CND
+     1. LB：硬件
+     1. SLB：软负载均衡，基于nginx，
+     1. API Gateway：收口的统一网关，之前基于zuul，现在是netty，通过将filter编译层class实现动态更新，采用了私有tcp通信
+   - 呼叫中心
+     1. 
 ### work gist
 1. 门户
    - 新增关联用户的方法
@@ -109,9 +116,13 @@
     --data-urlencode 'type=1'
     ```
    - 文档地址
-     1. https://wiki.zhiyinlou.com/pages/viewpage.action?pageId=30852539
-     1. https://wiki.zhiyinlou.com/pages/viewpage.action?pageId=30852968
-     1. https://wiki.zhiyinlou.com/pages/viewpage.action?pageId=58724741
+     1. 总的：https://wiki.zhiyinlou.com/pages/viewpage.action?pageId=30852539
+     1. 文件夹：https://wiki.zhiyinlou.com/pages/viewpage.action?pageId=38822201
+     1. 异步定稿：https://wiki.zhiyinlou.com/pages/viewpage.action?pageId=30852968
+     1. 课件平台：https://wiki.zhiyinlou.com/pages/viewpage.action?pageId=90909004
+     1. 对外
+        - https://wiki.zhiyinlou.com/pages/viewpage.action?pageId=60813822
+        - https://wiki.zhiyinlou.com/pages/viewpage.action?pageId=58724741
    - 优网海外
      1. 不需要验证码登录
      1. 服务器直连数据库：`mysql -hxuexi-test-01-xesdb.chmwbtopgut6.us-west-2.rds.amazonaws.com -uxes_courseware_rw -pKvPSMGkn5jgbpEa9df0NFENnXSgfiZT6+`

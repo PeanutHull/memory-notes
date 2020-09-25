@@ -281,6 +281,7 @@
         include vhost/*.conf;
     }
     ```
+1. https：`listen 443 ssl;`
 1. 其他配置文件
    - mime.types：文件扩展名与文件类型映射表，找不到使用默认default_type
    - fastcgi.conf/fastcgi_params/uwsgi_params/scgi_params：使用对应cgi时，向cgi传递的变量

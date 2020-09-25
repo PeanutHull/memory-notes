@@ -1,10 +1,4 @@
 ### 基础
-1. 打印
-   - `fmt.Printf("s[%d] == %d\n", i, s[i])`
-     1. %s：字符串
-     1. %d：数字
-     1. %v：slice
-   - `fmt.Println(m)`
 1. 数据类型转换
     ```go
     var f float64 = float64(i)
@@ -18,24 +12,6 @@
         Big   = 1 << 100
         Small = Big >> 99
     )
-    ```
-1. 函数
-    ```go
-    // 多值返回
-    func swap(x, y string) (string, string) {           // 缩写参数类型
-        return y, x
-    }
-    a, b := swap("hello", "world")
-    // 命名返回值
-    func split(sum int) (x, y int) {                    // x/y为返回值，为变量。长函数中使用会影响可读性
-        x = sum * 4 / 9
-        y = sum - x
-        return
-    }
-    // 函数作为参数、返回值
-    hypot := func compute(fn func(float64, float64) float64) float64 {
-        return fn(3, 4)
-    }
     ```
 1. if
     ```go
@@ -59,6 +35,24 @@
     }
     ```
 1. 死循环：`for {}`
+1. 函数
+    ```go
+    // 多值返回
+    func swap(x, y string) (string, string) {           // 缩写参数类型
+        return y, x
+    }
+    a, b := swap("hello", "world")
+    // 命名返回值
+    func split(sum int) (x, y int) {                    // x/y为返回值，为变量。长函数中使用会影响可读性
+        x = sum * 4 / 9
+        y = sum - x
+        return
+    }
+    // 函数作为参数、返回值
+    hypot := func compute(fn func(float64, float64) float64) float64 {
+        return fn(3, 4)
+    }
+    ```
 1. 在结构体上定义方法
     ```go
     func (v *vertex) Add() float64 {
@@ -73,19 +67,12 @@
 	p := &v
     p.X
     ```
-1. 时间
-    ```go
-    package main
-
-    import (
-        "fmt"
-        "time"
-    )
-
-    func main() {
-        fmt.Println("The time is", time.Now())
-    }
-    ```
+1. 打印
+   - `fmt.Printf("s[%d] == %d\n", i, s[i])`
+     1. %s：字符串
+     1. %d：数字
+     1. %v：slice
+   - `fmt.Println(m)`
 1. goroutine的斐波那契数列
     ```go
     func fibonacci(c, quit chan int) {
@@ -176,3 +163,9 @@
         //%d 替换成24
     }
     ```
+### 进阶
+1. 死锁、活锁、饥饿
+   - 死锁：两个或两个以上争夺资源而相互等待，若无外力将无法推进，导致异常
+   - 活锁：不会阻塞执行，但也不能继续执行，需要一直重复，可能会成功，会降低执行效率，引入随机性解决
+     1. 像两个过于礼貌的人在路上相遇，彼此让路，然后在另一条路上相遇，然后一直循环
+   - 饥饿：可运行进程能继续执行，但被调度器无限期忽视，而不能被执行，通过计数取样解决

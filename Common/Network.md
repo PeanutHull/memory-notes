@@ -76,19 +76,21 @@
 1. 认识：HyperText Transfer Protocol，超文本传输协议，以字节为单位，以ascii码传输。无状态、通信开销小，简单快速、基于BS模式
 1. http头
    - 通用
-    ```
-    Cache-Control                   控制缓存的行为，如Cache-Control: private, max-age=0, no-cache
-        响应指令：public/private        其他人是否可使用缓存
-        请求指令：no-cache              强制向源服务器再次验证，防止从缓存中返回过期的资源，no-store 不缓冲，max-age 秒 响应的最大Age值，
-    Connection                      逐跳首部、连接的管理，Close、Keep-Alive、Upgrade
-    Date                            创建报文的日期时间
-    Transfer-Encoding               指定报文主体的传输编码方式
-    Pragma                          报文指令
-    Trailer                         报文末端的首部一览
-    Upgrade                         升级为其他协议
-    Via                             代理服务器的相关信息
-    Warning                         错误通知
-    ```
+     1. Cache-Control：控制缓存的行为，如`Cache-Control: private, max-age=0, no-cache`，
+        - 请求指令：
+          1. no-cache：强制向源服务器再次验证，防止从缓存中返回过期的资源
+          1. no-store：不缓冲
+          1. max-age：秒，指定缓存有效的最大Age值
+          1. s-maxage：覆盖max-age、expires，仅用于共享缓存，私有缓存会被忽略
+        - 响应指令：public/private，其他人是否可使用缓存
+     1. Connection：逐跳首部、连接的管理，Close、Keep-Alive、Upgrade
+     1. Date：创建报文的日期时间
+     1. Transfer-Encoding：指定报文主体的传输编码方式
+     1. Pragma：报文指令
+     1. Trailer：报文末端的首部一览
+     1. Upgrade：升级为其他协议
+     1. Via：代理服务器的相关信息
+     1. Warning：错误通知
    - 请求头
     ```
     Host                            请求资源所在服务器
@@ -135,7 +137,7 @@
     Content-Location                替代对应资源的URI
     Content-MD5                     实体主体的报文摘要
     Content-Range                   实体主体的位置范围
-    Expires                         实体主体过期的日期时间
+    Expires                         实体主体过期的日期时间，是http1.0的标准，cache-control的优先级更高
     Last-Modified                   资源的最后修改日期时间
     ```
 1. 请求

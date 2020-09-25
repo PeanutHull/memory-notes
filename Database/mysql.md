@@ -294,6 +294,11 @@
    - 查看
      1. 表锁争用情况：`show status like 'table%';`
      1. 行锁争用情况：`show status like 'innodb_row_lock%';`，使用监视器`CREATE TABLE innodb_monitor(a INT) ENGINE=INNODB;Show innodb status\G;DROP TABLE innodb_monitor;`
+   - 解决方案
+     1. 如果并发查询多个表，约定访问顺序
+     1. 在同一个事务中，尽可能做到一次锁定获取所需要的资源
+     1. 对于容易产生死锁的业务场景，尝试升级锁颗粒度，使用表级锁
+     1. 采用分布式事务锁或者使用乐观锁
 1. 预解析
    - 理解：使用占位符预先准备查询语句，不用解析语句，查询速度更快，防止注入。步骤有：prepare、execute、deallocate prepare(发布)
    - 实例

@@ -1,12 +1,12 @@
-### 概念
-1. 理解：全称golang，快速、静态强类型、编译型、具有垃圾回收的开源语言，感觉却像动态类型的解释型语言
+### go
+1. 认识：全称golang，快速、静态强类型、编译型、具有垃圾回收的开源语言，感觉却像动态类型的解释型语言
    - 简洁清晰高效
-   - 并发机制/并发编程，goroutine跟channel，有效利用多核和网络
+   - 并发机制/并发编程，goroutine跟channel，有效利用多核和网络，并发而生
    - go的机器码迅速，可直接编译成机器码，支持跨平台编译
    - 方便的自动垃圾回收
    - 强大的运行时反射机制
    - 便于在线的性能分析，以及堆栈分析
-   - 丰富的标准库支持、强大的工具、
+   - 丰富的标准库支持、强大的工具类库
    - 丰富的内置类型支持，支持函数多返回值、匿名函数和闭包、类型和接口、反射
    - 能与c语言交互
    - 是静态类型的语言，类型系统没有层级，不需要在定义类型之间的关系上花费时间，这样感觉起来比典型的面向对象语言更轻量级
@@ -15,7 +15,7 @@
    - 性能、简单
    - 每个Go程序都是由包组成的
    - 结合了解释型语言的游刃有余，动态类型语言的开发效率，以及静态类型的安全性。它也打算成为现代的，支持网络与多核计算的语言。要满足这些目标，需要解决一些语言上的问题：一个富有表达能力但轻量级的类型系统，并发与垃圾回收机制，严格的依赖规范等
-1. 用途：
+1. 用途
    - 服务器编程：处理日志
    - 分布式系统：数据库代理器
    - 网络编程：Web应用、api应用
@@ -27,6 +27,22 @@
 
     import "fmt"
 
+    const name string = "aa"
+
+    var a string = "1"
+
+    type aInt int                           // 一般类型声明，相当于类型别名
+
+    type aStruct struct {
+    }
+
+    type Ia interface{
+    }
+
+    func aFunc() {
+
+    }
+
     func main() {
         fmt.Println("Hello, 世界\n")
     }
@@ -34,128 +50,53 @@
 ### 语法
 1. 语法
    - 函数外的每个语句都必须以关键字(var/func/...)开始
-   - 注释c风格/* */、c++风格//
+   - main是入口函数，程序必须以package开头
+   - 注释：多行/* */、单行//
+   - 作用域：首字母大小写来区分，就是public、private那些，首字母大写的名称是被导出的，他包只能读取首字母大写的变量
    - 每行可以不加分号
+   - 语法糖
+     1. ...：可变参数
+     1. :=：声明、赋值、类型推断
 1. 数据类型
+   - 意义：将数据分为所需内存不同的，充分利用内存
    - 基本
-     1. bool
-     1. string
-     1. int int8 int16 int32(rune，代表一个Unicode码) int64
-     1. uint uint8(byte) uint16 uint32 uint64 uintptr：位
-     1. float32 float64
-     1. complex64 complex128
-   - 其他
-     1. 零值：无初始化时，可以表现为0，false，""
+     1. 布尔：bool，只能是true、false
+     1. 字符串：string，统一编码为utf-8
+     1. 数值
+        - 有符号整形：int8 int16 int32 int64，数字是位数，如int32为前后20亿
+        - 无符号整形：uint8 uint16 uint32 uint64
+        - 浮点型：float32 float64
+        - 复数：complex64 complex128，即实数和虚数
+     1. 其他
+        - int/uint：32或64位，根据操作系统位数变化
+        - byte：类似uint8
+        - rune：类似int32，代表一个Unicode码
+        - uintptr：位，无符号整型，用于存放一个指针
+   - 派生
+     1. array
+     1. slice
+     1. map
+     1. pointer：指针
+     1. struct
+     1. func
+     1. interface
+     1. chan
    - 特点
+     1. 类型零值：变量无初始化时的默认值，可以表现为0，false，""
      1. 类型推导：不指定其类型时，由右值推导得出
+     1. 类型别名：`type aInt int`
      1. 类型转换：T(v)，将值v转换为类型T，不同类型相互转换的时候需要显式转换
+   - 用法
+     1. 字节大小：`unsafe.Sizeof()`
+     1. 数据类型：`reflect.TypeOf()`
 1. 运算符
    - + 字符串连接符
-1. 变量：var :=
-    ```go
-    var i,j int = 1,2       // 初始化变量
-    var i,j = 1,true        // 使用表达式，可省略类型
-    k := 3                  // 短声明、类型推导：:=，只能在函数内使用
-    ```
-1. 常量：const，可以是字符、string、bool或数字类型
-    ```go
-    const Pi = 3.14
-    ```
-1. func 函数
-   - 定义
-    ```go
-    func add(x int, y int) int {
-        return x + y
-    }
-    // 函数值
-    hypot := func(x, y int) int {}
-    ```
-   - 使用
-     1. split(17)/hypot/compute：返回7和10
-1. 流程控制
-   - 判断：不能使用()
-     1. if
-        ```go
-        if x < 0 {
-            return 1
-        } else {
-            return 2
-        }
-        ```
-     1. switch
-        ```go
-        switch os := runtime.GOOS; os {
-        case "darwin":          // 匹配则跳过剩下的case
-        case "linux":
-        case f():
-        default:
-        }
-        ```
-   - 循环：不能使用()
-     1. for
-        ```go
-        sum := 0
-        for i := 0; i < 10; i++ {
-            sum += i
-        }
-        ```
-     1. while：for代替，没有分号
-        ```go
-        for sum < 1000 {
-            sum += sum
-        }
-        ```
-   - 延迟：defer，会延迟函数的执行直到上层函数返回。所有的defer会压入栈中，并且先入后出
-    ```go
-    defer fmt.Println("world")
-	fmt.Println("hello")
-    ```
-1. * 指针
-   - 理解：保留了变量的内存地址，类型*T是指向类型T的值的指针，其零值是nil，即间接引用。与c不同go没有指针运算
-        ```go
-        var p *int      // 定义一个指针
-        i := 42
-        p = &i          // 生成指向其作用对象的指针
-        *p              // 读取i
-        *p = 21         // 设置i
-        ```
-1. 包
-   - 导出名：package指定，首字母大写的名称是被导出的，外界只能访问首字母大写的名称。可执行命令必须使用package main
-   - 导入：import，用其导出的名称来调用，包名为导入路径的最后一个元素
-        ```go
-        import "fmt"
-        import "math"
-        // 推荐下面的
-        import (
-            "fmt"
-            "math"
-            "math/rand"         // /导入某一个包
-        )
-        ```
-1. 错误
-   - 认识：用error值表示错误状态，error是内在接口，为nil时表示成功；非nil表示错误
-    ```go
-    i, err := strconv.Atoi("42")
-    if err != nil {}
-    ```
-   - error接口：fmt包处理error时会调用Error方法，使用`return 0, errors.New("math: square root of negative number")`
-   - 错误处理：Go在错误处理上采用了与C类似的检查返回值的方式，而不是其他多数主流语言采用的异常方式，导致错误处理代码的冗余
-### 数据结构
-1. struct 结构体
-   - 理解：字段的组合
-    ```go
-    type vertex struct {
-        X int
-        Y int
-    }
-    vertex{1, 2}        // 赋值
-    vertex{X: 1}        // Y:0 被省略
-    Vertex{}            // X:0 和 Y:0 被忽略
-    p = &Vertex{1, 2}   // 类型为 *Vertex
-    v.X                 // 访问
-    v.X = 4             // 赋值
-    ```
-1. array 数组
+   - 算术：++、--、+-*/%
+   - 关系：==、!=、>、<、>=、<=
+   - 逻辑：&&、||、!
+   - 按位：&、|、^、<<、>>
+   - 赋值：=、+=等
+1. array：数组
    - 理解：[n]T有n个类型为T的值的数组，不能改变长度
     ```go
     // 定义
@@ -202,31 +143,27 @@
         game[0][0] = "X"                        // 赋值
         ```
 1. map 映射
-   - 理解：映射键到值
+   - 理解：键值对，key没有顺序，key唯一
         ```go
         type Vertex struct {
             Lat, Long int
         }
+
         // 定义
         var m map[string]Vertex
         // 创建
         m = make(map[string]Vertex)
-
         // 定义、赋值
         var m = map[string]Vertex{
             "a": {1, 2},
             "b": {3, 4},
-            "c": vertex{
-                5, 6,
-            },
+            "c": vertex{5, 6},
         }
 
         // 获取
-        elem = m["key"]
+        m["key"]
         // 插入或修改
-        m["a"] = Vertex{
-            1, 2,
-        }
+        m["a"] = Vertex{1, 2}
         // 删除
         delete(m, "key")
         // 双赋值检测是否存在，ok为bool指示是否存在
@@ -234,8 +171,251 @@
         ```
    - 操作
      1. delete(m, key)：删除
+1. 变量
+   - 认识：var或者:=
+    ```go
+    var i,j int = 1,2       // 声明、赋值
+    var i,j = 1,true
+    var (                   // 多个进行
+        i int = 1
+        j float32
+    )
+    k := 3                  // 短声明、类型推导：:=，只能在函数内使用
+    ```
+   - _：特殊变量，类似黑洞
+   - 变量类型转换：必须是显式的，只能发生在两种兼容的类型之间，如int和bool不可以。`a := int32(b)`
+1. 常量
+   - 认识：const，只能是string、bool、数字类型，自定义函数操作常量会报错，只能内置函数操作
+    ```go
+    const Pi = 3.14
+    const i,j = 1,true
+    const (
+        a int = 1
+        b int = 1
+    )
+    ```
+   - iota：特殊常量，iota在const关键字出现时将被重置为0，const中每新增一行常量声明则+1，`const a = iota`
+     1. 跳值使用法
+        ```go
+        const (
+            a = iota
+            _ = iota        // 跳过了，b为3，中间不想有其他常量
+            b = iota
+        )
+        ```
+     1. 插队使用法
+        ```go
+        const (
+            a = iota
+            b = 1           // 插队了
+            c = iota
+        )
+        ```
+     1. 表达式隐式使用法
+        ```go
+        const (
+            a,b = iota, iota+3
+            c,d             // c,d分别为1,4，隐式引用了上一个
+            c = iota
+        )
+        ```
+     1. 单行使用法：`const a,b = iota, iota+3`
+1. 流程控制
+   - 判断：不能使用()
+     1. if
+        ```go
+        if x < 0 {
+            return 1
+        } else {
+            return 2
+        }
+        ```
+     1. switch：还可用于type-switch来判断某个interface变量的实际变量类型
+        ```go
+        switch os := runtime.GOOS; os {
+        case "darwin":          // 匹配则跳过剩下的case
+            return 1
+        case "linux":
+            return 1
+        case f():
+            return 1
+        default:
+        }
+        ```
+   - 循环：不能使用()
+     1. for
+        ```go
+        sum := 0
+        for i := 0; i < 10; i++ {
+            sum += i
+        }
+        // foreach
+        a := []string{"a","b"};
+        for key,value := range a{}
+        for _,value := range a{}
+        // 无限循环
+        for {}
+        ```
+     1. while：for代替，没有分号
+        ```go
+        for sum < 1000 {
+            sum += sum
+        }
+        ```
+     1. range：后边跟一个可循环的，自动类型推断
+   - 跳转：goto
+    ```go
+    goto one
+    one:
+    // 无限循环
+    one:
+    goto one
+    ```
+   - 延迟：defer，会延迟函数的执行直到上层函数返回。所有的defer会压入栈中，并且先入后出
+    ```go
+    defer fmt.Println("world")
+	fmt.Println("hello")
+    ```
+1. func 函数
+   - 定义
+    ```go
+    func add(x int, y int) int {            // 参数类型，返回值类型
+        return x + y
+    }
+    // 函数值
+    hypot := func(x, y int) int {}
+    func add(value...int) {                 // 可变参数，value是形参名称，类型统一
+        for _,v := range value {
+        }
+    }
+    ```
+   - 使用
+     1. split(17)/hypot/compute：返回7和10
+   - 内建方法
+     1. make
+        - 认识：可以创建slice、map、chan三种类型，返回引用类型，即让帮忙将数据初始化好
+        - 使用
+            ```go
+            // slice
+            mSlice := make([]string, 3)
+            // map
+            mMap := make(map[int]string)
+            // chan
+            mChan := make(chan int, 3)
+            ```
+     1. new
+        - 认识：传入的内存置零，返回传入类型的指针
+        - 使用
+            ```go
+            // slice
+            mSlice := make([]string, 3)
+            // map
+            mMap := new(map[int]string)
+            // chan
+            mChan := make(chan int, 3)
+            ```
+     1. append、copy：对slice进行操作，`mSlice = append(mSlice, "aa")`，`copy(Dst, Src)`，append会预判多加长度，copy只操作Dst原有长度范围的数据
+     1. delete：对map进行操作，`delete(mMap, xxKey)`
+     1. len、cap、close
+        - len：长度，string、array、slice、map、chan
+        - cap：容量，slice、array、chan
+        - close：关闭，chan
+     1. panic、recover：抛出，接收异常
+        ```go
+        defer func() {                  // 直接执行的匿名方法
+            msg := recover()            // 捕获，判断类型
+            switch msg.(type) {
+                case string:
+                case error:
+                default:
+            }
+        }()
+        panic("haha")                   // string类型
+        panic(error.New("kuku"))        // string类型
+        ```
+1. * 指针
+   - 理解：保留了变量的内存地址，类型*T是指向类型T的值的指针，其零值是nil，即间接引用。与c不同go没有指针运算
+        ```go
+        i := 42
+        var p *int      // 声明指针类型
+        p = &i          // 赋值指针一个作用对象
+        *p              // 读取i，*又变为取值运算符
+        *p = 21         // 设置i
+        ```
+   - 指针数组
+     1. 指针数据：是数组，数组中全是指针
+        ```go
+        a,b := 1,2
+        pointArr := [...]*int(&a, &b)
+        ```
+     1. 数组指针：是指针
+        ```go
+        arr := [...]int(1,2)
+        arrPoint := &arr
+        ```
+   - 指向指针的指针
+   - 值传递和指针传递
+1. 错误
+   - 认识：用error值表示错误状态，error是内在接口，为nil时表示成功；非nil表示错误
+    ```go
+    i, err := strconv.Atoi("42")
+    if err != nil {}
+    ```
+   - error接口：fmt包处理error时会调用Error方法，使用`return 0, errors.New("math: square root of negative number")`
+   - 错误处理：Go在错误处理上采用了与C类似的检查返回值的方式，而不是其他多数主流语言采用的异常方式，导致错误处理代码的冗余
 ### 面向对象
-1. 类：go没有类，可以在任意类型里定义方法，除了基础类型或其他包的类型。方法接收者出现在func和方法名之间的参数中
+1. struct
+   - 理解：结构体，字段的组合
+    ```go
+    type Dog struct {
+        x int               // 封装
+        y int
+    }
+    // 赋值1
+    var dog Dog
+    dog.x = 1
+    // 赋值2
+    dog := Dog{1, 2}
+    Dog{x: 1}               // y:0 被省略
+    Dog{}                   // 都被忽略
+    // 赋值3
+    dog := new(Dog)
+    dog.x = 1
+
+    // 访问
+    dog.x
+
+    // 添加方法
+    func (d *Dog) Run {}
+
+    p = &Dog{1, 2}          // 类型为 *Dog
+    ```
+   - 组合：继承
+    ```go
+    type Animal struct{
+        Color string
+    }
+    type Dog struct{
+        Animal                  // 就组合了，可以用父结构体的属性和方法
+        name string
+    }
+    dog.Color = "1"             // 就可以直接用了
+    ```
+1. interface 接口
+   - 理解：接口类型是一组方法定义的集合。即抽象、封装、多态
+        ```go
+        type Abser interface {
+            Abs() float64
+        }
+
+        type MyFloat float64
+        f := MyFloat()
+
+        var a Abser                 // 1. 接口定义变量
+        a = f                       // 2. 方法赋值给变量，即a MyFloat实现了Abser
+        ```
+   - 隐式接口：类通过实现那些方法来实现接口。这就没有了显式声明的必要和关键字implements。解藕了实现接口的包和定义接口的包，因此无需在每个实现上增加新接口，也鼓励了明确的接口定义
+1. go没有类，可以在任意类型里定义方法，除了基础类型或其他包的类型。方法接收者出现在func和方法名之间的参数中
     ```go
     func (v *Vertex) Abs() float64 {}           // 接收者为指针，大结构体的话更有效率
     v := &Vertex{3, 4}
@@ -246,20 +426,6 @@
     f := MyFloat()
     f.Abs()
     ```
-1. interface 接口
-   - 理解：接口类型是一组方法定义的集合
-        ```go
-        type Abser interface {
-            Abs() float64
-        }
-
-        type MyFloat float64
-        f := MyFloat()
-
-        var a Abser
-        a = f                       // a MyFloat实现了Abser
-        ```
-   - 隐式接口：类通过实现那些方法来实现接口。这就没有了显式声明的必要和关键字implements。解藕了实现接口的包和定义接口的包，因此无需在每个实现上增加新接口，也鼓励了明确的接口定义
 1. 内建接口
    - Stringer
     ```go
@@ -270,54 +436,88 @@
     z := Person{"Zaphod Beeblebrox", 9001}
     fmt.Println(a, z)
     ```
-### 多线程
-1. goroutine：go的轻量级线程
+### 协程
+1. goroutine：go的协程，协程间需要通信、同步，是并行运行的，需要的内存极小，实际可以cpu核数减一来设置，给系统留下
     ```go
+    go say("hello")
     go say("world")
     ```
 1. channel
-   - 理解：有类型的管道，用<-发送或接收值，用来在线程间通信。默认另一端准备好之前发送和接收都会阻塞，使得goroutine可以在没有明确的锁或竞态变量的情况下同步
+   - 认识：有类型的管道，用于协程间通信。默认另一端准备好之前发送和接收都会阻塞，使得goroutine可以在没有明确的锁或竞态变量的情况下同步
         ```go
-        ch := make(chan int)        // 和map、slice一样，使用前必须创建
-        ch <- v                     // 将v送入channel ch
-        v := <-ch                   // 从ch接收，并且赋值给v
+        ch := make(chan int)
+        ch <- v                     // 放入管道
+        v := <- ch                  // 拿出管道
         ```
-   - 缓冲：向缓冲channel发送数据的时，只有缓冲区满时才会阻塞，当缓冲区清空的时候接收操作会阻塞
+   - 缓冲：向channel发送数据的时，只有缓冲区满时才会阻塞，当缓冲区清空的时候接收操作会阻塞
         ```go
         ch := make(chan int, 100)
         ```
    - 关闭
         ```go
         c := make(chan int, 10)
-        // 发送者close channel，表示再没有值会被发送，只有发送者才能关闭channel
-        close(c)
-        // 接收者通过赋值语句的第二参数来测试channel是否被关闭，ok为false表示已经关闭
-        v, ok := <-ch
-        // 不断从channel接收值，直到它被关闭
-        for i := range c {
+        close(c)                        // 发送者close channel，表示再没有值会被发送，只有发送者才能关闭channel
+
+        v, ok := <-ch                   // 接收者通过赋值语句的第二参数来测试channel是否被关闭，ok为false表示已经关闭
+        for i := range c {              // 不断从channel接收值，直到它被关闭
             fmt.Println(i)
         }
         ```
-   - select：可以使线程在多个通讯操作上等待，select会阻塞直到条件分支中的某个可以继续执行。当多个都准备好的时候，会随机选择一个
+   - select：随机接收多个管道的数据，select会阻塞直到条件分支中的某个可以继续执行。当多个都准备好的时候，会随机选择一个。可用于多个写入，一个读取场景
         ```go
         select {
-            case c <- x:
-            case <-quit:
+            case c <- chName1:
+            case <- quitChName:                         // 只要有数据，不管值是什么
             case <- time.After(5 * time.Second):        // 设置超时
             default:                                    // 其他分支没准备好的时候default分支会被执行，可用于非阻塞的发送或者接收
         }
         ```
-   - 互斥：sync.Mutex，保证同时只有一个goroutine能访问一个共享的变量从而避免冲突
+1. sync
+   - 同步：`sync.WaitGroup`，需要一个条件完成，才能继续
+     1. Add：添加协程记录
+     1. Done：移除协程记录
+     1. Wait：同步等待所有的记录的协程全部结束
+   - 锁
+     1. 互斥锁：`sync.Mutex`，保证同时只有一个goroutine能访问一个共享的变量从而避免冲突
         ```go
         c.mux.Lock()
         c.v[key]++      // Lock 之后同一时刻只有一个goroutine能访问 c.v
         c.mux.Unlock()
         ```
+     1. 读写互斥锁：`sync.RWMutex`
+     1. map：`sync.Map`
 ### 包
-1. 时间
+1. package
+   - 认识：包，是最基本的分发单位和工程管理中依赖的体现
+     1. go源代码开头都必须以package声明开头，用来表示所属代码包
+     1. 同一个路径下只能存在一个package(同一个目录下包名相同)，一个package可拆成多个源文件(同一个目录下可有多个文件)
+     1. 可执行的程序必须有main包，并且该包下有main函数
+   - 导入
+     1. 认识：import，顺序导入有依赖的包，两种导入方式，导入未使用的包会报错，包只会被导入一次，import只有这一个功能
+        - 先导入最上层依赖的包
+        - 然后初始化包中常量和变量
+        - 然后包中有init方法则执行
+        - 所有包导入完成后，对main初始化常量和变量、执行init方法
+     1. 导入方式
+        ```go
+        import "fmt"
+        import "math"
+        // 推荐下面的
+        import (
+            "fmt"
+            "math"
+            "math/rand"         // 导入某一个包
+        )
+        ```
+     1. 别名：`import xx/./_ "fmt"`
+       1. .：点标识的包导入后，调用该包函数可以省略包名，不建议用，容易迷惑
+       1. _：不导入整个包，只执行init函数，用来注册包中引擎
+   - 导出：package，可执行命令必须使用main包
+1. time
    - time
      1. `time.Now()`
-1. io包
+     1. `time.Sleep(time.Second * 5)`
+1. io
    - 目录：Mkdir/MkdirAll/Remove/RemoveAll：`os.Mkdir("a", 0777)`
    - 文件
      1. Create/NewFile
@@ -340,7 +540,8 @@
             }
         }
         ```
-1. http包、log包
+1. bufio
+1. net、log
    - 核心功能
      1. Conn：使用goroutines保证请求独立性
      1. ServeMux：数据路由
@@ -376,13 +577,13 @@
         cookie := http.Cookie{Name: "id", Value: "astaxie", Expires: expiration}
         http.SetCookie(w, &cookie)
 
-        err := http.ListenAndServe("localhost:4000", h)
+        err := http.ListenAndServe("localhost:4000", h)                             // 启动服务器
         if err != nil {
             log.Fatal(err)
         }
         ```
    - ip：`addr := net.ParseIP()`
-1. image包
+1. image
     ```go
     m := image.NewRGBA(image.Rect(0, 0, 100, 100))
 	m.Bounds()
@@ -391,7 +592,17 @@
 1. math
    - `math.Nextafter(2, 3)`
    - `rand.Intn(10)`："math/rand"
+1. database/sql：数据库驱动的标准接口
+1. archive
+   - `archive.tar`
+   - `archive.zip`
+1. reflect
+   - TypeOf/Type
+   - ValueOf/Value
+   - Elem：指针指向的元素类型
 1. runtime
+   - `runtime.GOMAXPROCS`：使用最大核心数
+   - `runtime.NumCPU`：cpu核心数
    - 多线程
      1. Goexit
      1. Gosched
@@ -416,47 +627,69 @@
         regexp.Compile("\\<script[\\S\\s]+?\\</script\\>")
         ```
    - xml：encoding/xml包，读取Unmarshal，生成Marshal/MarshalIndent
-   - json：encoding/json包，读取Unmarshal，生成Marshal，Javascript Object Notation，具有自我描述性且易于阅读
+   - json：encoding/json包
+     1. Marshal：序列化，用于map和struct
         ```go
-        // 已知结构的
         type Server struct {
-            ServerName string
-            ServerIP   string
-        }
-        type Serverslice struct {
-            Servers []Server
+            ServerName string `json:"name"`     // 这是tag，生成json时替换key，做个映射，反过来也会用到
+            ServerIP   string `json:"ip"`
         }
 
-        var s Serverslice
-        str := `{"servers":[{"name":"1","ip":"127"},{"name":"2","ip":"127"}]}`
-        json.Unmarshal([]byte(str), &s)
-        fmt.Println(s)
-        // 未知结构，interface和type assert配合
-        str := `{"servers":[{"name":"1","ip":"127"},{"name":"2","ip":"127"}]}`
-        var f interface{}
-        err := json.Unmarshal(str, &f)
-        m := f.(map[string]interface{})         // 断言形式
-        for k, v := range m {
-            switch vv := v.(type) {
-            case string:
-            case int:
-            case float64:
-                fmt.Println(k,"is float64",vv)
-            case []interface{}:
-                fmt.Println(k, "is an array:")
-                for i, u := range vv {
-                    fmt.Println(i, u)
-                }
-            default:
-                fmt.Println(k, "is of a type I don't know how to handle")
-            }
+        server := new(Server)
+        server.ServerName = "1"
+
+        a,err := json.Marshal(server)       // 序列化
+        if err != nil {
+            return err.Error()
         }
-        // 第三方simplejson包
-        js, err := NewJson([]byte(`{"servers":[{"name":"1","ip":"127"},{"name":"2","ip":"127"}]}`))
-        arr, _ := js.Get("servers").Get("name").Array()
-        i, _ := js.Get("servers").Get("name").Int()
-        ms := js.Get("servers").Get("name").MustString()
         ```
+     1. Unmarshal：反序列化
+        - struct
+            ```go
+            // 已知结构的
+            type Server struct {
+                ServerName string
+                ServerIP   string
+            }
+            type Serverslice struct {
+                Servers []Server
+            }
+
+            var s Serverslice
+            str := `{"servers":[{"name":"1","ip":"127"},{"name":"2","ip":"127"}]}`
+            err := json.Unmarshal([]byte(str), &s)     // 强行转为数组
+            fmt.Println(s)
+            ```
+        - map
+            ```go
+            // 未知结构，interface和type assert配合
+            str := `{"servers":[{"name":"1","ip":"127"},{"name":"2","ip":"127"}]}`
+            var f interface{}
+            err := json.Unmarshal(str, &f)
+            m := f.(map[string]interface{})             // 断言形式
+
+            // 下边这些不知道在干嘛
+            for k, v := range m {
+                switch vv := v.(type) {
+                    case string:
+                    case int:
+                    case float64:
+                        fmt.Println(k,"is float64",vv)
+                    case []interface{}:
+                        fmt.Println(k, "is an array:")
+                        for i, u := range vv {
+                            fmt.Println(i, u)
+                        }
+                    default:
+                        fmt.Println(k, "is of a type I don't know how to handle")
+                }
+            }
+            // 第三方simplejson包
+            js, err := NewJson([]byte(`{"servers":[{"name":"1","ip":"127"},{"name":"2","ip":"127"}]}`))
+            arr, _ := js.Get("servers").Get("name").Array()
+            i, _ := js.Get("servers").Get("name").Int()
+            ms := js.Get("servers").Get("name").MustString()
+            ```
    - 命令行：`os.Args/os.Args[1]`
 1. 加解密
    - base64
@@ -611,6 +844,34 @@
         - src：源码目录，import时来src查找
         - bin：可执行命令，go get二进制文件下载的目的地
         - pkg：包对象，编译生成的lib文件存储的地方
+   - module
+     1. 认识：go Module，版本依赖工具，命令行支持modules操作，modules用来替换GOPATH的
+     1. 组成
+        - go.mod文件，可以将工程从GOPATH中移出来
+            ```
+            module rsc.io/hello
+
+            go 1.12
+
+            require (
+                "golang.org/x/text" v0.0.0-20180208041248-4e4a3210bb54
+                "rsc.io/quote" v1.5.2
+            )
+            ```
+        - go.sum文件：用来校验文件，都是命令行自动操作
+     1. 使用
+        - 初始化：`go mod init`
+        - 查看
+          1. 打印：`go mod graph`
+          1. 展示依赖关系：`go mod why`
+        - 操作
+          1. 下载：`go get`
+          1. 下载：`go build`
+          1. 编辑：`go mod edit -module/require/version/print xx`
+          1. 下载：`go mod download`
+          1. 将依赖放入vendor目录：`go mod vendor`，将GOPATH分开，用于打包构建
+          1. 验证：`go mod verify`
+          1. 整理：`go mod tidy`，需要的加，不要的删
    - 依赖
      1. 认识：dep，实现了tag管理代码，而不是trunk/mainline，如go get下载的代码，依赖管理工具为应用管理代码，go get为GOPATH管理代码
      1. 组成
@@ -631,7 +892,6 @@
         - glide：glide.yaml、glide.lock，官方建议迁移到dep
         - govendor
         - gvt
-   - module
 1. cli
    - 基础
      1. `go help`
@@ -655,29 +915,32 @@
      1. `go get`：动态获取远程代码包，下载和install，下载到GOROOT/src
      1. `go list`：查看安装的packag
 ### wiki
+1. 关键字和标识符
+   - 关键字：25个
+     1. var、const、map、struct、type
+     1. if、else、for、switch、select、break、continue、case、default、range
+     1. goto、defer
+     1. func、interface、return
+     1. go、chan
+     1. package、import
+     1. fallthrough
+   - 标识符：36个
+     1. 基础数据类型
+        - iota
+        - nil、bool、false、true、byte、string
+        - int、int8、int16、int32、int64、uint、uint8、uint16、uint32、uint64、uintprt、float32、float64、complex、complex64、complex128
+        - imag、panic、recover
+     1. 内嵌函数
+        - copy、append、cap、close、len、real
+        - make、new
+        - print、println
 1. 历史
    - 07年开发
    - 09年开源
    - 12年1.0稳定版本
    - 14年1.4版本
    - 1.11
-     1. 库文件管理模块：go Module，命令行支持modules操作，modules用来替换GOPATH的
-        ```go
-        // go.mod文件
-        module "rsc.io/hello"
-
-        require (
-            "golang.org/x/text" v0.0.0-20180208041248-4e4a3210bb54
-            "rsc.io/quote" v1.5.2
-        )
-        ```
+     1. 库文件管理模块go module
 1. wiki
    - int/uint/uintptr受系统位数影响
-1. 测试：go test和testing包构成
-1. 数据构造
-   - new：分配置零的内存的内建函数，并返回指针(地址)
-        ```go
-        type SyncedBuffer struct {}
-        p := new(SyncedBuffer)              // type *SyncedBuffer
-        ```
-   - make：只用于创建slice、map和channel
+1. 测试：go test和testing包

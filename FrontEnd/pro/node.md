@@ -15,6 +15,8 @@
         - `process.env`：环境变量
         - `process.argv`
         - `process.nextTick()`：事件循环中的插队机制
+     1. os：系统数据
+     1. moment：时间
    - 系统模块：需要require，不需要下载
    - 自定义模块
      1. 认识：模块，nodejs继承了commonjs的理念，node里每个js文件都是一个独立的模块
@@ -137,7 +139,6 @@
         ```
    - cluster：利用多核cpu，创建一堆node子进程，共享套接字从而实现负载均衡
      1. 进程间通信：...
-1. await/async
 ### 应用
 1. mongoose
    - 解释：node的mongoDB驱动，提供Schema、Model、Document对象。安装：`npm install mongodb`
