@@ -148,3 +148,44 @@
      1. 缺陷
         - 内核态和用户态的切换，很大的浪费
      1. php7内存接口
+### swoole
+1. 组成
+   - 目录：头文件include，.cc是c++文件，swoole_server.cc是php相关的，是所有的入口
+   - 结构：两部分，core是swoole的核心，不依赖php，可以编译为.so文件，是基于c++的
+‌编译sw源代码：cmake gcc ldd nm ldconfig strace   uname -a
+‌abi：.h描述内存布局，.a静态库，.so，这是c体系，二进制调用，nm对应的符号即指针，去指示链接的过程，可能是动态的，完成函数的调用
+‌头文件可以任意地址
+‌service.c：service这个结构体在栈上
+‌init方法开始，先设置默认值，初始化cpu核数等
+‌create：创建进程模式，线程模式，资源的申请，创建管道，
+‌service可以挂很多端口，tcp udp sock，用于挂ipv6，ssl等6种，用add_port方法，最多65536
+‌挂回调，7个
+‌start，启动了
+‌gcc test_server.c -lswoole -I../include -L指定lib绝对路径，这时候头文件不一致了，好乱啊，设置的so和指定的不一样
+‌工作进程，master进程，
+‌核心lib/swoole.so，跟php没有关系，
+‌写tcp用swoole，链接so，复制头文件，
+‌协程使用libco
+‌模式：base模式，单线程不一定单进程，accept receive close一个线程，一个线程只能一个核，如只能核数分之一，fork可变多进程，但是只监听一个端口，和node，nginx相同，有惊群问题，异步的进程，阻塞在epoll wait上，一个连接到来无法解决惊群，epoll进程都唤醒，高版本可只唤醒一个进程，进程唤醒开销4微秒，fpm不存在这个问题，操作系统只唤醒一个，老系统2.6以下不行
+‌process模式，即代理模式，manager负责进程管理，和fpm相似，发生core dump，php fatalerror，oom只有这三种，manager得到退出信号启动新的。master监听端口、accept，fd取模分给reator线程，生命周期为receive、send、close。reator线程最大2M投递dispatch给worker进程，是一个完整的包，每个进程有4个内存地址，一次投递全放进来，一个worker和reator数据一定是串行的，保证数据正确性，得到结果返回给reator，由reatorsend。多路进程：每个worker进程有双向unix socket管道和reator交互，他们多对多的关系，从而实现并发处理。多线程的话每个工作线程一个内存队列，由于php多进程，完全无锁多个管道不停数据。所有线程和进程都是在epoll wait的状态
+process.c：创建manager和worker进程，用pthread创建reator线程，然后在epoll wait循环，她们全是异步的，基于reator模型，add后wait，在回调中处理，wait不停接受事件，接收完继续接受。
+master线程也是reator模式，也在epoll wait状态，和reator线程在一个进程中。master线程添加了监听端口listen_list、定时器swTime_add、等事件，设置SW_FD_LISTEN给swServer_回调方法，master线程通过epoll wait给到reator，fd取模线程数的给到方式。reator有自己epoll队列，master线程accept以后产生 new fd，即最新连接，取模，为什么监听可写事件？可写缓冲区可写的话一定可写，可读在可写前，add是master添加的，先拿ctl，就是wait中可读可写切换，有连接以后不发包如恶意客户。可读用于pipe满处理慢，是否可读。可写事件一步一步触发，如2M就200k的一点点写，状态一直切换，然后等。缓冲区为空去掉可写状态
+水位控制：即缓冲区不足，一种多出来的直接丢弃，一种扩大占用内存
+unix socket：为出和入，多路管道不能用stream因为数据没边界，用dgram，
+linux 3.1新增 重用端口，4个进程都用相同端口sock，reuse port，内核线程是串行的
+http：连接握手 syn包，发，收，发ack，服务端放到backlog，之后再accept。发data，然后服务端onread，给worker然后onwrite，返回数据
+ipv4的udp一次最多发64k，dgram最大2M
+重点在理解，知道原理，协调好东西
+![avatar](../../images/swoole.jpeg)
+1. 其他
+   - 24核，4个网卡队列，4个核处理网卡中断，网卡处理不及时就会丢包，将24个核都平均都处理网卡中断，最大化减少丢包
+   - server.h和.c是一个库，是开放的
+   - master.cc是master进程的主文件，
+   - 守护进程就是fork两次，然后让主进程退出，即父进程的进程id为1
+   - 一些结构体，用位存储，节省内存
+   - 用session取代fd，避免fd高度重用从而导致错误发送的问题，各种措施保证fd不被释放，
+   - 连接关闭碰撞：客户端主动关闭，服务费关闭，双端关闭会产生冲突
+   - 上节课是进程的通信，用的管道，
+   - 这节课是通信的细节，协议的实现，结合man查看使用方法，协议中数据流的传输
+   - socket有六种。新的连接放到reator_thread的事件循环中，socket_create方法，是异步的，然后reator_add添加到epoll中，调用epoll_wait，从listen队列中取出来，加到epoll的事件监听中
+   - 四种消耗之一的系统调用消耗很大，内存拷贝，进程切换，锁（碰撞就进程切换）

@@ -320,19 +320,6 @@
         - len：长度，string、array、slice、map、chan
         - cap：容量，slice、array、chan
         - close：关闭，chan
-     1. panic、recover：抛出，接收异常
-        ```go
-        defer func() {                  // 直接执行的匿名方法
-            msg := recover()            // 捕获，判断类型
-            switch msg.(type) {
-                case string:
-                case error:
-                default:
-            }
-        }()
-        panic("haha")                   // string类型
-        panic(error.New("kuku"))        // string类型
-        ```
 1. * 指针
    - 理解：保留了变量的内存地址，类型*T是指向类型T的值的指针，其零值是nil，即间接引用。与c不同go没有指针运算
         ```go
@@ -355,14 +342,30 @@
         ```
    - 指向指针的指针
    - 值传递和指针传递
-1. 错误
-   - 认识：用error值表示错误状态，error是内在接口，为nil时表示成功；非nil表示错误
-    ```go
-    i, err := strconv.Atoi("42")
-    if err != nil {}
-    ```
-   - error接口：fmt包处理error时会调用Error方法，使用`return 0, errors.New("math: square root of negative number")`
-   - 错误处理：Go在错误处理上采用了与C类似的检查返回值的方式，而不是其他多数主流语言采用的异常方式，导致错误处理代码的冗余
+1. 错误和异常
+   - 错误
+     1. 认识：用error值表示错误状态，error是内在接口，为nil时表示成功；非nil表示错误
+        - error接口：fmt包处理error时会调用Error方法，使用`return 0, errors.New("math: square root of negative number")`
+            ```go
+            i, err := strconv.Atoi("42")
+            if err != nil {}
+            ```
+   - 比较
+     1. 在错误处理上采用了与C类似的检查返回值的方式，而异常定义为无法预测的，几乎不可能失败但是特殊条件下也没法返回错误，也无法继续执行，这时就会返回异常panic
+   - 异常
+     1. 认识：panic、recover，抛出，接收异常
+        ```go
+        defer func() {                  // 直接执行的匿名方法
+            msg := recover()            // 捕获，判断类型
+            switch msg.(type) {
+                case string:
+                case error:
+                default:
+            }
+        }()
+        panic("haha")                   // string类型
+        panic(error.New("kuku"))        // string类型
+        ```
 ### 面向对象
 1. struct
    - 理解：结构体，字段的组合
@@ -437,7 +440,8 @@
     fmt.Println(a, z)
     ```
 ### 协程
-1. goroutine：go的协程，协程间需要通信、同步，是并行运行的，需要的内存极小，实际可以cpu核数减一来设置，给系统留下
+1. 并行与并发：并发只是假装同时进行
+1. goroutine：go的协程(coroutine)，协程间需要通信、同步，是并行运行的(多处理器同时)，需要的内存极小，实际可以cpu核数减一来设置，给系统留下
     ```go
     go say("hello")
     go say("world")
@@ -446,24 +450,33 @@
    - 认识：有类型的管道，用于协程间通信。默认另一端准备好之前发送和接收都会阻塞，使得goroutine可以在没有明确的锁或竞态变量的情况下同步
         ```go
         ch := make(chan int)
-        ch <- v                     // 放入管道
-        v := <- ch                  // 拿出管道
-        ```
-   - 缓冲：向channel发送数据的时，只有缓冲区满时才会阻塞，当缓冲区清空的时候接收操作会阻塞
-        ```go
-        ch := make(chan int, 100)
+        ch <- v                     // 写
+        v := <- ch                  // 读
+
+        // 单向通道
+        var send chan <- int         // 只能发送
+        var receive <- chan int      // 只能接收
         ```
    - 关闭
         ```go
         c := make(chan int, 10)
         close(c)                        // 发送者close channel，表示再没有值会被发送，只有发送者才能关闭channel
 
-        v, ok := <-ch                   // 接收者通过赋值语句的第二参数来测试channel是否被关闭，ok为false表示已经关闭
-        for i := range c {              // 不断从channel接收值，直到它被关闭
-            fmt.Println(i)
+        v,ok := <-ch                    // 接收者通过赋值语句的第二参数来测试channel是否被关闭，ok为false表示已经关闭
+        for{
+            v,ok := <- ch
+            if ok == false {        // 通道已经关闭
+                break
+            }
         }
+        for v := range ch{}         // 简便写法，不断从channel接收值，直到它被关闭
         ```
-   - select：随机接收多个管道的数据，select会阻塞直到条件分支中的某个可以继续执行。当多个都准备好的时候，会随机选择一个。可用于多个写入，一个读取场景
+   - 缓冲
+        ```go
+        ch := make(chan int, 100)   // 有缓冲通道，只有缓冲区满时才会阻塞，当缓冲区清空的时候接收操作会阻塞
+        ch := make(chan int)        // 无缓冲通道/同步通道，即通道大小为0，不会存储数据
+        ```
+   - select：同时监听多个管道并收发消息，会阻塞直到条件分支中的某个可以继续执行。多个都准备好的随机选一个。可用于多个写入，一个读取场景
         ```go
         select {
             case c <- chName1:
@@ -472,11 +485,31 @@
             default:                                    // 其他分支没准备好的时候default分支会被执行，可用于非阻塞的发送或者接收
         }
         ```
+   - 特性
+     1. 无缓冲通道读时没有数据会阻塞，没有取数据时goroutine会阻塞，读写不能放一个协程里，写读颠倒会死锁
+     1. 给一个nil的channel发送数据，造成永远阻塞 
+     1. 从一个nil的channel接收数据，造成永远阻塞
+     1. 给一个已经关闭的channel发送数据，引起panic 
+     1. 从一个已经关闭的channel接收数据，返回channel中缓存的值，如果通道中无缓存，返回0
 1. sync
-   - 同步：`sync.WaitGroup`，需要一个条件完成，才能继续
-     1. Add：添加协程记录
-     1. Done：移除协程记录
-     1. Wait：同步等待所有的记录的协程全部结束
+   - 同步器：`sync.WaitGroup`，是信号量，需要一个条件完成，才能继续
+     1. 方法
+        - Add(n)：设置计数器数量n
+        - Done()：计数器数量减一
+        - Wait()：等待，同步等待所有的记录的协程全部结束
+     1. 示例
+        ```go
+        var wg sync.WaitGroup
+        
+        wg.Add(2)
+        go func() {
+            defer wg.Done()
+        }()
+        go func() {
+            defer wg.Done()
+        }()
+        wg.Wait()                       // 阻塞，使其等待
+        ```
    - 锁
      1. 互斥锁：`sync.Mutex`，保证同时只有一个goroutine能访问一个共享的变量从而避免冲突
         ```go
@@ -486,6 +519,9 @@
         ```
      1. 读写互斥锁：`sync.RWMutex`
      1. map：`sync.Map`
+1. context：库，1.7加入，跟踪goroutine调用树，并在这些树中传递通知和元数据
+   - 退出通知机制：传递给所有树节点
+   - 传递数据：传递给所有树节点
 ### 包
 1. package
    - 认识：包，是最基本的分发单位和工程管理中依赖的体现
@@ -517,7 +553,7 @@
    - time
      1. `time.Now()`
      1. `time.Sleep(time.Second * 5)`
-1. io
+1. os
    - 目录：Mkdir/MkdirAll/Remove/RemoveAll：`os.Mkdir("a", 0777)`
    - 文件
      1. Create/NewFile
@@ -540,7 +576,7 @@
             }
         }
         ```
-1. bufio
+1. bufio：os包的增强版，如可读取一行
 1. net、log
    - 核心功能
      1. Conn：使用goroutines保证请求独立性
@@ -603,6 +639,8 @@
 1. runtime
    - `runtime.GOMAXPROCS`：使用最大核心数
    - `runtime.NumCPU`：cpu核心数
+   - `runtime.Gosched()`：使goroutine让出cpu时间片
+   - `runtime.Goexit()`：使goroutine立即终止
    - 多线程
      1. Goexit
      1. Gosched
@@ -914,6 +952,9 @@
    - 依赖
      1. `go get`：动态获取远程代码包，下载和install，下载到GOROOT/src
      1. `go list`：查看安装的packag
+1. 部署
+   - supervisor来管理go程序，go自己用异常捕捉来处理
+   - 打包linux的：`CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build main.go`
 ### wiki
 1. 关键字和标识符
    - 关键字：25个

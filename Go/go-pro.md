@@ -32,3 +32,12 @@
      1. 析构方法：`runtime.SetFinalizer()`
         - 被GC时触发，由于可能任意时间被触发，因此一般只用于长期运行的程序中释放非内存资源
         - 会按依赖顺序执行
+1. goroutine
+   - 每个goroutine stack的size默认设置为2k，可以轻易创建几十万goroutine不用担心内存耗尽等问题
+   - scheduler：go的调度器要将众多goroutine放在有限的线程上去调度执行。使用M:N的G-P-M线程调度模型
+   - sysmon：用于监控的线程，改变goroutine的抢占标志位，goroutine下一次调用时runtime可以将其抢占
+     1. 释放闲置超过5分钟的span物理内存
+     1. 如果超过2分钟没有垃圾回收，强制执行
+     1. 将长时间未处理的netpoll结果添加到任务队列
+     1. 向长时间运行的G任务发出抢占调度
+     1. 收回因syscall长时间阻塞的P

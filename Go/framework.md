@@ -41,3 +41,6 @@
 ### 轮子
 1. Viper：配置信息处理框架，各种文件格式、环境变量、ETCD等，检测文件变动
 1. fsnotify：viper的内部就是fsnotify
+### 库
+1. logrus：最活跃的日志库
+1. zap：日志库

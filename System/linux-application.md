@@ -161,6 +161,11 @@
    - httpDNS：指通过ip和http协议直接访问dns服务器获取解析，绕过本地运营商。因为智能dns有很多弊端，如nat转换导致解析链路加长等原因，移动端用的多
 1. tumx：多个界面，断网保存用户操作的界面
 1. 数据恢复工具：ext3grep
+1. 文件、目录的变动监控
+   - linux、android：inotify
+   - macOS、iOS、BSD：kqueue、FSEvents(比kqueue更高效、先进)
+   - windows：ReadDirectoryChangesW
+   - Solaris 11：FEN
 ### 性能监控
 1. cpu工具
    - ps
@@ -541,7 +546,7 @@
      1. 文件副本进行负载均衡
      1. 进行特定索引文件计算
    - 分类
-     1. 应用级：GFS、HDFS、Ceph、GridFS、mogileFS、TFS、FastDFS、Ceph
+     1. 应用级：GFS、HDFS、Ceph、GridFS、mogileFS、TFS、FastDFS
         - Lustre：存储量PB起步，万级节点
         - HDFS：Hadoop内置，价格低廉，高可靠性，高容错性，小文件过多的情况HDFS不能很好的支持
      1. 系统级
@@ -656,6 +661,15 @@
      1. 安全：攻击、漏洞
    - 监控工具
      1. 开源：zabbix(最常用)、grafana(可视化非常强大，导入数据源即可用)、Open-falcon、nagios
+### api
+1. io相关
+   - inotify
+     1. 认识：通过inode绑定和epoll通知链，实现高效、异步的监控
+     1. 配置：`/proc/sys/fs/inotify`
+        - max_user_watches
+        - max_user_instances
+        - max_queued_events
+     1. 衍生工具：inotify-tools，提供命令行、api等
 ### wiki
 1. 快捷键
    - ctrl+s     暂停该终端，ctrl+q恢复
