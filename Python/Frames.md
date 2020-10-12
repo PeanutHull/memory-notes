@@ -33,7 +33,7 @@
    - Cheetah
    - Django：是一站式框架，内置一个用{% ... %}和{{ xxx }}的模板
 ### 服务器
-1. wsgi：web服务器和应用服务器通信的协议，用于python程序
+1. wsgi：web服务器和只应用于python服务器通信的协议
    - 响应：要求实现application函数，就可以响应http
     ```python
     def application(environ, start_response):
@@ -49,10 +49,9 @@
     print('Serving HTTP on port 8000...')
     httpd.serve_forever()                               # 开始监听http
     ```
-1. uwsgi：是uWSGI服务器的独占通信协议，Web App就是写一个WSGI的处理函数，针对每个HTTP请求进行响应
-1. uWSGI
+1. uwsgi
    - 理解：web应用服务器，c编写，可以将http协议转换为wsgi协议让python使用，uwsgi似乎不能充分利用cpu和内存达到无上限并发。到达瓶颈后cpu和内存还剩下很多
-   - 和框架：Django自带服务器不稳定只能用于测试，搭配uwsgi和nginx实现服务器
+     1. Django自带服务器不稳定只能用于测试，搭配uwsgi和nginx实现服务器
    - 配置
      1. 使用配置文件：uwsgi --ini uwsgi.ini
         ```conf
@@ -108,5 +107,5 @@
 ### 爬虫
 1. 步骤：抓取、分析、存储
 1. scrapy
-1. wiki：‌组合利用好各种api可以实现数据统计的效果，如和地图结合查看数据分布，定时监控某个想要的数据f
+1. wiki：‌组合利用好各种api可以实现数据统计的效果，如和地图结合查看数据分布，定时监控某个想要的数据
 ### 数据清洗

@@ -130,20 +130,6 @@
         except StopIteration:
             sys.exit()
     ```
-1. 函数分类
-   - 数学函数
-     1. 随机数函数
-        - random()：0-1的随机数
-        - choice(seq)：随机挑选一个元素，如随机一个整数 `random.choice(range(10))`
-        - shuffle(list)：随机排序序列
-        - randrange([start,] stop [,step])：指定范围内按指定基数递增的集合中获取一个随机数
-        - uniform(x, y)：随机生成下一个实数
-        - seed([x])：改变随机数生成器的种子
-     1. 数学函数：round(奇进偶弃，懂？)/max/min/abs/exp/log/pow/sqrt...
-     1. 三角函数：sin/cos/tan...
-     1. 数学常量：pi圆周率、e自然常数
-   - id()：获取对象内存地址
-   - enumerate()
 1. 遍历
     ```python
     # 遍历数字
@@ -347,6 +333,7 @@
     msg = s.recv(1024)                  # 接收小于1024字节的数据
     s.close()
     ```
+### 应用
 1. CGI编程
    - 示例
     ```python
@@ -368,7 +355,6 @@
     print ()                                                # 空行，告诉服务器结束头部
     print ('<html></html>')
     ```
-### 应用
 1. 连接MySQL
    - 理解：p3使用PyMySQL，p2使用mysqldb
    - 方法

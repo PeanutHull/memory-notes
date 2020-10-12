@@ -564,6 +564,11 @@
 ### 优化
 1. 问题定位
    - strace：跟踪系统调用的执行
+     1. 查看统计：`strace -p xx -c`
+     1. 查看实时：`strace -p xx -T -s 4094`
+   - pstack
+   - gdb
+   - ltrace
    - tcpdump
 1. 问题解决
 1. irqbalance

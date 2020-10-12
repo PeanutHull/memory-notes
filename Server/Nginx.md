@@ -418,6 +418,25 @@
         - 累计成功数：连续检测多少次成功后网关认为该节点已恢复
         - 是否通知
         - 是否摘除
+1. 网关接口
+   - CGI
+     1. 理解：Common Gateway Interface，通用网关接口，外部应用程序和web服务器的接口标准，允许web服务器执行外部程序，并将输出发回web服务器。早期动态网页处理程序一次只能处理一个请求。跨平台性极佳，性能低下
+     1. 原理
+        - 请求——创建子进程——处理，即fork-and-execute模式，请求数=cgi子进程数，子进程的反复加载是cgi性能低下的原因，会大量占用cpu和内存
+        - 每个web请求都必须重新解析php.ini，重新载入全部扩展，初始化全部数据结构
+   - FastCGI
+     1. 理解：类似常驻型cgi，先启一个master，cgi解释器保持在内存中并接受fastcgi的调度，类似线程池的技术特性，也是一个协议
+     1. 原理
+        - web服务器载入fastcgi进程管理器
+        - fastcgi自身初始化，启动多个cgi解释器进程等待调用
+        - 请求到达时，web服务器连接到fastcgi，fastcgi选择一个cgi解释器交给web服务器
+        - cgi将结果返回web服务器
+     1. 特点
+        - 所有配置只在进程启动时加载一次
+        - PHP死掉不会带死apache，而且会立即启动一个新的php进程
+        - fastcgi是适用高并发场景的，对web服务器不挑可以自由更换
+   - SCGI：Simple CGI，精简数据协议和响应过程的FCGI，为适应ajax和rest，做出更快更简介应答，并规定http响应后立刻关闭链接，适合SOA提倡的请求-忘记的通信模式
+   - WSGI：Web Server Gateway Interface，
 ### 调优
 1. worker_processes
 1. worker_rlimit_nofile

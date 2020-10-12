@@ -504,25 +504,11 @@
         - php file                                            // 执行php文件
         - php -S 127.0.0.1:80 -t /www /www/index.php          // 启动一个单线程http服务器，可以用于开发和测试
    - CGI
-     1. 理解：通用网关接口，外部应用程序和web服务器的接口标准，允许web服务器执行外部程序，并将输出发回web服务器。早期动态网页处理程序一次只能处理一个请求。跨平台性极佳，性能低下
-     1. 原理
-        - 请求——创建子进程——处理，即fork-and-execute模式，请求数=cgi子进程数，子进程的反复加载是cgi性能低下的原因，会大量占用cpu和内存
-        - 每个web请求都必须重新解析php.ini，重新载入全部扩展，初始化全部数据结构
    - FastCGI
-     1. 理解：类似常驻型cgi，先启一个master，cgi解释器保持在内存中并接受fastcgi的调度，类似线程池的技术特性，也是一个协议
-     1. 原理
-        - web服务器载入fastcgi进程管理器
-        - fastcgi自身初始化，启动多个cgi解释器进程等待调用
-        - 请求到达时，web服务器连接到fastcgi，fastcgi选择一个cgi解释器交给web服务器
-        - cgi将结果返回web服务器
-     1. 特点
-        - 所有配置只在进程启动时加载一次
-        - PHP死掉不会带死apache，而且会立即启动一个新的php进程
-        - fastcgi是适用高并发场景的，对web服务器不挑可以自由更换
    - Module
      1. 理解：将php集成到web服务器，以同一个进程运行。php作为apache的模块，预先生成多个进程副本驻留内存，一旦请求出现就立即响应，省去创建子进程的延迟，处理完成后不退出，等待下次请求
    - ISAPI
-     1. 理解：微软提供的一套面向Internet服务的API接口，ISAPI的dll被请求激活后常驻内存，不停接受请求。dll和web服务器处于同一个进程中，5.3舍弃
+     1. 理解：微软提供的一套面向Internet服务的API接口，ISAPI的dll被请求激活后常驻内存，不停接受请求。dll和web服务器处于同一个进程中，php5.3舍弃
      1. 特点：微软的排他性，只能在windows运行、效率高于CGI、稳定性不好，php出错，IIS或apache也死掉
 1. PHP-FPM：fastcgi Process Manager，fastcgi进程管理器，比spawn-fcgi更优秀，官方收录。php-fpm实现了fastcgi这个协议
    - 特点

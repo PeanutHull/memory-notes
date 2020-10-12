@@ -387,7 +387,8 @@
    - 后台运行：xx &
    - 断开shell继续运行：因为shell断开进程收到SIGHUP，该信号的默认处理导致进程终止，进程不终止主要是处理SIGHUP信号
      1. 未运行
-        - `nohup xx &`
+        - `nohup xx &`：需要按下任意键返回shell，并且使用exit退出，不能直接断开shell，否则还是会shutdown
+          1. 同时不输出日志：`nohup xx 1>/dev/null 2>&1 &`
         - `setsid xx &`
      1. 已运行
         - disown
@@ -447,7 +448,7 @@
 1. 定时任务
    - crontab：linux原生定时器
      1. -l
-     1. -e： 添加，* * * * *(分时日月周) php index.php >> index.log
+     1. -e：打开vi后添加`* * * * *(分时日月周) php index.php >> index.log`
      1. at：执行一次，`at 2:00 tomorrow`
    - 运维
      1. service crond start/stop/restart/reload/status

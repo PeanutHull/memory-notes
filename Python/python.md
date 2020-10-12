@@ -1,32 +1,32 @@
 ### 认识
-1. 理解：是一种解释性(解释执行)、动态数据类型、面向对象的高级编程语言，抽象层次高，表达能力强，1989年发明。源代码开源，版权与许可证在python软件基金会
-   - 易于理解、学习，简单优雅、易于开发
+1. 认识：是一种解释型(解释执行)、动态数据类型、面向对象的高级编程语言。开源，版权与许可证在python软件基金会
+   - 易于理解、学习，简单优雅、易于开发。抽象层次高，表达能力强
    - 执行效率换来了开发效率
-   - 内置电池：官方提供完善广泛的标准库，众多第三方库远超其他语言，如网络编程、输入输出、文件系统、图形处理、数据库、文本处理等
+   - 内置包多：官方提供完善广泛的标准库，众多第三方库远超其他语言，如网络编程、输入输出、文件系统、图形处理、数据库、文本处理等
    - 胶水语言：具有可扩展性，丰富api和工具，轻松使用其他语言的模块
 1. 用途
    - web
    - 脚本
    - 爬虫
    - 数据分析：商业智能
-1. 举例
-   - vim hello.py
-        ```python
-        #!/usr/bin/python3
-        print("Hello, World!");
-        ```
+1. 示例
    - python3 hello.py
-丹麦：自行车上的童话王国
-2019春初中风俗文化课-母亲节
-【2019春】【初三菁英第3讲】
-2019暑期初一菁英班Lecture1
-【2019春】初三目标第十三讲
-2019春初一提高班第1讲
+    ```python
+    #!/usr/bin/python3
+    print("Hello, World!");
+    ```
 ### 语法
 1. 基础
-   - 编码：默认utf8编码，可以指定不同编码：`# -*- coding: cp-1252 -*-`
-   - 标识符：不能以数字开头，对大小写敏感
-   - 注释：单行 #，多行 '''或"""
+   - 编码：默认utf8，可以指定不同编码：`# -*- coding: cp-1252 -*-`
+    ```py
+    # 设置编码
+    reload(sys)
+    sys.setdefaultencoding("utf-8")
+    ```
+   - 标识符：不能以数字开头，大小写敏感
+   - 注释
+     1. 单行 #
+     1. 多行 '''或"""
    - 行与缩进：用缩进代表代码块，无需大括号包裹。同一代码块的缩进空格数必须相等。使用反斜杠实现多行语句，使用分号表示多条语句在一行
 1. 数据类型
    - Bool：True/False，表示1/0，可以和数字直接运算，""也是假，不是基本数据类型
@@ -45,7 +45,7 @@
         - 级联字符串：如"this " "is " "string"会被自动转换为this is string
      1. 功能
         - 单引号和双引号完全相同，两者都可表示
-        - 字符串不可改变，向一个索引位置赋值，比如word[0] = 'm'会导致错误
+        - 字符串不可改变，向一个索引位置赋值，比如`word[0] = 'm'`会导致错误
         - 字符串截取：从左往右以0开始，从右往左以-1开始
         - 连接符+，转义符\，复制符*
      1. 三引号：从引号和特殊字符串的泥潭中走出来
@@ -84,19 +84,19 @@
      1. 方法
         - clear()
         - keys()/items()
-1. 运算符
-   - 算术运算符：+-*/%，a**b次幂，//取整除
-   - 比较运算符：== != > < >= <=，==比较的是值，is比较引用对象
-   - 赋值运算符：= += -= *= /= %= **= //=
-   - 位运算符：& | ^ ~ << >>
-   - 逻辑运算符：and or not，如`if(a and b)`，and从左到右计算表达式，若所有值均为真，返回最后一个值，若存在假，返回第一个假值；or从左到右返回第一个为真的值
-   - 成员运算符：in/not in，是否存在于序列中，如`if(a in list)`
-   - 身份运算符：is/is not，两个标识符是否引用自一个对象，如`if(a is b)`，a是20b是30都不同
 1. 类型转换
    - int/long/float/complex()
    - chr(整数转字符)/unichr(整数转unicode)/ord(字符转整数)/hex(整数转十六进制字符串)/oct(整数转八进制字符串)
    - str/repr(表达式字符串)/eval(执行字符串中的python表达式)()
    - list/tuple/set/dict/frozenset(不可变集合)()
+1. 运算符
+   - 算术运算符：+-*/%，a**b次幂，//取整除
+   - 比较运算符：== != > < >= <=
+   - 赋值运算符：= += -= *= /= %= **= //=
+   - 位运算符：& | ^ ~ << >>
+   - 逻辑运算符：and or not，如`if(a and b)`，and从左到右计算表达式，若所有值均为真，返回最后一个值，若存在假，返回第一个假值；or从左到右返回第一个为真的值
+   - 成员运算符：in/not in，是否存在于序列中，如`if(a in list)`
+   - 身份运算符：is/is not，两个标识符是否引用自一个对象，如`if(a is b)`，a是20b是30都不同。==比较的是值，is比较引用对象
 1. 变量
    - 理解：不需要声明，使用前必须赋值，赋值之后变量才会被创建。变量的类型由赋予它的值来决定，以值为基准，一个值一个内存地址，多个变量可以指向一个内存地址，变量没有类型，仅仅是一个对象的引用
    - 操作
@@ -145,6 +145,20 @@
         sum = lambda arg1, arg2: arg1 + arg2;   # 可以无限参数，像函数一样
         sum(1, 2)                               # 输出3
         ```
+   - 函数分类
+     1. 数学函数
+     1. 随机数函数
+          1. random()：0-1的随机数
+          1. choice(seq)：随机挑选一个元素，如随机一个整数 `random.choice(range(10))`
+          1. shuffle(list)：随机排序序列
+          1. randrange([start,] stop [,step])：指定范围内按指定基数递增的集合中获取一个随机数
+          1. uniform(x, y)：随机生成下一个实数
+          1. seed([x])：改变随机数生成器的种子
+        - 数学函数：round(奇进偶弃，懂？)/max/min/abs/exp/log/pow/sqrt...
+        - 三角函数：sin/cos/tan...
+        - 数学常量：pi圆周率、e自然常数
+     1. id()：获取对象内存地址
+     1. enumerate()
 1. 流程控制
    - 判断
     ```python
@@ -189,13 +203,18 @@
      1. struct：处理字节
      1. hashlib：摘要算法，如md5
      1. hmac：哈希算法
+        - sha256：`hmac.new(secret, string, digestmod=hashlib.sha256).digest()`
      1. urllib
+        - `urllib.quote`：encode
      1. HTMLParser
      1. XML
+     1. json
+        - `json.dumps()`：encode
      1. contextlib：读写文件
      1. os：目录接口
      1. glob：从目录通配符搜索中生成文件列表，如`glob.glob('*.py')`
      1. base64
+        - `base64.b64encode`：encode
      1. datetime：日期和时间，如`date.today()`
      1. pprint
      1. pickle：序列化/反序列化对象
@@ -207,7 +226,23 @@
      1. doctest/unittest、
    - 第三方模块
      1. Pillow：图像处理
-     1. requests：处理url
+     1. requests：基于urllib的http库，更加方便
+        - 发送
+            ```py
+            body = {
+                "msgtype": "text",
+            }
+            headers = {'content-type': 'application/json', 'Accept-Charset': 'UTF-8'}
+            r = requests.post(url, data=body, headers=headers)
+            ```
+        - 请求
+          1. r.headers['content-type']
+        - 响应
+          1. r.encoding：编码
+          1. r.status_code
+          1. r.text：文本
+          1. r.content：二进制
+          1. r.json()
      1. chardet：编码
      1. psutil：系统监控
 1. 错误和异常
@@ -285,7 +320,7 @@
    - `os.link(src, dst)`：硬链接
 1. 时间和日期
    - time
-     1. `time.time()`：时间戳
+     1. `time.time()`：秒为单位的时间戳浮点数，毫秒为单位`str(round(time.time() * 1000))`
      1. `time.asctime(time.localtime(time.time()))`：格式化时间，Thu Apr  7 10:29:13 2016
      1. `time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())`：格式化时间，2016-03-20 11:45:39
    - calendar
@@ -303,6 +338,8 @@
      1. re.S 匹配所有字符
      1. re.U 根据Unicode字符集解析字符，影响\w/W/b/B
      1. re.X 给允更灵活的方式
+### 包
+1. pyotp：用于二次登录验证(密码+验证码)的验证码生成，如`pyotp.TOTP('YOUR SECRET').now()`
 ### 高级
 1. 函数式编程
    - 返回函数
@@ -399,18 +436,23 @@
    - 打印：print(x)
      1. 连续打印：`print('hello', 'world')`
      1. 打印变量：`print('hello,', name)`
-     1. print("OS error: {0}".format(err))
+     1. `print("OS error: {0}".format(err))`
      1. 不换行和连接符：`print(x, end="", sep='&')`
    - 序列化/反序列化：pickle，用于对象信息的保存
-1. 依赖管理工具：pip，pip3
-   - 安装包
-     1. pip install package              # 最新版本
-     1. pip install package==1.0.4       # 指定版本
-     1. pip install 'package>=1.0.4'     # 最小版本
-   - 更新包：pip install --upgrade package
-   - 可更新的包：pip list -o package
-   - 其他操作：pip list/show/search/uninstall/ package
-   - 更新自己：pip3 install --upgrade pip
+1. 依赖管理工具：pip，pip3。来源pypi，Python Package Index，官方的第三方仓库
+   - 安装
+     1. 手动
+        ```
+        curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py   # 下载安装脚本
+        python get-pip.py                                         # 运行安装脚本，用哪个版本python安装就关联到哪个版本
+        ```
+     1. yum：`yum install python-pip`
+   - 更新：`pip install --upgrade pip`
+   - 包管理
+     1. 安装
+        - 最新版本：`pip install/uninstall package`
+        - 指定版本：`pip install package ==/>= 1.0.4`
+     1. 查看：`pip list/show/search package`
 1. python解释器
    - 理解：开源，有多种
    - 分类
@@ -429,12 +471,12 @@
    - try，except，raise，
    - as，assert，with
 1. 历史
+   - 1989年发明
    - python3不向下兼容，性能有提升，语法差别不大
    - Life is short, you need Python
    - 创始人吉多•范罗苏姆的心思缜密与灵活处事为Python最初的发展营造了良好的环境，包括几次权属的转移、起草新的许可证、机智地与自由软件阵营斡旋，最后安全融入开源的大潮。这一切为Python此后十多年里逐渐成长为主流编程语言赢得了契机
    - Python编程思想包含强烈的黑箱思维，这意味着开发者将愈加重视模块化和流水线式的编程工作
    - python：蟒蛇
-1. PyPI：Python Package Index，官方的第三方仓库
 1. mysql，SQL占位符是%s
    - pip安装mysql-connector-python驱动：`import mysql.connector`
 1. mail
