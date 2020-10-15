@@ -33,7 +33,7 @@
    - Cheetah
    - Django：是一站式框架，内置一个用{% ... %}和{{ xxx }}的模板
 ### 服务器
-1. wsgi：web服务器和只应用于python服务器通信的协议
+1. wsgi：Python Web Server GateWay Interface，web服务器和只应用于python服务器通信的协议
    - 响应：要求实现application函数，就可以响应http
     ```python
     def application(environ, start_response):
@@ -50,8 +50,9 @@
     httpd.serve_forever()                               # 开始监听http
     ```
 1. uwsgi
-   - 理解：web应用服务器，c编写，可以将http协议转换为wsgi协议让python使用，uwsgi似乎不能充分利用cpu和内存达到无上限并发。到达瓶颈后cpu和内存还剩下很多
+   - 理解：是web服务器，c编写，实现了WSGI、uwsgi、http等协议。可以将http协议转换为wsgi协议让python使用，uwsgi似乎不能充分利用cpu和内存达到无上限并发。到达瓶颈后cpu和内存还剩下很多
      1. Django自带服务器不稳定只能用于测试，搭配uwsgi和nginx实现服务器
+     1. uwsgi：uWSGI服务器实现的独有协议
    - 配置
      1. 使用配置文件：uwsgi --ini uwsgi.ini
         ```conf

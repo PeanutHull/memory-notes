@@ -301,6 +301,12 @@ foreach (new RecursiveFileFilterIterator('/path/to/something') as $item) {
      1. 上桩：继承类并覆盖方法、值，模拟数据对象
    - 代码覆盖算法：大致上对比准确性：路径覆盖 > 条件覆盖 ~= 判定覆盖 > 语句覆盖
    - 其他框架：JUnit
+### Opcache
+1. 认识：将php预编译的字节码存储到共享内存中来提升性能，省去了每次加载和解析php脚本的开销，同时还应用了一些代码优化模式。还有WinCache
+1. 运维
+   - `opcache.enable`：默认关闭，开启后需重启php
+   - `opcache.enable_file_override`：用于file_exists、is_file、is_readable的缓存，
+   - `opcache.validate_timestamps`：每隔`opcache.revalidate_freq`秒检查脚本是否更新
 ### 其他
 1. 多线程：pthreads
 1. 消息队列：gearman
