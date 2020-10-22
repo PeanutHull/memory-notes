@@ -874,6 +874,31 @@
 1. 配合其他语言
    - python
    - c
+     1. 认识：cgo，就是先由编译器识别出import "C"的位置，然后在其上的注释中提取C代码，最后调用C编译器进行分开编译
+        - go代码开始部分(package xxx之后)，添加注释，注释中编写需要使用的C语言代码
+        - 紧挨着注释结束，另起一行增加import "C"，且不要跟其他golang的import放在一起
+     1. demo
+        ```go
+        package main
+
+        // #include <stdio.h>
+        // #include <stdlib.h>
+        /*
+        void print(char *s) {
+            printf("print used by C language:%s\n", s);
+        }
+        */
+        import "C" //和上一行"*/"直接不能有空行或其他注释
+
+        import "unsafe"
+
+        func main() {
+            s := "hello"
+            cs := C.CString(s)
+            defer C.free(unsafe.Pointer(cs))
+            C.print(cs)
+        }
+        ```
 ### 运维
 1. 运行
    - 环境变量
@@ -883,7 +908,7 @@
         - bin：可执行命令，go get二进制文件下载的目的地
         - pkg：包对象，编译生成的lib文件存储的地方
    - module
-     1. 认识：go Module，版本依赖工具，命令行支持modules操作，modules用来替换GOPATH的
+     1. 认识：go Module，模块的版本管理工具，命令行支持modules操作，modules用来替换GOPATH的
      1. 组成
         - go.mod文件，可以将工程从GOPATH中移出来
             ```
@@ -910,7 +935,7 @@
           1. 将依赖放入vendor目录：`go mod vendor`，将GOPATH分开，用于打包构建
           1. 验证：`go mod verify`
           1. 整理：`go mod tidy`，需要的加，不要的删
-   - 依赖
+   - 依赖管理
      1. 认识：dep，实现了tag管理代码，而不是trunk/mainline，如go get下载的代码，依赖管理工具为应用管理代码，go get为GOPATH管理代码
      1. 组成
         - `Gopkg.toml`：配置文件，可以手工修改
@@ -949,7 +974,7 @@
      1. `go build`：用于测试编译，普通包不产生任何文件，main包生成可执行文件，在GOROOT/src和GOPATH/src搜索包
      1. `go install`：生成可执行文件，结果移到$GOPATH/pkg(bin)
      1. `go clean`：移除当前源码包里面编译生成的文件
-   - 依赖
+   - 模块
      1. `go get`：动态获取远程代码包，下载和install，下载到GOROOT/src
      1. `go list`：查看安装的packag
 1. 部署

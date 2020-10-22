@@ -100,6 +100,24 @@
         fibonacci(c, quit)
     }
     ```
+1. 闭包
+    ```go
+    // 闭包，闭包是一个函数值，来自函数体的外部的变量引用，函数可以对这个引用值进行访问和赋值；换句话说这个函数被“绑定”在这个变量上
+    func adder() func(int) int {   // 函数adder返回一个闭包。每个闭包都被绑定到其各自的sum变量上，pos按照pos的节奏，neg按照..，两个独立变量被赋值
+        sum := 0
+        return func(x int) int {
+            sum += x
+            return sum
+        }
+    }
+    pos, neg := adder(), adder()
+    for i := 0; i < 10; i++ {
+        fmt.Println(
+            pos(i),
+            neg(-2*i),
+        )
+    }
+    ```
 1. aes加解密
     ```go
     import (
@@ -163,9 +181,89 @@
         //%d 替换成24
     }
     ```
-### 进阶
-1. 死锁、活锁、饥饿
-   - 死锁：两个或两个以上争夺资源而相互等待，若无外力将无法推进，导致异常
-   - 活锁：不会阻塞执行，但也不能继续执行，需要一直重复，可能会成功，会降低执行效率，引入随机性解决
-     1. 像两个过于礼貌的人在路上相遇，彼此让路，然后在另一条路上相遇，然后一直循环
-   - 饥饿：可运行进程能继续执行，但被调度器无限期忽视，而不能被执行，通过计数取样解决
+### skill
+1. 语言编程基础
+   - 关键词和语法（Language Syntax）
+   - 数据类型（Arrays, Slices and Maps）
+   - 流程控制（if/else，for/range）
+   - Go 函数（Function）
+   - 面向对象（Methods, Interfaces and Embedding）
+   - 包处理（Packaging and Exporting）
+   - Go 指针（Using Pointers）
+   - 程序测试（Testing and Debugging）
+   - 对象合成（Composition）
+   - 错误处理（Error Handling）
+   - 标准库（Standard Library）
+   - 反射（Reflection）
+1. web编程
+   - Web基础
+     1. Web工作方式
+     1. Go 搭建一个简单的web服务
+     1. Go 的 HTTP 包详解
+   - 表单
+     1. 处理表单的输入
+     1. 验证表单的输入
+     1. 预防跨站脚本
+     1.  防止多次递交表单
+     1. 处理文件上传
+   - 数据库
+     1. database/sql接口
+     1. 使用MySQL数据库
+     1. 使用PostgreSQL数据库
+     1. 使用beedb库进行ORM开发
+     1. NOSQL数据库操作
+   - Session 和数据存储
+     1. Session 和 Cookie
+     1. Go 如何使用 Session
+     1. Session 存储
+     1. 预防 Session 劫持
+   - 文本文件处理
+     1. XML 处理
+     1. JSON 处理
+     1. 正则处理
+     1. 模板处理
+     1. 文件操作
+     1. 字符串处理
+   - Web服务
+     1. Socket 编程
+     1. WebSocket
+     1. REST
+   - 安全与加密
+     1. 预防 CSRF 攻击
+     1. 确保输入过滤
+     1. 避免 XSS 攻击
+     1. 避免 SQL 注入
+     1. 存储密码
+     1. 加密和解密数据
+   - 错误处理，调试和测试
+     1. 错误处理
+     1. 使用GDB调试
+     1. Go怎么写测试用例
+   - 部署与维护
+     1. 应用日志
+     1. 网站错误处理
+     1. 应用部署
+     1. 备份和恢复
+   - 如何设计一个Web框架　
+     1. 项目规划　
+     1. 自定义路由器设计
+     1. Controller 设计
+     1. 日志和配置设计
+     1. 实现博客的增删改
+   - 扩展Web框架
+     1. 静态文件支持
+     1. Session 支持
+     1. 表单支持
+     1. 用户认证
+     1. 多语言支持
+     1. pprof支持
+1. 并发编程
+   - Go 并发基础（Concurrency, Race Conditions and Channels）
+   - 并发模式（Concurrency Patterns）
+   - 读写锁
+   - 协程：协程泄露
+1. Go 应用
+   - Docker
+   - Bee Go
+   - NSQ
+   - NewSQL

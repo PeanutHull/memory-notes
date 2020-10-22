@@ -116,18 +116,18 @@
      1. 自带客户端类型的SQL协议接口
 1. 原理和使用技巧
 ### wiki
-1. NoSql分类
-   - 按照存储方式
-     1. 列：Hbase、Cassandra、Hypertable
-        - 方便存储结构化和半结构化数据
-        - 列查询有IO优势
-     1. kv：Redis、Memcache
-        - 快速查询value
-     1. 文档：MongoDB、CouchDB
-        - 类json格式存储，内容是文档型的，可对字段建立索引实现关系数据库的某些功能
-     1. 对象：db4o、Versant
-     1. 图：Neo4J
-     1. 时序
+1. NoSql分类：按照存储方式
+   - 键值
+     1. 最终一致性：Cassandra
+     1. 内存：Redis、Memcache
+     1. 持久化：BigTable、LevelDB
+   - 文档：MongoDB、CouchDB、SimpleDB，类json格式存储，内容是文档型的，可对字段建立索引实现关系数据库的某些功能
+   - 列：Hbase、Cassandra、Hypertable
+     1. 方便存储结构化和半结构化数据
+     1. 列查询有IO优势
+   - 对象：db4o、Versant
+   - 图：Neo4J
+   - 时序
 1. sql历史
    - Oracle：
      1. 不开源，传奇的公司，传奇的大老板，连续12年每年销售额翻一番。
