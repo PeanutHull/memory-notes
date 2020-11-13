@@ -44,8 +44,8 @@
      1. 代表：Spanner/F1、TiDB、TDSQL、Greenplum
 1. 分类
    - 分析型/事务型
-     1. OLAP
-     1. OLTP
+     1. OLTP：联机事务处理，逻辑处理
+     1. OLAP：联机分析处理，数据分析
      1. HATP(OLAP&OLTP)
    - 数据模型
      1. Relation
