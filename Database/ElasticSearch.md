@@ -126,7 +126,7 @@
         - 模糊/相似度：~，允许n个char可增删改查
           1. `xx:xx~n`，单词级别，
           1. `xx:"x x"~n`，词语级别
-     1. Query DSL：Domain Specific Language
+     1. Query DSL：Domain Specific Language，领域特定语言
         - 查询类型
           1. 字段
              - 全文匹配：针对text类型，会先分词，再查找，然后再相关性算分。match、query_string

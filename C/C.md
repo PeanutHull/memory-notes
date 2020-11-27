@@ -536,10 +536,12 @@
         - l：查看源代码
    - 步骤
      1. 编译程序：-O0不优化，-g添加调试信息使得GDB可以调试。优化等级：-O0~-O4
-   - 查看调试器
+   - 其他调试器
      1. Remote Debugger：VS自带调试器
      1. WinDbg：window下调试器
      1. LLDB：xcode自带
+     1. lldb：mac自带
+     1. dlv：调试go
 ### wiki
 1. gcc
    - 认识：GNU Compile Collection，GNU编译器套装(牛)。它支持像C，C++，Java，Python，Objective-C，Ada，Fortran，Pascal，能够为很多不同机器生成机器码
