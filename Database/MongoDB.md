@@ -1,11 +1,10 @@
 ### MongoDB
 1. 认识：基于文档的非关系型分布式开源数据库，是可扩展性的表结构。C++编写，文档按照BSON存储，增删改查等命令和js语法很像
-   - 灵活的文档模型，强大查询语言
+   - 灵活的文档模型，强大查询语言，支持查询联接
+   - 具有快照隔离的分布式多文档ACID事务
    - 高性能：mmapv1、wiredtiger、mongorocks（rocksdb）、in-memory等引擎
    - 高可用：故障自动切换
    - 水平扩展：可扩展分片集群，海量数据存储
-   - 具有快照隔离的分布式多文档ACID事务
-   - 支持查询联接
    - 两种关系：引入、嵌入式
 1. 适用场景
    - 表结构可能会不断扩展的MySQL表结构，可通过mongoDB存储，可保证表结构扩展性
@@ -19,7 +18,7 @@
 1. 缺点
    - 多表关联：仅支持Left Outer Join
    - 16mb文档大小限制，不支持中文排序 ，服务端js性能欠佳
-### 操作
+### 认识
 1. 概述
    - 组成：数据库、集合、文档
      1. db：数据库实例
@@ -50,14 +49,14 @@
         - db.dropDatabase()                                   // 删
 1. collection
    - 认识：集合，插入数据时，集合会被创建
-     1. capped collections：封顶集合，固定大小的集合，有很高的性能以及队列过期的特性。数据存储空间值是提前分配的，单位字节。MongoDB的操作日志文件oplog.rs用了这个
+     1. capped collections：封顶集合，固定大小的集合，有很高的性能以及队列过期的特性。数据存储空间值是提前分配的，单位字节。oplog.rs用了这个
         - 可以按照文档的插入顺序保存到集合中，在磁盘上存放位置也是按照插入顺序来保存的，所以提高了新增数据的效率
         - 更新后的文档不可以超过之前文档的大小，就可以确保所有文档在磁盘上的位置一直保持不变
         - `db.createCollection("xx", {capped:true, size:x})`
    - 操作
      1. 查看
         - show collections                                    // 查看集合内容
-        - db.getCollection()
+        - db.getCollection()/listCollections()
         - db.getCollectionNames()
         - db.getCollectionInfos()
      1. 修改
@@ -70,30 +69,24 @@
         - coll = db.getCollection("xx")                       // 得到集合对象
      1. 删除
         - coll.drop();                                        // 删
-1. 文档
-   - 认识：是一组键值对，即BSON
+1. document
+   - 认识：文档，是一组键值对，即BSON
      1. 主键为_id(ObjectId.getTimestamp()可获取创建时间)，用于创建文档的id，可以很快生成和排序，为12字节，4字节时间戳，3字节机器码，2字节PID，3字节随机数
      1. 键值对有序，区分类型和大小写
      1. 不需要设置相同的字段，相同的字段不需要相同的数据类型
      1. 不要求文档有相同模式，v3.2在新增、更新时可强制执行规则验证
      1. 不能有重复键，键不能有\0(用于表示键结尾)，.和$只在特定环境使用，_开头的是保留的(不严格要求)
      1. 值可以是多种数据类型，甚至可以是整个嵌入的文档
-1. 运算符：
+1. 运算符
+   - 符号
+     1. $：顶级字段名称不能以$开头
+     1. .：点表示法，表示更深一层的字段
    - 查询
      1. 比较
-        - $in：匹配数组中指定的任何值
-        - $eq：匹配等于指定值的值
-        - $gt：匹配大于指定值的值
-        - $lt：匹配小于指定值的值
-        - $gte：匹配大于或等于指定值的值
-        - $lte：匹配小于或等于指定值的值
-        - $ne：匹配所有不等于指定值的值
-        - $nin：不匹配数组中指定的任何值
-     1. 逻辑
-        - $and：使用逻辑AND连接查询子句，返回与这两个子句条件匹配的所有文档
-        - $or：用逻辑OR连接查询子句，返回与任一子句条件匹配的所有文档
-        - $not：反转查询表达式的效果，并返回与查询表达式不匹配的文档
-        - $nor：用逻辑NOR连接查询子句，返回所有不能匹配这两个子句的文档
+        - $in/$nin：(不)匹配数组中指定的任何值
+        - $eq/$ne：(不)匹配等于指定值的值
+        - $gt/$gte：匹配大于/或等于指定值的值
+        - $lt/$lte：匹配小于/或等于指定值的值
      1. 数组
         - $all：匹配包含查询中指定的所有元素的数组
         - $elemMatch：如果array字段中的元素符合所有指定$elemMatch条件，则选择文档
@@ -108,6 +101,11 @@
         - $regex：选择值与指定的正则表达式匹配的文档
         - $text：执行文本搜索
         - $where：匹配满足JavaScript表达式的文档
+     1. 逻辑，用于查询子句
+        - $and：使用逻辑AND连接查询子句，返回与这两个子句条件匹配的所有文档
+        - $or：用逻辑OR连接查询子句，返回与任一子句条件匹配的所有文档
+        - $not：反转查询表达式的效果，并返回与查询表达式不匹配的文档
+        - $nor：用逻辑NOR连接查询子句，返回所有不能匹配这两个子句的文档
      1. 地理空间
         - $geoIntersects：选择与GeoJSON几何形状相交的几何形状。2dsphere索引支持 $geoIntersects
         - $geoWithin：选择边界GeoJSON几何内的几何，2dsphere和2D指标支持 $geoWithin
@@ -158,32 +156,40 @@
      1. 列表
      1. 布尔
      1. 累加器等等
-1. CURD
-   - 查询
-     1. 方法
-        - coll.find(query, projection).limit(n).skip(n).sort({KEY:1})
-          1. projection：指定返回字段
-          1. sort：1 升序，-1降序
-        - coll.findOne()
-        - coll.find({xx:"xx",xx:{$gt:x}}, {xx:"xx"})          // 查询条件 + 查询字段，查询字段顺序也要完全匹配，否则查不出来
-        - coll.find({xx:"xx"}).pretty()：以易读方式读取数据
-        - coll.find().sort({$natural: 1})
-        - coll.distinct("xx")：查询去掉当前集合中某列的重复数据
-     1. 多重关系
-        - and：db.inventory.find( { status: "A", qty: { $lt: 30 } } )
-        - or：db.inventory.find( { $or: [ { status: "A" }, { qty: { $lt: 30 } } ] } )
-     1. 查询数组
-        - db.inventory.find({tags:["red","blank"]})：恰好具有两个元素的数组
-        - db.inventory.find({tags:{$all:["red","blank"]}})：同时包含元素的数组
+### 操作
+1. 查询
+   - 方法
+     1. coll.find(query, projection).limit(n).skip(n).sort({KEY:1}).pretty()
+        - projection：指定返回字段
+        - sort：1 升序，-1降序
+        - pretty：以易读方式读取数据
+     1. coll.findOne()
+     1. coll.distinct("xx")：查询去掉当前集合中某列的重复数据
+   - 用法
+     1. 普通查询
+        - coll.find({})：查询所有
+        - coll.find( { status : "A" } , { item.value : 1 , status : 1 , _id : 0 } )：控制选取和排除的字段，1选取，0排除
+     1. 数组查询
+        - coll.find({tags:["red","blank"]})：恰好具有两个元素的数组
+        - coll.find({tags:{$all:["red","blank"]}})：同时包含元素的数组
      1. 空字段、缺少字段
-        - db.inventory.find({item:null})：匹配值是null的item字段或不包含item字段的文档
-        - db.inventory.find( { item : { $type: 10 } } )：仅匹配item字段值为null的文档
-        - db.inventory.find( { item : { $exists: false } } )：字段存在检查
-     1. 文本搜索
-        - db.inventory.find({'instock.qty.0.a':{$lte:20}})：点表示法，表示更深一层的字段
-        - db.inventory.find({"instock":{$elemMatch:{qty:{$gt:10,$lte:20}}}})：$elemMatch指定多个条件
-        - db.inventory.find({status:"A"},{item:1,status:1,_id:0})：选取某些字段，用0和1区分
-     1. 游标：迭代
+        - coll.find( { item : null } )：匹配值是null的item字段或不包含item字段的文档
+        - coll.find( { item : { $type: 10 } } )：仅匹配item字段值为null的文档
+        - coll.find( { item : { $exists: false } } )：字段存在检查
+     1. 运算符查询
+        - coll.find( { xx : "xx" , xx : { $gt : x } } , { xx : "xx" } )：查询条件 + 查询字段，查询字段顺序也要完全匹配，否则查不出来
+        - coll.find( { instock : { $elemMatch : { qty : { $gt : 10 , $lte : 20 } } } } )：$elemMatch指定多个条件
+        - coll.find( { 'instock.qty.0.a' : {$lte:20 } } )
+        - coll.find().sort({$natural: 1})
+     1. 多重关系查询
+        - and：coll.find( { status: "A", qty: { $lt: 30 } } )
+        - or：coll.find( { $or: [ { status: "A" }, { qty: { $lt: 30 } } ] } )
+   - 游标：find返回游标
+     1. hasNext()和next()和objsLeftInBatch()(剩余文档数)来迭代游标，toArray()方法耗尽游标
+     1. 服务器将在闲置10分钟后或客户端用尽光标后自动关闭游标
+        - 关闭超时：`cursor.noCursorTimeout()`或者`db.users.find().noCursorTimeout();`，那就必须使用`cursor.close()`手动关闭
+     1. 服务器批量返回结果不会超过16M
+1. CURD
    - 新增
      1. 认识
         - 插入数据没有db和collection会自动创建
@@ -220,21 +226,6 @@
         - db.collection.remove(<query>, {justOne: <boolean>, writeConcern: <document>, collation: <document>})
         - db.collection.deleteMany()
         - db.collection.deleteOne()
-   - 验证规则
-   - 可重试写入、读取
-     1. 认识：在遇到网络错误或在副本集或分片群集中找不到正常的主操作时自动重试一次。不适用单节点，需要支持文档级锁定的存储引擎，v3.6
-   - 读写关注
-     1.读关注认识：允许你控制从副本集和分片集群读取数据的一致性和隔离性
-     1.读关注级别
-        - local
-        - available
-        - majority
-        - linearizable
-        - snapshot：仅用于多文档事务
-     1. 写关注认识：写操作的确认级别
-        - 多文档事务可以在事务级别设置写关注
-   - wiki
-     1. 匹配所有写法：{}
 1. 索引
    - 特性
      1. 建索引过程会阻塞其它数据库操作
@@ -250,6 +241,7 @@
      1. hash
      1. 2d/2dsphere/geoHaystack
    - 操作
+     1. coll.listIndexes();
      1. coll.createIndex(keys, options)
         - keys：{projection:1/-1}，可指定多个创建复合索引
         - options
@@ -273,11 +265,9 @@
      1. `db.mycol.aggregate([{$group : {_id : "$by_user", num_tutorial : {$sum : 1}}}])`
      1. 类似：`select by_user, count(*) from mycol group by by_user`
      1. 先match再group管道实例：`db.coll.aggregate( [{ $match : { score : { $gt : 70} } },{ $group: { _id: null, count: { $sum: 1}}}]);`
-1. 事务：只支持单文档事务
-session.start_transaction()
-session.commit_transaction()
-1. 变更流
-   - 认识：可订阅collection、db、sh、rs的数据变更
+1. 事务
+   - session.start_transaction()
+   - session.commit_transaction()
 1. 视图
    - 认识
      1. 是只读的，不能重命名
@@ -286,6 +276,29 @@ session.commit_transaction()
    - 操作
      1. `db.createView(<view>, <source>, <pipeline>, <collation>)`
      1. `db.collection.find()/findOne()/aggregate()/count()/distinct()`
+1. GeoJSON
+   - 认识：存储地理空间数据，可以提供查询范围内的东西的能力
+     1. 有效的经度值在-180 180
+     1. 有效的纬度值在-90 90
+1. 操作特性
+   - 验证规则
+   - 可重试写入、读取
+     1. 认识：在遇到网络错误或在副本集或分片群集中找不到正常的主操作时自动重试一次。不适用单节点，需要支持文档级锁定的存储引擎，v3.6
+   - 读写关注
+     1.读关注认识：允许你控制从副本集和分片集群读取数据的一致性和隔离性
+     1.读关注级别
+        - local
+        - available
+        - majority
+        - linearizable
+        - snapshot：仅用于多文档事务
+     1. 写关注认识：写操作的确认级别
+        - 多文档事务可以在事务级别设置写关注
+   - wiki
+     1. 匹配所有写法：{}
+1. 变更流
+   - 认识：可订阅collection、db、sh、rs的数据变更
+1. mongoDB驱动程序
 1. 应用
    - 二级索引
    - 地理位置索引
@@ -295,27 +308,6 @@ session.commit_transaction()
    - MapReduce
    - GridFS：基于mongoDB的分布式文件存储系统，解决大文件(超16M)存储。采用分片存储
    - journal：硬关闭时帮助数据库恢复的日志，可配置日志在特定用例的性能和可靠性之间取得平衡
-1. GeoJSON
-   - 认识：存储地理空间数据，可以提供查询范围内的东西的能力
-     1. 有效的经度值在-180 180
-     1. 有效的纬度值在-90 90
-1. 安全
-   - 认识：权限管理，默认没有权限
-   - 权限分类
-     1. Read/readWrite：读写
-     1. dbAdmin：执行管理函数、索引管理、查看统计、访问system.profile
-     1. userAdmin：管理用户，允许用户向system.users集合写入
-     1. admin库中
-        - root：只在admin数据库中可用。超级账号，超级权限
-        - readAnyDatabase/readWriteAnyDatabase：所有数据库读写权限
-        - userAdminAnyDatabase/dbAdminAnyDatabase：所有数据库管理权限
-        - clusterAdmin：分片和副本集相关函数的管理权限
-   - 操作
-     1. `db.createUser({user:"root", pwd:"root", roles:[{role:"root",db:"admin"}]})`：创建用户
-     1. `db.dropUser("xx")`：删除
-     1. `db.auth("name","secret")`：验证用户
-   - 启用权限：在conf中`authorization: enabled`，然后重启
-1. mongoDB驱动程序
 ### 运维
 1. 基础操作
    - 开关
@@ -336,17 +328,36 @@ session.commit_transaction()
      1. 关闭：`db.shutdownServer()`
      1. 重启：`mongo restart`
    - 连接：`mongo`
-1. mongo shell
+   - 注意事项
+     1. mongod进程收到SIGINT信号或者SIGTERM信号，会关闭打开连接、内存数据强制刷到磁盘、等待当前操作执行完毕、安全停止。不能kill -9，会数据丢失、数据文件损坏
 1. 数据导出导入
    - 导出：`mongodump -h dbhost -d dbname -o dbdirectory`
    - 导入：`mongorestore -h <hostname><:port> -d dbname <path>`
-1. 参数
+1. mongo shell
+1. 安全
+   - 认识：权限管理，默认没有权限
+   - 权限分类
+     1. Read/readWrite：读写
+     1. dbAdmin：执行管理函数、索引管理、查看统计、访问system.profile
+     1. userAdmin：管理用户，允许用户向system.users集合写入
+     1. admin库中
+        - root：只在admin数据库中可用。超级账号，超级权限
+        - readAnyDatabase/readWriteAnyDatabase：所有数据库读写权限
+        - userAdminAnyDatabase/dbAdminAnyDatabase：所有数据库管理权限
+        - clusterAdmin：分片和副本集相关函数的管理权限
+   - 操作
+     1. `db.createUser({user:"root", pwd:"root", roles:[{role:"root",db:"admin"}]})`：创建用户
+     1. `db.dropUser("xx")`：删除
+     1. `db.auth("name","secret")`：验证用户
+   - 启用权限：在conf中`authorization: enabled`，然后重启
+1. 监控
+1. 调优
    - 数据库
      1. totalSize：集合中索引+数据压缩存储之后的大小
      1. storageSize：集合中数据压缩存储的大小
 ### 企业级
 1. 架构
-   - ReplicaSet：副本集，将数据同步在多个节点中。一主n从架构，oplog用于同步。只能通过主节点将Mongo服务添加到副本集中
+   - ReplicaSet：副本集，将数据同步在多个节点中。一主n从架构，一般为三节点架构，oplog用于同步。只能通过主节点将Mongo服务添加到副本集中
      1. 特点
         - 一写多读：多读性能强，所有写入在主节点
         - 自动故障转移：可用性高
@@ -376,9 +387,9 @@ session.commit_transaction()
         - addshard
         - enablesharding：设置分片存储的数据库
 1. 存储引擎：WiredTiger、内存
+1. oplog.rs：mongoDB的操作日志文件
 ### wiki
 1. aggregation & mapreduce：数据分析，用户可以自己写查询语句或脚本，将请求都分发到MongoDB上完成
-1. mongod进程收到SIGINT信号或者SIGTERM信号，会关闭打开连接、内存数据强制刷到磁盘、等待当前操作执行完毕、安全停止。不能kill -9，会数据丢失、数据文件损坏
 1. bson：json的轻量化二进制格式，BSON文件大小限制16M
    - 数据类型
      1. Null：用于创建空值

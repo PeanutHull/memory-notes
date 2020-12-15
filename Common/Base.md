@@ -188,12 +188,31 @@
         - 理解：结合，半编译型语言，C#在编译的时候不是直接编译成机器码而是中间码，.NET平台提供了中间语言运行库运行中间码，中间语言运行库类似于Java虚拟机。.net在编译成IL代码后，保存在dll中，首次运行时由JIT在编译成机器码缓存在内存中，下次直接执行。Java先生成字节码再在Java虚拟机中解释执行。严格来说混合型语言属于解释型语言。C#更接近编译型语言
         - 包含：C#
 1. 桌面开发语言
-   - c#/.net+wpf/winform(较早，适合标准界面)/CEF/uwp(只win10)
-     1. WPF：window presentation Foundation，微软推出的打破GUI编程旧模式的创新技术，现代，可实现复杂效果，整体渲染框架基于D3D
-   - qt(嵌入式)+c++：跨平台大型GUI，还有pyqt
-   - electron：跨平台
-   - wxWidget
-   - GTK
+   - 分类
+     1. c#/.net + WPF/WinForms/CEF/UWP
+        - MFC/WTL/WinForms：上世纪，只适合标准界面，没有突破进步
+          1. WinForms：使用GDI+，GDI+是GDI的“面向对象包装”，使用c++实现
+        - WPF：window presentation Foundation，微软推出的打破GUI编程旧模式的创新技术，现代，可实现复杂效果，整体渲染框架基于D3D，取代以上三个
+          1. DirectX：Direct eXtension，使用c++实现
+        - UWP：只win10，Direct UI、硬件加速、双向绑定、模板、资源字典、高DPI支持
+     1. qt+c++：跨平台大型GUI
+     1. GTK/GObject：linux的，
+     1. electron：跨平台
+     1. WinUI3
+     1. wxWidget
+     1. SwiftUI/Flutter
+   - 比较
+     1. MFC、Qt、Cocoa 这三个库可以代表那个时间段所产生的技术：面向对象、Direct UI、Layer&GPU加速渲染
+     1. 现在都不关心怎么Direct UI，而是新的开发范式，web技术也是可以很复杂，交给浏览器绘制就可以了
+1. windows
+   - win32
+     1. 认识
+        - 广义：所有Windows提供的API
+        - 狭义：Win95时代就有的， Kernel32GDI32USER32SHELL32等
+     1. 绘图
+        - GDI、GDI+、Direct2D
+        - 第三方绘图引擎
+        - 使用以上为核心的第三方UI工具包
 1. JIT：just in time，即时编译，表示运行时将指令转为二进制机器码，jit可以将opcode直接转为机器码，大幅提升性能
 1. LLVM：Low Level Virtual Machine，低级虚拟机。是一个模块化和可重复使用的编译器和工具技术的集合。提供编译器相关的支持，能够进行程序语言的编译期优化、链接优化、在线编译优化、代码生成
    - 生成语言无关的中间代码IR

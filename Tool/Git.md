@@ -85,14 +85,14 @@
 1. git reset --hard HASH      返回到某个节点，不保留工作区，即HASH之后的提交全部抛弃
 1. git refolg show master     显示版本记录————重新重置，如果发现错误重置，HEAD指向了重置的$id，该版本之后的提交都不见了(git log找不到)时使用
 ### cherry-pick
-1. 应用场景：一个分支上的修改，另一个分支也需要，不能单纯的去另一个分支改，merge会产生冲突，cherry-pick为此而生
-1. 摘出一个分支上的某一个commit修改，放到另一个分支上，auth不变，但是会产生新的hash，但是git知道这个新hash和旧hash是相同的，不会出问题。在以后merge时不会认为同样的文件，不同人修改是冲突的
+1. 应用场景：一个分支上的修改，另一个分支也需要，不能单纯的去另一个分支改，merge会产生冲突；或者只想要一个分支中某个commitId，cherry-pick为此而生
+1. 摘出一个分支上的某一个commit的修改，放到另一个分支上，auth不变，但是会产生新的hash，但是git知道这个新hash和旧hash是相同的，不会出问题。在以后merge时不会认为同样的文件，不同人修改是冲突的
 1. 步骤
 ```
-1 切到缺hash的分支上
-2 git cherry-pick hash
-3 git log        // 查看结果
-4 git push XXX
+# 切到缺hash的分支上
+1 git cherry-pick hash
+2 git log        // 查看结果
+3 git push XXX
 ```
 ### merge
 1. git merge < branch_name >        将此分支合并到当前分支

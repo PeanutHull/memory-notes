@@ -439,6 +439,7 @@
         - ~1.0：适用遵循语义化版本号，以最后一位数字加1为上限，相当于>=1.0,<2.0
         - 1.0.0-stable/dev/alpha3/beta2/RC5：添加后缀
         - 1.0.0#2eb0c0978d29：添加提交编号，不建议
+        - ^1.8：
      1. 包类型
         - php：php版本要求
         - hhvm：HipHop Virtual Machine，是Facebook执行php的虚拟机，是JIT（Just-In- Time）编译器，同时具有产生快速代码和即时编译的优点

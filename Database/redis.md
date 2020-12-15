@@ -264,6 +264,10 @@
      1. ping：查看是否运行
      1. monitor：实时打印接收到的命令，调试用
      1. debug segfault：让redis崩溃
+     1. 配置
+        - 密码
+          1. `config get requirepass`：查看
+          1. `config set requirepass xxx/''`：设置/取消
    - 数据
      1. save/bgsave/lastsave：默认生成dump.rdb文件，查看最后一次保存确认是否后台保存成功
      1. flushdb/flushall：删除当前/所有数据库的所有key

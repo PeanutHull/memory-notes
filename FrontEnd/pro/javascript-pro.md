@@ -350,6 +350,8 @@
    - 其他：alchemy
    - 支持语言：C，C++和Rust，预计会推出的语言有Go，Java和C#
    - 使用WebAssembly对浏览器API进行任何调用时，目前还需要JS进行交互，用JS作为入口。未来WebAssembly可能被浏览器内置支持，并使其能够直接调用DOM，Web Workers或其他浏览器API等
+### Chromium
+1. CEF： Chromium Embedded Framework，为第三方应用提供可嵌入浏览器支持
 ### 编译工具
 1. TypeScript
 1. Babel

@@ -238,6 +238,9 @@
      1. 模拟用户操作
      1. 分析网页性能
      1. 提供自动化测试环境
+1. ffi：Foreign Function Interface，用js加载、调用动态库，俗称调dll，php也有相关扩展
+   - 不需要源代码，不需要每次重编译node
+   - 性能有折损，类似其他语言的FFI调试，此方法近似黑盒调用，调错比较困难
 1. node框架
    - express
    - koa

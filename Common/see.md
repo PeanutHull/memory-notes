@@ -28,3 +28,21 @@
    - 历史
      1. 1999年Intel建立
      1. 如今由Willow Garage提供支持
+### webRTC
+1. 由谷歌推广的实时音视频技术栈，是W3C标准，也是一个开源项目，还有对应的IETF工作组(RTCWEB)
+   - 主流浏览器都支持，省去客户端工作，回声消除，双讲抑制
+   - 媒体服务器：客户端只和服务器建立媒体传输通道
+     1. SFU：Selected Forward Unit，并发转发多路信号，带宽占用高，灵活分发
+        - 媒体流：RTP数据包
+        - 媒体控制流：RTCP包，包含NACK, PLI, REMB, Receiver Report
+     1. MCU：Multipoint Control Unit，转码/混流后传输，带宽占用少，对服务器性能要求高，实时性稍差
+     1. 开源媒体服务器：janus、licode、mediasoup
+   - RTC：实时音视频通信
+1. 高级
+   - 流程：采集、处理、传输，传输难以把控，时延、抖动、丢包
+   - Qos：Quality of Service，服务质量
+     1. ARQ：自动重传请求，是数据链路层的错误纠正协议之一，使用NACK机制
+     1. FEC：前向纠错，是增加数据通讯可靠度的方法
+     1. Jitter Buffer：抖动缓冲，通过在接收端维护一个数据缓冲区，可以对抗一定程度的网络抖动
+     1. Congestion Control：拥塞控制， WebRTC利用GCC算法来控制传输
+   - Qoe：Quality of Experience，质量体验，

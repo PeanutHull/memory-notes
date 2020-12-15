@@ -126,6 +126,7 @@
     WWW-Authenticate                服务器对客户端的认证信息
     Proxy-Authenticate              代理服务器对客户端的认证信息
     Vary                            代理服务器缓存的管理信息
+    Content-Disposition             请求内容存为文件时提供默认文件名，如attachment;filename="aaa.csv"
     ```
    - 实体头
     ```
