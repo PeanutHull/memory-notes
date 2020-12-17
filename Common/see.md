@@ -29,7 +29,7 @@
      1. 1999年Intel建立
      1. 如今由Willow Garage提供支持
 ### webRTC
-1. 由谷歌推广的实时音视频技术栈，是W3C标准，也是一个开源项目，还有对应的IETF工作组(RTCWEB)
+1. 由谷歌推广的开源实时音视频技术栈，是W3C标准，还有对应的IETF工作组(RTCWEB)
    - 主流浏览器都支持，省去客户端工作，回声消除，双讲抑制
    - 媒体服务器：客户端只和服务器建立媒体传输通道
      1. SFU：Selected Forward Unit，并发转发多路信号，带宽占用高，灵活分发
@@ -45,4 +45,7 @@
      1. FEC：前向纠错，是增加数据通讯可靠度的方法
      1. Jitter Buffer：抖动缓冲，通过在接收端维护一个数据缓冲区，可以对抗一定程度的网络抖动
      1. Congestion Control：拥塞控制， WebRTC利用GCC算法来控制传输
-   - Qoe：Quality of Experience，质量体验，
+   - Qoe：Quality of Experience，质量体验
+1. p2p：peer to peer，点对点技术，P2P网络中的所有计算机上记载着除该台计算机外所有计算机的信息
+   - 创世节点
+   - 节点通信建立，NAT穿透：Network Address Translation，网络地址转换，网络地址翻译技术，将内部的私有IP转换成公网IP，一个解决地址不够，二是安全(不在转换列表的全都拒绝)

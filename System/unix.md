@@ -1,7 +1,7 @@
 ### 标准和实现
 1. 标准化
    - ISO C：c语言标准，涉及是否支持头文件和库函数
-   - IEEE POSIX：可移植操作系统接口，用于提升应用程序在unix操作系统的可移植性，规定了各种必须的服务
+   - IEEE POSIX：Portable Operating System Interfac，可移植操作系统接口，用于提升应用程序在unix操作系统的可移植性，规定了各种必须的服务
    - Single UNIX Specification：单一unix规范，是POSIX.1标准的超集，包括XSI(X/Open System Interface)
 1. 实现
    - 分支
