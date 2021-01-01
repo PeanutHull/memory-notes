@@ -1,25 +1,26 @@
 ### 底层实现
-1. 特性：动态、符号表、间接引用
-1. 架构图
-   - application：fpm
-   - sapi：cli(shell)、cgi、mod_php5(apache)、isapi(iis)
+1. 组成
+   - sapi：Server Application Programming Interface，服务器端应用编程端口，是php与其它应用交互的接口，是php的接入层，接受请求，然后调用php内核api，严格来说不属于内核。为内部的PHP提供一套固定的, 统一的接口, 使得PHP自身实现能够不受错综复杂的外部环境影响，保持一定的独立性
+     1. cli、cgi、mod_php5(apache)、isapi(iis)、fpm
    - php、php api、extension
      1. php api：streams、output
      1. extension：mysql
-   - zend api、zend extension api
-   - zend engine
-1. 组成
-   - sapi：Server Application Programming Interface，服务器端应用编程端口，是php与其它应用交互的接口，是php的接入层，接受请求，然后调用php内核api，严格来说不属于内核。为内部的PHP提供一套固定的, 统一的接口, 使得PHP自身实现能够不受错综复杂的外部环境影响，保持一定的独立性
-   - 引擎
-     1. 理解：核心，负责从编译到执行
+   - zend
+     1. 理解：引擎，核心，负责从编译到执行。zend engine、zend api、zend extension api
      1. 组成
         - 编译器：代码->抽象语法树->opcode，相当于gcc，编译器是一个语言实现的基础
         - 执行器：执行opcode，即执行逻辑
      1. 分类
         - Zend
         - HHVM
+1. 目录
+   - main：框架主要代码，输入输出、框架初始化等
+   - sapi：php的应用接口层
+   - Zend：解析器、执行器
+   - ext：扩展相关
 1. 编译：默认情况下Zend引擎先将php源码编译为opcode(即字节码/虚拟指令，可理解成C语言级函数，根据指令由相应的C编写的函数来执行)，然后Zend解析引擎逐条执行
 1. HHVM提升性能方式：替代Zend引擎将php代码转换成中间字节码(HHVM自己的，通常称为中间语言)，然后运行时通过JIT编译器将字节码转换成机器码，类似于Java的JVM。为了达到最佳优化效果，需要将PHP的变量类型固定下来，而不是让编译器去猜测，Facebook的工程师们就定义一种Hack写法，进而达到编译器优化
+1. 特性：动态、符号表、间接引用
 1. 变量
    - 认识：用zval结构体表示
 1. 数组 - HashTable

@@ -42,7 +42,8 @@
      1. percolator
      1. join：父子查询
 1. 组成
-   - index：索引，库，相同属性的文档集合。分为结构化/非结构化，名称必须小写/无下划线(es关键字前缀为_)，可精确搜索
+   - index：索引，即数据库，相同属性的文档集合。分为结构化/非结构化
+     1. 命名：名称必须小写/无下划线(es关键字前缀为_)，可精确搜索
      1. mapping：属性描述，类似表结构定义。定义了字段名称/类型，倒排索引的配置，分词处理规则。为空则为非结构化
         - 特性
           1. 修改：字段类型一旦设定禁止修改。需要建立新的索引，然后reindex(就是重新导入)。因为lucene的倒排索引为了提高效率生成后不允许修改
@@ -62,13 +63,13 @@
           1. 动态设置类型：dynamic mapping，es根据json的类型实现自动识别字段类型。如boolean为boolean，整数为long，string匹配日期/数字，匹配为text附加keyword子字段
           1. 动态模板：`dynamic_templates`属性，支持按照设定的规则设置字段类型，如所有message开头的设置为text，所有自动匹配为double的都设定为float
         - 属性
-          1. enabled：是否仅存储，不搜索或聚合分析，返回时就没有_source字段了
+          1. enabled：默认true，只作用于object，使es不去解析该字段，并且该字段不能被查询和store
           1. index：字段是否建立倒排索引，默认true，false则不可搜索，用于不用搜索的字段，节省空间，加快速度
-          1. index_options：控制字段的倒排索引记录的内容。text默认positions，其他默认docs。记录越多，占用索引越大
+          1. index_options：控制放入倒排索引记录的内容。text默认positions，其他默认docs。记录越多，占用索引越大
              - docs：只记录doc id
-             - freqs：加个term frequencies，词频
-             - positions：再加个term position，出现位置，可支持词语查询，因为有位置
-             - offsets：再加个character offset，开始和结束位置，可支持高亮
+             - freqs：以上基础加term frequencies，词频
+             - positions：以上基础加term position，出现位置，可支持词语查询，因为有位置
+             - offsets：以上基础加character offset，开始和结束位置，可支持高亮
           1. norms：是否存储归一化参数，即算分排序。如果仅用于过滤和聚合分析，可关闭
           1. doc_values：是否开启自动数据类型转换
           1. fields：多字段
@@ -81,15 +82,19 @@
              - 数值：能用byte不用long
              - 其他：bool、日期、地理位置
           1. 是否需要搜索
-             - 完全不需要：enabled为false
+             - 完全不需要：enabled为false，即不解析该字段
              - 不需要搜索：index为false
              - 需要搜索：设定存储粒度，index_options/norms
           1. 是否需要排序和聚合分析
              - doc_values为false，节省磁盘空间
              - fielddata为false，节省磁盘空间
-          1. 是否需要另行存储
-             - store：是否另行存储，因为如果原字段很大，即使使用字段过滤搜索，内部节点还是会取出来进行数据交换，只是返回用户时去掉了，用这个搭配store_fields，用于解决如几十万文字搜索的性能问题
-             - 一般用于enabled为false时使用
+          1. 是否独立存储
+             - store：bool，默认所有值都建立了倒排索引，但没有存储(只记录了doc id等)，所以只能查询不能取回原始数据。要取回原始数据就会读所有字段的默认已存储的_source
+               1. 大多数情况并不是必须的，从_source中获取值是快速而且高效的
+               1. 当某一个字段巨大，即使使用字段过滤搜索，内部节点还是会取出来所有的字段值进行数据交换，只是返回用户时去掉了，为true时搭配store_fields，用于解决如几十万文字搜索的性能问题
+               1. 为true时es会分辨出field1已经被存储了，因此不会从_source中加载，而是从field1的存储块中加载
+               1. 获取独立存储的字段要比从_source中解析快得多，_source越大对比越明显
+               1. 独立存储的字段越多，索引就越大，建立索引和检索就会越慢
      1. 索引模板：index template，新建索引时自动应用预先设定的配置，简化索引创建步骤
         ```json
         PUT _template/xx
@@ -100,33 +105,229 @@
             "mappings": {},
         }
         ```
-   - Type：类型，表，属于index，新版本会干掉
-   - Document：文档，行，最小存储单位，属于type
+   - Type：类型，属于index，虚拟的逻辑分组，用来过滤document
+     1. 不同的type应该有相似的结构（schema）
+     1. 6.x只允许每个index包含一个type，7.x彻底移除
+   - Document：文档，单条的记录（行），最小存储单位，属于type
      1. Field：列，属于document
      1. MetaData：元数据，用于标注文档信息
         - _index：所在索引名
         - _type：所在类型名
         - _id：唯一id
         - _uid：组合id，由_type和_id组成(6.x，那俩都不起作用)
-        - _source：原始json数据
+        - _source：原始的json数据
         - _all：将所有字段值连接起来，一起搜索关键字，占空间，查询慢，新版本默认禁用
-1. 表现
-   - 查询语法
-     1. Query String Syntax
-        - 泛查询：所有字段查询，即啥也不写所有字段查找 `xx`
-        - 指定字段：xx:xx
-        - term、phrase：单词和词语，区别在于顺序。空格表示or，词语查询用""来要求前后顺序
-        - 分组：括号，如`status:(xx OR xx) title:(xx)`
-        - 布尔操作符：AND OR NOT + -，不能小写，后俩对应must和must not，+在url中应该写为%2B
-        - 范围：支持数值和日期
-          1. `xx:[1 TO 10]、xx:[1 TO 10}、xx:[1 TO ]、xx:[* TO 10]`：区间写法，闭区间用[]，开区间用{}
-          1. `xx:(>=1 && <=10)、xx:>=1`：算术符号写法
-        - 通配符：? *，如`xx:t?m`，执行效率低，占内存多，以?*开头的效率最低，因为匹配所有文档
-        - 正则：//，`xx:/preg/`
-        - 模糊/相似度：~，允许n个char可增删改查
-          1. `xx:xx~n`，单词级别，
-          1. `xx:"x x"~n`，词语级别
-     1. Query DSL：Domain Specific Language，领域特定语言
+### Restful Api
+1. 认识
+   - 使用方式
+     1. Restful Api：http方法、url、json串，`http://ip/index/type/doc，get/post/put/delete`
+        - 匹配：xx|,|*|_all，单个|多个|通配符|所有
+     1. Kibana DevTools
+   - index数据结构
+   - doc数据结构
+        ```json
+        {
+            "_index": "xx",
+            "_type": "xx",
+            "_id": "xx",
+            "_version": x,                                          // 每次更新操作+1，乐观锁的机制，同步更新时发现更新版本小于当前版本则拒绝修改
+            "result": "created/updated",
+            "_shards": {
+                "total": x,
+                "successful": x,
+                "failed": x,
+            },
+            "_seq_no": x,
+            "_primary_term": x
+        }
+        ```
+   - 查询结果解析
+    ```json
+    {
+        "took": x,                              // 花费时间，毫秒
+        "timed_out": false,                     // 是否超时，可指定最长搜索时间
+        "_shards": ...,                         // 参与查询的分片数据，可能有分片失败
+        "hits": {
+            "total": x,
+            "max_score": 1.0,
+            "hits": [                           // 结果集合，默认前10个
+                {
+                    "_index": "xx",
+                    "_type": "xx",
+                    "_id": "xx",
+                    "_score": x|null,           // 指定排序返回null，0表示没有算分
+                    "_source": {                // 原始的字段值
+                        "xx": "xx",
+                    },
+                }
+            ]
+        }
+    }
+    ```
+1. 索引
+   - 查看：`GET http://ip/index/_settings|_mapping`
+   - 创建
+        ```json
+        // PUT http://ip/index
+        {
+            "setting": {                                            // 索引设置
+                "number_of_shards": 5,                                      // 分片数
+                "number_of_replicas": 1,                                    // 副本数
+                // 分词设置
+                "analysis": {
+                    "char_filter": {},
+                    "tokenizer": {},
+                    "filter": {},
+                    "analyzer": {
+                        "xx": {
+                            ...
+                        }
+                    },
+                }
+            },
+            "mappings": {
+                "xx": {                                             // type，类型
+                    "dynamic": false,
+                    "dynamic_templates": [                                  // 动态模板，创建字段省事
+                        {
+                            "string": {
+                                "match_mapping_type": "string",             // 当识别为string时，都设置为keyword类型
+                                "mapping": {
+                                    "type": "keyword",
+                                }
+                            }
+                        }
+                    ],
+                    "properties": {                                         // 字段属性
+                        "xx": {                                             // 名称
+                            "type": "text",                                 // 字段类型
+                            "analyzer": "xx",                               // 指定分词器
+                            "copy_to": "xxx",                               // 复制内容
+                            "ignore_above": n,                              // 只存储特定长度字符
+                            "ignore_malformed": true,                       // 是否将格式错误的字段不编制索引，同时不影响其他字段
+                            "fields": {                                     // 子字段
+                                "xx": {
+                                    "type": "keyword",
+                                    "analyzer": "xx",
+                                }
+                            },
+                        },
+                        "xx": {
+                            "type": "date",
+                            "format": "yyyy-MM-dd HH:mm:ss || epoch_millis" // || 或的意思
+                        }
+                    }
+                },
+            }
+        }
+        ```
+   - 更新
+     1. 新增字段
+        ```json
+        // PUT http://ip/index/type/_mapping
+        {
+            "properties": {
+                "ee": {
+                    "type": "keyword"
+                }
+            }
+        }
+        ```
+     1. 修改字段：只能采取搬迁的形式
+        - 创建新索引：字段名称和原来的一致
+        - 同步数据
+            ```json
+            // POST _reindex
+            {
+                "source": {
+                    "index": "xx1"
+                },
+                "dest": {
+                    "index": "xx2"
+                }
+            }
+            ```
+        - 删除原索引
+        - 设置别名
+            ```json
+            // POST _aliases
+            {
+                "actions": [
+                    {"add": {"index": "xx2", "alias": "xx1"}}
+                ]
+            }
+            ```
+   - 删除：`DELETE http://ip/index`
+1. 文档
+   - 查看
+     1. 单个：`GET http://ip/index/type/doc_id`
+     1. 批量：`GET _mget`，
+        ```json
+        {
+            "docs": [
+                {
+                    "_index": "xx",
+                    "_type": "xx",
+                    "_id": "xx",
+                }
+            ]
+        }
+        ```
+   - 插入
+     1. 分类
+        - 指定id：put方法，`http://ip/index/type/doc_id`
+        - 自动生成id：post方法，`http://ip/index/type`
+     1. 请求参数
+        ```json
+        {
+            "xx": "name",                                           // 要写入的字段即可
+            "date": "2000-01-01"
+        }
+        ```
+   - 更新
+     1. restful方式
+        ```json
+        // PUT index/type/doc_id
+        {
+            "xx": "xx",                                             // 覆盖文档
+        }
+        // POST index/type/doc_id/_update
+        {
+            "doc": {
+                "xx": "xx",                                         // 更新字段
+            }
+        }
+        ```
+     1. 脚本方式
+        ```json
+        {
+            "script": {
+                "lang": "painless/python",
+                "source": "ctx._source.age (+= 10/params.age)",     // 脚本内容
+                "params": {
+                    "age": 11
+                }
+            }
+        }
+        ```
+     1. 批量更新
+        - 意义：一次操作多个文档，减少网络传输开销，提升速率
+        - 使用：`POST _bulk`，请求体隔一行json一个单独操作，新增和更新紧接着下一行是内容数据。先指定索引和类型，再传数据
+        - 操作分类
+          1. index：文档已存在覆盖，`{"index":{"_index":"xx", "_type":"xx", "_id":"xx"}}`，换一行是具体文档内容如`{"xx":"xx"}`
+          1. update
+          1. create：文档已存在报错
+          1. delete
+   - 删除：`DELETE index/type/doc_id`，http地址最后到哪级删哪级
+1. 文档查询
+   - 方式
+     1. `GET index/_search`：发送get参数，使用_all字段，仅包含部分语法，操作简单。`GET /index/type/_search?q=xx:xx&sort=xx:desc`
+        - q：指定查询语句，语法为Query String Syntax
+        - df：指定返回字段
+        - sort：xx:asc
+        - timeout：1s
+        - from,size
+     1. `GET index/_search`：发送请求体，使用完备的查询语法，Query DSL
         - 查询类型
           1. 字段
              - 全文匹配：针对text类型，会先分词，再查找，然后再相关性算分。match、query_string
@@ -150,6 +351,136 @@
           1. Filter Context：直接匹配，不算分
              - bool中的filter、must_not
              - constant_score中的filter
+     1. `GET index/_count`：只获取文档数
+   - 字段类举例
+        ```json
+        // POST index/_search
+        {
+            "query": {
+                // 文本查询：文本类型
+                "match": {                              // 模糊匹配，会进行分词查询
+                    "xx": "xx xx",                      // 单词间是或的关系
+                    "xx": {                             // 控制单词间关系
+                        "query": "xx xx",
+                        "operator": "and|or",
+                        "minimum_should_match": "n"     // 最少满足匹配的单词数
+                    }
+                },
+                "match_phrase": {                       // 对词语顺序有要求
+                    "xx": "xx xx",
+                    "slop": "n"                         // 单词间间隔
+                },                    
+                "mult_match": {                         // 多字段同时模糊匹配某一内容
+                    "query": "",
+                    "fields": ["xx", "xx"]
+                },
+                "match_all": {},                        // 查询所有
+
+                "query_string": {                       // 语法查询，根据语法规则查询，类似q。支持多字段，支持通配符/范围查询/布尔查询/正则
+                    "query": "(xx AND xx) OR xx",
+                    "fields": ["xx", "xx"]              // 限定字段查询范围
+                },
+                "simple_query_string": {                // 忽略错误查询语法，仅支持部分查询语法，不能使用AND OR NOT
+                    "query": "(xx + xx) | xx",          // + 与，- 非， | 或
+                },
+
+                // 字段查询
+                "term": {                               // 可以使用元数据字段
+                    "xx1|_id": x,
+                    "xx2": x
+                },
+                "terms": {                              // 单字段一次多关键字查询
+                    "xx": ["xx","xx"]
+                },
+                "range": {                              // 范围
+                    "xx": {
+                        "gte/gt": "2017-01-01",
+                        "lte/lt": "now-1d"
+                    }
+                }
+            },
+
+            // 其他参数
+
+            // _source
+            "_source": false,                           // 默认返回_source，除非使用stored_fields或者设置_source为false
+            "_source": ["xx.*", "xx"],                  // 只取某个字段
+            "_source": {
+                "includes": [ "obj1.*", "obj2.*" ],     // 包含某个
+                "excludes": [ "*.description" ]         // 排除某个
+            },
+            "stored_fields": ["xx"],                    // 只取某个store的字段，不推荐，应该使用以上方式
+
+            "sort": {                                   // 排序
+                "xx": "desc" 
+            },
+            "sort": [                                   // 多个排序条件，从上到下依次比较
+                {"xx": "desc"},
+                {"xx": "desc"}
+            ],
+
+            "from": 1,                                  // 分页
+            "size": 1,
+
+            "highlight": {                              // 高亮
+                "field": {
+                    "name": {}
+                }
+            },
+        }
+        ```
+   - 复合类查询
+        ```json
+        // POST index/_search
+        {
+            "query": {
+                "constant_score": {                     // 固定分数查询
+                    "filter": {                         // 只有一个filter
+                        "match": {
+                            "xx": "xx"
+                        }
+                    },
+                    "boost": x                          // 指定分数
+                },
+
+                "bool": {                               // 布尔查询
+                    "filter": [                         // 支持数组
+                        "term": {
+                            "xx": x
+                        },
+                        "range": {
+                            "xx": {"gt": x}
+                        }
+                    ],
+                    "must": [],
+                    "must_not": [],
+                    "should": [],
+                    "minimum_should_match": n           // 最少满足的条件个数
+                }
+            }
+        }
+        ```
+1. 系统
+   - `GET _cat`
+     1. _cat/plugins
+### 特性
+1. 使用
+   - 查询语法
+     1. Query String Syntax：即用q查询的方式
+        - 泛查询：所有字段查询，即啥也不写所有字段查找 `xx`
+        - 指定字段：xx:xx
+        - term、phrase：单词和词语，区别在于顺序。空格表示or，词语查询用""来要求前后顺序
+        - 分组：括号，如`status:(xx OR xx) title:(xx)`
+        - 布尔操作符：AND OR NOT + -，不能小写，后俩对应must和must not，+在url中应该写为%2B
+        - 范围：支持数值和日期
+          1. `xx:[1 TO 10]、xx:[1 TO 10}、xx:[1 TO ]、xx:[* TO 10]`：区间写法，闭区间用[]，开区间用{}
+          1. `xx:(>=1 && <=10)、xx:>=1`：算术符号写法
+        - 通配符：? *，如`xx:t?m`，执行效率低，占内存多，以?*开头的效率最低，因为匹配所有文档
+        - 正则：//，`xx:/preg/`
+        - 模糊/相似度：~，允许n个char可增删改查
+          1. `xx:xx~n`，单词级别，
+          1. `xx:"x x"~n`，词语级别
+     1. Query DSL：Domain Specific Language，特定领域的语言
    - 排序
      1. 认识：对字段原始内容进行排序的过程，这个过程倒排索引无法发挥作用，需要用到正排索引。除了text。会采用列示存储和很多压缩算法节省空间
         - 默认按照算分，采用其他字段排序不会算分
@@ -420,6 +751,17 @@
         }
     }
     ```
+1. 插件
+   - 操作
+     1. 查看：`get _cat/plugins`
+   - 列表
+     1. elasticsearch-head：web管理工具。粗线框为主分片，细的为备份分片
+     1. elasticsearch-ik：中文分词插件
+     1. elasticsearch-jdbc：mysql数据导入和计划任务，编写脚本即可实现
+     1. logstash-input-jdbc：mysql数据同步更新，可做全量同步和增量同步，数据表中定义订阅的update_time字段即可，其他的可以订阅binlog
+     1. esrally：es压测工具
+     1. cerebro：比head好用多的界面，可以管理
+     1. x-pack monitor：官方推出的免费集群监控功能，可以看读写的性能/jvm/luceue等指标。`bin/elasticsearch/kibana-plugin install x-pack`
 1. 集群
    - 特点
      1. 通过集群名称区分，`cluster.name`
@@ -457,334 +799,13 @@
      1. 脑裂问题：集群断开后会形成两个独立集群，之后无法恢复正常状态
         - 解决：多半数人参与才能选举。参与选举节点数大于等于quorum才能进行选举，quorum=eligible/2+1
      1. 惊群问题
-### Restful Api
-1. 认识
-   - 使用方式
-     1. http api：http://ip/index/type/doc，get/post/put/delete
-        - 匹配：xx|,|*|_all，单个|多个|通配符|所有
-     1. Kibana DevTools
-   - 文档数据结构
-        ```json
-        {
-            "_index": "xx",
-            "_type": "xx",
-            "_id": "xx",
-            "_version": x,                                          // 每次更新操作+1，乐观锁的机制，同步更新时发现更新版本小于当前版本则拒绝修改
-            "result": "created/updated",
-            "_shards": {
-                "total": x,
-                "successful": x,
-                "failed": x,
-            },
-            "_seq_no": x,
-            "_primary_term": x
-        }
-        ```
-   - 查询结果解析
-    ```json
-    {
-        "took": x,                              // 花费时间，毫秒
-        "timed_out": false,                     // 是否超时，可指定最长搜索时间
-        "_shards": ...,                         // 参与查询的分片数据，可能有分片失败
-        "hits": {
-            "total": x,
-            "max_score": 1,
-            "hits": [                           // 结果集合，默认前10个
-                {
-                    "_index": "xx",
-                    "_type": "xx",
-                    "_id": "xx",
-                    "_score": x|null,           // 指定排序返回null，0表示没有算分
-                    "_source": {
-                        "xx": "xx",
-                    },
-                }
-            ]
-        }
-    }
-    ```
-1. 索引
-   - 查看：`http://ip/index/_settings|_mapping`，get
-   - 创建
-        ```json
-        // PUT index
-        {
-            "setting": {                                            // 设置
-                "number_of_shards": 5,                                      // 分片数
-                "number_of_replicas": 1,                                    // 副本数
-                // 分词设置
-                "analysis": {
-                    "char_filter": {},
-                    "tokenizer": {},
-                    "filter": {},
-                    "analyzer": {
-                        "xx": {
-                            ...
-                        }
-                    },
-                }
-            },
-            "mappings": {
-                "xx": {                                             // 类型
-                    "dynamic": false,
-                    "dynamic_templates": [                                  // 动态模板，创建字段省事
-                        {
-                            "string": {
-                                "match_mapping_type": "string",             // 当识别为string时，都设置为keyword类型
-                                "mapping": {
-                                    "type": "keyword",
-                                }
-                            }
-                        }
-                    ],
-                    "properties": {                                         // 属性
-                        "xx": {                                             // 名称
-                            "type": "text",                                 // 字段类型
-                            "analyzer": "xx",                               // 指定分词器
-                            "copy_to": "xxx",                               // 复制内容
-                            "fields": {                                     // 子字段
-                                "xx": {
-                                    "type": "keyword",
-                                    "analyzer": "xx",
-                                    "ignore_above": n                       // 只存储特定长度字符
-                                }
-                            },
-                        },
-                        "xx": {
-                            "type": "date",
-                            "format": "yyyy-MM-dd HH:mm:ss || epoch_millis" // || 或的意思
-                        }
-                    }
-                },
-            }
-        }
-        ```
-   - 更新
-     1. 新增字段
-        ```json
-        PUT aa/bb/_mapping
-        {
-        "properties": {
-            "ee": {
-                "type": "keyword"
-            }
-        }
-        }
-        ```
-     1. 修改字段
-        - 创建新索引：字段名称和原来的一致
-        - 同步数据
-            ```json
-            // POST _reindex
-            {
-                "source": {
-                    "index": "xx1"
-                },
-                "dest": {
-                    "index": "xx2"
-                }
-            }
-            ```
-        - 删除原索引
-        - 设置别名
-            ```json
-            // POST _aliases
-            {
-                "actions": [
-                    {"add": {"index": "xx2", "alias": "xx1"}}
-                ]
-            }
-            ```
-1. 文档
-   - 查看
-     1. 单个：`GET index/type/doc_id`
-     1. 批量：`GET _mget`，
-        ```json
-        {
-            "docs": [
-                {
-                    "_index": "xx",
-                    "_type": "xx",
-                    "_id": "xx",
-                }
-            ]
-        }
-        ```
-   - 插入
-     1. 分类
-        - 指定id：put方法，`http://ip/index/type/doc_id`
-        - 自动生成id：post方法，`http://ip/index/type`
-     1. 请求参数
-        ```json
-        {
-            "xx": "name",                                           // 要写入的字段即可
-            "date": "2000-01-01"
-        }
-        ```
-   - 更新
-     1. restful方式
-        ```json
-        // PUT index/type/doc_id
-        {
-            "xx": "xx",                                             // 覆盖文档
-        }
-        // POST index/type/doc_id/_update
-        {
-            "doc": {
-                "xx": "xx",                                         // 更新字段
-            }
-        }
-        ```
-     1. 脚本方式
-        ```json
-        {
-            "script": {
-                "lang": "painless/python",                          // painless为es内置脚本语言
-                "source": "ctx._source.age (+= 10/params.age)",     // 脚本内容
-                "params": {
-                    "age": 11
-                }
-            }
-        }
-        ```
-     1. 批量更新
-        - 意义：一次操作多个文档，减少网络传输开销，提升速率
-        - 使用：`POST _bulk`，请求体隔一行json一个单独操作，新增和更新紧接着下一行是内容数据。先指定索引和类型，再传数据
-        - 操作分类
-          1. index：文档已存在覆盖，`{"index":{"_index":"xx", "_type":"xx", "_id":"xx"}}`，换一行是具体文档内容如`{"xx":"xx"}`
-          1. update
-          1. create：文档已存在报错
-          1. delete
-1. 删除：`DELETE index/type/doc_id`，http地址最后到哪级删哪级
-1. 查询
-   - 方式
-     1. `GET index/_search`：发送get参数，使用_all字段，仅包含部分语法，操作简单
-        - q：指定查询语句，语法为Query String Syntax
-        - df：指定返回字段
-        - sort：xx:asc
-        - timeout：1s
-        - from,size
-     1. `GET index/_search`：发送请求体支持完备查询语法， Query DSL
-     1. `GET index/_count`：只获取文档数
-   - 字段类实例
-        ```json
-        // POST index/_search
-        {
-            "query": {
-                // 文本查询：文本类型
-                "match": {                              // 模糊匹配，会进行分词查询
-                    "xx": "xx xx",                      // 单词间是或的关系
-                    "xx": {                             // 控制单词间关系
-                        "query": "xx xx",
-                        "operator": "and|or",
-                        "minimum_should_match": "n"     // 最少满足匹配的单词数
-                    }
-                },
-                "match_phrase": {                       // 对词语顺序有要求
-                    "xx": "xx xx",
-                    "slop": "n"                         // 单词间间隔
-                },                    
-                "mult_match": {                         // 多字段同时模糊匹配某一内容
-                    "query": "",
-                    "fields": ["xx", "xx "]
-                },
-                "match_all": {},                        // 查询所有
-
-                "query_string": {                       // 语法查询，根据语法规则查询，类似q。支持多字段，支持通配符/范围查询/布尔查询/正则
-                    "query": "(xx AND xx) OR xx",
-                    "fields": ["xx", "xx"]              // 限定字段查询范围
-                },
-                "simple_query_string": {                // 忽略错误查询语法，仅支持部分查询语法，不能使用AND OR NOT
-                    "query": "(xx + xx) | xx",          // + 与，- 非， | 或
-                },
-
-                // 字段查询
-                "term": {                               // 可以使用元数据字段
-                    "xx1|_id": x,
-                    "xx2": x
-                },
-                "terms": {                              // 单字段一次多关键字查询
-                    "xx": ["xx","xx"]
-                },
-                "range": {                              // 范围
-                    "xx": {
-                        "gte/gt": "2017-01-01",
-                        "lte/lt": "now-1d"
-                    }
-                }
-            }
-        }
-        ```
-   - 复合类查询
-        ```json
-        // POST index/_search
-        {
-            "query": {
-                "constant_score": {                     // 固定分数查询
-                    "filter": {                         // 只有一个filter
-                        "match": {
-                            "xx": "xx"
-                        }
-                    },
-                    "boost": x                          // 指定分数
-                },
-
-                "bool": {                               // 布尔查询
-                    "filter": [                         // 支持数组
-                        "term": {
-                            "xx": x
-                        },
-                        "range": {
-                            "xx": {"gt": x}
-                        }
-                    ],
-                    "must": [],
-                    "must_not": [],
-                    "should": [],
-                    "minimum_should_match": n           // 最少满足的条件个数
-                }
-            }
-        }
-        ```
-   - 查询配置
-    ```json
-    {
-        "_source": ["xx"],                          // 只取某个字段
-        "store_fields": ["xx"],                     // 只取某个store字段
-
-        "sort": {                                   // 排序
-            "xx": "desc" 
-        },
-        "sort": [                                   // 多个排序条件，从上到下依次比较
-            {"xx": "desc"},
-            {"xx": "desc"}
-        ],
-
-        "from": 1,                                  // 分页
-        "size": 1,
-
-        "highlight": {                              // 高亮
-            "field": {
-                "name": {}
-            }
-        },
-    }
-    ```
-1. 插件
-   - 操作
-     1. 查看：`get _cat/plugins`
-   - 列表
-     1. elasticsearch-head：web管理工具。粗线框为主分片，细的为备份分片
-     1. elasticsearch-ik：中文分词插件
-     1. elasticsearch-jdbc：mysql数据导入和计划任务，编写脚本即可实现
-     1. logstash-input-jdbc：mysql数据同步更新，可做全量同步和增量同步，数据表中定义订阅的update_time字段即可，其他的可以订阅binlog
-     1. esrally：es压测工具
-     1. cerebro：比head好用多的界面，可以管理
-     1. x-pack monitor：官方推出的免费集群监控功能，可以看读写的性能/jvm/luceue等指标。`bin/elasticsearch/kibana-plugin install x-pack`
 ### 运维
 1. 安装/运行
    - `wget es.tar && tar -vxf es.tar && cd es`
    - `./bin/elasticsearch (-d 后台启动)`
+1. 安装插件
+   - `./bin/elasticsearch-plugin install xx.zip`
+   - 重启es，会自动加载
 1. 安装elasticsearch-head
    - `wget github/elasticsearch-head && cd head`
    - `npm install`
@@ -801,6 +822,8 @@
      1. `network.host: ip`
      1. `http.port: 9201`
      1. `discovery.zen.ping.unicast.hosts: ["ip"]`：主节点ip
+1. 调试
+   - 查看基础信息：`curl http://ip:9200`
 ### pro
 1. 调优
     ```json
@@ -810,7 +833,7 @@
         "explain":true              // 返回算分方法，es的算分按照shard进行，使用时注意分片数
     }
     ```
-1. 生产环境部署
+1. 生产环境部署最佳实践
    - 按照官网文档建议设置所有系统参数：日志、安全、系统参数(jvm option等)。静态参数(只能在yml中设置)和动态参数
      1. cluster.name
      1. node.name/node.master/node.data/node.ingest
@@ -834,6 +857,17 @@
         }
     }
     ```
+   - 优化方式：集群规划、索引配置、存储策略、索引拆分、冷热分区、段合并等几个维度优化
+     1. shard数：由于es性能是线性扩展，只要测出1个shard性能指标，单不要超过15G，日志的不超过50G，越大查询性能越低，估算总数据大小，除以单shard大小，就是分片数，测试方法如下
+        - 搭建和生产环境相同配置的单节点集群
+        - 设定一个单分片零副本的索引
+        - 写入实际生产数据进行测试，获取写指标
+        - 进行实际查询请求，获取读指标
+        - 工具可用esrally
+   - 连接
+     1. php的连接池使用静态的连接池，因为php的无共享架构，动态发现节点成本太高(每次请求来了都发现)
+        - 连接池会划分出活死节点，一旦发现不可用将其列为死节点，并设置重试检测定时器(第一次60s，失败后指数增长)，重连设置只会针对活结点
+     1. 节点选择器：连接池之上是选择器，随机选择不合理因为可能创建多个连接，采用粘性随机更合理
 1. 写性能优化：增大写吞吐量EPS，events per second，越高越好
    - 客户端：多线程写，批量写
    - es：高质量数据建模的前提下，在refresh、translog、flush做文章
@@ -882,13 +916,6 @@
      1. 尽量使用filter上下文，减少算分，同时有缓存机制，极大提高性能
      1. 尽量不使用script进行计算
      1. 结合profile、explain分析慢查询
-1. 优化方式：集群规划、索引配置、存储策略、索引拆分、冷热分区、段合并等几个维度优化
-   - shard数：由于es性能是线性扩展，只要测出1个shard性能指标，单不要超过15G，日志的不超过50G，越大查询性能越低，估算总数据大小，除以单shard大小，就是分片数，测试方法如下
-     1. 搭建和生产环境相同配置的单节点集群
-     1. 设定一个单分片零副本的索引
-     1. 写入实际生产数据进行测试，获取写指标
-     1. 进行实际查询请求，获取读指标
-     1. 工具可用esrally
 ### wiki
 1. 相关 
    - 默认端口：9200
@@ -900,19 +927,19 @@
      1. 7.4：不再支持索引类型，新建时不要指定类型会报错(可设置开启，不建议，因为8会直接删除)
    - 结构化/非结构化数据：无法用统一结构表示的，可称为全文数据
    - es构建于json数据格式之上
+   - painless为es内置脚本语言
    - 更全的配置可以在官网上查询到
 1. Elastic Stack：新一代ELK
    - elasticsearch：存储、查询、分析
    - logstash：数据收集、聚合
-   - Beats：数据收集、聚合
+   - kibana：可视化显示
+   - beats：数据收集、聚合
      1. ETL：Extract Transform Load，数据源多样
         - 数据文件：日志、excel
         - 数据库：mysql
         - http服务
         - 网络数据
-   - kibana：可视化显示
 1. 问题
-   - 为什么otms的都是text，而不是其他类型？
    - conflicts=proceed？
 ### deep
 1. 搜索引擎
@@ -1045,8 +1072,6 @@
      1. 文档写入到buffer时，同时即时落盘(fsync)写入translog，6.x默认每个请求都落盘安全性最高，可改为5秒一次忍受最长5秒的数据丢失`index.translog.*`
      1. es启动时检查translog文件，从中恢复数据
 1. 相关性算分：relevance，概念：词频、文档频率(出现的总文档数)、逆向文档频率(即1/n)、文档长度(越短越高)。算分模型：TF/IDF，BM25(5.x默认)，best match，迭代了25次才计算
-
-
 1. 顺序扫描法、索引扫描法：将全文数据一部分提取出来变成一定结构，加快搜索速度
 1. 通过有限状态转换器实现全文检索的倒排索引：用于存储数值数据的BKD树，和用于分析的列存储
    - 存储数据时按有序存储

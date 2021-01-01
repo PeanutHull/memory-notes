@@ -311,7 +311,7 @@
 ### 运维
 1. 基础操作
    - 开关
-     1. 命令行方式：`mongod --dbpath= --logpath=/xx.log --port=27017 --logappend --fork`
+     1. 命令行方式：`mongod --dbpath= --logpath=/xx.log --logappend --port=27017 --fork --bind_ip_all`
         - --fork：后台运行
         - --auth：是否验证权限
         - --bind_ip/bind_ip_all：限制访问ip
