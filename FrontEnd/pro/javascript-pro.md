@@ -350,14 +350,30 @@
    - 其他：alchemy
    - 支持语言：C，C++和Rust，预计会推出的语言有Go，Java和C#
    - 使用WebAssembly对浏览器API进行任何调用时，目前还需要JS进行交互，用JS作为入口。未来WebAssembly可能被浏览器内置支持，并使其能够直接调用DOM，Web Workers或其他浏览器API等
+### PWA
+1. 认识：Progressive Web App，渐进式web应用程序，渐进式的跳出浏览器的范围，跟原生应用做更深层次的结合，是20年前ajax和10年前的响应式布局的又一场革命，web应用的又一个全新时代
+   - 诞生场景：web应用体验不佳
+     1. 网页资源下载的网络延迟
+     1. 依赖浏览器作为入口，可以放到主屏
+     1. 没有好的离线方案
+     1. 没有好的消息通知方案
+   - 解决方案
+     1. W3C Web App Manifest：系统交互，作用域、图标等
+     1. Service Worker：离线缓存、可编程、可做http代理，离线优先革命
+     1. Push Notification：让推送服务具备向web推送的能力
+   - 展望
+     1. ios正在逐步支持
+     1. js-to-native和PWA消化hybird的问题
+     1. 特性还是草案，各种终端不支持
 ### Chromium
 1. CEF： Chromium Embedded Framework，为第三方应用提供可嵌入浏览器支持
 ### 编译工具
 1. TypeScript
-1. Babel
+1. Babel：转为es5
 1. Flow
 1. Reason
 1. Purescript
+1. postCSS
 ### 构建工具
 1. 认识：用于构建代码，提供编译、压缩和部署等一系列自动化操作的工具，用来提高工作效率
 1. 分类

@@ -24,7 +24,7 @@
    - 布尔：boolean
    - 二进制：binary
    - 数值：byte、integer、short、long、float、double、half_float(节省空间)、scaled_float
-   - 字符串：text(分词)、keyword(不分词)
+   - 字符串：text(分词)、keyword(不分词)，text类型的已经分词了，用完整全文去查，是查不到的
    - 日期：date
    - 范围：integer_range|long_range、float_range|double_range、date_range，5.x新增
    - 复杂类型
@@ -106,8 +106,8 @@
         }
         ```
    - Type：类型，属于index，虚拟的逻辑分组，用来过滤document
-     1. 不同的type应该有相似的结构（schema）
-     1. 6.x只允许每个index包含一个type，7.x彻底移除
+     1. 不同的type应该有相似的属性、设置，因为es通过_type进行type的过滤，是放在一起存储的，不一样无法处理
+     1. 6.x只允许每个index包含一个type，7.x不需要设置
    - Document：文档，单条的记录（行），最小存储单位，属于type
      1. Field：列，属于document
      1. MetaData：元数据，用于标注文档信息
@@ -121,17 +121,21 @@
 1. 认识
    - 使用方式
      1. Restful Api：http方法、url、json串，`http://ip/index/type/doc，get/post/put/delete`
-        - 匹配：xx|,|*|_all，单个|多个|通配符|所有
+        - xx：单个
+        - | ,：多个
+        - ?：单字符通配符
+        - *：多字符通配符
+        - _all，所有
      1. Kibana DevTools
    - index数据结构
    - doc数据结构
         ```json
         {
-            "_index": "xx",
-            "_type": "xx",
-            "_id": "xx",
+            "_index": "xx",                                         // 所属的索引
+            "_type": "xx",                                          // type值
+            "_id": "xx",                                            // 唯一值
             "_version": x,                                          // 每次更新操作+1，乐观锁的机制，同步更新时发现更新版本小于当前版本则拒绝修改
-            "result": "created/updated",
+            "result": "created/updated",                            // 数据的当前状态，是新建还是更新
             "_shards": {
                 "total": x,
                 "successful": x,
@@ -215,7 +219,14 @@
                         "xx": {
                             "type": "date",
                             "format": "yyyy-MM-dd HH:mm:ss || epoch_millis" // || 或的意思
-                        }
+                        },
+                        "xx": {                                             // 分词设置
+                            "type": "text",
+                            "term_vector": "with_positions_offsets",
+                            "analyzer": "ik_max_word",
+                            "search_analyzer": "ik_smart",
+                            "fielddata": true
+                        },
                     }
                 },
             }
@@ -321,44 +332,65 @@
    - 删除：`DELETE index/type/doc_id`，http地址最后到哪级删哪级
 1. 文档查询
    - 方式
-     1. `GET index/_search`：发送get参数，使用_all字段，仅包含部分语法，操作简单。`GET /index/type/_search?q=xx:xx&sort=xx:desc`
-        - q：指定查询语句，语法为Query String Syntax
-        - df：指定返回字段
-        - sort：xx:asc
-        - timeout：1s
-        - from,size
-     1. `GET index/_search`：发送请求体，使用完备的查询语法，Query DSL
-        - 查询类型
-          1. 字段
-             - 全文匹配：针对text类型，会先分词，再查找，然后再相关性算分。match、query_string
-             - 字段搜索：不分词，直接比较倒排索引，提供评分。term
-          1. 复合：n个字段或复合查询
-             - constant_score：将内部查询结果得分都设为1或boost的值，多用于结合bool实现自定义得分
-             - bool：由bool子句组成
-               1. filter：只过滤符合条件的，不算得分。有智能缓存，执行效率高
-               1. must：必须符合must中的所有条件，会影响得分
-               1. must not：相反
-               1. should：可以符合
-                  - 只有should：或的意思
-                  - 有should和must：不要求满足should条件，但是满足增加得分，可以用于将某种结果往前排
-             - dis_max
-             - function_score
-             - boosting
-        - 查询和过滤上下文
-          1. Query Context：进行算分
-             - query
-             - bool中的must、should
-          1. Filter Context：直接匹配，不算分
-             - bool中的filter、must_not
-             - constant_score中的filter
+     1. `GET index/_search`
+        - 认识：发送get参数，使用_all字段，仅包含部分语法，操作简单。`GET /index/type/_search?q=xx:xx&sort=xx:desc`
+        - 参数类型
+          1. q：指定查询语句，语法为Query String Syntax
+          1. df：指定返回字段
+          1. sort：xx:asc
+          1. timeout：1s
+          1. from,size
+     1. `GET index/_search`
+        - 认识：发送请求体，使用完备的查询语法 Query DSL
      1. `GET index/_count`：只获取文档数
    - 字段类举例
         ```json
         // POST index/_search
         {
             "query": {
-                // 文本查询：文本类型
-                "match": {                              // 模糊匹配，会进行分词查询
+                // 无条件
+                "match_all": {},                        // 查询所有，最简单
+                "match_none": {},                       // 一个都不查询
+
+                // 不分词查询
+                "term": {                               // 可以使用元数据字段
+                    "xx1|_id": x,
+                    "xx2": x
+                },
+                "terms": {                              // 单字段一次多关键字查询，即IN
+                    "xx": ["xx","xx"]
+                },
+                "terms_set": "",                        // 满足一个或多个即可
+                "range": {                              // 范围
+                    "xx": {
+                        "gte/gt": "2017-01-01",
+                        "lte/lt": "now-1d"
+                    }
+                },
+                "exists": {                             // 字段至少含有一个非null值
+                    "field" : "xx"
+                },
+                "prefix": {                             // 以xx确切的开头
+                    "xx" : "xx"
+                },
+                "wildcard": {                           // 通配符查询，只支持?*，查询比较慢
+                    "xx" : ""
+                },
+                "regexp": {                             // 正则匹配
+                    "xx":{
+                        "value":"s.*y",
+                        "flags" : "INTERSECTION|COMPLEMENT|EMPTY",
+                        "boost":1.2
+                    }
+                },
+                "fuzzy": {                             // 模棱两可查询
+                    "xx" : "xx"
+                },
+                "type": "",
+                "ids": "",
+
+                // 全文查询：文本类型
+                "match": {                              // 模糊匹配和解析、接近查询，先分词解析，再查询
                     "xx": "xx xx",                      // 单词间是或的关系
                     "xx": {                             // 控制单词间关系
                         "query": "xx xx",
@@ -366,16 +398,17 @@
                         "minimum_should_match": "n"     // 最少满足匹配的单词数
                     }
                 },
-                "match_phrase": {                       // 对词语顺序有要求
-                    "xx": "xx xx",
-                    "slop": "n"                         // 单词间间隔
-                },                    
-                "mult_match": {                         // 多字段同时模糊匹配某一内容
+                "mult_match": {                         // match的多字段版本
                     "query": "",
                     "fields": ["xx", "xx"]
                 },
-                "match_all": {},                        // 查询所有
+                "match_phrase": {                       // 匹配确切解析、接近查询，对词语顺序有要求
+                    "xx": "xx xx",
+                    "slop": "n"                         // 单词间间隔
+                },
+                "common": "",
 
+                // query_string查询
                 "query_string": {                       // 语法查询，根据语法规则查询，类似q。支持多字段，支持通配符/范围查询/布尔查询/正则
                     "query": "(xx AND xx) OR xx",
                     "fields": ["xx", "xx"]              // 限定字段查询范围
@@ -383,35 +416,22 @@
                 "simple_query_string": {                // 忽略错误查询语法，仅支持部分查询语法，不能使用AND OR NOT
                     "query": "(xx + xx) | xx",          // + 与，- 非， | 或
                 },
-
-                // 字段查询
-                "term": {                               // 可以使用元数据字段
-                    "xx1|_id": x,
-                    "xx2": x
-                },
-                "terms": {                              // 单字段一次多关键字查询
-                    "xx": ["xx","xx"]
-                },
-                "range": {                              // 范围
-                    "xx": {
-                        "gte/gt": "2017-01-01",
-                        "lte/lt": "now-1d"
-                    }
-                }
             },
+
 
             // 其他参数
 
             // _source
-            "_source": false,                           // 默认返回_source，除非使用stored_fields或者设置_source为false
             "_source": ["xx.*", "xx"],                  // 只取某个字段
             "_source": {
                 "includes": [ "obj1.*", "obj2.*" ],     // 包含某个
                 "excludes": [ "*.description" ]         // 排除某个
             },
+            "_source": false,                           // 默认返回_source，除非使用stored_fields或者设置_source为false
             "stored_fields": ["xx"],                    // 只取某个store的字段，不推荐，应该使用以上方式
 
-            "sort": {                                   // 排序
+            // 排序
+            "sort": {
                 "xx": "desc" 
             },
             "sort": [                                   // 多个排序条件，从上到下依次比较
@@ -419,10 +439,12 @@
                 {"xx": "desc"}
             ],
 
-            "from": 1,                                  // 分页
+            // 分页
+            "from": 1,
             "size": 1,
 
-            "highlight": {                              // 高亮
+            // 高亮
+            "highlight": {
                 "field": {
                     "name": {}
                 }
@@ -444,58 +466,110 @@
                 },
 
                 "bool": {                               // 布尔查询
-                    "filter": [                         // 支持数组
-                        "term": {
-                            "xx": x
-                        },
-                        "range": {
-                            "xx": {"gt": x}
+                    "filter": [                         // 支持数组，可以写为对象，也可以写为数组，数组要用[]，里边多套层{}
+                        {
+                            "term": {
+                                "xx": x
+                            },
+                        }
+                        {
+                            "range": {
+                                "xx": {"gt": x}
+                            }
                         }
                     ],
-                    "must": [],
+                    "must": [],                         // 多个bool子句可同时使用，如filter不影响must的算分，只作为过滤
                     "must_not": [],
-                    "should": [],
-                    "minimum_should_match": n           // 最少满足的条件个数
+                    "should": [],                       // OR的意思
+                    "minimum_should_match": n           // 规定最少满足的should条件个数
                 }
             }
         }
         ```
-1. 系统
+1. endpoint
+   - `PUT/GET _settings/_mapping`
+   - `GET _count`
+   - `GET _source`：不查询元数据，只查询source
+   - `GET _all`：查询所有索引
+   - `POST _search/_update/_reindex`
    - `GET _cat`
      1. _cat/plugins
+     1. _cat/shards
+     1. _cat/nodes
+   - `GET _cluster`
 ### 特性
-1. 使用
-   - 查询语法
-     1. Query String Syntax：即用q查询的方式
-        - 泛查询：所有字段查询，即啥也不写所有字段查找 `xx`
-        - 指定字段：xx:xx
-        - term、phrase：单词和词语，区别在于顺序。空格表示or，词语查询用""来要求前后顺序
-        - 分组：括号，如`status:(xx OR xx) title:(xx)`
-        - 布尔操作符：AND OR NOT + -，不能小写，后俩对应must和must not，+在url中应该写为%2B
-        - 范围：支持数值和日期
-          1. `xx:[1 TO 10]、xx:[1 TO 10}、xx:[1 TO ]、xx:[* TO 10]`：区间写法，闭区间用[]，开区间用{}
-          1. `xx:(>=1 && <=10)、xx:>=1`：算术符号写法
-        - 通配符：? *，如`xx:t?m`，执行效率低，占内存多，以?*开头的效率最低，因为匹配所有文档
-        - 正则：//，`xx:/preg/`
-        - 模糊/相似度：~，允许n个char可增删改查
-          1. `xx:xx~n`，单词级别，
-          1. `xx:"x x"~n`，词语级别
-     1. Query DSL：Domain Specific Language，特定领域的语言
-   - 排序
-     1. 认识：对字段原始内容进行排序的过程，这个过程倒排索引无法发挥作用，需要用到正排索引。除了text。会采用列示存储和很多压缩算法节省空间
-        - 默认按照算分，采用其他字段排序不会算分
-        - text不能排序，keyword可以
-     1. 实现方案
-        - fielddata：默认禁用，只针对text类型，按照分词后的term排序，结果很难符合预期。搜索时即使创建，占用jvm heap，文档多时耗时长，内存占用大。针对字段配置 `"fielddata":true`。一般对分词做聚合分析时开启，可随时开启关闭
-        - doc values：默认启用，索引时创建和倒排的时机一样，占用磁盘，会减慢创建索引速度。针对字段配置，可在创建索引时关闭 `"doc_values": false`
-   - 分页与遍历
-     1. from + size：开始位置/文档数，从0开始，分页就是数据分片存储下，会在所有分片取出0到size个文档再汇总处理，深分页配置 `index.max_result_window`为10000。搜索引擎是为了让你尽快找到结果，而不是深分页
-     1. scroll
-        - 认识：遍历文档集的api，以快照方式避免深分页。指定快照保存时间，快照一个个查询，会占用内存
-          1. 不能用来实时搜索，数据不实时。因为建立快照需要时间，是建立快照时的数据
-          1. 尽量不要复杂sort，使用_doc最高效
-        - 使用
-          1. 发起scroll search
+1. 查询语法
+   - Query String Syntax
+     1. 泛查询：所有字段查询，直接写入q中
+     1. 指定字段：xx:xx
+     1. term、phrase：单词和词语，区别在于顺序。空格表示or，词语查询用""来要求前后顺序
+     1. 分组：使用括号，如`status:(xx OR xx) title:(xx)`
+     1. 布尔操作符：AND OR NOT + -，区分大小写，后俩对应must和must not，+在url中应该写为%2B
+     1. 范围：支持数值和日期
+        - `xx:[1 TO 10]、xx:[1 TO 10}、xx:[1 TO ]、xx:[* TO 10]`：区间写法，闭区间用[]，开区间用{}
+        - `xx:(>=1 && <=10)、xx:>=1`：算术符号写法
+     1. 通配符：? *，如`xx:t?m`，执行效率低，占内存多，以?或*开头的效率最低，因为匹配所有文档
+     1. 正则：//，`xx:/preg/`
+     1. 模糊/相似度：~，允许n个char，可增删改查
+        - `xx:xx~n`，单词级别，
+        - `xx:"x x"~n`，词语级别
+   - Query DSL
+     1. 认识：Domain Specific Language，特定领域的语言
+        - 默认进行相关性算分并排序
+     1. 行为类型
+        - 查询上下文：匹配程度怎么样？
+        - 过滤上下文：匹配吗？只有是和否，如bool查询中的filter/must not，constant_score的filter，aggregation中的filter
+     1. 查询子句类型
+        - 叶子查询：可独立使用
+          1. 模糊匹配：针对text类型，会先分词，再查找，然后再相关性算分
+             - match
+             - prefix
+             - regexp
+             - query_string
+          1. 精确匹配：不分词，直接比较倒排索引，提供相关性算分
+             - term
+             - range
+             - ids
+        - 复合查询
+          1. 认识：包含叶子查询和复合查询组合使用
+          1. bool：由bool子句组成
+             - filter：过滤器，只过滤符合条件的，是或否，不算分，其他的是有多接近，这个是是否。有智能缓存，执行效率高
+             - must：必须符合must中的所有条件，即and，算分
+             - must not：相反，不算分
+             - should：可以符合，即or
+               1. 只有should：或的意思
+               1. 有should和must：不要求满足should条件，但是满足增加得分，可以用于将某种结果往前排
+          1. constant_score：不计算相关度评分，将内部查询结果得分都设为1或boost的值，多用于结合bool实现自定义得分
+             - filter：不算分
+          1. dis_max
+          1. function_score
+          1. boosting
+        - 连接查询
+          1. nested
+             - path
+             - query
+          1. has_child/has_parent
+             - type/parent_type
+             - query
+             - inner_hits
+        - geo查询
+        - 专用查询
+        - 跨度查询：和非跨度不能混用，用于详细控制查询和顺序
+1. 排序
+   - 认识：对字段原始内容进行排序的过程，这个过程倒排索引无法发挥作用，需要用到正排索引。除了text。会采用列示存储和很多压缩算法节省空间
+     1. 默认按照算分，采用其他字段排序不会算分
+     1. text不能排序，keyword可以
+   - 实现方案
+     1. fielddata：默认禁用，只针对text类型，按照分词后的term排序，结果很难符合预期。搜索时即使创建，占用jvm heap，文档多时耗时长，内存占用大。针对字段配置 `"fielddata":true`。一般对分词做聚合分析时开启，可随时开启关闭
+     1. doc values：默认启用，索引时创建和倒排的时机一样，占用磁盘，会减慢创建索引速度。针对字段配置，可在创建索引时关闭 `"doc_values": false`
+1. 分页与遍历
+   - from + size：开始位置/文档数，从0开始，分页就是数据分片存储下，会在所有分片取出0到size个文档再汇总处理，深分页配置 `index.max_result_window`为10000。搜索引擎是为了让你尽快找到结果，而不是深分页
+   - scroll
+     1. 认识：遍历文档集的api，以快照方式避免深分页。指定快照保存时间，快照一个个查询，会占用内存
+        - 不能用来实时搜索，数据不实时。因为建立快照需要时间，是建立快照时的数据
+        - 尽量不要复杂sort，使用_doc最高效
+     1. 使用
+        - 发起scroll search
             ```json
             // GET _search?scroll=1m        // 指定快照有效时间
             {
@@ -506,7 +580,7 @@
                 "size": n                   // 每次scorll返回的文档数
             }
             ```
-          1. 利用scroll_id获取文档，当hits为空时可停止
+        - 利用scroll_id获取文档，当hits为空时可停止
             ```json
             // POST _search/scroll
             {
@@ -514,184 +588,145 @@
                 "scroll_id": "xx"
             }
             ```
-          1. 删除：`DELETE _search/scorll {"scroll_id":["",""]}`、`DELETE _search/scroll/_all`
-     1. search after
-        - 认识：可避免深分页的性能问题，提供实时的下一页文档获取
-          1. 不能指定页数
-          1. 只能下一页，不能上一页
+        - 删除：`DELETE _search/scorll {"scroll_id":["",""]}`、`DELETE _search/scroll/_all`
+   - search after
+     1. 认识：可避免深分页的性能问题，提供实时的下一页文档获取。可用bool查询的range filter实现
+        - 不能指定页数
+        - 只能下一页，不能上一页
         - 原理：基于上一页排序值检索下一页实现动态分页。需要指定支持排序且值唯一的n个字段做下一页拉取的指针。因为只需找各个分片要这个排序值之后size个数据然后组合即可，性能也是极高的
-        - 实现：可用bool查询的range filter实现
-        - 使用
-            ```json
-            // GET _search
-            {
-                "search_after": [],         // 填入上一页返回的排序结果
-                "sort": {}
-            }
-            ```
-   - 关联关系处理
-     1. 认识：不擅长处理关联关系，因为倒排索引不能做动态数据联合，适用于某些关联关系查询等操作的，可以使用
-     1. api
-        - Nested Object：是独立存储的，所以查询的时候可以横跨多个字段，获取每个array中符合的，普通的object array则不支持这么查，因为它必须在一个数组里
-            ```json
-            // 创建
-            type为nested
-            // 查询
-            GET _search
-            {
-                "query": {
-                    "nested": {
-                        "path": "xx",
-                        "query": {},
-                    }
+     1. 使用
+        ```json
+        // GET _search
+        {
+            "search_after": [],         // 填入上一页返回的排序结果
+            "sort": {}
+        }
+        ```
+1. 关联关系处理
+   - 认识：不擅长处理关联关系，因为倒排索引不能做动态数据联合，适用于某些关联关系查询等操作的，可以使用
+   - api
+     1. Nested Object：嵌套文档，独立存储，查询的时候可以横跨多个字段，获取每个array中符合的，普通的object array则不支持这么查，因为它必须在一个数组里
+        ```json
+        // 创建
+        type为nested
+        // 查询
+        GET _search
+        {
+            "query": {
+                "nested": {
+                    "path": "xx",                           // 字段路径
+                    "query": {},                            // 查询条件
                 }
             }
-            ```
-        - Parent/Child：类似join，6.x之前用多type方式实现
-            ```json
-            // 创建索引
-            PUT xx
-            {
-                "mappings": {
-                    "xx": {
-                        "properties": {
-                            "xx": {
-                                "type": "join",
-                                "relations": {                  // 指明父子关系
-                                    "xx_parent": "xx_child"
-                                }
+        }
+        ```
+     1. Parent/Child：父子文档，类似join，6.x之前用多type方式实现
+        ```json
+        // 创建索引
+        PUT xx
+        {
+            "mappings": {
+                "xx": {
+                    "properties": {
+                        "xx": {
+                            "type": "join",
+                            "relations": {                  // 指明父子关系
+                                "xx_parent": "xx_child"
                             }
                         }
                     }
+                }
+            },
+        }
+        // 创建父文档
+        PUT xx
+        {
+            "xx": "xx",
+            "join": "xx",                   // 指明父类型
+        }
+        // 创建子文档
+        PUT xx?routing=1                    // 指明route值，确保父子文档在一个分片上，一般使用父文档id
+        {
+            "xx": "xx",
+            "join": {
+                "xx": "xx",                 // 指明子类型
+                "parent": n,                // 指明父文档id
+            },
+        }
+        
+        // 查询
+        GET _search
+        {
+            "query": {
+                // 获取某父文档的子文档
+                "parent_id": {
+                    "type": "xx",           // 指定子文档类型
+                    "id": n,                // 指明父文档id
+                    "inner_hits": ""        // 内层过滤
                 },
-            }
-            // 创建父文档
-            PUT xx
-            {
-                "xx": "xx",
-                "join": "xx",                   // 指明父类型
-            }
-            // 创建子文档
-            PUT xx?routing=1                    // 指明route值，确保父子文档在一个分片上，一般使用父文档id
-            {
-                "xx": "xx",
-                "join": {
-                    "xx": "xx",                 // 指明子类型
-                    "parent": n,                // 指明父文档id
+                // 获取包含某子文档的父文档
+                "has_child": {
+                    "type": "xx",           // 指定子文档类型
+                    "query": {},            // 指明子文档的查询条件
                 },
-            }
-            
-            // 查询
-            GET _search
-            {
-                "query": {
-                    // 获取某父文档的子文档
-                    "parent_id": {
-                        "type": "xx",           // 指定子文档类型
-                        "id": n,                // 指明父文档id
-                    },
-                    // 获取包含某子文档的父文档
-                    "has_child": {
-                        "type": "xx",           // 指定子文档类型
-                        "query": {},            // 指明子文档的查询条件
-                    },
-                    // 获取某父文档的子文档
-                    "has_parent": {
-                        "parent_type": "xx",    // 指定父文档类型
-                        "query": {},            // 指明父文档查询条件
-                    }
+                // 获取某父文档的子文档
+                "has_parent": {
+                    "parent_type": "xx",    // 指定父文档类型
+                    "query": {},            // 指明父文档查询条件
                 }
             }
-            ```
-     1. 对比
-        - nested object：尽量选择这个，
-          1. 文档存储在一起，读性能高
-          1. 更新父子时需更新整个文档
-          1. 适用于读多改少
-        - parent/Child
-          1. 父子文档可独立更新互不影响
-          1. 为维护json关系，需要占用内存，读取时候在内存中做join性能差
-          1. 适用于子文档更新频繁
-   - reindex
-     1. 认识：即重建数据，用于mapping设置变更，index设置变更(如分片数修改)，迁移数据。重建更更新数据版本号
-     1. 方案：都是基于scroll，以后新增的、修改的无法感知，一般索引不变的时候才做重建操作
-        - _update_by_query：在现有索引上重建
-            ```json
-            POST _update_by_query
-            {
-                "script": {
-                    "source": "如xx.xx++",                      // 更新字段值
-                    "lang": "painless"
-                },
-                "query": {}                                     // 可以更新部分文档
+        }
+        ```
+   - 对比
+     1. nested object：尽量选择这个
+        - 文档存储在一起，读性能高
+        - 更新父子时需更新整个文档
+        - 适用于读多改少
+     1. parent/Child
+        - 父子文档可独立更新互不影响
+        - 为维护json关系，需要占用内存，读取时候在内存中做join性能差
+        - 适用于子文档更新频繁
+1. reindex
+   - 认识：即重建数据，用于mapping设置变更，index设置变更(如分片数修改)，迁移数据。重建更更新数据版本号
+   - 方案：都是基于scroll，以后新增的、修改的无法感知，一般索引不变的时候才做重建操作
+     1. _update_by_query：在现有索引上重建
+        ```json
+        // POST _update_by_query
+        {
+            "script": {
+                "source": "如xx.xx++",                      // 更新字段值
+                "lang": "painless"
+            },
+            "query": {}                                     // 可以更新部分文档
+        }
+        ```
+     1. _reindex：在其他索引上重建，允许将数据重建到其他索引上，也支持远程es集群
+        ```json
+        // POST _reindex
+        {
+            "conflicts": "proceed",
+            "source": {                                     // 原索引名称
+                "index": "xx",
+                "query": {},
+            },
+            "dest": {                                       // 目标索引
+                "index": "xx"
+            },
+            "script": {
+                "source" : "xx.xx1 = xx.xx2"
             }
-            ```
-        - _reindex：在其他索引上重建，允许将数据重建到其他索引上，也支持远程es集群
-            ```json
-            POST _reindex
-            {
-                "conflicts": "proceed",
-                "source": {                                     // 原索引名称
-                    "index": "xx",
-                    "query": {},
-                },
-                "dest": {                                       // 目标索引
-                    "index": "xx"
-                },
-                "script": {
-                    "source" : "xx.xx1 = xx.xx2"
-                }
-            }
-            ```
-     1. 配置
-        - `wait_for_completion`：false，改为异步重建，使用task api查看任务的执行进度和相关数据`GET _tasks/xx`，`POST _tasks/_cancel`
-        - `conflicts`：proceed，重建过程中有更新则会版本冲突，那么设置为覆盖并继续执行，否则报错并停止
-        - `requests_per_second`：限流
+        }
+        ```
+   - 配置
+     1. `wait_for_completion`：false，改为异步重建，使用task api查看任务的执行进度和相关数据`GET _tasks/xx`，`POST _tasks/_cancel`
+     1. `conflicts`：proceed，重建过程中有更新则会版本冲突，那么设置为覆盖并继续执行，否则报错并停止
+     1. `requests_per_second`：限流
 1. 聚合分析
-   - 认识：aggregation，是除搜索功能外提供的数据统计分析功能
+   - 认识：aggregation，是除搜索功能外提供的数据统计分析功能，类似sql的sum等，可以对query后的结果进行aggregation
      1. 支持bucket、metric、pipeline等分析方式
+        - bucket：桶，即设置分组条件后的一个个数据集合
+        - metric：指标，进行统计计算的方式，不指定默认按照value_count聚合
      1. 计算结果实时返回，实时性高
-   - 分析方式
-     1. metric：指标分析，如计算最大、最小、平均值
-        - 单值：输出结果只有一个
-          1. min/max/avg/sum
-          1. cardinality：基数，不同数值的个数。类似distint count，结果近似准确的，不是精准
-        - 多值
-          1. stats/extended_stats：一次性返回min/max/avg/sum的统计值，extended stats多了方差、标准差
-          1. percentile/percentile rank：百分位数统计，rank可获取指定值的位置，结果是近似准确的，不是精准
-          1. top hits：一般用于分桶后获取该桶内最匹配的顶部文档数据
-     1. bucket：分桶，类似group by，按照一定规则将文档放入不同桶中，用于分类
-        - 分桶规则
-          1. terms：text类型则按照分词结果分桶
-          1. range/date range：指定范围来设定分桶规则，加`ranges`字段
-          1. histogram：以固定间隔设定，`interval`间隔大小，`extended_bounds`被间隔的数据范围
-          1. date histogram：针对日期的直方图或柱状图，时序数据分析中常用
-     1. pipeline：管道分析，基于上级聚合分析再进行分析，支持链式调用，会输出到原结果中
-        - 输出位置
-          1. parent：内嵌到现有结果
-             - derivative：求导，导数
-             - moving average：移动平均值
-             - cumulative sum：累积加和
-          1. sibling：与现有结果同级
-             - max/min/avg/sum bucket
-             - stats/extended stats bucket
-             - percentiles bucket
-     1. matrix：矩阵分析
-   - 作用范围：默认query结果集，可通过以下修改
-     1. filter：为聚合分析设定过滤条件，不改变query的结果
-     1. post-filter：在聚合分析后生效，作用于文档过滤
-     1. global：无视过滤条件，基于全部文档分析
-   - 排序
-     1. `_count`：文档数
-     1. `_key`：分析后的key值排序，.用于多值中的某一个值
-     1. 用子聚合的结果
-   - 应用
-     1. bucket + metric：相互结合进行子分析，变的强大
-     1. 精准度：
-        - min：精确
-        - terms：不一定准确，因为数据分散在不同的分片，无法查看数据全貌
-          1. 可设置分片为1，或者合理设置shard-size大小，`show_term_doc_count_error`可查看每个bucket误算的最大值。尽量保证每个shard都把文档返回
-        - 近似统计算法：海量数据/精确度/实时性，只能同时满足其二，es是牺牲精准度
    - 使用
     ```json
     GET index/_search
@@ -700,15 +735,30 @@
 
         "aggs": {
             "xx": {                                         // 查询名称
+                // 查询条件
                 "terms/stats/min/max": {                    // 关键词
-                    "field": "",
-                    "size":n                                // 返回数量
+                    "field": "",                            // 根据xx分桶
+                    "size":n                                // 设置返回数量
                 },
-            },
-            "xx": {
+
                 "min_bucket/stats_bucket": {                // pipeline关键词
                     "buckets_path": "xx>xx",
                 },
+
+                "aggs": {                                       // 嵌套查询，可以对结果进行进一步的分析
+                    "xx": {
+                        "top_hits": {                           // top_hits
+                            "size": n,
+                            "sort": [
+                                {
+                                    "xx": {
+                                        "order": "desc"
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
             },
 
             // 作用范围
@@ -720,25 +770,11 @@
                         }
                     }
                 },
-                "aggs": {}
             },
-
-            "aggs": {                                       // 子查询
-                "xx": {
-                    "top_hits": {                           // top_hits
-                        "size": n,
-                        "sort": [
-                            {
-                                "xx": {
-                                    "order": "desc"
-                                }
-                            }
-                        ]
-                    }
-                }
-            }
         },
-        "order": [                                          // 排序
+
+        // 排序，可以嵌套在terms中使用，或者独立使用
+        "order": [
             {
                 "_count": "asc"
             },
@@ -751,6 +787,60 @@
         }
     }
     ```
+   - 分析方式
+     1. metric：指标分析，类似统计函数
+        - 单值：输出结果只有一个
+          1. min/max/avg/sum
+          1. value_count：文档总数
+          1. cardinality：去重的文档总数，结果近似准确不精准
+        - 多值
+          1. stats/extended_stats：一次性返回min/max/avg/sum的统计值，extended stats多了方差、标准差
+          1. percentile/percentile rank：百分位数统计，rank可获取指定值的位置，结果是近似准确的，不是精准
+          1. top hits：一般用于分桶后获取该桶内最匹配的顶部文档数据
+     1. bucket
+        - 认识：分组分析，类似group by，按照一定规则将文档放入不同桶中，用于分类
+        - 分桶规则
+          1. terms：根据唯一值分桶，每个唯一值算一个桶，text类型则按照分词结果分桶
+          1. range：根据范围分桶，`ranges`
+            - date range
+          1. histogram：根据固定间隔分桶，`interval`间隔大小，`extended_bounds`被间隔的数据范围
+            - date histogram：根据时间间隔分桶，针对日期的直方图或柱状图，时序数据分析中常用。`calendar_interval`，`format`
+          1. filter：将规则仅限于某一集合
+          1. composite：符合聚合，可从不同来源创建复合存储桶，可以流式处理桶，类似scroll之于文档
+     1. matrix：矩阵分析
+     1. pipeline：管道分析，基于上级聚合分析再进行分析，支持链式调用，会输出到原结果中
+        - 输出位置
+          1. parent：内嵌到现有结果
+             - derivative：求导，导数
+             - moving average：移动平均值
+             - cumulative sum：累积加和
+          1. sibling：与现有结果同级
+             - max/min/avg/sum bucket
+             - stats/extended stats bucket
+             - percentiles bucket
+   - 作用范围：默认query结果集，可通过以下修改
+     1. filter：为聚合分析设定过滤条件，不改变query的结果
+     1. post-filter：在聚合分析后生效，作用于文档过滤
+     1. global：无视过滤条件，基于全部文档分析
+   - 排序
+     1. 认识：默认按照doc_count排序，分两种
+     1. 分类
+        - 内置排序
+          1. `_count`：按照文档数，terms/histogram有效
+          1. `_term`：按词项的字符串值的字母顺序排序。只针对terms
+          1. `_key`：分桶后的key值排序，只针对histogram
+        - 度量指标排序：就是按照字段排序
+   - 应用
+     1. bucket + metric：可以先分组再计算，更加强大
+     1. 精准度：
+        - min：精确
+        - terms
+          1. 不一定准确，因为数据分散在不同的分片，只会取每个分片的top数据然后进行总和。某个数据进入不到所在分片的top就会被少算，可设置分片为1，或者合理设置shard-size大小解决，`show_term_doc_count_error`可查看每个bucket误算的最大值。尽量保证每个shard都把文档返回
+          1. 是为了获得top，不是为了分页，分页用composite
+        - 近似统计算法：海量数据/精确度/实时性，只能同时满足其二，es是牺牲精准度
+1. cat
+1. x-pack：官方提供的sql形式查询的方式
+1. Modules
 1. 插件
    - 操作
      1. 查看：`get _cat/plugins`
@@ -924,7 +1014,7 @@
      1. 2.x
      1. 5.x：直接从2到5，支持lucene6性能大幅提升，磁盘空间少一半，索引建立时间少一半，查询性能提升25%，支持ipv6
      1. 6.x：新增join类型
-     1. 7.4：不再支持索引类型，新建时不要指定类型会报错(可设置开启，不建议，因为8会直接删除)
+     1. 7.4：不再支持索引类型，新建时不要指定类型(可设置开启，不建议，因为8会直接删除)
    - 结构化/非结构化数据：无法用统一结构表示的，可称为全文数据
    - es构建于json数据格式之上
    - painless为es内置脚本语言
@@ -1071,6 +1161,7 @@
    - 数据高可用：translog机制
      1. 文档写入到buffer时，同时即时落盘(fsync)写入translog，6.x默认每个请求都落盘安全性最高，可改为5秒一次忍受最长5秒的数据丢失`index.translog.*`
      1. es启动时检查translog文件，从中恢复数据
+   - global ordinals：假如需要聚合的数据是海量的，如果将查询结果全部读取回来放到内存里计算，内存消耗会非常大。因此利用global ordinals先打有序标记，之后遍历时很快可以查出，成本在于原始构建上。还有High Cardinality的概念
 1. 相关性算分：relevance，概念：词频、文档频率(出现的总文档数)、逆向文档频率(即1/n)、文档长度(越短越高)。算分模型：TF/IDF，BM25(5.x默认)，best match，迭代了25次才计算
 1. 顺序扫描法、索引扫描法：将全文数据一部分提取出来变成一定结构，加快搜索速度
 1. 通过有限状态转换器实现全文检索的倒排索引：用于存储数值数据的BKD树，和用于分析的列存储

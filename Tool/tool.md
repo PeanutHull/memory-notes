@@ -21,7 +21,44 @@
         ```
    - 其他
      1. tcpdump
-     1. wireshark
+1. wireshark
+   - 认识：捕获网络包，显示包信息
+   - 界面
+     1. 数据包列表
+     1. 数据包详细信息、字节流
+        - Frame：物理层
+        - Ethernet II：链路层
+        - Internet Protocol Version 4：网络层
+        - Transmission Control Protocol：传输层，可以查看tcp报文内容
+        - Hypertext Transfer Protocol：应用层
+     1. 工具栏
+        - capture管理
+        - packet跳转控制
+        - 数据包列表显示大小
+     1. 过滤器：左侧小标签选择标签
+        - ip
+          1. ip.addr/src/dst：如`ip.addr == 10.90.100.46`
+        - tcp
+          1. tcp.port/srcport
+        - http
+          1. http.request.method：如`http.request.method == "GET"`
+        - 逻辑
+          1. or：`ip.src == xx or ip.src == xx`
+   - 功能
+     1. 统计器
+        - 协议统计
+        - 包长度统计
+        - io统计
+        - http统计
+        - 等等
+     1. 分析器
+     1. 电话相关工具
+     1. 无线相关工具
+        - bluetooth
+        - wlan
+   - 诊断技巧
+     1. `(tcp.flags.reset == 1) && (tcp.seq == 1)`：通常表示握手请求被对方拒绝()连接被拒绝
+     1. `(tcp.flags.syn == 1) && (tcp.analysis.retransmission)`：对方没收到，或者对方回复的确认包丢失了的重传握手请求
 ### DevTool
 1. 简介
  - 官方文档：https://developers.google.com/web/tools/

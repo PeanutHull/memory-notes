@@ -67,6 +67,7 @@
         - 旧版：支持格式化输出字符串，就是将值插入到有格式符%s的字符串中，和c的sprintf一样的语法，如`print("我叫 %s 今年 %d 岁!" % ('小明', 10)`
           1. 格式化符号：%c符合和ACSII，%d整数，%u无符号整数，%o八进制，%x十六进制，%X十六进制(大写)，%s字符串...
           1. 辅助指令：*定义宽度或小数点精度，-左对齐，(var)映射变量...
+1. 数据结构：相关操作、推导式
    - List
      1. 理解：列表，数字为索引的数组，使用最频繁，可被索引和切片、元素可被改变、可用+拼接、可继续嵌套
      1. 方法
@@ -159,6 +160,7 @@
         - 数学常量：pi圆周率、e自然常数
      1. id()：获取对象内存地址
      1. enumerate()
+1. lambda
 1. 流程控制
    - 判断
     ```python
@@ -340,8 +342,21 @@
      1. re.X 给允更灵活的方式
 ### 包
 1. pyotp：用于二次登录验证(密码+验证码)的验证码生成，如`pyotp.TOTP('YOUR SECRET').now()`
-### 高级
+1. NumPy
+   - 认识：Numerical python，开源的c语言写的python数据分析和科学计算库，可以替代matlab
+     1. c写的，速度快
+     1. 本身的数据结构比python的访问效率更高
+     1. 支持大量高维度数据和矩阵运算
+     1. 提供大量的数学函数库
+   - 安装
+     1. anaconda：开源的python发行版版
+   - 相关
+     1. pandas：数据分析
+     1. scipy：科学计算
+     1. matplotlib：绘图库，给命令，生成图
+### pro
 1. 函数式编程
+   - 基础函数：filter、map、reduce
    - 返回函数
    - 匿名函数
    - 装饰器
@@ -420,6 +435,15 @@
    - wxWidgets
    - Qt
    - GTK
+1. python解释器
+   - 理解：开源，有多种
+   - 分类
+     1. CPython：官方，c语言开发，提示符>>>
+     1. IPython：交互方式增强，提示符:
+     1. PyPy：执行速度快，使用JIT技术进行动态编译，和其他解释器执行可能有不同地方
+     1. Jython：java平台上的，可将python编译为java字节码
+     1. IronPython：.net平台上的
+   - 虚拟环境：virtualenv
 ### 运维
 1. 运行模式
    - 交互式：python3、IDLE
@@ -453,16 +477,7 @@
         - 最新版本：`pip install/uninstall package`
         - 指定版本：`pip install package ==/>= 1.0.4`
      1. 查看：`pip list/show/search package`
-1. python解释器
-   - 理解：开源，有多种
-   - 分类
-     1. CPython：官方，c语言开发，提示符>>>
-     1. IPython：交互方式增强，提示符:
-     1. PyPy：执行速度快，使用JIT技术进行动态编译，和其他解释器执行可能有不同地方
-     1. Jython：java平台上的，可将python编译为java字节码
-     1. IronPython：.net平台上的
-   - 虚拟环境：virtualenv
-## WIKI
+### WIKI
 1. 保留字
    - class，from，import，return，
    - if，elif，else，for，while，continue，break，finally，pass，
