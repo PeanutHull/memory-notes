@@ -972,10 +972,13 @@
    - 调试
      1. `go bug`：调试
      1. `go tool`：pprof性能检查工具，cgo跟C语言和GO语言有关的命令
+        - `go tool compile -N -l -S main.go`：不优化编译，可用dlv调试
      1. `go vet`：静态检查工具，项目快完成时进行进行优化
    - 运行和编译
      1. `go run hello.go`
-     1. `go build`：用于测试编译，普通包不产生任何文件，main包生成可执行文件，在GOROOT/src和GOPATH/src搜索包
+     1. `go build`：用于测试编译，普通包不产生任何文件，main包生成可执行文件，会在GOROOT/src和GOPATH/src搜索包
+        - `go build -ldflags "-s -w"`：-s 去掉符号信息。-w 去掉DWARF调试信息
+        - `go build -gcflags "-N -l"`：关闭内联优化
      1. `go install`：生成可执行文件，结果移到$GOPATH/pkg(bin)
      1. `go clean`：移除当前源码包里面编译生成的文件
    - 模块

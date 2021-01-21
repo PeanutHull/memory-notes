@@ -251,7 +251,7 @@
         - svctm：每次io操作的平均服务时间，单位ms
         - %util：向设备发送io操作的时间占比(设备的带宽利用率)，接近100%，则已满负荷，越高负荷越重
      1. -n：network
-        - IFACE：网络设备名称
+        - IFACE：interface，网络设备名称
         - rxpck/s：接收包数/每秒钟
         - txpck/s：发送包数/每秒钟
         - rxkB/s：接收字节数/每秒钟
@@ -536,6 +536,7 @@
         - 比FAT更新，处理速度更快，碎片更少
         - 分区最大2T，支持分区、文件夹、文件的压缩
         - FAT32分区能够在DOS下直接访问，NTFS不能
+   - VFAT：长文件名系统，一个与Windows系统兼容的Linux文件系统，支持长文件名，可以作为Windows与Linux交换文件的分区
 1. 网络文件系统：NFS、Samda
 1. 分布式文件系统
    - 认识：通过网络在多台主机上存储的文件系统。新手用fastdfs，淘宝tfs，七牛。阿里云nas用于存日志、小文件等，oss
@@ -613,32 +614,32 @@
    - cd ~/.ssh
    - ssh -copy-id peter@happypeter.net       // 把公钥复制到服务器上
 ### 运维相关
-1. 运维
-   - 组成
-     1. 基础：配机器
-     1. 私有云：openstack
-     1. 监控
-     1. 网络
-     1. 开发：配套工具和功能开发
-   - 分类
-     1. 监控
-     1. 部署
-        - openstack：用于管理基础设施的一系列开源项目组成的平台
-          1. Neutron：flat\flatdhcp\vlan，网络服务
-          1. Horizon：可视化、ui服务
-          1. Cinder/Swift：存储服务
-          1. Nova：计算服务
-          1. Glance：镜像服务
-          1. Keystone：认证、身份服务
-          1. Heat：编排组织服务
-          1. Ceilometer：监控计量服务
-        - saltstack，服务器管理方式，远程执行系统，用salt命令控制多台机器，用python函数执行
-          1. 结构：master中心控制，minion被管理客户端
-     1. cmdb
-   - 技术
-     1. nat：网络地址转换服务，可基于状态过滤连接（就是内网出去的能回来，其他进不来），可做对外网的口子
-     1. lvm：逻辑卷管理，动态扩缩容
-     1. DNS：智能dns，DNS view，可根据用户ip返回不同的ip，解决了同域名不同解析地址问题，使用bind 9
+1. 组成
+   - 基础：配机器
+   - 私有云：openstack
+   - 监控
+   - 网络
+   - 开发：配套工具和功能开发
+1. 云管理平台：部署，配置管理
+   - openstack：用于管理基础设施的一系列开源项目组成的平台
+     1. Neutron：flat\flatdhcp\vlan，网络服务
+     1. Horizon：可视化、ui服务
+     1. Cinder/Swift：存储服务
+     1. Nova：计算服务
+     1. Glance：镜像服务
+     1. Keystone：认证、身份服务
+     1. Heat：编排组织服务
+     1. Ceilometer：监控计量服务
+   - saltstack，服务器管理方式，远程执行系统，用salt命令控制多台机器，用python函数执行
+     1. 结构：master中心控制，minion被管理客户端
+   - cloudstack
+   - virsh/virt-manager
+1. hypervisor
+   - xen
+   - kvm
+   - vmvare vshpere
+   - puppet
+   - ansible
 1. 监控
    - 意义
      1. 运行状态展示
@@ -666,6 +667,18 @@
      1. 安全：攻击、漏洞
    - 监控工具
      1. 开源：zabbix(最常用)、grafana(可视化非常强大，导入数据源即可用)、Open-falcon、nagios
+1. cmdb
+1. 技术
+   - nat：网络地址转换服务，可基于状态过滤连接（就是内网出去的能回来，其他进不来），可做对外网的口子
+   - lvm：逻辑卷管理，动态扩缩容
+   - dns：智能dns，DNS view，可根据用户ip返回不同的ip，解决了同域名不同解析地址问题，使用bind 9
+   - 标准化、自动化、平台化、服务化
+   - DevOps：Developers+Operators
+1. 实操
+   - 网卡bond模式：linux多网卡的7种bond模式原理：bond0~6。通过多张网卡绑定为一个逻辑网卡，实现本地网卡的冗余，带宽扩容和负载均衡
+     1. mode=0：平衡负载模式，有自动备援，但需要”Switch”支援及设定
+     1. mode=1：自动备援模式，其中一条线若断线，其他线路将会自动备援
+     1. mode=6：平衡负载模式，有自动备援，不必”Switch”支援及设定
 ### api
 1. io相关
    - inotify

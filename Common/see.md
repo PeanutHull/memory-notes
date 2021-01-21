@@ -28,6 +28,11 @@
    - 历史
      1. 1999年Intel建立
      1. 如今由Willow Garage提供支持
+1. libui：简单易用的c语言gui库，支持window、mac、linux三大平台，使用其本地gui技术
+1. libpng
+1. libjpeg
+1. stb_image
+1. openalpr：开源的车牌识别
 ### webRTC
 1. 由谷歌推广的开源实时音视频技术栈，是W3C标准，还有对应的IETF工作组(RTCWEB)
    - 主流浏览器都支持，省去客户端工作，回声消除，双讲抑制

@@ -123,21 +123,51 @@
    - 服务注册发现、服务编排、内部路由
    - 快速部署、负载均衡
    - 有状态的服务支持
+### 云计算
+1. 认识
+   - 云部署形式：公有云、私有云(企业内部)、混合云(如存储内部、计算外部)
+   - 云服务模式：IaaS(基础设施即服务)、PaaS(平台即服务)、SaaS(软件即服务，面向用户)
+1. 虚拟机
+   - 认识：VM，Virtual Machine
+   - 虚拟技术
+     1. 全虚拟化：软件模拟硬件接口，性能低
+     1. 半虚拟化：修改客户操作系统配合
+     1. 硬件辅助虚拟化：硬件支持虚拟硬件接口
+   - 主机虚拟化
+     1. 虚拟硬件接口
+     1. 虚拟操作系统接口：更轻量，无法更深层次虚拟，不安全
+1. Hypervisor
+   - 认识：VMM，即Virtual Machine Monitor，虚拟机监视器，是一类软件的统称
+1. kvm
+   - 认识：Kernel-Based Virtual Machine，是linux内核的一个模块，完全内置于Linux，只需加载即可
+     1. 开源的，是基于硬件的完全虚拟化
+     1. kvm本身只关注虚拟机调度和内存管理这两个方面。IO外设的任务交给Linux内核和Qemu
+   - Qemu：虚拟化软件，可以虚拟不同的cpu，支持异构（x86架构可虚拟化出不是x86的架构）
+     1. Qemu-kvm：用户态管理kvm，网卡，声卡，PCI设备等都是qemu来管理
+   - 安装
+     1. 确认cpu支持虚拟化，intel的VMX，amd的SVM。`grep -E "svm|vmx" /proc/cpuinfo`
+     1. 安装
+        - `yum install -y qemu-kvm libvirt`
+        - `yum install -y virt-install`
+     1. 创建虚拟磁盘：`qemu-img create`
+     1. 启动服务：`systemctl enable libvirtd`
+     1. 上传镜像
+     1. 挂载目录
+     1. 创建虚拟机：`virt-install`
+     1. 启动、查看：`virsh list/start xx`
+     1. 热添加cpu：`virsh edit xx.xml`
+   - 优化
+     1. cpu：物理机到虚拟机多次的上下文切换有性能问题，intel实现了技术VT-x在cpu硬件实现加速转换
+     1. cpu缓存绑定：提高ln缓存亲和力从而提升性能
+     1. 内存：以前VMM通过影子页表决解内存转换，coreI7系列处理器上集成了EPT技术，以硬件辅助的方式完成客户物理内存到机器物理内存的转换，完成内存虚拟化
 1. wiki
-   - 云部署形式：公有云、私有云(企业内部)、混合云
-   - 云服务模式：IaaS(基础架构)、PaaS(平台即服务)、SaaS(软件即服务，面向用户)
    - 应用部署形式：物理单机->虚拟机(openstack)->容器->云原生，更敏捷、自动化、效率、低成本
+   - 其他：Swarm、Mesos
+   - 边缘计算：是一种分散式运算的架构，将应用程序、数据资料与服务的运算，由网络中心节点移往网络逻辑上的边缘节点来处理。类似cdn思想，实现更快速，去中心化
+   - 裸金属服务器：就是直接对接hypervisor的服务器
+### wiki
+1. wiki
    - DevOps
      1. Prometheus监控：资源、性能、办公网连通性、流量
      1. Graylog日志
-   - 虚拟机
-     1. 虚拟技术
-        - 全虚拟化：软件模拟硬件接口，性能低
-        - 半虚拟化：修改客户操作系统配合
-        - 硬件辅助虚拟化：硬件支持虚拟硬件接口
-     1. 主机虚拟化
-        - 虚拟硬件接口
-        - 虚拟操作系统接口：更轻量，无法更深层次虚拟，不安全
-   - kvm：Kernel-Based Virtual Machine，基于linux内核，KVM本身只关注虚拟机调度和内存管理这两个方面。IO外设的任务交给Linux内核和Qemu
-   - 其他：Swarm、Mesos
-1. vagrant：基于Ruby的工具，用于创建和部署虚拟化开发环境。使用Oracle的开源VirtualBox，使用Chef创建自动化虚拟环境
+   - vagrant：基于Ruby的工具，用于创建和部署虚拟化开发环境。使用Oracle的开源VirtualBox，使用Chef创建自动化虚拟环境

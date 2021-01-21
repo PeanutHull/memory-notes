@@ -126,7 +126,7 @@
     WWW-Authenticate                服务器对客户端的认证信息
     Proxy-Authenticate              代理服务器对客户端的认证信息
     Vary                            代理服务器缓存的管理信息
-    Content-Disposition             请求内容存为文件时提供默认文件名，如attachment;filename="aaa.csv"
+    Content-Disposition             请求内容存为文件时提供默认文件名，如attachment;filename="aaa.csv"，设置为空可以防止浏览器下载
     ```
    - 实体头
     ```
@@ -172,9 +172,23 @@
    - 数字和文字的状态码：负责表示HTTP请求的返回结果
      1. 1xx：请求处理中
      1. 2xx：正常处理。200 ok，206 范围请求
-     1. 3xx：重定向。301 永久重定向，302 临时重定向，304 未修改(未符合If-Match，If-None-Match，If-Modified-Since，If-Unmodified-Since、If-Range)
-     1. 4xx：客户端错误。400 请求报文语法错误，401 未认证，403 阻止，404 未找到，408 连接超时(请求发送到网站时间过长，如访问google)，499 客户端或服务端主动断开连接
-     1. 5xx：服务器错误。500 内部错误，502 上游无效响应(无法连接、连接断开等)，503 服务不可用，504 响应超时
+     1. 3xx：重定向
+        - 301 永久重定向
+        - 302 临时重定向
+        - 304 未修改(未符合If-Match，If-None-Match，If-Modified-Since，If-Unmodified-Since、If-Range)
+     1. 4xx：客户端错误
+        - 400 请求报文语法错误
+        - 401 未认证
+        - 403 阻止
+        - 404 未找到
+        - 408 连接超时(请求发送到网站时间过长，如访问google)
+        - 499 客户端或服务端主动断开连接
+     1. 5xx：服务器错误
+        - 500 无法预料的错误
+        - 501 服务器不支持或者无法识别请求的功能
+        - 502 bad gateway，上游无效响应(无法连接、连接断开等)
+        - 503 service unavailable，服务不可用，提醒稍后再试，fpm不够用，可返回Retry-After头表示恢复时间
+        - 504 gateway timeout，响应超时
    - 响应头：服务器类型(UA)、日期时间、内容类型和长度
    - 响应正文
 1. https

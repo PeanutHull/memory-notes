@@ -1,6 +1,7 @@
-### 路线：基础知识（操作、配置、历史）——优化方式、方法、注意点——各种技术方案——原理
-### 提升：集群部署--中间件实施--备份设计监控--日志处理--授权
 ### 基础
+1. 基础
+   - 注释 ：--、#、/**/=
+   - 变量：基于会话，用户变量不区分大小写。定义 `set @a:=/=1`
 1. 数据类型
    - 数字
      1. 整数
@@ -48,6 +49,81 @@
      1. unsigned
      1. zerofill
      1. variables
+1. 库
+   - mysql
+     1. 认识：系统库，服务器运行相关信息
+     1. 分类
+        - slave相关
+          1. ndb_binlog_index
+          1. slave_master_info/slave_relay_log_info/slave_worker_info
+        - 日志相关
+          1. general_log
+          1. slow_log
+        - 权限相关
+          1. user
+          1. db
+          1. host
+          1. tables_priv/columns_priv/procs_priv/proxies_priv：3为存储过程和函数权限
+        - 优化器统计相关：innodb_index_stats、innodb_table_stats
+        - 时区相关：time_zone
+        - 帮助相关表：help_category等
+        - 其他：事件 event、用户函数 func、插件表 plugin、存储过程和函数 proc、防火墙等
+   - information_schema
+     1. 认识：提供元数据相关信息，提供服务器、库、表相关信息。一些是只读的，实际是视图不是表
+     1. 分类
+        - 系统组成
+          1. schemata
+          1. tables
+          1. columns
+          1. views
+          1. triggers
+          1. engines
+          1. plugins
+        - innodb相关
+        - xtradb
+        - 字符集相关
+   - performance_schema
+     1. 认识：提供服务器性能表现，可以监视server的执行
+     1. 分类
+        - 全局状态
+          1. global_status 
+          1. global_variables
+          1. setup_instruments：配置监控选项
+          1. status_by_account/status_by_thread/status_by_host
+          1. threads
+        - 连接、登录相关
+          1. accounts：连接用户列表
+          1. users
+          1. hosts/host_cache
+          1. session_status/session_connect_attrs/session_variables
+        - 事件相关
+          1. events_stages_current
+          1. events_statements_current
+          1. events_transactions_current
+          1. events_waits_current
+        - socket相关
+          1. socket_instances
+          1. socket_summary_by_event_name
+        - 内存相关
+          1. memory_summary_by_account_by_event_name
+          1. memory_summary_by_user_by_event_name
+          1. memory_summary_by_host_by_event_name
+        - 表io相关
+          1. table_handles
+          1. table_io_waits_summary_by_index_usage
+        - 文件相关
+          1. file_instances
+          1. file_summary_by_event_name
+          1. file_summary_by_instance
+        - 复制相关
+          1. replication_applier_status
+          1. replication_connection_status
+        - 其他
+          1. mutex_instances
+          1. metadata_locks
+          1. rwlock_instances
+   - sys
+     1. 认识：数据来自performance，降低复杂度便于查看，5.7默认安装。字母开头给人看的，x$开头用于工具采集。可以统计哪个表/文件/账号/连接的次数最多/延迟多/内存占用多/线程多少/sql最多
 1. 表
    - 结构
      1. primary key：主键列，作为一行的唯一标识符用来定位，不能重复不能为空，特殊的唯一索引，可有复合主键 `primary key(id,name)`
@@ -80,13 +156,7 @@
      1. merge：将具有相似结构的多个MyISAM表组合到一个表中的虚拟表
      1. 对比
         - nodb不支持全文索引，MyISAM支持
-1. 库
-   - 组成
-     1. mysql：用户/权限相关，user表存储用户和权限
-     1. information_schema：自身架构相关
-     1. performance_schema
-     1. sys
-1. sql语句
+1. sql
    - 分类
      1. DCL：对数据库的操作：mysql、use、set、show
      1. DDL：对表的操作：show、create、drop、alter
@@ -194,9 +264,6 @@
         - 时间戳
           1. 转为时间戳：`unix_timestamp('2018-01-15 09:45:16');`
           1. 转为时间：` from_unixtime(date, '%Y-%c-%d %h:%i:%s')`
-1. 其他
-   - 注释 ：--、#、/**/=
-   - 变量：基于会话，用户变量不区分大小写。定义 `set @a:=/=1`
 ### 特性
 1. 索引
    - 认识：为加快查询速度，对数据列进行排序的一种结构，包含所有记录的引用指针，查询时先查索引，引擎实现
@@ -346,6 +413,71 @@
     open num;
     close num;
     ```
+### 维护
+1. 日志
+   - 分类
+     1. 错误：启动、运行、停止遇到的问题
+     1. 通用查询：客户端连接和执行的语句
+     1. 二进制：记录更改数据的语句
+     1. 中继：从接收的主的数据
+     1. 慢查询：执行时间超过long_query_time的查询或不使用索引的查询
+     1. DDL：元数据操作的语句
+   - frm,myd,myi
+   - binlog
+     1. 认识：记录所有除查询的DDL和DML语句，以事件形式记录、包含执行的时间、事务安全型的二进制文件集合。分为本身和索引文件(记录有效的文件)，开启1%的性能损耗
+        - 生成新的日志文件的情况：重启时、执行`flush logs`、大小超过`max_binlog_size`
+        - 记录的格式
+          1. STATEMENT：基于SQL语句。不记录每行变化，减少了日志量节约了IO，为了slave正确运行需要记录相关信息
+          1. ROW：基于行，5.7.7及以上默认，之前是STATEMENT。只记录行的修改点，避免了存储过程/function/trigger的调用和触发无法被正确复制的问题，日志量大
+          1. MIXED：混合模式，一般用statment，无法完成主从复制的操作用row
+        - 配置
+          1. sync_binlog：刷新到磁盘的事务执行次数，为1最安全在系统故障时最多丢失一个事务的更新
+        - 事件类型：QUERY_EVENT、STOP_EVENT等
+     1. 用途
+        - 主从复制：传输binlog
+        - 数据恢复：使用mysqlbinlog工具
+     1. 使用
+        - sql
+          1. `show binary logs;`：查看二进制文件列表和大小，如mysql-bin.*
+          1. `show binlog events in '' from pos limit [offset,]count;`：查看某个binlog
+          1. `reset master;`：清空所有
+        - 工具：mysqlbinlog，直接恢复：`mysqlbinlog /var/lib/mysql/mysqld-bin.000001 | mysql -uroot`
+          1. --database DB_name
+          1. --no-defaults 
+          1. --start/stop-datetime、--start/stop-position
+1. 用户和权限管理
+   - user
+    ```sql
+    select * from mysql.user\G;                                             # 查看用户
+    create user userName@'::1' identified by 'password';                    # 创建用户 
+    drop user username;                                                     # 删除用户
+    rename user oldName to newName;                                         # 重命名
+    update mysql.user set password=password('') where user='';              # 修改用户密码
+    set password for userName@'%' = password('');                           # 修改用户密码
+    ```
+   - 权限
+     1. 指令
+        ```sql
+        show grants (for userName);                                         # 查看用户权限
+        grant select,update on *.* to userName@'%';                         # 赋予查询更新权限
+        grant all privileges on *.* to userName@"";                         # 所有权限，不包括管理权限
+        grant all privileges on *.* to userName@'' WITH GRANT OPTION;       # 管理权限，也就是管理员
+        revoke select on *.* from userName;                                 # 回收权限
+        revoke grant option on *.* from userName;                           # 回收管理权限，需要显示指定
+        FLUSH PRIVILEGES;                                                   # 刷新权限，更改了都要刷新
+        ```
+     1. user表中host列的值的意义
+        - %：匹配所有主机
+        - localhost：localhost不会被解析成IP地址，直接通过UNIXsocket连接
+        - 127.0.0.1：会通过TCP/IP协议连接，并且只能在本机访问；
+        - ::1：兼容支持ipv6的，表示同ipv4的127.0.0.1
+     1. 权限意义
+        - usage：无权限
+        - ALL：所有，同ALL PRIVILEGES，除grant外
+        - INDEX：创建/删除索引
+        - PROCESS：查看/杀死线程
+        - RELOAD：重载授权表、清空日志/主机缓存/表缓存
+        - SHUTDOWN：关闭服务器
 ### 运维
 1. 安装
    - 安装：`yum -y install mysql-server`
@@ -384,164 +516,6 @@
         mysql -u -p databaseName < data.sql
         load data local infile 'xx.txt' into table tableName;
         ```
-1. 日志
-   - 分类
-     1. 错误：启动、运行、停止遇到的问题
-     1. 通用查询：客户端连接和执行的语句
-     1. 二进制：记录更改数据的语句
-     1. 中继：从接收的主的数据
-     1. 慢查询：执行时间超过long_query_time的查询或不使用索引的查询
-     1. DDL：元数据操作的语句
-   - frm,myd,myi
-   - binlog
-     1. 认识：记录所有除查询的DDL和DML语句，以事件形式记录、包含执行的时间、事务安全型的二进制文件集合。分为本身和索引文件(记录有效的文件)，开启1%的性能损耗
-        - 生成新的日志文件的情况：重启时、执行`flush logs`、大小超过`max_binlog_size`
-        - 记录的格式
-          1. STATEMENT：基于SQL语句。不记录每行变化，减少了日志量节约了IO，为了slave正确运行需要记录相关信息
-          1. ROW：基于行，5.7.7及以上默认，之前是STATEMENT。只记录行的修改点，避免了存储过程/function/trigger的调用和触发无法被正确复制的问题，日志量大
-          1. MIXED：混合模式，一般用statment，无法完成主从复制的操作用row
-        - 配置
-          1. sync_binlog：刷新到磁盘的事务执行次数，为1最安全在系统故障时最多丢失一个事务的更新
-        - 事件类型：QUERY_EVENT、STOP_EVENT等
-     1. 用途
-        - 主从复制：传输binlog
-        - 数据恢复：使用mysqlbinlog工具
-     1. 使用
-        - sql
-          1. `show binary logs;`：查看二进制文件列表和大小，如mysql-bin.*
-          1. `show binlog events in '' from pos limit [offset,]count;`：查看某个binlog
-          1. `reset master;`：清空所有
-        - 工具：mysqlbinlog，直接恢复：`mysqlbinlog /var/lib/mysql/mysqld-bin.000001 | mysql -uroot`
-          1. --database DB_name
-          1. --no-defaults 
-          1. --start/stop-datetime、--start/stop-position
-1. 单表不能超过20G
-1. 监控
-   - 性能测试：数据多才有参考价值，数据总量超过内存总量，如几百条数据第一条命令下去就全部加载到内存了，没有参考意义
-   - 性能：连接数、qps
-     1. `show status like 'Threads%';`：查看连接数
-     1. `show processlist;`：查看所有连接
-     1. `show variables like '%connect%';`：查看连接的配置
-   - 硬件：主频高处理快高吞吐低时延，L1/2/3的cache大速度快，内存大磁盘读写少TPS高，固态快机械配阵列卡，网卡好低时延
-     1. 更大内存、更快磁盘：比业务服务器要求高
-   - 指标
-     1. qps：select、delete、insert、update，物理机qps30000，tps10000，虚拟机qps5000，tps1000
-     1. sort
-        - sort_range：使用范围完成的排序数
-        - sort_rows：排序的行数，sort_merge_passes：排序算法必须执行的合并传递的数量。 如果此值很大，则应考虑增加sort_buffer_size系统变量的值。
-        - sort_scan：通过扫描表格完成的排序数量
-     1. thread：单用户2000，单实例5000
-        - conneted
-        - cached
-        - created
-        - running
-     1. threadpool_used_percent：连接数占比
-     1. seconds_behind_master：主从延迟
-     1. slave_status：slave_io_running，从库IO线程状态
-     1. innodb_rows：每秒增删改查的行数
-     1. innodb_row_lock
-        - innodb_row_lock_waits：等待行锁的总次数
-        - innodb_row_lock_time：等待行锁的总时间
-     1. mysql_locks
-        - table_locks_immediate：申请时立刻获得表锁次数
-        - table_locks_waited：申请表锁时等待的次数
-     1. mysql_handler
-        - Handler_commit：内部提交语句数
-        - Handler_delete：请求从表中删除行的次数
-        - Handler_read_prev：按照键顺序读取一行的请求数。该方法主要用于优化Order By DESC
-        - Handler_read_rnd_next：在数据文件中读下一行的请求数，如果你正在进行大量的表扫描，该值较高。同城说明你的表索引不正确或写入的查询没有利用索引。
-        - Handler_read_last：根据键读最后一行的请求数
-        - Handler_read_first：索引中第一条被读的次数。如果较高，建议服务器正执大量全索引扫描。例如 SELECT col1 From foo 假定col1有索引
-        - Handler_read_next：按照键顺序读取下一行的请求数。如果你用范围约束或如果执行搜索扫描来查询索引列，该值增加
-        - Handler_update：请求更新表中一行的次数
-        - Handler_read_rnd：根据固定位置读一行的请求数，如果你正执行大量查询并需要对结果进行排序该值较高。你可能使用了大量需要MySQL扫描整个表的查询或你的连接没有正确使用索引
-        - Handler_write：请求向表中插入一行的次数
-     1. innodb_pages 
-        - innodb_pages_created：buffer pool创建页的数
-        - innodb_pages_read：从buffer pool中读取的页数
-        - innodb_pages_written：写buffer pool的页数
-     1. innodb_bytes
-        - bytes_sent：发送给所有客户端的字节数
-        - bytes_received：从所有客户端接收的字节数
-     1. innodb_buffer_pool_bytes
-        - buffer_pool_bytes_data：buffer pool中数据页的大小
-        - buffer_pool_bytes_dirty：buffer pool中脏页的大小
-     1. innodb_buffer_pool_pages
-        - buffer_pool_pages_misc：用于存储行锁，自适应哈希索引等信息的管理层的页数
-        - buffer_pool_pages_free：buffer pool中空闲的页书目
-        - buffer_pool_pages_made_young：标记为young的页数目
-        - buffer_pool_pages_old：在buffer pool LRU old段的页数
-        - buffer_pool_pages_flushed：请求flush pages的次数
-        - buffer_pool_pages_total：buffer pool包含的总页数
-        - buffer_pool_pages_data：buffer pool包含数据的页数(包括dirty和clean页)
-        - buffer_pool_pages_made_not_young：进入buffer pool后未被标记为young的页数
-        - buffer_pool_pages_dirty：buffer pool中脏页数目
-     1. innodb_data
-        - data_written：innodb写入的总数据量，单位字节
-        - data_writes：innodb数据写入的总次数
-        - data_fsyncs：innodb进行fsync的次数
-        - data_read：innodb读取的总数据量
-        - data_reads：innodb数据读取的总次数
-     1. mysql_innodb_log
-        - innodb_os_log_fsyncs：调用fsync() writes写redo log的次数
-        - innodb_log_waits：log buffer 空闲空间不足，必须等待其被写入所造成的等待数
-        - innodb_log_write_requests：写redo log的请求次数
-        - innodb_log_writes：redo log的物理写次数
-        - innodb_os_log_written：写入redo log的bytes
-1. 慢查询：记录超过一定时间的查询语句
-    ```
-    slow_query_log = ON
-    slow_query_log_file = /usr/local/mysql/data/slow.log
-    long_query_time = 1
-    ```
-1. 调优
-   - 参数
-     1. Innodb_buffer_pool
-     1. Innodb_buffer_pool_instances
-     1. innodb_flush_log_at_trx_commit
-     1. binlog-format
-     1. transaction-isolation
-     1. sync_binlog
-1. 基准测试：进行定量的、可复现的测试，不关心业务逻辑，对比于压力测试。mysql由于数据一致性的要求无法简单的水平扩展(即加机器)，主要评估qps和响应时间
-   - mysqlslap：简单，容易使用，无法生成数据，适合对既有数据库单个sql进行优化测试
-     1. `--concurrency=5000`：并发数
-     1. `--number-of-queries`：总查询数
-   - sysbench：内嵌lua脚本，可生成指定规模数据，主流厂商(Oracle/Percona)使用，支持多线程，支持多种数据库
-     1. 建表，塞1百万数据：`sysbench --monitis=oltp --oltp-table-size=1000000 --mysql-db=xx --mysql-user=root --mysql-password=xx prepare`
-     1. 开始测试：`sysbench --monitis=oltp --oltp-table-size=1000000 --mysql-db=xx –mysql-user=root –mysql-password=xx –max-time=60 –oltp-read-only=on –max-requests=0 –num-threads=8 run`
-1. 用户和权限管理
-   - user
-    ```sql
-    select * from mysql.user\G;                                             # 查看用户
-    create user userName@'::1' identified by 'password';                    # 创建用户 
-    drop user username;                                                     # 删除用户
-    rename user oldName to newName;                                         # 重命名
-    update mysql.user set password=password('') where user='';              # 修改用户密码
-    set password for userName@'%' = password('');                           # 修改用户密码
-    ```
-   - 权限
-     1. 指令
-        ```sql
-        show grants (for userName);                                         # 查看用户权限
-        grant select,update on *.* to userName@'%';                         # 赋予查询更新权限
-        grant all privileges on *.* to userName@"";                         # 所有权限，不包括管理权限
-        grant all privileges on *.* to userName@'' WITH GRANT OPTION;       # 管理权限，也就是管理员
-        revoke select on *.* from userName;                                 # 回收权限
-        revoke grant option on *.* from userName;                           # 回收管理权限，需要显示指定
-        FLUSH PRIVILEGES;                                                   # 刷新权限，更改了都要刷新
-        ```
-     1. user表中host列的值的意义
-        - %：匹配所有主机
-        - localhost：localhost不会被解析成IP地址，直接通过UNIXsocket连接
-        - 127.0.0.1：会通过TCP/IP协议连接，并且只能在本机访问；
-        - ::1：兼容支持ipv6的，表示同ipv4的127.0.0.1
-     1. 权限意义
-        - usage：无权限
-        - ALL：所有，同ALL PRIVILEGES，除grant外
-        - INDEX：创建/删除索引
-        - PROCESS：查看/杀死线程
-        - RELOAD：重载授权表、清空日志/主机缓存/表缓存
-        - SHUTDOWN：关闭服务器
 1. 实例迁移步骤
    - 搭建新实例实时和旧的同步
    - 业务方修改配置
@@ -550,134 +524,11 @@
    - 断开新实例到老实例同步，开启新主库可写入
    - 发布，验证业务
    - 删除旧实例
-### 实践
-1. 设计和使用
-   - 数据类型
-     1. 尽量使用更简单的类型，数据长度越短越好(更少存储内存空间)
-     1. 长数字使用string
-     1. 用枚举代替常用字符串类型
-     1. 尽量用timestamp，比datetime效率高
-     1. 给文本字段留足余量
-     1. 不能为null
-   - 列设计
-     1. 一定有主键，最好是自增，否则多次读写后更离散，更多随机io
-     1. 增加create_time/update_time字段，用于数据归档/自定义差异备份
-     1. 大数据字段独立表进行存储，提交表性能
-     1. 名称不要和关键字碰撞
-   - 索引
-     1. 建立原则
-        - 数据量少的、数据经常改变的、数据差别不大的不能建立
-        - 字符串使用前缀索引，节省大量空间
-        - 尽可能扩展和整合索引，而不是增加索引
-        - 最左前缀原则：不用给组合索引最左边的列单独建立索引
-     1. 使用原则
-        - like：最左原则，%aa%不使用索引，而aa%使用
-        - or：前后条件都有索引才使用索引，否则用union
-        - !=、not in、<>：不使用索引，范围查询可能用到索引如>、in等
-        - 字符串列加引号，否则索引失效
-        - 不在列上运算：因为每个行要运算所以索引失效
-        - 使用索引列排序：唯一索引原则
-        - 优化器会评估，有可能放弃使用索引
-        - on、using子句上有索引，否则全表
-   - 事务
-     1. 不能运行大事务，否则导致主从延迟，事务执行多长时间，就延迟多长时间
-   - 查询
-     1. 无select *，sql中无计算、无函数
-     1. 提高索引利用率
-     1. 所有where条件加引号，防止类型隐式转换
-     1. 尽量用union代替子查询
-     1. union all代替union
-     1. group和order尽量在一个表中，否则在两个表中两个表全表扫描
-     1. 不需要排序用order by null否则依然排序
-     1. 使用count(*)忽略所有列，不用列名
-     1. 尽量inner join让优化器自动选择驱动表
-     1. 一个大查询可以分解为小查询，内部每秒能扫描百万行
-     1. 开启查询缓存
-   - 运维
-     1. 慢查询日志，不要直接打开，使用pt-query-digest工具分析
-     1. set profile = 1;show profile;show profile for query 1;获取sql执行时间
-     1. show status;show global status;分析计数器
-     1. show processlist;查看线程状态
-     1. 关键业务上线前explain确认执行计划
-1. explain
-   - 理解：sql语句分析，将过程和索引等信息列出来
-   - 使用解析
-     1. select_type：查询类型，simple、primary、union、subquery
-     1. type：访问类型，在表中找到所需行的方式，效率由高到低
-        - system/const：最多一个匹配行，主键或者唯一索引，性能最优
-        - eq_ref：多表连接中使用唯一索引
-        - ref：非唯一索引/唯一索引的前缀扫描
-        - range：索引范围扫描
-        - index：索引全扫描
-        - all：全表扫描
-     1. possible_keys：可用的索引
-     1. key：实际使用索引
-     1. key_len：索引使用字节数，越小越好越快
-     1. ref：另外表的数据列名字
-     1. row：预计读出的数据行数，里面所有数字乘积代表需要处理的组合数
-     1. extra：问题解决提示信息
-1. gist
-   - 查询这个数据是否存在，存在则存到另一张表里：`create table temp as select * from admin a where exists (select uid from user u where a.userName = u.account);`
-   - 查询两张表中是否有相同数据：`select * from admin where uid IN(select uid from temp);`
-   - 求差集：`SELECT * FROM A LEFT JOIN B ON A.xx = B.xx WHERE B.id IS NULL union SELECT * FROM A RIGHT JOIN B ON A.xx = B.xx WHERE A.id IS NULL;`
-   - 求全集：`SELECT * FROM A LEFT JOIN B ON A.xx = B.xx union SELECT * FROM A RIGHT JOIN B ON A.xx = B.xx;`
-   - 原所有id增加5万，必须倒叙操作：`update user SET uid=uid+50000 order by uid desc;`
-   - 插入不重复数据行，mysql特有不是标准sql语法：`INSERT token(udid) values ('{$udid}') ON DUPLICATE KEY UPDATE activetime ='{$time}'`
-1. 问题排查思路
-   - 查看现场：`show full processlist`
-   - 分析情况：`explain xx`
-   - 查看信息
-     1. 正在执行的事务：`select * from information_schema.innodb_trx`
-     1. 锁等待：`select * from information_schema.innodb_lock_waits w inner join information_schema.innodb_trx b on b.trx_id=w.blocking_trx_id inner join information_schema.innodb_trx r on r.trx_id=w.requesting_trx_id`
-     1. 锁表情况：`show open tables where In_use > 0`
-     1. 锁定的事务：`select * from information_schema.innodb_locks`
-     1. 锁等待的事务：`select * from information_schema.innodb_lock_waits`
-     1. 死锁：``
-   - 日志分析：general.log
-### 高级
-1. 主从，主主，amoeba
-   - 原理：主库将更改记录到二进制日志binlog，从库复制到中继日志，读取中继重新放到库中
-     1. 负载均衡，降低压力
-     1. 高可用，故障切换
-   - 查看
-     1. `show master status;`
-1. 读写分离：采用数据库主从方式，多个从库分担读，主库负责写
-1. 分表分区
-   - 认识
-     1. 分区：对用户透明，底层分为多个物理分区。用partition by定义每个分区存放的数据，优化器自动使用。适用于数据多，只在表最后有热点数据，其他都是历史数据。分区可以分布在不同机器上独立维护，有很多功能不能用
-        - 存储更多数据：可分布在不同的物理设备
-        - 优化查询：where语句中包含分区条件时，只会使用某几个分区
-        - 类型：RANGE、LIST、HASH、KEY
-          1. 两级映射：指定id范围和表的关系，不够了加关系就行，可通过中间件实现
-        - 适用于所有数据和索引，两者不能分开
-     1. 分表：可以将两种方式结合使用
-        - 水平拆分：用于数据本身有独立性，可以拆分，逻辑分层算法无法变更，关键字段取模方式拆到多个表中，降低单表大小
-        - 垂直拆分：把属性较多、数据较大的表某些字段拆分到不同的表中，查询时可减少io次数，但是应用增加复杂度。分主表、扩展表。因为数据库的内存buffer存row
-   - 跨表分页
-     1. 全局视野法：改造分页sql，每个表都取出来，然后放一起再排序。`offset X limit Y`改为`offset 0 limit X+Y`。精准返回，页码增加性能急剧下降
-     1. 业务折衷
-        - 禁止跳页查询：第一页作为第二页的查询条件，再全局视野
-        - 允许数据精度损失：认定数据足够随机，取模去取数据
-     1. 二次查询法
-        - 将order by time offset X limit Y，改写成order by time offset X/N limit Y
-        - 找到所有表中的最小值time_min
-        - between二次查询，order by time between $time_min and $time_N_max
-        - 拿time_min在各个分库中比较，得出每个表的虚拟offset，相加从而得到time_min在全局的offset
-        - 得到了time_min在全局的offset，自然得到了全局的offset X limit Y，要什么从后推着拿就行
-1. 数据库中间件：前端无感知
-   - mycat：开源分布式数据库中间件，13年阿里开源，java写的。支持读写分离、高可用(主没了选从)、拆分(垂直、水平)
-     1. 高可用：采用去中心化的集群，在虚拟ip下，在不同的节点部署多个mycat，根据某种策略(ip选举策略)选举某一个为临时master，之间采用心跳机制进行通信维持故障切换。可使用zk、haproxy、keepalived等组件，可以有选举、心跳、切换ip等功能
-   - Kingshard：个人的go开发，读写分离、分库分表、sql黑名单
-   - mysql proxy：mysql官方
 ### WIKI
-1. 当系统遇到无法解决的技术难题时，可以通过变换业务逻辑实现功能
-1. 概念
+1. 相关
    - 数据库：文件中读写数据不方便、速度慢，按照数据结构来组织、存储和管理数据的仓库，提供API进行数据操作
    - 关系型数据库：建立在关系模型基础上，由行、表、库等组成
    - MySQL：瑞典的属于Oracle公司的开源数据库，使用标准sql语句，支持多客户端语言如c、php等，32位最大表文件4GB，64的8TB
-1. 聚集索引/非聚集索引
-   - 非聚簇索引：MyISAM的方式，单行检索快
-   - 聚簇索引：叶结点包含了完整的数据记录，按数据存放的物理位置为顺序，多行检索快。辅助索引搜索需要检索两遍索引：首先检索辅助索引获得主键，然后用主键到主索引中检索获得记录
 1. 其他
    - 严格模式
    - NULL与任何其它值的比较永远返回false，即使NULL=NULL也返回false
@@ -745,7 +596,7 @@
         - 支持函数索引：在索引中使用函数，支持json数据索引，基于虚拟列实现
      1. 支持通用表表达式：CTE，即with子句，和派生表类似，像语句级别的临时表或视图，用完就不用管了，类似临时的变量等
         - 可以引用其他cte
-     1. 支持窗口函数，也叫分析函数，over，和分组聚合类似，是每一行生成一个结果，可以结合统计函数一起使用
+     1. 支持窗口函数，也叫分析函数，over，和分组聚合类似，是每一行生成一个结果，可以结合统计函数一起使用，非常灵活
         - row_number/rank
         - first_value/last_value/lead
         - cume_dist/nth_value
@@ -762,91 +613,3 @@
         - 实用函数
         - 合并函数
         - 表函数
-### 原理
-1. 架构
-   - Server：————负责跨存储引擎功能的实现，如存储过程、触发器、视图
-     1. 连接器：————管理连接、连接权限验证，用户权限信息放在一个变量中以供后续使用，长连接多了容易内存爆满
-     1. 查询缓存：————8.0已删除，命中率非常低，表更新会使所有查询缓存清空
-     1. 分析器：————词法语法分析，之后进行precheck权限检查
-     1. 优化器：————生成执行计划，选择索引
-        - 决定使用哪个索引
-        - join时决定表的连接顺序
-     1. 执行器：————操作引擎(调用引擎接口)，返回结果，再次检查权限，因为有些只能在执行阶段才能知道具体哪张表，如触发器
-   - 存储引擎：————负责数据存取，插件式
-     1. InnoDB
-     1. MyISAM
-     1. Memory
-1. WAL
-   - 认识：Write-Ahead Logging，预写式日志。先写内存日志，再更新。当MySQL空闲时，将内存中的数据落盘
-   - 步骤
-     1. 执行器取ID=2的数据
-     1. 引擎判断数据页是否在内存中，没有则从磁盘读取到内存中，从内存中返回行数据；（内存大的服务器的好处）
-     1. 执行器将该数据值加1，之后写入新行，通知引擎
-     1. 引擎将新数据更新到内存中
-     1. 引擎此时开始记录redolog，并将该记录置为prepare状态（SSD磁盘读写快，写日志嗖嗖的）
-     1. 执行器写binlog
-     1. 引擎提交事务，并更新此行数据的redolog状态为commit
-     1. 当MySQL空闲时，会将内存中的数据落盘
-   - 解释
-     1. 步骤
-        - 账本记录卖一瓶可乐（redolog 处于 prepare）
-        - 收钱放入抽屉（binlog）
-        - 收完钱，在账本该记录上打对勾，代表抵账（redolog 置为 commit）
-     1. 纠错
-        - 若收钱过程被打断，则整理交易时，发现只是记账了却没收钱，则删除该账本记录（回滚）
-        - 若收了钱，有事情耽误了抵账，那么之后闲下来对账的时候，将账本该记录打勾即可（即commit）
-1. 日志
-   - 分类
-     1. Server：binlog，是Server层的追加记录的日志记录功能，当文件写到一定大小会新增文件继续记录，属于全量日志
-     1. InnoDB
-        - undolog：回滚日志，记录事务开始前的数据，update/delete操作存放数据旧记录，insert操作记录新数据行的PK(rowid)，用于回滚、崩溃恢复，实际做的是相反的操作
-        - redolog：重做日志，记录事务运行中的改动。InnoDB独有，是物理页上的直接改动，顺序写的方式，效率很高。固定大小，循环记录
-   - 联系
-     1. binlog和redolog通过事件id关联，并存可以保证数据一致性，即crash-safe
-     1. redo是前滚，undo是事务前回滚
-1. ACID
-   - 概括
-     1. undo保证事务的原子性，redo保证持久性，隔离性通过锁和mvcc实现，其他通过日志
-     1. 数据库重启先进行crash recovery
-   - 持久性和原子性
-     1. 持久性和事务原子性
-        - redo：redo日志记录LSN(每一个事务写入重做日志的字节总量)，数据页头部也记录LSN，数据库启动时，对比两个LSN，会将redo中多出来的写回页中
-        - undo：撤销所有执行了一部分但尚未提交的操作
-     1. 写入原子性：redo日志以512字节存储，称为重做日志块。磁盘一个扇区是512字节，操作系统与磁盘的数据交换扇区为基本单位。只需无缓冲写入磁盘就可保证数据原子写入
-   - 一致性：原子性不能保证一致性，为了保证并发情况下的一致性，引入了隔离性
-   - 隔离性：保证每个事务看到的数据是一致的，就象其它并发事务不存在。
-     1. MVCC
-        - 认识：Multi-Version Concurrency Control 数据多版本并发控制
-          1. 提供基于某时间点的快照。可提供事务开始时相同的数据，不管事务执行的时间有多长
-          1. 对于支持行锁的事务引擎，进行数据库的并发控制，把数据库的行锁与行的多个版本结合起来,只需很小开销就可实现非锁定读,从而大大提高并发性能
-        - 原理
-          1. 写任务发生时，将数据克隆一份，以版本号区分；
-          1. 写任务操作新克隆的数据，直至提交
-          1. 并发读任务可以继续读取旧版本的数据，不至于阻塞
-1. 索引
-   - 类型分类
-     1. 主键索引
-     1. 普通索引：如果查询普通索引获取本普通索引之外的数据，那么就需要找到主键id，然后去主键索引上拿数据，n个普通索引的记录，就需要重复n次去主键上取数据
-   - 属性分类
-     1. Hash：由引擎根据情况自动创建，不能人为干涉。比较hash计算后的hash值会变得没有规律，只能等值过滤。只需一次定位检索效率很高，不像btree需要多次io跑节点
-        - 不能范围查找，只能=/<>/in
-        - 不支持索引的排序操作
-        - 不能使用前缀索引查询
-        - 任何时候不能避免全表查询，因为重复hash值的存在，需要查表获得实际数据
-     1. B+Tree：B被认为是Balance的缩写，平衡算法
-   - 引擎支持的索引结构
-     1. InnoDB/memory/heap：b+tree、hash
-     1. MySIAM：b+tree、rtree(空间列是rtree)
-   - 不同引擎的区别
-     1. Innodb中，Leaf Nodes存放其他字段实际数据，还包含主键值，Secondary Index和普通b-tree相同，所以主键查询非常快，Secondary需要先找到Leaf再找主键值
-1. B+Tree
-   - 特点
-     1. 二分查找一级级向叶子节点，io查找数据库和指针，内存计算向哪个方向
-     1. 三层的B+树可以表示上百万的数据，如果上百万的数据查询只需要三次I/O，性能提高将会是巨大的。B+树就是一种索引数据结构，如果没有这样的索引，每个数据项发生一次I/O，那么成本将会大大提升
-     1. I/O的次数取决于B+树的高度H，假设当前数据表的数据为N，每个磁盘块的数据项的数量是M，则有：H=log(M+1)N，当数据量N一定的情况下，M越大，H越小；而M=磁盘块大小/数据项大小，磁盘块大小也就是一个数据页的大小，是固定的，如果数据项占的空间越小，数据项的数量越多，树的高度也就越低。这也就是为什么每个数据项，即索引字段要尽量的小，比如int占4个字节，要比bigint的8个字节小一半。这也是为什么B+树要求把真实数据放在叶子节点内而不是内层节点内，一旦放到内层节点内，磁盘块的数据项会大幅度的下降，导致树层级的增高。当数据项为1时，B+树会退化成线性表
-     1. B+树的数据项是复合性数据结构，比如（name，age，gender）的时候，B+树是按照从左到右的顺序来建立搜索树的，比如当（小张，22，女）这样的数据来检索的时候，B+树会优先比较name来确定下一步的搜索方向，如果name相同再依次比较age和gender，最后得到检索的数据。但是，当（22，女）这样没有name的数据来的时候，B+树就不知道下一步该查哪个节点，因为建立搜索树的时候，name就是第一个比较因子，必须根据name来搜索才知道下一步去哪里查询。比如，当（小张，男）这样的数据来检索时，B+树就可以根据name来指定搜索方向，但下一字段age缺失，所以只能把名字是“小张”的所有数据都找到，然后再匹配性别是“男”的数据了。这个是非常重要的一条性质，即索引的最左匹配特性
-   - 分类
-     1. btree：二叉搜索树，每个结点只存储一个关键字，等于则命中，小于走左结点，大于走右结点
-     1. b-tree：多路搜索树，每个结点存储M/2到M个关键字，非叶子结点存储指向关键字范围的子结点；所有关键字在整颗树中出现，且只出现一次，非叶子结点可以命中
-     1. b+tree：在B-树基础上，为叶子结点增加链表指针，所有关键字都在叶子结点中出现，非叶子结点作为叶子结点的索引；B+树总是到叶子结点才命中
-     1. b*tree：在B+树基础上，为非叶子结点也增加链表指针，将结点的最低利用率从1/2提高到2/3

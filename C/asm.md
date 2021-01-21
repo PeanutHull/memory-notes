@@ -1,5 +1,5 @@
 ### 认识
-1. asm：assembly language，汇编语言，不同平台的指令集和寄存器不一样，这是汇编本身的性质
+1. asm：assembly language，汇编语言，为cpu设计的指令，使用助记符表示。不同平台的指令集和寄存器不一样，这是汇编本身的性质
    - 分类
      1. intel x86
      1. plan9
