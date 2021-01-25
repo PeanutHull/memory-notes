@@ -75,6 +75,7 @@
           1. `awk -F : '{ print $1 }' file`：只是以:作为分隔符
         - 给结果加上头尾字符串：`awk 'BEGIN {print "begin\n"}{print $1 "\t" $4} END{print "end"}' file`
         - 匹配第一个行是xx：`awk '{if($1=="xx") print $0}' file`
+        - 同ip访问次数，空格分隔：`cat filename | awk -F '' '{print $1}' | sort | uniq -c > result.txt`
    - sed
      1. 认识：文本过滤工具，是一种非交互性的文本流编辑
      1. 运行方式：`sed [options] 'command' files`，脚本执行方式：`sed[options] -f sed脚本文件`

@@ -352,6 +352,10 @@
         - 行锁：InnoDB，开销大，加锁慢，有死锁，冲突低，并发高。基于索引，如果改的字段是索引或者自增字段，会锁住整个表
         - 间隙锁：gap锁，范围查找自动锁定范围内所有行，不可以被其他事务读取/修改，防止幻读
         - 页锁：BDB被InnoDB取代，并发介于表和行之间，会死锁
+        - 会话锁
+          1. `get_lock(key, timeout)`：按key名加锁，使用元数据锁定(MDL)，没人用
+          1. `release_lock(key)/release_all_lock()`：释放锁，关闭连接锁也释放
+          1. `is_free_lock(key)/is_used_lock(key)`
      1. 基于逻辑
         - 悲观锁
           1. 理解：Pessimistic Locking，读取的时候为后面的更新加锁，之后再来的读写都会等待，属于数据库层面的锁

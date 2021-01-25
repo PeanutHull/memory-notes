@@ -1,5 +1,5 @@
 ### 认识
-1. 理解：开源、基于内存、可持久化的日志型、Key-Value的数据库，多客户端支持。对关系型数据库起到补充作用。常用作缓存、数据库、消息中间件，使用ANSI C编写
+1. 理解：开源、基于内存、可持久化的日志型的Key-Value非关系型数据库，多客户端支持。对关系型数据库起到补充作用。常用作缓存、数据库、消息中间件，使用ANSI C编写
    - 速度快，性能高：读11万次/秒，写8万次/秒
    - 多数据结构，key过期，发布/订阅模式
    - 所有操作都是原子的、事务、Lua脚本
@@ -7,7 +7,7 @@
    - 主从同步、Sentinel提供高可用，Cluster提供自动分区
 1. key
    - 库
-     1. select index：切换某个库，更像命名空间，隔离key名冲突。索引号只能是数字不能自定义，可设置数量，开始和默认是0
+     1. select index：切换库，更像命名空间，隔离key名冲突。索引号只能是数字不能自定义，可设置数量，开始和默认是0
      1. move：移动key到某个库中
    - 查看
      1. dbsize：key的数量
@@ -32,6 +32,11 @@
      1. 认识：字符串，键值对类型、二进制安全的字符串，意味着可包含任意对象(如一个图片)，最大512MB
      1. 命令
         - set/get、mset/mget、setbit/getbit：单个、多个、按照偏移量设置位(可做Bloom过滤器)
+          1. set
+             - EX：过期时间秒
+             - PX：过期时间毫秒
+             - NX：不存在才设置
+             - XX：存在才设置
         - setex/psetex、setnx/msetnx、setrange/getrange：设置过期时间、存在才设置、按照偏移量设置
         - incr/incrby/incrbyfloat、decr/decrby：加/减、一/N，可当原子计数器
         - getset、strlen、append：设置并返回旧值、长度、追加到末尾
@@ -79,6 +84,13 @@
    - geospatial：地理空间，索引半径查找，如附近的人
    - bitmaps：位图，即位的数组
 1. 功能
+   - 管道
+     1. 认识：pipeline，不直接响应，一次性发送多条命令，一次性返回所有响应。减少了多次数据往返时间，提高服务端利用率
+     1. 使用
+        ```php
+        $redis->pipeline();
+        $redis->exec();
+        ```
    - 超时
      1. 认识：expire，设置超时时间，超时后不删除，只有对值进行改变才会删除，过期是不可靠的
         ```lua
@@ -95,35 +107,37 @@
         - subscribe/unsubscribe/psubscribe/punsubscribe：订阅/退订n个，[给定模式(通配符等)]
         - publish：发布
         - pubsub：查看订阅和发布系统状态
-   - 管道
-     1. 认识：pipeline，不直接响应，一次性发送多条命令，一次性返回所有响应。减少了多次数据往返时间，提高服务端利用率
-     1. 使用
-        ```php
-        $redis->pipeline();
-        $redis->exec();
-        ```
    - 事务
      1. 认识：一组命令在一个步骤里执行，具有原子性
         - 不具备回滚机制，需要自己收拾烂摊子
-        - 事务中不能获取事务中其他命令执行的结果
+        - 事务中不能获取同一事务其他命令执行的结果
         - 错误处理：语法错误所有命令不执行，运行错误不影响其他命令执行(会造成问题)
      1. 使用
         - multi：标记开始
-        - watch：监视n个key，exec前值被改变则取消事务，可以提供CAS(check-and-set)行为
+        - watch：监视n个key，exec前值被改变则取消事务，即提供了CAS(check-and-set)行为
         - unwatch：取消所有key的监视
         - exec：执行事务
         - discard：取消
-   - 锁
-     1. set nx ex val lua：排他，过期，一段时间内唯一的特性
-        - 存在执行时间超出锁时间，造成同时拥有锁，这就是setnx陷阱
-        - 删除锁时，锁已过期，这个间隔他人拿到了锁，会误删他人锁：利用lua脚本，拿锁和删锁原子操作，解决了此问题
+   - 锁：锁的性能也是很高
+     1. 使用incr的原子计数特性实现库存扣减，防止超卖
+     1. 单实例分布式锁：set nx ex val lua：排他，过期，一段时间内唯一的特性
+        - 存在执行时间超出锁时间，造成同时拥有锁，这就是setnx陷阱，可以在拿到锁三分之二时间后，进行锁的延时申请，这个申请要和一开始拿锁的校验等级相同，实现有java的redisson
+        - 设置一个不可猜测的长随机字符串，作为口令串，防止误删他人锁
+        - 利用lua脚本，拿锁和删锁原子操作：防止持有过期锁的客户端误删现有锁的情况出现
      1. 分布式锁
-        - 分类
-          1. RedLock：一个集群中依次在大多数节点建锁(5个节点就需要建3个锁)，建锁时间小于超时时间则成功，否则就删掉锁重抢。轮询重试抢锁，利用key的过期和nx特性，删除锁时使用事务和对比内容是否一致判断是否误删他人锁
-          1. zk：抢锁就是节点尝试创建临时znode，建锁失败则注册监听器，放锁就是删除znode，然后zk通知客户端抢锁，也可以弄成顺序节点，多个抢锁就依次监听上一个znode
-        - 比较：zk注册监听器即可，比redis的轮询性能开销小
+        - RedLock：一个集群中依次在大多数节点建锁(n/2+1)，建锁时间小于超时时间则成功，否则就删掉全部锁重抢(即使有的节点没有加锁成功)
+          1. 基于集群都是独立master，不存在集群协调机制，否则主从的架构可能在主从切换时恰好导致同时拥有锁
+          1. 客户端应设置响应超时时间，防止集群挂掉傻傻等待，并在超时时删掉全部锁。还可轮询重试抢锁。同样服务端也不要留给某个节点太长时间，应该尽快尝试下一个
+          1. 使用当前时间减去开始拿锁时间即获取锁使用的时间
+          1. 时钟漂移带来的时间差对于失效时间来说几乎可以忽略不计
+          1. redlock内部在客户端无法取到锁时，应该在一个随机的并且大于拿锁时间的延迟后重试，尽可能防止多客户端在同时抢夺同一锁(防止脑裂，没人会拿到锁)
+             - 拿到锁的时间越短，脑裂概率越低
+             - 客户端拿锁失败时，应尽快释放锁，否则已经存在脑裂，只能等待锁自动释放，叫做惩罚
+          1. redis重启时，没有备份锁排斥性失效，有AOF没有fsync=always也不行，不过有AOF重启后失效时间还是按照之前的，可以设置重启机ttl后再提供服务，但可能会导致服务整体不可用的时间变长
+        - zk：抢锁就是节点尝试创建临时znode，建锁失败则注册监听器，解锁就是删除znode，然后zk通知客户端抢锁，也可弄成顺序节点，多个抢锁就依次监听上个znode
+        - 比较：zk设计定位就是分布式协调，注册监听器即可，但大并发压力会较大，比redis的轮询性能开销小
    - 脚本
-      - 认识：执行lua脚本，内嵌lua解释器
+      - 认识：支持lua脚本，内嵌lua解释器
       - 命令
         1. `eval script numkeys key`：执行，会缓存sha1以便下次用evalsha调用
            - 如`eval "return {KEYS[1],KEYS[2],ARGV[1],ARGV[2]}" 2 key1 key2 first second`
@@ -256,6 +270,15 @@
      1. 范围：不同范围放到不同实例中，需要维护范围表
      1. hash：使用crc32将key转为数字，然后取模(模为实例数量)确定实例
    - 自动分区：cluster
+1. 数据库缓存一致性方案
+   - key过期，mysql更新不更新redis
+     1. 开发成本低，管理成本低
+     1. 不一致时间很长
+   - key过期，mysql更新时，更新redis
+     1. 延迟更小
+     1. 损耗双倍资源
+   - key过期，消息队列异步更新redis
+   - key过期，从库订阅binlog来更新redis
 ### 运维
 1. 命令
    - 服务器
@@ -313,6 +336,120 @@
      1. -n：请求数
      1. -d：字节形式指定set/get大小
      1. -k：1=keep alive 0=reconnect
+1. 阿里云架构：百万QPS，最好性能512G内存、最大连载数320000、最大吞吐1536M
+   - 负载均衡
+   - 多个proxy，负责故障转移
+   - 分片服务器，单节点，不需同步数据，不提供数据持久化和备份策略，节点故障会丢失数据。集群版是双节点
+   - 配置服务器，即Configserver，存储集群配置信息及分区策略，采用双副本的高可用架构
+1. 使用
+   - 避免产生hot-key，导致主库节点成为系统的短板
+   - 避免产生big-key，导致网卡撑爆、慢查询等
+   - zset服务器消耗最高，要排序还要去重，尽量少用
+1. 主库重启 checklist 
+   - 世纪互联主从库节点 zabbix 关闭报警
+   - 世纪互联主从库节点 注释脉搏脚本
+   - 切换Master到从库，修改参数并重启
+    ```
+    redis-cli -h 10.20.52.245 -p 8379 sentinel failover jy-courseware-redis
+    redis-cli -h 10.20.52.245 -p 9379 sentinel failover jy-tnt-redis
+
+    vim /boot/grub/grub.conf
+    isolcpus=10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29 
+    for i in {1..9}; do /etc/init.d/${i}379redis stop; done 
+    init 6
+    ```
+   - 重启完成后sysbench验证,重启redis服务
+    ```
+    /bin/rm -rf /root/scripts/sysbench.sh
+    cd /root/scripts && wget -N --http-user=XueRs --http-passwd=xxx http://soft.xesv5.com:88/dell/sysbench.sh
+    ./sysbench.sh  --test=cpu --num-threads=${v_cpu_num} --max-requests=600000 run
+    for i in {1..9}; do /etc/init.d/${i}379redis start;sleep 60; done 
+    for i in {1..9};do sed -i '/slaveof/d' /data/${i}379redis/etc/redis.conf;done
+    for i in {1..9};do cat /data/${i}379redis/etc/redis.conf |grep slaveof;done
+    ```
+   - 同步完成后，切回原主
+    ```
+    redis-cli -h 10.20.52.245 -p 8379 sentinel failover jy-courseware-redis
+    redis-cli -h 10.20.52.245 -p 9379 sentinel failover jy-tnt-redis
+    ```
+   - 开启zabbix报警和脉搏，sentinel reset 
+   - yf的同步节点挂到sjhl从库
+    ```
+    /etc/init.d/irqbalance restart
+    chkconfig irqbalance on
+    ```
+### 架构
+1. TwemProxy
+   - 认识：twitter开源的redis/memcache的快速、轻量级的单线程代理服务器，可对多台redis/memcache进行管理和分配。就是分片、分布式方案
+     1. 支持失败节点自动删除
+     1. 支持设置HashTag：将两个key哈希到同一个实例
+     1. 和redis、客户端采用长链接，减少连接数
+     1. 数据自动分片
+        - hash：MD5、CRC16、CRC32、CRC32a、hsieh、murmur、Jenkins
+        - 分片：ketama、modular、random
+        - 可设置权重
+     1. 支持集群部署，上边接负载均衡
+     1. 支持状态监控：监控ip、端口、刷新间隔时间
+     1. 使用pipelining处理请求和响应
+     1. 不支持redis事务
+     1. 使用某些命令需要保证key都在同一个分片上：SIDFF,SDIFFSTORE,SINTER,SINTERSTORE,SMOVE,SUNION and SUNIONSTORE
+     1. 相对于官方较新的Redis Cluster架构，容量伸缩较麻烦
+     1. 支持memcached ASCII协议和redis协议
+   - 如何一份数据复制两份发到两个实例？
+   - 运维
+     1. 同时使用tw和pipeline时，如果对pipeline的执行顺序有要求，那么要设置tw对redis的server_connections数量为1，否则会导致顺序错乱。因为tw用epoll，每个连接有独立的队列，每个连接用完就会扔到队尾准备重复利用，就势必导致两个命令在两个不同的连接上进行，到了redis那里就有可能造成顺序错乱，如zadd和expire一起用
+1. Codis
+   - 没有pipeline
+1. Pika
+1. cluster：太复杂，是去中心化的。没有tw的简单，用的稳定
+### wiki
+1. 历史
+   - 2009年，开源
+   - 2.6：set命令增加键存在与否的判断和过期时间的设置，新增lua环境
+   - 2.8：新增，支持复制的断线重连时有条件的增量数据传输，可用的哨兵机制
+   - 2.8.9：新增，HyperLogLog
+   - 2.8.18：新增，无硬盘复制(避免硬盘性能瓶颈)
+   - 3.0：2015年，新增，集群功能
+1. 数据类型的适用场景
+   - string：可持久化的缓存，如session_id为key的session，二进制安全，图片、文件什么的，原子计数器做粉丝数、关注数、ip封锁次数啥的
+   - hash：存对象数据，如用户基本信息，直接更新即可
+   - list：消息排行，消息队列，日志收集器，配合发布订阅
+     1. 队列的安全性：单个队列一旦pop出去客户端崩溃，消息丢失，利用rpoplpush弄个备份队列，数据丢了再去备份队列取一下
+   - set：做不重复的集合，存不重复用户名啦、每日投票一次啦
+   - zset：有序的不重复集合，如热门内容的排序，只需修改score，排行榜
+1. 编程语言客户端
+   - php：官方推荐两个
+     1. Predis：php代码实现的原生客户端
+     1. phpredis：c编写的php扩展，性能更好
+   - ruby：redis-rb，最稳定的客户端
+   - python：redis-py
+   - node：node_redis、ioredis，前者早，后者功能丰富
+1. 内存
+   - 复杂的数据结构在内存中操作非常简单，redis可以做很复杂的操作
+   - 达到最大内存后，Redis会先尝试清除已到期或即将到期的Key，当此方法处理后，仍然到达最大内存设置，将无法再进行写入操作，但仍然可以进行读取操作。Redis新的vm机制，会把Key存放内存，Value会存放在swap区
+   - 虚拟内存机制：VM机制将数据分页存放，由Redis将访问量较少的页即冷数据swap到磁盘上，访问多的页面由磁盘自动换出到内存中，突破了物理内存的限制
+1. 磁盘中是紧凑追加方式存在，不存在随机io
+1. 连接原理
+   - 认识Redis通过监听一个TCP端口或者Unix socket的方式来接收来自客户端的连接，当一个连接建立后，Redis内部会进行以下一些操作
+     1. 首先，客户端socket会被设置为非阻塞模式，因为Redis在网络事件处理上采用的是非阻塞多路复用模型
+     1. 然后为这个socket设置TCP_NODELAY属性，禁用Nagle算法
+     1. 然后创建一个可读的文件事件用于监听这个客户端socket的数据发送
+1. redis协议：流言协议
+1. 主从同步原理：主准备所有的命令，利用redis协议，发送到从，执行并且放入到内存中
+1. 哨兵机制：通过多个sentinel的订阅和发布，实现对主的监视
+1. Redis是单进程单线程的网络模型，命令是一个接着一个执行的，不存在并行执行的情况
+   - 用的是epoll,poll,select网络模型
+   - 单线程处理所有的客户端连接请求，命令读写请求
+   - 2个命令组合起来才算是完成一个业务，但是2个命令组合起来就不具备原子性，所有在两个命令之间其他客户端会出现读写脏数据的情况
+1. 网校redis架构
+   - 高可用：confd + etcd + tw + redis一从热备 + sentinel
+     1. etcd集群做保活，设置10秒过期，tw每2秒续期，一旦tw发生变化，etcd切换tw，通知confd
+        - etcd：go编写，支持watch并且主动通知
+     1. confd收到etcd的通知后，完成客户端ip配置文件的更新
+     1. 客户端sdk负责负载均衡
+     1. 一从热备：假如从库一直提供服务，从库一旦重连导致从库数据不对
+     1. 哨兵监控：完成主从切换后，通知etcd
+   - 扩容：找新机器，用工具同步存量+增量的旧数据，然后挂到tw上
 1. lua
    - 认识：高效的轻量级动态类型的脚本语言，lua是葡萄牙语月亮的意思，是卫星语言，能够方便嵌入其他语言中
      1. redis内嵌lua就是为了提供给用户无限可能，因为命令不可能无限提供
@@ -402,151 +539,3 @@
         - 脚本执行是原子的，单线程的，lua-time-limit限制脚本最长执行时间，之后接受其他指令不执行返回busy，只执行两个指令：script kill和shutdown nosave。kill还是等到脚本执行完毕，因为要原子性，nosave可以立即终止，但是丢数据
         - 不应该在脚本中执行耗时的操作，因为redis单线程，程序却是多进/线程
 1. Memcache：高性能分布式内存对象缓存系统，内存里维护一个统一的巨大的hash表，能够存储图像等数据
-1. 数据库缓存一致性方案
-   - key过期，mysql更新不更新redis
-     1. 开发成本低，管理成本低
-     1. 不一致时间很长
-   - key过期，mysql更新时，更新redis
-     1. 延迟更小
-     1. 损耗双倍资源
-   - key过期，消息队列异步更新redis
-   - key过期，从库订阅binlog来更新redis
-1. 阿里云架构：百万QPS，最好性能512G内存、最大连载数320000、最大吞吐1536M
-   - 负载均衡
-   - 多个proxy，负责故障转移
-   - 分片服务器，单节点，不需同步数据，不提供数据持久化和备份策略，节点故障会丢失数据。集群版是双节点
-   - 配置服务器，即Configserver，存储集群配置信息及分区策略，采用双副本的高可用架构
-1. 使用
-   - 避免产生hot-key，导致主库节点成为系统的短板
-   - 避免产生big-key，导致网卡撑爆、慢查询等
-   - zset服务器消耗最高，要排序还要去重，尽量少用
-### 架构
-1. TwemProxy
-   - 认识：twitter开源的redis/memcache的快速、轻量级的单线程代理服务器，可对多台redis/memcache进行管理和分配。就是分片、分布式方案
-     1. 支持失败节点自动删除
-     1. 支持设置HashTag：将两个key哈希到同一个实例
-     1. 和redis、客户端采用长链接，减少连接数
-     1. 数据自动分片
-        - hash：MD5、CRC16、CRC32、CRC32a、hsieh、murmur、Jenkins
-        - 分片：ketama、modular、random
-        - 可设置权重
-     1. 支持集群部署，上边接负载均衡
-     1. 支持状态监控：监控ip、端口、刷新间隔时间
-     1. 使用pipelining处理请求和响应
-     1. 不支持redis事务
-     1. 使用某些命令需要保证key都在同一个分片上：SIDFF,SDIFFSTORE,SINTER,SINTERSTORE,SMOVE,SUNION and SUNIONSTORE
-     1. 相对于官方较新的Redis Cluster架构，容量伸缩较麻烦
-     1. 支持memcached ASCII协议和redis协议
-   - 如何一份数据复制两份发到两个实例？
-   - 运维
-     1. 同时使用tw和pipeline时，如果对pipeline的执行顺序有要求，那么要设置tw对redis的server_connections数量为1，否则会导致顺序错乱。因为tw用epoll，每个连接有独立的队列，每个连接用完就会扔到队尾准备重复利用，就势必导致两个命令在两个不同的连接上进行，到了redis那里就有可能造成顺序错乱，如zadd和expire一起用
-1. Codis
-   - 没有pipeline
-1. Pika
-1. cluster：太复杂，是去中心化的。没有tw的简单，用的稳定
-### wiki
-1. 历史
-   - 2009年，开源
-   - 2.6：set命令增加键存在与否的判断和过期时间的设置，新增lua环境
-   - 2.8：新增，支持复制的断线重连时有条件的增量数据传输，可用的哨兵机制
-   - 2.8.9：新增，HyperLogLog
-   - 2.8.18：新增，无硬盘复制(避免硬盘性能瓶颈)
-   - 3.0：2015年，新增，集群功能
-1. 数据类型的适用场景
-   - string：可持久化的缓存，如session_id为key的session，二进制安全，图片、文件什么的，原子计数器做粉丝数、关注数、ip封锁次数啥的
-   - hash：存对象数据，如用户基本信息，直接更新即可
-   - list：消息排行，消息队列，日志收集器，配合发布订阅
-     1. 队列的安全性：单个队列一旦pop出去客户端崩溃，消息丢失，利用rpoplpush弄个备份队列，数据丢了再去备份队列取一下
-   - set：做不重复的集合，存不重复用户名啦、每日投票一次啦
-   - zset：有序的不重复集合，如热门内容的排序，只需修改score，排行榜
-1. 编程语言客户端
-   - php：官方推荐两个
-     1. Predis：php代码实现的原生客户端
-     1. phpredis：c编写的php扩展，性能更好
-   - ruby：redis-rb，最稳定的客户端
-   - python：redis-py
-   - node：node_redis、ioredis，前者早，后者功能丰富
-1. 内存
-   - 复杂的数据结构在内存中操作非常简单，redis可以做很复杂的操作
-   - 达到最大内存后，Redis会先尝试清除已到期或即将到期的Key，当此方法处理后，仍然到达最大内存设置，将无法再进行写入操作，但仍然可以进行读取操作。Redis新的vm机制，会把Key存放内存，Value会存放在swap区
-   - 虚拟内存机制：VM机制将数据分页存放，由Redis将访问量较少的页即冷数据swap到磁盘上，访问多的页面由磁盘自动换出到内存中，突破了物理内存的限制
-1. 磁盘中是紧凑追加方式存在，不存在随机io
-1. 连接原理
-   - 认识Redis通过监听一个TCP端口或者Unix socket的方式来接收来自客户端的连接，当一个连接建立后，Redis内部会进行以下一些操作
-     1. 首先，客户端socket会被设置为非阻塞模式，因为Redis在网络事件处理上采用的是非阻塞多路复用模型
-     1. 然后为这个socket设置TCP_NODELAY属性，禁用Nagle算法
-     1. 然后创建一个可读的文件事件用于监听这个客户端socket的数据发送
-1. redis协议：流言协议
-1. 主从同步原理：主准备所有的命令，利用redis协议，发送到从，执行并且放入到内存中
-1. 哨兵机制：通过多个sentinel的订阅和发布，实现对主的监视
-1. Redis是单进程单线程的网络模型，命令是一个接着一个执行的，不存在并行执行的情况
-   - 用的是epoll,poll,select网络模型
-   - 单线程处理所有的客户端连接请求，命令读写请求
-   - 2个命令组合起来才算是完成一个业务，但是2个命令组合起来就不具备原子性，所有在两个命令之间其他客户端会出现读写脏数据的情况
-1. 网校redis架构
-   - 高可用：confd + etcd + tw + redis一从热备 + sentinel
-     1. etcd集群做保活，设置10秒过期，tw每2秒续期，一旦tw发生变化，etcd切换tw，通知confd
-        - etcd：go编写，支持watch并且主动通知
-     1. confd收到etcd的通知后，完成客户端ip配置文件的更新
-     1. 客户端sdk负责负载均衡
-     1. 一从热备：假如从库一直提供服务，从库一旦重连导致从库数据不对
-     1. 哨兵监控：完成主从切换后，通知etcd
-   - 扩容：找新机器，用工具同步存量+增量的旧数据，然后挂到tw上
-   
-
-
-
-
-
-
-
-   
-1. #主库重启 checklist 
-1. 世纪互联主从库节点 zabbix 关闭报警
-2. 世纪互联主从库节点 注释脉搏脚本
-3.  切换Master到从库，修改参数并重启
-redis-cli -h 10.20.52.245 -p 1379 sentinel failover jy-app-redis
-redis-cli -h 10.20.52.245 -p 2379 sentinel failover jy-appapimanager-redis
-redis-cli -h 10.20.52.245 -p 4379 sentinel failover jy-handout-redis
-redis-cli -h 10.20.52.245 -p 5379 sentinel failover jy-material-redis
-redis-cli -h 10.20.52.245 -p 6379 sentinel failover jy-workflow-redis
-redis-cli -h 10.20.52.245 -p 7379 sentinel failover jy-wordlibrary-redis
-redis-cli -h 10.20.52.245 -p 8379 sentinel failover jy-courseware-redis
-redis-cli -h 10.20.52.245 -p 9379 sentinel failover jy-tnt-redis
-
-vim /boot/grub/grub.conf
-isolcpus=10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29 
-
-for i in {1..9}; do /etc/init.d/${i}379redis stop; done 
-
-init 6
-
-5. 重启完成后sysbench验证,重启redis服务
-/bin/rm -rf /root/scripts/sysbench.sh
-cd /root/scripts && wget -N --http-user=XueRs --http-passwd=xueersi123 http://soft.xesv5.com:88/dell/sysbench.sh
-./sysbench.sh  --test=cpu --num-threads=${v_cpu_num} --max-requests=600000 run
-
-for i in {1..9}; do /etc/init.d/${i}379redis start;sleep 60; done 
-
-for i in {1..9};do sed -i '/slaveof/d' /data/${i}379redis/etc/redis.conf;done
-
-for i in {1..9};do cat /data/${i}379redis/etc/redis.conf |grep slaveof;done
-
-6. 同步完成后，切回原主
-
-redis-cli -h 10.20.52.245 -p 3379 sentinel failover jy-app-redis
-redis-cli -h 10.20.52.245 -p 3379 sentinel failover jy-appapimanager-redis
-redis-cli -h 10.20.52.245 -p 4379 sentinel failover jy-handout-redis
-redis-cli -h 10.20.52.245 -p 5379 sentinel failover jy-material-redis
-redis-cli -h 10.20.52.245 -p 6379 sentinel failover jy-workflow-redis
-redis-cli -h 10.20.52.245 -p 7379 sentinel failover jy-wordlibrary-redis
-redis-cli -h 10.20.52.245 -p 8379 sentinel failover jy-courseware-redis
-redis-cli -h 10.20.52.245 -p 9379 sentinel failover jy-tnt-redis
-
-7. 开启zabbix报警和脉搏，sentinel reset 
-
-8. yf的同步节点挂到sjhl从库
-
-9. 
-/etc/init.d/irqbalance restart
-chkconfig irqbalance on

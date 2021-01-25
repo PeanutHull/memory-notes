@@ -1021,9 +1021,62 @@
    - 更全的配置可以在官网上查询到
 1. Elastic Stack：新一代ELK
    - elasticsearch：存储、查询、分析
-   - logstash：数据收集、聚合
-   - kibana：可视化显示
-   - beats：数据收集、聚合
+   - logstash
+     1. 认识：数据收集、聚合，开源的服务端的多数据来源的数据转换、发送到另一端的工具
+     1. 处理流程
+        - input：file、redis、beats、kafka
+        - filter：远强于beat的地方
+          1. grok：基于正则提供了丰富可重用的模式/语法，可将非格式数据转为格式化数据
+          1. mutate：对字段进行编辑
+          1. drop
+          1. date：字符串类型时间字段转为时间戳类型
+        - output：stdout、es、redis、kafka
+   - kibana：数据的可视化显示
+     1. 组成
+        - discover：数据搜索查看
+        - visualize：图表制作
+        - dashboard：仪表盘制作，可以将一些图表集合在一起查看
+        - timelion：时序数据
+        - apm：性能指标和错误
+        - devTools：开发者工具
+        - monitoring：
+        - management：系统管理
+   - beats：轻量级数据传送者
+     1. 分类
+        - Filebeat：日志文件，输出数据到es、logstash、kafka、redis，go编写
+          1. 处理流程：输入、过滤、输出
+          1. 组成
+              - prospector n：观察者，监听文件是否有变化
+              - harvester：消费者，每个文件都一个，从每个文件取出数据输出
+          1. 配置：yaml语法
+              - 输入：filebeat.prospectors
+                1. input_type：log/stdin
+                1. paths
+              - 输出：output.elasticsearch/console
+                1. host
+                1. username
+                1. password
+              - 过滤：过滤能力较弱
+                1. input时处理：include_lines/exclude_lines/exclude_filess
+                1. onput前处理：drop_event/drop_fields/decode_json_fields/include_fields
+                ```
+                prospectors:
+                  - drop_event
+                    when
+                      regexp:
+                        message: "^dbg:"
+                  - decode_json_fields:
+                    fields: ["xx"]
+                ```
+          1. elasticsearch ingest node：由于beat的转换能力较弱，新增的es的node类型，在数据写入es前对数据进行转换，使用的是pipeline api
+          1. module：对常见需要封装支持易用性，如nginx、mysql、apache，封装内容有filebeat.yml/ingest node pipeline/kibana dashboard
+        - Metricbeat：度量数据，cpu、内存、nginx等
+        - Packetbeat：网络包数据
+          1. 功能
+             - 实时抓取网络包
+             - 自动解析应用层协议，如icmp、dns、http、mysql、redis
+        - Winlogbeat：window日志数据
+        - Heartbeat：健康检查
      1. ETL：Extract Transform Load，数据源多样
         - 数据文件：日志、excel
         - 数据库：mysql

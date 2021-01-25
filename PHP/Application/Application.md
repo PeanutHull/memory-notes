@@ -319,3 +319,5 @@ function authCode($string, $key = '', $operation = 'DECODE')
     extension=php_igbinary.dll
     extension=php_redis.dll
     ```
+1. php集合
+   - 互斥锁实现集合：https://github.com/php-lock/lock
