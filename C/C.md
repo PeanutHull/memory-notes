@@ -531,40 +531,64 @@
      1. 支持断点调试，并查看程序状态
      1. 可以直接查看内存数据
      1. 支持C、C++、Go、Objective-C、OpenCL的调试
+   - 调试方式
+     1. 直接使用gdb
+     1. 目标使用gdbserver，本地gdb调试
+     1. ulimit -c unlimited生成core文件，本地gdb调试
    - 使用
      1. 调试
         - `gdb program`：开始调试
           1. -p：调试进程id为xx的程序
           1. --args：为程序传递参数
-        - `gdb program core dump`：调试core dump
+        - `gdb program core dump`：调试core dump，使用`set solib-search-path`加载库文件
         - `gdb -d`：参数载入
      1. 运行
         - `r xx`：run，开始运行、触发第一个断点，也可传递参数
         - `st xx`：start，开始执行程序,在main函数的第一条语句前面停下来
-        - `b n [if cond]`：break，在n行设置断点，每次程序执行到n行时计算表达式cond的值，为true则暂停，如`b main.go:17`
-          1. tbreak：只生效一次的断点，用法同break
-          1. rbreak regex：函数名满足正则regex的话，就在内部开头打断点，如`rbreak admin_*`是admin开头
         - `c`：continue，继续程序的运行,直到遇到下一个断点
         - `s`：step，执行下一条语句，如果该语句为函数调用，则进入函数执行其中的第一条语句
         - `n`：next，执行下一条语句，如果该语句为函数调用，不会进入函数内部执行
         - `k`：kill，终止正在调试的程序
-        - x
+        - `q`：退出
+     1. 断点相关
+        - `source gdb.init`：执行一系列gdb命令
+        - `b`：break，设置断点，如`b main.go:17`
+          1. `b 行号/函数名/文件名:函数名/文件名:行号`
+          1. `b +偏移量/-偏移量`
+          1. `break *地址`
+          1. `tbreak`：只生效一次的断点，用法同break
+          1. `rbreak regex`：函数名满足正则regex的话，就在内部开头打断点，如`rbreak admin_*`是admin开头
+        - `d/clear`：delete，删除断点
+        - `disable/enable`：停启用断点
+        - `condition breakNum condition`：给指定断点添加触发条件
+        - `b n [if cond]`：每次程序执行到n行时计算表达式cond的值，为true则暂停
+     1. 查看
+        - `x`：显示内容，`x/格式 地址`
           1. `x/3xw &r`：查看r内存数据，指针 8 + 长度 4
           1. `x/15xb 0x4212124`
           1. `x/i`：查看指令
-        - `q`：退出
-     1. 查看
-        - `p xx`：print，打印内部变量值
+        - `p xx`：print，打印变量值
           1. `p $len(s)`：获取对象长度
+          1. `p $寄存器`：显示寄存器内容，如p $pc
+          1. `p/x $寄存器`：十六进制显示寄存器内容
         - `f`：frame，查看栈帧。`f n`切换到编号为n的栈
         - `bt`：backtrace，查看函数调用信息(堆栈)
-        - `disassemble`：查看汇编
-        - `disassembler $pc,+length`：只显示关注的运行指针附近的汇编代码
+          1. `bt full`：不仅显示backtrace，还显示局部变量
+          1. `bt n`：显示开头N个栈帧
+          1. `bt full n`
         - `i`：info，描述程序状态，`i r`
-          1. `info breakpoints`：查看所有断点
+          1. `info break/breakpoints`：查看所有断点
+          1. `info reg`：显示寄存器内容
+        - `disassemble`：查看反汇编
+          1. `disassembler $pc,+length`：只显示关注的运行指针附近的汇编代码
         - `l main.main:8`：查看源代码
-        - `watch`：监视变量值的变化
         - `disp`：display，跟踪查看某个变量，每次停下来都显示它的值
+        - `watch`：表达式发生变化时暂停运行
+          1. `awatch`：表达式被访问、改变时暂停执行
+          1. `rwatch`：表达式被访问时暂停执行
+        - `set`：改变变量的值
+        - `generate-core-file`：生成内核转储文件
+        - `dump binary memory FILE START STOP`：dump内存
    - 步骤
      1. 编译程序
         - g添加调试信息使得GDB可以调试
