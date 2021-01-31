@@ -6,7 +6,7 @@
 1. 查看
    - 目录
      1. pwd
-     1. ls [dir]：查看当前或指定目录。-l：列表详细查看，-lh：以兆查看文件大小
+     1. ls [dir]：查看当前或指定目录。-l：列表详细查看，-lh：以兆查看文件大小，-S：按照大小排序
    - 文件
      1. stat：查看文件详情信息，修改时间、Inode、Links数等
      1. file：查看文件类型
@@ -178,7 +178,6 @@
         - -r：同步
         - -av：同步文件，删除--delete
    - samba
-     1. 认识：基于SMB协议的开源软件，linux上共享文件和打印机等资源，是client\server型，client(linux)访问server(windows)的资源，两个系统文件共享
      1. 运维：`yum install samba`，配置：`/etc/samba/smb.conf`，即可开始共享文件
    - scp
      1. 上传：`scp [-r] local addr@ip:/addr`
@@ -816,6 +815,7 @@
      1. uname -a：显示系统信息
      1. uptime：当前系统时间、开机到现在运行时间、用户在线数、系统平均负载
      1. runlevel：查看系统运行级别，修改系统默认运行级别`cat /etc/inittab id:3:initdefault:`
+     1. dmesg：显示内核相关信息
    - 系统版本
      1. `cat /etc/redhat-release`：查看centos版本
      1. `cat /proc/version`：查看内核版本
@@ -1017,14 +1017,14 @@
    - 软实时
    - 嵌入式/专用操作系统：vxWorks、ucos
 1. linux的发行版本
-   - RedHat系列：Redhat、Centos、Fedora等
-     1. Redhat Enterprise：红帽的企业级商业化版本
-     1. Fedora：红帽赞助的社区免费版本
-     1. Centos：模仿红帽企业版的免费版本
-   - SUSE系列
+   - RedHat
+     1. RHEL：Redhat Enterprise Linux，红帽的企业级商业化版本。红帽：来源于开源社区，服务于开源社区
+     1. Fedora：红帽赞助的社区免费版本，有点像实验版本，经过测试稳定后，增加的特性和功能会迁移到RHEL上
+     1. Centos：模仿红帽企业版的免费版本，无法得到红帽公司的商业支持，但可以获得开源社区的维护和支持，使用上相差无几
+   - SUSE
      1. SUSE Linux Enterprise：novell公司的商业化版本
      1. openSUSE：novell公司的社区版本
-   - Debian系列：Debian、Ubuntu等
+   - Debian
      1. Debian：免费版本
      1. Ubuntu：类似Debian的免费版本
 1. 目录结构

@@ -208,3 +208,5 @@
    - Sqoop数据库抽取工具
    - Flume日志抽取工具
    - DataFrame组件
+1. wiki
+   - storm对于实时计算的意义类似于hadoop对于批处理的意义

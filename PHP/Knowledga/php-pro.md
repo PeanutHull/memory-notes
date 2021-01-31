@@ -97,7 +97,7 @@ $o->sayHello ();                        // 输出Hello World!
         - is_null/is_int/is_string...
      1. 获取
         - get_class/get_class_methods
-        - get_defined_functions/func_get_args
+        - get_defined_functions/get_defined_vars/get_called_class/get_declared_interfaces/func_get_args
      1. 使用
         - call_user_func/forward_static_call
 #### 协程

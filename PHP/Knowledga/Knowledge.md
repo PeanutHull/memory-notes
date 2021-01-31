@@ -319,6 +319,7 @@ new \app\mvc\view\home\Index();                             // 实例化未引�
    - mb_convert_encoding/mb_strlen/mb_strcut/mb_substr      多字节字符串处理
    - hex2bin/pack                                           进制处理
    - json_encode/json_decode                                json编解码
+   - gzdecode/gzencode                                      gzip解压缩处理，通常用于base64数据太大
    - base64_encode/base64_decode                            mime base64编解码
    - convert_uuencode                                       uuencode编解码
    - urlencode/urldecode                                    url编码，空格转为+

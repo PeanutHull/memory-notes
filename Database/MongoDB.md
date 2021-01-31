@@ -9,6 +9,7 @@
 1. 适用场景
    - 表结构可能会不断扩展的MySQL表结构，可通过mongoDB存储，可保证表结构扩展性
    - 存储日志，利用分片集群支持海量数据，同时使用聚集分析和MapReduce的能力
+   - 性能真的不太行，几百万区分度低的数据，查起来大几百毫秒，适合小应用，灵活快速
 1. 不适用场景
    - PB级不适用
    - 文档字段几十个
@@ -157,6 +158,7 @@
      1. 布尔
      1. 累加器等等
 ### 操作
+1. 操作方式：mongo shell
 1. 查询
    - 方法
      1. coll.find(query, projection).limit(n).skip(n).sort({KEY:1}).pretty()
@@ -259,12 +261,16 @@
    - 查看
      1. coll.getIndexes()
      1. coll.totalIndexSize()
-1. 聚合管道
-   - 认识：aggregate，用于处理、计算数据，并返回处理结果，管道就是一个个的管道传递处理，管道操作可以重复
-   - 实例
-     1. `db.mycol.aggregate([{$group : {_id : "$by_user", num_tutorial : {$sum : 1}}}])`
-     1. 类似：`select by_user, count(*) from mycol group by by_user`
-     1. 先match再group管道实例：`db.coll.aggregate( [{ $match : { score : { $gt : 70} } },{ $group: { _id: null, count: { $sum: 1}}}]);`
+1. 聚合
+   - 分类
+     1. 聚合管道
+     1. map-reduce
+     1. 单一目的聚合方法
+   - 聚合管道：aggregate，以数据处理管道的概念为蓝本的。文档进入多阶段管道，将文档转换为聚合结果，用于处理、计算数据，并返回处理结果
+     1. 实例
+        - `db.mycol.aggregate([{$group : {_id : "$by_user", num_tutorial : {$sum : 1}}}])`
+        - 类似：`select by_user, count(*) from mycol group by by_user`
+        - 先match再group管道实例：`db.coll.aggregate( [{ $match : { score : { $gt : 70} } },{ $group: { _id: null, count: { $sum: 1}}}]);`
 1. 事务
    - session.start_transaction()
    - session.commit_transaction()
@@ -299,6 +305,8 @@
 1. 变更流
    - 认识：可订阅collection、db、sh、rs的数据变更
 1. mongoDB驱动程序
+1. 存储引擎：WiredTiger、内存
+1. oplog.rs：mongoDB的操作日志文件
 1. 应用
    - 二级索引
    - 地理位置索引
@@ -333,7 +341,6 @@
 1. 数据导出导入
    - 导出：`mongodump -h dbhost -d dbname -o dbdirectory`
    - 导入：`mongorestore -h <hostname><:port> -d dbname <path>`
-1. mongo shell
 1. 安全
    - 认识：权限管理，默认没有权限
    - 权限分类
@@ -386,8 +393,6 @@
      1. 方法
         - addshard
         - enablesharding：设置分片存储的数据库
-1. 存储引擎：WiredTiger、内存
-1. oplog.rs：mongoDB的操作日志文件
 ### wiki
 1. aggregation & mapreduce：数据分析，用户可以自己写查询语句或脚本，将请求都分发到MongoDB上完成
 1. bson：json的轻量化二进制格式，BSON文件大小限制16M

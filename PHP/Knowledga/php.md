@@ -286,7 +286,7 @@
         - register_shutdown_function：设置php终止执行的函数，脚本执行完后或exit后，可多次调用则依次执行，常配合error_get_last
         - error_get_last/error_clear_last
         - trigger_error：抛出用户级错误
-        - error_log/debug_backtrace
+        - error_log/debug_backtrace/debug_print_backtrace：产生一条回溯跟踪
      1. 显示控制
         - display_errors
         - error_reporting：除了NOTICE的写法，`(E_ALL & ~E_NOTICE)`或`(E_ALL ^ ~E_NOTICE)`

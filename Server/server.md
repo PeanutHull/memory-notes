@@ -1,3 +1,4 @@
+### confd+etcd
 1. confd
    - 认识：是一个轻量级的配置管理工具，应用非常广泛的是etcd+confd，后端支持的数据类型有：etcd、consul、vault、environment variables、redis、zookeeper、dynamodb、stackengine、rancher
      1. 可通过查询etcd，结合配置模板引擎，用于保持本地配置最新
