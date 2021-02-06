@@ -54,3 +54,4 @@
 1. p2p：peer to peer，点对点技术，P2P网络中的所有计算机上记载着除该台计算机外所有计算机的信息
    - 创世节点
    - 节点通信建立，NAT穿透：Network Address Translation，网络地址转换，网络地址翻译技术，将内部的私有IP转换成公网IP，一个解决地址不够，二是安全(不在转换列表的全都拒绝)
+1. irc：古老简单的网络聊天协议，linux的server：ircd-hybrid，客户端：irssi/weechat，小圈子，因为古老而有门槛和纯粹

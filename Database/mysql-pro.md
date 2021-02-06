@@ -144,6 +144,7 @@
         - innodb_log_write_requests：写redo log的请求次数
         - innodb_log_writes：redo log的物理写次数
         - innodb_os_log_written：写入redo log的bytes
+     1. cardinality是索引中不重复记录的预估值，会有更新机制，不准，很小需要评估索引是否有意义
 1. 调优
    - 参数
      1. Innodb_buffer_pool

@@ -188,3 +188,12 @@
    - 教研tw看板：http://app.xesv5.com/zeus_grafana/d/RTeQqLZz/jiao-yan-tw-kan-ban?orgId=1&from=now-5m&to=now&refresh=5s
 1. CDN
    - 域名整理：https://wiki.zhiyinlou.com/pages/viewpage.action?pageId=63621439
+1. 故障常见原因
+   - 连表
+   - 没加索引
+   - 关键数据没有做好缓存
+   - 计算复杂度高、逻辑复杂放到了c端
+   - 监控项缺失：无法先兆发现
+   - 没有全方位压测：最后一道保障
+     1. 全链路压测能力不足，不能只从内网压测，无法模拟外网全链路
+   - 客户端疯狂重试，造成雪崩

@@ -947,7 +947,7 @@
         - mail：邮件
         - mark：产生时间戳，系统每隔一段时间向日志文件中输出当前时间，每行的格式类似于 May 26 11:17:09 rs2 -- MARK --，可以由此推断系统发生故障的大概时间
         - news：网络新闻传输协议(nntp)
-        - ntp：网络时间协议(ntp)
+        - ntp：网络时间协议(ntp)，提供高精准度的时间校正，LAN上与标准间差小于1毫秒，WAN上几十毫秒
         - user：用户进程
      1. 优先级：emerg、alert、crit、err、warning、notice、info、debug
      1. 常用日志文件
