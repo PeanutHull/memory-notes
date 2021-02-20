@@ -663,6 +663,8 @@
    - Debian
      1. deb/dpkg：软件包名称，比rpm晚，`dpkg -l`
      1. apt-get：包管理工具，基于deb。`install/remove/purge`
+   - ArchLinux
+     1. pacman：软件包管理器，将二进制包格式和易用的构建系统结合，软件都能很方便管理。是Arch Linux的一大亮点，如安装sublime `pacman -S sublime-text`
 1. VirtualBox安装虚拟机、连接网络
    - 安装：blog.csdn.net/risingsun001/article/details/37934975
    - 调通网络

@@ -1,4 +1,4 @@
-####概述
+#### 概述
 1. 目的：提高用户效率，理解用户代码，快速导航，即时错误检查
 1. 功能
     1. 编辑器功能
@@ -10,13 +10,14 @@
  - php和js、html设置断点
  - git、svn、数据库的支持
  - 生成类的继承关系图
-######功能
+#### 功能
 1. 全局搜索：两次shift
 1. 项目列表：alt+1
 1. 方法列表：alt+7
 1. 数据库显示：ctri+tab+0
 1. 数据库隐藏：ctrl+esc
-#####快捷键
+1. 代码格式化：可以设置代码风格，并且一键格式化
+#### 快捷键
 1. 编辑器操作
 ```
 Ctrl+反引号           快速切换皮肤。
@@ -84,7 +85,7 @@ HTML标签+右键+Show Applied Styles For Tag  查看标签应用的样式
 1.Ctrl+Shift+J
 1.ctrl+H
 ```
-#####编辑器设置
+#### 编辑器设置
 1. 导出设置方法：File -> Export Settings，导入设置方法：File -> Import Settings
 1. 去掉波浪线
 settings -> Editor -> Colors & Fonts -> General -> TYPO->Effects
@@ -92,7 +93,7 @@ settings -> Editor -> Colors & Fonts -> General -> TYPO->Effects
 settings->editor ->plugins->browse repositories -> 插件内容
 1. 编辑的文件加*标识
 settings -> editor -> editor tabs -> 勾选 mark modifed tabs
-#####其他功能
+#### 其他功能
 1. 利用xdebug单步调试，入门级
  - 配置步骤
 ```
