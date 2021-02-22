@@ -575,8 +575,8 @@
         - `#error Not C11`：让预处理器发出一条错误信息
    - 运算符
      1. `\`：宏延续，可以分行写宏
-     1. `#`：字符串常量化运算符，把宏参数转换为字符串常量，如传入aa，就会变为aa
-     1. `##`：标记粘贴运算符，宏定义中合并标记，不传参数时宏就可以忽略，`#define XX(format, ...) printf(format"\n", ##__VA_ARGS__)`
+     1. `#`：字符串常量化，把宏参数转换为字符串常量，如传入aa，就会变为aa
+     1. `##`：记号粘合，宏定义中合并标记，不传参数时宏可以忽略，`#define XX(format, ...) printf(format"\n", ##__VA_ARGS__)`
      1. `defined(XX)`：是否定义判断符
    - 实战
      1. `#define PRINTLNF(format, ...) printf("("__FILE__":%d) %s : "format"\n", __LINE__, __FUNCTION__, ##__VA_ARGS__)`：打印文件和行号

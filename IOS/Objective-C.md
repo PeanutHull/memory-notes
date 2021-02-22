@@ -144,3 +144,5 @@
    - NSObject，NSInteger，NSNumber，CGFloat
    - property，nonatomic;，retain，strong
    - weak，unsafe_unretained;，readwrite，readonly
+### swift
+1. 变量 var，常量 let
