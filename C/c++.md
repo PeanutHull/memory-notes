@@ -41,16 +41,18 @@
         - short int：2byte
         - long int：8byte，-9,223,372,036,854,775,808~9,223,372,036,854,775,807，
         - unsigned short int：2byte，0~65,535
-     1. float：浮点，4byte，+/- 3.4e +/- 38，7个数字。格式为1位符号，8位指数，23位小数
+     1. float：浮点，4byte，+/-3.4e+/-38，7个数字。格式为1位符号，8位指数，23位小数
      1. double：双浮点，8byte。格式为1位符号，11位指数，52位小数
         - long double：16byte
      1. void：无类型，表示类型的缺失
      1. wchar_t：宽字符，`typedef short int wchar_t;`，2或4byte
    - 类型修饰符
-     1. signed
-     1. unsigned
-     1. short
-     1. long
+     1. 特点
+        - 可使用速记符号来声明无符号短整数或无符号长整数，即不写int
+     1. 分类
+        - signed、unsigned：可用于整型、字符型，可作为short、long的前缀
+        - short：可用于整型
+        - long：可用于整型、双精度型
    - 派生类型
      1. enum
         - 认识：枚举，由用户定义的若干枚举常量的集合
@@ -89,8 +91,15 @@
           1. double：0
           1. pointer：NULL
      1. 形式参数：函数参数的定义中声明
+   - 限定符
+     1. const
+     1. volatile：告诉编译器不需要优化，可以直接从内存访问，不用可能优化到寄存器中
+     1. restrict：指针是唯一一种访问它所指向的对象的方式，C99
 1. 常量
-   - 认识：是程序执行期间不会改变的固定值，是基本数据类型，是不能改的变量，也叫字面量
+   - 认识：是程序执行期间不会改变的固定值，是基本数据类型，是不能改的变量，通常大写，也叫字面量
+   - 定义
+     1. #define：cpp，定义，`#define identifier value`
+     1. const：关键字，声明，`const type variable = value;`
    - 分类
      1. 整数常量
         - 前缀指定基数
@@ -100,10 +109,17 @@
         - 后缀：u和l的组合，不区分大小写，二者前后顺序任意
           1. U：无符号整数，unsigned
           1. L：长整数，long，
-     1. 浮点常量
-     1. 布尔常量
-     1. 
-     1. 
+     1. 浮点常量：由整数、小数点、小数、指数组成，可使用小数形式、指数形式来表示浮点常量，指数用e或E 
+     1. 布尔常量：true、false，不能将二者看为1和0
+     1. 字符常量：括在单括号中
+        - 分类
+          1. 窄字符常量：存储在char中
+          1. 宽字符常量：以L开头，如`L'x'`，存储在wchar_t的变量中
+        - 字符分类
+          1. 普通：'a'
+          1. 转义序列：'\t'
+          1. 通用字符：'\u02C0'
+     1. 字符串常量：括在双引号中，空格连接符，\ 分行符
 1. 组成
    - const的用法
    - 引用的用法
@@ -180,11 +196,11 @@
      1. return、if、else、for、while、do、break、continue、switch、case、default、goto
      1. void
      1. namespace、class、new、this、private、protected、public
-     1. static、static_cast、dynamic_cast、const、const_cast、typedef、sizeof
+     1. static、static_cast、dynamic_cast、const、const_cast、volatile、typedef、sizeof
      1. try、catch、throw
      1. 
      1. auto、operator、explicit、export、extern、register、typeid、reinterpret_cast、typename、friend、using、virtual、inline、delete
-	 1. volatile、mutable、template
+	 1. mutable、template
 1. 三字符组
    - 认识：用于表示另一个字符的三个字符序列，vc++ 2010开始不再替换，g++支持但给出编译警告
      1. 总是以两个问号开头

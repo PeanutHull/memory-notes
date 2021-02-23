@@ -62,17 +62,18 @@
    - 意义：将数据分为所需内存不同的，充分利用内存
    - 基本
      1. 布尔：bool，只能是true、false
-     1. 字符串：string，统一编码为utf-8
+     1. 字符串：string，统一编码为utf-8，16byte
      1. 数值
         - 有符号整形：int8 int16 int32 int64，数字是位数，如int32为前后20亿
         - 无符号整形：uint8 uint16 uint32 uint64
         - 浮点型：float32 float64
-        - 复数：complex64 complex128，即实数和虚数
+        - 复数：complex64 complex128，即实部和虚部
      1. 其他
-        - int/uint：32或64位，根据操作系统位数变化
+        - int/uint：32位cpu为4byte，64位为8byte
         - byte：类似uint8
         - rune：类似int32，代表一个Unicode码
         - uintptr：位，无符号整型，用于存放一个指针
+        - 引用：8byte
    - 派生
      1. array
      1. slice
@@ -87,6 +88,7 @@
      1. 类型推导：不指定其类型时，由右值推导得出
      1. 类型别名：`type aInt int`
      1. 类型转换：T(v)，将值v转换为类型T，不同类型相互转换的时候需要显式转换
+     1. 不像c，不支持地址的直接转换，只能用unsafe.Pointer()
    - 用法
      1. 字节大小：`unsafe.Sizeof()`
      1. 数据类型：`reflect.TypeOf()`
@@ -105,7 +107,7 @@
     a[0]                // 访问
     a[1] = "World"      // 赋值
     ```
-1. slice 切片
+1. slice 切片，s []byte为24byte，s [1024]byte为1024byte
    - 理解：指向一个序列的值，包含了长度信息
        ```go
         // 定义/赋值
