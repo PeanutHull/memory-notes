@@ -723,9 +723,9 @@
      1. `requests_per_second`：限流
 1. 聚合分析
    - 认识：aggregation，是除搜索功能外提供的数据统计分析功能，类似sql的sum等，可以对query后的结果进行aggregation
-     1. 支持bucket、metric、pipeline等分析方式
+     1. 支持bucket、metric、pipeline等分析方式，metric是计算方式，bucket对数据分堆，这两个可以组合为xy轴展示的
+        - metric：指标，进行统计计算的方式，如sum、min等，不指定默认按照value_count聚合
         - bucket：桶，即设置分组条件后的一个个数据集合
-        - metric：指标，进行统计计算的方式，不指定默认按照value_count聚合
      1. 计算结果实时返回，实时性高
    - 使用
     ```json

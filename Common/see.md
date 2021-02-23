@@ -140,6 +140,13 @@
    - srs
    - cdn
    - rtmp
+1. RTSP：Real-Time Stream Protocol，基于文本的多媒体播放控制协议，流媒体协议，是共有协议并有专门机构做维护，一般传输TS、MP4格式的流，其传输一般需要2~3个通道，命令和数据通道分离，应用层
+   - 客户->服务：
+     1. RTP数据分组(UDP)
+     1. RTCP分组(UDP)
+   - 服务->客户
+     1. RTSP分组(TCP)
+1. RTMP：流媒体协议，是Adobe私有协议未完全公开，一般传输flv、f4v，一般在TCP1个通道上传输命令和数据
 1. wiki
    - 直播架构
      1. 推流工具：推到流媒体服务器，如obs、ffplay
