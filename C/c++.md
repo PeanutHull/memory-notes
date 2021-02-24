@@ -78,6 +78,14 @@
      1. typedef：为已有类型声明新名字，`typedef type newname;`
    - wiki
      1. 早期c编译器int2byte，long int4byte，新版标准兼容了早期
+1. 运算符：和c一样
+   - 算术
+   - 关系
+   - 逻辑
+   - 位
+   - 赋值
+   - 杂项
+### 语法
 1. 变量
    - 认识：只不过是程序可操作的存储区的名称，变量类型决定了变量存储的大小和布局
    - 声明和定义：`type var1 = xx, var2, var3, ...;`，type必须是有效的数据类型
@@ -92,9 +100,19 @@
           1. pointer：NULL
      1. 形式参数：函数参数的定义中声明
    - 限定符
-     1. const
+     1. const：改为常量
      1. volatile：告诉编译器不需要优化，可以直接从内存访问，不用可能优化到寄存器中
      1. restrict：指针是唯一一种访问它所指向的对象的方式，C99
+   - 存储类：规定变量/函数的可见性和生命周期，
+     1. static：使声明周期保持存在
+        - 局部变量：保持局部变量的存在，而不需要每次进入和离开作用域时进行创建和销毁，可以保持其值，程序运行结束以后才释放
+        - 全局变量：只能在本文件中访问，不能在其它文件访问，包括函数，extern来了也不好使
+        - 类数据成员：会导致仅有一个该成员的副本被类的所有对象共享
+     1. extern：提供对所有文件都可见的引用，用于多个文件共享全局变量和函数
+     1. mutable：用于类的对象，允许对象的成员替代常量
+     1. thread_local：C++11新增，仅可在其上创建的线程访问，随着线程创建和销毁，每个线程都有自己的变量副本
+     1. auto：C++11已删除，C++17不再是，用来自动推断被声明变量的类型，如`auto f=3.14;`，使用少且多余
+     1. register：C++17弃用，定义存储在寄存器中而不是内存的局部变量，只是可能存在看实现，最大为寄存器大小，且不能用&，没有内存地址
 1. 常量
    - 认识：是程序执行期间不会改变的固定值，是基本数据类型，是不能改的变量，通常大写，也叫字面量
    - 定义
@@ -193,14 +211,16 @@
      1. unsigned、signed、short、long
      1. enum
      1. asm、struct、union
-     1. return、if、else、for、while、do、break、continue、switch、case、default、goto
-     1. void
+     1. auto、register、static、static_cast、dynamic_cast、extern、template
+     1. const、const_cast、volatile
+     1. typedef、sizeof
+     1. if、else ———— switch、case、default ———— for、while、do、break、continue、goto
+     1. void、return
      1. namespace、class、new、this、private、protected、public
-     1. static、static_cast、dynamic_cast、const、const_cast、volatile、typedef、sizeof
      1. try、catch、throw
      1. 
-     1. auto、operator、explicit、export、extern、register、typeid、reinterpret_cast、typename、friend、using、virtual、inline、delete
-	 1. mutable、template
+     1. operator、explicit、export、typeid、reinterpret_cast、typename、friend、using、virtual、inline、delete
+	 1. mutable
 1. 三字符组
    - 认识：用于表示另一个字符的三个字符序列，vc++ 2010开始不再替换，g++支持但给出编译警告
      1. 总是以两个问号开头
