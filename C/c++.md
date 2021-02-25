@@ -10,12 +10,13 @@
    - 强大的抽象封装能力，强大的工程开发能力
    - 高性能，占用资源少，低功耗，可以将性能发挥更多
    - 语法复杂，细节多，需要好的范式，否则难以维护
-1. 应用：编写设备驱动程序、有实时性操作硬件的软件，mac和windows系统的主要用户接口使用c++编写
+1. 应用
+   - 编写设备驱动程序、有实时性操作硬件的软件，mac和windows系统的主要用户接口使用c++编写
    - 大型桌面应用程序，如chrome和office
    - 大型网站后台
    - 游戏和游戏引擎
    - ai、视觉，如opencv、tensorflow
-   - 数据库，如MongoDB、sql server
+   - 数据库，如MongoDB、sql server，java虚拟机
    - 嵌入式，自动驾驶系统
 1. begin
     ```c++
@@ -75,7 +76,7 @@
         enum color { red, green=5, blue };
         ```
    - 操作
-     1. typedef：为已有类型声明新名字，`typedef type newname;`
+     1. typedef：为已有数据类型声明新名字，`typedef type newname;`
    - wiki
      1. 早期c编译器int2byte，long int4byte，新版标准兼容了早期
 1. 运算符：和c一样
@@ -85,25 +86,34 @@
    - 位
    - 赋值
    - 杂项
+1. 字符串
+   - 形式
+     1. c风格字符串
+     1. c++的string类
+   - string类
+    ```c++
+    #include <string>
+ 
+    using namespace std;
+
+    string str1 = "xx";
+    string str2 = "xx";
+
+    // 连接
+    str3 = str1 + str2;
+    // 长度
+    int len;
+    len = str3.size();
+    ```
 ### 语法
 1. 变量
    - 认识：只不过是程序可操作的存储区的名称，变量类型决定了变量存储的大小和布局
    - 声明和定义：`type var1 = xx, var2, var3, ...;`，type必须是有效的数据类型
-   - 作用域
-     1. 局部：函数或代码块内部声明，只能内部使用，不会被初始化，局部会覆盖全局
-     1. 全局：函数外部声明，会被初始化
-        - 初始化对应表
-          1. int：0
-          1. char：'\0'
-          1. float：0
-          1. double：0
-          1. pointer：NULL
-     1. 形式参数：函数参数的定义中声明
    - 限定符
      1. const：改为常量
      1. volatile：告诉编译器不需要优化，可以直接从内存访问，不用可能优化到寄存器中
      1. restrict：指针是唯一一种访问它所指向的对象的方式，C99
-   - 存储类：规定变量/函数的可见性和生命周期，
+   - 存储类：规定变量/函数的可见性和生命周期
      1. static：使声明周期保持存在
         - 局部变量：保持局部变量的存在，而不需要每次进入和离开作用域时进行创建和销毁，可以保持其值，程序运行结束以后才释放
         - 全局变量：只能在本文件中访问，不能在其它文件访问，包括函数，extern来了也不好使
@@ -113,6 +123,15 @@
      1. thread_local：C++11新增，仅可在其上创建的线程访问，随着线程创建和销毁，每个线程都有自己的变量副本
      1. auto：C++11已删除，C++17不再是，用来自动推断被声明变量的类型，如`auto f=3.14;`，使用少且多余
      1. register：C++17弃用，定义存储在寄存器中而不是内存的局部变量，只是可能存在看实现，最大为寄存器大小，且不能用&，没有内存地址
+   - 引用
+     1. 认识：是已存在变量的别名，不存在空引用，一旦初始化就不能修改，必须在创建的时候初始化
+     1. 使用
+        ```c++
+        int i = 17;
+
+        // r是一个初始化为i的整型引用
+        int&  r = i;
+        ```
 1. 常量
    - 认识：是程序执行期间不会改变的固定值，是基本数据类型，是不能改的变量，通常大写，也叫字面量
    - 定义
@@ -138,10 +157,9 @@
           1. 转义序列：'\t'
           1. 通用字符：'\u02C0'
      1. 字符串常量：括在双引号中，空格连接符，\ 分行符
+1. 函数：同c
+1. 数组：同c
 1. 组成
-   - const的用法
-   - 引用的用法
-   - define用法
    - 构造函数
    - 析构函数
    - 拷贝构造
@@ -149,7 +167,6 @@
    - 访问限定符 public、private、protected
    - 深拷贝和浅拷贝
    - 友元函数
-   - static
    - 内联函数
    - 继承、虚继承
    - 钻石继承问题
@@ -160,18 +177,146 @@
    - 接口
    - 多态
    - 重写
-   - 重载
-   - 函数重载
-   - 运算符重载
    - 流类库和文件
 1. 重难点
    - 指针、内存分配的见解，实践经验
-1. 多线程
-   - Thread：c++ 11有了
-1. 编译器：g++
+### 面向对象
+1. 类
+   - 定义：成员访问运算符.，范围解析运算符::
+    ```c++
+    class ClassName
+    {
+        public:                 // 访问修饰符，public、protected、private
+            int xx;             // 成员变量
+            friend void xxx(ClassName className);      // 声明类的友元函数
+        private:
+            int xx();           // 成员方法声明
+            int xx(){};         // 成员方法定义
+        protected:
+            ClassName()         // 构造函数
+            ~ClassName()        // 析构函数
+            Line( const Line &obj);                     // 拷贝构造函数
+    };                          // 封号结束类
+    // 成员函数定义
+    double ClassName::xx()
+    {
+    }
+    // 友元类
+    friend class ClassTwo;
+    ```
+   - 静态：使用::访问
+     1. 静态成员：所有对象都只有一个副本。创建第一个对象时所有的静态数据会被初始化为零，不能把静态成员的初始化放在类的定义中
+     1. 静态成员函数：类对象不存在也能被调用，只能访问静态成员数据，没有this指针
+   - 抽象类：为了给其他类提供一个可以继承的适当的基类。如果类中至少有一个纯虚函数，那就是，不能实例化对象会编译错误，只能当接口
+   - 初始化列表：快捷初始化变量值
+    ```c++
+    Line::Line( double len): length(len)
+    {
+    }
+    // 相当于
+    Line::Line( double len)
+    {
+        length = len;
+    }
+    ```
+   - this：this指针是所有成员函数的隐含参数，可用来指向调用对象，就是代替对象，如`this->xx()`
+   - 类指针
+    ```c++
+    Box *ptrBox;
+    ptrBox = &Box1;
+    ptrBox->xx();
+    ```
+   - 拷贝构造函数
+     1. 通过使用另一个同类型的对象来初始化新创建的对象
+     1. 复制对象把它作为参数传递给函数
+     1. 复制对象，并从函数返回这个对象
+   - 友元函数/友元类：定义在类外部但这个函数有权访问类的private、protected成员，友元函数不是成员函数。友元类所有成员都是友元
+   - 内联函数：inline，为解决程序中函数调用的效率问题，是空间代价换时间的节省。编译器会将其内联展开, 而不是按通常的函数调用机制进行调用，少于10行再用
+     1. 优点: 当函数体比较小的时候, 内联该函数可以令目标代码更加高效. 对于存取函数以及其它函数体比较短, 性能关键的函数, 鼓励使用内联
+     1. 缺点: 滥用内联将导致程序变慢. 内联可能使目标代码量或增或减, 这取决于内联函数的大小. 内联非常短小的存取函数通常会减少代码大小, 但内联一个相当大的函数将戏剧性的增加代码大小. 现代处理器由于更好的利用了指令缓存, 小巧的代码往往执行更快
+1. 对象
+   - 定义
+    ```c++
+    ClassName ObjectName;
+    ObjectName.xx;
+    ObjectName.xx();
+    ```
+1. 继承
+   - 认识：
+     1. 继承了所有的基类方法，除外有构造函数、析构函数、拷贝构造函数、友元函数、重载运算符
+     1. 继承类型：控制成员的可见性
+        - public：公是公，保护是保护
+        - protected：公和保护都是保护
+        - private：公和保护都是私
+     1. 多继承
+     1. 虚拟继承：virtual，解决环状继承
+   - 定义：基类、派生类
+    ```c++
+    // 基类
+    class Animal
+    {
+    };
+    //派生类
+    class Dog : public Animal, public Earth
+    {
+    };
+    ```
+1. 重载
+   - 函数重载：同样的函数名称，不同的形参，编译器会进行重载决策，决定合适的定义
+   - 运算符重载：`ClassName operator+ ();`，关键字operator + 符号
+     1. 不可重载的运算符
+        - .：成员访问运算符
+        - .*, ->*：成员指针访问运算符
+        - ::：域运算符
+        - sizeof：长度运算符
+        - ?:：条件运算符
+        - #： 预处理符号
+1. 多态
+   - 定义：多种形态，就是在继承形态下，不同派生类有各自的方法，是否使用派生类自己方法的问题，不加virtual就用基类的
+     1. 虚函数：类中virtual声明的函数，派生类中重新定义基类中的虚函数时，会告诉编译器不要静态链接到该函数，要根据所调用的对象类型来选择调用的函数，叫动态链接
+     1. 纯虚函数：`virtual int xx() = 0;`，告诉编译器函数没有实体
+### 应用
+1. io
+   - 输入输出
+     1. <iostream>：cin、cout、cerr、clog对象，即标准输入流、标准输出流、非缓冲标准错误流、缓冲标准错误流，<< >>可多次使用
+        - cin：和流提取运算符 >> 结合使用。附属到标准输入设备，通常是键盘
+          1. `cin >> xx;`，按照回车键后获取所有字符
+          1. `cin >> xx1 >> xx2;`，相当于赋值两次
+        - cout：和流插入运算符 << 结合使用。附属到标准错误设备，通常是显示屏
+          1. `cout << "xx"`
+          1. `cout << "xxxxxx" << varName << endl;`
+        - endl：在行末添加一个换行符
+        - cerr：非缓冲，每个流插入都会立即输出
+        - clog：插入到clog会先存储在缓冲区，直到缓冲填满或缓冲区刷新时才输出
+     1. <iomanip>：从文件读取信息
+     1. <fstream>：表示文件流
+   - 文件
+    ```c++
+    // 以写模式打开文件
+    ofstream outfile;
+    outfile.open("afile.dat");
+    outfile.close();
+    
+    // 以读模式打开文件
+    ifstream infile; 
+    infile.open("afile.dat"); 
+    infile >> data; 
+    infile.close();
+
+    // 文件位置指针， istream的seekg()、ostream的seekp() 
+    ios::beg                // 流开头开始定位
+    ios::cur
+    ios::end
+    ```
+1. 标准库
+   - <cmath>
+     1. sin()
+     1. cos()
+     1. tan()
+     1. srand()/rand()
+   - <ctime>：处理时间
 ### 高级
 1. 泛型编程
-1. lambda
 ### 库
 1. folly
 1. boost：为标准库提供扩展的c++程序的总称，由boost社区维护(各种大牛)。20多个分类，字符串、算法、高阶编程等。一般标准库功能都有了，体积又太大，不建议为了用而用
@@ -216,10 +361,10 @@
      1. typedef、sizeof
      1. if、else ———— switch、case、default ———— for、while、do、break、continue、goto
      1. void、return
-     1. namespace、class、new、this、private、protected、public
+     1. namespace、using、class、virtual、friend、inline、operator、private、protected、public、new、delete、this
      1. try、catch、throw
      1. 
-     1. operator、explicit、export、typeid、reinterpret_cast、typename、friend、using、virtual、inline、delete
+     1. explicit、export、typeid、reinterpret_cast、typename
 	 1. mutable
 1. 三字符组
    - 认识：用于表示另一个字符的三个字符序列，vc++ 2010开始不再替换，g++支持但给出编译警告
