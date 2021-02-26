@@ -159,27 +159,116 @@
      1. 字符串常量：括在双引号中，空格连接符，\ 分行符
 1. 函数：同c
 1. 数组：同c
+1. 动态内存
+   - 认识：内存分为堆和栈
+   - 使用
+     1. new：为内置数据类型、类、结构体、指针在执行时分配内存。malloc()也可用，new比它多了创建对象
+   - 实例
+    ```c++
+    // 分配内存，检查错误值，是否返回NULL指针
+    int* pvalue  = NULL;
+    if(!(pvalue = new int))
+    {
+        exit(1);
+    }
+
+    // 释放
+    delete pvalue;
+
+    // 数组操作
+    char* pvalue  = NULL;
+    pvalue  = new char[20];
+    delete [] pvalue;
+    ```
 1. 组成
-   - 构造函数
-   - 析构函数
-   - 拷贝构造
    - new、delete 和 malloc、free 的区别
-   - 访问限定符 public、private、protected
    - 深拷贝和浅拷贝
-   - 友元函数
-   - 内联函数
-   - 继承、虚继承
    - 钻石继承问题
-   - 同名覆盖问题
-   - 虚函数表
    - 虚指针
-   - 虚函数、纯虚函数
-   - 接口
-   - 多态
-   - 重写
    - 流类库和文件
-1. 重难点
    - 指针、内存分配的见解，实践经验
+1. 异常处理
+   - 认识：转移程序控制权的方式
+    ```c++
+    throw "xxxx";
+
+    try {
+    }catch( ExceptionName e1 ) {
+
+    }catch(const char* msg) {           // 捕获字符串的
+
+    }
+    ```
+   - 标准异常：<exception>，父子结构，所有异常的父类为`std::exception`
+     1. std::bad_alloc
+     1. std::bad_exception
+     1. std::runtime_error：不可以通过读取代码检测的异常 
+        - std::overflow_error，发生数学上溢
+        - std::range_error，尝试存储超范围的值
+        - std::underflow_error，发生数学下溢
+   - 定义新异常
+    ```c++
+    // 定义
+    struct MyException : public exception
+    {
+        const char * what () const throw ()         // what()被所有子异常类重载
+        {
+            return "xxx";
+        }
+    };
+    // 使用
+    try
+    {
+        throw MyException();
+    }
+    catch(MyException& e)
+    {
+        e.what();
+    }
+    catch(std::exception& e)
+    {
+        // 其他的错误
+    }
+    ```
+1. 命名空间
+   - 认识：定义了一个范围
+   - 实例
+    ```c++
+    // 定义，可以写在一个文件里，写多次就是添加元素
+    namespace namespaceName {}
+
+    // 调用
+    name::code;
+    name::code();
+
+    // 声明使用的命名空间
+    using namespace std;
+    using std::cout;                // 部分引用
+
+    // 嵌套
+    namespace namespaceName1 {
+        namespace namespaceName2 {
+        }
+    }
+    using namespace namespaceName1::namespaceName2;
+    ```
+1. 模板
+   - 认识：是泛型编程的基础，是创建泛型类或函数的蓝图或公式，可以用来定义函数和类，
+     1. 泛型编程：以一种独立于任何特定类型的方式编写代码
+   - 分类
+     1. 函数模板：`template <typename type> returnType funcName(parameter list){}`，type是占位符类型名称，可在类实例化时指定
+     1. 类模板：`template <class type> class class-name {}`
+   - 定义
+    ```c++
+    // 实例，比较大小
+    template <typename T>
+    inline T const& Max (T const& a, T const& b) 
+    { 
+        return a < b ? b:a; 
+    } 
+    // 使用
+    Max(i, j)
+    ```
 ### 面向对象
 1. 类
    - 定义：成员访问运算符.，范围解析运算符::
@@ -208,6 +297,7 @@
      1. 静态成员：所有对象都只有一个副本。创建第一个对象时所有的静态数据会被初始化为零，不能把静态成员的初始化放在类的定义中
      1. 静态成员函数：类对象不存在也能被调用，只能访问静态成员数据，没有this指针
    - 抽象类：为了给其他类提供一个可以继承的适当的基类。如果类中至少有一个纯虚函数，那就是，不能实例化对象会编译错误，只能当接口
+   - explicit：用于修饰只有一个参数的类构造函数, 防止类构造函数的隐式自动转换，构造函数默认implicit
    - 初始化列表：快捷初始化变量值
     ```c++
     Line::Line( double len): length(len)
@@ -276,6 +366,7 @@
      1. 虚函数：类中virtual声明的函数，派生类中重新定义基类中的虚函数时，会告诉编译器不要静态链接到该函数，要根据所调用的对象类型来选择调用的函数，叫动态链接
      1. 纯虚函数：`virtual int xx() = 0;`，告诉编译器函数没有实体
 ### 应用
+1. 预处理：同c
 1. io
    - 输入输出
      1. <iostream>：cin、cout、cerr、clog对象，即标准输入流、标准输出流、非缓冲标准错误流、缓冲标准错误流，<< >>可多次使用
@@ -308,26 +399,72 @@
     ios::cur
     ios::end
     ```
+1. 类库
+   - cgicc：`libcgicc.so`，c++处理cgi请求的
+   - folly
+   - boost：为标准库提供扩展的c++程序总称，由boost社区维护(各种大牛)。20多个分类，字符串、算法、高阶编程等。一般标准库功能都有了，体积又太大，不建议为了用而用
 1. 标准库
+   - 分类
+     1. 标准函数库：继承自c，包含了所有的c标准库，为支持类型安全做一定的添加和修改
+     1. 面向对象类库
+        - io类
+        - String类
+        - 数值类
+        - 异常处理类
+        - 
    - <cmath>
      1. sin()
      1. cos()
      1. tan()
      1. srand()/rand()
    - <ctime>：处理时间
-### 高级
-1. 泛型编程
-### 库
-1. folly
-1. boost：为标准库提供扩展的c++程序的总称，由boost社区维护(各种大牛)。20多个分类，字符串、算法、高阶编程等。一般标准库功能都有了，体积又太大，不建议为了用而用
-1. STL：Standard Template Library，是泛型的
+1. STL：Standard Template Library，标准模板库，提供了通用的模板类和函数，可以实现多种流行和常用的算法和数据结构，如向量、链表、队列、栈。是泛型的
    - 组件
-     1. 仿函数
-     1. 算法
-     1. 迭代器
+     1. 容器：用来管理某一类对象的集合
+     1. 算法：提供作用于容器的各种操作方式
+     1. 迭代器：用于遍历对象集合的元素
      1. 适配器：adapter
      1. 空间配置器：内存分配管理
-     1. 容器
+     1. 仿函数
+1. cgi编程
+   - 环境变量：`getenv("CONTENT_TYPE")`，包括CONTENT_TYPE、CONTENT_LENGTH、HTTP_COOKIE、REMOTE_HOST、REMOTE_ADDR、SERVER_NAME等
+   - 使用cigcc
+    ```c++
+    #include <cgicc/CgiDefs.h> 
+    #include <cgicc/Cgicc.h> 
+    #include <cgicc/HTTPHTMLHeader.h> 
+    #include <cgicc/HTMLClasses.h>  
+
+    using namespace std;
+    using namespace cgicc;
+
+    Cgicc cgi;
+
+    // 获取get参数
+    orm_iterator fi = cgi.getElement("xx");  
+    if( !fi->isEmpty() && fi != (*cgi).end()) {  
+        cout << **fi << endl;  
+    }
+
+    // 获取cookie
+    const CgiEnvironment& env = cgi.getEnvironment();
+    for( cci = env.getCookieList().begin(); cci != env.getCookieList().end(); ++cci )
+    {
+        cci->getName()
+        cci->getValue()
+    }
+
+    // 获取文件
+    const_file_iterator file = cgi.getFile("xx");
+    if(file != cgi.getFiles().end()) {
+        // 在 cout 中发送数据类型
+        cout << HTTPContentHeader(file->getDataType());
+        // 在 cout 中写入内容
+        file->writeToStream(cout);
+    }
+    ```
+### 高级
+1. 泛型编程
 ### wiki
 1. 关键是要理解概念，而不应过于深究语言的技术细节
 1. 历史
@@ -356,16 +493,15 @@
      1. unsigned、signed、short、long
      1. enum
      1. asm、struct、union
-     1. auto、register、static、static_cast、dynamic_cast、extern、template
-     1. const、const_cast、volatile
-     1. typedef、sizeof
+     1. auto、register、static、extern、export、template、const、mutable、volatile
+     1. static_cast、dynamic_cast、reinterpret_cast、const_cast
+     1. typedef、sizeof、typeid
      1. if、else ———— switch、case、default ———— for、while、do、break、continue、goto
      1. void、return
-     1. namespace、using、class、virtual、friend、inline、operator、private、protected、public、new、delete、this
+     1. namespace、using、class、explicit、implicit、virtual、friend、inline、operator、private、protected、public、this
      1. try、catch、throw
-     1. 
-     1. explicit、export、typeid、reinterpret_cast、typename
-	 1. mutable
+     1. new、delete
+     1. typename
 1. 三字符组
    - 认识：用于表示另一个字符的三个字符序列，vc++ 2010开始不再替换，g++支持但给出编译警告
      1. 总是以两个问号开头

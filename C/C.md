@@ -472,6 +472,30 @@
 
      1. scanf：格式化输入，空格为截止符
      1. printf：格式化打印
+1. 信号
+   - 可捕获的：有些信号不能被程序捕获
+     1. SIGABRT	程序异常终止，如调用abort
+     1. SIGFPE	错误的算术运算，如除零或导致溢出
+     1. SIGILL	检测非法指令
+     1. SIGINT	程序终止(interrupt)信号，如ctrl + c
+     1. SIGSEGV	非法访问内存
+     1. SIGTERM	发送到程序的终止请求
+   - 使用
+     1. signal：注册信号回调程序
+     1. raise：发送信号
+   - 实例
+    ```c++
+    // 回调函数
+    void signalHandler( int signum )
+    {
+        exit(signum);  
+    }
+    // 注册信号
+    signal(SIGINT, signalHandler);
+
+    // 生成信号
+    raise(SIGINT);
+    ```
 1. 类库
    - libuv：提供非阻塞io操作，在所有支持的操作系统上保持一致的接口。跨平台、线程池、事件池、异步io
      1. 提供机制处理诸如文件系统、DNS、网络、子进程、管道、信号量控制、轮询机制和数据流
