@@ -84,7 +84,7 @@
      1. php7内存接口
 1. wiki
    - 内存对齐：存取速度会更快
-   - 写时复制：
+   - 写时复制：只用一份，需要改的时候再独立复制一份
 ### 扩展
 1. 扩展开发
    - 理解：C/C++基础，同时需要熟悉php扩展api，要用到PHP自身定义的函数和宏
@@ -94,7 +94,7 @@
    - 开发
      1. config.m4：PHP_ARG_WITH、PHP_ARG_ENABLE
      1. php_xx.h、xx.c
-1. posix/pcntl
+1. posix/pcntl：多进程管理，属于php的进程
 1. php5和php7的扩展大部分都不一样了
 ### swoole
 1. 组成
@@ -138,25 +138,62 @@ ipv4的udp一次最多发64k，dgram最大2M
    - socket有六种。新的连接放到reator_thread的事件循环中，socket_create方法，是异步的，然后reator_add添加到epoll中，调用epoll_wait，从listen队列中取出来，加到epoll的事件监听中
    - 四种消耗之一的系统调用消耗很大，内存拷贝，进程切换，锁（碰撞就进程切换）
 ### 调优
-1. 编码级优化
-   - 提前销毁大变量
-   - 避免使用魔术方法耗性能
-   - requiere_once耗性能
-   - 少用正则
-   - 不要用@符掩盖错误
-   - 单引号代替双引号
-1. 语言级优化
-   - 部署环境：nginx+php-fpm方式
-   - 框架选择
-   - 缓存
-     1. 程序层面的文件静态和优化比底层来的更有效、直接
-     1. 开启opcode缓存：避免重复编译，如APC、xcache
-     1. 本地缓存：如用xcache缓存元数据，不用每次读文件
-   - 文件加载：一个文件操作胜过优化N个CPU指令
-   - nginx开启gzip压缩
-1. 配置优化
-   - php.ini：memory_limit、session.save_handler、output_buffering
-   - php-fpm：动态和静态的子进程管理，平衡cpu和内存
+1. 优化方式
+   - 语言本身
+     1. 配置
+        - php.ini：memory_limit、session.save_handler、output_buffering
+        - php-fpm：动态和静态的子进程管理，平衡cpu和内存
+   - 架构
+     1. 部署环境：nginx+php-fpm方式
+     1. 框架选择
+     1. 缓存
+        - 程序层面的文件静态和优化比底层来的更有效、直接
+        - 开启opcode缓存：避免重复编译，如APC、xcache
+        - 本地缓存：如用xcache缓存元数据，不用每次读文件
+     1. 外部
+        - nginx开启gzip压缩
+   - 编码
+     1. 文件加载：一个文件操作胜过优化N个CPU指令
+     1. 提前销毁大变量
+     1. 避免使用魔术方法耗性能
+     1. requiere_once耗性能
+     1. 少用正则
+     1. 不要用@符掩盖错误
+     1. 单引号代替双引号
+1. 工具
+   - xdebug
+   - xhprof
+     1. 认识：php的层次性能分析工具，查看资源占用和各个调用的耗时，搭配graphviz图显示更直接，还有xhGui。facebook开源，性能开销低，可用在生产活动中
+     1. 使用
+        ```php
+        // 抓取
+        xhprof_enable(XHPROF_FLAGS_NO_BUILTINS | XHPROF_FLAGS_CPU | XHPROF_FLAGS_MEMORY);
+        // --业务代码--
+        $xhprof_data = xhprof_disable();
+
+        // 获取此次分析id
+        include_once "/xhprof_lib/utils/xhprof_lib.php";
+        include_once "/xhprof_lib/utils/xhprof_runs.php";
+        $xhprof_runs = new XHProfRuns_Default();
+        $run_id = $xhprof_runs->save_run($xhprof_data, "dengling");
+
+        // 查看生成报告
+        http://localhost/xhprof/xhprof_html/index.php?run=xxx&source=your_project
+        ```
+     1. 配置
+        ```conf
+        [xhprof]
+        extension=xhprof.so;
+        xhprof.output_dir=/tmp/xhprof           // 分析文件生成地址
+        ```
+1. 性能检测
+    ```php
+    ini_set('memory_limit', "1024M");
+    set_time_limit(0);
+    echo microtime() . PHP_EOL;
+    echo microtime() . PHP_EOL;
+    echo memory_get_usage() . PHP_EOL;
+    ```
 1. 发挥PHP7的性能
    - 开启Opcache
      1. zend_extension=opcache.so
@@ -165,16 +202,6 @@ ipv4的udp一次最多发64k，dgram最大2M
    - 使用GCC 4.8以上进行编译
    - 开启HugePage （根据系统内存决定）：操作系统默认的内存是以4KB分页的，而虚拟地址和内存地址需要转换，而这个转换要查表，CPU为了加速这个查表过程会内建TLB(Translation Lookaside Buffer)。 显然，如果虚拟页越小，表里的条目数也就越多，而TLB大小是有限的，条目数越多TLB的Cache Miss也就会越高，所以如果我们能启用大内存页就能间接降低这个TLB Cache Miss。php将采用大内存页来保存，减少TLB miss，提高性能
    - PGO：Profile Guided Optimization，第一次编译成功后，用项目代码去训练PHP，会产生一些profile信息，最后根据这些信息第二次gcc编译PHP就可以得到量身定做的PHP7
-1. 性能
-    ```php
-    ini_set('memory_limit', "1024M");
-    set_time_limit(0);
-    echo microtime() . PHP_EOL;
-    echo microtime() . PHP_EOL;
-    echo memory_get_usage() . PHP_EOL;
-    ```
-1. xhprof
-1. opcache
 1. php7性能优化：使用Zend Engine 3.0，ZEND引擎升级到Zend Engine 3，也就是所谓的PHP NG，重写了ZendVM
    - 标量类型声明：为了v7.1的jit特性做准备，因为jit有了准确的变量类型，可以生成最佳的机器指令
    - zval使用栈内存：ZVAL结构的重构，一个php变量就是一个zval指针，之前是动态从堆上分配，php7直接使用栈内存

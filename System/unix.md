@@ -149,7 +149,7 @@
         - 其他：select函数监视的文件描述符分3类，分别是writefds、readfds、和exceptfds
    - poll：指定描述符数组、变动条件、等待时间
      1. 理解：链表保存文件描述符，没有文件数量限制，其他缺点存在。直到设备就绪或主动超时，poll被唤醒后又要再次遍历fd，这个过程经历了多次无谓的遍历
-   - epoll：epoll模型是Linux2.6以上内核高性能网络I/O模型，如果FreeBSD用kqueue，只支持pipe/网络产生的fd，不支持文件系统产生的
+   - epoll：epoll模型是Linux2.6以上内核高性能网络I/O模型，如果FreeBSD用kqueue，只支持pipe/网络产生的fd，不支持文件系统产生的，即Reactor模式
      1. 认识：即eventpoll，事件机制，linux自带，没有描述符限制，不会因为fd数量而效率下降，利用mmap()文件映射内存加速与内核的消息传递，利用回调激活描述符，并在调用wait时得到通知
      1. 过程：在内核申请简易文件系统(B+树)，然后
         - 调用epoll_create()建立一个epoll对象(在epoll文件系统中为这个句柄对象分配资源)。此调用返回一个句柄，之后所有都依靠这个句柄来标识

@@ -94,42 +94,37 @@ settings->editor ->plugins->browse repositories -> 插件内容
 1. 编辑的文件加*标识
 settings -> editor -> editor tabs -> 勾选 mark modifed tabs
 #### 其他功能
-1. 利用xdebug单步调试，入门级
- - 配置步骤
-```
-1.开启php的xdebug模块
-2.配置phpstorm来挂接xdebug
-3.使用调试功能
-```
- - 开启xdebug
-```
-1.配置php.ini
-引入xdebug文件              zend_extension="D:\Program Files\phpStudy\php54n\ext\xdebug.dll"
-是否允许远程终端，必须开启    xdebug.remote_enable=ON
-调试器关键字                xdebug.idekey="PHPSTORM"
-指定远程调试接口             xdebug.remote_port = 8998
-2.检测xdebug是否开启
-phpinfo(); 查找xdebug
-```
- - 配置PhpStorm
-```
-编辑器右上角———Edit Configurations
-添加PHP Web Application
-添加————应用名称、配置服务器信息、选择默认浏览器
-服务器配置：名称、主机地址
-调试开始的url
-```
- - 使用调试功能
-```
-打断点—>点击臭虫—>点击浏览器页面触发断点—>自动跳转回PhpStorm—>查看携带的数据（调试的目的）—>可按步执行查找问题点—>点击运行（或者F5）—>浏览器页面继续执行—>调试完成
-```
- - 总结
-```
-Xdebug可以用来跟踪，调试和分析PHP程序的运行状况。本文重点是调试。Xdebug本身拥有大量内置函数，可以分析php程序性能瓶颈等问题。关于其高级使用方法还有很多。灵活使用Xdebug，对提高调试效率会有很大帮助。原文地址：http://blog.csdn.net/knight_quan/article/details/51953269
-```
- - xdebug函数
-```
-xdebug_call_class()      // 取文件名，行号，函数名
-xdebug_get_headers()     // header信息
-xdebug_time_index()      // 执行时间
-```
+1. xdebug单步调试
+   - 认识：跟踪，调试和分析PHP程序的运行状况
+   - 配置步骤
+     1. 开启php的xdebug模块
+     1. 配置phpstorm来挂接xdebug
+     1. 使用调试功能
+   - 开启xdebug
+     1. 配置php.ini
+        - 引入xdebug文件              zend_extension="D:\Program Files\phpStudy\php54n\ext\xdebug.dll"
+        - 是否允许远程终端，必须开启    xdebug.remote_enable=ON
+        - 调试器关键字                xdebug.idekey="PHPSTORM"
+        - 指定远程调试接口             xdebug.remote_port = 8998
+     1. 检测xdebug是否开启，phpinfo查看
+   - 配置PhpStorm
+     1. 编辑器右上角———Edit Configurations
+     1. 添加PHP Web Application
+     1. 添加————应用名称、配置服务器信息、选择默认浏览器
+     1. 服务器配置：名称、主机地址
+     1. 调试开始的url
+   - 使用调试功能
+     1. 打断点
+     1. 点击臭虫
+     1. 点击浏览器页面触发断点
+     1. 自动跳转回PhpStorm
+     1. 查看携带的数据（调试的目的）
+     1. 可按步执行查找问题点
+     1. 点击运行（或者F5）
+     1. 浏览器页面继续执行
+     1. 调试完成
+   - 总结：Xdebug本身拥有大量内置函数，可以分析php程序性能瓶颈等问题。关于其高级使用方法还有很多。原文地址：http://blog.csdn.net/knight_quan/article/details/51953269
+   - xdebug函数
+     1. xdebug_call_class()      // 取文件名，行号，函数名
+     1. xdebug_get_headers()     // header信息
+     1. xdebug_time_index()      // 执行时间

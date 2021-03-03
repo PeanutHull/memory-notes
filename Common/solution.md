@@ -97,7 +97,7 @@
 1. corosync+pacemaker：用于传递信息，提供心跳信息，集群框架引擎程序，高可用集群资源管理器，crmsh是pacemaker的命令行工具
 1. heartbeat：和corosync一类，
 1. mysql
-   - 主主热备：都可读写，keepalived + virtual ip转移
+   - 主主热备：都可读写，+ keepalived
    - 每个主带多个从，读通过连接池(会自动故障转移)走从
 1. 自动故障转移
    - 故障检测
