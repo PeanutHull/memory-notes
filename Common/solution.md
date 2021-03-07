@@ -524,7 +524,10 @@
 1. 数据库自增
 1. UUID
 1. redis原子步长：多台可负载均衡
-1. 雪花算法
+1. 雪花算法：snowflake，https://github.com/twitter-archive/snowflake
+1. 百度uid-generator：https://github.com/baidu/uid-generator
+1. 美团leaf：https://tech.meituan.com/MT_Leaf.html
+1. 滴滴tinyid：https://github.com/didi/tinyid/wiki
 ### 测试
 1. 分类
    - 业务测试

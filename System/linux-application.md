@@ -8,16 +8,16 @@
 1. 进程守护
    - 工具：supervisor、systemd、monit(还能性能监控)
      1. supervisor：进程管理器，用于保证进程的自动重启等。通过fork/exec的方式将这些被管理的进程当作supervisor的子进程来启动，配置进程命令即可，python写的
-        - 操作
-          1. `start/stop/restart all/xx`       //  开始停止xx
-          1. `status`        //查看所有进程的状态
-          1. `update`        //配置文件修改后使用该命令加载新的配置
-          1. `reload`        //重新启动配置中的所有程序
         - 启动
             ```
-            supervisord -c supervisor.conf                                              // 通过配置文件启动supervisor
-            supervisorctl -c supervisor.conf start/stop [all]|[x|zzg_worker]            // 启动停止所有/一个
+            supervisord -c supervisor.conf                                            // 通过配置文件启动supervisor
+            supervisorctl -c supervisor.conf start/stop [all]|[zzg_worker]            // 启动停止所有/一个
             ```
+        - 操作
+          1. `supervisorctl start/stop/restart all/xx`
+          1. `supervisorctl status`        //查看所有进程的状态
+          1. `supervisorctl update`        //配置文件修改后使用该命令加载新的配置
+          1. `supervisorctl reload`        //重新启动配置中的所有程序
         - supervisor的配置文件：supervisor.conf
             ```conf
             [unix_http_server]
@@ -40,10 +40,6 @@
             minfds=1024                                     ; 可以打开的文件描述符的最小值，默认 1024
             minprocs=200                                    ; 可以打开的进程数的最小值，默认 200
 
-            ; the below section must remain in the config file for RPC
-            ; (supervisorctl/web interface) to work, additional interfaces may be
-            ; added by defining them in separate rpcinterface: sections
-
             [rpcinterface:supervisor]
             supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
 
@@ -51,21 +47,12 @@
             serverurl=unix:///tmp/supervisor_zzg.sock       ; 通过 UNIX socket 连接 supervisord，路径与 unix_http_server 部分的 file 一致
             ;serverurl=http://127.0.0.1:9001                ; 通过 HTTP 的方式连接 supervisord
 
-            [program:zzg_worker]
-            process_name=%(program_name)s_%(process_num)02d
-            command=php /xdfapp/apps/develop/okayAdmin_zzg/artisan queue:work redis --daemon --delay=600 --sleep=1 --tries=1 --env=_zzg
-            autostart=true
-            autorestart=true
-            user=zhangyunfei
-            numprocs=4
-            redirect_stderr=true
-            stdout_logfile=/tmp/zzg_worker.log
-
-            [include]
-            ;files = /xdfapp/_zzg/*.conf
+            [include]                                       ; 包含其他配置文件
+            files = /xdfapp/_zzg/*.conf
             ```
-        - 子进程配置文件：/etc/supervisor.d/*.ini
+        - 子进程配置文件
             ```conf
+            ; /etc/supervisor.d/*.ini
             [program:zzg_worker]
             process_name=%(program_name)s_%(process_num)02d
             command=php /xdfapp/develop/okayAdmin/artisan queue:work redis --daemon --sleep=1 --tries=1 --env=_lj
@@ -75,20 +62,20 @@
             numprocs=1
             redirect_stderr=true
             stdout_logfile=/tmp/zzg_worker.log
-            ```
-        - xes的tw配置
-            ```conf
+
+
+            ; xes的tw配置
             [program:confd-tw]
             command=/usr/local/bin/confd -config-file /home/www/confd-tw/etc/confd-tw.toml
             autostar=true
             autorestart=true
-            redirect_stderr=true
+            redirect_stderr=true                            ; redirect proc stderr to stdout
             stdout_logfile =/dev/stdout
             stderr_logfile=/dev/stdout
             loglevel=info
-            startretries=3000
-            stopwaitsecs=300
-            startsecs=10
+            startretries=3000                               ; 启动重试次数
+            stopwaitsecs=300                                ; 搞死子进程，等待操作系统将SIGCHLD返回给supervisor的秒数，超过了就直接SIGKILL
+            startsecs=10                                    ; 确认是否启动成功的等待秒数
             ```
      1. Systemd
         - 背景：linux采用init进程启动服务，如`/etc/init.d/apache2 start`或`service apache2 start`，缺点为只能串行启动，只启动脚本，不管其他事情，如session信号通知

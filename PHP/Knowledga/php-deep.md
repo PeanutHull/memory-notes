@@ -1,4 +1,64 @@
 ### 底层实现
+1. 变量
+   - zval：16byte
+   - val的结构简单描述下，用type来指示是什么
+     1. 要点有直接复制和写时复制，简单类型直接复制，复杂的用写时复制
+   - 类型，不同类型的特点
+     1. 索引数组是哪个？
+     1. string的二进制安全和结构
+     1. array，组织形式和结构
+        - 组成
+          1. bucket和索引数组的分类形式，拉链法、头插法，后来的往前边插入，
+          1. packed array和hash array的认识，packed前边的索引数组只保留2位且不需要hash运算能省内存，packed的退化(key较大或者间隔大)
+1. 内存管理描述下
+   - 文件
+     1. zend_alloc_sizes.h
+     1. zend_alloc.c
+     1. zend_alloc.h
+   - 组成
+     1. small、page、chunk
+     1. alloc_globals：全局变量
+        - mm_heap
+          1. size：已经使用大小
+          1. pick：历史使用峰值
+          1. free_solt：存小块内存
+          1. huge_list：挂huge
+          1. main_chunk：第一个的chunk
+   - chunk
+     1. 认识
+     1. 组成
+        - chunk首地址：高43，低21全是0
+     1. 函数
+        - zend_mm_chunk_alloc_int
+     1. 特性
+        - 2M对齐：通过申请4m-4k拿到对齐的2m首地址，然后释放掉两边的内存并移动指针
+   - small
+     1. ZEND_MM_BINS_INFO：不同大小对应的数量
+   - 方法
+     1. _emalloc
+     1. _efree
+   - 背景
+     1. 内存已内存页管理，一定是4k的整数倍
+1. 生命周期记录下，每个生命周期的异同，都完成了哪些
+1. 代码编译
+   - 认识：实时编译，生成opcode
+   - 组成
+     1. 词法分析
+        - 认识：即将代码看作长字符串，用正则匹配，找出所有的token(标识)，如变量、表达式、函数等类型
+        - 方法
+          1. NFA，不确定有穷自动机。自动机就是遇到输入是否进行下一个状态切换，有一个最终状态，是穷举所有的可能
+          1. DFA，确定有穷自动机，每一个输入都有确定的下一个状态的迁移
+        - 工具：用re2c实现，编写正则表达式就会帮忙生成c语言方式的DFA，`/*!re2c xxxxxx */`
+     1. 语法分析
+     1. 
+1. 代码解析
+1. 代码执行
+   - 认识：zend虚拟机 + opcode才能在物理机运行行
+   - opcode
+   - zend虚拟机
+
+
+
 1. 组成
    - sapi：Server Application Programming Interface，服务器端应用编程端口，是php与其它应用交互的接口，是php的接入层，接受请求，然后调用php内核api，严格来说不属于内核。为内部的PHP提供一套固定的, 统一的接口, 使得PHP自身实现能够不受错综复杂的外部环境影响，保持一定的独立性
      1. cli、cgi、mod_php5(apache)、isapi(iis)、fpm

@@ -607,3 +607,12 @@
 1. 理解：旨在简化创建产品级的 Spring 应用和服务，提供了命令行工具，是封装了spring再面向用户的
 ### Netty
 1. 理解：Netty是由JBOSS提供的一个java开源框架。Netty提供异步的、事件驱动的网络应用程序框架和工具
+### 业务网关
+1. Spring Cloud gateway
+1. linkered
+1. zuul
+### 熔断器
+1. Hystrix
+1. Sentinel
+1. Resilience4J
+1. Spring Retry
