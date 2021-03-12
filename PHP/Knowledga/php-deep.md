@@ -1,4 +1,18 @@
 ### 底层实现
+1. 目录
+   - main：框架主要代码，输入输出、框架初始化等
+   - sapi：php的应用接口层
+     1. 认识：Server Application Programming Interface，服务器端应用编程端口，是php与其它应用交互的接口，是php的接入层，接受请求，然后调用php内核api，严格来说不属于内核。为内部的PHP提供一套固定的, 统一的接口, 使得PHP自身实现能够不受错综复杂的外部环境影响，保持一定的独立性
+     1. 组成：cli、cgi、mod_php5(apache)、isapi(iis)、fpm
+   - Zend：解析器、执行器
+     1. 理解：引擎，核心，负责从编译到执行。zend engine、zend api、zend extension api
+     1. 组成
+        - 编译器：代码->抽象语法树->opcode，相当于gcc，编译器是一个语言实现的基础
+        - 执行器：执行opcode，即执行逻辑
+     1. 分类
+        - Zend
+        - HHVM
+   - ext：扩展相关
 1. 变量
    - zval：16byte
    - val的结构简单描述下，用type来指示是什么
@@ -9,7 +23,20 @@
      1. array，组织形式和结构
         - 组成
           1. bucket和索引数组的分类形式，拉链法、头插法，后来的往前边插入，
-          1. packed array和hash array的认识，packed前边的索引数组只保留2位且不需要hash运算能省内存，packed的退化(key较大或者间隔大)
+          1. packed array和hash array的认识，是否需要需要建立散列关系，packed前边的索引数组只保留2位且不需要hash运算能省内存，packed的退化(key较大或者间隔大)
+        - 索引数组
+          1. gc
+          1. u
+          1. nTableMask
+          1. *arData
+          1. nNumUsed
+          1. nNextFreeElement
+          1. pDestructor
+        - bucket数组：重复就采用链表
+          1. 0~7
+          1. -1~-8
+     1. 引用类型
+        - 循环引用：使用&后，两个都是引用类型，指向了那谁，自己引用自己，引用计数还是1，产生死亡拥抱，产生了垃圾
 1. 内存管理描述下
    - 文件
      1. zend_alloc_sizes.h
@@ -39,82 +66,6 @@
      1. _efree
    - 背景
      1. 内存已内存页管理，一定是4k的整数倍
-1. 生命周期记录下，每个生命周期的异同，都完成了哪些
-1. 代码编译
-   - 认识：实时编译，生成opcode
-   - 组成
-     1. 词法分析
-        - 认识：即将代码看作长字符串，用正则匹配，找出所有的token(标识)，如变量、表达式、函数等类型
-        - 方法
-          1. NFA，不确定有穷自动机。自动机就是遇到输入是否进行下一个状态切换，有一个最终状态，是穷举所有的可能
-          1. DFA，确定有穷自动机，每一个输入都有确定的下一个状态的迁移
-        - 工具：用re2c实现，编写正则表达式就会帮忙生成c语言方式的DFA，`/*!re2c xxxxxx */`
-     1. 语法分析
-     1. 
-1. 代码解析
-1. 代码执行
-   - 认识：zend虚拟机 + opcode才能在物理机运行行
-   - opcode
-   - zend虚拟机
-
-
-
-1. 组成
-   - sapi：Server Application Programming Interface，服务器端应用编程端口，是php与其它应用交互的接口，是php的接入层，接受请求，然后调用php内核api，严格来说不属于内核。为内部的PHP提供一套固定的, 统一的接口, 使得PHP自身实现能够不受错综复杂的外部环境影响，保持一定的独立性
-     1. cli、cgi、mod_php5(apache)、isapi(iis)、fpm
-   - php、php api、extension
-     1. php api：streams、output
-     1. extension：mysql
-   - zend
-     1. 理解：引擎，核心，负责从编译到执行。zend engine、zend api、zend extension api
-     1. 组成
-        - 编译器：代码->抽象语法树->opcode，相当于gcc，编译器是一个语言实现的基础
-        - 执行器：执行opcode，即执行逻辑
-     1. 分类
-        - Zend
-        - HHVM
-1. 目录
-   - main：框架主要代码，输入输出、框架初始化等
-   - sapi：php的应用接口层
-   - Zend：解析器、执行器
-   - ext：扩展相关
-1. 编译：默认情况下Zend引擎先将php源码编译为opcode(即字节码/虚拟指令，可理解成C语言级函数，根据指令由相应的C编写的函数来执行)，然后Zend解析引擎逐条执行
-1. HHVM提升性能方式：替代Zend引擎将php代码转换成中间字节码(HHVM自己的，通常称为中间语言)，然后运行时通过JIT编译器将字节码转换成机器码，类似于Java的JVM。为了达到最佳优化效果，需要将PHP的变量类型固定下来，而不是让编译器去猜测，Facebook的工程师们就定义一种Hack写法，进而达到编译器优化
-1. 特性：动态、符号表、间接引用
-1. 变量
-   - 认识：用zval结构体表示
-1. 数组 - HashTable
-   - 类型
-     1. xxxx
-     1. dart？？？
-   - 组成
-     1. 索引数组
-        - gc
-        - u
-        - nTableMask
-        - *arData
-        - nNumUsed
-        - nNextFreeElement
-        - pDestructor
-     1. bucket数组：重复就采用链表
-        - 0~7
-        - -1~-8
-   - 其他
-     1. Packed Array：不需要建立散列关系
-     1. Hash Array：需要建立散列关系
-1. 引用类型
-   - 理解：使用&后，两个都是引用类型，指向了那谁
-   - 特性
-     1. 循环引用：自己引用自己，引用计数还是1，产生死亡拥抱，产生了垃圾
-1. 垃圾回收
-   - 认识：解决引用回收的缺陷，因为只记录了次数，没有记录引用的地址
-     1. 引用计数
-     1. 循环引用
-   - 四色法
-     1. 标成紫色放到垃圾桶（默认10000），标记后不会再次放入
-     1. 垃圾桶满时，触发回收，触发gc
-     1. 遍历垃圾桶，标记为灰色，同时引用计数减1
-     1. 再一次遍历，都是0的标记为白色，回收，大于0的标记为黑色返回
 1. 内存管理
    - 内存分配
      1. 概念
@@ -142,7 +93,63 @@
      1. 缺陷
         - 内核态和用户态的切换，很大的浪费
      1. php7内存接口
+1. 垃圾回收
+   - 认识：解决引用回收的缺陷，因为只记录了次数，没有记录引用的地址
+     1. 引用计数
+     1. 循环引用
+   - 四色法
+     1. 标成紫色放到垃圾桶（默认10000），标记后不会再次放入
+     1. 垃圾桶满时，触发回收，触发gc
+     1. 遍历垃圾桶，标记为灰色，同时引用计数减1
+     1. 再一次遍历，都是0的标记为白色，回收，大于0的标记为黑色返回
+1. 生命周期
+   - 认识：记录下，每个生命周期的异同，都完成了哪些
+1. 代码解析
+   - 认识：是实时编译的，最终生成opcode。之前直接生成opcode，php7新增词法分析后生成ast
+   - 过程
+     1. 词法分析
+        - 认识：将代码看作长字符串，用正则匹配，找出所有的词块(token)，用zval存储，如变量、表达式、函数等类型，后缀.l
+        - 方法
+          1. NFA，不确定有穷自动机。自动机就是遇到输入是否进行下一个状态切换，有一个最终状态，是穷举所有的可能
+          1. DFA，确定有穷自动机，每一个输入都有确定的下一个状态的迁移,NFA没有
+        - 实现：编写正则表达式来定义词法规则，用re2c生成c语言方式的DFA，`/*!re2c xxxxxx */`
+        - php7表现
+          1. 用全局变量scanner_globals存文件指针位置，进行词法分析
+     1. 语法分析
+        - 认识：建立关系、确定token如何彼此关联，会生成语法树。将语法写成巴科斯范式，然后利用bison生成状态机，bsion后缀.y
+        - php7表现
+          1. 语法分析后create生成zend_ast_*，如list/zval/decl
+     1. `$a=1`的ast：![avatar](../../images/asAST.png)
+   - 流程
+     1. zend_execute_scripts()
+     1. compile_file()
+     1. znedparse()：语法解析函数yyparse()，生成ast
+     1. zend_compile_top_stmt()：生成opcode
+     1. pass_two()
+     1. zend_execute()
+   - 特征
+     1. 二者都要生成c文件
+     1. 语法相关的在zend_language_*，词法scanner，语法parser
+1. 代码编译
+   - 认识：从ast到opcode
+   - opcode
+     1. 认识：就是一个个的zend虚拟机具体执行命令的，结构体类似汇编，有指令集，符号表，堆栈
+        - hander是提前定义好的c函数
+     1. opcode：字节码/虚拟指令，然后Zend解析引擎逐条执行
+     1. 结构：zend_op、zend_op_array、zend_execute_data、zend_vm_stack
+1. 代码执行
+   - 认识：zend虚拟机 + opcode才能在物理机运行，三层，虚拟机只包含中间数据层和执行层，执行就是zend虚拟机把全局的execute_global中的oplines，包含op1和op2取出来通过hander计算放到result中
+   - zend虚拟机
+     1. 解释层：词法分析+语法分析 -> AST -> 编译器
+     1. 中间数据层：执行栈、opline指令、符号表
+     1. 执行层：执行引擎
+1. 问题
+   - 词法语法解析的过程还是不懂
+   - re2c生成的DFA怎么用于bison？二者同时进行又是怎么进行的？
+   - ast怎么编译为opcode的？
+   - opcode是怎么执行的？
 1. wiki
+   - HHVM提升性能方式：替代Zend引擎将php代码转换成中间字节码(HHVM自己的，通常称为中间语言)，然后运行时通过JIT编译器将字节码转换成机器码，类似于Java的JVM。为了达到最佳优化效果，需要将PHP的变量类型固定下来，而不是让编译器去猜测，Facebook的工程师们就定义一种Hack写法，进而达到编译器优化
    - 内存对齐：存取速度会更快
    - 写时复制：只用一份，需要改的时候再独立复制一份
 ### 扩展
@@ -224,6 +231,7 @@ ipv4的udp一次最多发64k，dgram最大2M
    - xdebug
    - xhprof
      1. 认识：php的层次性能分析工具，查看资源占用和各个调用的耗时，搭配graphviz图显示更直接，还有xhGui。facebook开源，性能开销低，可用在生产活动中
+        - graphviz：开源的图形可视化软件，以简单的文本语言获取图形的描述，应用于网页、svg、pdf、postscript中，有颜色，字体，表格节点布局，线条样式，超链接和自定义形状的选项
      1. 使用
         ```php
         // 抓取
@@ -232,14 +240,21 @@ ipv4的udp一次最多发64k，dgram最大2M
         $xhprof_data = xhprof_disable();
 
         // 获取此次分析id
-        include_once "/xhprof_lib/utils/xhprof_lib.php";
-        include_once "/xhprof_lib/utils/xhprof_runs.php";
+        include_once "/usr/share/pear/xhprof_lib/utils/xhprof_lib.php";
+        include_once "/usr/share/pear/xhprof_lib/utils/xhprof_runs.php";
         $xhprof_runs = new XHProfRuns_Default();
         $run_id = $xhprof_runs->save_run($xhprof_data, "dengling");
 
-        // 查看生成报告
-        http://localhost/xhprof/xhprof_html/index.php?run=xxx&source=your_project
+        // 查看生成报告，nginx指向xhprof的目录
+        http://xhprof.xesv5.com/index.php?run=604994b1e56a4&source=dengling
         ```
+     1. 字段含义
+        - microsec：微秒
+        - Calls：方法被调用的次数
+        - Incl.Wall Time：方法执行花费的时间，包括子方法执行时间
+        - IWall%：方法执行花费的时间百分比
+        - Excl. Wall Time(microsec)：方法本身执行花费的时间，不包括子方法
+        - Incl. CPU(microsecs)：方法执行花费的CPU时间，包括子方法
      1. 配置
         ```conf
         [xhprof]

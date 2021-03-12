@@ -165,10 +165,12 @@
 1. 应用
    - wget
    - curl
-     1. -X POST
+     1. -X POST：
      1. -x '127.0.0.1：80'
      1. -H 'CONTENT-TYPE:application/json' -H 'traceid:123abc'：多个就写多个-H
-     1. -d '{"id":xx}'
+     1. -d '{"id":xx}'：http post data
+     1. -i 查看返回头
+     1. -v：查看请求详细信息
      1. `curl ipinfo.io/curl cip.cc`：查看出口ip
    - rsync
      1. 认识：linux的文件备份、同步工具
@@ -405,6 +407,7 @@
      1. `ps -aux --sort -pcpu,+pmem | less`，所有进程并且详细模式，按cpu升序、内存降序。x显示没有控制终端的进程。less可换成`head -n 10`显示前10个
      1. `ps -f -C php-fpm`：查看某进程详细信息
      1. `ps -L pid`：查看某进程的线程
+     1. `ps -eLf`：查看线程
    - pstree：树状显示所有进程，`pstree | grep php`
    - pidof：打印pid
    - jstack：查看进程
@@ -885,6 +888,24 @@
      1. `echo $SHELL`：查看
      1. `export PATH=xx:$PATH`：临时修改PATH，用:连接，用$PATH防止覆盖。仅对当前用户立即生效，关闭窗口后无效，
      1. `source .bash_profile`：使生效，修改后要么重新登录要么用source
+1. ulimit
+   - 认识：用户资源限制，生产环境配置：![avatar](../images/ulimit.png)
+   - 分类
+   - -a：列出所有资源极限
+   - -c：设置core文件最大值
+   - -d：设置一个进程数据段的最大值
+   - -f：Shell创建文件的文件大小的最大值
+   - -h：指定设置某个给定资源的硬极限。如果用户拥有 root 用户权限，可以增大硬极限。任何用户均可减少硬极限
+   - -l：可以锁住的物理内存的最大值
+   - -m：可以使用的常驻内存的最大值
+   - -n：每个进程可以同时打开的最大文件数
+   - -p：设置管道的最大值，单位为block，1block=512bytes
+   - -s：指定堆栈的最大值：单位：kbytes
+   - -S：指定为给定的资源设置软极限。软极限可增大到硬极限的值。如果 -H 和 -S 标志均未指定，极限适用于以上二者
+   - -t：指定每个进程所使用的秒数,单位：seconds
+   - -u：可以运行的最大并发进程数
+   - -v：Shell可使用的最大的虚拟内存，单位：kbytes
+   - -x：最多能拿到的文件锁数量
 1. 输入输出
    - 分类
      1. 标准输入文件stdin 0

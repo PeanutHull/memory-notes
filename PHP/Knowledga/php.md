@@ -264,6 +264,7 @@
      1. 匹配手机号：`preg_match("/^(1([34578]))\d{9}$/", $mobile)`
      1. 4到6位数字：`preg_match("/^\d{4,6}$/", $code)`
      1. 匹配中文+数字，不能是纯中文，也不是纯数字：`preg_match('/^(?!\d+$)(?![\x{4e00}-\x{9fa5}]+$)[\x{4e00}-\x{9fa5}\d]+$/u', $string)`
+     1. 匹配英文逗号分隔数字：`!preg_match('/^\d+(\,\d+){0,}$/', $params['ids'])`
      1. 匹配img标签中的src值
         ```php
         $str = '<img id="aa" src="aa.jpg">';
@@ -273,13 +274,15 @@
         ```
 1. 错误和异常
    - 理解：Error和Exception都实现了Throwable接口，可用`handler(Throwable $e)`
-     1. 错误：错误不能以异常的形式捕获，php7中大多数错误被作为Error抛出，可用`Error`或`Throwable`捕获，Exception不可以
+     1. 错误：错误不能以异常的形式捕获，php7中大多数错误被作为Error抛出，可用`Error`或`Throwable`捕获，不捕获就变为fatal_error，Exception不可以捕获错误。Throwable不可以捕获notice如`$a['notExist']`
         - 类型
-          1. E_ERROR/E_WARNING/E_PARSE/E_NOTICE：错误、警告、解析、注意
-          1. E_STRICT/E_RECOVERABLE_ERROR/E_DEPRECATED/E_ALL
-          1. E_CORE_ERROR, E_CORE_WARNING：引擎产生
-          1. E_COMPILE_ERROR, E_COMPILE_WARNING：引擎产生
-          1. E_USER_ERROR, E_USER_WARNING, E_USER_NOTICE, E_USER_DEPRECATED：用户级
+          1. E_PARSE、E_ERROR、E_WARNING、E_NOTICE：语法解析错误、致命错误暂停执行脚本、警告、注意
+          1. E_USER_ERROR、E_USER_WARNING、E_USER_NOTICE、E_USER_DEPRECATED：用户自定义的用trigger_error触发的
+          1. E_CORE_ERROR, E_CORE_WARNING、E_COMPILE_ERROR, E_COMPILE_WARNING：php核心、编译的错误和警告
+          1. E_ALL：所有的错误和警告，不包括E_STRICT
+          1. E_STRICT：编码标准化警告
+          1. E_RECOVERABLE_ERROR：可被捕捉的致命错误，如果没有set_error_handler捕捉，就变为E_ERROR并停止运行
+          1. E_DEPRECATED：运行时通知。会对在未来版本中可能无法正常工作的代码给出警告
    - 使用
      1. 处理
         - set_exception_handler/set_error_handler：设置异常、错误处理时的函数，不能捕获E_ERROR、E_PARSE
