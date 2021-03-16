@@ -279,18 +279,95 @@ function authCode($string, $key = '', $operation = 'DECODE')
     return str_replace('=', '', base64_encode($result));
 }
 ```
-### 其他
-1. 获得毫秒数
-    ```
-    list($t1, $t2) = explode(' ', microtime());
-    return (float)sprintf('%.0f',(floatval($t1)+floatval($t2))*1000);
-    ```
+### 脚本
 1. php阻止重复执行脚本
     ```
     cli_set_process_title('worker');                                // 设定脚本title
     $cmd = "ps aux | grep -i 'worker' | grep -v grep | wc -l";      // 检查是否有相同的脚本正在运行
     $rt = shell_exec($cmd);
     return trim($rt) > 1 ? true : false;
+    ```
+1. 主动重启、信号处理
+   - 意义
+     1. 常驻进程防止内存泄露
+     1. 程序优雅退出，防止数据处理一半造成错误
+   - 实现
+     1. $this->loop总体控制while循环是否退出
+     1. 时间减法确定是否重启
+     1. pcntl信号处理
+   - 代码
+    ```php
+    $job = new Job();
+    $job->handle();
+    class Job
+    {
+        const MAX_RUN_TIME = 3600;  //最长运行1小时
+        private $redis;
+        private $loop = true;
+        private $startTime;
+        public function __()
+        {
+            //信号安装
+            $this->installSignal();
+            $this->redis = new \Redis();
+            $this->redis->connect('127.0.0.1', 6379);
+        }
+        //处理函数
+        public function handle()
+        {
+            $this->startTime = time();
+            while($this->loop) {
+                //检查运行时间
+                $this->checkRunTime();
+                //信号分发
+                pcntl_signal_dispatch();
+                $data = $this->redis->lPop('QUEUE:JOB');
+                if(!$data) {
+                    sleep(5);       //spare sleep
+                    continue;
+                }
+                //do data
+                //比如：将数据存储到文件中……
+                file_put_contents('/data/data.txt', $data, FILE_APPEND);
+            }
+        }
+        //检查运行时间
+        private function checkRunTime()
+        {
+            if (time() - $this->startTime > self::MAX_RUN_TIME) {
+                $this->loop = false;
+            }
+        }
+        //信号安装
+        function installSignal()
+        {
+            //绑定QUIT信号
+            pcntl_signal(SIGQUIT, array($this, 'sigalHndler'));
+            pcntl_signal(SIGTERM, array($this, 'sigalHndler'));
+            pcntl_signal(SIGHUP, array($this, 'sigalHndler'));
+            pcntl_signal(SIGINT, array($this, 'sigalHndler'));
+        }
+        //信号处理函数
+        private function sigalHndler($signo)
+        {
+            switch ($signo) {
+                case SIGTERM:
+                case SIGHUP:
+                case SIGINT:
+                case SIGQUIT:
+                    $this->loop = false;
+                    break;
+                default:
+                    // 处理所有其他信号
+            }
+        }
+    }
+    ```
+### 其他
+1. 获得毫秒数
+    ```
+    list($t1, $t2) = explode(' ', microtime());
+    return (float)sprintf('%.0f',(floatval($t1)+floatval($t2))*1000);
     ```
 1. php监听队列消息
     ```php

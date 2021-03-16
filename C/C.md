@@ -526,7 +526,15 @@
    - c-ares：提供异步dns
    - OpenSSL
    - zlib
-   - libevent：对epoll的封装
+   - libeio：异步io库，提供了比较齐全的异步文件操作，能够让使用者写出非阻塞程序
+   - libev：事件通知库
+   - libevent：c写的轻量级的开源高性能事件通知库，对epoll的封装
+     1. 事件驱动，高性能
+     1. 支持多种io多路复用技术epoll、poll、dev/poll、select、kqueue等
+     1. 支持io、定时器、信号等事件
+     1. 注册事件优先级
+     1. 轻量级，专注于网络：源代码精练
+     1. 跨平台，支持windows、linux、mac等
 1. 标准库
    - <stdlib.h>：通用工具函数
      1. 库变量：size_t、wchar_t、div_t、ldiv_t
@@ -708,6 +716,8 @@
      1. 结构模板定义
      1. 类型定义
 1. 编译工具
+   - m4：类似宏处理器的编程语言，经常被用来生成makefile的脚本语言来使用，后缀.m4
+     1. 是POSIX标准中的一部分，所有版本的unix都可用，但大多数人需要m4仅仅是因为GNU autoconf中的“configure”脚本依赖它
    - make：智能的批处理工具，本身不能编译和链接，按照用户指令工作，可以执行makefile
      1. 用以解决：只有一个源文件时可以用gcc编译，多了以后容易混乱、工作量大
    - makefile：类似于批处理的"脚本"文件，内含编译等指令，换个平台就需要重新编写

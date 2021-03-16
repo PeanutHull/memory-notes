@@ -421,17 +421,17 @@
    - 查看/设置允许打开的最大文件句柄数：`ulimit -n xx`，重启或用户退出失效
 1. 杀死
    - 分类
-     1. kill：发信号
-        - -2：SIGINT
-        - -4：SIGTERM
+     1. kill：发指定的信号
      1. killall：按照名字消灭进程
      1. pkill：根据名字和其它属性查看、发出信号
      1. skill：发送信号、报告进程状态
    - 参数
-     1. -USR2 pid
-     1. -QUIT：从容
-     1. -TERM：快速
-     1. -9 pid：强制
+     1. -HUP：1，重载配置
+     1. -2：SIGINT，即ctrl+c
+     1. -QUIT：3，从容关闭
+     1. -TERM：15，快速关闭，默认的，杀死没俘获该信号的进程
+     1. -KILL：9，强制关闭，该信号不能被捕获
+     1. -USR1/USR2 pid：用户定义
    - 应用
      1. 杀死僵死进程：`ps -ef | grep defunct | grep -v grep | cut -b8-20 | xargs kill -9`
      1. 杀死所有fpm：`ps -ef | grep php-fpm | awk -F ' ' '{print $2}' | xargs kill -9`
@@ -533,6 +533,8 @@
 1. 相关库、框架
    - OpenSSL：是用于TLS和SSL的工具包和加密库，可用来进行安全通信，包含了SSL协议库、应用程序、密码算法库
    - Socket：应用层与各种网络协议通信的中间软件抽象层，是一组调用接口/API/封装。用socket组织数据，兼容多网络协议，负责程序通信，以符合指定的协议
+1. 网络
+   - netcat：tcp/ip的瑞士军刀，体积小，功能灵活
 ### shell
 1. 理解：壳，命令行解释器，利用ASCII码表转换将命令传给内核，敲命令的界面就是shell。支持命令执行、条件判断、循环控制
 1. 运算符：expr、let
@@ -824,6 +826,8 @@
      1. `cat /etc/redhat-release`：查看centos版本
      1. `cat /proc/version`：查看内核版本
      1. `getconf LONG_BIT`：查看centos位数
+   - 内核
+     1. `cat /proc/sys/kernel`
    - 硬件
      1. `cat /proc/cpuinfo`：cpu信息
      1. `lscpu`：cpu信息

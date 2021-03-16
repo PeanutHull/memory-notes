@@ -161,7 +161,11 @@
    - 开发
      1. config.m4：PHP_ARG_WITH、PHP_ARG_ENABLE
      1. php_xx.h、xx.c
-1. posix/pcntl：多进程管理，属于php的进程
+1. posix/pcntl：进程管理扩展，用于进程创建、信号处理、进程中断，仅用于linux，window没有，fpm模式会有意外问题
+   - pcntl_fork
+   - pcntl_signal_dispatch
+   - pcntl_signal
+1. POSIX：提供了在POSIX中定义的函数的接口，如posix_kill，posix_access
 1. php5和php7的扩展大部分都不一样了
 ### swoole
 1. 组成
