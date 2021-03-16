@@ -1,3 +1,16 @@
+### YAC
+1. 认识：Yet Another cache，无锁的共享内存的用户数据缓存，可进程间共享内存数据，相当于本机kv缓存，可以代替apc和memcache
+1. 操作
+   - set：覆盖新增
+   - add：新增，已存在无法覆盖，返回false
+   - get：获取，不会删除
+   - dump：查看指定数量的key的信息
+   - delete：删除
+   - flush：全部删除
+   - info：yac整体状态
+### YAR
+1. 认识：yet another RPC framework，可并行的支持msgpack/json/php打包协议的rpc框架，基于HTTP协议, 在libcurl基础上开发而成
+   - RPC框架：xml-rpc, soap
 ### ThinkPHP
 1. 结构
    - URL模式：普通(get参数形式)、PATHINFO、REWRITE、兼容(不支持PATHINFO)。优点排序：REWRITE>PATHINFO>普通

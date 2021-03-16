@@ -109,6 +109,17 @@
      1. 效率：和直接read、write差不多
      1. 内存流：创建fmemopen、open_memstream、open_wmemstream
 1. 系统数据文件和信息
+1. 文件类型
+   - 套接字
+   - 普通文件
+   - 目录文件
+   - 符号链接
+   - 设备文件
+   - FIFO
+1. 文件描述符fd分类
+   - 进程级fd表
+   - 系统级fd表
+   - 文件系统的iNode表
 ### 高级IO
 1. 阻塞io原理
    - read后：进程进入阻塞态
@@ -150,7 +161,7 @@
         - 其他：select函数监视的文件描述符分3类，分别是writefds、readfds、和exceptfds
    - poll：指定描述符数组、变动条件、等待时间
      1. 理解：链表保存文件描述符，没有文件数量限制，其他缺点存在。直到设备就绪或主动超时，poll被唤醒后又要再次遍历fd，这个过程经历了多次无谓的遍历
-   - epoll：epoll模型是Linux2.6以上内核高性能网络I/O模型，如果FreeBSD用kqueue，只支持pipe/网络产生的fd，不支持文件系统产生的，即Reactor模式
+   - epoll：epoll模型是Linux2.6以上内核高性能网络I/O模型，如果FreeBSD用kqueue，只支持pipe/网络产生的fd，不支持文件系统产生的，即Reactor模式，红黑树管理，log(n)
      1. 认识：即eventpoll，事件机制，linux自带，没有描述符限制，不会因为fd数量而效率下降，利用mmap()文件映射内存加速与内核的消息传递，利用回调激活描述符，并在调用wait时得到通知
      1. 过程：在内核申请简易文件系统(B+树)，然后
         - 调用epoll_create()建立一个epoll对象(在epoll文件系统中为这个句柄对象分配资源)。此调用返回一个句柄，之后所有都依靠这个句柄来标识
@@ -170,6 +181,8 @@
    - libuv
      1. epoll支持的，用epoll_wait
      1. 文件处理/DNS解析/解压缩等，使用工作线程进行处理，将请求和结果通过两个队列建立联系，由pipe与主线程通信，epoll监听该fd来确定读取队列的时机
+1. 阻塞io：结合io多路复用，就是这俩图的流程，只是步骤不同而已![avatar](../images/block_io.png)
+1. io多路复用：![avatar](../images/select_io.png)
 1. 比较：![avatar](../images/io_compare.png)
 1. IO：cpu对n内存以外的设备进行读取，如硬盘和网卡。调用recv作为例子从套接字上接收一个消息，因为是一个系统调用，所以调用时会从用户进程空间切换到内核空间运行一段时间再切换回来，网络数据到达并且复制到用户进程空间或者发生错误时返回，以下为io模型
    - 阻塞io模型：recv默认参数，一直等数据直到拷贝到用户空间，这段时间内进程始终阻塞
@@ -562,6 +575,12 @@
 1. 使用
    - `#include <pthread.h> `
    - 链接libpthread.so：`gcc program.o -o program -lpthread`
+1. 线程实现方式
+   - 内核级
+   - 用户级：用户自行调度，内核无法干涉，依赖的内核线程阻塞了所有都阻塞
+   - 组合方式
+     1. python：提供Thread线程对象，yield、await、async等关键字，asyncio等协程库
+1. cas：Compare and Swap, 比较并交换
 ### 进程间通信
 1. 理解：缩写IPC
 1. 管道

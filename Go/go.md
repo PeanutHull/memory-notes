@@ -645,9 +645,10 @@
    - `archive.tar`
    - `archive.zip`
 1. reflect
-   - TypeOf/Type
-   - ValueOf/Value
-   - Elem：指针指向的元素类型
+   - TypeOf()/Type()
+   - ValueOf()/Value()
+     1. CanSet()
+   - Elem()：指针指向的元素类型
 1. runtime
    - `runtime.GOMAXPROCS`：使用最大核心数
    - `runtime.NumCPU`：cpu核心数
@@ -1009,7 +1010,7 @@
      1. 基础数据类型
         - iota
         - nil、bool、false、true、byte、string
-        - int、int8、int16、int32、int64、uint、uint8、uint16、uint32、uint64、uintprt、float32、float64、complex、complex64、complex128
+        - int、int8、int16、int32、int64、uint、uint8、uint16、uint32、uint64、uintptr、float32、float64、complex、complex64、complex128
         - imag、panic、recover
      1. 内嵌函数
         - copy、append、cap、close、len、real
@@ -1023,5 +1024,5 @@
    - 1.11
      1. 库文件管理模块go module
 1. wiki
-   - int/uint/uintptr受系统位数影响
+   - int/uint/uintptr受系统位数影响，64位系统就是64位
 1. 测试：go test和testing包

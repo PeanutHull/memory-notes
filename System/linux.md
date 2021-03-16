@@ -847,7 +847,7 @@
           1. `mpstat -P ALL 5 2`：分别查看每个cpu
    - 全局监控
      1. top/htop：查看系统性能，htop高亮，3秒刷新一次
-     1. sar：System Activity Reporter 系统活动情况报告，最全面的系统性能分析工具之一，可以看文件读写、系统调用情况、磁盘I/O、CPU效率、内存使用、进程活动及IPC等
+     1. sar：System Activity Reporter 系统活动情况报告，最全面的系统性能分析工具之一，可以看文件读写、系统调用情况、磁盘I/O、CPU效率、内存使用、进程活动及IPC等，查看上下文切换数量`sar -w 1 10`
         - -A：所有报告的总和
 
         - -p：报告每个CPU的状态

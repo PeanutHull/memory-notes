@@ -60,24 +60,24 @@
         ```
 ### Trait
 1. 理解：特质,是一种为类似PHP的单继承语言而准备的代码复用机制，使开发人员能够自由地在不同层次结构的独立的类中复用方法集。来避免传统多继承和混入类（Mixin）相关的典型问题，就是先定义trait，用use给类插入代码，代码复用，属于类与对象，v5.4
-```php
-class Base {
-    public function sayHello () {
-        echo 'Hello ' ;
+    ```php
+    class Base {
+        public function sayHello () {
+            echo 'Hello ' ;
+        }
     }
-}
-trait SayWorld {
-    public function sayHello () {
-        parent::sayHello();
-        echo 'World!';
+    trait SayWorld {
+        public function sayHello () {
+            parent::sayHello();
+            echo 'World!';
+        }
     }
-}
-class MyHelloWorld extends Base {
-    use SayWorld;
-}
-$o = new MyHelloWorld();
-$o->sayHello ();                        // 输出Hello World!
-```
+    class MyHelloWorld extends Base {
+        use SayWorld;
+    }
+    $o = new MyHelloWorld();
+    $o->sayHello ();                        // 输出Hello World!
+    ```
 ### Reflection
 1. 理解：反射，是在php运行过程中分析php程序，提取类/对象/方法/属性/参数/注释等信息。获取信息和调用对象的方法叫做反射api，是php内建的oop扩展
 1. 分类
@@ -100,7 +100,7 @@ $o->sayHello ();                        // 输出Hello World!
         - get_defined_functions/get_defined_vars/get_called_class/get_declared_interfaces/func_get_args
      1. 使用
         - call_user_func/forward_static_call
-#### 协程
+### 协程
 1. 理解：协作式的用户态"线程"，任务调度器，在用户程序中实现了协作式任务调度，是在同一进程或线程中运行多个任务，将任务切换的部分工作从内核转移到应用层
 1. 特点
    - 以写同步代码的方式写出异步代码般的效率
@@ -123,56 +123,24 @@ $o->sayHello ();                        // 输出Hello World!
     var_dump($myGen->current());
     var_dump($myGen->send("main send"));
     ```
-#### SPL
-1. 理解：Standard PHP Library，PHP标准库，用于解决典型问题的一组接口和类的集合
-1. 数据结构：对应数据的存储结构，数据的存储和操作
-   - 双向链表：SplQueue
-   - 堆：SplStack
-   - 阵列：SplFixedArray
-   - 映射：SplObjectStorage
-1. 迭代器：以不同的方式来遍历操作的对象，提供了对应数据类型的迭代器。虽然更多的代码，但是高度重用且可测试，都可以尝试下spl的迭代器，或许能改变你编写传统代码的习惯
-```php
-class RecursiveFileFilterIterator extends FilterIterator {
-
-    // 满足条件的扩展名
-    protected $ext = array('jpg','gif');
-    // 提供 $path 并生成对应的目录迭代器
-    public function __construct($path) {
-        parent::__construct(new RecursiveIteratorIterator(new RecursiveDirectoryIterator($path)));
-    }
-    // 检查文件扩展名是否满足条件
-    public function accept() {
-        $item = $this->getInnerIterator();
-        if ($item->isFile() && in_array(pathinfo($item->getFilename(), PATHINFO_EXTENSION), $this->ext)) {
-            return TRUE;
-        }
-    }
-}
-
-// 实例化
-foreach (new RecursiveFileFilterIterator('/path/to/something') as $item) {
-    echo $item . PHP_EOL;
-}
-```
-1. 其他spl函数：文件处理、接口、异常、类和接口
 ### PSR
 1. 解释：PHP Standards Recommendation，php推荐标准，是PHP-FIG组织制定的php推荐书写标准
 1. 分类
-   - PSR-1：基本的代码风格
-     1. 标签   php代码必须在<?php ?>中
-     1. 编码   必须使用utf8，不能有字节顺序标记(BOM Byte Order Mark)
-     1. 常量   全部大写，可用下划线
-     1. 类名   必须驼峰
-     1. 方法名 小写开头+驼峰
-     1. 加载   命名空间和类必须遵守psr-4自动加载器标准
-     1. 目的   一个php文件，要么定义符号，要么执行操作，不能同时做
-   - PSR-2：严格的代码风格
-     1. 贯彻   首先遵守psr-1
-     1. 缩进   四个空格
-     1. 文件和代码行、关键字、命名空间、类、方法、可见性、控制结构
-   - PSR-3：日志记录器接口，不是指导，是一个接口
-   - PSR-4：自动加载，命名空间前缀和文件系统的目录对应起来，代替PSR-0(已弃用)
-   - PSR-7：http通信标准
+    - PSR-1：基本的代码风格
+        1. 标签   php代码必须在<?php ?>中
+        1. 编码   必须使用utf8，不能有字节顺序标记(BOM Byte Order Mark)
+        1. 常量   全部大写，可用下划线
+        1. 类名   必须驼峰
+        1. 方法名 小写开头+驼峰
+        1. 加载   命名空间和类必须遵守psr-4自动加载器标准
+        1. 目的   一个php文件，要么定义符号，要么执行操作，不能同时做
+    - PSR-2：严格的代码风格
+        1. 贯彻   首先遵守psr-1
+        1. 缩进   四个空格
+        1. 文件和代码行、关键字、命名空间、类、方法、可见性、控制结构
+    - PSR-3：日志记录器接口，不是指导，是一个接口
+    - PSR-4：自动加载，命名空间前缀和文件系统的目录对应起来，代替PSR-0(已弃用)
+    - PSR-7：http通信标准
 1. 注释书写参考
    - @access
    - @param  string|array
@@ -181,6 +149,53 @@ foreach (new RecursiveFileFilterIterator('/path/to/something') as $item) {
    - @desc
    - @example
    - @version
+### SPL
+1. 理解：Standard PHP Library，PHP标准库，用于解决典型问题的一组接口和类的集合
+1. 数据结构：对应数据的存储结构，数据的存储和操作
+   - 双向链表：SplQueue
+   - 堆：SplStack
+   - 阵列：SplFixedArray
+   - 映射：SplObjectStorage
+1. 迭代器：以不同的方式来遍历操作的对象，提供了对应数据类型的迭代器。虽然更多的代码，但是高度重用且可测试，都可以尝试下spl的迭代器，或许能改变你编写传统代码的习惯
+    ```php
+    class RecursiveFileFilterIterator extends FilterIterator {
+
+        // 满足条件的扩展名
+        protected $ext = array('jpg','gif');
+        // 提供 $path 并生成对应的目录迭代器
+        public function __construct($path) {
+            parent::__construct(new RecursiveIteratorIterator(new RecursiveDirectoryIterator($path)));
+        }
+        // 检查文件扩展名是否满足条件
+        public function accept() {
+            $item = $this->getInnerIterator();
+            if ($item->isFile() && in_array(pathinfo($item->getFilename(), PATHINFO_EXTENSION), $this->ext)) {
+                return TRUE;
+            }
+        }
+    }
+
+    // 实例化
+    foreach (new RecursiveFileFilterIterator('/path/to/something') as $item) {
+        echo $item . PHP_EOL;
+    }
+    ```
+1. 其他spl函数：文件处理、接口、异常、类和接口
+### Opcache
+1. 认识：将opcode存储到共享内存中来提升性能，省去了每次加载和解析php脚本的开销，同时还应用了一些代码优化模式使之更快。还有WinCache
+1. 方法
+   - opcache_get_status()：状态信息
+   - opcache_get_configuration()：获取配置
+   - opcache_is_script_cached()：判断是否缓存
+
+   - opcache_compile_file()：编译并缓存php脚本
+   - opcache_invalidate()：废除缓存
+   - opcache_reset()：重置所有缓存内容
+1. 运维
+   - `opcache.enable`：默认关闭，开启后需重启php
+   - `opcache.enable_file_override`：用于file_exists、is_file、is_readable的缓存
+   - `opcache.validate_timestamps`：每隔`opcache.revalidate_freq`秒检查脚本是否更新，设置2~5合适，高了更新不及时，性能提升有限
+1. 其他优化器：APC、xcache、eAccelerator
 ### Swoole
 1. 理解：面向生产环境的php异步网络通信引擎，可以编写高性能的异步并发TCP/UDP/Unix Socket/HTTP/WebSocket服务
    - 纯C编写，提供php语言的异步多线程服务器
@@ -301,12 +316,6 @@ foreach (new RecursiveFileFilterIterator('/path/to/something') as $item) {
      1. 上桩：继承类并覆盖方法、值，模拟数据对象
    - 代码覆盖算法：大致上对比准确性：路径覆盖 > 条件覆盖 ~= 判定覆盖 > 语句覆盖
    - 其他框架：JUnit
-### Opcache
-1. 认识：将php预编译的字节码存储到共享内存中来提升性能，省去了每次加载和解析php脚本的开销，同时还应用了一些代码优化模式。还有WinCache
-1. 运维
-   - `opcache.enable`：默认关闭，开启后需重启php
-   - `opcache.enable_file_override`：用于file_exists、is_file、is_readable的缓存，
-   - `opcache.validate_timestamps`：每隔`opcache.revalidate_freq`秒检查脚本是否更新
 ### 其他
 1. 多线程：pthreads
 1. 消息队列：gearman

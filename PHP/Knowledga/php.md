@@ -290,6 +290,7 @@
         - error_get_last/error_clear_last
         - trigger_error：抛出用户级错误
         - error_log/debug_backtrace/debug_print_backtrace：产生一条回溯跟踪
+        - @：错误控制运算符，放在表达式前，该表达式可生的任何错误信息都被忽略
      1. 显示控制
         - display_errors
         - error_reporting：除了NOTICE的写法，`(E_ALL & ~E_NOTICE)`或`(E_ALL ^ ~E_NOTICE)`
