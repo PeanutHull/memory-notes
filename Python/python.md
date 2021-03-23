@@ -354,6 +354,46 @@
      1. pandas：数据分析
      1. scipy：科学计算
      1. matplotlib：绘图库，给命令，生成图
+### 协程
+1. 协程学习目录
+   - 基础知识
+     1. 用户态和内核态
+     1. 同步和异步
+     1. 并行和并发
+     1. 计算密集型和io密集型
+   - 线程和进程
+     1. 进程五态模型，调度方式
+     1. 线程的实现方式
+     1. 上下文切换
+     1. 协程本质
+   - 多线程实践
+     1. 线程池
+     1. 线程池标准库ThreadPoolExecutor
+     1. 控制变量法分析
+   - pyhron解释器GIL
+   - 多进程实践
+     1. 进程池标准库ProcessPoolExecutor
+     1. 多进程局限性
+     1. 进程和线程比较，进程更重，更占资源
+   - 生成器协程
+     1. 学完好好补充一下
+   - 实现生成器协程调度器
+     1. 学完好好补充一下
+   - 事件驱动编程
+     1. socket编程
+     1. fd认识
+     1. tcp服务器原理
+     1. 网络io模型认识
+     1. 事件驱动编程原理和实现
+   - 协程调度器
+     1. async，await，可等待对象和future，协程调度器eventLoop
+     1. socket协程适配器SocketWrapper
+     1. 事件驱动在调度器的应用
+     1. 协程tcp网络服务器
+   - python协程生态
+     1. aiohttp和aiodns基于asyncio的第三方库
+1. 生成器：yield
+1. 协程：async，await
 ### pro
 1. 函数式编程
    - 基础函数：filter、map、reduce

@@ -1,7 +1,10 @@
 ### 基础
 1. 基础
    - 注释 ：--、#、/**/=
-   - 变量：基于会话，用户变量不区分大小写。定义 `set @a:=/=1`
+   - 不区分大小写
+   - 符号
+     1. %百分号通配符: 表示任何字符出现任意次数 (可以是0次).
+     1. _下划线通配符:表示只能匹配单个字符,不能多也不能少,就是一个字符.
 1. 数据类型
    - 数字
      1. 整数
@@ -35,6 +38,59 @@
      1. enum：枚举，0~65535，如`enum('','')`
      1. set：集合，0~64，可以存一个集合，如`set('','')`
      1. json：5.7.8支持，与longtext大小差不多，不能有默认值，不能直接被编为索引，可以在虚拟列上创建
+1. 变量
+   - 分类
+     1. 局部变量：必须在存储过程中并且在最开始写
+        ```sql
+        BEGIN
+            # 定义
+            declare xx int(4);
+
+            # 直接赋值
+            set xx = 2;
+
+            #使用查询结果赋值
+            select id into xx from xxx where xxxx = 'xxxx';
+        END
+        ```
+     1. 用户变量：作用域是当前连接，声明、赋值、查询都用@符号
+        ```sql
+        # 声明、赋值
+        set @xx = 2;
+        set @xx := 2;
+        select id into @xx from xxx where xxxx = 'xxxx';
+        ```
+     1. 会话变量：作用域是当前连接
+        ```sql
+        # 显示所有的会话变量
+        show session variables;
+
+        # 查询
+        show variables like '%auto_increment_increment%';   #查询变量值的通用方式
+        select @@auto_increment_increment;                  #使用@@方式查询
+        select @@session.auto_increment_increment;          
+        select @@local.auto_increment_increment;            
+
+        # 设置
+        set auto_increment_increment=1;                     #直接设置
+        set session auto_increment_increment=1;             #使用session关键字，设置选定的范围
+        set @@session.auto_increment_increment=1;           
+        set @@local.auto_increment_increment=1;             
+        ```
+     1. 全局变量：作用域是server整个生命周期
+        ```sql
+        # 显示所有的全局变量
+        show global variables;
+
+        # 查询
+        show variables like '%sql_warnings%';               #查询变量值的通用方式
+        select @@global.sql_warnings;                       
+
+        # 设置
+        set sql_warnings = FALSE;                           #直接设置
+        set global sql_warnings = FALSE;                    #使用global关键字，设置选定的范围，最好加上global
+        set @@global.sql_warnings = OFF;                    
+        ```
 1. 函数
    - 数学：format/round/pow/abs/sin/cos/tan/bit_and
    - 字符串：char/concat/length  

@@ -548,3 +548,32 @@
    - 先读缓存，没有则读数据库，再set回缓存(可加锁防止数据库雪崩)
 1. 写的时候
    - 先del缓存(不能set，否则不一致)，再写数据库————读的时候初始化就行，不能反过来，否则缓存可能有问题
+### 项目管理
+1. 配置方式
+   - jenkins判断.release、.online
+   - .env
+   - 环境变量
+   - k8s的配置中心
+1. composer
+   - composer.lock提交到代码库，利用lock文件确认深层次依赖中每一个的版本号，命令` composer install -vvv --no-dev --ignore-platform-reqs --no-interaction --optimize-autoloader`
+1. 文件结构（App、helper、Exceptions、Libraries、logs、vendor 、common、.env  等）
+2. 日志使用规范（项目日志、nginx日志、日志级别）
+   - 链路追踪
+   - 程序日志
+3. 异常使用规范
+   - 统一异常捕获
+   - 区分框架异常、业务异常
+4. 多版本开发 （v1、v2等）
+5. API 路由规范
+7. docker 镜像管理
+8. 其他细节（return、helper、composer）
+   - 一个方法只有一个return, 只返回一种类型
+   - 框架原生语法封装 （数据库、日志、curl等）：以后换的时候只改一个地方
+   - 返回码：stat、code、data、msg、trace_id
+   - 多版本开发，v1、v2，就是提高代码复用率
+9. 维护（监控、报警、配置管理）
+### 技术方案
+1. 确定目标：性能要求，扩展性要求(提效，技术层面、业务层面)，接口标准
+1. 系统设计：架构设计、数据库设计、数据结构设计
+1. 核心技术：关键技术点
+1. 影响范围：测试用例点、上下游业务影响范围等
