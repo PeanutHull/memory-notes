@@ -81,6 +81,8 @@
    - Latency：延时
    - Throughput：吞吐
    - Response Time：响应时间
+1. 协议
+   - SPDY：google的基于tcp的
 ### ARP
 1. 认识：Address Resolution Protocol，地址解析协议，通过ip拿mac地址，先局域网广播询问物理地址，之后缓存一段时间，ipV6中用NDP代替
    - RARP：反向地址转换协议

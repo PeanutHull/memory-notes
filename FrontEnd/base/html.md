@@ -23,7 +23,13 @@
      1. 对标签：包含起始和结束标签，内容写在对标签中间，属性写在起始标签括号内
      1. 单标签
    - 组成
-     1. a：可以打开一个超链接，超链接是网络的灵魂。属性：`target="_blank"`、`href="跳转位置的元素、ID、class，#为顶部"`
+     1. a：可以打开一个超链接，超链接是网络的灵魂。属性：`target="_blank"`、`href="跳转位置的元素、ID、class，#id表示锚点作定位器"`
+        - target：
+          1. _self    当前窗口（默认）
+          1. _blank    新窗口
+          1. _parent 父框架集
+          1. _top 整个窗口
+          1. _framename 指定框架
      1. img：属性：title(鼠标停留的显示)、alt(加载失败文本提示和seo指定图片内容)，可以做热点地图
      1. span、h1~h6、strong、em、u
      1. ul/li/ol：属性：`list-style:none`、`colspan`、`rowspan`

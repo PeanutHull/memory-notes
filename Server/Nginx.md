@@ -11,7 +11,8 @@
    - 虚拟主机：实现一台服务器虚拟出多个网站
    - 反向代理、负载均衡
 ### 配置
-1. nginx层级：http-->server-->location
+1. 认识：一门微型的编程语言
+   - 层级：http-->server-->location
 1. nginx.conf配置
     ```lua
     user                        www;                            # 用户和用户组
@@ -50,6 +51,15 @@
     }
     ```
 1. location配置，匹配路径
+   - 语法：优先级递减
+     1. =     精确匹配    1
+     1. ^~    以某个字符串开头    2
+     1. ~     区分大小写的正则匹配    3
+     1. ~*    不区分大小写的正则匹配    4
+     1. !~    区分大小写不匹配的正则    5
+     1. !~*   不区分大小写不匹配的正则    6
+     1. /     通用匹配，任何请求都会匹配到    7
+   - 实例
     ```lua
     location / {
         root   html;
@@ -105,6 +115,15 @@
         add_header headerName headerValue
     }
     ```
+1. 变量
+   - 认识：$开头
+   - 分类
+     1. 请求类
+        - $https
+        - $uri
+        - $http_cookie
+        - $args：请求的参数值
+     1. 自身类
 1. 超时时间
    - proxy_connect_timeout：和后端服务器的连接(发起握手后的)等待超时时间
    - proxy_read_timeout：等待后端服务器的响应超时时间
@@ -118,6 +137,11 @@
    - client_max_body_size 500m;              # 客户端请求服务器最大允许大小
    - client_body_buffer_size     128k;       # nginx分配给请求数据的Buffer大小
    - proxy_ignore_client_abort   on;         # 是否开启proxy忽略客户端中断
+1. https：`listen 443 ssl;`
+1. 其他配置文件
+   - mime.types：文件扩展名与文件类型映射表，找不到使用默认default_type
+   - fastcgi.conf/fastcgi_params/uwsgi_params/scgi_params：使用对应cgi时，向cgi传递的变量
+   - koi-utf/koi-win/win-utf：编码转换映射文件
 1. fastcgi的配置：`fastcgi.conf`
     ```conf
     fastcgi_param  SCRIPT_FILENAME    $document_root$fastcgi_script_name;
@@ -146,146 +170,6 @@
     # PHP only, required if PHP was built with --enable-force-cgi-redirect
     fastcgi_param  REDIRECT_STATUS    200;
     ```
-1. 代理线上配置
-    ```lua
-    server { 
-        listen 80;
-        server_name tntapi.xesv5.com ;
-        set_by_lua_block $request_trace_id {
-            local mid = ngx.var.pid..ngx.var.server_addr..ngx.var.remote_addr..ngx.var.connection..ngx.var.connection_requests..ngx.var.bytes_sent..ngx.now()
-            return ngx.md5(mid)
-        }
-        access_log /home/nginx/logs/tntapi.xesv5.com_access.log main;
-        error_page 500 502 503 504  http://www.xueersi.com/wait.html;
-        location /  { 
-            add_header 'Access-Control-Allow-Methods' 'GET,POST,OPTIONS';
-            add_header 'Access-Control-Allow-Credentials' 'true';
-            add_header 'Access-Control-Allow-Origin' '$http_origin';
-            add_header 'Access-Control-Allow-Headers' 'prelogid,Authorization,DNT,User-Agent,Keep-Alive,Content-Type,accept,origin,X-Requested-With,rpcid,traceid,jytoken';
-            proxy_pass http://tntapi.xesv5.com;
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Request-Id $request_trace_id;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_redirect off;
-            client_max_body_size 500m;
-            client_body_buffer_size 128k;
-            proxy_ignore_client_abort on;
-            proxy_connect_timeout 60;
-            proxy_send_timeout 60;
-            proxy_read_timeout 60;
-            proxy_buffer_size 128k;
-            proxy_buffers 32 32k;
-            proxy_busy_buffers_size 128k;
-            proxy_temp_file_write_size 128k;
-            proxy_next_upstream off;
-            add_header X-Request-Id $request_trace_id;
-            add_header "Set-Cookie" "X-Request-Id=$request_trace_id; path=/";
-            add_header Xes-App $upstream_http_server;
-        } 
-    } 
-    ```
-1. 线上业务机配置
-    ```lua
-    user  nobody nobody;
-    worker_processes auto;
-    error_log  /home/nginx/logs/error.log  error;
-    pid        /home/nginx/logs/nginx.pid;
-
-    worker_rlimit_nofile 51200;
-
-    events {
-        use epoll;
-        worker_connections 51200;
-    }
-
-    http {
-        include       mime.types;
-        default_type  application/octet-stream;
-
-        server_names_hash_bucket_size 128;
-        client_header_buffer_size 4k;
-        large_client_header_buffers 4 32k;
-        client_max_body_size 500m;
-
-        sendfile on;
-        tcp_nopush     on;
-
-        server_tag xes-app/bj-sjhl-api-jiaoyan-online-94-32;
-
-        keepalive_timeout 75;
-
-        tcp_nodelay on;
-
-        fastcgi_connect_timeout 300;
-        fastcgi_send_timeout 300;
-        fastcgi_read_timeout 300;
-        fastcgi_buffer_size 256k;
-        fastcgi_buffers 4 256k;
-        fastcgi_busy_buffers_size 512k;
-        fastcgi_temp_file_write_size 512k;
-
-        client_body_buffer_size 256k;
-        send_timeout 3m;
-        proxy_ignore_client_abort on;
-
-        gzip on;
-        gzip_min_length  1k;
-        gzip_buffers     4 16k;
-        gzip_http_version 1.0;
-        gzip_comp_level 2;
-        gzip_types text/plain text/css text/javascript application/json application/javascript application/x-javascript application/xml application/x-httpd-php image/jpeg image/gif image/png font/ttf font/otf image/svg+xml;
-        gzip_vary on;
-
-        server {
-                listen  80;
-                server_name 10.20.94.32;
-
-                location /nginx_status {
-                        stub_status on;
-                        access_log   off;
-                }
-                location ~ ^/(php56fpmstatus)$ {
-                        fastcgi_index index.php;
-                        fastcgi_pass  unix:/dev/shm/php56-cgi.sock;
-                        include fastcgi.conf;
-                }
-
-                location ~ ^/(php7fpmstatus)$ {
-                        fastcgi_index index.php;
-                        fastcgi_pass  unix:/dev/shm/php7-cgi.sock;
-                        include fastcgi.conf;
-                }
-        }
-
-        log_format main '{ "@timestamp": "$time_iso8601", '
-                '"hostname": "$hostname", '
-                '"server_name": "$server_name", '
-                '"xes-app": "$upstream_http_server", '
-                '"remote_addr": "$remote_addr", '
-                '"remote_user": "$remote_user", '
-                '"body_bytes_sent": $body_bytes_sent, '
-                '"request_time": $request_time, '
-                '"upstream_response_time": "$upstream_response_time", '
-                '"status": $status, '
-                '"upstream_status": "$upstream_status", '
-                '"connection_requests": $connection_requests, '
-                '"request": "$request", '
-                '"request_method": "$request_method", '
-               # '"request_body": "$request_body", '
-                '"http_referrer": "$http_referer", '
-                '"http_cookie": "$http_cookie", '
-                '"http_x_request_id": "$http_x_request_id", '
-                '"http_user_agent": "$http_user_agent" }';
-
-        include vhost/*.conf;
-    }
-    ```
-1. https：`listen 443 ssl;`
-1. 其他配置文件
-   - mime.types：文件扩展名与文件类型映射表，找不到使用默认default_type
-   - fastcgi.conf/fastcgi_params/uwsgi_params/scgi_params：使用对应cgi时，向cgi传递的变量
-   - koi-utf/koi-win/win-utf：编码转换映射文件
 ### 应用
 1. gzip压缩：可在任何层级定义，越细优先级越高
     ```lua
@@ -530,6 +414,142 @@
      1. api管理
         - 限流
    - 架构：cdn——负载均衡器——api网关——k8s的ingress控制器——web服务
+### 实际应用
+1. 代理线上配置
+    ```lua
+    server { 
+        listen 80;
+        server_name tntapi.xesv5.com ;
+        set_by_lua_block $request_trace_id {
+            local mid = ngx.var.pid..ngx.var.server_addr..ngx.var.remote_addr..ngx.var.connection..ngx.var.connection_requests..ngx.var.bytes_sent..ngx.now()
+            return ngx.md5(mid)
+        }
+        access_log /home/nginx/logs/tntapi.xesv5.com_access.log main;
+        error_page 500 502 503 504  http://www.xueersi.com/wait.html;
+        location /  { 
+            add_header 'Access-Control-Allow-Methods' 'GET,POST,OPTIONS';
+            add_header 'Access-Control-Allow-Credentials' 'true';
+            add_header 'Access-Control-Allow-Origin' '$http_origin';
+            add_header 'Access-Control-Allow-Headers' 'prelogid,Authorization,DNT,User-Agent,Keep-Alive,Content-Type,accept,origin,X-Requested-With,rpcid,traceid,jytoken';
+            proxy_pass http://tntapi.xesv5.com;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Request-Id $request_trace_id;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_redirect off;
+            client_max_body_size 500m;
+            client_body_buffer_size 128k;
+            proxy_ignore_client_abort on;
+            proxy_connect_timeout 60;
+            proxy_send_timeout 60;
+            proxy_read_timeout 60;
+            proxy_buffer_size 128k;
+            proxy_buffers 32 32k;
+            proxy_busy_buffers_size 128k;
+            proxy_temp_file_write_size 128k;
+            proxy_next_upstream off;
+            add_header X-Request-Id $request_trace_id;
+            add_header "Set-Cookie" "X-Request-Id=$request_trace_id; path=/";
+            add_header Xes-App $upstream_http_server;
+        } 
+    } 
+    ```
+1. 线上业务机配置
+    ```lua
+    user  nobody nobody;
+    worker_processes auto;
+    error_log  /home/nginx/logs/error.log  error;
+    pid        /home/nginx/logs/nginx.pid;
+
+    worker_rlimit_nofile 51200;
+
+    events {
+        use epoll;
+        worker_connections 51200;
+    }
+
+    http {
+        include       mime.types;
+        default_type  application/octet-stream;
+
+        server_names_hash_bucket_size 128;
+        client_header_buffer_size 4k;
+        large_client_header_buffers 4 32k;
+        client_max_body_size 500m;
+
+        sendfile on;
+        tcp_nopush     on;
+
+        server_tag xes-app/bj-sjhl-api-jiaoyan-online-94-32;
+
+        keepalive_timeout 75;
+
+        tcp_nodelay on;
+
+        fastcgi_connect_timeout 300;
+        fastcgi_send_timeout 300;
+        fastcgi_read_timeout 300;
+        fastcgi_buffer_size 256k;
+        fastcgi_buffers 4 256k;
+        fastcgi_busy_buffers_size 512k;
+        fastcgi_temp_file_write_size 512k;
+
+        client_body_buffer_size 256k;
+        send_timeout 3m;
+        proxy_ignore_client_abort on;
+
+        gzip on;
+        gzip_min_length  1k;
+        gzip_buffers     4 16k;
+        gzip_http_version 1.0;
+        gzip_comp_level 2;
+        gzip_types text/plain text/css text/javascript application/json application/javascript application/x-javascript application/xml application/x-httpd-php image/jpeg image/gif image/png font/ttf font/otf image/svg+xml;
+        gzip_vary on;
+
+        server {
+                listen  80;
+                server_name 10.20.94.32;
+
+                location /nginx_status {
+                        stub_status on;
+                        access_log   off;
+                }
+                location ~ ^/(php56fpmstatus)$ {
+                        fastcgi_index index.php;
+                        fastcgi_pass  unix:/dev/shm/php56-cgi.sock;
+                        include fastcgi.conf;
+                }
+
+                location ~ ^/(php7fpmstatus)$ {
+                        fastcgi_index index.php;
+                        fastcgi_pass  unix:/dev/shm/php7-cgi.sock;
+                        include fastcgi.conf;
+                }
+        }
+
+        log_format main '{ "@timestamp": "$time_iso8601", '
+                '"hostname": "$hostname", '
+                '"server_name": "$server_name", '
+                '"xes-app": "$upstream_http_server", '
+                '"remote_addr": "$remote_addr", '
+                '"remote_user": "$remote_user", '
+                '"body_bytes_sent": $body_bytes_sent, '
+                '"request_time": $request_time, '
+                '"upstream_response_time": "$upstream_response_time", '
+                '"status": $status, '
+                '"upstream_status": "$upstream_status", '
+                '"connection_requests": $connection_requests, '
+                '"request": "$request", '
+                '"request_method": "$request_method", '
+               # '"request_body": "$request_body", '
+                '"http_referrer": "$http_referer", '
+                '"http_cookie": "$http_cookie", '
+                '"http_x_request_id": "$http_x_request_id", '
+                '"http_user_agent": "$http_user_agent" }';
+
+        include vhost/*.conf;
+    }
+    ```
 ### 原理
 1. 内存池，连接池，自旋锁，红黑树
 1. 进程模型：管理进程(master)和工作进程(worker)

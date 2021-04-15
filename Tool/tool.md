@@ -176,3 +176,6 @@
 1. 全局搜索文件和关键字：ctrl+shift+F
 1. 执行命令：ctrl+shift+P
 1. 事件断点：Sources——右侧面板——Event Listener Breakpoints，会在事件产生时产生断点
+### API
+1. GraphQL：用于api接口的查询语言，client可自由获取、组合server提前定义好的数据，提高了接口的灵活性。可替代rest，玩不转，后端太重
+1. APIJSON：

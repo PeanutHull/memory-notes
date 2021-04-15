@@ -509,6 +509,7 @@
      1. 参数
         - php -h                                              // 查看帮助
         - php -m                                              // 查看cli模式安装的扩展
+        - php --ri curl                                       // 查看扩展信息
         - php --ini                                           // 查看cli模式的配置文件位置
         - php-config
         - php file                                            // 执行php文件

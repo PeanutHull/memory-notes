@@ -14,6 +14,7 @@
      1. keys：查找符合给定模式的key
      1. exists：是否存在
      1. type：查看类型
+     1. scan：会使过期的key删除，带来内存占用的下降
      1. sort by xx*->xx desc get xx*->xx get # store xx：对队列、集合按照某些规则排序，by可用通配符，get用于获取指定键值，store结果存储
    - 过期时间
      1. expire/pexpire：[用毫秒]设置过期时间
@@ -425,7 +426,7 @@
      1. 同时使用tw和pipeline时，如果对pipeline的执行顺序有要求，那么要设置tw对redis的server_connections数量为1，否则会导致顺序错乱。因为tw用epoll，每个连接有独立的队列，每个连接用完就会扔到队尾准备重复利用，就势必导致两个命令在两个不同的连接上进行，到了redis那里就有可能造成顺序错乱，如zadd和expire一起用
 1. Codis
    - 没有pipeline
-1. Pika
+1. Pika：从rocksdb发展来的360开源类redis系统，redis容量过大的解决方案。支持redis协议
 1. cluster：太复杂，是去中心化的。没有tw的简单，用的稳定
 ### wiki
 1. 历史
@@ -468,12 +469,13 @@
    - 2个命令组合起来才算是完成一个业务，但是2个命令组合起来就不具备原子性，所有在两个命令之间其他客户端会出现读写脏数据的情况
 1. 网校redis架构
    - 高可用：confd + etcd + tw + redis一从热备 + sentinel
-     1. etcd集群做保活，设置10秒过期，tw每2秒续期，一旦tw发生变化，etcd切换tw，通知confd
-        - etcd：go编写，支持watch并且主动通知
-     1. confd收到etcd的通知后，完成客户端ip配置文件的更新
+     1. tw本身高可用
+        - etcd集群做保活，设置10秒过期，tw每2秒续期，一旦tw发生变化，etcd切换tw，通知confd
+          1. etcd：go编写，支持watch并且主动通知
+        - confd收到etcd的通知后，完成客户端ip配置文件的更新
      1. 客户端sdk负责负载均衡
      1. 一从热备：假如从库一直提供服务，从库一旦重连导致从库数据不对
-     1. 哨兵监控：完成主从切换后，通知etcd
+     1. 哨兵监控：完成主从切换后，通知etcd，然后confd更新客户端ip配置文件
    - 扩容：找新机器，用工具同步存量+增量的旧数据，然后挂到tw上
 1. lua
    - 认识：高效的轻量级动态类型的脚本语言，lua是葡萄牙语月亮的意思，是卫星语言，能够方便嵌入其他语言中
