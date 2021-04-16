@@ -62,7 +62,7 @@
    - 用户接入
      1. GLSB、CDN、CND
      1. LB：硬件
-     1. SLB：软负载均衡，基于nginx，
+     1. SLB：Server Load Balancing，软负载均衡，服务器负载均衡，基于nginx
      1. API Gateway：收口的统一网关，之前基于zuul，现在是netty，通过将filter编译层class实现动态更新，采用了私有tcp通信
    - 呼叫中心
      1. 
