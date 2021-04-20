@@ -914,7 +914,7 @@
      1. `discovery.zen.ping.unicast.hosts: ["ip"]`：主节点ip
 1. 调试
    - 查看基础信息：`curl http://ip:9200`
-### pro
+### 实践
 1. 调优
     ```json
     GET index/_search?q=xx

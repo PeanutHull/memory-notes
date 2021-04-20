@@ -205,7 +205,11 @@
      1. CTR：计算器
      1. OCF：密码反馈
      1. CFB：输出反馈
-1. RSA
-   - 认识：非对称加密，分公钥和私钥，计算开销比aes大。ssh是先rsa加密，再aes加密传数据
-1. SHA：单向加密，SHA-256、SHA-1
-1. MD5：Message-Digest Algorithm 5，报文摘要算法，单向加密
+1. 哈希算法
+   - MD5：Message-Digest Algorithm 5，报文摘要算法，单向加密
+   - SHA：单向加密，SHA-256、SHA-1
+   - 
+1. 数字签名算法
+   - RSA：非对称加密，分公钥和私钥，计算开销比aes大。ssh是先rsa加密，再aes加密传数据
+   - DSA
+   - ECDSA：椭圆曲线签名算法，使用的椭圆曲线是一个已经定义好的标准曲线secp256k1

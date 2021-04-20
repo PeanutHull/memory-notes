@@ -312,6 +312,7 @@ function authCode($string, $key = '', $operation = 'DECODE')
             $this->redis = new \Redis();
             $this->redis->connect('127.0.0.1', 6379);
         }
+
         //处理函数
         public function handle()
         {
@@ -331,6 +332,7 @@ function authCode($string, $key = '', $operation = 'DECODE')
                 file_put_contents('/data/data.txt', $data, FILE_APPEND);
             }
         }
+        
         //检查运行时间
         private function checkRunTime()
         {
