@@ -193,25 +193,6 @@
      1. 派生表：是select返回的虚拟表，即from使用的独立子查询，可以和子查询互换使用。如`from(select * from table2)derivedTableName`
      1. 公共表表达式：CTE，是一个命名的临时结果集，仅在单个SQL语句的执行范围内存在，比派生表更易读，性能更高
    - 表间关系：一对一、一对多、多对多
-   - 存储引擎
-     1. MyISAM：5.1之前的默认引擎，用于只读提高性能、不支持事务、不支持外键，最大256TB，可以压缩为只读表，支持全文索引、压缩、空间函数。表存两个文件myd和myi，表示数据和索引
-     1. InnoDB：性能优秀，数据存在共享表空间，可通过配置分开，支持MVCC，多种行锁机制组合，一致性读或者读快照就是读取当前事务开始之前的数据快照，在这个事务开始之后的更新不会被读到。InnoDB行锁是通过给索引上的索引项加锁来实现的
-        - 事务
-        - 行级锁
-        - 实现sql标准的4种隔离级别
-        - 自动插入缓存(insert buffer)
-        - 二次写(double write)
-        - 读取数据时自动在内存构建hash索引(adaptive hash index)
-        - 预读(read ahead)
-        - 索引是其表空间的组成部分
-        - 通过工具支持热备份
-        - 支持崩溃后安全恢复
-        - 支持外键
-     1. memory；内存表存储在内存中，并使用散列索引，使其比MyISAM表格快，服务器停止数据丢失
-     1. Archive、Blackhole、CSV
-     1. merge：将具有相似结构的多个MyISAM表组合到一个表中的虚拟表
-     1. 对比
-        - nodb不支持全文索引，MyISAM支持
 1. sql
    - 分类
      1. DCL：对数据库的操作：mysql、use、set、show
@@ -354,24 +335,26 @@
      1. hash索引，重复数据多了性能下降，hash碰撞
      1. 使用了索引：意思是使用索引的快速搜索功能，有效的减少了扫描行数。对应的有全索引扫描，是不够快的
 1. 事务
-   - 理解：保证一致性，所有操作全部执行，由InnoDB提供，服务层不管理，由下边的引擎实现，在一个事务中，使用多个引擎不靠谱。再开启一个事务会隐式提交上一个事务
-   - 特性：ACID
-     1. 原子性：一个事务是一个整体，要么全部成功，要么全部失败
-     1. 稳定性/一致性：有非法数据(外键约束等)，事务撤回，数据库总是从一个一致性状态转换到另一个一致状态
-     1. 隔离性：通常来说，一个事务所做的修改在最终提交以前对其他事务不可见
-     1. 持久性/可靠性：一旦事务提交，则其所做的修改就会永久保存到数据库中。此时即使系统崩溃，修改的数据也不会丢失
+   - 理解：保证一致性，所有操作全部执行
+     1. 服务层不管理，由引擎实现
+     1. 不支持嵌套事务：再开启一个事务会隐式提交上一个事务
+     1. 一个事务中使用多引擎不靠谱
    - 使用
     ```sql
     set autocommit=0/1;                 # 禁止/开启自动提交
     set transaction;                    # 设置隔离级别
     
-    begin;/start transaction;
+    begin;/start transaction;           # 显式开启事务，自动事务前禁止自动提交，事务后关闭
     commit;
     rollback;
 
+    # 保存点
     savepoint xx;                       # 创建标记点
     release savepoint xx;               # 删除标记点
-    rollback to xx;                     # 回滚到标记点
+    rollback to xx;                     # 回滚到标记点，用rollback才会结束事务
+
+    # 分布式事务
+    XA {START|BEGIN} xid [JOIN|RESUME]
     ```
    - 并发事务
      1. 问题
@@ -474,37 +457,6 @@
     close num;
     ```
 ### 维护
-1. 日志
-   - 分类
-     1. 错误：启动、运行、停止遇到的问题
-     1. 通用查询：客户端连接和执行的语句
-     1. 二进制：记录更改数据的语句
-     1. 中继：从接收的主的数据
-     1. 慢查询：执行时间超过long_query_time的查询或不使用索引的查询
-     1. DDL：元数据操作的语句
-   - frm,myd,myi
-   - binlog
-     1. 认识：记录所有除查询的DDL和DML语句，以事件形式记录、包含执行的时间、事务安全型的二进制文件集合。分为本身和索引文件(记录有效的文件)，开启1%的性能损耗
-        - 生成新的日志文件的情况：重启时、执行`flush logs`、大小超过`max_binlog_size`
-        - 记录的格式
-          1. STATEMENT：基于SQL语句。不记录每行变化，减少了日志量节约了IO，为了slave正确运行需要记录相关信息
-          1. ROW：基于行，5.7.7及以上默认，之前是STATEMENT。只记录行的修改点，避免了存储过程/function/trigger的调用和触发无法被正确复制的问题，日志量大
-          1. MIXED：混合模式，一般用statment，无法完成主从复制的操作用row
-        - 配置
-          1. sync_binlog：刷新到磁盘的事务执行次数，为1最安全在系统故障时最多丢失一个事务的更新
-        - 事件类型：QUERY_EVENT、STOP_EVENT等
-     1. 用途
-        - 主从复制：传输binlog
-        - 数据恢复：使用mysqlbinlog工具
-     1. 使用
-        - sql
-          1. `show binary logs;`：查看二进制文件列表和大小，如mysql-bin.*
-          1. `show binlog events in '' from pos limit [offset,]count;`：查看某个binlog
-          1. `reset master;`：清空所有
-        - 工具：mysqlbinlog，直接恢复：`mysqlbinlog /var/lib/mysql/mysqld-bin.000001 | mysql -uroot`
-          1. --database DB_name
-          1. --no-defaults 
-          1. --start/stop-datetime、--start/stop-position
 1. 用户和权限管理
    - user
     ```sql
@@ -550,6 +502,8 @@
    - 重启：`service mysqld restart`
    - 查看：`ps -ef | grep mysqld`
 1. 配置
+   - 配置文件
+     1. `mysql --help | grep my.cnf`
    - 查看
      1. `show variables;`
      1. `show variables like 'slow_query%';`
@@ -576,6 +530,10 @@
         mysql -u -p databaseName < data.sql
         load data local infile 'xx.txt' into table tableName;
         ```
+1. 连接方式
+   - tcp/ip套接字：`mysql -h127.0.0.1`
+   - 域套接字：`mysql -S /tmp/mysql.sock`
+   - 命名管道、共享内存：通过配置开启
 1. 实例迁移步骤
    - 搭建新实例实时和旧的同步
    - 业务方修改配置

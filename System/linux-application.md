@@ -667,6 +667,24 @@
    - ssh -kengen
    - cd ~/.ssh
    - ssh -copy-id peter@happypeter.net       // 把公钥复制到服务器上
+### 网络
+1. tcp连接
+   - 四元组：源ip、源port、目标ip、目标port，都相同了才是一条相同的tcp连接
+   - 资源耗费：寻找最近的资源瓶颈
+     1. 端口：操作系统自动分配可用的
+        - 可用端口范围
+          1. 查看：`cat /proc/sys/net/ipv4/ip_local_port_range`
+          1. 设置：`vim /etc/sysctl.conf：net.ipv4.ip_local_port_range`
+          1. 生效：`sysctl -p /etc/sysctl.conf`
+     1. 文件描述符：每一个tcp链接就要一个fd，就是数字
+        - 查看可打开的最大数量
+          1. 整个系统：`cat /proc/sys/fs/file-max`
+          1. 指定用户：`cat /etc/security/limits.conf `
+          1. 单个进程：`cat /proc/sys/fs/nr_open`
+        - 修改：`echo 10000 > /proc/sys/fs/nr_open`
+     1. 线程：默认一个tcp占用一个线程，用io多路复用
+     1. 内存：tcp本身和其缓冲区，都要占用内存
+     1. cpu：上下文切换成本
 ### 运维相关
 1. 组成
    - 基础：配机器
