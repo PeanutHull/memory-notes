@@ -513,23 +513,6 @@
    - 安全
      1. sql安全：防注入(预处理)、特殊字符转义、错误信息屏蔽。权限分开、定期修改密码
      1. 备份恢复
-        - 定期备份：物理备份、逻辑备份
-          1. 热备：master-slave
-          1. 冷备：shell(mysqldump) + rsync + crontab
-        - 恢复：binlog增量恢复
-   - 导出导入
-     1. 导出
-        ```sql
-        mysqldump -u -p [databaseName or tableName] > data.sql            # -d 只导出结构，-t 只导出数据
-        select * into outfile 'xx.txt' fields terminated by ',' optionally enclosed by '"' lines terminated by '\n' from table;
-        ```
-     1. 导入
-        ```sql
-        mysqlimport -u -p --local databaseName dump.sql
-        source xx.sql
-        mysql -u -p databaseName < data.sql
-        load data local infile 'xx.txt' into table tableName;
-        ```
 1. 连接方式
    - tcp/ip套接字：`mysql -h127.0.0.1`
    - 域套接字：`mysql -S /tmp/mysql.sock`
@@ -542,11 +525,50 @@
    - 断开新实例到老实例同步，开启新主库可写入
    - 发布，验证业务
    - 删除旧实例
-1. 备份方式
-   - 本地备份
-   - 本地增量备份：每天和每10分钟一次，备份到同机房其他服务器
-   - 异地备份：先随机加密，后传输到异地，异地双备份
-   - 定期覆盖度测试
+1. 备份
+   - 认识
+     1. 备份文件：逻辑文件，文件可读如mysqldump，恢复时间长，用于升级、迁移等工作；裸文件
+     1. 备份方式：完全、增量（记录LSN之后的备份）、日志
+   - 备份策略最佳实践：定期备份
+     1. 本地备份
+     1. 本地增量备份：每天和每10分钟一次，备份到同机房其他服务器
+     1. 异地备份，先随机加密，后传输到异地，异地双备份
+   - 备份要求
+     1. 备份的一致性
+     1. 做好异地容灾
+     1. 定期覆盖度测试
+   - 备份方式
+     1. 冷备
+        - 理解：复制相关文件即可，应该存放到远程服务器中。如shell(mysqldump) + rsync + crontab，或者直接复制文件
+        - 备份内容：frm、ibdata1、*.ibd、redo log、my.conf
+     1. 热备
+        - ibbackup
+          1. 认识：官方提供，不阻塞，性能好(复制日志文件)，支持压缩。不支持真正增量备份，只是某时刻的恢复
+          1. 原理：记录LSN，开始备份，然后找回来备份时的redo log
+        - xtrabacup
+          1. 认识：开源，支持增量备份，原理是先全备，记录此时的LSN，增量时比较LSN并且不断更新LSN
+     1. 复制
+     1. 逻辑备份
+        - mysqldump：`mysqldump -u -p [databaseName or tableName] > data.sql`
+          1. -d 只导出结构
+          1. -t 只导出数据
+          1. --all-databases：所有数据库
+          1. --single-transaction：设定备份一致性
+        - select ... into outfile：`select * into outfile 'xx.txt' fields terminated by ',' optionally enclosed by '"' lines terminated by '\n' from table;`
+     1. 二进制备份：用`flush logs`生成新日志文件，然后备份旧的
+     1. 快照备份
+        - 认识：把所有日志放到同一个逻辑卷中，用lvm快照
+1. 恢复
+   - 逻辑日志导入
+     1. mysql -u -p databaseName < data.sql
+     1. source xx.sql
+     1. load data local infile 'xx.txt' into table tableName;
+     1. mysqlimport -u -p --local databaseName dump.sql
+   - 二进制日志导入
+     1. mysqlbinlog
+        - start/stop-position：开始结束位置
+        - `mysqlbinlog xx.xx | mysql -u -p`
+        - `mysqlbinlog xx.xx > xx.sql`
 1. 工具
    - binlog2sql：回滚指定时间点的sql语句
    - xtrabackup：录binlog位置后copy文件，速度比逻辑备份快上百倍

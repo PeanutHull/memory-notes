@@ -186,20 +186,20 @@
    - C：Consistency，一致性，数据在任何时候都要保证一致
    - I：Isolation，独立性，并发的事务之间不会互相影响
    - D：Durability，持久性，一旦事务提交后，它所做的修改将会永久保存
+1. BASE方案
+   - 认识：牺牲某时刻一致性保证最终一致性，对cap的延伸
+     1. Basically Available：基本可用，保证核心可用
+     1. Soft State：软状态，允许系统存在中间状态，不是最终态
+     1. Eventually Consistent：最终一致，经过一定时间后，最终能够达到一致的状态
 1. CAP
    - 认识：对于一个分布式计算系统来说，不可能同时满足以下三点，又叫布鲁尔定理
      1. Consistency：一致性，所有节点在同一时间具有相同的数据
      1. Availability：可用性，保证每个请求不管成功或者失败都有响应
-     1. Partition tolerance：分区容错性，系统中任意信息的丢失或失败不会影响系统的继续运作)
+     1. Partition tolerance：分区容错性，系统中任意信息的丢失或失败不会影响系统的继续运作
    - 根据CAP原理，对NoSQL进行分类
      1. CA：单点集群，满足一致性，可用性的系统，通常在可扩展性上不太强大，如RDBMS
      1. CP：满足一致性，分区容忍性的系统，通常性能不是特别高，如MongoDB、Redis、HBase
      1. AP：满足可用性，分区容忍性的系统，通常可能对一致性要求低一些，如CouchDB
-1. BASE方案
-   - 认识：牺牲某时刻一致性保证最终一致性
-     1. Basically Available：基本可用
-     1. Soft State：软状态
-     1. Eventually Consistent：最终一致
 1. 一致性
    - 强一致性：时时刻刻同步
    - 弱一致性：如主库写入成功，不等待从库响应，直接返回“更新成功”，则复制是异步的，即弱一致性

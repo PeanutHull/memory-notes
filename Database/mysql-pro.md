@@ -94,6 +94,7 @@ redo的流程是什么
    - sysbench：内嵌lua脚本，可生成指定规模数据，主流厂商(Oracle/Percona)使用，支持多线程，支持多种数据库
      1. 建表，塞1百万数据：`sysbench --monitis=oltp --oltp-table-size=1000000 --mysql-db=xx --mysql-user=root --mysql-password=xx prepare`
      1. 开始测试：`sysbench --monitis=oltp --oltp-table-size=1000000 --mysql-db=xx –mysql-user=root –mysql-password=xx –max-time=60 –oltp-read-only=on –max-requests=0 –num-threads=8 run`
+   - mysql-tpcc
 1. 监控
    - 性能测试：数据多才有参考价值，数据总量超过内存总量，如几百条数据第一条命令下去就全部加载到内存了，没有参考意义
    - 性能：连接数、qps
@@ -168,6 +169,11 @@ redo的流程是什么
         - innodb_os_log_written：写入redo log的bytes
      1. cardinality是索引中不重复记录的预估值，会有更新机制，不准，很小需要评估索引是否有意义
 1. 调优
+   - 硬件
+     1. cpu：区分oltp和olap
+     1. 内存：大内存性能线性提高
+     1. ssd
+     1. RAID
    - 参数
      1. Innodb_buffer_pool
      1. Innodb_buffer_pool_instances
@@ -202,13 +208,11 @@ redo的流程是什么
    - 日志分析：general.log
 1. 当系统遇到无法解决的技术难题时，可以通过变换业务逻辑实现功能
 ### 架构
-1. 主从，主主，amoeba
-   - 原理：主库将更改记录到二进制日志binlog，从库复制到中继日志，读取中继重新放到库中
-     1. 负载均衡，降低压力
-     1. 高可用，故障切换
-   - 查看
-     1. `show master status;`
-1. 读写分离：采用数据库主从方式，多个从库分担读，主库负责写
+1. 主从
+   - 读写分离：采用数据库主从方式，多个从库分担读，主库负责写
+   - 高可用
+     1. 对从进行快照保存，可以防止主drop database级的防御
+     1. 对从设置read-only，防止误改
 1. 分表分区
    - 认识
      1. 分区：对用户透明，底层分为多个物理分区。用partition by定义每个分区存放的数据，优化器自动使用。适用于数据多，只在表最后有热点数据，其他都是历史数据。分区可以分布在不同机器上独立维护，有很多功能不能用
@@ -236,6 +240,7 @@ redo的流程是什么
      1. 高可用：采用去中心化的集群，在虚拟ip下，在不同的节点部署多个mycat，根据某种策略(ip选举策略)选举某一个为临时master，之间采用心跳机制进行通信维持故障切换。可使用zk、haproxy、keepalived等组件，可以有选举、心跳、切换ip等功能
    - Kingshard：个人的go开发，读写分离、分库分表、sql黑名单
    - mysql proxy：mysql官方
+   - amoeba
 ### 原理
 1. 认识：单进程多线程，插件式的表存储引擎
    - 数据多了，性能下降不是线性的
@@ -252,6 +257,56 @@ redo的流程是什么
      1. InnoDB
      1. MyISAM
      1. Memory
+1. 数据更新流程
+   - 认识：流程和wal一致，![avatar](../images/mysql-update.jpeg)
+     1. 读写数据：缓存提高效率
+        - 脏页：缓存中的数据发生变更的内存页
+        - 刷脏页：数据发生变更的缓存刷到磁盘中
+     1. mysql宕机：缓存中数据来不及刷盘，数据丢失，需要用日志恢复
+     1. 磁盘特点：写入系统文件缓存page cache，并没有持久化，非常快，和写内存差不多(本质就是写内存)。一般fsync才占用iops
+     1. 两阶段提交：平衡各方都完成
+     1. 正常数据落盘和redo没有关系，脏页到ibdata
+     1. 事务回滚：redo中commit的发现LSN落后的就重放刷盘，没commit的判断binlog是否完整来重新commit或者回滚
+   - 重启操作
+     1. 数据页中的LSN小于redo log的LSN，说明redo log上记录着数据页没完成的操作，就会从最近的一个check point出发，开始重放刷盘
+     1. 数据库重启先进行crash recovery保证crash-safe，binlog和redolog通过事件xid关联，保证数据一致性
+   - 双一问题：可以主双一，从非双一，提高性能
+     1. sync_binlog不为1，服务器宕机会丢失binlog
+     1. innodb_flush_log_at_trx_commit为1
+        - 可以在redo commit时不进行fsync，就无法保证一致性，但是提高了效率
+        - innodb_support_xa不为1，redo没commit重启后要回滚，但是binlog记录了，造成问题
+   - 数据丢失场景
+     1. mysql宕机：写入了文件缓存就丢不了
+     1. 服务器宕机：没有设置双一，就可能丢
+### 表
+1. 认识：了解其物理存储特征
+1. 特点
+   - 索引组织表：按主键顺序存放，数据即索引，索引即数据。不显式指定主键或者唯一索引就生成6字节的rowId
+1. innodb逻辑存储结构
+   - 表空间
+     1. 存储方式
+        - 共享表空间：默认，.ibdata1
+        - 独占表空间：.ibd
+     1. 逻辑存储结构
+        - segment：段，引擎自身完成
+          1. 数据段：b+tree的叶子节点
+          1. 索引段：非叶子节点
+          1. 回滚段
+          1. 
+        - extent：区，连续页组成，都是1m
+        - page：页/块，默认16k，innodb磁盘管理的最小单位，与数据库相关的所有内容都存储在里边。大小16kb，32位int表示，对应innodb的64TB存储容量(16kb * 2^32)
+          1. 类型
+             - b-tree node：数据页
+             - undo log page：undo页
+             - system page：系统页
+             - transaction system page：事务数据页
+             - insert buffer bitmap：插入缓冲位图页
+             - insert buffer free list：插入缓冲空闲列表页
+             - uncompressed blob page：二进制大对象
+             - compressed blob page
+        - row：行
+          1. 记录格式：Redundant稀疏、Compact紧凑、Dynamic动态、Compressed压缩
+     1. index：聚集方式，因此按主键顺序存放，不显式指定主键或者唯一索引就生成6字节的rowId
 ### 日志
 1. 日志
    - 分类
@@ -262,7 +317,7 @@ redo的流程是什么
      1. relay log：中继日志，从接收的主的日志
      1. 引擎日志
 1. binlog
-   - 认识：记录所有除查询的DDL和DML语句，以事件形式记录的事务安全型的二进制文件集合，包含执行的时间。
+   - 认识：记录所有除查询的DDL和DML语句，以事件形式记录的事务安全型的二进制文件集合，包含执行的时间
      1. 具体的写入时间：配置控制是否执行fsync，只写入了缓存
      1. 会重写密码，不以纯文本展示；8可以进行加密
      1. 生成新的日志文件的情况：重启时、执行`flush logs`、大小超过`max_binlog_size`
@@ -286,11 +341,19 @@ redo的流程是什么
              - 日志量大，`alter tableh`每条都会记录，新版优化了
           1. MIXED：混合模式，一般用statment，无法完成主从复制的操作用row
         - 事件类型：QUERY_EVENT、STOP_EVENT等
+   - 写入流程
+     1. 基于session，根据binlog_cache_size写入缓存或临时文件
+     1. group commit，写入磁盘，清空缓存，同时根据sync_binlog判断是否fsync
+   - 特点
+     1. 一个事务的binlog不会拆开，要确保一次性写入
+     1. 事务组提交：group commit，会把后边来的事务一起处理，到时候他们直接返回，一起处理的越多，效果越好
    - 使用
      1. 配置
-        - sync_binlog：写缓冲多少次就同步磁盘，1是同步写磁盘，默认0，建议设置为ON。用innodb_support_xa为1解决binlog和innodb的数据文件的同步
-        - max_binlog_size：单个最大值，超过就加序号新建文件
+        - log-bin：是否开启binlog及文件名
         - binlog_cache_size：未提交的日志记录缓存的大小，超过了写入临时文件，基于会话。binlog_cache_use、binlog_cache_disk_use用于判断设置是否合适
+        - sync_binlog：写缓冲多少次就同步磁盘，1是同步写磁盘，默认0，建议设置为100~1000
+        - innodb_support_xa：为1解决binlog和innodb的数据文件的同步
+        - max_binlog_size：单个最大值，超过就加序号新建文件
         - binlog-do-db/binlog-ignore-db：要记录库的范围
         - log-slave-update：从库需要设置，不记录自己的master的日志
         - binlog_format：格式
@@ -311,12 +374,20 @@ redo的流程是什么
           1. --no-defaults 
           1. --start/stop-datetime、--start/stop-position
 1. 主从复制
+   - 原理：主库将更改记录到二进制日志binlog，从库复制到中继日志，读取中继重新放到库中。异步实时
+     1. 负载均衡，降低压力
+     1. 高可用，故障切换
+     1. 备份：异步实时备份
+     1. 计算主从的LSN，可得出时延
    - 步骤
      1. master记录到binlog
-     1. slave的io进程连接master，请求指定文件的指定位置之后的内容
+     1. slave的io线程连接master，请求指定文件的指定位置之后的内容
      1. master返回信息
-     1. slave的io进程将接收的日志依次记录到relaylog末尾中，将binlog日志名和位置记录到masterinfo中
+     1. slave的io线程将接收的日志依次记录到relaylog末尾中，将binlog日志名和位置记录到masterinfo中
      1. slave的sql线程检测到relaylog新增了内容，解析并执行
+   - 查看
+     1. `show master status;`
+     1. `show slave status;`
 ### 引擎
 1. 认识：基于表
    - 分类
@@ -337,15 +408,11 @@ redo的流程是什么
      1. Blackhole、CSV
    - 结构
      1. frm文件：存储表的元数据信息，主要是表结构，视图也在
-   - 表空间
-     1. 表空间存储方式
-        - 共享表空间：默认，.ibdata1
-        - 独占表空间：.ibd，存储逻辑分为表空间（Tablespace）、段 (Segment)、区 (Extent)、页 （Page） 以及行 (row)
 1. InnoDB
    - 认识：性能优秀，数据存在共享表空间，可通过配置分开。多种行锁机制组合，行锁通过给索引上的索引项加锁来实现
      1. 事务
      1. 行级锁
-     1. 非锁定读：默认读取不产生锁
+     1. 非锁定读：通过读取undo实现，没有额外开销，默认读取不产生锁，因为没人改
      1. sql标准的4种隔离级别
      1. 通过工具支持热备份
      1. 支持崩溃后安全恢复
@@ -358,16 +425,6 @@ redo的流程是什么
      1. adaptive hash index：读取数据时自动在内存构建hash索引
      1. read ahead：预读
      1. next-key locking：避免幻读phantom
-   - 结构
-     1. page：innodb磁盘管理的最小单位，与数据库相关的所有内容都存储在里边。大小16kb，32位int表示，对应innodb的64TB存储容量(16kb * 2^32)
-        - 分类
-          1. B-Tree Node：数据页
-          1. Undo Log：undo页
-          1. System Page：系统页
-          1. Transaction System Page：事务数据页
-     1. row
-        - 格式：Redundant稀疏、Compact紧凑、Dynamic动态、Compressed压缩
-     1. index：聚集方式，因此按主键顺序存放，不显式指定生成6字节的rowId
    - 文件
      1. frm
      1. ibd：表空间文件
@@ -378,33 +435,64 @@ redo的流程是什么
      1. ib_logfile0/ib_logfile1：重做日志文件
 
 1. MVCC：一致性读或者读快照就是读取当前事务开始之前的数据快照，在这个事务开始之后的更新不会被读到
-1. double write
-   - 认识：两次写，保证数据页的完整可靠性。再写一个页的副本，redo前先通过副本还原该页。有些文件系统提供了部分写失效的防范机制(ZFS)，不用开启两次写
-     1. 部分写失效：一页没有写完整，redo log是无法解决，页本身损坏重做无意义
-     1. 文件系统写失效：只写入了页缓存，并没有同步到磁盘上
-        - unix的高速页缓存机制：大多数磁盘io都通过缓冲进行，用fsync主动触发，同步磁盘太慢了
-   - 组成
-     1. 内存buffer：2m大小
-     1. 共享表空间：2m大小，连续128个页，2个区extent
-   - 写入流程
-     1. 缓冲池脏页刷新时，先memcpy到buffer
-     1. buffer分2次，每次1m顺序写入共享表空间，然后立即fsync
-        - 因为顺序写入，开销不大
-     1. buffer再写入各个表空间
-   - 恢复流程
-     1. 共享表空间本身失败的话，通过事务日志计算正确的数据，重新写入共享表空间
-     1. 从共享表空间获取页副本，复制到表空间文件，再应用重做
+1. 引擎日志
+   - 认识
+     1. undo是回滚，redo是前滚
+     1. redo和binlog相比
+        - redo引擎层产生，binlog库上层产生，binlog会包含redo的
+        - redo是物理格式，记录每个页的修改；binlog是逻辑日志，记录对应sql
+        - 写入磁盘时机：redo不断写入，binlog事务commit后一次写入
+   - redolog
+     1. 认识：重做日志，存储事务日志，保证可靠的事务，存储每个页的修改，不是某行
+        - InnoDB独有，顺序整块写，效率高。固定大小，写满后循环记录
+        - 至少有一个文件组，至少2个文件，循环2个文件一个个写入。可有多个镜像日志组，更高可靠性，有了高可用方案如磁盘阵列可不用
+        - 有LSN落后数量最多检查阈值，否则需要将缓冲池的脏页列表的部分写回磁盘，会阻塞用户线程
+        - 不需要对redo进行读取
+     1. 结构：有几十种类型
+        - redo_log_type：类型
+        - space：表空间id
+        - page_no：页偏移量
+        - redo_log_body：数据部分，恢复时需要调用相应函数进行解析
+     1. 流程
+        - 先写入buffer，然后顺序写入日志文件
+        - 刷盘：根据innodb_flush_log_at_trx_commit确定刷盘策略
+          1. 流程：![avatar](../images/redo-buffer.jpeg)
+             - write pos：当前记录的LSN
+             - check point：已刷盘的LSN，之前的已刷盘
+             - check point到write pos是未刷盘的，当write pos追上check point，先推动check point向前移动，空出位置再记录新的日志
+          1. 特点
+             - 触发条件有主线程、事务提交
+             - 主线程每秒将buffer写入文件，不论事务是否提交
+             - 每秒刷盘和崩溃恢复的逻辑，innodb认为redo log在commit时不需要fsync了，写到page cache就够了
+        - 固定512byte(扇区大小)写磁盘，扇区是写入的最小单位，保证写入必定成功，不需要doublewrite
+     1. 组成
+        - LSN：Log Sequence Number 日志逻辑序列号，版本标记的计数，单调递增的值，写多少日志，就加多少
+        - checkpoint
+          1. 认识：保证checkpoint之前的脏页都刷新回磁盘，那么崩溃恢复直接从checkpoint的点开始应用redo即可
+          1. 分类
+             - sharp checkpoint：保证所有的脏页刷新到磁盘
+             - fuzzy checkpoint
+          1. 触发情形
+             - master thread固定频率checkpoint
+             - redo log不够用了，强制checkpoint以释放redo空间被新事务覆盖(write pos追上check point)
+             - buffer不够用了，LRU list淘汰page，淘汰的page属于脏页，需要强制checkpoint
+     1. 配置
+        - innodb_flush_log_at_trx_commit：提交事务时的文件写入策略
+          1. 0：不写，等待主线程每秒刷新，10倍性能提升
+          1. 1：调用fsync，为了保持持久性，必须为1，才能保证宕机能够用redo恢复
+          1. 2：异步写，等待操作系统落盘，不能保证commit时肯定写入了redo log，6倍性能提升
+        - innodb_log_file_size：日志文件大小，太小老checkpoint性能抖动，太大恢复时间长
+   - undolog
+     1. 认识：用于回滚/崩溃恢复，记录数据修改前的数据，记录与当前操作相反的逻辑日志，做相反操作。update/delete操作存放数据旧记录，insert操作记录新数据行的PK(rowid)
 1. WAL
-   - 认识：Write-Ahead Logging，日志先行，先写日志再持久化数据文件，保证持久化数据之前日志已经记录
-     1. 空闲时，将内存中的数据落盘
+   - 认识：Write-Ahead Logging，日志先行，先写日志再持久化数据文件，保证持久化数据之前日志已经记录。binlog和redo log都落盘了，保证mysql不丢数据
    - 步骤
-     1. 执行器取数据
-     1. 引擎判断数据页是否在内存中，没有则从磁盘读取到内存中，从内存中返回行数据（内存大的服务器的好处）
-     1. 执行器将该数据值加1，之后写入新行，通知引擎
-     1. 引擎将新数据更新到内存中
+     1. 执行器通知引擎数据更新
+     1. 引擎将新数据更新到脏页内存中
      1. 引擎此时开始记录redolog，并将该记录置为prepare状态
      1. 执行器写binlog
      1. 引擎提交事务，并更新此行数据的redolog状态为commit
+     1. Force Log at Commit：持久化redo后才能进行事务的commit，保证持久性
      1. 当MySQL空闲时，会将内存中的数据落盘
    - 解释
      1. 步骤
@@ -414,39 +502,25 @@ redo的流程是什么
      1. 纠错
         - 若收钱过程被打断，则整理交易时，发现只是记账了却没收钱，则删除该账本记录（回滚）
         - 若收了钱，有事情耽误了抵账，那么之后闲下来对账的时候，将账本该记录打勾即可（即commit）
-1. 引擎日志
-   - 认识
-     1. undo事务前回滚，redo是向前滚
-   - redolog
-     1. 认识：重做日志，存储事务日志，保证可靠的事务
-        - InnoDB独有，顺序整块写，效率高。固定大小，循环记录
-        - 至少一个文件组，至少2个文件，循环2个文件一个个写入。可多个镜像日志组，更高可靠性，有了高可用方案如磁盘阵列可不用
-        - 有数量最多检查阈值，否则需要将缓冲池的脏页列表的部分写回磁盘，会阻塞用户线程
-        - 数据库重启先进行crash recovery，binlog和redolog通过事件id关联，并存可以保证数据一致性，即crash-safe
-     1. 结构：有几十种类型
-        - redo_log_type：类型
-        - space：表空间id
-        - page_no：页偏移量
-        - redo_log_body：数据部分，恢复时需要调用相应函数进行解析
-     1. 流程
-        - 先写入buffer，然后顺序写入日志文件，具体触发条件有主线程、事务提交
-        - 固定512byte(扇区大小)写磁盘，扇区是写入的最小单位，保证写入必定成功，不需要doublewrite
-        - 主线程每秒将buffer写入文件，不论事务是否提交
-     1. 配置
-        - innodb_flush_log_at_trx_commit：提交事务时的文件写入策略
-          1. 0：不写，等待主线程每秒刷新，10倍性能提升
-          1. 1：调用fsync，为了保持持久性，必须为1，才能保证宕机能够用redo恢复
-          1. 2：异步写，等待操作系统落盘，不能保证commit时肯定写入了redo log，6倍性能提升
-        - innodb_log_file_size：日志文件大小，太小老checkpoint性能抖动，太大恢复时间长
-   - undolog
-     1. 认识：回滚日志，记录事务开始前的数据。update/delete操作存放数据旧记录，insert操作记录新数据行的PK(rowid)
-        - 用于回滚/崩溃恢复，实际做的是相反的操作
+1. double write
+   - 认识：两次写，保证redo数据页的完整可靠性。即再写一个页的副本，redo前先通过副本还原该页。有些文件系统提供了部分写失效的防范机制(ZFS)，不用开启两次写
+     1. 部分写失效：一页没有写完整，redo log是无法解决，页本身损坏重做无意义
+     1. 文件系统写失效：只写入了页缓存，并没有同步到磁盘上
+        - unix的高速页缓存机制：大多数磁盘io都通过缓冲进行，用fsync主动触发，同步磁盘太慢了
+   - 组成
+     1. 内存buffer：2m大小
+     1. 共享表空间：2m大小，连续128个页，2个区extent
+   - 写入流程：在redo commit之后进行
+     1. 缓冲池脏页刷新时，先memcpy到buffer
+     1. buffer分2次，每次1m顺序写入共享表空间，然后立即fsync
+        - 因为顺序写入，开销不大
+     1. buffer再写入各个表空间
+   - 恢复流程
+     1. redo log失败的话，通过binlog计算正确的数据，重新写入redo log
+     1. 从redo log获取页副本，复制到redo log，再应用重做操作
 1. wiki
    - innoDB最早第三方引擎，被oracle收购，5.5.8开始是默认引擎
    - 数据可靠性指的是：可靠的范围划分，mysql告诉你成功了，他自身能保证数据能找回来，没告诉你成功，那就不会记录，才好理解可靠性机制
-     1. 刷盘策略
-        - checkpoint
-        - LSN：Log Sequence Number，版本标记的计数，单调递增的值
 ### 事务
 1. ACID实现原理
    - 隔离性：锁
@@ -465,16 +539,6 @@ redo的流程是什么
      1. redo：redo日志记录LSN，数据页头部也记录LSN，数据库启动时，对比两个LSN，会将redo中多出来的写回页中
      1. 写入原子性：redo日志以512字节存储，称为重做日志块。磁盘一个扇区是512字节，操作系统与磁盘的数据交换扇区为基本单位。只需无缓冲写入磁盘就可保证数据原子写入
    - 一致性：undo
-1. redo
-   - 特点
-     1. 不需要对redo进行读取
-     1. 可以在commit时不进行fsync，就无法保证一致性，但是提高了效率
-     1. 和binlog相比
-        - redo引擎层产生，binlog库上层产生，binlog会包含redo的
-        - redo是物理格式，记录每个页的修改；binlog是逻辑日志，记录对应sql
-        - 写入磁盘时机：redo不断写入，binlog事务commit后一次写入
-   - 流程
-     1. Force Log at Commit：持久化redo后才能进行事务的commit，保证持久性
 1. 内部XA事务
    - 认识：最常见的是binlog和redo log之间，二者要求是原子性的，否则导致主从不一致(因为binlog传给从了)，如果redo没做，重启后就再做一次
 ### 索引
@@ -492,6 +556,7 @@ redo的流程是什么
         - 不能使用前缀索引查询
         - 任何时候不能避免全表查询，因为重复hash值的存在，需要查表获得实际数据
      1. B+Tree：B被认为是Balance的缩写，平衡算法
+     1. full-text：全文索引，倒排索引实现
    - 引擎支持的索引结构
      1. InnoDB/memory/heap：b+tree、hash
      1. MySIAM：b+tree、rtree(空间列是rtree)
