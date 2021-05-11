@@ -1,25 +1,21 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-缓冲池是什么
-redo的流程是什么
 ### 实践
+1. explain
+   - 理解：sql语句分析，将过程和索引等信息列出来
+   - 使用解析
+     1. select_type：查询类型，simple、primary、union、subquery
+     1. type：访问类型，在表中找到所需行的方式，效率由高到低
+        - system/const：最多一个匹配行，主键或者唯一索引，性能最优
+        - eq_ref：多表连接中使用唯一索引
+        - ref：非唯一索引/唯一索引的前缀扫描
+        - range：索引范围扫描
+        - index：索引全扫描
+        - all：全表扫描
+     1. possible_keys：可用的索引
+     1. key：实际使用索引
+     1. key_len：索引使用字节数，越小越好越快
+     1. ref：另外表的数据列名字
+     1. row：预计读出的数据行数，里面所有数字乘积代表需要处理的组合数
+     1. extra：问题解决提示信息
 1. 设计和使用
    - 数据类型
      1. 尽量使用更简单的类型，数据长度越短越好(更少存储内存空间)
@@ -69,24 +65,46 @@ redo的流程是什么
      1. show status;show global status;分析计数器
      1. show processlist;查看线程状态
      1. 关键业务上线前explain确认执行计划
-1. explain
-   - 理解：sql语句分析，将过程和索引等信息列出来
-   - 使用解析
-     1. select_type：查询类型，simple、primary、union、subquery
-     1. type：访问类型，在表中找到所需行的方式，效率由高到低
-        - system/const：最多一个匹配行，主键或者唯一索引，性能最优
-        - eq_ref：多表连接中使用唯一索引
-        - ref：非唯一索引/唯一索引的前缀扫描
-        - range：索引范围扫描
-        - index：索引全扫描
-        - all：全表扫描
-     1. possible_keys：可用的索引
-     1. key：实际使用索引
-     1. key_len：索引使用字节数，越小越好越快
-     1. ref：另外表的数据列名字
-     1. row：预计读出的数据行数，里面所有数字乘积代表需要处理的组合数
-     1. extra：问题解决提示信息
-### 维护
+1. 使用规范
+   - 建库、表
+     1. 建表语句必须在sql审核平台审核通过，不然不予以创建，审核地址：http://app.xesv5.com/zeus
+     1. MYSQL引擎默认使用InnoDB 使用其他引擎需要特别说明
+     1. 字符集使用 utf8mb4 排序规则使用utf8mb4_general_ci
+     1. `id` int(11) NOT NULL AUTO_INCREMENT 作为第一个字段，且为主键，有自增属性
+     1. 所有类型的字段均有NOT NULL属性，有默认值，不使用保留字（关键字），text和json两种类型因无法设置默认值，因此不需要NOT NULL属性
+        - 必须有中文说明 时间类型字段的默认值遵循此类型的范围                          
+          1. datetime	0001-01-01 00:00:00	9999/12/31 23:59
+          1. timestamp	1970/1/1 8:00	2038/1/19 11:14
+          1. date	1000-01-01	9999/12/31
+     1. 尽可能不要使用text,blob类型，如果必须使用，不要设置not null属性，不指定DEFAULT。
+     1. 不要在数据库中使用varbinary或blob存储图片及文件，mysql 并不适合大量存储这类型文件
+     1. 表注释部分要说明此表作用和建表人 例如：COMMENT='课程内容信息-建表人名'
+     1. 如果使用分表，表名内有明确的标识作为后缀
+     1. 不使用外键，触发器，函数，存储过程，事件
+     1. 单表建议控制在5000万以内,文件大小不超过20G
+     1. 普通索引命名规则: idx_索引名称 例:KEY `idx_channel_type` (`channel_type`)
+     1. 唯一索引命名规则: uniq_索引名称 例：UNIQUE KEY `uniq_email` (`email`)
+     1. 不要使用char类型，以varchar代替
+   - 索引规范
+     1. 单张表的索引数量不超过5个
+     1. 复合索引字段数不超过5个
+     1. 对长字符串使用前缀索引，前缀长度不超过8个字符
+     1. 对特殊字段，增加crc32或md5的伪列并建立索引
+     1. 尽量复用联合索引，避免冗余索引
+     1. 不在低基数列上建立索引，例如“性别”
+     1. UPDATE,DELETE语句的WHERE条件列必须使用索引
+   - SQL规范
+     1. 通用实例的SQL必须在SQL审核平台确认
+     1. 不使用%前导的查询，尽量优化负向查询此类查询不能使用索引例如like “%abc”, not in，!= ，not like, <>
+     1. SQL的返回结果尽量少，合理使用分页展示
+     1. 注意字段的类型，避免隐式转换即字符型字段的值需要加单引号，数值型不加
+     1. 避免使用大表的JOIN，将大SQL拆分成小SQL、OLTP类型SQL建议优化到0.05秒以内、OLAP类型在从库查询，查询最大时间为600秒
+     1. 避免在数据库中进行数学运算
+     1. 写入大量数据时，必须使用一个insert多个values的形式，一个insert的写入量需小于10000行数据，循环执行，有两秒的间隔
+     1. 删除、更新、或查询大量数据时，where 条件必须加上id范围，每次操作1万到2万行，循环执行，且有1秒的sleep时间。例如：where id > 0 and id < 10000
+     1. 不在业务高峰期批量写入、更新、删除
+     1. 禁止联库查询
+     1. 禁止使用 SELECT * 查询### 维护
 1. 基准测试：进行定量的、可复现的测试，不关心业务逻辑，对比于压力测试。mysql由于数据一致性的要求无法简单的水平扩展(即加机器)，主要评估qps和响应时间
    - mysqlslap：简单，容易使用，无法生成数据，适合对既有数据库单个sql进行优化测试
      1. `--concurrency=5000`：并发数
@@ -206,7 +224,17 @@ redo的流程是什么
      1. 锁等待的事务：`select * from information_schema.innodb_lock_waits`
      1. 死锁：``
    - 日志分析：general.log
-1. 当系统遇到无法解决的技术难题时，可以通过变换业务逻辑实现功能
+1. 实例切换
+   - 操作步骤
+     1. 停服
+        - 新实例挂载为旧的从库，并设置为只读，防止两边写
+        - 上线切换代码
+        - 放开新实例的DML操作
+   - 注意项
+     1. 常驻程序的重启，如supervisor
+     1. 依赖方
+        - 直接使用旧从库的，注意切换，如其他业务方、数仓、es
+     1. 请求、任务失败，需要有反向check机制
 ### 架构
 1. 主从
    - 读写分离：采用数据库主从方式，多个从库分担读，主库负责写
@@ -241,6 +269,74 @@ redo的流程是什么
    - Kingshard：个人的go开发，读写分离、分库分表、sql黑名单
    - mysql proxy：mysql官方
    - amoeba
+1. maxwell
+   - 认识：同步binlog以json写入到kafka、redis、等流平台，用于ETL、缓存刷新、指标收集、增量到搜索引擎、数据分区迁移、切库binlog回滚等场景，java写的
+     1. 有过滤器功能
+   - 原理：伪装为slave，接收binlog events，然后根据schemas信息拼装，可接受ddl、xid、row等各种event
+   - 使用
+     1. 流程
+        - mysql配置maxwell用户、给与权限
+        - 配置连接mysql信息
+        - 配置连接kafka信息，topic
+     1. maxwell-bootstrap：基于SELECT*FROM table帮助完成数据初始化
+     1. 特点
+        - timestamp column：对时间类型当字符串处理。所以更合理的做法是提供时区参数，然后maxwell自动处理时区问题
+        - binary column：做base64_encode，消费者需要解码
+   - 配置
+     1. mysql角色
+        - host：主机，建maxwell库表，存储捕获到的schema等信息
+        - replication_host：复制主机，Event监听，读取该主机binlog
+          1. 将host和replication_host分开，可以避免replication_user往生产库里写数据
+        - schema_host：schema主机，捕获表结构schema的主机
+          1. binlog没有字段信息，所以m需要从数据库查出schema，存起来
+     1. 过滤器
+        - --filter='exclude: foodb.*, include: foodb.tbl, include: foodb./table_\d+/'：# 仅匹配foodb数据库的tbl表和所有table_数字的表
+        - --filter = 'exclude: *.*, include: db1.*'：排除所有库所有表，仅匹配db1数据库
+        - --filter = 'exclude: db.tbl.col = reject'：排除含db.tbl.col列值为reject的所有更新
+        - --filter = 'exclude: *.*.col_a = *'：排除任何包含col_a列的更新
+        - --filter = 'blacklist: bad_db.*'：blacklist 黑名单，完全排除bad_db数据库，若要恢复，必须删除maxwel
+     1. 输出格式
+        - 是否包含 binlog position
+        - 是否包含 gtid position
+        - 是否包含 commit and xid
+   - 架构
+     1. 高可用
+        - 最小队列粒度也是表，根据数据量级分开
+        - 不直接支持ha，但支持断点还原
+        - 不支持控制数据速率
+        - 监控：baselogging mechanism,JMX,HTTP,bypush toDatadog
+        - 报警
+          1. 进程是否存在
+          1. 监控异常日志
+          1. 网络监控
+          1. 数据一致性：可手动修改position位置
+        - 主从切换：通过域名访问mysql，跟着切换走
+     1. 架构：跟着数据库在不同集群就行，关系就是和mysql、kafka
+   - 性能表现
+     1. qps 16w，单核2G，20%cpu，7%内存占用，带宽会很高
+   - 其他
+     1. canal：分为服务端和客户端，需要自己编写客户端来消费服务端解析到的数据。性能稳定，功能强大，阿里。maxwell不用客户端了简单
+     1. mysql_streamer
+     1. datax
+     1. flink
+1. 网校架构
+   - 主要
+     1. 一主两从，读写分离
+     1. 版本5.7.24，启用GTID模式，启用半同步复制
+   - 功能划分
+     1. 主库功能（rw）：承载DDL、DML、查询操作，并且通过binlog将所有操作在从库上复现，从而实现主从数据一致
+     1. 线上从库功能（ro）：承载线上查询（select）操作，以减轻主库压力
+     1. 线下从库功能（ofl）：供数据部门（统计类型业务）、开发进行相关查询操作，以避免慢查询影响线上业务
+   - 主从切换机制：Arksentinel
+     1. Arksentinel中每个哨兵均每隔一段时间探测一次状态为“online”+“normal”的数据库实例，判断其是否存活或者正常服务，若不可访问/不可正常服务，则会连续探测多次；其中间隔时长和探测次数可由参数“ping间隔时间(ms)”和“ping次数”指定
+     1. 若某个哨兵连续探测次数达到参数“ping次数”之后节点仍未正常，则该哨兵标记该节点为“SDOWN”状态，此时会询问其他哨兵该节点状态。
+     1. 若其他哨兵中认为该节点状态为“SDOWN”的个数达到quorum（法定数量）后，则Arksentinel认为该节点实例为“ODOWN”状态，即哨兵集群认为该数据库节点已不可用，应当发起故障切换
+        - quorum法定数量是指N个节点中有N/2+1个，例如5个节点的quorum就是3，6个节点的quorum就是4；SDOWN是Subjective Down，某个哨兵主观认为节点宕机；ODOWN是Objective Down，客观事实该节点已经宕机可不服务。
+        - 此处系统还有一个特殊情况处理，若非所有哨兵均认为节点SDOWN，则会延迟后面的投票和选举等操作一段时间，这样是为了极大情况排除机房间断网或者网络闪断而发生切换的情况。
+     1. 哨兵内部会发起选举和投票，以选出一个Leader来执行数据库故障切换操作。
+        - 哨兵的每一次探测、选举和投票，均针对其内部的同一个epoch，即不会发生某个哨兵对上一轮的选举发起投票的情况。
+     1. Leader哨兵会根据用户自定义的故障转移方案完成整个高可用切换，包括MySQL集群关系重新建立、新Master/Write节点关闭read_only参数、VIP/DNS漂移等，并标记故障节点为“offline”+“problem”状态，即不再对外提供服务，需要用户在节点恢复后手动置为“online”状态。
+        - 对于主从复制架构来说，新Master会选取Retrive Binlog最大的节点，即从原Master上获得最多Binlog的节点，其上的Binlog才是相对最完整的。当然新Master/Write节点的选取，还会参照权重、机房和主从复制延迟多个维度，保障数据的完整性和一致性
 ### 原理
 1. 认识：单进程多线程，插件式的表存储引擎
    - 数据多了，性能下降不是线性的
@@ -388,6 +484,10 @@ redo的流程是什么
    - 查看
      1. `show master status;`
      1. `show slave status;`
+1. GTID
+   - 认识：Global Transaction ID 全局事务id，已提交事务会有一个主库唯一的编号。强化了主备一致性，故障恢复以及容错能力。之前基于二进制日志的复制中从库需要告知主库从哪个偏移量进行增量同步，如果指定错误会造成数据的遗漏，从而造成数据的不一致。借助GTID主备切换下可以找到正确的复制位置，大大简化复制的维护，另外，可以忽略已经执行过的事务，减少数据发生不一致的风险
+     1. 全局唯一性
+     1. 趋势递增
 ### 引擎
 1. 认识：基于表
    - 分类

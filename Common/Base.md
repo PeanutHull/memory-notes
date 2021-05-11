@@ -228,7 +228,7 @@
    - win32
      1. 认识
         - 广义：所有Windows提供的API
-        - 狭义：Win95时代就有的， Kernel32GDI32USER32SHELL32等
+        - 狭义：Win95时代就有的， Kernel32、GDI32、USER32、SHELL32等
      1. 绘图
         - GDI、GDI+、Direct2D
         - 第三方绘图引擎

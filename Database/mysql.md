@@ -105,6 +105,7 @@
      1. unsigned
      1. zerofill
      1. variables
+### 组成
 1. 库
    - mysql
      1. 认识：系统库，服务器运行相关信息
@@ -127,7 +128,7 @@
    - information_schema
      1. 认识：提供元数据相关信息，提供服务器、库、表相关信息。一些是只读的，实际是视图不是表
      1. 分类
-        - 系统组成
+        - 系统组成相关
           1. schemata
           1. tables
           1. columns

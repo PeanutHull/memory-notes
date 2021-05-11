@@ -22,18 +22,32 @@
 ### 视觉库
 1. OpenCV
    - 认识：开源的跨平台的计算机视觉库，基于BSD许可，实现了图像处理和计算机视觉方面的很多通用算法，由一系列C函数和少量C++类构成
-     1. 轻量高效，
+     1. 轻量高效
      1. 提供了Python、Ruby、MATLAB、C#、Ch、Ruby、GO等的接口
      1. 应用于：人机互动、物体识别、图像分割、人脸识别、动作识别、运动跟踪、运动分析、机器视觉、结构分析、汽车驾驶
-   - 历史
-     1. 1999年Intel建立
-     1. 如今由Willow Garage提供支持
+   - 组成
+     1. 图片、视频加载
+     1. 图形绘制
+     1. 计算：算术、位转换
+     1. 图像变换、滤波器
+     1. 形态学
+     1. 目标识别：轮廓查找，轮廓识别
+     1. 特征点检测和匹配：图像搜索用的这个
+     1. 图像分割和修复
+     1. 识别图片文字
+     1. 机器学习：结合，识别率更高
    - 函数
      1. cv2.imread()/inshow()/cvtColor()
      1. cv2.blur()/GaussianBlur()/medianBlur()：滤波器、算子
      1. cv2.erode()/dilate()/morphologyEx()：腐蚀、膨胀
      1. cv2.Sobel()/Canny()：边缘提取算子
      1. cv2.equalizeHist()：直方图均衡化
+   - 应用
+     1. 和图形学
+     1. FFmpeg调用opencv进行过滤
+   - wiki
+     1. 1999年Intel建立
+     1. 如今由Willow Garage提供支持
 1. libui：简单易用的c语言gui库，支持window、mac、linux三大平台，使用其本地gui技术
 1. libpng
 1. libjpeg
@@ -84,7 +98,7 @@
         - 认识：和平滑相反，通过增强高频分量来减少图像中的模糊，增强图像细节边缘、轮廓，增强灰度反差，便于后期对目标的识别和处理，会增加图像的噪声
         - 方法
           1. 微分法
-          1. 高通滤波法
+          1. 高通滤波法：低通滤波
    - 图像边缘提取
      1. 认识：完成对图像纹理信息的抓取，通过微分的方式计算图像边缘，色差、灰度值相差大的都是边缘，邻域作差即可
      1. 算子：roberts、prewitt等
@@ -122,6 +136,7 @@
    - 合并文件：`ffmpeg -i source.mp4 -i source.aac out.mp4`
    - 格式转换：`ffmpeg -i source.mp4 out.flv`
    - 音频采集：`ffmpeg -f avfoundation -i :0 out.wav`
+   - 录屏：gdigrab
 ### 音频
 1. 格式
    - 原始格式
@@ -191,6 +206,16 @@
 ### 视频
 1. 视频
    - 视频帧：一组图像组成
+     1. 编码帧
+        - I帧即Intra-coded picture（帧内编码图像帧），不参考其他图像帧，只利用本帧的信息进行编码
+        - P帧即Predictive-codedPicture（预测编码图像帧），利用之前的I帧或P帧，采用运动预测的方式进行帧间预测编码
+        - B帧即Bidirectionallypredicted picture（双向预测编码图像帧)，提供最高的压缩比，它既需要之前的图像帧(I帧或P帧)，也需要后来的图像帧(P帧)，采用运动预测的方式进行帧间双向预测编码
+     1. GOP：group of pictures，两个I帧之间的间隔，如GOP为120，如果是720p60的话，那就是2s一次I帧
+   - 屏幕
+     1. PPI：pixels per inch，每英寸的像素数量，>300是视网膜级别。1inch=2.54cm
+     1. DPI：dots per inch，每英寸的点数
+   - RGB码流：kb/s，宽 * 高 * 3byte(rgb) * 帧率，如720p的25帧视频每秒500多M
+   - 关系
      1. 帧：就是图像，图片是RGB格式的，视频帧通常是YUV
      1. 帧率：fps Frames Per Second，平滑程度/跳动感，每秒采集、播放的图像个数，动画帧数为25，常见15、30、60，视觉暂留人眼最低24fps
      1. 分辨率：图像大小/清晰程度，x轴像素个数 * y轴像素个数，常见有360p、720p、1k、2k，常见宽高比16:9、4:3
@@ -199,10 +224,6 @@
         - 像素：Pixel，缩写px，一个点，是图像显示的基本单位。每三个红绿蓝二极管组成一个像素，由Picture(图像)和Element（元素）组成
         - 颜色
         - 图像处理：拉伸/留白、缩小/截断
-   - 屏幕
-     1. PPI：pixels per inch，每英寸的像素数量，>300是视网膜级别。1inch=2.54cm
-     1. DPI：dots per inch，每英寸的点数
-   - RGB码流：kb/s，宽 * 高 * 3byte(rgb) * 帧率，如720p的25帧视频每秒500多M
 1. 封装格式
    - 认识：打包音频和视频
    - 分类：![avatar](../images/video_format.png)

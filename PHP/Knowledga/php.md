@@ -212,9 +212,15 @@
    - 查找：glob
    - 重命名/移动：rename
 1. 网络/IO
-   - socket：socket类遵循tcp/ip协议，封装大量的内部通讯方法，用于创建主机端与客户端的数据通讯，就是listen/accept/send/write等几个基本操作，相关函数：fopen/fsockopen/stream_socket_server/stream_socket_client
+   - socket：对底层Socket API的封装，socket类遵循tcp/ip协议，封装大量的内部通讯方法，用于创建主机端与客户端的数据通讯，就是listen/accept/send/write等几个基本操作，相关函数：fopen/fsockopen/stream_socket_server/stream_socket_client
    - stream：流，补充文件形式的其他数据源的处理能力，经常和socket联合使用
    - php协议：php://stdin/stdout/stderr/input/output/fd/filter：`file_get_contents("php://input")`：获取不同content-type下的post数据，type为multipart/form-data时无效
+1. 线程、进程管理
+   - Pcntl/Posix：多进程、信号、进程管理的支持
+   - Pthread：多线程、线程管理、锁的支持
+1. 事件管理
+   - Libevent：对libevent库的封装
+   - Event：基于Libevent更高级的封装，提供了面向对象接口、定时器、信号处理的支持
 1. 编解码
     ```php
     // web传输
