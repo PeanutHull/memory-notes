@@ -328,6 +328,14 @@
 1. tcp_max_syn_backlog
    - 太大：php-fpm处理不过来，nginx等待超时断开连接，报504 gateway timeout，同时php-fpm处理完准备write数据给nginx时发现TCP连接断开报Broken pipe
    - 太小：进不了php-fpm的accept queue，报502 Bad Gateway
+1. 优化：修改配置项目
+   - worker_processes 8;                                    # 进程数
+   - worker_cpu_affinity 1000 0100 0010 0001;               # 每个进程分配cpu，这是4核
+   - worker_connections 65535;                              # 连接数=进程数*单个进程连接数
+   - worker_rlimit_nofile 65535;                            # 打开的最多文件描述符
+   - use epoll;                                             # 不同系统不同模型
+   - keepalive_timeout 60;
+   - gzip on;
 ### 运维
 1. 安装
    - linux
@@ -381,14 +389,14 @@
 1. 操作
    - 启动：`nginx`
    - 热重启：`nginx -s stop/reload`
-1. 优化：修改配置项目
-   - worker_processes 8;                                    # 进程数
-   - worker_cpu_affinity 1000 0100 0010 0001;               # 每个进程分配cpu，这是4核
-   - worker_connections 65535;                              # 连接数=进程数*单个进程连接数
-   - worker_rlimit_nofile 65535;                            # 打开的最多文件描述符
-   - use epoll;                                             # 不同系统不同模型
-   - keepalive_timeout 60;
-   - gzip on;
+### 架构
+1. 网关
+   - 作用
+     1. 反向代理
+     1. 负载均衡
+     1. api管理
+        - 限流
+   - 架构：cdn——负载均衡器——api网关——k8s的ingress控制器——web服务
 ### wiki
 1. nginx依赖
    - pcre：Perl Compatible Regular Expressions，是Perl库。nginx的http模块使用pcre来解析正则表达式
@@ -407,13 +415,9 @@
      1. 支持基于端口的监控、故障切换
      1. 支持停机模式、支持监控界面、监控api输出
      1. 支持虚拟主机
-1. 网关
-   - 作用
-     1. 反向代理
-     1. 负载均衡
-     1. api管理
-        - 限流
-   - 架构：cdn——负载均衡器——api网关——k8s的ingress控制器——web服务
+1. OpenResty
+   - 认识：ngx_openresty，基于nginx与lua的高性能web平台，用于方便地搭建处理高并发、扩展性的服务和动态网关
+     1. 可以使用lua脚本语言调动nginx的各种c、lua模块，让web服务直接跑在nginx内部
 ### 实际应用
 1. 代理线上配置
     ```lua

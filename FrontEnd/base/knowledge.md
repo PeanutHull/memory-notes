@@ -144,6 +144,9 @@ alert(jsonobj.name);
           1. 条件
              - 三种请求方法：head、get、post
              - 请求头不超出以下字段：Accept、Accept-Language、Content-Language、Last-Event-ID、Content-Type(仅三个application/x-www-form-urlencoded、multipart/form-data、text/plain)
+     1. CORB：当跨域请求回来的数据 MIME type 同跨域标签应有的 MIME 类型不匹配时，浏览器会启动 CORB 保护数据不被泄漏，被保护的数据类型只有 htmlxml 和 json
+        - 一个域名一个独立运行进程，跨域打破了这个限制
+          1. SCA：Side-Channel Attacks 旁道攻击，由于利用程序运行时(同样的内存)，系统产生的一些物理特征（如：时延，能耗，电磁，错误消息，频率等）进行推测型攻击
 1. jsBridge定义不同平台、app构建viewport、只访问jsBridge的方法，他去实现不同情况的请求方法————把不变的放在一起
 1. MEAN————全栈javascript开发架构
  - 理解：即MongoDB、ExpressJS，AngularJS、Node.js

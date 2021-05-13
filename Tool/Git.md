@@ -4,6 +4,9 @@
 1. 要使用merge --no-ff
 1. 多人rebase流程：git fetch origin branch————git rebase origin branch————git push。即先用远程的commit history纠正本地的history，才不会出错
 1. rebase冲突解决：fetch——rebase——冲突——git add 更新索引——git rebase --continue。随时退出：git rebase --abort
+1. 代理
+   - git config --global https.proxy 'socks5://127.0.0.1:1080'
+   - git config --global --unset https.proxy
 ### 组合知识
 1. git add < filename >               不用撤销add，直接再add一次就可以覆盖
 1. git，开源分布式版本控制系统。

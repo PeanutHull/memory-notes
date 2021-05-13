@@ -49,7 +49,7 @@
         - 软连接：-s，即符号链接，类似快捷方式
      1. unlink
 1. 查看内容
-   - cat：查看文件内容
+   - cat：查看文件内容，整个文件都载入
      1. `cat file1 file2`：同时查看两个文件
      1. `cat -n file | grep ''| more`：分页查看
      1. `cat file > xxx.txt`：将显示结果保存到文件
@@ -59,7 +59,7 @@
    - head/tail：输出文件头/尾
      1. -n：行数
      1. -f：tail不停显示
-   - less/more：分页查看内容，less在另一屏打开，不占用当前屏幕内容
+   - less/more：分页查看内容，一点点载入；less在另一屏打开，不占用当前屏幕内容
      1. -M：显示更多文件信息：页码等
      1. enter：下一行
      1. space：下一屏
@@ -67,15 +67,24 @@
      1. /：字符查找，n查找下一次，gg到文件头，G到文件尾，q退出
    - awk：
      1. 认识：从文件或字符串中基于指定规则浏览和抽取信息，是一种自解释的编程语言。`awk [options] 'command' files`。三剑客：awk sed grep
-     1. awk脚本：用awk命令解释器作为脚本的首行，以便通过键入脚本名称来调用它
-     1. 域标识：浏览域，标记为$1/$2/$n，$0为所有域
+        - awk脚本：用awk命令解释器作为脚本的首行，以便通过键入脚本名称来调用它
+        - 域标识：浏览域，标记为$1/$2/$n，$0为所有域
+        - 默认用空格识别分块，是逐行处理的，
+     1. 关键字
+        - NEXT显示告诉去下一行
+        - END关键字代表一个触发器，当前面的输入全部完成后才会执行END {}中的语句
      1. 使用
         - 输出所有行
           1. `awk '{print $0}' file`
-          1. `awk -F : '{ print $1 }' file`：只是以:作为分隔符
+          1. `awk -F : '{ print $1 }' file`：以:作为分隔符
         - 给结果加上头尾字符串：`awk 'BEGIN {print "begin\n"}{print $1 "\t" $4} END{print "end"}' file`
         - 匹配第一个行是xx：`awk '{if($1=="xx") print $0}' file`
-        - 同ip访问次数，空格分隔：`cat filename | awk -F '' '{print $1}' | sort | uniq -c > result.txt`
+     1. 例子
+        - 每日pv多少，即按每天分组，用日期去重倒序排序取前三表示：`awk '{print substr($4, 2, 11)}' access.log | sort | uniq -c | sort -rn | head -n 3`
+          1. uniq是前后两两比较排序，所以需要sort
+        - 每日uv多少，用访问ip去重统计表示：`awk '{print $1}' access.log | sort | uniq | wc -l`
+        - 相同ip访问次数，空格分隔：`cat filename | awk -F '' '{print $1}' | sort | uniq -c`
+        - 每日的uv数量：`awk '{print substr($4, 2, 11) " " $1}' access.log | sort | uniq | awk '{uv[$1]++;next}END{for (ip in uv) print ip, uv[ip]}'`
    - sed
      1. 认识：文本过滤工具，是一种非交互性的文本流编辑
      1. 运行方式：`sed [options] 'command' files`，脚本执行方式：`sed[options] -f sed脚本文件`

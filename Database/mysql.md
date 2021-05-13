@@ -225,7 +225,7 @@
     create table table_name(                                                                # 创建表
         id int unsigned primary key auto_increment,
         username char(25) unique not null default '',
-    )ENGINE=InnoDB AUTO_INCREMENT=0 DEFAULT CHARSET=utf8 COMMENT='';
+    )ENGINE=InnoDB AUTO_INCREMENT=0 DEFAULT CHARSET=utf8 COMMENT='' CHECKSUM=1 DELAY_KEY_WRITE=1 ROW_FORMAT=DYNAMIC;
     create unique/fulltext/spatial index indexName using btree/hash/rtree                   # 创建索引
     create table tableName1 like tableName;                                                 # 复制表结构
     insert into tableName1 select * from tableName;                                         # 复制表数据
@@ -302,6 +302,14 @@
         - 时间戳
           1. 转为时间戳：`unix_timestamp('2018-01-15 09:45:16');`
           1. 转为时间：` from_unixtime(date, '%Y-%c-%d %h:%i:%s')`
+   - checksum：在逻辑备份时候前后可以用于验证数据一致性，`checksum table xxx`
+     1. 无关：是否有索引、字符集、引擎类型
+     1. 有关：字段顺序
+   - DELAY_KEY_WRITE
+     1. 认识在表关闭之前，将对表的update操作只更新数据到磁盘，而不更新索引到磁盘，把对索引的更改记录在内存，在关闭表的时候一起更新索引到磁盘
+        - 使索引更新更快
+        - 重启或掉电会导致索引没更新，启动参数加上--myisam-recover
+     1. 操作：`ALTER TABLE xxx DELAY_KEY_WRITE=1`
 ### 特性
 1. 索引
    - 认识：为加快查询速度，对数据列进行排序的一种结构，包含所有记录的引用指针，查询时先查索引，引擎实现
@@ -312,6 +320,16 @@
      1. 非常小的表：全表扫描效率更高
      1. 中大型：索引非常有效
      1. 特大型：索引代价增长，使用分区
+   - 特性
+     1. 选择性原则：不重复的索引值和总数的比值。范围0~1，选择性越高查询效率越高，提高查询速度，节省空间和io。唯一索引的选择性是1性能最好。区分度公式COUNT(DISTINCT col)/COUNT(*)
+     1. 最左前缀原则：组合索引只会从左边开始按照索引搜索，如果检索条件没有最左的，那么就不会使用到索引，因为不知道去哪儿开始找
+     1. 查询只能使用一个索引，会选择限制最严格的那个索引：where用了order没法用，只有order的字段在where中才会用
+     1. 有null的列不会包含在索引中
+   - 特点
+     1. 表只有一个主键索引，可有多个唯一索引
+     1. key和index都是索引，为兼容其他系统，key多了一层约束层含义
+     1. hash索引，重复数据多了性能下降，hash碰撞
+     1. 使用了索引：意思是使用索引的快速搜索功能，有效的减少了扫描行数。对应的有全索引扫描，是不够快的
    - 分类
     ```
     key/index               # 普通索引
@@ -325,16 +343,6 @@
     fulltext                # 全文索引，用于文本搜索，仅MySIAM，仅用于char/varchar/text，仅英文
     spatial                 # 空间列，值不为null
     ```
-   - 特性
-     1. 选择性原则：不重复的索引值和总数的比值。范围0~1，选择性越高查询效率越高，提高查询速度，节省空间和io。唯一索引的选择性是1性能最好。区分度公式COUNT(DISTINCT col)/COUNT(*)
-     1. 最左前缀原则：组合索引只会从左边开始按照索引搜索，如果检索条件没有最左的，那么就不会使用到索引，因为不知道去哪儿开始找
-     1. 查询只能使用一个索引，会选择限制最严格的索引：where用了order没法用，只有order的字段在where中才会用
-     1. 有null的列不会包含在索引中
-   - 特点
-     1. 表只有一个主键索引，可有多个唯一索引
-     1. key和index都是索引，为兼容其他系统，key多了一层约束层含义
-     1. hash索引，重复数据多了性能下降，hash碰撞
-     1. 使用了索引：意思是使用索引的快速搜索功能，有效的减少了扫描行数。对应的有全索引扫描，是不够快的
 1. 事务
    - 理解：保证一致性，所有操作全部执行
      1. 服务层不管理，由引擎实现
@@ -370,52 +378,96 @@
         - 隔离级别：由低到高
           1. Read Uncommitted：未提交读，会导致数据完整性的严重问题，3种问题都存在
           1. Read Committed：已提交读，避免脏读，本事务中可以看到其他事务提交的数据，导致不可重复读、幻读
-          1. Repeatable Read：可重复读，默认，一个事务开始后其他session对数据库的修改在本事务中不可见，只针对修改不针对插入，避免脏读/不可重复读
-          1. Serializable：可序列化，事务串行化顺序执行，性能问题并增加死锁的机率，避免脏读/不可重复读/幻读
+          1. Repeatable Read：可重复读，默认，一个事务开始后其他session对数据库的修改在本事务中不可见，只针对修改不针对插入，避免脏读/不可重复读/幻读
+          1. Serializable：可序列化，事务串行化顺序执行，从mvcc并发控制退化为基于锁的并发控制，读写冲突，并发度急剧下降并增加死锁的机率，避免脏读/不可重复读/幻读
      1. 在读取数据的时候,innodb几乎不用获得任何锁, 每个查询都通过版本检查,只获得自己需要的数据版本,从而大大提高了系统的并发度
 1. 锁
-   - 分类
-     1. 基于数据操作
-        - 共享锁：`lock in share mode;`，读锁，读读可以并行，同时锁拥有者不能修改，保证了拥有者释放锁时其他人读取的是对的
-        - 排他锁：`for update`，写锁，读写不能并行，写写不能并行
-          1. 锁级别：有主键或索引行级别，无则表级别
-          1. 注意
-             - 仅适用于InnoDB，必须在事务中执行
-             - 存在写锁时普通select拿不到，for update读写都拿不到，update/delete/insert自动加，select任何锁不加
-        - 意向共享锁：为了允许行锁和表锁共存，实现多粒度锁机制，意向锁都是表锁，申请表锁时为了快速知道是否可锁，否则需要一行行去看是否有锁
-        - 意向排他锁
-        - MDL锁
-        - 两阶段锁协议
-        - 死锁和死锁检测：发生死锁后InnoDB一般都能自动检测到，并使一个事务释放锁并回退，涉及表锁稍微不行
-     1. 基于范围
-        - 表锁：MyISAM，性能开销小，加锁快，无死锁，冲突高，并发低。可以并发读，写的时候读写都加锁等待，系统自动加锁。因为一次获取所有锁，不会死锁。必须一次锁定所有用到的表，别名也要指定，否则出错
-        - 行锁：InnoDB，开销大，加锁慢，有死锁，冲突低，并发高。基于索引，如果改的字段是索引或者自增字段，会锁住整个表
-        - 间隙锁：gap锁，范围查找自动锁定范围内所有行，不可以被其他事务读取/修改，防止幻读
-        - 页锁：BDB被InnoDB取代，并发介于表和行之间，会死锁
-        - 会话锁
-          1. `get_lock(key, timeout)`：按key名加锁，使用元数据锁定(MDL)，没人用
-          1. `release_lock(key)/release_all_lock()`：释放锁，关闭连接锁也释放
-          1. `is_free_lock(key)/is_used_lock(key)`
-     1. 基于逻辑
+   - 特点
+     1. 行锁基于索引项加锁实现，只有通过索引条件检索数据，InnoDB才使用行级锁，否则，InnoDB将使用表锁
+     1. 目前处理死锁的方法是：将持有最少行级排它锁的事务回滚
+   - 概念
+     1. 加锁方式
         - 悲观锁
-          1. 理解：Pessimistic Locking，读取的时候为后面的更新加锁，之后再来的读写都会等待，属于数据库层面的锁
+          1. 理解：Pessimistic Locking，读取的时候为后面的更新加锁，之后再来的读写都会等待，属于数据库的锁
+             - 每次取数据时都认为其他线程会修改
           1. 意义：数据修改排他性，高并发下，数据可以正确写入。但带来数据库性能的大量开销，影响并发访问性，特别是长事务
         - 乐观锁
-          1. 理解：Optimistic Locking，乐观并发控制。基于数据版本记录机制实现。如updatetime/version等版本标识字段，根据version更新数据，一旦发现其他并发操作更新，会回退，并从新执行自己
+          1. 理解：Optimistic Locking，乐观并发控制。基于数据版本记录机制或CAS操作实现
+            - 每次去取数据的时候总认为不会有其他线程对数据进行修改
           1. 优缺点：程序实现，不会存在死锁。但是阻止不了程序之外的数据库操作
-          1. 流程
+          1. 流程：如updatetime/version等版本标识字段，根据version更新数据，一旦发现其他并发操作更新，会回退，并从新执行自己
              - 读数据时，将version/时间戳一同读出
              - 更新数据时，对比数据局版本
              - 版本正确，更新数据，version加1
              - 版本错误，认为是过期数据，采取补救措施
+     1. 基于范围
+        - 表锁：MyISAM，性能开销小，加锁快，无死锁，冲突高，并发低。可以并发读
+          1. 写的时候读写都加锁等待，系统自动加锁。因为一次获取所有锁，不会死锁
+          1. 必须一次锁定所有用到的表，别名也要指定，否则出错
+        - 行锁：InnoDB，记录锁，开销大，加锁慢，有死锁，冲突低，并发高。基于索引，如果改的字段是索引或者自增字段，会锁住整个表
+        - 页锁：BDB被InnoDB取代，并发介于表和行之间，会死锁
+     1. 加锁方式
+        - 一次性锁协议：所有锁一次性申请和释放，不会产生死锁
+        - 两阶段锁协议：分成加锁(不能解锁)阶段，和释放第一个锁后就进入解锁(不能加锁)阶段
+          1. 使得事务具有较高的并发度，因为解锁不必发生在事务结尾，但有死锁
+   - mysql的锁
+     1. Shared and Exclusive Lock
+        - 特点
+          1. 强锁
+          1. 锁级别：有主键或索引行级别，无则表级别
+          1. 仅适用于InnoDB，必须在事务中执行
+          1. 存在写锁时普通select拿不到，for update读写都拿不到，update/delete/insert自动加，select任何锁不加
+        - 分类
+          1. Shared  Lock：共享锁，读锁，s，其他人读可以并行，锁拥有者不能修改，保证了拥有者释放锁时其他人读取的是对的，`lock in share mode`
+          1. Exclusive Locks：排他锁，写锁，x，其他人读写都不能并行，`for update`
+     1. Intention Lock
+        - 认识：意向锁，表锁，为了允许行锁和表锁共存，实现多粒度锁机制。申请表锁时为了快速知道是否可锁，否则需要一行行去看是否有锁
+          1. 弱锁，仅仅表明意向
+          1. 给一个数据行加锁前必须先取得该表对应的意向锁
+          1. 是InnoDB自动加的，不需用户干预
+        - 分类
+          1. 意向共享锁：is
+          1. 意向排他锁：ix
+     1. Auto-inc Lock
+        - 认识：自增锁，特殊的表级锁，专门针对事务插入AUTO_INCREMENT类型的列
+          1. 如果插入位置冲突，多个事务会阻塞，以保证数据一致性
+          1. innodb_autoinc_lock_mode：调节该锁的模式与行为，3种配置，0加自增锁，1回滚自增列不连续，2批量插入自增列可能不连续，主从同步可能出问题
+     1. Record Lock
+        - 认识：记录锁，索引记录上加锁
+     1. Gap Lock
+        - 认识：间隙锁，范围查找自动锁定区间内所有行，索引记录中的间隔加锁，不可以被其他事务读取/修改，防止幻读
+        - 分类
+          1. Insert Intention Lock
+             - 认识：插入意向锁，插入操作时使用，多个事务在同一个索引、同一个范围区间插入记录时，如果插入的位置冲突会阻塞
+             - 实际是gap锁上加一个LOCK_INSERT_INTENTION标记
+     1. Next-key Lock
+        - 认识：Ordinary Lock 临键锁，同时锁住索引的记录和间隙
+          1. 在RR下有效，防止幻读
+          1. 两种锁可能只成功一个，所以next-key是半开半闭区间，且是下界开，上界闭
+     1. Metadata Lock
+        - 认识：MDL锁，是server层的锁，主要用于隔离DML和DDL操作之间的干扰
+          1. 每执行一条DML、DDL语句时都会申请，DML需MDL读锁，DDL需MDL写锁，有活动事务时会等待
+          1. 加锁过程自动控制
+          1. 查看：`select * from performance_schema.metadata_locks;`
+        - 会话锁
+          1. `get_lock(key, timeout)`：按key名加锁，使用元数据锁定(MDL)，没人用
+          1. `release_lock(key)/release_all_lock()`：释放锁，关闭连接锁也释放
+          1. `is_free_lock(key)/is_used_lock(key)`
    - 查看
      1. 表锁争用情况：`show status like 'table%';`
      1. 行锁争用情况：`show status like 'innodb_row_lock%';`，使用监视器`CREATE TABLE innodb_monitor(a INT) ENGINE=INNODB;Show innodb status\G;DROP TABLE innodb_monitor;`
-   - 解决方案
-     1. 如果并发查询多个表，约定访问顺序
-     1. 在同一个事务中，尽可能做到一次锁定获取所需要的资源
-     1. 对于容易产生死锁的业务场景，尝试升级锁颗粒度，使用表级锁
-     1. 采用分布式事务锁或者使用乐观锁
+   - 死锁
+     1. 表现
+        - 记录锁（LOCK_REC_NOT_GAP）: lock_mode X locks rec but not gap
+        - 间隙锁（LOCK_GAP）: lock_mode X locks gap before rec
+        - 插入意向锁（LOCK_INSERT_INTENTION）: lock_mode X locks gap before rec insert intention
+        - Next-key锁（LOCK_ORNIDARY）: lock_mode X
+     1. 解决方案
+        - 通常来说，死锁都是应用设计的问题。死锁的关键在于两个(或以上)的Session加锁的顺序不一致
+        - 如果并发查询多个表，约定访问顺序
+        - 批量处理数据时事先对数据排序，保证每个线程按固定顺序处理记录，也可以大大降低出现死锁的可能
+        - 在同一个事务中，尽可能做到一次锁定获取所需要的资源，不要先共享锁，再排它锁
+        - 小事务发生锁冲突的几率也更小
 1. 预解析
    - 理解：使用占位符预先准备查询语句，不用解析语句，查询速度更快，防止注入。步骤有：prepare、execute、deallocate prepare(发布)
    - 实例
