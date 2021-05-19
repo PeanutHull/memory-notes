@@ -69,10 +69,18 @@
      1. 认识：从文件或字符串中基于指定规则浏览和抽取信息，是一种自解释的编程语言。`awk [options] 'command' files`。三剑客：awk sed grep
         - awk脚本：用awk命令解释器作为脚本的首行，以便通过键入脚本名称来调用它
         - 域标识：浏览域，标记为$1/$2/$n，$0为所有域
-        - 默认用空格识别分块，是逐行处理的，
+        - 默认用空格识别分块，是逐行处理的
      1. 关键字
         - NEXT显示告诉去下一行
+        - GEGIN
         - END关键字代表一个触发器，当前面的输入全部完成后才会执行END {}中的语句
+     1. 变量
+        - 用法：$FS
+        - 分类
+          1. FS：设置分隔符
+     1. 运算符
+        - + - * / % ^
+        - == !- >= ~(匹配)
      1. 使用
         - 输出所有行
           1. `awk '{print $0}' file`
@@ -85,6 +93,21 @@
         - 每日uv多少，用访问ip去重统计表示：`awk '{print $1}' access.log | sort | uniq | wc -l`
         - 相同ip访问次数，空格分隔：`cat filename | awk -F '' '{print $1}' | sort | uniq -c`
         - 每日的uv数量：`awk '{print substr($4, 2, 11) " " $1}' access.log | sort | uniq | awk '{uv[$1]++;next}END{for (ip in uv) print ip, uv[ip]}'`
+        - 找出目录下的最大的文件和最小的文件，输出平均大小
+            ```shell
+            # 思路： ls 有一个参数大写字母S，会把文件从大到小排序，
+            # 排序后，最大文件就是第一行（NR＝1），最小文件就是最后一行，平均大小为（累计总大小/NR）
+            cat 1.awk
+            BEGIN {total=0}
+            {
+                if(NR==2) print "max file:"  $NF, "size " $5
+                total+=$5
+            }
+            END {
+                print "min file:" $NF, "size " $5
+                print "mean file size: " total/NR
+            }
+            ```
    - sed
      1. 认识：文本过滤工具，是一种非交互性的文本流编辑
      1. 运行方式：`sed [options] 'command' files`，脚本执行方式：`sed[options] -f sed脚本文件`
@@ -380,6 +403,12 @@
      1. -a：显示每个子文件的磁盘占用量。默认只统计子目录的磁盘占用量
      1. -h：使用习惯单位显示磁盘占用量，如KB、MB
      1. -s：统计总磁盘占用量，而不列出子目录和子文件的磁盘占用量
+   - dd：用指定大小的块拷贝一个文件，并在拷贝的同时进行指定的转换
+     1. 性能测试：`time dd if=test.dbf bs=4k count=300000 of=/dev/null`，time计时，dd用于复制，从if读出，写到of
+        - if=/dev/zero产生字符、不产生IO，可以用来测试纯写速度
+        - of=/dev/null回收站、无底洞、不产生IO，可以用来测试纯读速度
+        - 将/tmp/test拷贝到/var测试读写速度
+        - bs是每次读或写的大小，即一个块的大小，count是读写块的数量
    - dlkid
    - fsck：检查文件系统，并尝试修复
    - fdisk：分区，大于2TB用parted
@@ -461,6 +490,8 @@
    - 单机最大连接数
      1. 进程的文件句柄限制，可以改配置变大
      1. 端口号限制，根据tcp连接标识定义，连接数即客户端ip数×客户端port数，不考虑地址重用/地址分类，对于ipv4，server端单机最大tcp连接数约为2的48次方
+1. wiki
+   - 子进程的fd限制会继承父进程
 ### 工具
 1. 定时任务
    - crontab：linux原生定时器

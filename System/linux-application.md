@@ -491,6 +491,11 @@
      1. 内核层
         - SCI：System Call Interface，系统调用接口
         - VFS：Virtual File System，虚拟文件系统，是物理文件系统与服务应用之间的接口层，提供了mount等api
+          1. 数据结构
+             - superblock：Linux 用来标注具体已安装的文件系统的有关信息
+             - inode：Linux 中的每一个文件/目录都有一个 inode，记录其权限、修改时间等信息
+             - desty：目录项，是路径中的一部分，所有的目录项对象串起来就是一棵 Linux 下的目录树
+             - file：文件对象，用来和打开它的进程进行交互
         - General Block Device Layer：通用块设备层，统一对外输出底层不同的io接口
      1. 物理层：硬盘
    - 操作系统使用的分类
@@ -616,13 +621,22 @@
         - 文件名写入目录，将文件名和i-node连接起来
 ### 优化
 1. 问题定位
-   - strace：跟踪系统调用的执行
-     1. 查看统计：`strace -p xx -c`
-     1. 查看实时：`strace -p xx -T -s 4094`
+   - network
+     1. telnet：用于连接
+     1. strace：跟踪系统调用的执行
+        - 查看统计：`strace -p xx -c`
+        - 查看实时：`strace -p xx -T -s 4094`
+     1. netstat：
+        - `netstat -s | grep LISTEN`
+        - `netstat -s | grep TCPBacklogDrop`
+     1. ss -l
+     1. tcpdump
+   - log
+     1. dmesg：查看系统日志
+        - /var/log/message
    - pstack
    - gdb
    - ltrace
-   - tcpdump
 1. 问题解决
 1. irqbalance
 ### 软件安装
@@ -750,6 +764,9 @@
      1. 将虚拟网卡桥接到物理网卡上，和linux下一个网卡绑定两个不同地址类似，实际上是将网卡设置为混杂模式，从而达到侦听多个ip的能力
      1. 虚拟机和host机处于对等的地位，在网络关系上是平等的
    - 主机模式：仅让虚拟机与物理机通信，不能访问外网
+1. 安全
+   - ossec：开源的入侵检测系统
+   - clamav：linux杀毒软件
 ### api
 1. io相关
    - inotify

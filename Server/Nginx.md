@@ -53,9 +53,9 @@
 1. location配置，匹配路径
    - 语法：优先级递减
      1. =     精确匹配    1
-     1. ^~    以某个字符串开头    2
-     1. ~     区分大小写的正则匹配    3
-     1. ~*    不区分大小写的正则匹配    4
+     1. ^~    以某个字符串开头，不以开头的可以新建另一个server不同port解决    2
+     1. ~     开头表示区分大小写的正则匹配    3
+     1. ~*    开头表示不区分大小写的正则匹配    4
      1. !~    区分大小写不匹配的正则    5
      1. !~*   不区分大小写不匹配的正则    6
      1. /     通用匹配，任何请求都会匹配到    7
@@ -82,12 +82,16 @@
         root /Users/Treri/project/wecook/mobile;
     }
 
-    location / {                                                                # 重动向
+    location / {                                                                # 重定向
         if (!-e $request_filename) {
             rewrite  ^(.*)$  /index.php?s=$1  last;
             break;
         }
     }
+    # last – 基本上都用这个Flag。
+    # break – 中止Rewirte，不在继续匹配
+    # redirect – 返回临时重定向的HTTP状态302
+    # permanent – 返回永久重定向的HTTP状态301
 
     location / {                                                                # 反向代理，请求转发
         proxy_pass http://localhost:99;

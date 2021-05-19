@@ -1,5 +1,5 @@
 ### 基础
-1. 理解：是用go开发的开源应用容器引擎，可以为应用创建可移植的、轻量级的容器。允许开发者打包应用到一个可移植的容器中，然后可以批量地在生产环境中部署。内核容器技术，将(LXC、cgroups、Union FS)整合和包装，形成了标准镜像格式
+1. 理解：是用go开发的开源应用容器引擎，可以为应用创建可移植的、轻量级的容器。允许开发者打包应用到一个可移植的容器中，然后可以批量地在生产环境中部署。内核容器技术，将(LXC、cgroups、Union FS)整合和包装，形成了标准镜像格式。容器就是一个进程集合，只需要一个独立的文件系统提供其所需要文件集合即可。所有的文件隔离都是进程级别的，隔离效果相比 VM 要差很多
 1. 特点
    - 轻量，内存占用小，高密度(每个虚拟机需要一套os)
    - 快速，毫秒启动
@@ -106,24 +106,59 @@
     docker attach xdfAdmin
     ```
 ### Kubernetes
-1. 理解：k8s，google开源的一个容器管理、编排、调度引擎和平台，是微服务的支撑平台，是可移植的云平台。用于管理云平台中多个主机上的容器化的应用，让部署容器化的应用简单并且高效，提供自动负载均衡，自动纠错，自动分配负载、自动回滚，管理应用、负载均衡、域名、服务
-   - 以Pod为基本的编排和调度单元，声明式的对象配置模型(控制器、configMap、secret)
+1. 理解：k8s，google开源的一个容器管理、编排、调度引擎和平台。用于管理云平台中多个主机上的容器化的应用，让部署容器化的应用简单并且高效
    - 资源分配管理
    - 健康检查、自愈、伸缩、滚动升级
+   - 提供自动负载均衡，自动纠错，自动分配负载、自动回滚，管理应用、负载均衡、域名、服务等
+   - 以pod为基本的编排和调度单元，声明式的对象配置模型(控制器、configMap、secret)
 1. 特点
+   - 是微服务的支撑平台，是可移植的云平台
    - 颁布了云原生的标准，已经成为容器管理领域的标准，支持跨云迁移
-   - 生态圈：是google最成熟的管理经验输出，是战胜Docker Swarm和Apache Mesoc唯一值得绑定的平台，是google、Red Hat的OpenShift、Microsoft的AWS、IBM的云平台提供商的支持
-1. 组成
-   - Deployment：部署
-   - Pods：容器组
-   - Service：服务
-   - Ingress：路由
-   - ConfigMap：配置项
+   - 生态圈：是google最成熟的管理经验输出，是战胜Docker Swarm和Apache Mesoc唯一值得绑定的平台
+     1. google、Red Hat的OpenShift、Microsoft的AWS、IBM的云平台提供商的支持
 1. 对微服务的支撑
    - 服务注册发现、服务编排、内部路由
    - 快速部署、负载均衡
    - 有状态的服务支持
-1. 前端发布：k8s+skaffold +kaniko + gitops
+1. 组成
+   - Master：通过etcd的List-Watch方式通信（事件发送与监听）
+     1. APIServer
+     1. Controller Manager：管理，调整资源状态、执行宕机修复流程等，是运维自动化的核心，分为8个Controller
+     1. Scheduler：调度，关注待调度的Pod、可用的Node，调度算法和策略
+        - 将待调度的Pod按照算法和策略绑定到Node上，同时将信息保存在etcd中
+        - kubelet 通过 APIServer 监听到 Scheduler 产生的 Pod 绑定事件，然后通过 Pod 的描述装载镜像文件，并且启动容器
+   - Node
+     1. kubelet：具体执行命令的，Pod创建和容器加载等
+     1. kube-proxy：即Service
+        - 定义服务访问入口地址：IP+Port
+        - Service与后端Pod副本集群通过组(Label Selector)实现连接
+        - Service的type=NodePort改为type=LoadBalancer，Kubernetes就会自动创建一个对应的Load Balancer实例并返回它的IP地址供外部客户端使用
+     1. Pod
+        - cAdvisor：监控资源
+        - container：容器
+1. 功能
+   - Pods：容器组，一个pod具有一个ip，该ip在其容器间共享
+   - Label：标签，用于过滤系统中相似资源的方式
+   - Annotation：注解，用于以自由的字符串形式保存不同对象的元数据
+   - Service Discovery：服务发现
+     1. 所有Pod使用自定义的 DNS 服务器
+   - ReplicaSet：副本集
+     1. 自动伸缩
+   - DaemonSet：守护进程集
+     1. 代理需要运行在所有节点上
+   - StatefulSet：有状态集
+   - Job：任务
+   - Ingress：路由
+   - ConfigMap：配置映射，实际是环境变量键值列表
+   - Secret：机密配置，类似ConfigMap，只是会进行加密
+   - Deployment：部署
+     1. 替换
+     1. 滚动升级
+   - Storage：存储
+1. wiki
+   - 用8代替8个字符“ubernete”而成的缩写
+   - 前端发布：k8s + skaffold + kaniko + gitops
+   - 使用etcd作为数据库
 ### 云计算
 1. 认识
    - 云部署形式

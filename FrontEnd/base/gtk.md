@@ -166,6 +166,8 @@
         g_object_set(gtk_settings_get_default(), "gtk-theme-name", "Desert-1.2", NULL);     // 设置主题
     }
     ```
+1. 其他
+   - AWTK：基于c语言开发的GUI框架，支持跨平台同步开发
 ### 运维
 1. 打包发布：将依赖的动态库、静态库、资源文件都放到需要的目录下，然后搭配安装制作工具发布包
 ### wiki
