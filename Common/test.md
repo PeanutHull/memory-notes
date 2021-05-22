@@ -113,5 +113,7 @@
      1. LoadRunner：收费
      1. http_load
      1. wrk
-     1. webbench
+     1. webbench：最多可以模拟3万个并发连接，`webbench -c 1000 -t 30 http://xxx`
+        - -t：并发
+        - -c：时间
    - 分布式压测

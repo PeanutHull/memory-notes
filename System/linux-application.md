@@ -748,7 +748,7 @@
    - 标准化、自动化、平台化、服务化
    - DevOps：Developers+Operators
    - SRE：Site Reliability Engineer，网站可靠性工程师
-   - SLA：Service-Level Agreement，服务等级协议，保证要提供的服务协议，包括正常运行时间占比
+   - SLA：Service-Level Agreement，服务等级协议，保证要提供的服务协议，包括正常运行时间占比，如运营商承诺的带宽、时延、抖动、丢包率
 1. 实操
    - 网卡bond模式：linux多网卡的7种bond模式原理：bond0~6。通过多张网卡绑定为一个逻辑网卡，实现本地网卡的冗余，带宽扩容和负载均衡
      1. mode=0：平衡负载模式，有自动备援，但需要”Switch”支援及设定

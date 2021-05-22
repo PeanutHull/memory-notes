@@ -87,6 +87,10 @@
             rewrite  ^(.*)$  /index.php?s=$1  last;
             break;
         }
+
+        if (-d $request_filename) { 
+            rewrite [^/]$ $uri/?$query_string break;                            # 携带参数跳转
+        }
     }
     # last – 基本上都用这个Flag。
     # break – 中止Rewirte，不在继续匹配
@@ -419,9 +423,35 @@
      1. 支持基于端口的监控、故障切换
      1. 支持停机模式、支持监控界面、监控api输出
      1. 支持虚拟主机
-1. OpenResty
-   - 认识：ngx_openresty，基于nginx与lua的高性能web平台，用于方便地搭建处理高并发、扩展性的服务和动态网关
-     1. 可以使用lua脚本语言调动nginx的各种c、lua模块，让web服务直接跑在nginx内部
+### OpenResty
+1. ngx_openresty，基于nginx与lua的高性能web平台，用于方便地搭建处理高并发、扩展性的服务和动态网关
+   - 可以使用lua脚本语言调动nginx的各种c、lua模块，让web服务直接跑在nginx内部
+   - 针对域名、目录结构做分流、转发的策略，既能做负载又能做反向代理
+   - 具有Lua协程 + Nginx 事件驱动的事件循环回调机制，即Cosoket，对远程后端如MySQL、Memcached、Redis等都可实现同步写代码的方式实现非阻塞I/O
+   - 依托于LuaJit，即时编译器会将频繁执行的代码编译成机器码缓存起来，当下次调用时将直接执行机器码，相比原生逐条执行虚拟机指令效率更高，而对于那些只执行一次的代码仍然可以逐条执行
+1. wiki
+   - C10K：OpenResty、JavaNetty、Golang、NodeJS 
+   - 调整文件打开数、设置 TCP Buckets、设置 TIME_WAIT等
+   - 马蜂窝广告数据处理
+     1. 收集
+        - lua代码缓存，设置Resolver、epoll、keepalive
+        - 数据收集部分不需要考虑时序或对数据进行聚合处理，因此核心的推送介质选择 Lua 共享内存即可，以 I/O 请求来代替访问其他中间件所需要的网络服务
+     1. 处理
+        - FFI处理ip
+        - 之后创建内部的日志 location，结合 Lua 自定义 log_format，利用 Nginx 子请求特性离线完成数据落盘，同时保证数据延迟时长在毫秒级
+        - Redis+FluxDB
+          1. 去中心化，配置链接池来增加链接复用，增加 AOF与延时入库保证可靠
+          1. FluxDB保证数据日志时序性可查，聚合统计与实时报表表现较优
+     1. 存储
+        - 实时数据源：数据采集服务→ Filebeat → Kafka → Flink → ES
+        - 离线数据源：HDFS → Spark → Hive → ES
+     1. 流程
+        - init_worker_by_lua阶段：负责服务配置业务
+        - access_by_lua阶段：负责CC防护、权限准入、流量时序监控等业务
+        - content_by_lua阶段：负责实现限速器、分流器、WebAPI、流量采集等业务
+        - log_by_lua阶段：负责日志落盘等业务
+     1. 分流器业务：NodeJS上报cpu、内存使用情况；Lua脚本调用RedisCluster获取时间窗口内NodeJS集群使用情况，计算出负载较高的，进行熔断、降级、限流等处理；将监控数据同步InfluxDB，进行时序监测
+     1. 小型web防火墙：使用第三方开源 lua_resty_waf 类库实现，支持 IP 白名单和黑名单、URL 白名单、UA 过滤、CC 攻击防护功能。在此基础上增加WAF对InfluxDB 的支持，进行时序监控和服务预警
 ### 实际应用
 1. 代理线上配置
     ```lua

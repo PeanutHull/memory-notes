@@ -8,11 +8,11 @@
 1. 数据类型
    - 数字
      1. 整数
-        - 分类
+        - 分类：m仅用于显示不影响存储范围，如int(3)、tinyint(4)，显示为001，和INTEGER相同
           1. tinyint：-128~127
           1. smallint：前后3万2
           1. mediumint：前后8.3千万
-          1. int：前后21亿，int中m仅用于显示不影响存储范围，如int(3)，显示为001，和INTEGER相同
+          1. int：前后21亿
           1. bigint：前后9亿亿亿，19位，2E64
         - 属性
           1. unsigned

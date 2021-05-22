@@ -366,6 +366,7 @@
 1. Chardet：字符集检测
 1. Python-dateutil：时间日期处理
 1. BeautifulSoup：从html和xml中提取数据
+1. NetworkX：绘制网络图，图论与复杂网络建模工具
 ### 协程
 1. 协程学习目录
    - 基础知识
