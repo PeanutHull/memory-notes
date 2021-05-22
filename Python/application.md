@@ -333,6 +333,71 @@
     msg = s.recv(1024)                  # 接收小于1024字节的数据
     s.close()
     ```
+### 线程池
+1. 简单的线程池
+    ```python
+    import time
+    import threading
+
+    class SimpleThreadPool:
+        def process(self):
+            while True:
+                if len(self.queue) == 0:
+                    time.sleep(1)
+                    continue
+                task = self.queue.pop()
+                task()
+
+        def __init__(self, size):
+            self.pool = []
+            self.queue = []
+            for i in range(size):
+                self.pool.append(threading.Thread(target=self.process))
+
+        def submit(self, task):
+            self.queue.append(task)
+
+        def start(self):
+            for thread in self.pool:
+                thread.start()
+
+    def _task():
+        for i in range(2):
+            print('this is a _task. i = {}. thread id = {}'.format(i, threading.get_native_id()))
+            time.sleep(1)
+
+
+    if __name__ == '__main__':
+        pool = SimpleThreadPool(10)
+        pool.start()
+        for i in range(10):
+            pool.submit(_task)
+    ```
+1. 官方线程池示例
+    ```python
+    import time
+    import threading
+    from concurrent.futures import ThreadPoolExecutor
+
+
+    def _task():
+        for i in range(2):
+            print('this is a _task. i = {}. thread id = {}'.format(i, threading.get_native_id()))
+            time.sleep(1)
+        return time.time()
+
+
+    tp = ThreadPoolExecutor(10)                     # 初始化
+
+    futures = []
+    for i in range(10):
+        # future对象
+        future = tp.submit(_task)                   # 提交任务
+        futures.append(future)                          # feture对象可能是还未执行完的
+        
+    for future in futures:
+        print(future.result())                      # 获取结果，是阻塞的，所以要所有任务提交后再拿结果
+    ```
 ### 应用
 1. CGI编程
    - 示例

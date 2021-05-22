@@ -219,7 +219,7 @@
     show databases/tables;                                  # 查看所有数据库/表
     show columns/index from tabel;                          # 查看列/索引信息
     show table status from baseName like \G;                # 表信息
-    desc tables;                                            # 查看表结构
+    desc/describe tables;                                   # 查看表结构
     show create database/table baseName/tableName;          # 输出标准sql
     ## create
     create table table_name(                                                                # 创建表

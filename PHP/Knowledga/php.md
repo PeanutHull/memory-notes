@@ -372,14 +372,28 @@
             $stmt->execute();
 
             // prepare另一种方式
-            $stmt = $dbh->prepare("(?, ?)");
+            $stmt = $dbh->prepare("(?, ?)");                # ：问号方式、别名方式
             $stmt->bindParam(1, $name);
             $stmt->bindParam(2, $value);
+
+            // 绑定方式
+            bindValue
+            bindParam
+            execute：直接传递参数
+
+            // 其他方法
+            bindColumn
+            rowCount
             ```
         - 事务
           1. `PDO::beginTransaction()`
           1. `PDO::commit()`
           1. `PDO::rollBack()`
+     1. 异常处理
+        - PDO::ATTR_ERRMODE：错误抛出方式
+          1. PDO::ERRMODE_SILENT：不报错，默认
+          1. PDO::ERRMODE_WARNING：以E_WARNING
+          1. PDO::ERRMODE_EXCEPTION：以异常
    - MySqli：可以设置长连接，进程重用长连接，但是mysqli会做一些清理工作
    - mysql函数：不支持预处理，不安全，已经淘汰
 ### 运维
