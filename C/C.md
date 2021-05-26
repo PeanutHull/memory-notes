@@ -536,6 +536,7 @@
      1. 注册事件优先级
      1. 轻量级，专注于网络：源代码精练
      1. 跨平台，支持windows、linux、mac等
+   - libffi
 1. 标准库
    - <stdlib.h>：通用工具函数
      1. 库变量：size_t、wchar_t、div_t、ldiv_t

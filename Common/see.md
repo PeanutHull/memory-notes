@@ -51,6 +51,8 @@
 1. libui：简单易用的c语言gui库，支持window、mac、linux三大平台，使用其本地gui技术
 1. libpng
 1. libjpeg
+1. libx264
+1. libfaac
 1. stb_image
 1. openalpr：开源的车牌识别
 1. 人工智能：使计算机模拟人的思维过程和行为：学习、推理、思考、规划、情感、记忆、自我、听说、行动

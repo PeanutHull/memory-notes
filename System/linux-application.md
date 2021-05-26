@@ -148,6 +148,47 @@
    - httpDNS：指通过ip和http协议直接访问dns服务器获取解析，绕过本地运营商。因为智能dns有很多弊端，如nat转换导致解析链路加长、域名劫持等原因，移动端用的多
      1. 用法：将请求url中的host修改为httpdns解析给我们的ip, 并在请求header中将host指定为原始域名
      1. httpdns下的https的curl写法：`curl -v "https://xxx" --resolve xx.xx.com:443:xx.xx.xx.xx`，注意httpdns面对https时需要提供正确的host，否则证书返回的不对
+1. 高可用
+   - LVS
+     1. 认识：Linux Virtual Server，基于linux操作系统实现的负载均衡
+        - linux 2.6放入了内核
+        - 只工作在4层
+        - 实践：一般搭配KeepAlived做主备形式的ha，可以不用dns了，避免了dns的耗时和错误问题
+     1. 组成
+        - 负载均衡器：IPVS，IP Virtual Server，在真实服务器前充当4层负载均衡器
+        - 服务器池
+        - 共享存储
+     1. 请求转发方式
+        - NAT
+        - DR：必须是Linux操作系统，不支持端口映射，处于同一个广播域中
+        - TUN
+     1. 调优
+        - LVS的调优建议将hash table的值设置为不低于并发连接数。例如，并发连接数为200，Persistent时间为200S，那么hash桶的个数应设置为尽可能接近200x200=40000，2的15次方为32768就可以了
+        - 当ip_vs_conn_tab_bits=20 时，哈希表的的大小（条目）为 pow(2,20)，即 1048576，对于64位系统，IPVS占用大概16M内存，可以通过demsg看到：IPVS:Connection hash table configured (size=1048576, memory=16384Kbytes)。对于现在的服务器来说，这样的内存占用不是问题。所以直接设置为20即可。
+          1. 关于最大“连接数限制”：这里的hash桶的个数，并不是LVS最大连接数限制。LVS使用哈希链表解决“哈希冲突”，当连接数大于这个值时，必然会出现哈稀冲突，会稍微降低性能，但功能上不对LVS造成影响
+     1. wiki
+        - 负载均衡里，lvs性能最高，nginx功能丰富，haproxy可以负载4层
+   - keepalived
+     1. 认识：以VRRP协议为基础实现服务热备，功能有健康检查、自动切换
+        - 可根据ip、端口、http请求判断是否正常，即工作在OSI的3、4、7层
+          1. 3：发送ICMP数据包判断是否故障(ping)
+          1. 4：端口
+          1. 7：自定义检测脚本
+        - 可自动完成切换，主恢复后可抢占回备占用的vip
+        - 支持自身健康检查
+        - 一般应用为：LVS+Keepalived、Nginx+Keepalived、HAproxy+Keepalived
+     1. 组成模块
+        - core：负责主进程的启动、维护，全局配置文件的加载和解析
+        - check：负责健康检查、各种检查方式
+        - vrrp：实现VRRP协议
+     1. 应用
+        - 主备都部署服务 + keepalived
+        - 主备的keepalived通过VRRP交互，虚拟出一个vip，并落在主上
+        - 主备的keepalived设置为：当检测服务不可用时尝试重启服务，不成功则关闭keepalived，实现服务转移
+     1.wiki
+        - VRRP协议：虚拟路由冗余协议，是实现路由器冗余的协议，是为了消除在静态默认路由环境下路由器单点故障引起的网络失效而设计的主备模式的协议
+          1. 一主一备，同时只有一个提供服务。即将n台设备虚拟成一个设备，对外提供一个或多个虚拟IP
+          1. 检测到故障，虚拟IP地址会自动漂移到备份服务器，即keepalived广播vip对应的mac由主切换到备用，其他客户端更新ARP表，实现故障转移
 1. tumx：多个界面，断网保存用户操作的界面
 1. 数据恢复工具：ext3grep
 1. 文件、目录的变动监控
@@ -532,6 +573,9 @@
         - 分区最大2T，支持分区、文件夹、文件的压缩
         - FAT32分区能够在DOS下直接访问，NTFS不能
    - VFAT：长文件名系统，一个与Windows系统兼容的Linux文件系统，支持长文件名，可以作为Windows与Linux交换文件的分区
+1. 操作系统中常用的文件系统
+   - window：FAT、NTFS(只有这个合适)
+   - linux：EXT3、EXT4、XFS(建议)
 1. 网络文件系统
    - 认识
      1. 发展趋势：软件定义存储 SDS，软件定义网络 SDN

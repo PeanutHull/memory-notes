@@ -1,6 +1,239 @@
 1. 路线：基础知识（操作、配置、历史）——优化方式、方法、注意点——各种技术方案——原理
 1. 提升：集群部署--中间件实施--备份设计监控--日志处理--授权
-### 实践
+### 设计
+1. 分表分区
+   - 认识
+     1. 分区：对用户透明，底层分为多个物理分区。用partition by定义每个分区存放的数据，优化器自动使用。适用于数据多，只在表最后有热点数据，其他都是历史数据。分区可以分布在不同机器上独立维护，有很多功能不能用
+        - 存储更多数据：可分布在不同的物理设备
+        - 优化查询：where语句中包含分区条件时，只会使用某几个分区
+        - 类型：RANGE、LIST、HASH、KEY
+          1. 两级映射：指定id范围和表的关系，不够了加关系就行，可通过中间件实现
+        - 适用于所有数据和索引，两者不能分开
+     1. 分表：可以将两种方式结合使用
+        - 水平拆分：用于数据本身有独立性，可以拆分，逻辑分层算法无法变更，关键字段取模方式拆到多个表中，降低单表大小
+        - 垂直拆分：把属性较多、数据较大的表某些字段拆分到不同的表中，查询时可减少io次数，但是应用增加复杂度。分主表、扩展表。因为数据库的内存buffer存row
+     1. 分片
+        - 方式
+          1. 分片键的hash取模
+          1. 分片键范围划分
+          1. 分区键和分片映射表分配
+        - 如何生成全局唯一id
+          1. 分配auto_increment_increment和auto_increment_offset参数
+          1. 全局id生成节点
+   - 跨表分页
+     1. 全局视野法：改造分页sql，每个表都取出来，然后放一起再排序。`offset X limit Y`改为`offset 0 limit X+Y`。精准返回，页码增加性能急剧下降
+     1. 业务折衷
+        - 禁止跳页查询：第一页作为第二页的查询条件，再全局视野
+        - 允许数据精度损失：认定数据足够随机，取模去取数据
+     1. 二次查询法
+        - 将order by time offset X limit Y，改写成order by time offset X/N limit Y
+        - 找到所有表中的最小值time_min
+        - between二次查询，order by time between $time_min and $time_N_max
+        - 拿time_min在各个分库中比较，得出每个表的虚拟offset，相加从而得到time_min在全局的offset
+        - 得到了time_min在全局的offset，自然得到了全局的offset X limit Y，要什么从后推着拿就行
+### 性能
+1. 影响性能的方面
+   - 硬件、系统
+     1. 主数据库用RAID10做保障，从用RAID0、RAID5节省成本，注意5磁盘损坏性能的大幅下降
+     1. san/nas等网络存储设备：数据库需要大量随机io他们不是优势，一旦出问题需要厂商协助恢复时间长，可以作为备份使用
+     1. 足够的内存可以将随机io变为顺序io，把多次写变为一次写
+   - 系统参数、数据库参数、存储引擎
+   - 表结构、sql
+1. 参数
+   - mysql
+     1. 命令行、配置文件
+     1. 全局参数、会话参数
+     1. 内存
+        - mysql自身运行的占用：无法控制
+        - 最大使用内存
+          1. 32位系统无法超过3G
+          1. 超过物理内存造成内存溢出
+        - 每个连接的使用内存
+          1. sort_buffer_size：排序缓冲区大小，需要排序时不管实际用多少全部占用
+          1. join_buffer_size：连接缓冲区大小，每关联一个表就分配一个
+          1. read_buffer_size：MySIAM表全表扫描的读缓冲区大小，不管大小全部占用，得是4k倍数
+          1. read_rnd_buffer_size：索引缓冲区大小，只会分配需要的大小，不是参数指定的大小
+        - 操作系统
+          1. 独占一台物理机，不要多实例混部，也不要混合其他服务，避免资源争用
+        - 缓冲池
+          1. innodb_buffer_pool_size：innodb缓冲池大小，对性能非常重要，要缓存索引、数据、自适应hash索引、插入缓冲、锁、其他内部数据结构，还帮助延迟顺序写入，要分配足够的内存大小，重启才能更改，太大了重启慢需要刷脏页，总大小 = 每个线程需要的内存 * 连接数 - 系统保留内存
+          1. key_buffer_size：MySIAM的索引缓冲，因为系统表还在用MySIAM
+     1.  io：性能和安全的取平衡
+        - innodb_log_file_size
+        - innodb_log_file_in_group：事务日志总大小 innodb_log_file_size * innodb_log_file_in_group
+        - innodb_log_buffer_size
+        - innodb_flush_log_at_trx_commit
+        - innodb_flush_method = O_DIRECT
+        - innodb_file_per_table = 1
+        - innodb_doublewrite = 1
+        - delay_key_write
+     1. 安全
+        - expire_logs_days
+        - max_allowed_packet：mysql可以接收的包大小，32M
+        - skip_name_resolve：禁用dns查找
+        - sysdate_is_now：确保sysdata
+        - read_only：禁止非super的写权限
+        - skip_slave_start：禁用slave
+        - sql_mode
+          1. strict_trans_tables
+          1. no_engine_subtitution
+          1. no_zero_date
+          1. no_zero_in_date
+          1. only_full_group_by
+   - 内核
+     1. 配置文件：`/etc/sysctl.conf`
+     1. 网路
+        - net.core.somaxconn：65535，socket listen的backlog上限，监听队列每个端口最大的长度
+        - net.core.netdev_max_backlog：65535，当个别接口接收包的速度快于内核处理速度时允许的最大的包数量
+        - net.ipv4.tcp_max_syn_backlog：65535，还未获得连接的请求的最大数量，超出被抛弃
+        - net.core.netdev_budget：每次软中断处理的网络包个数
+
+        - net.ipv4.tcp_fin_timeout：10，tcp等待超时时间，加快tcp连接回收速度，适用于大量tcp连接的系统
+        - net.ipv4.tcp_tw_reuse：1，
+        - net.ipv4.tcp_tw_recycle：1，
+
+        - net.core.wmem_default：87380，tcp接收和发送的缓冲区大小和默认值，应该大一些
+        - net.core.wmem_max：16777216
+        - net.core.rmem_default：87380
+        - net.core.rmem_max：16777216
+
+        - net.ipv4.tcp_keepalive_time：120，减少tcp失效连接占用系统资源的数量，加快资源回收的效率，发送keepalive的时间间隔，秒，用于确认tcp是否有效，应该小一些
+        - net.ipv4.tcp_keepalive_intvl：30，消息未获得响应时，重发该消息的间隔，秒
+        - net.ipv4.tcp_keepalive_probes：3，认定tcp失效前最多发送多少keepalive消息
+     1. 内存
+        - kernel.shmmax=4294967295：定义单个共享内存段的最大值，应该足够大，能容下整个InnoDB缓冲池的大小，过低需要创建多个共享内存段，性能下降
+          1. 可取最大值为物理内存值-1byte，建议为一半，一般大于InnoDB缓冲池即可
+        - vm.swappiness=0：除非虚拟内存全部占满，否则不用内存交换分区
+          1. 一旦发生内存交换，性能巨大影响。禁用临时需要大内存时一降低系统性能，二容易造成内存溢出、崩溃、被系统kill
+   - 资源限制
+     1. 配置文件：`/etc/security/limit.conf`，重启生效
+     1. 文件打开数
+        ```
+        soft nofile 65535   # * 所有用户生效，soft 当前系统生效
+        hard nofile 65535   # hard 系统中所能设定的最大值
+        ```
+   - 文件系统
+     1. 选择：window选ntfs，linux选xfs
+     1. 参数
+        - ext3/ext4：最佳实践`/dev/sda1/ext4 noatime,nodiratime,data=writeback 1 1`
+          1. data
+             - writeback：最快
+             - journal：最慢先写日志，innodb不需要
+             - ordered
+          1. noatime/nodiratime：不记录文件和文件夹读取的时间，加快磁盘速度
+   - 磁盘调度策略
+     1. 配置
+        - 文件：`/sys/block/devname/queue/scheduler`
+        - 设置：`echo deadline /sys/block/sda/queue/scheduler`
+     1. 分类
+        - cfg：公平调度
+        - noop：电梯式，实现了FIFO队列，像电梯的工作方式对io进行组织，新请求到来合并到最近的请求之后保证请求同一介质，倾向饿死读而利于写。对内存、嵌入式最合适
+        - anticipatory：预料io调度式，本质和deadline一致，最后一次读后等待6ms才对其他io调度，每个6ms插入新io操作，合并为大写入流，用写入延时换取最大吞吐量，适合写入较多，如文件服务器，数据库性能会很差
+        - deadline：截止时间式，确保一个可调整的截止时间内的请求，默认读期限小于写，防止了写因为不能被读取而饿死，是数据库类最好的选择
+1. 监控
+   - 性能测试：数据多才有参考价值，数据总量超过内存总量，如几百条数据第一条命令下去就全部加载到内存了，没有参考意义
+   - 性能：连接数、qps
+     1. `show status like 'Threads%';`：查看连接数
+     1. `show processlist;`：查看所有连接
+     1. `show variables like '%connect%';`：查看连接的配置
+   - 硬件：主频高处理快高吞吐低时延，L1/2/3的cache大速度快，内存大磁盘读写少TPS高，固态快机械配阵列卡，网卡好低时延
+     1. 更大内存、更快磁盘：比业务服务器要求高
+   - 指标
+     1. qps：select、delete、insert、update，物理机qps30000，tps10000，虚拟机qps5000，tps1000
+     1. sort
+        - sort_range：使用范围完成的排序数
+        - sort_rows：排序的行数，sort_merge_passes：排序算法必须执行的合并传递的数量。 如果此值很大，则应考虑增加sort_buffer_size系统变量的值。
+        - sort_scan：通过扫描表格完成的排序数量
+     1. thread：单用户2000，单实例5000
+        - conneted
+        - cached
+        - created
+        - running
+     1. threadpool_used_percent：连接数占比
+     1. seconds_behind_master：主从延迟
+     1. slave_status：slave_io_running，从库IO线程状态
+     1. innodb_rows：每秒增删改查的行数
+     1. innodb_row_lock
+        - innodb_row_lock_waits：等待行锁的总次数
+        - innodb_row_lock_time：等待行锁的总时间
+     1. mysql_locks
+        - table_locks_immediate：申请时立刻获得表锁次数
+        - table_locks_waited：申请表锁时等待的次数
+     1. mysql_handler
+        - Handler_commit：内部提交语句数
+        - Handler_delete：请求从表中删除行的次数
+        - Handler_read_prev：按照键顺序读取一行的请求数。该方法主要用于优化Order By DESC
+        - Handler_read_rnd_next：在数据文件中读下一行的请求数，如果你正在进行大量的表扫描，该值较高。同城说明你的表索引不正确或写入的查询没有利用索引。
+        - Handler_read_last：根据键读最后一行的请求数
+        - Handler_read_first：索引中第一条被读的次数。如果较高，建议服务器正执大量全索引扫描。例如 SELECT col1 From foo 假定col1有索引
+        - Handler_read_next：按照键顺序读取下一行的请求数。如果你用范围约束或如果执行搜索扫描来查询索引列，该值增加
+        - Handler_update：请求更新表中一行的次数
+        - Handler_read_rnd：根据固定位置读一行的请求数，如果你正执行大量查询并需要对结果进行排序该值较高。你可能使用了大量需要MySQL扫描整个表的查询或你的连接没有正确使用索引
+        - Handler_write：请求向表中插入一行的次数
+     1. innodb_pages 
+        - innodb_pages_created：buffer pool创建页的数
+        - innodb_pages_read：从buffer pool中读取的页数
+        - innodb_pages_written：写buffer pool的页数
+     1. innodb_bytes
+        - bytes_sent：发送给所有客户端的字节数
+        - bytes_received：从所有客户端接收的字节数
+     1. innodb_buffer_pool_bytes
+        - buffer_pool_bytes_data：buffer pool中数据页的大小
+        - buffer_pool_bytes_dirty：buffer pool中脏页的大小
+     1. innodb_buffer_pool_pages
+        - buffer_pool_pages_misc：用于存储行锁，自适应哈希索引等信息的管理层的页数
+        - buffer_pool_pages_free：buffer pool中空闲的页书目
+        - buffer_pool_pages_made_young：标记为young的页数目
+        - buffer_pool_pages_old：在buffer pool LRU old段的页数
+        - buffer_pool_pages_flushed：请求flush pages的次数
+        - buffer_pool_pages_total：buffer pool包含的总页数
+        - buffer_pool_pages_data：buffer pool包含数据的页数(包括dirty和clean页)
+        - buffer_pool_pages_made_not_young：进入buffer pool后未被标记为young的页数
+        - buffer_pool_pages_dirty：buffer pool中脏页数目
+     1. innodb_data
+        - data_written：innodb写入的总数据量，单位字节
+        - data_writes：innodb数据写入的总次数
+        - data_fsyncs：innodb进行fsync的次数
+        - data_read：innodb读取的总数据量
+        - data_reads：innodb数据读取的总次数
+     1. mysql_innodb_log
+        - innodb_os_log_fsyncs：调用fsync() writes写redo log的次数
+        - innodb_log_waits：log buffer 空闲空间不足，必须等待其被写入所造成的等待数
+        - innodb_log_write_requests：写redo log的请求次数
+        - innodb_log_writes：redo log的物理写次数
+        - innodb_os_log_written：写入redo log的bytes
+     1. cardinality是索引中不重复记录的预估值，会有更新机制，不准，很小需要评估索引是否有意义
+1. 调优
+   - 硬件
+     1. cpu：区分oltp和olap
+     1. 内存：大内存性能线性提高
+     1. ssd
+     1. RAID
+   - 参数
+     1. Innodb_buffer_pool
+     1. Innodb_buffer_pool_instances
+     1. innodb_flush_log_at_trx_commit
+     1. binlog-format
+     1. transaction-isolation
+     1. sync_binlog
+   - 单表不能超过20G
+1. wiki
+   - 大表
+     1. 定义：一般是超一千万行，大小超10G
+     1. 风险
+        - 慢查询
+        - DDL操作
+          1. 建索引：v5.5之前锁表，之后不锁表但主从延迟，修改时间是要double的
+   - 大事务
+     1. 定义：运行时间较长、操作数据较多的事务
+     1. 风险
+        - 锁定太多数据，造成大量阻塞、锁超时
+        - 容易主从延迟
+        - 回滚时间长
+     1. 解决
+        - 避免一次操作太多数据
+        - 移除不必要的sql
+### 实践使用
 1. explain
    - 理解：sql语句分析，将过程和索引等信息列出来
    - 使用解析
@@ -107,107 +340,6 @@
      1. 不在业务高峰期批量写入、更新、删除
      1. 禁止联库查询
      1. 禁止使用 SELECT * 查询### 维护
-1. 基准测试：进行定量的、可复现的测试，不关心业务逻辑，对比于压力测试。mysql由于数据一致性的要求无法简单的水平扩展(即加机器)，主要评估qps和响应时间
-   - mysqlslap：简单，容易使用，无法生成数据，适合对既有数据库单个sql进行优化测试
-     1. `--concurrency=5000`：并发数
-     1. `--number-of-queries`：总查询数
-   - sysbench：内嵌lua脚本，可生成指定规模数据，主流厂商(Oracle/Percona)使用，支持多线程，支持多种数据库
-     1. 建表，塞1百万数据：`sysbench --monitis=oltp --oltp-table-size=1000000 --mysql-db=xx --mysql-user=root --mysql-password=xx prepare`
-     1. 开始测试：`sysbench --monitis=oltp --oltp-table-size=1000000 --mysql-db=xx –mysql-user=root –mysql-password=xx –max-time=60 –oltp-read-only=on –max-requests=0 –num-threads=8 run`
-   - mysql-tpcc
-1. 监控
-   - 性能测试：数据多才有参考价值，数据总量超过内存总量，如几百条数据第一条命令下去就全部加载到内存了，没有参考意义
-   - 性能：连接数、qps
-     1. `show status like 'Threads%';`：查看连接数
-     1. `show processlist;`：查看所有连接
-     1. `show variables like '%connect%';`：查看连接的配置
-   - 硬件：主频高处理快高吞吐低时延，L1/2/3的cache大速度快，内存大磁盘读写少TPS高，固态快机械配阵列卡，网卡好低时延
-     1. 更大内存、更快磁盘：比业务服务器要求高
-   - 指标
-     1. qps：select、delete、insert、update，物理机qps30000，tps10000，虚拟机qps5000，tps1000
-     1. sort
-        - sort_range：使用范围完成的排序数
-        - sort_rows：排序的行数，sort_merge_passes：排序算法必须执行的合并传递的数量。 如果此值很大，则应考虑增加sort_buffer_size系统变量的值。
-        - sort_scan：通过扫描表格完成的排序数量
-     1. thread：单用户2000，单实例5000
-        - conneted
-        - cached
-        - created
-        - running
-     1. threadpool_used_percent：连接数占比
-     1. seconds_behind_master：主从延迟
-     1. slave_status：slave_io_running，从库IO线程状态
-     1. innodb_rows：每秒增删改查的行数
-     1. innodb_row_lock
-        - innodb_row_lock_waits：等待行锁的总次数
-        - innodb_row_lock_time：等待行锁的总时间
-     1. mysql_locks
-        - table_locks_immediate：申请时立刻获得表锁次数
-        - table_locks_waited：申请表锁时等待的次数
-     1. mysql_handler
-        - Handler_commit：内部提交语句数
-        - Handler_delete：请求从表中删除行的次数
-        - Handler_read_prev：按照键顺序读取一行的请求数。该方法主要用于优化Order By DESC
-        - Handler_read_rnd_next：在数据文件中读下一行的请求数，如果你正在进行大量的表扫描，该值较高。同城说明你的表索引不正确或写入的查询没有利用索引。
-        - Handler_read_last：根据键读最后一行的请求数
-        - Handler_read_first：索引中第一条被读的次数。如果较高，建议服务器正执大量全索引扫描。例如 SELECT col1 From foo 假定col1有索引
-        - Handler_read_next：按照键顺序读取下一行的请求数。如果你用范围约束或如果执行搜索扫描来查询索引列，该值增加
-        - Handler_update：请求更新表中一行的次数
-        - Handler_read_rnd：根据固定位置读一行的请求数，如果你正执行大量查询并需要对结果进行排序该值较高。你可能使用了大量需要MySQL扫描整个表的查询或你的连接没有正确使用索引
-        - Handler_write：请求向表中插入一行的次数
-     1. innodb_pages 
-        - innodb_pages_created：buffer pool创建页的数
-        - innodb_pages_read：从buffer pool中读取的页数
-        - innodb_pages_written：写buffer pool的页数
-     1. innodb_bytes
-        - bytes_sent：发送给所有客户端的字节数
-        - bytes_received：从所有客户端接收的字节数
-     1. innodb_buffer_pool_bytes
-        - buffer_pool_bytes_data：buffer pool中数据页的大小
-        - buffer_pool_bytes_dirty：buffer pool中脏页的大小
-     1. innodb_buffer_pool_pages
-        - buffer_pool_pages_misc：用于存储行锁，自适应哈希索引等信息的管理层的页数
-        - buffer_pool_pages_free：buffer pool中空闲的页书目
-        - buffer_pool_pages_made_young：标记为young的页数目
-        - buffer_pool_pages_old：在buffer pool LRU old段的页数
-        - buffer_pool_pages_flushed：请求flush pages的次数
-        - buffer_pool_pages_total：buffer pool包含的总页数
-        - buffer_pool_pages_data：buffer pool包含数据的页数(包括dirty和clean页)
-        - buffer_pool_pages_made_not_young：进入buffer pool后未被标记为young的页数
-        - buffer_pool_pages_dirty：buffer pool中脏页数目
-     1. innodb_data
-        - data_written：innodb写入的总数据量，单位字节
-        - data_writes：innodb数据写入的总次数
-        - data_fsyncs：innodb进行fsync的次数
-        - data_read：innodb读取的总数据量
-        - data_reads：innodb数据读取的总次数
-     1. mysql_innodb_log
-        - innodb_os_log_fsyncs：调用fsync() writes写redo log的次数
-        - innodb_log_waits：log buffer 空闲空间不足，必须等待其被写入所造成的等待数
-        - innodb_log_write_requests：写redo log的请求次数
-        - innodb_log_writes：redo log的物理写次数
-        - innodb_os_log_written：写入redo log的bytes
-     1. cardinality是索引中不重复记录的预估值，会有更新机制，不准，很小需要评估索引是否有意义
-1. 调优
-   - 硬件
-     1. cpu：区分oltp和olap
-     1. 内存：大内存性能线性提高
-     1. ssd
-     1. RAID
-   - 参数
-     1. Innodb_buffer_pool
-     1. Innodb_buffer_pool_instances
-     1. innodb_flush_log_at_trx_commit
-     1. binlog-format
-     1. transaction-isolation
-     1. sync_binlog
-   - 单表不能超过20G
-1. 慢查询：记录超过一定时间的查询语句
-    ```
-    slow_query_log = ON
-    slow_query_log_file = /usr/local/mysql/data/slow.log
-    long_query_time = 1
-    ```
 1. gist
    - 查询这个数据是否存在，存在则存到另一张表里：`create table temp as select * from admin a where exists (select uid from user u where a.userName = u.account);`
    - 查询两张表中是否有相同数据：`select * from admin where uid IN(select uid from temp);`
@@ -215,6 +347,98 @@
    - 求全集：`SELECT * FROM A LEFT JOIN B ON A.xx = B.xx union SELECT * FROM A RIGHT JOIN B ON A.xx = B.xx;`
    - 原所有id增加5万，必须倒叙操作：`update user SET uid=uid+50000 order by uid desc;`
    - 插入不重复数据行，mysql特有不是标准sql语法：`INSERT token(udid) values ('{$udid}') ON DUPLICATE KEY UPDATE activetime ='{$time}'`
+### 运维
+1. 安装
+   - 安装：`yum -y install mysql-server`
+   - 设置字符集：`vim /etc/my.cnf` ([mysqld]下添加)
+     1. `character-set-server=utf8`
+     1. `default-character-set=utf8`
+1. 使用
+   - 启动：`mysqld_safe &`
+   - 关闭：`mysqladmin -u -p shutdown`
+   - 重启：`service mysqld restart`
+   - 查看：`ps -ef | grep mysqld`
+     1. mysqld_safe：是mysqld的守护进程，在启动服务后继续监控，并在死机时重新启动
+1. 配置
+   - 配置文件
+     1. `mysql --help | grep my.cnf`
+   - 查看
+     1. `show variables;`
+     1. `show variables like 'slow_query%';`
+   - 修改
+     1. 变量方式：`set global slow_query_log='ON';`
+     1. 配置文件方式：my.cnf，`slow_query_log = ON`
+   - 安全
+     1. sql安全：防注入(预处理)、特殊字符转义、错误信息屏蔽。权限分开、定期修改密码
+     1. 备份恢复
+1. 连接方式
+   - tcp/ip套接字：`mysql -h127.0.0.1`
+   - 域套接字：`mysql -S /tmp/mysql.sock`
+   - 命名管道、共享内存：通过配置开启
+1. 实例迁移步骤
+   - 搭建新实例实时和旧的同步
+   - 业务方修改配置
+   - 业务方停止增删改操作（停服）
+   - 删除写用户，保留只读用户 （防止丢数据）
+   - 断开新实例到老实例同步，开启新主库可写入
+   - 发布，验证业务
+   - 删除旧实例
+1. 备份
+   - 认识
+     1. 备份文件：逻辑文件，文件可读如mysqldump，恢复时间长，用于升级、迁移等工作；裸文件
+     1. 备份方式：完全、增量（记录LSN之后的备份）、日志
+   - 备份策略最佳实践：定期备份
+     1. 本地备份
+     1. 本地增量备份：每天和每10分钟一次，备份到同机房其他服务器
+     1. 异地备份，先随机加密，后传输到异地，异地双备份
+   - 备份要求
+     1. 备份的一致性
+     1. 做好异地容灾
+     1. 定期覆盖度测试
+   - 备份方式
+     1. 冷备
+        - 理解：复制相关文件即可，应该存放到远程服务器中。如shell(mysqldump) + rsync + crontab，或者直接复制文件
+        - 备份内容：frm、ibdata1、*.ibd、redo log、my.conf
+     1. 热备
+        - ibbackup
+          1. 认识：官方提供，不阻塞，性能好(复制日志文件)，支持压缩。不支持真正增量备份，只是某时刻的恢复
+          1. 原理：记录LSN，开始备份，然后找回来备份时的redo log
+        - xtrabacup
+          1. 认识：开源的支持在线增量备份，原理是先全备，记录此时的LSN，增量时比较LSN并且不断更新LSN
+     1. 复制
+     1. 逻辑备份
+        - mysqldump：`mysqldump -u -p [databaseName or tableName] > data.sql`
+          1. -d 只导出结构
+          1. -t 只导出数据
+          1. --all-databases：所有数据库
+          1. --single-transaction：设定备份一致性
+        - select ... into outfile：`select * into outfile 'xx.txt' fields terminated by ',' optionally enclosed by '"' lines terminated by '\n' from table;`
+     1. 二进制备份：用`flush logs`生成新日志文件，然后备份旧的
+     1. 快照备份
+        - 认识：把所有日志放到同一个逻辑卷中，用lvm快照
+   - 备份方法
+     1. 全量备份
+     1. 实时备份
+        - 实时二进制日志备份：`mysqlbinlog --raw --read-from-remote-server --stop-never --host localhost --port 3306 -u -p xxxx xx.000011`
+     1. 基于时间点备份
+1. 恢复
+   - 逻辑日志导入
+     1. mysql -u -p databaseName < data.sql
+     1. source xx.sql
+     1. load data local infile 'xx.txt' into table tableName;
+     1. mysqlimport -u -p --local databaseName dump.sql
+   - 二进制日志导入
+     1. mysqlbinlog
+        - start/stop-position：开始结束位置
+        - --database
+        - `mysqlbinlog xx.xx | mysql -u -p`
+        - `mysqlbinlog xx.xx < xx.sql`
+     1. binlog2sql：回滚指定时间点的sql语句
+     1. xtrabackup：录binlog位置后copy文件，速度比逻辑备份快上百倍
+   - 恢复方式
+     1. 基于时间点恢复：`mysqlbinlog --start-position=1 --stop-position=2 --database xx.000011 < xx.sql`
+        - 具有时间点之前的mysqldump全备：通过时间点确认LSN
+        - 具有全备到指定时间点的mysql二进制日志：用LSN恢复
 1. 问题排查思路
    - 查看现场：`show full processlist`
    - 分析情况：`explain xx`
@@ -226,6 +450,56 @@
      1. 锁等待的事务：`select * from information_schema.innodb_lock_waits`
      1. 死锁：``
    - 日志分析：general.log
+1. 监控
+   - 方面
+    1. 数据库服务可用性
+      1. 主从复制
+         - 状态：`Slave_IO_Running`、`Slave_SQL_Running`，都是yes主从才正常
+         - 延迟
+           1. `show slave status`：Seconds_Behind_Master这个不准确，因为是按照从执行时间减去主执行的时间，假如主阻塞很久但从都消费完了，则表现为无延迟
+           1. 正确的：需要多线程程序同时检查主从的binlog偏移量
+         - 数据一致性：`pt-table-checksum u= p= --database xx --replicate test.checksums`
+      1. 是否可连接：`mysqladmin -u -p ping`、`telnet ip port`
+      1. 是否可读写：`read_only=off`、简单监控表的更新测试、简单查询`select @@version`
+    1. 数据库性能
+      1. 服务器资源
+      1. qps/tps：单位时间内查询数、插入/修改/删除数
+      1. 连接数：Threads_connected / max_connections > 0.8
+        - `show variables like max_connections`
+        - `show global status like Threads_connected`
+      1. 并发请求数：`show global status like Threads_running`：越多性能越下降，这个数远小于连接数，否则就产生了大量的阻塞
+      1. innodb阻塞
+        ```sql
+        // 因为阻塞的sql已经执行完了，所以可能会抓到select这样的语句
+        SELECT
+            b.trx_mysql_thread_id AS '被阻塞线程',
+            b.trx_query AS '被阻塞SQL',
+            c.trx_mysql_thread_id AS '阻塞线程',
+            c.trx_query AS '阻塞SQL',
+            (UNIX_TIMESTAMP()-UNIX_TIMESTAMP(c.trx_started)) AS '阻塞时间' 
+        FROM 
+            information_schema.innodb_lock_waits a 
+        JOIN 
+            information_schema.innodb_trx b ON a.requesting_trx_id = b.trx_id 
+        JOIN 
+            information_schema.innodb_trx c ON a.blocking_trx_id = c.trx_id 
+        WHERE 
+            (UNIX_TIMESTAMP()-UNIX_TIMESTAMP(c.trx_started)) > 60
+        ```
+1. 基准测试：进行定量的、可复现的测试，不关心业务逻辑，对比于压力测试。mysql由于数据一致性的要求无法简单的水平扩展(即加机器)，主要评估qps和响应时间
+   - mysqlslap：简单，容易使用，无法生成数据，适合对既有数据库单个sql进行优化测试
+     1. `--concurrency=5000`：并发数
+     1. `--number-of-queries`：总查询数
+   - sysbench：内嵌lua脚本，可生成指定规模数据，主流厂商(Oracle/Percona)使用，支持多线程，支持多种数据库
+     1. 建表，塞1百万数据：`sysbench --monitis=oltp --oltp-table-size=1000000 --mysql-db=xx --mysql-user=root --mysql-password=xx prepare`
+     1. 开始测试：`sysbench --monitis=oltp --oltp-table-size=1000000 --mysql-db=xx –mysql-user=root –mysql-password=xx –max-time=60 –oltp-read-only=on –max-requests=0 –num-threads=8 run`
+   - mysql-tpcc
+1. 慢查询：记录超过一定时间的查询语句
+    ```
+    slow_query_log = ON
+    slow_query_log_file = /usr/local/mysql/data/slow.log
+    long_query_time = 1
+    ```
 1. 实例切换
    - 操作步骤
      1. 停服
@@ -267,34 +541,45 @@
    - 查看
      1. `show master status;`
      1. `show slave status;`
-1. 分表分区
-   - 认识
-     1. 分区：对用户透明，底层分为多个物理分区。用partition by定义每个分区存放的数据，优化器自动使用。适用于数据多，只在表最后有热点数据，其他都是历史数据。分区可以分布在不同机器上独立维护，有很多功能不能用
-        - 存储更多数据：可分布在不同的物理设备
-        - 优化查询：where语句中包含分区条件时，只会使用某几个分区
-        - 类型：RANGE、LIST、HASH、KEY
-          1. 两级映射：指定id范围和表的关系，不够了加关系就行，可通过中间件实现
-        - 适用于所有数据和索引，两者不能分开
-     1. 分表：可以将两种方式结合使用
-        - 水平拆分：用于数据本身有独立性，可以拆分，逻辑分层算法无法变更，关键字段取模方式拆到多个表中，降低单表大小
-        - 垂直拆分：把属性较多、数据较大的表某些字段拆分到不同的表中，查询时可减少io次数，但是应用增加复杂度。分主表、扩展表。因为数据库的内存buffer存row
-   - 跨表分页
-     1. 全局视野法：改造分页sql，每个表都取出来，然后放一起再排序。`offset X limit Y`改为`offset 0 limit X+Y`。精准返回，页码增加性能急剧下降
-     1. 业务折衷
-        - 禁止跳页查询：第一页作为第二页的查询条件，再全局视野
-        - 允许数据精度损失：认定数据足够随机，取模去取数据
-     1. 二次查询法
-        - 将order by time offset X limit Y，改写成order by time offset X/N limit Y
-        - 找到所有表中的最小值time_min
-        - between二次查询，order by time between $time_min and $time_N_max
-        - 拿time_min在各个分库中比较，得出每个表的虚拟offset，相加从而得到time_min在全局的offset
-        - 得到了time_min在全局的offset，自然得到了全局的offset X limit Y，要什么从后推着拿就行
-1. 数据库中间件：前端无感知
-   - mycat：开源分布式数据库中间件，13年阿里开源，java写的。支持读写分离、高可用(主没了选从)、拆分(垂直、水平)
-     1. 高可用：采用去中心化的集群，在虚拟ip下，在不同的节点部署多个mycat，根据某种策略(ip选举策略)选举某一个为临时master，之间采用心跳机制进行通信维持故障切换。可使用zk、haproxy、keepalived等组件，可以有选举、心跳、切换ip等功能
-   - Kingshard：个人的go开发，读写分离、分库分表、sql黑名单
-   - mysql proxy：mysql官方
+### 中间件
+1. 认识
+   - 对前端透明
+   - 分库分表：垂直、水分拆分
+   - 负载均衡
+   - 防火墙：sql审核、过滤、改写、容错、转换
+1. 集群方案
+   - MMM
+   - MHA
+   - pxc
+     1. 认识：数据多向同步的同步复制的高可用性和扩展性的集群方案，基于Percona Server 
+        - 多主复制，任意节点写操作
+        - 故障切换、自动节点克隆
+     1. 原理
+        - 在所有集群节点都要提交
+     1. 注意
+        - 尽可能的控制PXC集群的规模，节点越多，数据同步速度越慢
+        - 所有PXC节点的硬件配置要一致，如果不一致，配置低的节点将拖慢数据同步速度
+        - 只支持InnoDB
+1. 分类
+   - mysqlProxy
+     1. 认识：mysql官方
+   - maxscale
+     1. 认识：支持高可用、负载均衡、扩展插件式的数据库中间件，mariaDB出品
+     1. 插件
+        - 认证
+        - 协议
+        - 路由
+        - 监控
+        - 过滤日志：简单防火墙，sql过滤和改写、容错、转换
+   - oneProxy
+     1. 认识：将一个表分片，数据写到两个实例中，也可以保持两个实例都有一个相同的表
+   - mycat
+     1. 认识：开源分布式数据库中间件，13年阿里开源，java写的。支持读写分离、高可用(主没了选从)、拆分(垂直、水平)
+        - 高可用：采用去中心化的集群，在虚拟ip下，在不同的节点部署多个mycat，根据某种策略(ip选举策略)选举某一个为临时master，之间采用心跳机制进行通信维持故障切换。可使用zk、haproxy、keepalived等组件，可以有选举、心跳、切换ip等功能
+   - proxySQL
+   - DataX：阿里巴巴开源的离线数据同步工具
    - amoeba
+   - kingshard：个人的go开发，读写分离、分库分表、sql黑名单
 1. maxwell
    - 认识：同步binlog以json写入到kafka、redis、等流平台，用于ETL、缓存刷新、指标收集、增量到搜索引擎、数据分区迁移、切库binlog回滚等场景，java写的
      1. 有过滤器功能
@@ -367,7 +652,7 @@
 1. 认识：单进程多线程，插件式的表存储引擎
    - 数据多了，性能下降不是线性的
 1. 架构
-   - Server：————负责跨存储引擎功能的实现，如存储过程、触发器、视图
+   - 服务层：————负责跨存储引擎功能的实现，如存储过程、触发器、视图
      1. 连接器：————管理连接、连接权限验证，用户权限信息放在一个变量中以供后续使用，长连接多了容易内存爆满
      1. 查询缓存：————8.0已删除，命中率非常低，表更新会使所有查询缓存清空
      1. 分析器：————词法语法分析，之后进行precheck权限检查
@@ -375,10 +660,15 @@
         - 决定使用哪个索引
         - join时决定表的连接顺序
      1. 执行器：————操作引擎(调用引擎接口)，返回结果，再次检查权限，因为有些只能在执行阶段才能知道具体哪张表，如触发器
-   - 存储引擎：————负责数据存取，插件式
+   - 存储引擎层：————负责数据存取，插件式
      1. InnoDB
      1. MyISAM
      1. Memory
+1. 文件组成
+   - .frm：存储表的元数据信息，主要是表结构，视图也在
+   - .myd、.myi：MyISAM数据文件、索引文件
+   - .ibd：InnoDB文件，索引和数据在一起
+   - .index、.0001：binlog文件
 1. 数据更新流程
    - 认识：流程和wal一致，![avatar](../images/mysql-update.jpeg)
      1. 读写数据：缓存提高效率
@@ -404,35 +694,6 @@
 1. 认识：了解其物理存储特征
 1. 特点
    - 索引组织表：按主键顺序存放，数据即索引，索引即数据。不显式指定主键或者唯一索引就生成6字节的rowId
-1. innodb逻辑存储结构
-   - 表空间
-     1. 存储方式
-        - 共享表空间：默认，.ibdata1
-        - 独占表空间：.ibd
-     1. 逻辑存储结构
-        - segment：段，引擎自身完成
-          1. 数据段：b+tree的叶子节点
-          1. 索引段：非叶子节点
-          1. 回滚段
-          1. 
-        - extent：区，连续页组成，都是1m
-        - page：页/块，默认16k，innodb磁盘管理的最小单位，与数据库相关的所有内容都存储在里边。大小16kb，32位int表示，对应innodb的64TB存储容量(16kb * 2^32)
-          1. 类型
-             - b-tree node：数据页
-             - undo log page：undo页
-             - system page：系统页
-             - transaction system page：事务数据页
-             - insert buffer bitmap：插入缓冲位图页
-             - insert buffer free list：插入缓冲空闲列表页
-             - uncompressed blob page：二进制大对象
-             - compressed blob page
-        - row：行
-          1. 记录格式
-             - Redundant：稀疏，最早
-             - Compact：紧凑，5.0.3以后默认
-             - Dynamic：动态，将长字段完全off-page存储
-             - Compressed：压缩，行数据会以zlib算法进行压缩
-     1. index：聚集方式，因此按主键顺序存放，不显式指定主键或者唯一索引就生成6字节的rowId
 ### 日志
 1. 日志
    - 分类
@@ -503,26 +764,35 @@
    - 认识：Global Transaction ID 全局事务id，已提交事务会有一个主库唯一的编号。强化了主备一致性，故障恢复以及容错能力。之前基于二进制日志的复制中从库需要告知主库从哪个偏移量进行增量同步，如果指定错误会造成数据的遗漏，从而造成数据的不一致。借助GTID主备切换下可以找到正确的复制位置，大大简化复制的维护，另外，可以忽略已经执行过的事务，减少数据发生不一致的风险
      1. 全局唯一性
      1. 趋势递增
+   - 对比：基于日志点的复制
 ### 引擎
 1. 认识：基于表
    - 分类
      1. InnoDB
      1. MyISAM
-        - 认识：innodb之前的默认引擎，用于olap，表大小最大256TB
-          1. 不支持事务、不支持外键
-          1. 支持全文索引、压缩、空间函数，可以压缩为只读表
-          1. 缓冲池只缓冲索引，没有数据
-        - 结构
-          1. myd：数据文件
-          1. myi：索引文件
      1. Memory；内存表存储在内存中，默认使用hash索引，使其比MyISAM快，只支持表锁，服务器停止数据丢失，用于临时表
+        - 所有字段为固定长度
      1. Archive：提供高速的插入和压缩功能，只支持insert、select，使用zlib将行压缩存储，压缩比一比十，适合存储归档数据如日志，行锁，事务不安全
+        - .arz后缀
      1. Federated：不存数据，指向远程的表，不支持异构数据表
      1. Maria：设计取代MyISAM
      1. Merge：将具有相似结构的多个MyISAM表组合到一个表中的虚拟表
      1. Blackhole、CSV
-   - 结构
-     1. frm文件：存储表的元数据信息，主要是表结构，视图也在
+1. CSV
+   - 认识：不适合大表和在线处理。每次查询要全表扫描
+     1. csv格式的文件方式存储
+     1. 所有列不为null
+     1. 不支持索引
+   - 文件组成
+     1. .csv：表内容
+     1. .csm：表元数据，如状态和数据量
+1. MyISAM
+   - 认识：5.5之前的默认引擎，用于olap
+     1. 不支持事务、不支持外键、表大小默认256TB
+     1. 支持全文索引、压缩(myisampack)、空间函数，可以压缩为只读表
+     1. 系统吧、临时表的类型
+   - 特点
+     1. 缓冲池只缓冲索引，没有数据
 1. InnoDB
    - 认识：性能优秀，数据存在共享表空间，可通过配置分开。多种行锁机制组合，行锁通过给索引上的索引项加锁来实现
      1. 事务
@@ -546,8 +816,37 @@
         - tablespace：表空间，设计为数据按照表空间存放，包含数据、索引、插入缓冲bitmap
           1. 默认表空间文件初始大小10m、名称ibdate1
           1. 多文件可组合表示表空间，即不同磁盘文件负载可平均，可提高性能，可自动扩充大小
-          1. 可指定独立表空间，命名为tableName.ibd
+          1. 可指定独立表空间，不用系统表空间，命名为tableName.ibd，应该多用独立表空间
      1. ib_logfile0/ib_logfile1：重做日志文件
+1. innodb逻辑存储结构
+   - 表空间
+     1. 存储方式
+        - 共享表空间：默认，.ibdata1
+        - 独占表空间：.ibd
+     1. 逻辑存储结构
+        - segment：段，引擎自身完成
+          1. 数据段：b+tree的叶子节点
+          1. 索引段：非叶子节点
+          1. 回滚段
+          1. 
+        - extent：区，连续页组成，都是1m
+        - page：页/块，默认16k，innodb磁盘管理的最小单位，与数据库相关的所有内容都存储在里边。大小16kb，32位int表示，对应innodb的64TB存储容量(16kb * 2^32)
+          1. 类型
+             - b-tree node：数据页
+             - undo log page：undo页
+             - system page：系统页
+             - transaction system page：事务数据页
+             - insert buffer bitmap：插入缓冲位图页
+             - insert buffer free list：插入缓冲空闲列表页
+             - uncompressed blob page：二进制大对象
+             - compressed blob page
+        - row：行
+          1. 记录格式
+             - Redundant：稀疏，最早
+             - Compact：紧凑，5.0.3以后默认
+             - Dynamic：动态，将长字段完全off-page存储
+             - Compressed：压缩，行数据会以zlib算法进行压缩
+     1. index：聚集方式，因此按主键顺序存放，不显式指定主键或者唯一索引就生成6字节的rowId
 1. MVCC
    - 通过保存数据在某个时间点的快照来实现，大多数情况下可以代替行级锁
    - 理想的mvcc无法实现，Innodb只是借了MVCC这个名字，提供了读的非阻塞而已，没有实现核心的多版本共存，只是串行化的结果，因为类似乐观锁的特性无法代替二段提交的强一致性

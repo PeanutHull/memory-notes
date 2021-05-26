@@ -262,6 +262,7 @@
         - Iface：网络接口名
    - traceroute：显示网络数据包传输到指定主机的路径信息，追踪数据传输路由状况
    - openssl：查看网站证书链`openssl s_client -connect github.com:443 -showcerts`
+     1. 网站检测：myssl.com
    - lsof：list open files，列出打开文件。linux环境下任何事物都以文件的形式存在
      1. i:80：查看端口号，root用户查看
 1. 查看

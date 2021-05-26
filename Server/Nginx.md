@@ -141,7 +141,7 @@
    - proxy_buffers：缓存区大小和数量
    - proxy_busy_buffers_size：高负荷下缓存大小
    - proxy_temp_file_write_size：缓存临时文件大小
-   - 
+
    - client_max_body_size 500m;              # 客户端请求服务器最大允许大小
    - client_body_buffer_size     128k;       # nginx分配给请求数据的Buffer大小
    - proxy_ignore_client_abort   on;         # 是否开启proxy忽略客户端中断
@@ -204,18 +204,29 @@
      1. 一致性hash：使用nginx内置的一致性hash环
    - 内置策略：nginx的proxy
     ```lua
+    --print("七层")
     http{
         upstream host {
-            ip_hash;                                        # 加上几位ipHash策略，去掉为加权
-            server 0.0.0.1:80 weight=3;
-            server 0.0.0.2:80 weight=2;
-            server 0.0.0.3:80 weight=3;
-            keepalive_timeout 5s;                           # nginx主动发起关闭tcp通道的时间，防止上游关闭连接的瞬间，下游来请求产生502
+            ip_hash;                                                    # 加上几位ipHash策略，去掉为加权
+            server 0.0.0.1:80 weight=3 max_fails=3 fail_timeout=30s;    # max_fails节点多少次失败就摘除，fail_timeout节点不可用时暂停多久
+            server 0.0.0.2:80 weight=2 backup;                          # 别的节点都挂了才用这个
+            server 0.0.0.3:80 weight=3 proxy_next_upstream;
+            keepalive_timeout 5s;                                       # nginx主动发起关闭tcp通道的时间，防止上游关闭连接的瞬间，下游来请求产生502
         }
         server {
             location / {
                 proxy_pass http://somename
             }
+        }
+    }
+    --print("四层")
+    stream {
+        server {
+            listen 1034;
+            proxy_pass app;
+        }
+        upstream app {
+            server 192.168.0.3:1034;
         }
     }
     ```
@@ -273,7 +284,7 @@
             rewrite ^.+api/wx1matrix/?(.*)$ /$1 break;
             proxy_set_header Host wx1matrix.xueersi.com;
 
-            // 改为长连接用这俩
+            // 改为长连接用这俩，必须都有，否则不生效
             proxy_http_version 1.1;
             proxy_set_header Connection "";
 
@@ -411,7 +422,7 @@
    - zlib：提供了多种压缩/解压缩的方式。nginx使用zlib对http包的内容进行gzip
    - openssl
 1. Lighttpd：web服务器，低内存开销、模块丰富、动态页面处理能力很强
-1. HAProxy
+1. HaProxy
    - 认识：基于tcp、http的提供高可用、高并发、负载均衡的应用代理。c语言编写，通过反向代理实现负载均衡，不是web服务器，是专门的应用代理
      1. 快速、免费、可靠
      1. 事件驱动、单一进程模型，可以支持很大的并发连接数

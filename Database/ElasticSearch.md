@@ -1006,6 +1006,36 @@
      1. 尽量使用filter上下文，减少算分，同时有缓存机制，极大提高性能
      1. 尽量不使用script进行计算
      1. 结合profile、explain分析慢查询
+1. 马蜂窝binlog同步es实践
+   - 方案
+     1. go-mysql-elasticsearch开源组件，binlog转入kafka，然后入es
+   - 细节
+     1. 数据同步正确性保证
+        - 顺序性：把每条 Binlog 按照其 Primary Key，Hash 到各个 Partition 上，保证同一条 MySQL 记录的所有 Binlog 数据都发送到同一个 Partition
+          1. 多 Consumer 的情况，一个 Partition 只会分配给一个 Consumer
+     1. 完整性
+        - 利用 Kafka 的 Offset 机制：确认一条 Message 数据成功写入 Elasticsearch 后，才 Commit 该条 Message 的 Offset
+     1. es写入
+        - 放入slice每200ms或长度达到一定时调用_bulk
+   - 组成
+     1. 配置解析：mysql、kafka、es、mapping等配置
+     1. 规则：binlog和es索引关系，字段对应关系，where条件过滤数据
+     1. Kafka相关：生产者、消费者等
+     1. Binlog数据解析：由Canal解析Replication协议成json
+     1. Elasticsearch相关
+   - 定制化开发
+     1. upsert：多个不同的表通过`doc_as_upsert`实现不关心顺序的数据更新
+     1. filter：根据业务用where选择要同步的数据
+     1. 快速增量：由于es追上来全量数据很慢，kafka全量同步完binlog直接commit最近的offset，实现截取入es
+   - 高可用
+     1. binlog日志全量记录
+     1. 同步延时监控
+     1. 心跳检测：crontab 脚本每分钟修改一次该表，同时检查上一次修改是否同步到了指定的索引，如果没有，则发送报警通知，实现整个链路的检测
+   - low方案
+     1. 建立数据中间表，Crontab通过更新时间将增量数据搬进es
+        - 业务变更，中间表也跟着变
+        - 数据量越大，改表越困难
+        - 业务方需要维护中间表
 ### wiki
 1. 相关 
    - 默认端口：9200

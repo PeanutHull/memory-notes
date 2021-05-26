@@ -98,26 +98,6 @@
    - 执行效率
 ### 高可用
 1. 认识：HA，就是冗余 + 自动故障转移
-1. keepalived
-   - 认识：以VRRP协议为基础实现服务热备
-     1. 可根据ip、端口、http请求判断是否正常，即工作在OSI的3、4、7层
-        - 3：发送ICMP数据包判断是否故障(ping)
-        - 4：端口
-        - 7：自定义检测脚本
-     1. 可自动完成切换，主恢复后可抢占回备占用的vip
-     1. 支持自身健康检查
-   - 组成模块
-     1. core：负责主进程的启动、维护，全局配置文件的加载和解析
-     1. check：负责健康检查、各种检查方式
-     1. vrrp：实现VRRP协议
-   - 应用：如LVS+Keepalived、Nginx+Keepalived、HAproxy+Keepalived
-     1. 主备都部署服务+keepalived
-     1. 主备的keepalived之间通过vrrp交互，虚拟出一个vip，并落在主上
-     1. 主备的keepalived设置为：当检测服务不可用时尝试重启服务，不成功则关闭keepalived，实现服务转移
-   - wiki
-     1. VRRP协议：虚拟路由冗余协议，是实现路由器冗余的协议，是为了消除在静态默认路由环境下路由器单点故障引起的网络失效而设计的主备模式的协议
-        - 一主一备，同时只有一个提供服务。即将n台设备虚拟成一个设备，对外提供一个或多个虚拟IP
-        - 检测到故障，虚拟IP地址会自动漂移到备份服务器，即keepalived广播vip对应的mac由主切换到备用，其他客户端更新ARP表，实现故障转移
 1. corosync+pacemaker：用于传递信息，提供心跳信息，集群框架引擎程序，高可用集群资源管理器，crmsh是pacemaker的命令行工具
 1. heartbeat：和corosync一类，
 1. 自动故障转移
@@ -198,24 +178,6 @@
    - 应用场景
      1. 四层：Redis、MySQL、RabbitMQ
      1. 七层：Nginx、Tomcat、Apache、PHP、图片、API
-1. LVS
-   - 认识：Linux Virtual Server，基于linux操作系统实现的负载均衡
-      - 是linux标准内核的一部分
-      - 只工作在4层
-   - 组成
-      - 负载均衡器：IPVS，IP Virtual Server，在真实服务器前充当4层负载均衡器
-      - 服务器池
-      - 共享存储
-   - 转发请求的方式
-      - NAT
-      - DR：必须是Linux操作系统，不支持端口映射，处于同一个广播域中
-      - TUN
-   - 实践：一般搭配KeepAlived做主备形式的ha，可以不用dns了，避免了dns的耗时和错误问题
-   - 调优
-     1. LVS的调优建议将hash table的值设置为不低于并发连接数。例如，并发连接数为200，Persistent时间为200S，那么hash桶的个数应设置为尽可能接近200x200=40000，2的15次方为32768就可以了
-     1. 当ip_vs_conn_tab_bits=20 时，哈希表的的大小（条目）为 pow(2,20)，即 1048576，对于64位系统，IPVS占用大概16M内存，可以通过demsg看到：IPVS: Connection hash table configured (size=1048576, memory=16384Kbytes)。
-     1. 对于现在的服务器来说，这样的内存占用不是问题。所以直接设置为20即可。
-关于最大“连接数限制”：这里的hash桶的个数，并不是LVS最大连接数限制。LVS使用哈希链表解决“哈希冲突”，当连接数大于这个值时，必然会出现哈稀冲突，会（稍微）降低性能，但是并不对在功能上对LVS造成影响
 ### 分布式
 1. 好处
    - 增大系统容量，如内存、磁盘，可以支持pb级数据

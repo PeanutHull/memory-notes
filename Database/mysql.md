@@ -1,5 +1,5 @@
 ### 基础
-1. 基础
+1. 语法
    - 注释 ：--、#、/**/=
    - 不区分大小写
    - 符号
@@ -191,6 +191,7 @@
         - 级联限制：`constraint foreignKeyName foreign key(selfId) references foreignTable(foreignTableId) on delete/update cascade;`，删除被连接数据自己也被删除，连带删除
    - 分类
      1. 临时表：只有当前连接可见，关闭连接自动删除，如`create temporary table tableName ();`，show tables看不到该表
+        - 系统自动临时表：排序、分组操作中数量超过一定大小后，查询优化器建立的临时表
      1. 派生表：是select返回的虚拟表，即from使用的独立子查询，可以和子查询互换使用。如`from(select * from table2)derivedTableName`
      1. 公共表表达式：CTE，是一个命名的临时结果集，仅在单个SQL语句的执行范围内存在，比派生表更易读，性能更高
    - 表间关系：一对一、一对多、多对多
@@ -310,7 +311,7 @@
         - 使索引更新更快
         - 重启或掉电会导致索引没更新，启动参数加上--myisam-recover
      1. 操作：`ALTER TABLE xxx DELAY_KEY_WRITE=1`
-### 特性
+### 功能
 1. 索引
    - 认识：为加快查询速度，对数据列进行排序的一种结构，包含所有记录的引用指针，查询时先查索引，引擎实现
      1. 加快查询速度，大大减少服务器的检索数据
@@ -344,10 +345,11 @@
     spatial                 # 空间列，值不为null
     ```
 1. 事务
-   - 理解：保证一致性，所有操作全部执行
+   - 理解：是区别文件系统的重要特征，是具有原子性的sql语句，所有操作全部执行
      1. 服务层不管理，由引擎实现
      1. 不支持嵌套事务：再开启一个事务会隐式提交上一个事务
      1. 一个事务中使用多引擎不靠谱
+   - 特性：ACID
    - 使用
     ```sql
     set autocommit=0/1;                 # 禁止/开启自动提交
@@ -509,6 +511,23 @@
     open num;
     close num;
     ```
+### 设计和使用
+1. 范式
+   - 认识：为了消除重复数据，更高一级的范式要求先满足下边的范式。涉及数据库理论研究
+   - 三范式
+     1. 组成
+        - 1NF：原子性，属性不可再分解
+          1. 要根据具体情况判断是否可以再拆
+        - 2NF：惟一性，不存在部分依赖，要求其他字段都依赖于主键。如学号、课程号、姓名、学分中学分依赖课程，但不依赖学号，产生了部分依赖
+          1. 数据冗余：修改时需要同时修改多条记录
+          1. 删除异常：删除学分，课程号也删除
+          1. 插入异常：学生未选课，学分无法记录
+        - 3NF：冗余性，不存在传递依赖，要求字段没有冗余。如学号, 姓名, 学院名称, 学院电话，有传递依赖
+          1. 数据冗余：修改时需要同时修改多条记录
+     1. 特点
+        - 没有冗余、表更新快体积小、操作更快
+        - 查询需要多表关联，导致性能降低，更难进行索引优化
+   - 反范式化：没有冗余的数据库未必是最好的数据库，有时为了提高运行效率，就必须降低范式标准，适当保留冗余数据，达到以空间换时间的目的
 ### 维护
 1. 用户和权限管理
    - user
@@ -543,88 +562,6 @@
         - PROCESS：查看/杀死线程
         - RELOAD：重载授权表、清空日志/主机缓存/表缓存
         - SHUTDOWN：关闭服务器
-### 运维
-1. 安装
-   - 安装：`yum -y install mysql-server`
-   - 设置字符集：`vim /etc/my.cnf` ([mysqld]下添加)
-     1. `character-set-server=utf8`
-     1. `default-character-set=utf8`
-1. 使用
-   - 启动：`mysqld_safe &`
-   - 关闭：`mysqladmin -u -p shutdown`
-   - 重启：`service mysqld restart`
-   - 查看：`ps -ef | grep mysqld`
-1. 配置
-   - 配置文件
-     1. `mysql --help | grep my.cnf`
-   - 查看
-     1. `show variables;`
-     1. `show variables like 'slow_query%';`
-   - 修改
-     1. 变量方式：`set global slow_query_log='ON';`
-     1. 配置文件方式：my.cnf，`slow_query_log = ON`
-   - 安全
-     1. sql安全：防注入(预处理)、特殊字符转义、错误信息屏蔽。权限分开、定期修改密码
-     1. 备份恢复
-1. 连接方式
-   - tcp/ip套接字：`mysql -h127.0.0.1`
-   - 域套接字：`mysql -S /tmp/mysql.sock`
-   - 命名管道、共享内存：通过配置开启
-1. 实例迁移步骤
-   - 搭建新实例实时和旧的同步
-   - 业务方修改配置
-   - 业务方停止增删改操作（停服）
-   - 删除写用户，保留只读用户 （防止丢数据）
-   - 断开新实例到老实例同步，开启新主库可写入
-   - 发布，验证业务
-   - 删除旧实例
-1. 备份
-   - 认识
-     1. 备份文件：逻辑文件，文件可读如mysqldump，恢复时间长，用于升级、迁移等工作；裸文件
-     1. 备份方式：完全、增量（记录LSN之后的备份）、日志
-   - 备份策略最佳实践：定期备份
-     1. 本地备份
-     1. 本地增量备份：每天和每10分钟一次，备份到同机房其他服务器
-     1. 异地备份，先随机加密，后传输到异地，异地双备份
-   - 备份要求
-     1. 备份的一致性
-     1. 做好异地容灾
-     1. 定期覆盖度测试
-   - 备份方式
-     1. 冷备
-        - 理解：复制相关文件即可，应该存放到远程服务器中。如shell(mysqldump) + rsync + crontab，或者直接复制文件
-        - 备份内容：frm、ibdata1、*.ibd、redo log、my.conf
-     1. 热备
-        - ibbackup
-          1. 认识：官方提供，不阻塞，性能好(复制日志文件)，支持压缩。不支持真正增量备份，只是某时刻的恢复
-          1. 原理：记录LSN，开始备份，然后找回来备份时的redo log
-        - xtrabacup
-          1. 认识：开源，支持增量备份，原理是先全备，记录此时的LSN，增量时比较LSN并且不断更新LSN
-     1. 复制
-     1. 逻辑备份
-        - mysqldump：`mysqldump -u -p [databaseName or tableName] > data.sql`
-          1. -d 只导出结构
-          1. -t 只导出数据
-          1. --all-databases：所有数据库
-          1. --single-transaction：设定备份一致性
-        - select ... into outfile：`select * into outfile 'xx.txt' fields terminated by ',' optionally enclosed by '"' lines terminated by '\n' from table;`
-     1. 二进制备份：用`flush logs`生成新日志文件，然后备份旧的
-     1. 快照备份
-        - 认识：把所有日志放到同一个逻辑卷中，用lvm快照
-1. 恢复
-   - 逻辑日志导入
-     1. mysql -u -p databaseName < data.sql
-     1. source xx.sql
-     1. load data local infile 'xx.txt' into table tableName;
-     1. mysqlimport -u -p --local databaseName dump.sql
-   - 二进制日志导入
-     1. mysqlbinlog
-        - start/stop-position：开始结束位置
-        - `mysqlbinlog xx.xx | mysql -u -p`
-        - `mysqlbinlog xx.xx > xx.sql`
-1. 工具
-   - binlog2sql：回滚指定时间点的sql语句
-   - xtrabackup：录binlog位置后copy文件，速度比逻辑备份快上百倍
 ### WIKI
 1. 相关
    - 数据库：文件中读写数据不方便、速度慢，按照数据结构来组织、存储和管理数据的仓库，提供API进行数据操作
