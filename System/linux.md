@@ -220,6 +220,8 @@
      1. 上传：`scp [-r] local addr@ip:/addr`
      1. 下载：`scp [-r] addr@ip:/addr local`
    - rcp
+     1. 认识：remote file copy 远程文件拷贝，把远程的文件拿过来
+     1. 例子：`rcp root@127.0.0.1:/xxx xxx`
    - sz/rz
    - ftp/sftp
    - ssh

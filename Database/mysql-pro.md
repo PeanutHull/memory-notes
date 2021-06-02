@@ -16,6 +16,7 @@
         - 方式
           1. 分片键的hash取模
           1. 分片键范围划分
+          1. 时间跨度（年、月、日）分片
           1. 分区键和分片映射表分配
         - 如何生成全局唯一id
           1. 分配auto_increment_increment和auto_increment_offset参数
@@ -59,27 +60,35 @@
           1. innodb_buffer_pool_size：innodb缓冲池大小，对性能非常重要，要缓存索引、数据、自适应hash索引、插入缓冲、锁、其他内部数据结构，还帮助延迟顺序写入，要分配足够的内存大小，重启才能更改，太大了重启慢需要刷脏页，总大小 = 每个线程需要的内存 * 连接数 - 系统保留内存
           1. key_buffer_size：MySIAM的索引缓冲，因为系统表还在用MySIAM
      1.  io：性能和安全的取平衡
-        - innodb_log_file_size
-        - innodb_log_file_in_group：事务日志总大小 innodb_log_file_size * innodb_log_file_in_group
-        - innodb_log_buffer_size
-        - innodb_flush_log_at_trx_commit
-        - innodb_flush_method = O_DIRECT
-        - innodb_file_per_table = 1
-        - innodb_doublewrite = 1
-        - delay_key_write
+        - innodb_log_file_size/innodb_log_file_in_group：事务日志大小的单个和个数，即redolog的，事务日志总大小为二者相乘，事务日志是循环写入的，配置多个是没有意义的，业务忙设置大些，一般记录一个小时的信息
+        - innodb_log_buffer_size：日志缓冲区大小，能够保留至少一秒的事务就够，32M~128M
+        - innodb_flush_log_at_trx_commit：事务日志的刷新频繁程度，和innodb_log_buffer_size搭配的
+        - innodb_flush_method = O_DIRECT：flush的方式，会影响读写，这个通知操作系统不要预读也不要缓存，读写通过存储设备完成，避免操作系统和innodb的双重缓存，linux的最好选择
+        - innodb_file_per_table = 1：指定innodb为每个表建立表空间，否则放入系统表空间，强烈建议开启
+        - innodb_doublewrite = 1：是否开启双写缓冲，防止没有写完整导致的数据损坏，一个页默认16k，建议开启，性能影响不大
+        - delay_key_write OFF：延迟键写入，每次写操作后刷新键缓冲中的脏块到磁盘，OFF最安全，ON只对建表时指定的生效，ALL所有MySIAM都使用。如果服务器崩溃内存中脏块没写回，就需要对MySIAM修复
      1. 安全
-        - expire_logs_days
-        - max_allowed_packet：mysql可以接收的包大小，32M
-        - skip_name_resolve：禁用dns查找
-        - sysdate_is_now：确保sysdata
-        - read_only：禁止非super的写权限
-        - skip_slave_start：禁用slave
-        - sql_mode
-          1. strict_trans_tables
-          1. no_engine_subtitution
-          1. no_zero_date
-          1. no_zero_in_date
+        - expire_logs_days：自动清理binlog的天数，防止占用太多空间，应该至少覆盖两次全备间隔的天数
+        - max_allowed_packet：mysql可以接收的包大小，同时影响用户定义的变量容量，主从应该一致否则同步失败，如32M
+        - skip_name_resolve：禁用dns查找，加快访问速度，用户授权只能使用ip了
+        - sysdate_is_now：确保sysdata()返回确定性日期，建议设置，否则基于段的主从复制的不一致导致中断
+        - read_only：禁止非super的写权限，建议从库指定，保证主从一致
+        - skip_slave_start：禁用slave自动恢复，崩溃后自动恢复不安全
+        - sql_mode：sql模式，默认比较宽松，改了可能现在的程序无法运行
+          1. strict_trans_tables：如果数据无法插入到事务型引擎中会中止操作，非事务不影响
+          1. no_engine_subtitution：如果引擎不可用也会建立不成功，否则使用默认引擎，确保使用想要的引擎
+          1. no_zero_date：不能写入小于0的日期
+          1. no_zero_in_date：不接受部分为0的日期
           1. only_full_group_by
+     1. 服务器
+        - sync_binlog：控制什么时候磁盘刷新binlog，建议为1，避免主崩溃，cache日志没有同步到从中，就会很难恢复
+        - tmp_table_size/max_heap_table_size：控制内存临时表大小。隐式的超过后转为磁盘临时表，不要太大防止内存溢出
+        - max_connections：最大连接数，一般为3000或更大
+     1. 数据库设计
+        - 过分的反范式化设计，建立太多列
+        - 过分的范式化设计，太多的表关联
+        - oltp使用分区表，分区还是olap中使用
+        - 使用外键
    - 内核
      1. 配置文件：`/etc/sysctl.conf`
      1. 网路
@@ -251,6 +260,7 @@
      1. ref：另外表的数据列名字
      1. row：预计读出的数据行数，里面所有数字乘积代表需要处理的组合数
      1. extra：问题解决提示信息
+1. 实时获取性能问题sql：`select id,user,host,db,command,time,status,info from information_schema.PROCESSLIST where time >= 60`
 1. 设计和使用
    - 数据类型
      1. 尽量使用更简单的类型，数据长度越短越好(更少存储内存空间)
@@ -259,6 +269,9 @@
      1. 尽量用timestamp，比datetime效率高
      1. 给文本字段留足余量
      1. 不能为null
+     1. 日期
+        - 不要用字符串，一是不好查，二是不支持时间函数
+        - 使用int不如直接使用timestamp
    - 列设计
      1. 一定有主键，最好是自增，否则多次读写后更离散，更多随机io
      1. 增加create_time/update_time字段，用于数据归档/自定义差异备份
@@ -300,6 +313,7 @@
      1. show status;show global status;分析计数器
      1. show processlist;查看线程状态
      1. 关键业务上线前explain确认执行计划
+     1. 日志文件和数据文件放在不同的磁盘分区上，获得额外性能提升，也不至于一方占满空间另一方无法使用
 1. 使用规范
    - 建库、表
      1. 建表语句必须在sql审核平台审核通过，不然不予以创建，审核地址：http://app.xesv5.com/zeus
@@ -411,7 +425,9 @@
           1. -d 只导出结构
           1. -t 只导出数据
           1. --all-databases：所有数据库
-          1. --single-transaction：设定备份一致性
+          1. --master-data=2：记录当前备份的binlog文件信息和偏移量，知道在哪儿备份的
+          1. --single-transaction：设置要保证事务一致性
+          1. --lock-on-tables：要备份InnoDB和MySIAM混合的需要锁表
         - select ... into outfile：`select * into outfile 'xx.txt' fields terminated by ',' optionally enclosed by '"' lines terminated by '\n' from table;`
      1. 二进制备份：用`flush logs`生成新日志文件，然后备份旧的
      1. 快照备份
@@ -458,7 +474,7 @@
          - 延迟
            1. `show slave status`：Seconds_Behind_Master这个不准确，因为是按照从执行时间减去主执行的时间，假如主阻塞很久但从都消费完了，则表现为无延迟
            1. 正确的：需要多线程程序同时检查主从的binlog偏移量
-         - 数据一致性：`pt-table-checksum u= p= --database xx --replicate test.checksums`
+         - 数据一致性：主上执行，可以自动发现所有的从，并验证数据是否一致。`pt-table-checksum u= p= --database xx --replicate test.checksums`
       1. 是否可连接：`mysqladmin -u -p ping`、`telnet ip port`
       1. 是否可读写：`read_only=off`、简单监控表的更新测试、简单查询`select @@version`
     1. 数据库性能
@@ -486,14 +502,25 @@
         WHERE 
             (UNIX_TIMESTAMP()-UNIX_TIMESTAMP(c.trx_started)) > 60
         ```
-1. 基准测试：进行定量的、可复现的测试，不关心业务逻辑，对比于压力测试。mysql由于数据一致性的要求无法简单的水平扩展(即加机器)，主要评估qps和响应时间
-   - mysqlslap：简单，容易使用，无法生成数据，适合对既有数据库单个sql进行优化测试
-     1. `--concurrency=5000`：并发数
-     1. `--number-of-queries`：总查询数
-   - sysbench：内嵌lua脚本，可生成指定规模数据，主流厂商(Oracle/Percona)使用，支持多线程，支持多种数据库
-     1. 建表，塞1百万数据：`sysbench --monitis=oltp --oltp-table-size=1000000 --mysql-db=xx --mysql-user=root --mysql-password=xx prepare`
-     1. 开始测试：`sysbench --monitis=oltp --oltp-table-size=1000000 --mysql-db=xx –mysql-user=root –mysql-password=xx –max-time=60 –oltp-read-only=on –max-requests=0 –num-threads=8 run`
-   - mysql-tpcc
+1. 基准测试
+   - 认识：进行可复现的某时刻的性能基准测试，以便当系统发生软硬件变化时重新进行测试以评估变化对性能的影响
+     1. 要求：要简单、直接、易于比较，用于评估服务器的处理能力。和业务逻辑无关，是一种简化的压力测试
+     1. 目的
+        - 确定当前mysql服务器的运行情况
+        - 模拟更高的负载，以找出系统的扩展瓶颈
+          1. 如并发和性能的曲线关系
+          1. 测试不同的软硬件、系统参数等
+     1. mysql由于数据一致性的要求无法简单的水平扩展(即加机器)，主要评估qps和响应时间
+   - 方式
+     1. mysqlslap：简单，容易使用，自带，适合对既有数据库单个sql进行优化测试
+        - `--auto-generate-sql-load-type`：指定测试中使用的类型(读、写、删除、更新)
+        - `--auto-generate-sql-write-number`：指定初始化数据生成的数据量
+        - `--concurrency=5000`：并发数
+        - `--number-of-queries`：总查询数
+     1. sysbench：内嵌lua脚本，可生成指定规模数据，主流厂商(Oracle/Percona)使用，支持多线程，支持多种数据库
+        - 建表，塞1百万数据：`sysbench --monitis=oltp --oltp-table-size=1000000 --mysql-db=xx --mysql-user=root --mysql-password=xx prepare`
+        - 开始测试：`sysbench --monitis=oltp --oltp-table-size=1000000 --mysql-db=xx –mysql-user=root –mysql-password=xx –max-time=60 –oltp-read-only=on –max-requests=0 –num-threads=8 run`
+     1. mysql-tpcc
 1. 慢查询：记录超过一定时间的查询语句
     ```
     slow_query_log = ON
@@ -516,22 +543,13 @@
    - 原理：主库将更改记录到二进制日志binlog，从库复制到中继日志，读取中继重新放到库中。异步实时
      1. 计算主从的LSN，可得出时延
      1. 使用Replication协议
-   - 复制方式
-     1. 异步：主库宕了没同步binlog丢失数据
-     1. 半同步：提交commit后等待至少有一个从库收到binlog并写入到中继日志中，再返回给客户端成功，v5.5，降低了主库写效率，
-        - rpl_semi_sync_master_wait_for_slave_count：设置收到的从库数量才触发，v5.7
-     1. 组复制：MGR，MySQL Group Replication，基于paxos协议的状态机复制，需要通过一致性协议层的同意才能提交，大多数节点同意，v5.7
-        - 解决传统异步复制和半同步复制可能产生数据不一致的问题
-        - paxos作为分布式一致性算法被广泛使用
-        - 仅支持InnoDB表，并且每张表一定要有一个主键，用于做write set的冲突检测
-        - 必须打开GTID特性，二进制日志格式必须设置为ROW，用于选主与write set
    - 作用
      1. 负载均衡，降低压力：读写分离，采用数据库主从方式，多个从库分担读，主库负责写
-     1. 数据备份：异步实时备份
      1. 高可用，故障切换
         - 对从进行快照保存，可以防止主drop database级的防御
         - 对从设置read-only，防止误改
         - 主从自动切换
+     1. 数据备份：异步实时备份，复制不能代替备份，因为执行删除命令同步的很快，这个时候只能依赖备份了
    - 步骤
      1. master记录到binlog
      1. slave的io线程连接master，请求指定文件的指定位置之后的内容
@@ -541,15 +559,135 @@
    - 查看
      1. `show master status;`
      1. `show slave status;`
+   - 配置
+     1. 主
+        - bin_log=mysql-bin
+        - server_id=100
+     1. 从
+        - bin_log=mysql-bin
+        - server_id=101
+        - relay_log=mysql-relay-bin
+        - log_slave_update=on(可选，是否要当其他的主)
+        - read_only=on(建议)
+1. 复制
+   - 复制方式
+     1. 异步：主库宕了没同步binlog丢失数据
+     1. 半同步：提交commit后等待至少有一个从库收到binlog并写入到中继日志中，再返回给客户端成功，v5.5，降低了主库写效率，
+        - rpl_semi_sync_master_wait_for_slave_count：设置收到的从库数量才触发，v5.7
+     1. 组复制：MGR，MySQL Group Replication，基于paxos协议的状态机复制，需要通过一致性协议层的同意才能提交，大多数节点同意，v5.7
+        - 解决传统异步复制和半同步复制可能产生数据不一致的问题
+        - paxos作为分布式一致性算法被广泛使用
+        - 仅支持InnoDB表，并且每张表一定要有一个主键，用于做write set的冲突检测
+        - 必须打开GTID特性，二进制日志格式必须设置为ROW，用于选主与write set
+   - 复制方法
+     1. 基于日志点的复制
+        - 建立从账号：`grant replication slave on *.* to xx@ip段`
+        - 备份主库
+          1. 被备份表加锁：`mysqldump --master-data=2 --single-transaction`
+          1. 热备，InnoDB不加，其他的加，最好的方式：`xtrabackup --slave-info`
+        - scp传输sql文件
+        - 从导入基础数据
+        - 设置复制链路，包括binglog文件和日志点：`change master to master_host='', master_user='', master_password='', master_log_file='', master_log_pos='';`
+        - 启动复制：`start slave`
+     1. 基于GTID的复制
+        - 认识：从告诉主已经执行到的GTID值，主发送回没没执行的GTID值
+          1. 很方便进行故障转移
+          1. 从不会丢失主的修改：因为自动按照GTID识别同步
+        - 步骤
+          1. 主：`gtid_mode=on`、`enforce-gtid-consiste`、`log-slave-updates=on(5.6要求,5.7去掉了,会带来负担)`
+          1. 从：`gtid_mode=on`、`enforce-gtid-consistency`、`master_info_repository=tables(建议)`、`relay_log_info_repository=table(建议)`
+          1. 备份主库，类似以上
+          1. scp传输sql文件
+          1. 从导入基础数据
+          1. 设置复制链路，gtid方式：`change master to master_host='', master_user='', master_password='', master_auto_position=1;`
+          1. 启动复制：`start slave`
+   - 性能
+     1. 写入binlog的时间，事务太大，主从延迟严重
+     1. binlog传输时间，同机房部署、`binlog_row_image=minimal`
+     1. 从只有一个sql线程，主上的并发写，从变成串行，如大事务后边所有的修改都阻塞，5.7使用多线程复制
+        - `stop slave`
+        - `set global slave_parallel_type='logical_clock'`：使用逻辑时钟方式
+        - `set global slave_parallel_workers=4`：线程数
+        - `start slave`
+   - 常见问题
+     1. 解决方案
+        - 恢复复制
+        - 最终都要数据对比
+     1. 主从宕机
+        - 特点
+          1. 主宕机：主回滚事务，从拿不到
+          1.  从宕机：master_info没写入磁盘，造成重复获取主的二进制日志，基于日志点会出现主键重复、基于Statement出现重复更新
+        - 解决方案
+          1. 跳过二进制日志事件：日志点复制方式
+          1. 注入空事务先恢复中断复制链路：日志点或GTID方式
+     1. 数据损坏
+        - 特点
+          1. 主binlog损坏
+          1. 从relay_log损坏
+        - 解决方案
+          1. 通过change master重新指定
+     1. 从进行了数据修改：丢掉从的修改
+     1. 不唯一的server_id、server_uuid：从之间重复，数据相互拿的不对，甚至主从切换失败
+     1. max_allow_packet：不一致
+   - 无法解决的
+     1. 自动故障转移、主从切换
+     1. 读写分离
+1. 主主
+   - auto_increment_offset设置差1，auto_increment_increment设置为2：防止主键冲突
+   - log_slave_updates：两节点都要开启，就是反着搭建主备同步，
 ### 中间件
+1. 现有mysql的问题
+   - 无集群化的解决方案
+   - 无在线扩容方案，横向分片需要业务改造
+   - 网络模型限制了连接数
+   - 不支持跨机房部署、sql分发
+   - 不支持Paxos、Raft、Dynamo等一致性协议
 1. 认识
-   - 对前端透明
-   - 分库分表：垂直、水分拆分
-   - 负载均衡
-   - 防火墙：sql审核、过滤、改写、容错、转换
+   - 优点
+     1. 对前端透明
+     1. 自动故障转移(带事务重放)、主从切换、从节点选取
+     1. 集群健康度检查，包括复制链路
+     1. 读写分离、读负载均衡
+     1. 分库分表：垂直、水分拆分
+     1. 防火墙：sql审核、过滤、改写、容错、转换、慢指纹、错误sql指纹
+     1. 连接池
+     1. 配置热加载、ip白名单
+     1. 跨机房双活、多集群、多租户
+     1. 查询路由
+     1. 方便的运维方案：实例申请、建库表、慢查询统计、在线DDL
+   - 缺点
+     1. 增加中间层，执行效率降低，先进行基准测试
+     1. 需要控制是否读写分离
 1. 集群方案
    - MMM
+     1. 认识：Master-Master replication managerfor Mysql Mysql主主复制管理器，perl实现的双主故障切换、管理的脚本程序
+        - 功能
+          1. 主主的管理、监控、故障迁移、主从备份、节点重新同步、宕机从自动剔除
+          1. 提供多个VIP，同一时间只有一个主可写
+        - 缺点
+          1. 性能没有提升，每个主都要写
+          1. 主从切换容易数据丢失：只做了切换，不会主动补齐丢失的数据
+          1. 无读负载均衡
+     1. 部署：三台服务器，两台配置主主复制，第三台作为从服务器的同时作为监控节点对主主复制进行监控
    - MHA
+     1. 认识：Master High Availability 主高可用，完成主从架构下完成主从切换和从之间的选举，最大程度保证一致性，30s内完成切换，perl开发
+        - 主从切换
+        - 从之间的选举
+        - 最大程度保证一致性
+          1. 会保存主的binlog，如果主硬件、网络等无法访问，可能会丢失数据，可以结合v5.5半同步功能
+          1. 新主和其他从同步差异
+          1. 应用原主的binlog
+          1. 提升新主
+          1. 迁移其他从
+        - 支持GTID
+     1. 特点
+        - 缺少从的vip功能，也不能自动剔除宕机从
+        - 监控过程中不会管主从复制链路的健康度
+        - 需要打通ssh，存在安全隐患
+        - 无读负载均衡
+     1. 组成
+        - Manager
+        - Node：部署在每台实例上
    - pxc
      1. 认识：数据多向同步的同步复制的高可用性和扩展性的集群方案，基于Percona Server 
         - 多主复制，任意节点写操作
@@ -560,11 +698,12 @@
         - 尽可能的控制PXC集群的规模，节点越多，数据同步速度越慢
         - 所有PXC节点的硬件配置要一致，如果不一致，配置低的节点将拖慢数据同步速度
         - 只支持InnoDB
-1. 分类
    - mysqlProxy
-     1. 认识：mysql官方
+     1. 认识：mysql官方，很久，实验项目
    - maxscale
      1. 认识：支持高可用、负载均衡、扩展插件式的数据库中间件，mariaDB出品
+        - 主从复制状态监测，自动故障转移
+        - 读写分离、读负载均衡
      1. 插件
         - 认证
         - 协议
@@ -572,13 +711,70 @@
         - 监控
         - 过滤日志：简单防火墙，sql过滤和改写、容错、转换
    - oneProxy
-     1. 认识：将一个表分片，数据写到两个实例中，也可以保持两个实例都有一个相同的表
+     1. 认识：将一个表分片，数据写到两个实例中，也可以保持两个实例都有一个相同的表，貌似也停止维护
    - mycat
      1. 认识：开源分布式数据库中间件，13年阿里开源，java写的。支持读写分离、高可用(主没了选从)、拆分(垂直、水平)
         - 高可用：采用去中心化的集群，在虚拟ip下，在不同的节点部署多个mycat，根据某种策略(ip选举策略)选举某一个为临时master，之间采用心跳机制进行通信维持故障切换。可使用zk、haproxy、keepalived等组件，可以有选举、心跳、切换ip等功能
+        - 功能复杂，细节还待改善
    - proxySQL
+   - dbproxy：美团开源，Atlas基础上开发，17年停止维护
+   - wxproxy
+     1. 优势
+        - 分片功能实现横向扩容
+          1. 分片查询：Proxy根据SQL语句解析出AST，再根据AST里的WHERE条件判断是否满足id的查询条件，最后将SQL路由至该Shard
+        - proxy的仅有10%性能损失
+        - 监控体系：实现问题的发现、报警、追踪、排查、解除，提供web界面
+        - 双活机房部署支持，配置热加载，秒级主从机房切换
+     1. 功能
+        - 执行计划缓存
+        - 事务追踪
+        - 全局索引
+        - 分布式事务
+        - 平滑的扩容、缩容
+        - 注解路由：通过注释解析
+          1. 强制读主库
+          1. 强制路由到本地机房
+     1. 部署
+        - 前端Nginx+KeepAlived作四层负载均衡，dbproxy本身作为无状态服务，可以非常方便地横向扩容
+        - etcd作配置中心
+     1. 一致性支持：支持多种级别
+        - 弱一致：纯异步的复制机制，通过Maxwell异步复制Binlog支持
+        - 强一致：Proxy在执行SQL写入时，强制双写Local机房及Remote机房，确保两个机房都写成功后，返回客户端
+          1. 强一致场景仍然会有数据不一致风险，比如主机房写入成功，从机房写入失败，则在短暂时间内会有两个机房数据不一致的情况发生，后续可通过业务重试解决
+          1. 使用事务强一致可以避免数据不一致，跨库事务会有一定的开销但总体上不会太大
+        - 事务强一致：通过1PC Best Effort或2PC事务（需要Mysql调整隔离级别Serializable）确保本地机房和远端机房原子性写
+     1. SQL解析缓存
+        - Mysql Proxy在转发SQL请求时，会经历以下几个步骤：
+          1. Mysql协议解析
+          1. SQL解析：确定路由规则
+          1. 路由算法匹配
+          1. 通过连接池分发SQL到后端的Mysql实例
+        - 其中，步骤2耗时较长，因此，我们需要针对SQL解析后的AST增加缓存机制。具体做法是先将请求的SQL转化成SQL Statement（SQL指纹），屏蔽SQL中变量、大小写等
+        - 然后以SQL Statement为Key缓存解析后的AST。
+     1. Proxy高可用：在某个Proxy不可用时，由于Nginx本身有重试机制，当一个upstream中某个Backend无法响应时，Nginx会继续尝试下一个Backend。
+     1. 数据度量
+        - 单行查询的case，单核1W QPS
+        - 同机房部署比直连延迟额外增加在1ms以内
+        - 主从复制延迟
+          1. 同机房300us
+          1. 跨机房视专线网络RTT
+        - 连接数
+          1. 业务到Proxy：核数 * 5000
+          1. Proxy到Mysql：3000/数据库实例
+     1. 核心指标
+        - 服务器资源用量：CPU、RAM、网络带宽、磁盘占用
+        - 慢SQL
+        - 错误SQL
+        - SQL执行延迟
+        - 业务请求QPS
+        - 连接数
+   - gaea
+     1. 认识：定位轻量级, 高性能，小米开源
+   - cetus
    - DataX：阿里巴巴开源的离线数据同步工具
+   - PMM：percona公司提供的MySQL和MongoDB的监控和管理平台
    - amoeba
+   - atlas：360开源
    - kingshard：个人的go开发，读写分离、分库分表、sql黑名单
 1. maxwell
    - 认识：同步binlog以json写入到kafka、redis、等流平台，用于ETL、缓存刷新、指标收集、增量到搜索引擎、数据分区迁移、切库binlog回滚等场景，java写的
@@ -648,6 +844,23 @@
         - 哨兵的每一次探测、选举和投票，均针对其内部的同一个epoch，即不会发生某个哨兵对上一轮的选举发起投票的情况。
      1. Leader哨兵会根据用户自定义的故障转移方案完成整个高可用切换，包括MySQL集群关系重新建立、新Master/Write节点关闭read_only参数、VIP/DNS漂移等，并标记故障节点为“offline”+“problem”状态，即不再对外提供服务，需要用户在节点恢复后手动置为“online”状态。
         - 对于主从复制架构来说，新Master会选取Retrive Binlog最大的节点，即从原Master上获得最多Binlog的节点，其上的Binlog才是相对最完整的。当然新Master/Write节点的选取，还会参照权重、机房和主从复制延迟多个维度，保障数据的完整性和一致性
+   - dbproxy扩容
+     1. 原理图：![avatar](../images/dbproxy_expansion.png)
+     1. 说明
+        - Step 1：业务方将App Server的Mysql请求迁移到Nginx四层代理，Nginx四层代理指向Mysql Proxy及后面的Mysql老集群
+        - Step 2：启动Mysql数据全量同步及增量同步，并始终开启新老两个集群的maxwell binlog抽取，分别写入kafka的不同topic
+        - Step 3：增量数据同步结束后，执行新老集群数据对比，确保两个集群数据一致
+        - Step 4：Nginx四层代理切换流量到新的Mysql Proxy
+     1. 一致性保证
+        - 原因：由于在Step 4的过程中，可能会出现以下两个数据来源的写入乱序，因此切流新Mysql Proxy前需要先关闭Kafka的Data Loader，而Kafka的Data Loader流量来源于业务方写入老的Mysql Proxy的流量，而这个binlog抽取可能会有延迟，该延迟理论值小于10ms（待观察），需流量低谷执行
+          1. Kafka数据抽取，通过Data Loader写入新的Mysql Proxy
+          1. 切流量后，业务方的请求写入新的Mysql Proxy
+        - 步骤
+          1. 停止老的Mysql Proxy流量
+          1. 等大概200ms时间
+          1. 关闭Kafka Consumer（Data Loader）
+          1. 将流量切到新的Mysql Proxy
+          1. 打开Kafka Consumer，观察是否还有遗漏的数据，并进行手动修复（极小概率发生）
 ### 原理
 1. 认识：单进程多线程，插件式的表存储引擎
    - 数据多了，性能下降不是线性的
@@ -721,13 +934,23 @@
           1. Statement：基于sql和上下文环境，不记录每行变化
              - 减少了日志量节约了io，尤其是修改量大的场景
              - 主从版本可以不一样，从可以更高
-             - 为了slave正确运行需要记录相关信息
-          1. Row：只记录行的修改点，5.7.7及以上默认，会一步步的优化的更好，主流使用，之前是Statement
+          1. Row：只记录行的修改点，5.7.7及以上默认，会一步步的优化的更好，主流使用，之前是Statement。最好同时设置`binlog_row_image=minimal`
              - 避免了存储过程/function/trigger的调用和触发无法被正确复制的问题
              - 加快从库重放日志的效率
              - 日志量大，`alter tableh`每条都会记录，新版优化了
-          1. MIXED：混合模式，一般用statment，无法完成主从复制的操作用row
+          1. MIXED：混合模式，系统选择，一般用statment，无法完成主从复制的操作用row
         - 事件类型：QUERY_EVENT、STOP_EVENT等
+   - 格式对复制的影响
+     1. Statement
+        - 为了slave正确运行需要记录相关信息，uuid()等非确定性函数还是无法复制导致不一致
+        - 存储过程、触发器、自定义函数等bug较多
+        - 需要更多的行锁，主上锁多长时间，从就锁多久
+     1. Row
+        - 可应用于任何sql的复制，包括非确定函数、存储过程等
+        - 减少锁的使用，因为更新时只锁那一条
+        - 传输数据量大，网络不好延迟大，同机房可保证更好
+        - 要求主从表结构相同
+        - 无法单独执行触发器
    - 写入流程
      1. 基于session，根据binlog_cache_size写入缓存或临时文件
      1. group commit，写入磁盘，清空缓存，同时根据sync_binlog判断是否fsync
@@ -761,10 +984,13 @@
           1. --no-defaults 
           1. --start/stop-datetime、--start/stop-position
 1. GTID
-   - 认识：Global Transaction ID 全局事务id，已提交事务会有一个主库唯一的编号。强化了主备一致性，故障恢复以及容错能力。之前基于二进制日志的复制中从库需要告知主库从哪个偏移量进行增量同步，如果指定错误会造成数据的遗漏，从而造成数据的不一致。借助GTID主备切换下可以找到正确的复制位置，大大简化复制的维护，另外，可以忽略已经执行过的事务，减少数据发生不一致的风险
+   - 认识：Global Transaction ID 全局事务id，已提交事务的唯一的编号，v5.6。格式：source_id:transaction_id
      1. 全局唯一性
      1. 趋势递增
-   - 对比：基于日志点的复制
+   - 作用
+     1. 保证了同一个事务只在指定的从库执行一次，可以找到正确的复制位置，大大简化复制的维护
+     1. 强化了主备一致性，故障恢复以及容错能力
+        - 之前基于二进制日志的复制中从库需要告知主库从哪个偏移量进行增量同步，如果指定错误会造成数据的遗漏，从而造成数据的不一致
 ### 引擎
 1. 认识：基于表
    - 分类
@@ -905,8 +1131,8 @@
              - buffer不够用了，LRU list淘汰page，淘汰的page属于脏页，需要强制checkpoint
      1. 配置
         - innodb_flush_log_at_trx_commit：提交事务时的文件写入策略
-          1. 0：不写，等待主线程每秒刷新，10倍性能提升
-          1. 1：调用fsync，为了保持持久性，必须为1，才能保证宕机能够用redo恢复
+          1. 0：不写，等待主线程每秒刷新，10倍性能提升，最多丢失1秒的数据
+          1. 1：默认，最安全，性能最差，调用fsync，为了保持持久性，必须为1，才能保证宕机能够用redo恢复。flush log除非磁盘或者操作系统做了伪刷新
           1. 2：异步写，等待操作系统落盘，不能保证commit时肯定写入了redo log，6倍性能提升
         - innodb_log_file_size：日志文件大小，太小老checkpoint性能抖动，太大恢复时间长
    - undolog

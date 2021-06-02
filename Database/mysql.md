@@ -30,8 +30,12 @@
      1. binary：二进制形式的字符串，即包含字节字符串，不包含字符字符串，没有字符集，避免使用，会用到临时表，性能开销
    - 日期时间
      1. DATETIME：YYYY-MM-DD HH:MM:SS (1000-01-01 00:00:00/9999-12-31 23:59:59)，日期和时间
-     1. TIMESTAMP：YYYY-MM-DD HH:MM:SS (1970-01-01 00:00:00/2038 格林尼治时间/北京时间)，日期和时间/时间戳，只是时间戳表示的范围，可自动更新
+        - 时区无关，8byte，v5.7可以通过指定宽度存储微秒
+        - 最通用
+     1. TIMESTAMP：YYYY-MM-DD HH:MM:SS (1970-01-01 00:00:00/2038 格林尼治时间/北京时间)，日期和时间/时间戳，只是时间戳表示的范围
+        - 依赖时区，不同时区不同值，4byte，可自动更新(本行任意字段更新即更新)
      1. DATE：YYYY-MM-DD (1000-01-01/9999-12-31)，日期
+        - 3byte，支持日期计算
      1. TIME：HH:MM:SS ('-838:59:59'/'838:59:59')，时间或持续时间
      1. YEAR：YYYY (1901/2155)，年份
    - 其他
@@ -626,6 +630,7 @@
         SELECT json_extract(json_data,'$.content.answer') FROM entity_question WHERE JSON_EXTRACT(json_data, "$.content.answer[*].group[*].type") != 'text';
         ```
      1. 虚拟列：可以根据逻辑抽出某个字段的某种数据，查的时候方便了，不像以前不用再新建汇总表了。`alter table xxx add xx char(1) generated always as (left(xx, 1));`
+     1. 按照逻辑时钟方式分配sql线程，解决5.6多线程复制性能可能更低的问题
    - 8.0
      1. 索引相关
         - 支持多种索引

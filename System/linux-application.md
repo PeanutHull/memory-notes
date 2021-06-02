@@ -37,8 +37,8 @@
             loglevel=info                                   ; 日志级别，默认 info，其它: debug,warn,trace
             pidfile=/tmp/supervisord_zzg.pid                ; pid 文件
             nodaemon=false                                  ; 是否在前台启动，默认是 false，即以 daemon 的方式启动
-            minfds=1024                                     ; 可以打开的文件描述符的最小值，默认 1024
-            minprocs=200                                    ; 可以打开的进程数的最小值，默认 200
+            minfds=655350                                   ; 可以打开的文件描述符的最小值，默认 1024
+            minprocs=65535                                  ; 可以打开的进程数的最小值，默认 200
 
             [rpcinterface:supervisor]
             supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
@@ -189,6 +189,7 @@
         - VRRP协议：虚拟路由冗余协议，是实现路由器冗余的协议，是为了消除在静态默认路由环境下路由器单点故障引起的网络失效而设计的主备模式的协议
           1. 一主一备，同时只有一个提供服务。即将n台设备虚拟成一个设备，对外提供一个或多个虚拟IP
           1. 检测到故障，虚拟IP地址会自动漂移到备份服务器，即keepalived广播vip对应的mac由主切换到备用，其他客户端更新ARP表，实现故障转移
+        - 线上故障：vrrp通道被占用
 1. tumx：多个界面，断网保存用户操作的界面
 1. 数据恢复工具：ext3grep
 1. 文件、目录的变动监控

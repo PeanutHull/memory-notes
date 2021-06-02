@@ -35,6 +35,12 @@
 1. 认识
    - 大数据组件需要分场景使用，基础理论基本在hadoop基础上建立
 1. ![avatar](../images/bigData.jpeg)
+1. wiki
+   - 术语
+     1. DW ：data warehouse，数据仓库，由下到上为 DWD,DWB,DWS
+        - DWS：data warehouse service 服务数据层，基于DWB上的基础数据，整合汇总成分析某一个主题域的服务数据，一般是宽表
+        - DWB：data warehouse base 基础数据层，存储的是客观数据，一般用作中间层，可以认为是大量指标的数据层
+        - DWD：data warehouse detail 细节数据层、ODS层，是业务层与数据仓库的隔离层
 ### Hadoop
 1. 认识：开源的大数据框架，分布式计算的解决方案。子项目有hive、hbase等
 1. 组成
