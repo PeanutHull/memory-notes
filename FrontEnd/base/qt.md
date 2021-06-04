@@ -26,6 +26,7 @@
    - QSetting
    - QApplication
    - QUrl
+   - Qwebengineview
 1. 模块
    - Qt Core：核心非图形类
    - Qt GUI：图形界面基础类，包括openGL

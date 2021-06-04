@@ -463,6 +463,7 @@
         - log_by_lua阶段：负责日志落盘等业务
      1. 分流器业务：NodeJS上报cpu、内存使用情况；Lua脚本调用RedisCluster获取时间窗口内NodeJS集群使用情况，计算出负载较高的，进行熔断、降级、限流等处理；将监控数据同步InfluxDB，进行时序监测
      1. 小型web防火墙：使用第三方开源 lua_resty_waf 类库实现，支持 IP 白名单和黑名单、URL 白名单、UA 过滤、CC 攻击防护功能。在此基础上增加WAF对InfluxDB 的支持，进行时序监控和服务预警
+1. kong
 ### 实际应用
 1. 代理线上配置
     ```lua

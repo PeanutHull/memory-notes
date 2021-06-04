@@ -260,9 +260,10 @@
    - 完全分布式：Broker、Producer和Consumer都原生自动支持分布式，自动实现负载均衡
    - 消息有序：消费者采用Pull方式获取消息。通过控制能够保证，所有消息被消费且仅被消费一次
 1. 组成
-   - broker：节点，kafka集群的服务器节点
-     1. partition会平均分布在节点中
-     1. ReplicaManager：管理当前Broker所有分区和副本
+   - producer
+   - consumer/consumer group：topic中增减消息
+     1. 一对一
+     1. 发布订阅
    - topic：主题，逻辑概念，用于存储、区分消息，在broker上存储
      1. 组成：紧凑的二进制字节数组，避免了java繁重的堆上内存分配
         - key：消息键，决定哪个partition
@@ -272,27 +273,95 @@
      1. 一个分区消息有序，多个无法保证顺序。要保证消息顺序分区设为1
      1. 用于负载均衡，根据实际需要设置数量，实现性能最大化
    - replica：副本，用于防止数据丢失，一个分区多个副本
+   - broker：节点，kafka集群的服务器节点
+     1. partition会平均分布在节点中
+     1. ReplicaManager：管理当前Broker所有分区和副本
    - leader/follower：取代主备的提法，仅一个为主提供服务，从同步数据作为替补，从的写由主的数据变更的广播获取
      1. 主失效立即再选举，从挂掉/卡住/同步太慢会被删除再创建一个
      1. kafaka保证同一个分区的多个副本不会在一个节点上，毕竟不会实现备份冗余的效果
      1. ISR：in-sync replica，和主保持同步的副本集合，集合里的才能选为主
        1. 集合中所有副本都收到消息才会置为已提交。当副本滞后一定程度时才踢出ISR，追上再加回，自动的
        1. kafka的信息交付承诺：在ISR存活的条件下已提交信息不会丢失
-   - producer/consumer/consumer group：topic中增减消息
+1. producer
+   - 认识
+     1. 是批量发送，不是接一条发一条
+   - 发送方式
      1. 同步发送
      1. 异步发送
+     1. 异步阻塞发送
      1. 异步回调发送
-     1. 一对一
-     1. 发布订阅
+     1. 自定义分区负载均衡
+   - 消息传递保障：依赖producer和consumer共同实现，主要是producer
+     1. 最多一次
+     1. 至少一次
+     1. 正好一次
+1. consumer
+   - 认识
+     1. 客户端使用，配置
+     1. 高级特性
+   - 手动控制分区
+   - 手动控制offset位置
+     1. 应用场景
+        - 指定开始位置
+        - 消费失败，需要重复消费
+   - kafka记offset的方式有哪些
+   - consume限流，怕把consume流量高打死，用令牌桶方式
+   - reblance，加入，崩溃，离组，提交位移的操作，类似乐观锁还有什么java的解决方案
+1. consumer group
+   - 形式
+     1. 多个consumer：![avatar](../images/mult_consumer_one_handle.png)
+        - consume数量和partation数量相同，性能最好，否则存在分配的开销
+        - consume处于阻塞状态，适合普通业务场景，可以有好的管控，如消费3次不成功就报警
+     1. ![avatar](../images/one_consumer_mult_handle.png)
+        - consume变成非阻塞消费数据，后边线程池处理业务逻辑，但consume不知道后边是否成功可以commit，特点是减少consume消耗实现快速消费，适合非业务系统，如流处理，gps打点，机器监控，丢一些无所谓
+1. stream
+   - 认识：流式数据处理，通过state store实现高效状态操作，支持原语processor和高层抽象DSL
+     1. stream流处理流程
+        - 有inputTopic和outputTopic，处理完自动输出，state store记录每个task的状态
+     1. stream高层架构
+     1. stream开发
+   - 组成
+     1. 流、流处理器
+     1. 流处理拓扑
+     1. 源处理器、sink处理器
+1. connector
+   - 认识：是流式计算的一部分，用来和其他中间件建立流式通道，支持流式和批处理集成
+     1. 作用、背景
+        - 连接一端数据转换后输出到另一端
+        - 连接器，直连db数据交互，从源系统中拉取数据到kafka
+        - 大家都用的少，logstace比他强
+     1. 高层架构
+     1. 使用
+        - confluent：常用的依赖jdbc的connector组件
+          1. 指定根据哪个字段作为新增或者修改数据的依据
+          1. 指定数据修改的模式
+   - 模式
+     1. standalone
+     1. distributed
 1. api
    - admin
      1. 查看topic列表、属性等
    - producer
    - consumer
    - stream processor：高效将输入流转换到输出流
-   - connector：连接器，直连db数据交互，从源系统中拉取数据到kafka
+   - connector：
 1. 集群
-   - 没有单节点说法，一台也是集群
+   - 认识
+     1. 没有单节点说法，一台也是集群
+     1. 连接同一个zk就是同一个集群
+   - 组成
+     1. 节点
+        - 访问任意一个broker都可以完成请求，因为有数据同步机制
+     1. 副本
+        - 同一个Topic的partation只能有一个leader，可以有多个flower
+        - 可以单独指定partation的副本数量
+        - 一般partation的副本之间分布在不同的broker上，自己有协调机制
+        - produce和consume都去leader存取数据
+        - 对消息集群内平衡，就是不会将一个Topic的多个partation，也不会将一个partation的多个副本放在一个broker上
+     1. 11版本前非常依赖zk，之后慢慢减轻
+   - 管理工具：cmak，即kafka manager
+1. 中间件
+   - MQProxy
 1. 运维
    - 安装
      1. 下载解压

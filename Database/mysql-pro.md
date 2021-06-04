@@ -451,6 +451,7 @@
         - `mysqlbinlog xx.xx < xx.sql`
      1. binlog2sql：回滚指定时间点的sql语句
      1. xtrabackup：录binlog位置后copy文件，速度比逻辑备份快上百倍
+        - innobackupex：一个工具，同时支持InnoDB引擎以及MyISAM引擎
    - 恢复方式
      1. 基于时间点恢复：`mysqlbinlog --start-position=1 --stop-position=2 --database xx.000011 < xx.sql`
         - 具有时间点之前的mysqldump全备：通过时间点确认LSN
