@@ -1,0 +1,233 @@
+### 队列
+1. 作用
+   - 生产者/消费者模型
+   - 负责消息的接收、存储、转发
+1. 特点
+   - 异步处理：时间无关可延后处理、可以并行处理
+   - 解耦：两边修改不互相影响
+   - 削峰
+1. 问题
+   - 高可用：确保消息的可靠传递，数据不丢失、不重复
+1. Kafka Vs Rabbitmq：![avatar](../images/kafkaVsRabbitmq.png)
+1. AMQP：Advanced Message Queue，高级消息队列协议，是应用层的面向消息的中间件设计和开放标准，基于此协议客户端和消息中间件传递消息，不受产品/语言限制。模型架构和rabbitMQ一样
+### RabbitMQ
+1. 认识：热门的消息中间件，支持AMQP、STOMP、MQTT协议。erlang编写，因为兔子敏捷并且繁殖很疯狂
+   - 高可靠：持久化、传输确认、发布确认、跟踪机制
+   - 高可用：内建消息集群，集群镜像
+   - 功能多：灵活路由、多协议、多客户端、管理界面、易扩展、插件机制
+   - 无法实现消息恰好一次，不会丢也不会多
+1. 组成
+    1. 生产者：publisher，消息体payload、标签label。根据标签路由消息
+    1. 消费者：consumer，获取生产者消息体，不关心生产者是谁
+       - 消费模式
+         1. 推：消费者持续订阅
+         1. 拉：定时拉
+    1. 路由键：routingKey，生产者给交换器发消息时指定路由键，决定消息路由，和交换器类型、绑定键共同起作用
+    1. 交换器：exchange，用于和队列关联，接收消息并路由给队列
+       - 属性
+         1. 持久化
+         1. 自动删除：？？？
+         1. 内置：只接受交换器不接受生产者过来的消息
+       - 类型
+         1. fanout：广播，发给所有绑定的队列，最快
+         1. direct：直传，routingKey和bindingKey相同传过去
+         1. topic：加了匹配规则的direct，用bindingKey匹配routingKey，用.切分一个个单词，通配符#和*，如`#.usa`，*匹配单个单词，#匹配多个单词
+         1. headers：匹配header属性的键值对，一致才会传过去，慢，不用了
+    1. 绑定键：binding，通过绑定将交换器和队列关联，当路由键和绑定键相同时，会被传递到某个队列。可以和路由键看作一个东西，一个交换器前，一个后
+    1. 消息队列：queue，用于存储消息
+       - 属性
+         1. 排他：仅对首次连接可见，其他排他队列不可新建，连接断开自动删除队列，不能持久化，基于连接
+         1. 持久化：重启不丢失
+         1. 自动删除：？？？
+         1. 优先级
+    1. 信道：channel，建立在连接上的双向数据流的虚拟连接，所有消息通过信道发送，多路复用一个tcp连接，避免tcp高额的新建销毁成本    
+    1. 消息：包含消息体、属性、header
+1. 特性
+   - TTL：time to live 过期时间，两者都有取最小，超过后变死信，不设置不过期，设置为0表示不能直接投递则立即丢弃。分为消息自身、队列
+   - 死信：DLX 死信交换器，与之匹配的是死信队列，消息变死信后发送到这个交换器，可手动设置。产生条件：被拒绝、未送达、过期、队列达到最大长度
+   - 延迟队列：消息发出后，等待特定时间后，消费者才能拿到消息。使用DLX和TTL模拟效果，即消费者订阅某个队列对应的死信队列，队列设置有过期时间，过期后实现延迟效果
+   - 优先级队列：优先级高的队列有优先权，优先级高的消息优先被消费。消息的最大优先级不能超过队列的，当消费速度大于生产速度时没意义，因为同时就一条消息
+   - 持久化：需要设置交换器和队列的持久化，才能保证消息的持久化有用，所有消息持久化极大影响性能
+     1. 分类：交换器、队列、消息
+   - 消息确认
+     1. 生产者确认：confirm，可通过事务、发送方确认机制，都能保证消息已正确送达。后者更轻量级，二者互斥。持久化的话落盘后rabbitmq才会回复确认，是指确认发往交换器。确认就是落盘了，崩溃数据不丢失
+        - 发送方确认：confirmSelect不阻塞，可以继续发送下一条，可用waitForConfirm的返回结果进行失败的逻辑处理。原理是开启确认模式后，当前信道每个消息被指派一个唯一id，然后确认时返回这个id。批量confirm和异步confirm性能更高，一个一个的confirm性能只比事务少了一个tcp的ack
+        - 事务：一条消息一个commit，发送消息后commit会一直阻塞，直到消息成功被接收，事务才能提交成功
+          1. select、commit、rollback：开启事务模式、提交、回滚，提交成功则消息一定到达了rabbitMQ
+     1. 消费者确认：ack
+        - 等待消费者显式回复ack信号才会删除消息，否则发出去就删除。连接断开会安排未确认的消息重入队列
+        - 回复拒绝，可设置重新入队或者删除
+        - 消息分发
+          1. 多消费者同一队列消息被均摊即轮询
+          1. 推模式下，某消费者未确认的消息数量达到阈值，则停止向其派送消息。因为消费者之间的差异，防止消息堆积
+          1. 一个信道多个队列情况下，最大未确认消息数？？？
+   - RPC：可以和客户端进行RPC通信
+1. 集群
+   - 代理：broker，表示消息队列服务器实体
+   - 分类
+     1. 集群模式
+        - 认识：保证节点崩溃后继续可用，提高消息吞吐量。共享基础信息，各干各的活儿，别人崩溃了也不管消息丢失。v2.6支持镜像队列
+          1. 共享user/vhost/exchange等
+          1. 客户端可看见所有的队列
+          1. 节点间不能共享消息
+          1. 不能自动故障切换，需要手动删除节点
+          1. 只能部署在局域网
+        - 分类：可手动设置类型，至少要有一个磁盘节点，否则无法新建修改
+          1. 内存节点
+          1. 磁盘节点
+        - 镜像队列：可以主从切换，防止数据丢失    
+        - 配置步骤
+          1. 交换秘钥令牌cookie：以获得相互认证
+          1. stop_app - reset - joio_cluster/forget_cluster_node - start_app：关闭所有节点，启动时需要先启动最后关闭的节点，否则启动不了，可删节点解决
+     1. federation
+       1. 认识：联邦，可为不同broker进行消息转发，而无须建立集群。支持不同管理域和广域网。内部基于AMQP协议传递数据
+          - 联邦交换器：单向点对点的给不同broker的交换器转发消息，只能转发一次，而且转发后找不到合适队列也不会再次转回原地。允许复杂的路由拓扑提高转发次数，如环状和往返双路线
+          - 联邦队列：单向点对点的队列间的负载均衡，联邦队列间某个没消息了就去拿别人的帮忙，提升单队列的容量，消息可游离任意次数
+     1. shovel
+       1. 认识：铲子，数据挖到另一个地方。数据转发，从一个队列到另一个交换器，也可以交换器/队列到交换器/队列，只是shovel本身自动加了交换器/队列。基于AMQP传递
+          - 支持不同管理域的数据迁移
+          - 支持广域网、时断时续的传输保证消息可靠性
+          - 可用于队列堆积时的搬到另一个集群的数据分摊，即设置一个多了搬走，少了拿过来，相当于备份
+   - 比较
+     1. 是否是一个逻辑broker、是否所有交换器一样、是否可以看到所有队列
+     1. 是否需要相同cookie
+     1. CAP理论：集群是CA、federation、shovel是AP
+1. 网络分区
+1. 使用
+   - 资源创建方式
+     1. 提前静态
+     1. 用时动态
+   - 配置
+   - 消息顺序性：无法保证，由于接收多个生产者消息先后、事务可能回滚、消息优先级、过期时间都会影响
+   - 消息传输保障：rabbitMQ支持最多一次和最少一次，因为消息确认环节可能中断导致误解
+     1. 层级
+        - 最多一次：可能丢失，不会重复
+        - 最少一次：不会丢失，可能重复
+        - 恰好一次：不会丢失，不会重复正好一次
+     1. 最少一次需要做到的，最多一次就随便发，随便接收了
+        - 要有发送方确认
+        - 交换器、队列、消息要持久化、备份
+        - 消费者设置手动确认
+   - 保障消息安全
+     1. 要有发送方确认
+     1. 交换器、队列、消息要持久化、备份
+     1. 消费者设置手动确认
+1. 运维
+   - 安装
+     1. 安装erlang
+     1. 下载rabbitmq包解压，直接运行
+     1. 启动：`rabbitmq-server -detached`，端口5672，会启动erlang虚拟机和rabbitmq服务
+   - 配置
+     1. 认识：交换器和队列一旦设置属性不能修改
+     1. 分类
+        - 环境变量：rabbitmq-env.conf
+        - 配置文件：rabbitmq.config
+        - 运行时参数：不会同步到集群中，运行时可更改，不用重启。分vhost级别、globle级别。Policies支持批量动态修改属性参数
+   - 运行指标
+     1. 消息：发送速度、确认速度、消费速度、消息总数
+     1. 磁盘读写速度、句柄数
+     1. socket连接数、connection数、channel数
+   - 持久化数据
+     1. mnesia：数据库
+     1. metadata.json：元数据，就是vhost、交换器那一堆的数据文件
+1. 管理
+   - 命令行：rabbitmqctl
+     1. vhost：虚拟主机，多租户。拥有独立的交换器、队列、权限，逻辑、数据分离，避免命名冲突，易扩展，vhost是AMQP的概念基础，默认/，账号密码guest/guest
+        - `list_vhosts`
+        - `add_vhost、delete_vhost xx`
+        - `list/set/clear_parametyer`：运行参数操作
+     1. user：跨越vhost存在，
+        - `list_user、authentiçate_user`：验证用户
+        - `add_user、delete_user`
+        - `change_password、clear_password`
+        - `set_user_tag xx none/management/policymaker/monitoring/administrator`：授予角色，访问管理页面/策略参数设置/监控连接等/最高权限
+        - `set/clear/list_permissions -p vhost user {conf}{write}{read}`：权限是vhost级别的，可配置/写/读权限的正则，可读包含清空队列
+        - `list_user_permissions`
+     1. app：应用
+        - `stop/shutdown`：关闭erlang虚拟机、关闭rabbitmq服务
+        - `start_app/stop_app/wait/reset/force_reset`：针对rabbitMQ服务，reset 清空节点状态
+        - `list/set/clear_global_parameters`：全局参数
+     1. server：服务端
+        - `status`
+        - `environment/report`：显示变量、生成状态报告
+        - `node_health_check`：队列和交换器是否能够正常返回
+        - `eval`：执行erlang语句
+        - `list_exchanges [name type durable auto_delete]`：是否持久化、是否自动删除
+        - `list_bindings`：绑定关系
+        - `list_queues xx message_ready/unacknowledged`：等待投递/未确认消息数
+        - `list_consumers`
+        - `lìst_connectìons`
+        - `list_channels`
+     1. cluster：集群
+        - `cluster_status`：集群信息
+        - `joio_cluster/forget_cluster_node/update_cluster_nodes/set_cluster_name`
+        - `sync_queue/cancel_sync_queue`：同步master
+        - `change_cluster_node_type/force_boot`
+   - 插件：rabbitmq-plugins
+     1. `enable/disable rabbitmq_management`
+     1. `enable/disable rabbitmq_federation/rabbitmq_management_federation`
+     1. `enable/disable rabbitmq_shovel/rabbitmq_shovel_federation`
+     1. `lists`
+   - management：端口15672
+     1. web页面：各种功能
+     1. API接口：如`http://xx:15672/api/overview`
+1. 原理
+   - 存储机制
+     1. 现象：持久化的入队列就写入磁盘，内存中也备份一份，内存吃紧就清除。非持久化的只保存在内存中，内存吃紧换入硬盘
+   - 集群内部利用erlang的分布式通信框架OTP
+   - 流控
+   - 镜像队列原理
+1. wiki
+   - 队列历史
+     1. 商业的有微软的MSMQ、IBM的WebSphere
+     1. JMS试图通过公共Java API的方式，隐藏不同mq的实际接口，解决互通问题，但是使用单独接口胶合众多不同的接口也是存在很多问题。老牌ActiveMQ是JMS的一种实现
+     1. 消息通信标准化方案：2006年思科、红帽等联合制定了AMQP的公开标准。rabbitMQ是其开源实现，阿里的rocketMQ、kafka
+   - rabbitMQ历史
+     1. RabbitMQ Technologies Ltd开发并提供商业支持
+     1. 2010年被VMWare收购
+     1. 最新版本3.8
+   - Erlang
+     1. 认识：支持多核的特性，分布式特性。面向并发，结构化，动态类型，内建并行计算支持。OTP是实现健壮性和容错性的工具和类库和完整的结构化框架
+   - 通信步骤
+     1. 生产者：生产者把消息发布到exchange上时一般携带routingKey，exchange的类型和bindingKey一起决定发送到的queue
+        - 建立连接：connection
+        - 开启信道：channel
+        - 创建交换器，设置属性：exchange
+        - 创建队列，设置属性：queue
+        - 通过路由键绑定交换器和队列：route key
+        - 发送消息：message
+        - 断开：close
+     1. 消费者
+        - 建立连接：connection
+        - 开启信道：channel
+        - 请求消费
+        - 接收消息
+        - 确认消息：ack
+        - 队列删除已确认的消息
+        - 关闭信道
+        - 关闭连接
+### RocketMQ
+1. 认识：阿里kafka基础上开源
+   - 高性能、高可用
+   - 微服务架构设计，每个部分都支持多节点扩展
+   - 基于Netty异步事件驱动通讯框架，采用长连接
+1. 功能
+   - 消息类型
+     1. 普通
+     1. 顺序(全局/分区)
+     1. 定时/延时
+     1. 分布式事务：类似 X/Open XA 的分布事务，保证最终一致性
+   - 发布/订阅、集群消费(全部/任一)
+   - 消息路由
+   - sql形式的消息查询，全链路消息轨迹、消息回放
+1. 特点
+   - 单机支持上万Topic，Topic 数量增加对性能影响很小
+   - 内存模式支持同步请求处理，不落盘，适用于“request-reply”同步请求处理场景
+   - 流数据处理：如日志流数据，支持log4j、logback等日志异步appender，其他非交易数据处理需求，也可采用异步发送+batch模式提高数据传输效率
+   - Consumer支持Java,C++,Go
+   - 企业服务总线
+1. 组成：
+   - NameServer：注册中心，各节点互相独立，彼此没有通信关系
+   - broker集群：支持主从模式，有同步双写、异步复制两种模式
+   - Producer集群
+   - Consumer集群
