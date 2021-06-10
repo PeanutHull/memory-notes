@@ -2,8 +2,6 @@
 1. 如果想merge，先到被merge分支把代码pull到最新，再到另一分支执行merge方法，不能在当前分支去pull另一分支，这样会导致另一分支merge进当前分支，不推荐这么做。假如当前机器没有新建的分支，就用git pull先更新分支信息，再切换。
 1. merge步骤：merge————解决冲突————git add < filename >————git commit --no-ff————合并完成
 1. 要使用merge --no-ff
-1. 多人rebase流程：git fetch origin branch————git rebase origin branch————git push。即先用远程的commit history纠正本地的history，才不会出错
-1. rebase冲突解决：fetch——rebase——冲突——git add 更新索引——git rebase --continue。随时退出：git rebase --abort
 1. 代理
    - git config --global https.proxy 'socks5://127.0.0.1:1080'
    - git config --global --unset https.proxy
@@ -16,8 +14,6 @@
 1. 文件的三种状态：1.没有暂存2.已暂存3.已提交
 1. 三棵树：工作目录、暂存区、HEAD
 1. merge：会将不同人的commit合并到一起，而rebase类似嫁接，把分开的commit记录拉直，把本地的commit丢掉，git gc后会删除
-1. rebase：是对commit history的改写。多人开发下嫁接，merge会产生交叉的合并记录，而rebase只保留一条线，用于log树上的更好体现
-1. rebase的风险：本地分支中的对象被提交到远程后，不能对此分支进行rebase，因为你rebase过程中抛弃了现存的提交对象而创造了一些类似但不同的新的提交对象，其他人在你之前的提交对象开发的话就需要重新合并代码。你的rebase会对其他人造成困惑
 1. git xxx --help
 ### init
 1. git init：初始化项目，--bare 初始化项目为远程
@@ -102,8 +98,16 @@
 1. git merge origin/master --no-ff     不要fast-forward合并，可生成merge提交
 1. git merge --no-ff 本地两个分支合并，是会显示成一条直线的，强迫git保留分支历史，可以有合并分支树
 ### rebase————衍合
-1. git rebase --continue      继续合并过程
-1. git rebase --abort         退出rebase过程，并将代码恢复到rebase之前的状态
+1. 认识：是对commit history的改写
+   - 多人开发下嫁接，merge会产生交叉的合并记录，而rebase只保留一条线，用于log树上的更好体现
+1. 风险：本地分支中的对象被提交到远程后，不能对此分支进行rebase，因为你rebase过程中抛弃了现存的提交对象而创造了一些类似但不同的新的提交对象，其他人在你之前的提交对象开发的话就需要重新合并代码。你的rebase会对其他人造成困惑
+1. 多人rebase流程
+   - git fetch origin branch
+   - git rebase origin branch
+   - git push：即先用远程的commit history纠正本地的history，才不会出错
+1. 命令
+   - git rebase --continue      继续合并过程，用于解决完冲突后
+   - git rebase --abort         退出rebase过程，并将代码恢复到rebase之前的状态
 ### branch
 1. git branch          查看本地分支和所在分支
 1. git branch -r       查看远程分支

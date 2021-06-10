@@ -168,7 +168,7 @@
    - 方案
      1. Linux
         - aio：只支持Direct I/O（文件操作）
-        - io_uring：Kernel在5.1加入，新归宿
+        - io_uring：kernel在5.1加入，新归宿，适合长连接
      1. windows
         - iocp：libuv在windows的异步方案
 1. 信号驱动io：和异步io一样靠信号通知和回调函数实现，信号驱动io是数据准备好了，没有拷贝前信号通知；异步io更彻底，是已经把数据从内核空间拷贝到用户空间了再通知

@@ -236,6 +236,13 @@
    - 高性能：高吞吐量/高并发/低延迟/时间复杂度O(1)：每秒几十万
    - 分布式：基于zk，可水平热扩展、集群容错
    - 高可用：数据流永久存储、负载均衡、故障转移
+1. 特点
+   - 流处理平台：吞吐量高，能构建实时的流数据处理程序来变换或处理数据流
+     1. 高性能：单机写入TPS约在100万条/秒，消息大小10个字节
+   - 提供发布订阅、topic的支持：本身是分布式流处理平台，只是支持发布订阅和Topic，才认为可以做队列
+   - 快速持久化：可以在O(1)的系统开销下进行消息持久化
+   - 完全分布式：Broker、Producer和Consumer都原生自动支持分布式，自动实现负载均衡
+   - 消息有序：消费者采用Pull方式获取消息。通过控制能够保证，所有消息被消费且仅被消费一次
 1. 设计
    - 分区、副本、基于zk调度
    - 持久化：多副本/容错性/消息自动平衡
@@ -244,6 +251,7 @@
    - 消息压缩传输：消费者获取，镜像数据传输
    - 内置流处理：连接、聚合、过滤器、转换
    - 保证排序、零消息丢失和高效的一次性处理
+   - 提供offset管理，可以使用历史数据
    - 自己的二进制消息传输协议
    - 集群镜像：提供官方工具同步并重新发布消息
    - 支持同步和异步复制
@@ -253,13 +261,11 @@
      1. 同步：生产者从zk找到leader，发布消息后存入leader的log中，follow使用一个channel pull消息，写入自己log后发送确认消息，收到所有确认消息才给生产者发送
      1. 异步：写入log后立即发送确认信息，无法保证broker故障时的消息分发
    - 利用zk进行服务协调管理
-1. 特点
-   - 流处理平台：能构建实时的流数据处理程序来变换或处理数据流
-   - 快速持久化：可以在O(1)的系统开销下进行消息持久化
-   - 高性能：单机写入TPS约在100万条/秒，消息大小10个字节
-   - 完全分布式：Broker、Producer和Consumer都原生自动支持分布式，自动实现负载均衡
-   - 消息有序：消费者采用Pull方式获取消息。通过控制能够保证，所有消息被消费且仅被消费一次
-1. 组成
+1. 应用场景
+   - 流式系统、日志收集
+   - 消息系统
+   - 用户活动跟踪、运营指标监控，即实时处理
+1. 组成：![avatar](../images/kafka_struct.jpeg)
    - producer
    - consumer/consumer group：topic中增减消息
      1. 一对一
@@ -269,9 +275,7 @@
         - key：消息键，决定哪个partition
         - value：消息体
         - timestamp：消息发送时间戳，用于流式处理和其他依赖时间的
-   - partition：分区，有序的数据存储基本单元，一个topic分为n个分区，分区有序号，只能在分区尾部追加消息，并且每个消息有一个位移，每个分区用多个segment文件存储
-     1. 一个分区消息有序，多个无法保证顺序。要保证消息顺序分区设为1
-     1. 用于负载均衡，根据实际需要设置数量，实现性能最大化
+   - partition
    - replica：副本，用于防止数据丢失，一个分区多个副本
    - broker：节点，kafka集群的服务器节点
      1. partition会平均分布在节点中
@@ -295,6 +299,7 @@
      1. 最多一次
      1. 至少一次
      1. 正好一次
+   - 客户端原理：![avatar](../images/kafka_producer_client.png)
 1. consumer
    - 认识
      1. 客户端使用，配置
@@ -308,12 +313,74 @@
    - consume限流，怕把consume流量高打死，用令牌桶方式
    - reblance，加入，崩溃，离组，提交位移的操作，类似乐观锁还有什么java的解决方案
 1. consumer group
+   - 认识：是kafka消费的单位
+     1. 单partition只能由组中某个消费者消费，否则kafka需要加锁，会影响性能，就这样规定了
+     1. 单个消费者可以消费多个partition
+     1. 最佳实践：消费者数量和partation相等，多了没活干歇着浪费，少了性能不行
    - 形式
      1. 多个consumer：![avatar](../images/mult_consumer_one_handle.png)
         - consume数量和partation数量相同，性能最好，否则存在分配的开销
         - consume处于阻塞状态，适合普通业务场景，可以有好的管控，如消费3次不成功就报警
      1. ![avatar](../images/one_consumer_mult_handle.png)
         - consume变成非阻塞消费数据，后边线程池处理业务逻辑，但consume不知道后边是否成功可以commit，特点是减少consume消耗实现快速消费，适合非业务系统，如流处理，gps打点，机器监控，丢一些无所谓
+1. topic
+   - 删除
+     1. 认识
+        - 需要考虑生产者生产，消费者消费，broker损坏怎么办
+     1. 设置
+        - auto.create.topics.enable = false：要不然删不掉
+        - delete.topic.enable = true：最好打开，不然有问题
+     1. 原理
+        - 特点
+          1. 异步线程 + 延时操作
+        - 步骤
+          1. 注册zk的delete_topics节点的变化监听器
+          1. 启动删除topic线程，这时删除线程阻塞并等待删除事件
+          1. 执行删除命令时，在delete_topics节点添加
+          1. 唤起删除线程
+          1. 执行删除逻辑：删除分区信息、删除zk目录、清除controller中相关cache
+          1. 删除线程继续阻塞
+     1. 最佳实践
+        - 断掉所有访问：使用域名访问，切断解析，保证一定无流量进入
+        - 进行删除
+1. partition
+   - 认识：分区，有序的数据存储基本单元，一个topic分为n个有序号的partition
+     1. 只支持顺序读写，只能在partition尾部追加消息，总是写最新的segment，每个消息有一个位移
+     1. 单partition消息保证有序，全局不保证
+        - 要保证消息顺序partition可以设为1，一个partation只能有一个consume，性能太低，不如天生有序的rabbiemq呢
+        - 可以使用key + offset做到业务有序，一个key确定同一类型，offset作为顺序的判断，如先存了es，时序数据库中，攒够了一起处理
+     1. 用于负载均衡，根据实际需要设置数量，实现性能最大化
+   - 组成
+     1. 特点
+        - 每个partition的日志分为n个大小相等的segment文件存储
+        - 每个segment的消息数量不一定相等(消息大小不同)
+     1. 写
+        - partition将消息串行追加到最后一个segment上，segment达到阈值就滚动到新segment
+        - segment一定阈值后flush到磁盘上
+     1. 读：一级级的检索快速找到消息内容，顺序读取磁盘可以有很高的性能
+        - 用offset通过active segment list文件：找出具体的哪个segment
+        - 找这个segment的index文件得到segment中消息的起始位置offset
+        - 通过上个offset移动到某条消息的开头后，先读取4字节，就可以知道整个消息的长度了，最后读取整个消息内容
+1. 日志
+   - 认识
+     1. 以partition为单位进行保存，offset就是起始位置
+   - 组成
+     1. TopicName + Num：日志目录
+     1. partition
+     1. active segment list：追加、读取、删除，操作索引文件
+        - 是一个offset区间，有了offset就可确认哪个segment
+     1. segment
+          1. xxxxxxx.index：
+             - 左边是partation的全局offset，右边是segment的offset，
+             - 一条条的记录每条消息的字节位置，这样直接可以取到消息
+          1. xxxxxxx.log：segment file，包含一个个的message内容
+          1. xxxxxxx.timeindex：时间排序的索引
+          1. leader-epoch-checkpoint
+     1. message
+        - message length：4byte(1+4+n)，消息长度
+        - magic value：1byte，版本号
+        - crc：4byte，CRC校验码
+        - playload：n byte，消息内容
 1. stream
    - 认识：流式数据处理，通过state store实现高效状态操作，支持原语processor和高层抽象DSL
      1. stream流处理流程
@@ -347,19 +414,37 @@
    - connector：
 1. 集群
    - 认识
-     1. 没有单节点说法，一台也是集群
-     1. 连接同一个zk就是同一个集群
+     1. 天然支持集群，没有单节点说法，一台也是集群，通过brokerId区分不同节点
+     1. 依赖zk进行协调，连接同一个zk就是同一个集群
    - 组成
      1. 节点
         - 访问任意一个broker都可以完成请求，因为有数据同步机制
      1. 副本
-        - 同一个Topic的partation只能有一个leader，可以有多个flower
-        - 可以单独指定partation的副本数量
-        - 一般partation的副本之间分布在不同的broker上，自己有协调机制
-        - produce和consume都去leader存取数据
-        - 对消息集群内平衡，就是不会将一个Topic的多个partation，也不会将一个partation的多个副本放在一个broker上
+        - 认识：将每个topic的日志复制多份
+        - 组成
+          1. broker：部署节点
+             - 对消息集群内平衡，就是不会将一个Topic的多个partation，也不会将一个partation的多个副本放在一个broker上，自己有协调机制
+          1. leader：用于处理消息的接口、消费等需求
+             - produce和consume都去leader存取数据
+             - 同一个Topic的partation只能有一个leader，可以有多个flower
+          1. follower：主要用于备份消息
+             - 可以单独指定partation的副本数量
      1. 11版本前非常依赖zk，之后慢慢减轻
-   - 管理工具：cmak，即kafka manager
+   - 运维
+     1. leader选举
+        - 没有采用多数投票来选举
+        - 会动态维护一组leader数据的副本(ISR)
+        - 会在ISR中选择速度比较快的作为leader，谁先接收到算谁
+     1. 节点故障
+        - 认识
+          1. 不会因为节点故障丢失数据
+          1. kafka的语义担保也能很大程度避免数据丢失
+          1. 会对消息进行reblance，减少节点消息热度太高
+        - 判定标准：心跳未保持、消息落后leader太多
+        - 动作：移除
+     1. 工具
+        - 监控：cmak，即kafka manager
+        - 管理工具：kafka-run-class.sh
 1. 中间件
    - MQProxy
 1. 运维
@@ -379,7 +464,15 @@
    - 日志存储机制
    - 偏移量
    - 主题订阅、故障发现
+1. 认识
+   - 底层实现知道原理，来龙去脉，不变应万变
+   - 会比较晦涩
+1. 特点
+   - 为什么吞吐量大？
 1. 设计原理
+   - 顺序读写、快速检索
+   - partition机制
+   - 批量发送接收、数据压缩机制
    - 持久性
    - 高效率
    - 消息传递保障
@@ -387,7 +480,10 @@
    - leader选举
    - 日志压缩
    - 写入：不支持参与物理io操作，采用追加写入页缓存的方式，不能修改已写入的，磁盘顺序访问型，吞吐量高，写操作性能强
-   - 消费：sendfile零拷贝和大量使用页缓存(在内存中)，一个io处理不需上下文切换(内核和用户态之间)，利用直接存储器访问技术(DMA 内核缓冲区之间)。良好调优的kafaka有负载磁盘io也很少，因为直接命中缓存
+   - 消费：sendfile零拷贝和大量使用页缓存(在内存中)，一个io处理不需上下文切换(内核和用户态之间)，利用直接存储器访问技术(DMA 内核缓冲区之间)
+     1. 良好调优的kafaka有负载磁盘io也很少，因为直接命中缓存
+     1. 之前是磁盘io ———— 内核读取缓冲区  ———— 用户缓冲区 ———— socket缓冲区 ———— 网络io，现在直接从磁盘io到网络io，用文件描述符控制就行，是用户空间零拷贝
+        - 4步变2步，不仅节省了大量文件拷贝，而且节省用户上下文切换
    - 故障转移：基于zk的会话注册机制
    - 伸缩性：基于zk保存服务器状态和消费者信息
 1. wiki

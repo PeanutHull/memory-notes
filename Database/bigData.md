@@ -36,11 +36,17 @@
    - 大数据组件需要分场景使用，基础理论基本在hadoop基础上建立
 1. ![avatar](../images/bigData.jpeg)
 1. wiki
-   - 术语
+   - 概念词汇
+     1. APP：数据产品层，报表层
      1. DW ：data warehouse，数据仓库，由下到上为 DWD,DWB,DWS
+        - DM：数据集市层，以某个业务应用为出发点的局部DW，只关心自己需要的数据，用于BI ,多维分析，标签，数据挖掘等
+        - DIM：Dimension，维表层，就是配置表
+          1. 高基数维度数据：一般是用户资料表、商品资料表类似的资料表。数据量可能是千万级或者上亿级别
+          1. 低基数维度数据：一般是配置表，比如枚举值对应的中文含义，或者日期维表。数据量可能是个位数或者几千几万
         - DWS：data warehouse service 服务数据层，基于DWB上的基础数据，整合汇总成分析某一个主题域的服务数据，一般是宽表
         - DWB：data warehouse base 基础数据层，存储的是客观数据，一般用作中间层，可以认为是大量指标的数据层
         - DWD：data warehouse detail 细节数据层、ODS层，是业务层与数据仓库的隔离层
+     1. ODS：Operational Data Store，数据源中的数据经过ETL后装入本层，
 ### Hadoop
 1. 认识：开源的大数据框架，分布式计算的解决方案。子项目有hive、hbase等
 1. 组成
@@ -235,6 +241,8 @@
      1. supervisor
      1. worker
 1. Flink
+   - flink-cdc-connectors：Flink SQL CDC，可以直接从MySQl等数据库直接读取全量和增量变更数据的source组件，用户只需声明CDC的connector即可
+   - 实时数仓实践：![avatar](../images/Flink_SQL_done.png)
 1. Beam
 1. 应用
    - apache三大分布式计算：Hadoop、Spark、Storm

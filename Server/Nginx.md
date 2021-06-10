@@ -42,6 +42,35 @@
         include /etc/nginx/conf.d/*.conf;
     }
     ```
+1. 变量
+   - 认识：$开头
+   - 内置全局环境变量
+     1. 请求类
+        - $remote_addr                客户端的IP地址
+        - $remote_port                客户端的端口
+        - $remote_user                已经经过Auth Basic Module验证的用户名
+        
+        - $request_uri                包含请求参数的原始URI，不包含主机名，如：”/foo/bar.php?arg=baz”
+        - $uri                        不带请求参数的当前URI，$uri不包含主机名，如”/foo/bar.html”
+        - $document_uri               与$uri相同
+        - $args                       等于请求行中的参数，同$query_string
+        - $document_root              当前请求在root指令中指定的值
+
+        - $server_protocol            请求使用的协议，通常是HTTP/1.0或HTTP/1.1
+        - $host                       请求主机头字段，否则为服务器名称
+        - $content_length             请求头中的Content-length字段
+        - $content_type               请求头中的Content-Type字段
+        - $http_cookie                客户端cookie信息
+        - $http_user_agent            客户端agent信息
+
+        - $scheme                     HTTP方法（如http，https）
+        - $request_method             客户端请求的动作，通常为GET或POST
+        - $request_filename           当前请求的文件路径，由root或alias指令与URI请求生成
+     1. 自身配置
+        - $limit_rate                 可以限制连接速率
+        - $server_addr                服务器地址，在完成一次系统调用后可以确定这个值
+        - $server_name                服务器名称
+        - $server_port                请求到达服务器的端口号
 1. server配置，决定虚拟主机
     ```lua
     server {
@@ -123,15 +152,33 @@
         add_header headerName headerValue
     }
     ```
-1. 变量
-   - 认识：$开头
-   - 分类
-     1. 请求类
-        - $https
-        - $uri
-        - $http_cookie
-        - $args：请求的参数值
-     1. 自身类
+1. if
+1. rewrite
+   - 认识：重定向的重要指令，根据正则匹配内容跳转到replacement
+   - 场景
+     1. 调整用户浏览的URL，看起来规范
+     1. 为了让搜索引擎收录网站内容，让用户体验更好
+     1. 网站更换新域名后
+     1. 根据特殊的变量、目录、客户端信息进行跳转
+   - 使用
+     1. 应用位置：server、location、if
+     1. 默认值：none
+   - 指令：`rewrite regex replacement [flag];`
+     1. regex：表示想要匹配的目标URL
+     1. replacement：将正则匹配的内容替换成replacement
+        - $1是取自regex部分()里的内容
+     1. flag
+        - last	本条规则匹配完成后继续向下匹配新的location URI规则
+        - break	本条规则匹配完成后终止，不在匹配任何规则
+        - redirect	返回302临时重定向
+        - permanent	返回301永久重定向
+   - 实例
+     1. `rewrite /last.html /index.html last;`
+     1. `rewrite ^/html/(.+?).html$ /post/$1.html permanent;`：把/html/*.html => /post/*.html，301定向
+     1. `rewrite ^/(.*) http://www.jd.com/$1 permanent;`：把当前域名的请求，跳转到新域名上，域名变化但路径不变
+     1. ``
+     1. ``
+     1. ``
 1. 超时时间
    - proxy_connect_timeout：和后端服务器的连接(发起握手后的)等待超时时间
    - proxy_read_timeout：等待后端服务器的响应超时时间
@@ -146,11 +193,7 @@
    - client_body_buffer_size     128k;       # nginx分配给请求数据的Buffer大小
    - proxy_ignore_client_abort   on;         # 是否开启proxy忽略客户端中断
 1. https：`listen 443 ssl;`
-1. 其他配置文件
-   - mime.types：文件扩展名与文件类型映射表，找不到使用默认default_type
-   - fastcgi.conf/fastcgi_params/uwsgi_params/scgi_params：使用对应cgi时，向cgi传递的变量
-   - koi-utf/koi-win/win-utf：编码转换映射文件
-1. fastcgi的配置：`fastcgi.conf`
+1. fastcgi：`fastcgi.conf`
     ```conf
     fastcgi_param  SCRIPT_FILENAME    $document_root$fastcgi_script_name;
     fastcgi_param  QUERY_STRING       $query_string;
@@ -178,6 +221,10 @@
     # PHP only, required if PHP was built with --enable-force-cgi-redirect
     fastcgi_param  REDIRECT_STATUS    200;
     ```
+1. 其他配置文件
+   - mime.types：文件扩展名与文件类型映射表，找不到使用默认default_type
+   - fastcgi.conf/fastcgi_params/uwsgi_params/scgi_params：使用对应cgi时，向cgi传递的变量
+   - koi-utf/koi-win/win-utf：编码转换映射文件
 ### 应用
 1. gzip压缩：可在任何层级定义，越细优先级越高
     ```lua
@@ -418,7 +465,7 @@
    - 架构：cdn——负载均衡器——api网关——k8s的ingress控制器——web服务
 ### wiki
 1. nginx依赖
-   - pcre：Perl Compatible Regular Expressions，是Perl库。nginx的http模块使用pcre来解析正则表达式
+   - pcre：nginx的http模块使用pcre来解析正则表达式
    - zlib：提供了多种压缩/解压缩的方式。nginx使用zlib对http包的内容进行gzip
    - openssl
 1. Lighttpd：web服务器，低内存开销、模块丰富、动态页面处理能力很强

@@ -243,44 +243,6 @@
     ```
 1. 加密
    sha1：用于校验文件完整性，是否被篡改，可生成一个160位校验值，不可逆
-1. 正则：用于分割、查找、匹配、替换
-   - 组成
-     1. 分隔符：/斜线 #hash符号 ~取反符号
-     1. 通用原子：\d\D\w\W\s\S
-     1. 元字符：. * ? ^ $ + {n} {n,} {n,m} [] () [^] | [-]
-     1. 模式修正符：i m e s U x A D u(用于utf8模式下的匹配)
-   - 特性
-     1. 后向引用：一个字符类外面，反斜线紧跟一个大于0的数字就是之前出现的某个捕获组的后向引用
-        ```php
-        $str = '<b>abc</b>'
-        $pattern = '/<b>(.*)<\/b>/';
-        preg_replace($pattern, '\\1', $str);        // 用\\1后向引用括号中匹配到的
-        ```
-     1. 贪婪模式
-        ```php
-        $str = '<b>abc</b><b>bcd</b>'
-        $pattern = '/<b>.*?<\/b>/';                 // ?取消贪婪模式，要不一直往后匹配
-        $pattern = '/<b>.*?<\/b>/U';                // U取消
-        preg_replace_all($pattern, '\\1', $str);
-        ```
-     1. 断言：分为前瞻断言/后瞻断言，正面断言(?<=)/消极断言(?<!)
-   - 步骤
-     1. 写出要匹配的字符串
-     1. 从左向右使用原子和元字符拼接
-     1. 加入模式修正符
-   - 实例
-     1. 匹配数字、逗号：`preg_match('/^\d+(?:,\d+)*$/ ', $a)`
-     1. 匹配手机号：`preg_match("/^(1([34578]))\d{9}$/", $mobile)`
-     1. 4到6位数字：`preg_match("/^\d{4,6}$/", $code)`
-     1. 匹配中文+数字，不能是纯中文，也不是纯数字：`preg_match('/^(?!\d+$)(?![\x{4e00}-\x{9fa5}]+$)[\x{4e00}-\x{9fa5}\d]+$/u', $string)`
-     1. 匹配英文逗号分隔数字：`!preg_match('/^\d+(\,\d+){0,}$/', $params['ids'])`
-     1. 匹配img标签中的src值
-        ```php
-        $str = '<img id="aa" src="aa.jpg">';
-        $pattern = '/<img.*?src="(.*?).*?\/?>"/i';
-        preg_match($pattern, $str, $match);
-        var_dump($match);
-        ```
 1. 错误和异常
    - 理解：Error和Exception都实现了Throwable接口，可用`handler(Throwable $e)`
      1. 错误：错误不能以异常的形式捕获，php7中大多数错误被作为Error抛出，可用`Error`或`Throwable`捕获，不捕获就变为fatal_error，Exception不可以捕获错误。Throwable不可以捕获notice如`$a['notExist']`

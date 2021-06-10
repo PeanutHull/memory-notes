@@ -155,6 +155,19 @@
      1. 替换
      1. 滚动升级
    - Storage：存储
+1. 容器网络模式
+   - 认识
+     1.  
+   - 分类
+     1. 隧道封包模式: VxLan/IPIP/GRE,通过tunnel隧道封包建立overlay 网络，实现Pod到Pod的通信
+     1. 路由模式：通过映射目标容器网段和主机IP的关系，Pod 之间的通信数据包通过路由表转发到相应节点上
+   - service实现：Service主要解决的是Pod IP 短生命周期带来的问题，Service clutserIP 就是 node side Loadbalancer
+     1. iptables
+     1. IPVS
+     1. BPF
+   - 大型容器网络
+     1. 最经典的方式是用 VxLAN 方式构建大型 overlay 网络，从 Google 到阿里云底层皆使用 VxLAN 方式构建数据中心网络，使用MAC in UDP的方法进行封装，对端进行解封
+     1. BGP Router 模式
 1. wiki
    - 用8代替8个字符“ubernete”而成的缩写
    - 前端发布：k8s + skaffold + kaniko + gitops
