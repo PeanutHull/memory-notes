@@ -176,9 +176,6 @@
      1. `rewrite /last.html /index.html last;`
      1. `rewrite ^/html/(.+?).html$ /post/$1.html permanent;`：把/html/*.html => /post/*.html，301定向
      1. `rewrite ^/(.*) http://www.jd.com/$1 permanent;`：把当前域名的请求，跳转到新域名上，域名变化但路径不变
-     1. ``
-     1. ``
-     1. ``
 1. 超时时间
    - proxy_connect_timeout：和后端服务器的连接(发起握手后的)等待超时时间
    - proxy_read_timeout：等待后端服务器的响应超时时间
@@ -387,6 +384,31 @@
         - fastcgi是适用高并发场景的，对web服务器不挑可以自由更换
    - SCGI：Simple CGI，精简数据协议和响应过程的FCGI，为适应ajax和rest，做出更快更简介应答，并规定http响应后立刻关闭链接，适合SOA提倡的请求-忘记的通信模式
    - WSGI：Web Server Gateway Interface，
+   - GRPC
+    ```
+    server {
+        listen 1443 ssl http2;
+        ssl_certificate     ssl/xx.pem;
+        ssl_certificate_key     ssl/xx.pem;
+
+        location / {
+            grpc_pass grpc://grpc_server;
+
+            error_page 502 = /error502grpc;
+        }
+
+        location /error502grpc {
+            internal;                   # ???
+            
+            return 204;
+        }
+    }
+
+    upstream grpc_server {
+        server 127.0.0.1:10000;
+        server 127.0.0.1:10001;
+    }
+    ```
 ### 调优
 1. worker_processes
 1. worker_rlimit_nofile
@@ -463,26 +485,95 @@
      1. api管理
         - 限流
    - 架构：cdn——负载均衡器——api网关——k8s的ingress控制器——web服务
-### wiki
-1. nginx依赖
-   - pcre：nginx的http模块使用pcre来解析正则表达式
-   - zlib：提供了多种压缩/解压缩的方式。nginx使用zlib对http包的内容进行gzip
-   - openssl
-1. Lighttpd：web服务器，低内存开销、模块丰富、动态页面处理能力很强
-1. HaProxy
-   - 认识：基于tcp、http的提供高可用、高并发、负载均衡的应用代理。c语言编写，通过反向代理实现负载均衡，不是web服务器，是专门的应用代理
-     1. 快速、免费、可靠
-     1. 事件驱动、单一进程模型，可以支持很大的并发连接数
-     1. 适用场景：需要会话保持、负载均衡的高并发、多连接数的场景
-   - 功能
-     1. 支持负载均衡，支持长连接，支持正则调度
-     1. 支持添加cookie后调度，支持基于cookie调度
-     1. 支持双向http的header数据增删改查
-     1. 支持基于端口的监控、故障切换
-     1. 支持停机模式、支持监控界面、监控api输出
-     1. 支持虚拟主机
-### OpenResty
-1. ngx_openresty，基于nginx与lua的高性能web平台，用于方便地搭建处理高并发、扩展性的服务和动态网关
+### 中间件
+1. nginx + lua
+   - 认识：结合nginx的并发处理epoll优势，和lua的轻量实现简单的功能切高并发的场景
+     1. 用命令行进入能执行代码的，就是这个语言的解释器
+     1. nginx在不同阶段调用lua，同时也提供了自己的api
+   - 使用
+     1. nginx调用lua：nginx的可插拔模块化加载执行，共11个处理阶段
+        - set_by_lua、set_by_lua_file：设置nginx变量，可以实现复杂的赋值逻辑
+        - access_by_lua、access_by_lua_file：请求访问阶段处理，用于访问控制
+        - content_by_lua、content_by_lua_file：内容处理器，接收请求处理并输出响应
+     1. lua调用nginx api
+        - ngx.var                   nginx变量
+        - ngx.req.get_headers       获取请求头
+        - ngx.req.get_uri_args      获取url请求参数
+        - ngx.redirect              重定向
+        - ngx.print                 输出响应内容体
+        - ngx.say                   同print，最后再输出一个换行符
+        - ngx.header                输出响应头
+   - 实例
+     1. 基于ip的灰度选择功能
+        ```lua
+        // nginx配置
+        server {
+            listen 80;
+            server_name localhost;
+
+            location /myip {
+                default_type 'text/plain';
+                content_by_lua '
+                    clientIp = ngx.req.get_headers()["x_forwarded_for"]
+                    ngx.say("IP:",clientIp)
+                ';
+            }
+
+            location / {
+                content_by_lua_file /xx/xx.lua
+            }
+
+            location @server {
+                proxy_pass http://server
+            }
+
+            location @server_test {
+                proxy_pass http://server_test
+            }
+        }
+
+        // lua文件，memcache里边存储灰度ip，判断是否相等
+        
+        // 获取客户ip
+        clientIp = ngx.req.get_headers()["x_forwarded_for"]
+
+        // 初始化memcache
+        local memcached = require "resty.memcached"
+        local memc, err = memcached:new()
+        if not memc then
+            ngx.say("failed to instantiate memc: ", err)
+            return
+        end
+
+        // 连接memcache
+        local ok, err = memc:connect("127.0.0.1", 11211)
+        if not ok then
+            ngx.say("failed to connect: ", err)
+            return
+        end
+
+        // 能否获取值
+        local res, flags, err = memc:get(clientIP)
+        ngx.say("value key:",res,clientIP)
+        if err then
+            ngx.say("failed to get clientIP ", err)
+            return
+        end
+
+        // 选择调用哪个location
+        if res == "1" then
+            ngx.exec("@server_test")
+            return
+        end
+        ngx.exec("@server")
+        ```
+   - 搭建
+     1. 依赖
+        - luaJIT：更快的解释器
+        - ngx_devel_kit、ua-nginx-module
+        - 重新编译nginx
+     1. 步骤：https://www.imooc.com/article/19597
+1. OpenResty：ngx_openresty，基于nginx与lua的高性能web平台，用于方便地搭建处理高并发、扩展性的服务和动态网关
    - 可以使用lua脚本语言调动nginx的各种c、lua模块，让web服务直接跑在nginx内部
    - 针对域名、目录结构做分流、转发的策略，既能做负载又能做反向代理
    - 具有Lua协程 + Nginx 事件驱动的事件循环回调机制，即Cosoket，对远程后端如MySQL、Memcached、Redis等都可实现同步写代码的方式实现非阻塞I/O
@@ -647,6 +738,10 @@
         include vhost/*.conf;
     }
     ```
+1. 平滑升级版本
+   - 新老版本安装目录一致
+   - 老版本备份：nginx -> nginx.old
+   - reload重启
 ### 原理
 1. 内存池，连接池，自旋锁，红黑树
 1. 进程模型：管理进程(master)和工作进程(worker)
@@ -655,3 +750,23 @@
 1. 网络模型
    - apache是线程池实现多请求，占用资源多
    - nginx是io多路复用
+### wiki
+1. 版本
+   - 1.13.10：支持grpc
+1. nginx依赖
+   - pcre：nginx的http模块使用pcre来解析正则表达式
+   - zlib：提供了多种压缩/解压缩的方式。nginx使用zlib对http包的内容进行gzip
+   - openssl
+1. Lighttpd：web服务器，低内存开销、模块丰富、动态页面处理能力很强
+1. HaProxy
+   - 认识：基于tcp、http的提供高可用、高并发、负载均衡的应用代理。c语言编写，通过反向代理实现负载均衡，不是web服务器，是专门的应用代理
+     1. 快速、免费、可靠
+     1. 事件驱动、单一进程模型，可以支持很大的并发连接数
+     1. 适用场景：需要会话保持、负载均衡的高并发、多连接数的场景
+   - 功能
+     1. 支持负载均衡，支持长连接，支持正则调度
+     1. 支持添加cookie后调度，支持基于cookie调度
+     1. 支持双向http的header数据增删改查
+     1. 支持基于端口的监控、故障切换
+     1. 支持停机模式、支持监控界面、监控api输出
+     1. 支持虚拟主机

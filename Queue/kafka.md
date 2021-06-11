@@ -10,6 +10,8 @@
    - 快速持久化：可以在O(1)的系统开销下进行消息持久化
    - 完全分布式：Broker、Producer和Consumer都原生自动支持分布式，自动实现负载均衡
    - 消息有序：消费者采用Pull方式获取消息。通过控制能够保证，所有消息被消费且仅被消费一次
+   - 多分区，多副本，多订阅者，基于zk调度
+   - 数据可持久化、容错性、在线水平扩展、消息自动平衡
 1. 设计
    - 分区、副本、基于zk调度
    - 持久化：多副本/容错性/消息自动平衡
@@ -287,9 +289,15 @@
           1. xxxxxxx.timeindex：时间排序的索引
           1. leader-epoch-checkpoint
      1. message
+        - offset：4byte
         - message length：4byte(1+4+n)，消息长度
-        - magic value：1byte，版本号
         - crc：4byte，CRC校验码
+        - magic value：1byte，版本号
+        - attributes：1byte
+        - timestamp：4byte
+        - key length：4byte
+        - key
+        - value length：4byte
         - playload：n byte，消息内容
 1. 实现方式
    - 日志存储机制
@@ -314,8 +322,11 @@
    - 写入：不支持参与物理io操作，采用追加写入页缓存的方式，不能修改已写入的，磁盘顺序访问型，吞吐量高，写操作性能强
    - 消费：sendfile零拷贝和大量使用页缓存(在内存中)，一个io处理不需上下文切换(内核和用户态之间)，利用直接存储器访问技术(DMA 内核缓冲区之间)
      1. 良好调优的kafaka有负载磁盘io也很少，因为直接命中缓存
-     1. 之前是磁盘io ———— 内核读取缓冲区  ———— 用户缓冲区 ———— socket缓冲区 ———— 网络io，现在直接从磁盘io到网络io，用文件描述符控制就行，是用户空间零拷贝
+     1. 之前是磁盘io ———— 内核页缓冲区  ———— 用户缓冲区 ———— 内核socket缓冲区 ———— 网卡缓冲区，现在直接从磁盘io到网络io，用文件描述符控制就行，是用户空间零拷贝
         - 4步变2步，不仅节省了大量文件拷贝，而且节省用户上下文切换
+     1. 使用基础
+        - java nio channel.transforTo
+        - linux sendfile系统调用
    - 故障转移：基于zk的会话注册机制
    - 伸缩性：基于zk保存服务器状态和消费者信息
 ### wiki
