@@ -169,24 +169,25 @@
      1. wiki
         - 负载均衡里，lvs性能最高，nginx功能丰富，haproxy可以负载4层
    - keepalived
-     1. 认识：以VRRP协议为基础实现服务热备，功能有健康检查、自动切换
-        - 可根据ip、端口、http请求判断是否正常，即工作在OSI的3、4、7层
+     1. 认识：以VRRP协议为基础实现服务热备，一般应用为：LVS+Keepalived、Nginx+Keepalived、HAproxy+Keepalived
+        - 健康检查：可根据ip、端口、http请求判断是否正常，即工作在OSI的3、4、7层
           1. 3：发送ICMP数据包判断是否故障(ping)
           1. 4：端口
           1. 7：自定义检测脚本
-        - 可自动完成切换，主恢复后可抢占回备占用的vip
-        - 支持自身健康检查
-        - 一般应用为：LVS+Keepalived、Nginx+Keepalived、HAproxy+Keepalived
-     1. 组成模块：![avatar](../images/keepalived_struct.png)
-        - core：负责主进程的启动、维护，全局配置文件的加载和解析
-        - check：负责健康检查、各种检查方式
-        - vrrp：实现VRRP协议
+        - 自动切换：主恢复后可抢占回备占用的vip
+          1. 支持自身健康检查
      1. 应用
         - 主备都部署服务 + keepalived
         - 主备的keepalived通过VRRP交互，虚拟出一个vip，并落在主上
+          1. 主不断向备多播心跳，备接收不到时就接管，主恢复后抢回
         - 主备的keepalived设置为：当检测服务不可用时尝试重启服务，不成功则关闭keepalived，实现服务转移
+     1. 组成：![avatar](../images/keepalived_struct.png)
+        - vrrp stack：实现VRRP协议
+        - ipvs wrapper：为集群内节点生成ipvs规则
+        - checkers：负责健康检查、各种检查方式
+        - core：负责主进程的启动、维护，全局配置文件的加载和解析
      1.wiki
-        - VRRP协议：虚拟路由冗余协议，是实现路由器冗余的协议，是为了消除在静态默认路由环境下路由器单点故障引起的网络失效而设计的主备模式的协议
+        - VRRP协议：虚拟路由冗余协议，为消除静态路由单点故障引起的网络失效设计的主备模式的协议
           1. 一主一备，同时只有一个提供服务。即将n台设备虚拟成一个设备，对外提供一个或多个虚拟IP
           1. 检测到故障，虚拟IP地址会自动漂移到备份服务器，即keepalived广播vip对应的vmac地址由主切换到备用，其他客户端更新ARP表，实现故障转移
           1. keepalive设计是对lvs做故障转移，用在nginx上要写脚本

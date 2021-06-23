@@ -1,142 +1,49 @@
 ### 基础
 1. 认识：高吞吐量、高负载量的分布式流处理平台和消息系统。适用于消息传输、流式数据处理、在线和离线分析
-   - 高性能：高吞吐量/高并发/低延迟/时间复杂度O(1)：每秒几十万
-   - 分布式：基于zk，可水平热扩展、集群容错
-   - 高可用：数据流永久存储、负载均衡、故障转移
-1. 特点
-   - 流处理平台：吞吐量高，能构建实时的流数据处理程序来变换或处理数据流
-     1. 高性能：单机写入TPS约在100万条/秒，消息大小10个字节
+   - 流处理平台：能构建实时的流数据处理程序来处理数据流
    - 提供发布订阅、topic的支持：本身是分布式流处理平台，只是支持发布订阅和Topic，才认为可以做队列
-   - 快速持久化：可以在O(1)的系统开销下进行消息持久化
-   - 完全分布式：Broker、Producer和Consumer都原生自动支持分布式，自动实现负载均衡
-   - 消息有序：消费者采用Pull方式获取消息。通过控制能够保证，所有消息被消费且仅被消费一次
-   - 多分区，多副本，多订阅者，基于zk调度
-   - 数据可持久化、容错性、在线水平扩展、消息自动平衡
-1. 设计
-   - 分区、副本、基于zk调度
-   - 持久化：多副本/容错性/消息自动平衡
-   - 发布/订阅：消息系统，使用推拉模式
-   - 实时事件响应
-   - 消息压缩传输：消费者获取，镜像数据传输
-   - 内置流处理：连接、聚合、过滤器、转换
-   - 保证排序、零消息丢失和高效的一次性处理
-   - 提供offset管理，可以使用历史数据
-   - 自己的二进制消息传输协议
-   - 集群镜像：提供官方工具同步并重新发布消息
-   - 支持同步和异步复制
-   - 支持数据批量发送拉取
-   - 支持消息堆积
-   - 副本模式
-     1. 同步：生产者从zk找到leader，发布消息后存入leader的log中，follow使用一个channel pull消息，写入自己log后发送确认消息，收到所有确认消息才给生产者发送
-     1. 异步：写入log后立即发送确认信息，无法保证broker故障时的消息分发
-   - 利用zk进行服务协调管理
+   - 天生分布式：基于zk，组件原生支持水平热扩展、集群容错、消息自动平衡
+   - 高性能：高吞吐量/高并发/低延迟/时间复杂度O(1)，单机写入TPS约在100万条/秒，消息大小10个字节
+   - 高可用：数据快速持久化、故障转移
 1. 应用场景
    - 流式系统、日志收集
    - 消息系统
    - 用户活动跟踪、运营指标监控，即实时处理
 ### 组成
-1. 组成：![avatar](../images/kafka_struct.jpeg)
-   - producer
-   - consumer/consumer group：topic中增减消息
-     1. 一对一
-     1. 发布订阅
-   - topic：主题，逻辑概念，用于存储、区分消息，在broker上存储
-     1. 组成：紧凑的二进制字节数组，避免了java繁重的堆上内存分配
-        - key：消息键，决定哪个partition
-        - value：消息体
-        - timestamp：消息发送时间戳，用于流式处理和其他依赖时间的
-   - partition
-   - replica：副本，用于防止数据丢失，一个分区多个副本
-   - broker：节点，kafka集群的服务器节点
-     1. partition会平均分布在节点中
-     1. ReplicaManager：管理当前Broker所有分区和副本
-   - leader/follower：取代主备的提法，仅一个为主提供服务，从同步数据作为替补，从的写由主的数据变更的广播获取
-     1. 主失效立即再选举，从挂掉/卡住/同步太慢会被删除再创建一个
-     1. kafaka保证同一个分区的多个副本不会在一个节点上，毕竟不会实现备份冗余的效果
-     1. ISR：in-sync replica，和主保持同步的副本集合，集合里的才能选为主
-       1. 集合中所有副本都收到消息才会置为已提交。当副本滞后一定程度时才踢出ISR，追上再加回，自动的
-       1. kafka的信息交付承诺：在ISR存活的条件下已提交信息不会丢失
 1. producer
    - 认识
-     1. 是批量发送，不是接一条发一条
+     1. 批量发送，会积攒一批，然后一起发送
    - 发送方式
      1. 同步发送
      1. 异步发送
      1. 异步阻塞发送
      1. 异步回调发送
      1. 自定义分区负载均衡
-   - 消息传递保障：依赖producer和consumer共同实现，主要是producer
-     1. 最多一次
-     1. 至少一次
-     1. 正好一次
+   - 事务方法：跨多分区的原子性写入
+     1. initTransactions
+     1. beginTransaction
+     1. sendOffsets
+     1. commitTransaction
+     1. abortTransaction
    - 客户端原理：![avatar](../images/kafka_producer_client.png)
-1. consumer
-   - 认识
-     1. 客户端使用，配置
-     1. 高级特性
-   - 手动控制分区
-   - 手动控制offset位置
-     1. 应用场景
-        - 指定开始位置
-        - 消费失败，需要重复消费
-   - kafka记offset的方式有哪些
-   - consume限流，怕把consume流量高打死，用令牌桶方式
-   - reblance，加入，崩溃，离组，提交位移的操作，类似乐观锁还有什么java的解决方案
 1. consumer group
-   - 认识：是kafka消费的单位
+   - 认识：一组consumer，kafka消费的单位
      1. 单partition只能由组中某个消费者消费，否则kafka需要加锁，会影响性能，就这样规定了
      1. 单个消费者可以消费多个partition
      1. 最佳实践：消费者数量和partation相等，多了没活干歇着浪费，少了性能不行
    - 规则：控制读写等权限
+   - 手动控制offset位置
+     1. 应用场景
+        - 指定开始位置
+        - 消费失败，需要重复消费
+   - consume限流，怕把consume流量高打死，用令牌桶方式
+   - reblance，加入，崩溃，离组，提交位移的操作，类似乐观锁还有什么java的解决方案
    - 形式
      1. 多个consumer：![avatar](../images/mult_consumer_one_handle.png)
         - consume数量和partation数量相同，性能最好，否则存在分配的开销
         - consume处于阻塞状态，适合普通业务场景，可以有好的管控，如消费3次不成功就报警
      1. ![avatar](../images/one_consumer_mult_handle.png)
         - consume变成非阻塞消费数据，后边线程池处理业务逻辑，但consume不知道后边是否成功可以commit，特点是减少consume消耗实现快速消费，适合非业务系统，如流处理，gps打点，机器监控，丢一些无所谓
-1. topic
-   - 删除
-     1. 认识
-        - 需要考虑生产者生产，消费者消费，broker损坏怎么办
-     1. 设置
-        - auto.create.topics.enable = false：要不然删不掉
-        - delete.topic.enable = true：最好打开，不然有问题
-     1. 原理
-        - 特点
-          1. 异步线程 + 延时操作
-        - 步骤
-          1. 注册zk的delete_topics节点的变化监听器
-          1. 启动删除topic线程，这时删除线程阻塞并等待删除事件
-          1. 执行删除命令时，在delete_topics节点添加
-          1. 唤起删除线程
-          1. 执行删除逻辑：删除分区信息、删除zk目录、清除controller中相关cache
-          1. 删除线程继续阻塞
-     1. 最佳实践
-        - 断掉所有访问：使用域名访问，切断解析，保证一定无流量进入
-        - 进行删除
-1. partition
-   - 认识：分区，有序的数据存储基本单元，一个topic分为n个有序号的partition
-     1. 只支持顺序读写，只能在partition尾部追加消息，总是写最新的segment，每个消息有一个位移
-     1. 单partition消息保证有序，全局不保证
-        - 要保证消息顺序partition可以设为1，一个partation只能有一个consume，性能太低，不如天生有序的rabbiemq呢
-        - 可以使用key + offset做到业务有序，一个key确定同一类型，offset作为顺序的判断，如先存了es，时序数据库中，攒够了一起处理
-     1. 用于负载均衡，根据实际需要设置数量，实现性能最大化
-   - 组成
-     1. 特点
-        - 每个partition的日志分为n个大小相等的segment文件存储
-        - 每个segment的消息数量不一定相等(消息大小不同)
-     1. 写
-        - partition将消息串行追加到最后一个segment上，segment达到阈值就滚动到新segment
-        - segment一定阈值后flush到磁盘上
-     1. 读：一级级的检索快速找到消息内容，顺序读取磁盘可以有很高的性能
-        - 用offset通过active segment list文件：找出具体的哪个segment
-        - 找这个segment的index文件得到segment中消息的起始位置offset
-        - 通过上个offset移动到某条消息的开头后，先读取4字节，就可以知道整个消息的长度了，最后读取整个消息内容
-1. message
-   - 属性
-     1. 消费超时时间
-     1. 最大重试次数：业务方消费消息的时间超过"消费超时时间"时，消息会判断消费失败，重新投递给业务方的最大重试次数
-     1. QOS：并发回调个数
 1. stream
    - 认识：流式数据处理，通过state store实现高效状态操作，支持原语processor和高层抽象DSL
      1. stream流处理流程
@@ -165,45 +72,111 @@
    - admin
      1. 查看topic列表、属性等
    - producer
+     1. high level api：替我们把很多事情都干了，offset，路由啥都替我们干了，用以来很简单
+     1. simple api：offset啥的都是要我们自己记录
    - consumer
    - stream processor：高效将输入流转换到输出流
-   - connector：
-### 架构
-1. 集群
-   - 认识
-     1. 天然支持集群，没有单节点说法，一台也是集群，通过brokerId区分不同节点
-     1. 依赖zk进行协调，连接同一个zk就是同一个集群
+   - connector
+### 构成
+1. broker
+   - 认识：节点，kafka集群的服务器节点
+     1. partition会平均分布在节点中
+     1. replicaManager：管理当前Broker所有分区和副本
+1. topic
+   - 认识：主题，逻辑概念，用于存储、区分消息，在broker上存储
+     1. 紧凑的二进制字节数组，避免了java繁重的堆上内存分配
+1. partition
+   - 认识：分区，有序的数据存储基本单元，一个topic分为n个有序号的partition
+     1. 只支持顺序读写，只能在partition尾部追加消息，总是写最新的segment，每个消息有一个位移
+     1. 单partition消息保证有序，全局不保证
+        - 要保证消息顺序partition可以设为1，一个partation只能有一个consume，性能太低，不如天生有序的rabbiemq呢
+        - 可以使用key + offset做到业务有序，一个key确定同一类型，offset作为顺序的判断，如先存了es，时序数据库中，攒够了一起处理
+     1. 用于负载均衡，根据实际需要设置数量，实现性能最大化
+   - 分配
+     1. 将所有Broker（假设共n个Broker）和待分配的Partition排序
+     1. 将第i个Partition分配到第（i mod n）个Broker上 （这个就是leader）
+     1. 将第i个Partition的第j个Replica分配到第（(i + j) mode n）个Broker上
+1. replica
+   - 认识：副本，partation复制多份，用于防止数据丢失
+     1. 一个分区可以多个副本
+     1. 主失效立即再选举，从挂掉/卡住/同步太慢会被删除再创建一个
+     1. kafaka保证同一个分区的多个副本不会在一个节点上
    - 组成
-     1. 节点
-        - 访问任意一个broker都可以完成请求，因为有数据同步机制
-     1. 副本
-        - 认识：将每个topic的日志复制多份
-        - 组成
-          1. broker：部署节点
-             - 对消息集群内平衡，就是不会将一个Topic的多个partation，也不会将一个partation的多个副本放在一个broker上，自己有协调机制
-          1. leader：用于处理消息的接口、消费等需求
-             - produce和consume都去leader存取数据
-             - 同一个Topic的partation只能有一个leader，可以有多个flower
-          1. follower：主要用于备份消息
-             - 可以单独指定partation的副本数量
-     1. 11版本前非常依赖zk，之后慢慢减轻
-   - 运维
-     1. leader选举
-        - 没有采用多数投票来选举
-        - 在ISR中选择速度比较快的作为leader，谁先接收到算谁
-     1. 节点故障
-        - 认识
-          1. 不会因为节点故障丢失数据
-          1. kafka的语义担保也能很大程度避免数据丢失
-          1. 会对消息进行reblance，减少节点消息热度太高
-        - 判定标准：心跳未保持、消息落后leader太多
-        - 动作：移除
-     1. 工具
-        - 监控：cmak，即kafka manager
-        - 管理工具：kafka-run-class.sh
+    1. leader：用于处理消息的接口、消费等需求
+        - produce和consume都去leader存取数据
+        - 同一个Topic的partation只能有一个leader，可以有多个flower
+    1. follower：主要用于备份消息
+        - 可以单独指定partation的副本数量
+   - ISR
+     1. 认识：in-sync replica，和主保持同步的副本集合，集合里的才能选为主
+        - 集合中所有副本都收到消息才会置为已提交。当副本滞后一定程度时才踢出ISR，追上再加回，自动的
+        - kafka的信息交付承诺：在ISR存活的条件下已提交信息不会丢失
+1. message
+     1. key：消息键，决定哪个partition
+   - 属性
+     1. 消费超时时间
+     1. 最大重试次数：业务方消费消息的时间超过"消费超时时间"时，消息会判断消费失败，重新投递给业务方的最大重试次数
+     1. QOS：并发回调个数
+     1. key
+        - 有key：按照key进行哈希，相同key去一个partition
+        - 无key：round-robin来选partition
+### 最佳实践
+1. topic分区数如何确定
+   - 特点
+     1. kafka集群非常喜欢顺序读写，过多的分区会使得集群退化为随机读写
+   - 原则
+     1. 最好为broker的倍数，一般为3的倍数，这样分区可以均匀分布在所有broker上
+     1. key hash的业务，需要在最初就定义好分区数，因为如果添加分区，原来的数据是不会自动重新hash的
+1. out-of-range
+   - 认识：一般是消费速度不够快，服务端已经删除了消息。要么增大kafka的保留策略，要么提高消费能力
+### 架构
 1. 中间件
    - MQProxy
-     1. 分区数不建议超过6个
+     1. 认识：让用户更便捷的使用kafka，用户无需对kafka有过多的了解，无需过多关心kafka的健康状况，专注业务编码
+        - 通过http 的形式和proxy进行交互，proxy负责保障数据写入的可靠性和位移提交的便捷性
+        - java dobbo开发
+     1. 提供的服务
+        - 延时队列
+        - 重复消费
+        - 位移回溯
+        - 死信队列
+        - lag监控
+        - 消息灾备：由决策器来判断将消息发往目标kafka还是备份kafka
+        - 消息回调
+     1. 待开发的服务
+        - 顺序性
+        - 事务性
+        - 消息审计
+        - trace
+        - 死信重发
+     1. 架构
+        - 生产者
+          1. 心跳连接：生产者代理收到消息后通过和kafka之间的心跳来判断server的健康状态
+          1. 重新投递：发往备份kafka的消息都会由备份kafka的消费者从新把消息投递回目标队列
+          1. 本地存储/删除：生产者异步的将消息发送到kafka,发送前会把消息存储至本地mapdb做磁盘存储，成功就删除
+        - 消费者
+          1. 过期时间：可以指定消息的最大消费次数,和消费时间
+          1. 重复消费: 在指定的消费时间内没有提交位移,我们会把消息重新投递给业务方,直到消息提交或达到消息的最大消费次数为止
+          1. 预拉取: 为了保障业务方的消费速率,我们采用的是预拉取模式,即预先将消息拉取到mqproxy内存中,但是这样使得mqproxy变成了有状态模型
+          1. 无状态: 为了消除对业务方的状态,我们采用了java的高速率分布式传输框架dubbo,dubbo的提供者(server端)负责从kafka拉取消息, dubbo的消费者(portal端)负责从提供者拉取消息并推送给业务方,server和portal通过zookeeper做协同, 这样对于业务方来说mqproxy是无状态的,即可以从portal的任意节点拉取消息
+          1. 位移合并细节实现
+             - merge proxy 负责将业务方提交的位移进行合并
+             - 它用流计算的方式 消费"offset-commit-topic"中的消息,并进行位移合并,将合并的结果存放到"offset-merge-topic"
+             - "offset-merge-topic"是compact类型的topic,因为最后一次的位移结果对mqproxy来说才是有价值的
+             - offset-merge-topic的key值设计为 topic+group+partition , value值设计为 位移合并结果如:[1-80],[82-100]
+             - 消费者代理第一次启动会读取"offset-merge-topic"中的所有位移,并找到回溯位置进行消息回溯,因为是compact类型的topic,所以这个过程很快
+        - 延时队列架构
+          1. 指定级别延时队列实现
+             - 预先创建常用固定时延级别的topic，用户只能发送这些时延种类的消息
+             - proxy消费这些消息并且把消息拉取到内存中,在java的延时队列中进行倒计时
+             - 倒计时结束，将消息投递给真实的topic，并且向固定时延的topic提交位移
+          1. 任意级别延时队列实现
+             - 基于指定级别延时队列来实现任意级别延时队列
+             - 投递到一个指定级别的topic中,如果在这个级别的消息过期后,我们再将它投递到下一个级别的topic中，余数原理
+   - 多数据中心数据同步：Kafka官方同步工具MirrorMaker2，使用Kafka Connect的方式进行部署
+     1. 可实现主主、主备
+        - 主备：数据同步到备，必要时（如failover）启动，使用历史数据进行恢复
+        - 主主：数据同步到其他数据中心，被其他数据中心的消费者消费。同步后的Topic带有机房标识的前缀，应该有明确的需要同步的topic列表便于控制，而不是全部
 1. 应用案例
    - 基于SSD的Kafka应用层缓存架构设计与实现
      1. 背景
@@ -221,6 +194,137 @@
         - kafka内部实现：维护的消息偏移量区分实时和低速消费，随时间的推移淘汰到HDD上，采用
           1. 优点：充分考虑kafka读写特性，实时消费全在SSD保证低时延，HDD读取不会会刷到SSD防止缓存污染；日志段有明确唯一状态，查询路径最短，不存在CacheMiss的开销
           1. 缺点：需要server端改进，开发、测试工作量大，需要随社区大版本升级，但可以代码贡献社区解决迭代问题
+### 设计
+1. 设计
+   - 多分区、多副本、多订阅者，基于zk调度
+   - 快速持久化：多副本/容错性/消息自动平衡
+   - 发布/订阅：消息系统，使用推拉模式
+   - 实时事件响应
+   - 消息压缩传输：消费者获取，镜像数据传输
+   - 内置流处理：连接、聚合、过滤器、转换
+   - 保证排序、零消息丢失和高效的一次性处理
+   - 提供offset管理，可以使用历史数据
+   - 自己的二进制消息传输协议
+   - 集群镜像：提供官方工具同步并重新发布消息
+   - 支持同步和异步复制
+   - 支持数据批量发送拉取
+   - 支持消息堆积
+   - 副本模式
+     1. 同步：生产者从zk找到leader，发布消息后存入leader的log中，follow使用一个channel pull消息，写入自己log后发送确认消息，收到所有确认消息才给生产者发送
+     1. 异步：写入log后立即发送确认信息，无法保证broker故障时的消息分发
+   - 利用zk进行服务协调管理
+1. kafka拓扑结构：![avatar](../images/kafka_struct.jpeg)
+1. 集群
+   - 认识
+     1. 天然支持集群，没有单节点说法，一台也是集群，通过brokerId区分不同节点
+     1. 依赖zk进行协调，连接同一个zk就是同一个集群
+1. produce
+   - 生产幂等性
+     1. 为每个producer分配一个唯一标识pid，producer为每一个partition维护一个单调递增的seq
+     1. 当req_seq == broker_seq+1时，broker才会接受该消息，大了还没写入，小了已经写入了
+1. broker
+   - 认识：部署节点
+        - 对消息集群内平衡，就是不会将一个Topic的多个partation，也不会将一个partation的多个副本放在一个broker上，自己有协调机制
+        - 访问任意一个broker都可以完成请求，因为有数据同步机制
+   - controller：执行者，负责partition的分配、leader的选举
+        - 在zk的/brokers/ids节点上注册watch
+1. partition
+   - 读写
+     1. 特点
+        - 每个partition的日志分为n个大小相等的segment文件存储
+        - 每个segment的消息数量不一定相等(消息大小不同)
+     1. 写
+        - partition将消息串行追加到最后一个segment上，segment达到阈值就滚动到新segment
+        - segment一定阈值后flush到磁盘上
+     1. 读：一级级的检索快速找到消息内容，顺序读取磁盘可以有很高的性能
+        - 用offset通过active segment list文件：找出具体的哪个segment
+        - 找这个segment的index文件得到segment中消息的起始位置offset
+        - 通过上个offset移动到某条消息的开头后，先读取4字节，就可以知道整个消息的长度了，最后读取整个消息内容
+   - offset保存
+     1. 保存在__consumeroffsets的topic中，消息的key由groupid、topic、partition组成
+     1. value是偏移量offset，清理策略compact，缓存在内存中，第一次遍历partition建立缓存
+   - 多副本同步
+     1. 认识：处理follower批量拉取数据同步leader
+     1. 具体的可靠性由生产者来决定的：`request.required.acks`
+        - 0，发过去就完事了，不关心broker是否处理成功，可能丢数据
+        - 1，当写Leader成功后就返回,其他的replica都是通过fetcher去同步的,所以kafka是异步写，主备切换可能丢数据
+        - -1，要等到ISR里大于min.insync.replicas同步成功，才能返回成功，延时取决于最慢的机器。强一致，不会丢数据
+     1. epoch机制
+1. 情况设计
+   - 节点故障
+     1. 认识
+        - 不会因为节点故障丢失数据
+        - kafka的语义担保也能很大程度避免数据丢失
+        - 会对消息进行reblance，减少节点消息热度太高
+     1. 判定标准：心跳未保持、消息落后leader太多
+     1. 动作：移除
+   - leader选举
+     1. 没有采用多数投票来选举
+     1. 在ISR中选择速度比较快的作为leader，谁先接收到算谁
+   - leader容灾
+     1. broker宕机后，controller从zk的/brokers/topics/[topic]/partitions/[partition]/state中，读取ISR（in-sync replica已同步的副本）列表，选一个出来做leader
+1. 日志
+   - 认识
+     1. 以partition为单位进行保存，offset就是起始位置
+   - 组成
+     1. TopicName + Num：日志目录
+     1. partition
+     1. active segment list：追加、读取、删除，用于确认具体的索引文件
+        - 是一个offset区间，有了offset就可确认哪个segment
+        - 查找消息用二分法，找出对应的offset在哪个segment的索引中，在定位出offset在segment中的大概位置，再遍历查找message
+     1. segment
+          1. xxxxxxx.index：
+             - 左边是partation的全局offset，右边是segment的offset，
+             - 一条条的记录每条消息的字节位置，这样直接可以取到消息
+          1. xxxxxxx.log：segment file，包含一个个的message内容
+          1. xxxxxxx.timeindex：时间排序的索引
+          1. leader-epoch-checkpoint
+     1. message
+        - offset：4byte
+        - message length：4byte(1+4+n)，消息长度
+        - crc：4byte，CRC校验码
+        - magic value：1byte，版本号
+        - attributes：1byte
+        - timestamp：4byte
+        - key length：4byte
+        - key
+        - value length：4byte
+        - playload：n byte，消息内容
+   - 索引
+     1. 认识：为减少索引文件大小方便直接加载进内存，索引使用稀疏矩阵，每隔一定的字节数再建立一条索引
+     1. 组成
+        - baseOffset：对应segment文件中的第几条message。方便使用数值压缩算法节省空间。如varint
+        - position：在segment中的绝对位置
+1. 实现方式
+   - 日志存储机制
+   - 偏移量
+   - 主题订阅、故障发现
+### 源码与实现
+1. 认识
+   - 底层实现知道原理，来龙去脉，不变应万变
+   - 会比较晦涩
+1. 特点
+   - 为什么吞吐量大？
+1. 设计原理
+   - 顺序读写、快速检索
+   - partition机制
+   - 批量发送接收、数据压缩机制
+   - 持久性
+   - 高效率
+   - 消息传递保障
+   - 副本集
+   - leader选举
+   - 日志压缩
+   - 写入：不支持参与物理io操作，采用追加写入页缓存的方式，不能修改已写入的，磁盘顺序访问型，吞吐量高，写操作性能强
+   - 消费：sendfile零拷贝和大量使用页缓存(在内存中)，一个io处理不需上下文切换(内核和用户态之间)，利用直接存储器访问技术(DMA 内核缓冲区之间)
+     1. 良好调优的kafaka有负载磁盘io也很少，因为直接命中缓存
+     1. 之前是磁盘io ———— 内核页缓冲区  ———— 用户缓冲区 ———— 内核socket缓冲区 ———— 网卡缓冲区，现在直接从磁盘io到网络io，用文件描述符控制就行，是用户空间零拷贝
+        - 4步变2步，不仅节省了大量文件拷贝，而且节省用户上下文切换
+     1. 使用基础
+        - java nio channel.transforTo
+        - linux sendfile系统调用
+   - 故障转移：基于zk的会话注册机制
+   - 伸缩性：基于zk保存服务器状态和消费者信息
 ### 运维
 1. 安装
    - 下载解压
@@ -269,66 +373,29 @@
         - fetch.message.max.bytes：524288000B(500M) 消费者能读取的消息最大值，大于或等于message.max.bytes
      1. jvm
         - 堆内存：kafka-server-start.sh文件的`export KAFKA_HEAP_OPTS="-Xmx6G -Xms6G"`
-1. 其他
-   - web管理界面：Kafka-Manager
+1. 监控
+   - web管理界面：cmak，即Kafka-Manager
+   - 管理工具：kafka-run-class.sh
    - 脑裂问题：检测、自动恢复？
-### 设计
-1. 日志
+1. topic删除
    - 认识
-     1. 以partition为单位进行保存，offset就是起始位置
-   - 组成
-     1. TopicName + Num：日志目录
-     1. partition
-     1. active segment list：追加、读取、删除，操作索引文件
-        - 是一个offset区间，有了offset就可确认哪个segment
-     1. segment
-          1. xxxxxxx.index：
-             - 左边是partation的全局offset，右边是segment的offset，
-             - 一条条的记录每条消息的字节位置，这样直接可以取到消息
-          1. xxxxxxx.log：segment file，包含一个个的message内容
-          1. xxxxxxx.timeindex：时间排序的索引
-          1. leader-epoch-checkpoint
-     1. message
-        - offset：4byte
-        - message length：4byte(1+4+n)，消息长度
-        - crc：4byte，CRC校验码
-        - magic value：1byte，版本号
-        - attributes：1byte
-        - timestamp：4byte
-        - key length：4byte
-        - key
-        - value length：4byte
-        - playload：n byte，消息内容
-1. 实现方式
-   - 日志存储机制
-   - 偏移量
-   - 主题订阅、故障发现
-### 实现
-1. 认识
-   - 底层实现知道原理，来龙去脉，不变应万变
-   - 会比较晦涩
-1. 特点
-   - 为什么吞吐量大？
-1. 设计原理
-   - 顺序读写、快速检索
-   - partition机制
-   - 批量发送接收、数据压缩机制
-   - 持久性
-   - 高效率
-   - 消息传递保障
-   - 副本集
-   - leader选举
-   - 日志压缩
-   - 写入：不支持参与物理io操作，采用追加写入页缓存的方式，不能修改已写入的，磁盘顺序访问型，吞吐量高，写操作性能强
-   - 消费：sendfile零拷贝和大量使用页缓存(在内存中)，一个io处理不需上下文切换(内核和用户态之间)，利用直接存储器访问技术(DMA 内核缓冲区之间)
-     1. 良好调优的kafaka有负载磁盘io也很少，因为直接命中缓存
-     1. 之前是磁盘io ———— 内核页缓冲区  ———— 用户缓冲区 ———— 内核socket缓冲区 ———— 网卡缓冲区，现在直接从磁盘io到网络io，用文件描述符控制就行，是用户空间零拷贝
-        - 4步变2步，不仅节省了大量文件拷贝，而且节省用户上下文切换
-     1. 使用基础
-        - java nio channel.transforTo
-        - linux sendfile系统调用
-   - 故障转移：基于zk的会话注册机制
-   - 伸缩性：基于zk保存服务器状态和消费者信息
+     1. 需要考虑生产者生产，消费者消费，broker损坏怎么办
+   - 设置
+     1. auto.create.topics.enable = false：要不然删不掉
+     1. delete.topic.enable = true：最好打开，不然有问题
+   - 原理
+     1. 特点
+        - 异步线程 + 延时操作
+     1. 步骤
+        - 注册zk的delete_topics节点的变化监听器
+        - 启动删除topic线程，这时删除线程阻塞并等待删除事件
+        - 执行删除命令时，在delete_topics节点添加
+        - 唤起删除线程
+        - 执行删除逻辑：删除分区信息、删除zk目录、清除controller中相关cache
+        - 删除线程继续阻塞
+     1. 最佳实践
+        - 断掉所有访问：使用域名访问，切断解析，保证一定无流量进入
+        - 进行删除
 ### wiki
 1. 端口
    - kafka：9092
@@ -346,10 +413,64 @@
    - 2011：加入apache
    - 2010：开源，由Scala和Java编写，最初由Linkedin开发，最后贡献给Apache基金会并成为顶级开源项目
 1. 版本更新
-   - 0.11：事务支持
+   - 0.11：事务支持，11版本前非常依赖zk，之后慢慢减轻
    - 0.10：推出kafka streams组件，成为流式处理框架，本质还是消息的流转
    - 0.8：集群间备份，java重写生产者，不再依赖zk
 1. LinkIn开源的东西
    - Databus：分布式数据同步系统
    - Cubert：高性能计算引擎
    - ParSeq：java异步处理框架
+1. 面试题
+   - Kafka的用途有哪些？使用场景如何？
+   - Kafka中的ISR、AR又代表什么？ISR的伸缩又指什么
+   - Kafka中的HW、LEO、LSO、LW等分别代表什么？
+   - Kafka中是怎么体现消息顺序性的？
+   - Kafka中的分区器、序列化器、拦截器是否了解？它们之间的处理顺序是什么？
+   - Kafka生产者客户端的整体结构是什么样子的？
+   - Kafka生产者客户端中使用了几个线程来处理？分别是什么？
+   - Kafka的旧版Scala的消费者客户端的设计有什么缺陷？
+   - “消费组中的消费者个数如果超过topic的分区，那么就会有消费者消费不到数据”这句话是否正确？如果不正确，那么有没有什么hack的手段？
+   - 消费者提交消费位移时提交的是当前消费到的最新消息的offset还是offset+1?
+   - 有哪些情形会造成重复消费？
+   - 那些情景下会造成消息漏消费？
+   - KafkaConsumer是非线程安全的，那么怎么样实现多线程消费？
+   - 简述消费者与消费组之间的关系
+   - 当你使用kafka-topics.sh创建（删除）了一个topic之后，Kafka背后会执行什么逻辑？
+   - topic的分区数可不可以增加？如果可以怎么增加？如果不可以，那又是为什么？
+   - topic的分区数可不可以减少？如果可以怎么减少？如果不可以，那又是为什么？
+   - 创建topic时如何选择合适的分区数？
+   - Kafka目前有那些内部topic，它们都有什么特征？各自的作用又是什么？
+   - 优先副本是什么？它有什么特殊的作用？
+   - Kafka有哪几处地方有分区分配的概念？简述大致的过程及原理
+   - 简述Kafka的日志目录结构
+   - Kafka中有那些索引文件？
+   - 如果我指定了一个offset，Kafka怎么查找到对应的消息？
+   - 如果我指定了一个timestamp，Kafka怎么查找到对应的消息？
+   - 聊一聊你对Kafka的Log Retention的理解
+   - 聊一聊你对Kafka的Log Compaction的理解
+   - 聊一聊你对Kafka底层存储的理解（页缓存、内核层、块层、设备层）
+   - 聊一聊Kafka的延时操作的原理
+   - 聊一聊Kafka控制器的作用
+   - 消费再均衡的原理是什么？（提示：消费者协调器和消费组协调器）
+   - Kafka中的幂等是怎么实现的
+   - Kafka中的事务是怎么实现的（这题我去面试6加被问4次，照着答案念也要念十几分钟，面试官简直凑不要脸。实在记不住的话...只要简历上不写精通Kafka一般不会问到，我简历上写的是“熟悉Kafka，了解RabbitMQ....”）
+   - Kafka中有那些地方需要选举？这些地方的选举策略又有哪些？
+   - 失效副本是指什么？有那些应对措施？
+   - 多副本下，各个副本中的HW和LEO的演变过程
+   - 为什么Kafka不支持读写分离？
+   - Kafka在可靠性方面做了哪些改进？（HW, LeaderEpoch）
+   - Kafka中怎么实现死信队列和重试队列？
+   - Kafka中的延迟队列怎么实现（这题被问的比事务那题还要多！！！听说你会Kafka，那你说说延迟队列怎么实现？）
+   - Kafka中怎么做消息审计？
+   - Kafka中怎么做消息轨迹？
+   - Kafka中有那些配置参数比较有意思？聊一聊你的看法
+   - Kafka中有那些命名比较有意思？聊一聊你的看法
+   - Kafka有哪些指标需要着重关注？
+   - 怎么计算Lag？(注意read_uncommitted和read_committed状态下的不同)
+   - Kafka的那些设计让它有如此高的性能？
+   - Kafka有什么优缺点？
+   - 还用过什么同质类的其它产品，与Kafka相比有什么优缺点？
+   - 为什么选择Kafka?
+   - 在使用Kafka的过程中遇到过什么困难？怎么解决的？
+   - 怎么样才能确保Kafka极大程度上的可靠性？
+   - 聊一聊你对Kafka生态的理解

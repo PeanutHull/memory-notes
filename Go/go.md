@@ -919,6 +919,8 @@
    - 认识：面向分布式服务架构的高可用流量防护组件，以流量为切入点，从限流、流量整形、熔断降级、系统负载保护、热点防护等多个维度来帮助开发者保障微服务的稳定性
      1. 承接ali的双11流量
    - 生态：![avatar](../images/about_sentinel.png)
+1. Loaclcache：bigcache、fastcache、freecache、Caffeine
+   - Caffeine：基础存储没有采用复杂数据结构采用的是ConcurrentHashMap，所有的管理操作异步化、数据驱逐（淘汰）算法采用 W-TinyLFU，以及部分情况 LRF+LFU结合的方式，各种优秀的队列设计，冲突严重hash情况下链表降级采用红黑树来处理 等等优化处理
 ### 运维
 1. 运行
    - 环境变量

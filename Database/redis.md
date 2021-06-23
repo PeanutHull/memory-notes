@@ -157,8 +157,8 @@
         1. `script flush`：移除
 ### 应用
 1. 持久化
-   - 方式分类：二者结合使用
-     1. RDB：通过快照(内存中数据的副本)定时将数据存储在硬盘
+   - 方式分类
+     1. RDB：通过快照(内存中数据的副本)定时将数据存储在硬盘，可以恢复redis的内容
         - 触发条件
           1. 根据规则自动快照：save的配置
           1. 执行save、bgsave：save会阻塞所有客户端请求，避免生产环境使用
@@ -176,6 +176,11 @@
           1. save <seconds> <changes>：n时间内，n次更新操作，就将数据同步到数据文件，可存在多条，或的关系
           1. dir：目录
           1. rdbcompression：是否压缩，关闭节约cpu，但是文件变的巨大
+        - 触发机制
+          1. save会造成redis阻塞的，得等着，因为redis是单线程的，复杂度O(N)
+             - 文件策略：新的替换老的
+          1. bgsave是fork新进程进行，fork过程中会造成阻塞，设计或使用不好同样阻塞很长时间，二者执行内容相同
+          1. 自动：通过多条配置，满足一个就触发
      1. AOF
         - 认识：append only file，更新数据后追加记录命令，搭配AOF降低数据丢失的可能性，默认不开启，和rdb文件位置相同，
           1. redis启动时，相比于rdb，优先使用aof恢复数据，逐个执行aof命令来载入数据，比rdb方式慢
@@ -187,6 +192,11 @@
           1. appendfsync：记录方式，no等待系统将数据同步到磁盘(快)，always更新后将数据写到磁盘(慢，安全)，everysec每秒一次(折衷)
           1. auto-aof-rewrite-percentage：aof重写触发机制，当前aof大小超过上一次重写时大小的百分比时，进行重写
           1. auto-aof-rewrite-min-size：aof重写的最小文件大小
+   - 比较：![avatar](../images/save_vs_bgsave.png)
+     1. rdb是快照，aof是日志
+     1. 二者结合使用
+   - 日志
+     1. 有log文件和rdb文件，rdb是自己的协议不能直接cat查看，日志可以
    - 备份恢复
      1. 备份：save/bgsave
      1. 恢复：将dump.rdb文件放到redis目录并启动即可

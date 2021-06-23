@@ -8,7 +8,9 @@
    - 削峰
 1. 问题
    - 高可用：确保消息的可靠传递，数据不丢失、不重复
-1. Kafka Vs Rabbitmq：![avatar](../images/kafkaVsRabbitmq.png)
+   - 消费速度一直比生产速度慢，时间长了，整个系统就会出现问题，要么，消息队列的存储被填满无法提供服务，要么消息丢失，这对于整个系统来说都是严重故障
+   - 消息可靠性投递
+   - 消息幂等性
 1. AMQP
    - 认识：Advanced Message Queue 高级消息队列协议，是应用层的面向消息的中间件设计和开放标准，基于此协议客户端和消息中间件传递消息，不受产品/语言限制。模型架构和rabbitMQ一样
      1. 用exchange做路由转发到队列，不需要关心具体哪些队列，这是特点
@@ -20,6 +22,62 @@
         - routing key：一个路由规则，用来确定如何路由一个特定消息
      1. message queue：队列，保存消息
      1. message：由properties和body组成，如消息优先级、延迟等
+1. 队列特性
+   - 强一致顺序
+   - 事务/可靠性投递
+   - 优先级
+   - 过期
+   - 延时
+     1. rabbit：队列TTL + 死信队列
+   - 持久化/消息回溯
+   - 死信/消息补偿
+     1. RabbitMQ支持死信，Kafka不支持。
+1. Kafka Vs Rabbitmq
+   - 图：![avatar](../images/kafkaVsRabbitmq.png)
+   - 特性对比：![avatar](../images/queue_characterk_vs_r.png)
+   - RabbitMQ的优势在于灵活的路由和丰富的特性，使用队列的机制，可以让编码迭代很舒服。Kafka的优势在于重复消费和流（这对流式计算很重要），以及它的性能
+   - kafka的优势
+     1. Kafka的吞吐量比RabbitMQ高出至少一个数量级，消息体为1KB的情况下，RabbitMQ单Queue性能在55000msg/s - 60000msg/s之间，Kafka的性能在240000records/sec ～ 250000records/sec之间，kafka集群性能比rabbit高
+     1. 高负载的情况下，Kafka比RabbitMQ更稳定，占用的机器资源更少，且不会有类似于RabbitMQ的流控限制、高CPU和内存占用等情况发生
+     1. Kafka消息存储在磁盘上，比RabbitMQ能存储的消息更多，而RabbitMQ需要借助Lazy Queue使用磁盘
+     1. 天然的广播消费与重复消费，RabbitMQ在消费者ack之后便会删除服务端消息，无法进行重复消费，除非有多份完整消息，占用多份存储
+     1. Kafka比RabbitMQ有更好的顺序性支持
+   - kafka的劣势
+     1. Kafka官方支持Java客户端，PHP、Go等语言是第三方开发，而RabbitMQ为AMQP的实现，本身对多语言支持稍好
+     1. Kafka消费模式为pull，RabbitMQ通常为push。所以Kafka消费进度由客户端控制，RabbitMQ由服务端控制，从而导致Kafka消费者在提交offset方面较为复杂，RabbitMQ只需要ack就好
+     1. Kafka在优先级队列、延时队列等方面支持不如RabbitMQ好
+### 最佳实践
+1. 幂等性保障
+   - 用于消费端
+     1. 唯一id + 指纹码
+     1. redis原子性实现
+1. 消息强顺序性：拆分多个queue，每个queue一个消费者
+   - kafka不适用，本身是高吞吐处理系统，不能这么做
+1. 消息传递保障
+   - 认识：依赖producer和consumer共同实现
+     1. 一般用最少一次，如果需要可重入的话，往往是业务自己实现
+   - 层级
+     1. 最少一次：不会丢失，可能重复
+     1. 最多一次：可能丢失，不会重复
+     1. 正好一次
+   - 分类
+     1. kafka
+        - 最少一次
+          1. 生产者：消息是否成功写入不确定，重做写入重复消息
+          1. 消费者：业务处理成功后commit offset，更新offset失败，会重复消费
+        - 最多一次
+          1. 生产者生产消息异常，不管
+          1. 消费者：先commit offset，最后进行业务处理
+        - 正好一次
+          1. 下游系统保证幂等性
+             - 把commit offset和业务处理绑定成一个事务
+             - 唯一id识别
+          1. 多个topic下，把commit offset和输出到其他的topic绑定成一个事务
+   - rabbitMQ支持最多一次和最少一次，因为消息确认环节可能中断导致误解
+     1. 最少一次需要做到的，最多一次就随便发，随便接收了
+        - 要有发送方确认
+        - 交换器、队列、消息要持久化、备份
+        - 消费者设置手动确认
 ### RocketMQ
 1. 认识：阿里kafka基础上开源
    - 高性能、高可用
@@ -40,6 +98,7 @@
    - 流数据处理：如日志流数据，支持log4j、logback等日志异步appender，其他非交易数据处理需求，也可采用异步发送+batch模式提高数据传输效率
    - Consumer支持Java,C++,Go
    - 企业服务总线
+   - 分布式事务方式是增加了事务反查的机制来解决事务消息提交失败的问题，需要业务提供反查接口
 1. 组成：
    - NameServer：注册中心，各节点互相独立，彼此没有通信关系
    - broker集群：支持主从模式，有同步双写、异步复制两种模式

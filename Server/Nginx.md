@@ -417,13 +417,21 @@
    - 太大：php-fpm处理不过来，nginx等待超时断开连接，报504 gateway timeout，同时php-fpm处理完准备write数据给nginx时发现TCP连接断开报Broken pipe
    - 太小：进不了php-fpm的accept queue，报502 Bad Gateway
 1. 优化：修改配置项目
-   - worker_processes 8;                                    # 进程数
+   - worker_processes auto;                                 # 进程数
    - worker_cpu_affinity 1000 0100 0010 0001;               # 每个进程分配cpu，这是4核
    - worker_connections 65535;                              # 连接数=进程数*单个进程连接数
    - worker_rlimit_nofile 65535;                            # 打开的最多文件描述符
+   - worker_priority -20;                                   # 数字越小，cpu优先级越高，默认120，-20就是100
    - use epoll;                                             # 不同系统不同模型
    - keepalive_timeout 60;
    - gzip on;
+   - listen 80 deferred;                                    # 延迟处理新连接，deferred是发送数据过来才激活nginx，建立连接不激活
+1. nginx绑定cpu为了尽可能复用cpu缓冲
+1. 为了性能不会混部运行其他耗性能的程序
+1. 原则
+   - cpu
+     1. 尽可能占用全部cpu
+     1. 尽可能占用更大的cpu时间片、减少进程间切换
 ### 运维
 1. 安装
    - linux
@@ -573,11 +581,23 @@
         - ngx_devel_kit、ua-nginx-module
         - 重新编译nginx
      1. 步骤：https://www.imooc.com/article/19597
+1. nginx + keepalived
+   - nginx_health.sh
+    ```shell
+    #!/bin/bash
+    #
+
+    ps -ef | grep nginx | grep -v grep &> /dev/null
+    if [ $? -ne 0 ];then
+        killall keepalived
+    if
+    ```
 1. OpenResty：ngx_openresty，基于nginx与lua的高性能web平台，用于方便地搭建处理高并发、扩展性的服务和动态网关
    - 可以使用lua脚本语言调动nginx的各种c、lua模块，让web服务直接跑在nginx内部
    - 针对域名、目录结构做分流、转发的策略，既能做负载又能做反向代理
    - 具有Lua协程 + Nginx 事件驱动的事件循环回调机制，即Cosoket，对远程后端如MySQL、Memcached、Redis等都可实现同步写代码的方式实现非阻塞I/O
    - 依托于LuaJit，即时编译器会将频繁执行的代码编译成机器码缓存起来，当下次调用时将直接执行机器码，相比原生逐条执行虚拟机指令效率更高，而对于那些只执行一次的代码仍然可以逐条执行
+1. kong
 1. wiki
    - C10K：OpenResty、JavaNetty、Golang、NodeJS 
    - 调整文件打开数、设置 TCP Buckets、设置 TIME_WAIT等
@@ -601,7 +621,6 @@
         - log_by_lua阶段：负责日志落盘等业务
      1. 分流器业务：NodeJS上报cpu、内存使用情况；Lua脚本调用RedisCluster获取时间窗口内NodeJS集群使用情况，计算出负载较高的，进行熔断、降级、限流等处理；将监控数据同步InfluxDB，进行时序监测
      1. 小型web防火墙：使用第三方开源 lua_resty_waf 类库实现，支持 IP 白名单和黑名单、URL 白名单、UA 过滤、CC 攻击防护功能。在此基础上增加WAF对InfluxDB 的支持，进行时序监控和服务预警
-1. kong
 ### 实际应用
 1. 代理线上配置
     ```lua
@@ -770,3 +789,12 @@
      1. 支持基于端口的监控、故障切换
      1. 支持停机模式、支持监控界面、监控api输出
      1. 支持虚拟主机
+   - 配置
+    ```conf
+    listen rabbitmq_cluster
+    bind 0.0.0.0:5672
+    mode tcp                                                            # tcp模式
+    balance roundrobin                                                  # 简单轮询
+    server xxx1 x.x.x.x:5672 check inter 5000 rise 2 fall 3             # 主节点，每5秒健康检查，2次成功服务可用，3次失败服务不可用
+    server xxx2 x.x.x.x:5672 backup check inter 5000 rise 2 fall 3      # 备用节点
+    ```
