@@ -566,6 +566,10 @@
      1. k8s物理机：app.xesv5.com/k8s-core.grafana/d/fa49a4706d07a042595b664c87fb33ea/nodes?orgId=1
    - fengniao.xesv5.com/admin/#/loadshow
 1. 耗时分析
+   - 专线质量
+     1. 延时 <=2ms，1.5ms，2.5ms
+     1. 丢包：<=0.03%
+     1. 带宽：10G x 4，多线路冗余自愈
    - 网校网关：一半多在1ms及以下，2ms、3ms依次减少，三者占99%
    - 容器网关：1ms以下
    - pdo连接数据库：1.5ms

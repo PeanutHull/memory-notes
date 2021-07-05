@@ -31,13 +31,19 @@
      1. 单partition只能由组中某个消费者消费，否则kafka需要加锁，会影响性能，就这样规定了
      1. 单个消费者可以消费多个partition
      1. 最佳实践：消费者数量和partation相等，多了没活干歇着浪费，少了性能不行
-   - 规则：控制读写等权限
+   - 组成
+     1. 规则：控制读写等权限
+     1. partition ownership：消费者拥有哪个分区的所有权
    - 手动控制offset位置
      1. 应用场景
         - 指定开始位置
         - 消费失败，需要重复消费
    - consume限流，怕把consume流量高打死，用令牌桶方式
-   - reblance，加入，崩溃，离组，提交位移的操作，类似乐观锁还有什么java的解决方案
+   - consumer reblance：消费者再均衡，消费者加入/崩溃/离组/提交位移发生的操作，类似乐观锁还有什么java的解决方案
+   分区的所有权由一个消费者转移到另一个消费者
+     1. 带来了消费者的高可用性和可伸缩性
+     1. 期间消费者无法读取消息，造成群组一小段时间的不可用。另外分区重新分配给消费者时，消费者当前读取状态会丢失，可能需要刷新缓存。
+
    - 形式
      1. 多个consumer：![avatar](../images/mult_consumer_one_handle.png)
         - consume数量和partation数量相同，性能最好，否则存在分配的开销
@@ -79,40 +85,52 @@
    - connector
 ### 构成
 1. broker
-   - 认识：节点，kafka集群的服务器节点
+   - 认识：节点，一台机器，kafka集群的服务器节点
      1. partition会平均分布在节点中
      1. replicaManager：管理当前Broker所有分区和副本
+1. cluster
+   - 认识：集群，很多台机器组成
+   - 组成
+     1. controller：执行者，从集群活跃broker中选举出充当控制器的角色，负责partition在broker的分配、leader的选举、broker监控
 1. topic
    - 认识：主题，逻辑概念，用于存储、区分消息，在broker上存储
      1. 紧凑的二进制字节数组，避免了java繁重的堆上内存分配
+   - serializer：序列化器，对象、字节相互转换的编解码器
 1. partition
    - 认识：分区，有序的数据存储基本单元，一个topic分为n个有序号的partition
      1. 只支持顺序读写，只能在partition尾部追加消息，总是写最新的segment，每个消息有一个位移
      1. 单partition消息保证有序，全局不保证
         - 要保证消息顺序partition可以设为1，一个partation只能有一个consume，性能太低，不如天生有序的rabbiemq呢
         - 可以使用key + offset做到业务有序，一个key确定同一类型，offset作为顺序的判断，如先存了es，时序数据库中，攒够了一起处理
-     1. 用于负载均衡，根据实际需要设置数量，实现性能最大化
+     1. 是分布式的，保证伸缩性，用于负载均衡，根据实际需要设置数量，实现性能最大化
    - 分配
      1. 将所有Broker（假设共n个Broker）和待分配的Partition排序
      1. 将第i个Partition分配到第（i mod n）个Broker上 （这个就是leader）
      1. 将第i个Partition的第j个Replica分配到第（(i + j) mode n）个Broker上
+   - partition reassign：分区重分配，发生在分区数变化，或分区更改到其他broker
+   - 组成
+     1. offset：偏移量，递增的整数值。既可表示消息存在的位置，也能表示消费者消费到的位置
 1. replica
-   - 认识：副本，partation复制多份，用于防止数据丢失
-     1. 一个分区可以多个副本
+   - 认识：副本，分区的复制，用于防止数据丢失
+     1. 一个分区可以多个副本，每个都可能成为leader
      1. 主失效立即再选举，从挂掉/卡住/同步太慢会被删除再创建一个
      1. kafaka保证同一个分区的多个副本不会在一个节点上
    - 组成
-    1. leader：用于处理消息的接口、消费等需求
-        - produce和consume都去leader存取数据
-        - 同一个Topic的partation只能有一个leader，可以有多个flower
+    1. leader：首领副本，同一个Topic只有一个
+        - 接受生产消费请求
+        - 明确同步的follower
+    1. prefer leader：首选首领，即希望成为leader的分区。如果设置自动leader平衡，那么首选首领不是当前首领时会自动触发选举
     1. follower：主要用于备份消息
-        - 可以单独指定partation的副本数量
+        - 从leader复制数据，可以有多个
    - ISR
-     1. 认识：in-sync replica，和主保持同步的副本集合，集合里的才能选为主
-        - 集合中所有副本都收到消息才会置为已提交。当副本滞后一定程度时才踢出ISR，追上再加回，自动的
+     1. 认识：in-sync replica，同步的副本，集合里的才能选为主
+        - leader检测follower的偏移量，滞后一定程度时踢出ISR，追上再加回，自动的
+        - 集合中所有副本都收到消息才会置为已提交
         - kafka的信息交付承诺：在ISR存活的条件下已提交信息不会丢失
 1. message
      1. key：消息键，决定哪个partition
+     1. batch：分批发送
+     1. schema：消息编码方式
    - 属性
      1. 消费超时时间
      1. 最大重试次数：业务方消费消息的时间超过"消费超时时间"时，消息会判断消费失败，重新投递给业务方的最大重试次数
@@ -226,7 +244,7 @@
    - 认识：部署节点
         - 对消息集群内平衡，就是不会将一个Topic的多个partation，也不会将一个partation的多个副本放在一个broker上，自己有协调机制
         - 访问任意一个broker都可以完成请求，因为有数据同步机制
-   - controller：执行者，负责partition的分配、leader的选举
+   - controller
         - 在zk的/brokers/ids节点上注册watch
 1. partition
    - 读写
@@ -259,8 +277,9 @@
      1. 判定标准：心跳未保持、消息落后leader太多
      1. 动作：移除
    - leader选举
-     1. 没有采用多数投票来选举
-     1. 在ISR中选择速度比较快的作为leader，谁先接收到算谁
+     1. 没有采用多数投票来选举，首先通过抢注zookeeper的/controller+epoch机制竞争leader
+     1. 当controller发现有broker离开集群，在ISR中选择速度比较快的作为leader，谁先接收到算谁
+     1. 随后新leader开始接受生产消费请求，follower从leader复制数据
    - leader容灾
      1. broker宕机后，controller从zk的/brokers/topics/[topic]/partitions/[partition]/state中，读取ISR（in-sync replica已同步的副本）列表，选一个出来做leader
 1. 日志

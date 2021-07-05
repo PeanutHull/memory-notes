@@ -325,14 +325,28 @@
 
         print_r($rs);die;
     }
+
+    public function updateAdminLink() {
+
+        $data = [
+            'id'    => ,
+            'unique_user_id'    => 46919,
+            'linked_user_id'    => 65034,
+            'create_time'       => time(),
+        ];
+
+        $rs = Model_Mysql::factory()->addOrUpdate('jy_admins_link', $data);
+
+        print_r($rs);die;
+    }
     ```
    - 修改用户信息
     ```php
     public function updateAdminInfo() {
 
         $data = [
-            'id'    => 21880,
-            'name'  => 'v_yanxipeng',
+            'id'    => ,
+            'user_id'  => '',
         ];
 
         $rs = Model_Mysql::factory()->addOrUpdate('jy_admins', $data);

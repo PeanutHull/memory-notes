@@ -150,7 +150,7 @@
      1. httpdns下的https的curl写法：`curl -v "https://xxx" --resolve xx.xx.com:443:xx.xx.xx.xx`，注意httpdns面对https时需要提供正确的host，否则证书返回的不对
 1. 高可用
    - LVS
-     1. 认识：Linux Virtual Server，基于linux操作系统实现的负载均衡
+     1. 认识：Linux Virtual Server，基于linux操作系统实现的负载均衡器
         - linux 2.6放入了内核
         - 只工作在4层
         - 实践：一般搭配KeepAlived做主备形式的ha，可以不用dns了，避免了dns的耗时和错误问题
