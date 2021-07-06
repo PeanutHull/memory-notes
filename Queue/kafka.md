@@ -9,15 +9,20 @@
    - 流式系统、日志收集
    - 消息系统
    - 用户活动跟踪、运营指标监控，即实时处理
+   - 缺点：严格的顺序机制，不支持标准的消息协议，不支持消息优先级
+   - 适用：大数据日志处理，实时性稍低
 ### 组成
 1. producer
    - 认识
      1. 批量发送，会积攒一批，然后一起发送
+   - 生产请求：produce request
+     1. 先验证是否有权限写入
+     1. 其次看返回值ack=0、1、all，以便消息成功接收
    - 发送方式
-     1. 同步发送
-     1. 异步发送
+     1. 同步发送：等待返回发送后的结果
+     1. 异步发送：不关心是否成功，速度最快
+     1. 异步回调发送：使用回调函数保证消息一定收到
      1. 异步阻塞发送
-     1. 异步回调发送
      1. 自定义分区负载均衡
    - 事务方法：跨多分区的原子性写入
      1. initTransactions
@@ -26,24 +31,41 @@
      1. commitTransaction
      1. abortTransaction
    - 客户端原理：![avatar](../images/kafka_producer_client.png)
+   - thread safe：线程安全，生产者时线程安全，消费者不是线程安全的
 1. consumer group
    - 认识：一组consumer，kafka消费的单位
      1. 单partition只能由组中某个消费者消费，否则kafka需要加锁，会影响性能，就这样规定了
      1. 单个消费者可以消费多个partition
      1. 最佳实践：消费者数量和partation相等，多了没活干歇着浪费，少了性能不行
    - 组成
+     1. group coordinator：群组协调器，也是某个broker，负责接收消费者的心跳，传递由群主发来的分区分配信息到其他消费者，总之就是协调消费者的中间角色
+     1. group manager：群主，消费者要加入群组时，会向群组协调器发送joinGroup请求。第一个加入群组的消费者将成为群主。群主从协调器拿到消费者列表，并为其他消费者分配分区，之后传递给协调器，协调器在发送所有权关系到相应的消费者，所以只有群主知道所有消费者的分区分配信息。再均衡时这个过程会重复发生
+     1. rebalance listener：再均衡监听器，在再均衡发生时，可以让某些消费者失去分区的所有权之前，做一些提交或者清理工作。分别有两个钩子，发生在再均衡之前重分配之后
+   - 概念
      1. 规则：控制读写等权限
      1. partition ownership：消费者拥有哪个分区的所有权
-   - 手动控制offset位置
-     1. 应用场景
-        - 指定开始位置
-        - 消费失败，需要重复消费
-   - consume限流，怕把consume流量高打死，用令牌桶方式
-   - consumer reblance：消费者再均衡，消费者加入/崩溃/离组/提交位移发生的操作，类似乐观锁还有什么java的解决方案
-   分区的所有权由一个消费者转移到另一个消费者
-     1. 带来了消费者的高可用性和可伸缩性
-     1. 期间消费者无法读取消息，造成群组一小段时间的不可用。另外分区重新分配给消费者时，消费者当前读取状态会丢失，可能需要刷新缓存。
-
+     1. consumer heartbeat：消费者心跳，用于维持与群组的关系和分区的所有权。心跳也是在poll或者commit offset时发送的
+        - 消费者异常时，群组协调器会等待几秒确认他死亡才触发再均衡，所以正常情况下消费者在主动离开时会告诉协调器，协调器立即触发再均衡，减少停顿，非正常离开可能会导致整个群组在一段时间内无法读取消息
+     1. consumer reblance：消费者再均衡，组内发生分区所有权转移
+        - 认识
+          1. 带来了消费者的高可用性和可伸缩性
+          1. 期间消费者无法读取消息，造成群组一小段时间的不可用。另外分区重新分配给消费者时，消费者当前读取状态会丢失，可能需要刷新缓存
+          1. 只会在poll操作中发生
+        - 发生条件
+          1. 消费者加入/崩溃/离组/提交位移
+          1. topic数变化
+          1. partition数变化
+     1. lag：消费者延迟，消费者位置与最新的offset之间的距离
+   - 功能
+     1. consume request：消费请求，broker会缓冲一些消息，直到达到数量或时间，再返回给消费者。以此提高性能
+     1. poll：消费者请求数据的行为。但不只是请求数据，例如心跳的发送，再均衡也是在poll中进行的。所以要确保在poll中任何处理工作尽快完成
+     1. commit：更新分区的当前位置，即手动控制offset位置，可提交偏移量到内部主题_consumeroffset
+        - auto commit：每过一定周期自动提交poll下来的最大偏移量
+        - 应用场景
+          1. 指定开始位置
+          1. 消费失败，需要重复消费
+     1. consume限流，怕把consume流量高打死，用令牌桶方式
+     1. 消息投递语义：明确一次的语义需要使用kafka事务，让消费者的offset存储和消费者的输出存储之间实现一个两段式的提交
    - 形式
      1. 多个consumer：![avatar](../images/mult_consumer_one_handle.png)
         - consume数量和partation数量相同，性能最好，否则存在分配的开销
@@ -84,10 +106,13 @@
    - stream processor：高效将输入流转换到输出流
    - connector
 ### 构成
+1. client
+   - metadata request：元数据请求，客户端向任意broker发请求topic的分区、分区副本，leader位置。帮助客户端直接发送请求到leader。客户端会缓存信息，并定时刷新
 1. broker
    - 认识：节点，一台机器，kafka集群的服务器节点
      1. partition会平均分布在节点中
      1. replicaManager：管理当前Broker所有分区和副本
+   - temporary node：临时节点，其他broker订阅zk的临时节点从而知道有broker宕机
 1. cluster
    - 认识：集群，很多台机器组成
    - 组成
@@ -127,6 +152,8 @@
         - leader检测follower的偏移量，滞后一定程度时踢出ISR，追上再加回，自动的
         - 集合中所有副本都收到消息才会置为已提交
         - kafka的信息交付承诺：在ISR存活的条件下已提交信息不会丢失
+     1. 配置
+        - min insync replicas：最少同步副本
 1. message
      1. key：消息键，决定哪个partition
      1. batch：分批发送
@@ -191,7 +218,7 @@
           1. 任意级别延时队列实现
              - 基于指定级别延时队列来实现任意级别延时队列
              - 投递到一个指定级别的topic中,如果在这个级别的消息过期后,我们再将它投递到下一个级别的topic中，余数原理
-   - 多数据中心数据同步：Kafka官方同步工具MirrorMaker2，使用Kafka Connect的方式进行部署
+   - 多数据中心数据同步：MirrorMaker是Kafka官方提供的用来做跨机房同步的组件，使用Kafka Connect的方式进行部署，现在还有2.0版本
      1. 可实现主主、主备
         - 主备：数据同步到备，必要时（如failover）启动，使用历史数据进行恢复
         - 主主：数据同步到其他数据中心，被其他数据中心的消费者消费。同步后的Topic带有机房标识的前缀，应该有明确的需要同步的topic列表便于控制，而不是全部
@@ -253,6 +280,7 @@
         - 每个segment的消息数量不一定相等(消息大小不同)
      1. 写
         - partition将消息串行追加到最后一个segment上，segment达到阈值就滚动到新segment
+          1. active segment：活跃片段，当前正在写入的片段，活动片段不会被删除
         - segment一定阈值后flush到磁盘上
      1. 读：一级级的检索快速找到消息内容，顺序读取磁盘可以有很高的性能
         - 用offset通过active segment list文件：找出具体的哪个segment
@@ -277,9 +305,11 @@
      1. 判定标准：心跳未保持、消息落后leader太多
      1. 动作：移除
    - leader选举
-     1. 没有采用多数投票来选举，首先通过抢注zookeeper的/controller+epoch机制竞争leader
-     1. 当controller发现有broker离开集群，在ISR中选择速度比较快的作为leader，谁先接收到算谁
-     1. 随后新leader开始接受生产消费请求，follower从leader复制数据
+     1. unclean leader election：不完全首领选举，允许不同步的副本成为首领，提高可用性，增加丢消息的风险
+     1. 过程
+        - 没有采用多数投票来选举，首先通过抢注zookeeper的/controller+epoch机制竞争leader
+        - 当controller发现有broker离开集群，在ISR中选择速度比较快的作为leader，谁先接收到算谁
+        - 随后新leader开始接受生产消费请求，follower从leader复制数据
    - leader容灾
      1. broker宕机后，controller从zk的/brokers/topics/[topic]/partitions/[partition]/state中，读取ISR（in-sync replica已同步的副本）列表，选一个出来做leader
 1. 日志
@@ -328,20 +358,21 @@
    - 顺序读写、快速检索
    - partition机制
    - 批量发送接收、数据压缩机制
-   - 持久性
+   - 可伸缩的消息持久化
    - 高效率
    - 消息传递保障
    - 副本集
    - leader选举
    - 日志压缩
-   - 写入：不支持参与物理io操作，采用追加写入页缓存的方式，不能修改已写入的，磁盘顺序访问型，吞吐量高，写操作性能强
-   - 消费：sendfile零拷贝和大量使用页缓存(在内存中)，一个io处理不需上下文切换(内核和用户态之间)，利用直接存储器访问技术(DMA 内核缓冲区之间)
-     1. 良好调优的kafaka有负载磁盘io也很少，因为直接命中缓存
-     1. 之前是磁盘io ———— 内核页缓冲区  ———— 用户缓冲区 ———— 内核socket缓冲区 ———— 网卡缓冲区，现在直接从磁盘io到网络io，用文件描述符控制就行，是用户空间零拷贝
-        - 4步变2步，不仅节省了大量文件拷贝，而且节省用户上下文切换
+   - 存储：采用页缓存 + 异步io + 追加写入的方式。页缓存使用内存，磁盘顺序访问，实现吞吐量高，写操作性能强
+   - 读取：消费过程零拷贝 + 线性操作 + 批量操作。将突发消息转化为线性写入，用少量的延迟换取更好的吞吐
+     1. 避免了过高的byte copying和过多的small I/O，良好调优的磁盘io负载很少，因为直接命中缓存
      1. 使用基础
         - java nio channel.transforTo
-        - linux sendfile系统调用
+        - linux sendfile系统调用：io不需上下文切换(内核和用户态之间)，利用直接存储器访问技术(DMA 内核缓冲区之间)
+          1. 之前是磁盘io ——— 内核页缓冲区  ——— 用户缓冲区 ——— 内核socket缓冲区 ——— 网卡缓冲区
+          1. 现在直接从磁盘io到网络io，用文件描述符控制就行，是用户空间零拷贝
+          1. 4步变2步，不仅节省了大量文件拷贝，而且节省用户上下文切换
    - 故障转移：基于zk的会话注册机制
    - 伸缩性：基于zk保存服务器状态和消费者信息
 ### 运维
@@ -350,7 +381,8 @@
    - 安装java，启动zk
    - `kafka-server-start.sh config/server.properties`
 1. 命令行使用
-   - 创建topic：`kakfa-topics.sh --create --zookeeper localhost:2181 --topic xx --partition 1 --replication-factor 1`，一个分区一个副本
+   - 创建topic：`kakfa-topics.sh --create --zookeeper localhost:2181 --topic xx --partition 1 --replication-factor 1`
+     1. replication factor：复制系数，一个分区的副本数量
    - 查看topic：`kakfa-topics.sh --describe --zookeeper localhost:2181 --topic xx`
    - 发送消息：`kafka-console-producer.sh --broker-list localhost:9092 --topic xx`：不间断，回车发送
    - 消费消息：`kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic xx --form-beginning`
@@ -363,7 +395,9 @@
         - 清理策略
           1. 方式
              - compact：压实
+               1. 当键不为null时，相同的键只会保留最后的值
              - delete
+               1. 完全删除某个key：设置value=null。kafka会先进行常规清理，该消息作为墓碑消息保留一段时间
              - compact + delete
           1. 单分区数据保留字节数
           1. 单分区数据保留天数
@@ -392,6 +426,11 @@
         - fetch.message.max.bytes：524288000B(500M) 消费者能读取的消息最大值，大于或等于message.max.bytes
      1. jvm
         - 堆内存：kafka-server-start.sh文件的`export KAFKA_HEAP_OPTS="-Xmx6G -Xms6G"`
+   - 消费者：设置不合理会频繁发生rebalance，造成消费不可用
+     1. session.timeout.ms：超时时间
+     1. heartbeat.interval.ms：心跳时间间隔，需要有心跳线程
+     1. max.poll.interval.ms：每次消费的处理时间
+     1. max.poll.records：每次消费的消息数
 1. 监控
    - web管理界面：cmak，即Kafka-Manager
    - 管理工具：kafka-run-class.sh

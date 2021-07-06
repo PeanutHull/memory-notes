@@ -72,6 +72,13 @@
         - ibm主机体系：大型机、小型机
    - Apache IoTDB
      1. 时间序列数据收集、存储与分析一体化的数据管理引擎。体量轻、性能高、易使用的特点，完美对接 Hadoop 与 Spark 生态。适用于工业物联网应用中海量时间序列数据高速写入和复杂分析查询的需求
+### 索引
+1. 数据结构
+   - hash
+   - LSM-Tree：LevelDB/RocksDB、MongoDB WiredTiger、HBase、Cassandra
+     1. 快速高效率的写入，配合压缩算法
+   - B+-Tree：MySQL InnoDB、Oracle、SQLite、SoltDB、各类磁盘文件系统
+     1. 范围查找等，读写能力比较平衡
 ### 事务
 1. 事务
    - 认识：保证一致性
