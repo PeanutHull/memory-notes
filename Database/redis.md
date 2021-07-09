@@ -5,6 +5,14 @@
    - 所有操作都是原子的、事务、Lua脚本
    - 数据持久化、LRU收回
    - 主从同步、Sentinel提供高可用，Cluster提供自动分区
+1. 数据类型的适用场景
+   - string：可持久化的缓存，如session_id为key的session，二进制安全，图片、文件什么的，原子计数器做粉丝数、关注数、ip封锁次数啥的
+   - hash：存对象数据，如用户基本信息，直接更新即可
+   - list：消息排行，消息队列，日志收集器，配合发布订阅
+     1. 队列的安全性：单个队列一旦pop出去客户端崩溃，消息丢失，利用rpoplpush弄个备份队列，数据丢了再去备份队列取一下
+   - set：做不重复的集合，存不重复用户名啦、每日投票一次啦
+   - zset：有序的不重复集合，如热门内容的排序，只需修改score，排行榜
+### 组成
 1. key
    - 库
      1. select index：切换库，更像命名空间，隔离key名冲突。索引号只能是数字不能自定义，可设置数量，开始和默认是0
@@ -158,7 +166,7 @@
 ### 应用
 1. 持久化
    - 方式分类
-     1. RDB：通过快照(内存中数据的副本)定时将数据存储在硬盘，可以恢复redis的内容
+     1. RDB：redis database，通过快照内存中数据定时将数据存储在硬盘，可以恢复redis的内容
         - 触发条件
           1. 根据规则自动快照：save的配置
           1. 执行save、bgsave：save会阻塞所有客户端请求，避免生产环境使用
@@ -200,6 +208,162 @@
    - 备份恢复
      1. 备份：save/bgsave
      1. 恢复：将dump.rdb文件放到redis目录并启动即可
+1. 扩容：横向扩容、纵向扩容
+1. 守护进程
+   - daemonize no：yes
+1. 分区
+   - 认识：分割数据到多个Redis实例。提高容量，扩展计算能力和带宽
+     1. 不支持多个key同时操作，事务中也不行
+     1. 多实体数据库维护复杂，容量调整复杂，用presharding解决
+   - 类型
+     1. 范围：不同范围放到不同实例中，需要维护范围表
+     1. hash：使用crc32将key转为数字，然后取模(模为实例数量)确定实例
+   - 自动分区：cluster
+### 运维
+1. 命令
+   - 服务器
+     1. info：服务器信息
+     1. client list：客户端列表
+     1. ping：查看是否运行
+     1. monitor：实时打印接收到的命令，调试用
+     1. debug segfault：让redis崩溃
+     1. 配置
+        - 密码
+          1. `config get requirepass`：查看
+          1. `config set requirepass xxx/''`：设置/取消
+   - 数据
+     1. save/bgsave/lastsave：默认生成dump.rdb文件，查看最后一次保存确认是否后台保存成功
+     1. flushdb/flushall：删除当前/所有数据库的所有key
+   - 其他
+     1. slowlog subcommand：管理慢日志
+     1. sync：用于复制功能的内部
+     1. `src/redis-cli -h host -p port -a password`：客户端发起连接
+   - 配置
+     1. 操作：`config get/set/rewrite */configName configValue`
+     1. 分类
+        - 基础
+          1. port/bind/timeout(无操作连接超时时间，为0不断)
+          1. maxclients：最大连接数
+          1. databases：数量
+          1. maxmemory：最大占用内存，单位字节
+          1. maxmemory-policy：超最大内存后策略
+             - volatile-lru、allkeys-lru：根据lru算法(Least Recently Used)，删除过期/一个键。并不准确，随机取n(maxmemory-samples)个找最久未被使用
+             - volatile-random、allkeys-random：随机删除过期/一个键
+             - volatile-ttl：删除过期时间最近的一个键
+             - noeviction：不删除，只报错
+          1. maxmemory-samples
+          1. include：子配置文件地址
+          1. requirepass：设置密码，`auth` 检验密码是否正确
+        - 日志
+          1. loglevel：debug/verbose/notice/warning
+          1. logfile：文件地址，守护进程方式运行时日志发送给/dev/null
+        - 内存
+          1. vm-enabled：是否启用虚拟内存机制
+          1. vm-swap-file：虚拟内存文件路径，多Redis实例不可共享
+          1. vm-max-memory 0/vm-page-size 32/vm-pages 134217728/vm-max-threads 4
+1. 性能测试
+   - redis-benchmark [option] [option value]
+     1. -h/-p：地址端口
+     1. -s：指定socket
+     1. -c：并发连接数
+     1. -n：请求数
+     1. -d：字节形式指定set/get大小
+     1. -k：1=keep alive 0=reconnect
+1. 服务治理：连接数过多、慢查询、短连接、长连接
+1. 主库重启 checklist 
+   - 世纪互联主从库节点 zabbix 关闭报警
+   - 世纪互联主从库节点 注释脉搏脚本
+   - 切换Master到从库，修改参数并重启
+    ```
+    redis-cli -h 10.20.52.245 -p 8379 sentinel failover jy-courseware-redis
+    redis-cli -h 10.20.52.245 -p 9379 sentinel failover jy-tnt-redis
+
+    vim /boot/grub/grub.conf
+    isolcpus=10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29 
+    for i in {1..9}; do /etc/init.d/${i}379redis stop; done 
+    init 6
+    ```
+   - 重启完成后sysbench验证,重启redis服务
+    ```
+    /bin/rm -rf /root/scripts/sysbench.sh
+    cd /root/scripts && wget -N --http-user=XueRs --http-passwd=xxx http://soft.xesv5.com:88/dell/sysbench.sh
+    ./sysbench.sh  --test=cpu --num-threads=${v_cpu_num} --max-requests=600000 run
+    for i in {1..9}; do /etc/init.d/${i}379redis start;sleep 60; done 
+    for i in {1..9};do sed -i '/slaveof/d' /data/${i}379redis/etc/redis.conf;done
+    for i in {1..9};do cat /data/${i}379redis/etc/redis.conf |grep slaveof;done
+    ```
+   - 同步完成后，切回原主
+    ```
+    redis-cli -h 10.20.52.245 -p 8379 sentinel failover jy-courseware-redis
+    redis-cli -h 10.20.52.245 -p 9379 sentinel failover jy-tnt-redis
+    ```
+   - 开启zabbix报警和脉搏，sentinel reset 
+   - yf的同步节点挂到sjhl从库
+    ```
+    /etc/init.d/irqbalance restart
+    chkconfig irqbalance on
+    ```
+### 最佳实践
+1. 使用规范
+   - key名设计
+     1. 【建议】：可读性和管理性
+以业务名为前缀，以一定规则分割，比如业务名:表名:id
+     1. 【建议】: 简洁性
+保证语义的前提下，控制key的长度，当key较长时，内存占用也不容易忽视
+     1. 【建议】：redis单实例内存控制在 10G以内，内存越大，触发持久化的操作阻塞主线程的时间越长
+   - value设计
+     1. 【强制】：禁止在redis中存储图片
+     1. 【强制】：禁止在集合结构中只存不清，对于集合结构中数据增加频繁必须要有删除机制
+     1. 【建议】：拒绝bigkey（防止网卡流量，慢查询)： string类型控制在10KB以内，hash、list、set、zset元素个数不要超过5000。
+     1. 【建议】：选择合适的数据类型： 存储数据时选择合适的数据类型，要合理控制key和value的大小和个数以使用更优化的数据结构，如 ziplist
+   - 命令使用
+     1. 【强制】：禁止使用 FLUSHDB FLUSHALL KEYS BGSZVE SAVE BGREWRITEAOF命令
+     1. 【强制】：使用 SCAN 命令时应该批次使用，单次扫描key数量不应超过 2万，间隔0.5s
+     1. 【建议】：使用批量操作以提高效率
+     1. 【建议】：谨慎全量操作 hash set 等集合结构，O(N)命令关注 N 的数量，如 hgetall, lrange, smembers, zrange 等并非不能使用，但是要明确 N 的值, 有遍历的需求可以使用hscan、sscan、zscan代替
+     1. zset服务器消耗最高，要排序还要去重，尽量少用    
+   - 客户端使用
+     1. 【强制】：新上线或者迁移的redis服务强制使用密码，应用层要进行配置
+     1. 【强制】：只允许读取本部门redis， 需要使用其他部门数据则将数据服务化
+     1. 【建议】：应用层自行处理长连接断开问题，db组只负责维护redis服务域名的存活，应用层要考虑dns切換之后原来的连接无法使用的状况
+1. 缓存常见问题
+   - 缓存穿透：缓存和数据库中都没有数据，但是用户一直发起请求
+     1. 加强校验，避免非法请求
+     1. 缓存设置为key-null，过期时间设置短些：30s
+   - 缓存击穿：缓存数据过期，并发查同一条数据
+     1. 热点数据不过期，双写
+     1. 互斥读锁（请求KEY，进程ID，超时），读完后写缓存，其他请求区间随机时间等待，重试
+   - 缓存雪崩：大量数据同时过期
+     1. 热点数据不过期，双写
+     1. 缓存过期时间区间随机
+     1. 如果缓存通过代理访问，调整hash算法，确保热KEY均匀分布在不同分片上
+   - 热KEY：单机被集中大量访问
+     1. 收集数据（代理层，后台，客户端），提前准备预案
+     1. 数据冗余备份，通过随机数将key-value分散到不同分片中
+     1. 二级缓存，缓存到内存中
+   - 大key：拆，导致网卡撑爆、慢查询等
+     1. 加随机数前缀放到不同分片上
+     1. 用hash的hget方法只取精确的
+     1. 分成小key，用mget拿
+1. 性能监控
+   - qps
+   - 客户端数
+   - cpu
+   - 内存
+   - 流量入和出
+1. 缓存治理
+   - 数据库缓存一致性方案
+     1. key过期，mysql更新不更新redis
+        - 开发成本低，管理成本低
+        - 不一致时间很长
+     1. key过期，mysql更新时，更新redis
+        - 延迟更小
+        - 损耗双倍资源
+     1. key过期，消息队列异步更新redis
+     1. key过期，从库订阅binlog来更新redis
+### 架构
+1. 单机
+   - 认识：简单，不需要数据同步，单点故障隐患，性能瓶颈
 1. 主从
    - 认识：利用复制实现数据在不同库的同步，实现读写分离、冗余备份，可继续向下配置孙子辈的从
    - 命令
@@ -277,170 +441,24 @@
      1. `cluster addslots {0...5461}`：分配槽位
      1. `cluster replicate xx`：分配为某节点的从
      1. `redis-cli -c`：连接集群，c是集群模式
-1. 扩容：横向扩容、纵向扩容
-1. 守护进程
-   - daemonize no：yes
-   - pidfile /var/run/redis.pid：pid位置
-1. 分区
-   - 认识：分割数据到多个Redis实例。提高容量，扩展计算能力和带宽
-     1. 不支持多个key同时操作，事务中也不行
-     1. 多实体数据库维护复杂，容量调整复杂，用presharding解决
-   - 类型
-     1. 范围：不同范围放到不同实例中，需要维护范围表
-     1. hash：使用crc32将key转为数字，然后取模(模为实例数量)确定实例
-   - 自动分区：cluster
-1. 数据库缓存一致性方案
-   - key过期，mysql更新不更新redis
-     1. 开发成本低，管理成本低
-     1. 不一致时间很长
-   - key过期，mysql更新时，更新redis
-     1. 延迟更小
-     1. 损耗双倍资源
-   - key过期，消息队列异步更新redis
-   - key过期，从库订阅binlog来更新redis
-### 运维
-1. 命令
-   - 服务器
-     1. info：服务器信息
-     1. client list：客户端列表
-     1. ping：查看是否运行
-     1. monitor：实时打印接收到的命令，调试用
-     1. debug segfault：让redis崩溃
-     1. 配置
-        - 密码
-          1. `config get requirepass`：查看
-          1. `config set requirepass xxx/''`：设置/取消
-   - 数据
-     1. save/bgsave/lastsave：默认生成dump.rdb文件，查看最后一次保存确认是否后台保存成功
-     1. flushdb/flushall：删除当前/所有数据库的所有key
-   - 其他
-     1. slowlog subcommand：管理慢日志
-     1. sync：用于复制功能的内部
-     1. `src/redis-cli -h host -p port -a password`：客户端发起连接
-   - 配置
-     1. 操作：`config get/set/rewrite */configName configValue`
-     1. 分类
-        - 基础
-          1. port/bind/timeout(无操作连接超时时间，为0不断)
-          1. maxclients：最大连接数
-          1. databases：数量
-          1. maxmemory：最大占用内存，单位字节
-          1. maxmemory-policy：超最大内存后策略
-             - volatile-lru、allkeys-lru：根据lru算法(Least Recently Used)，删除过期/一个键。并不准确，随机取n(maxmemory-samples)个找最久未被使用
-             - volatile-random、allkeys-random：随机删除过期/一个键
-             - volatile-ttl：删除过期时间最近的一个键
-             - noeviction：不删除，只报错
-          1. maxmemory-samples
-          1. include：子配置文件地址
-          1. requirepass：设置密码，`auth` 检验密码是否正确
-        - 日志
-          1. loglevel：debug/verbose/notice/warning
-          1. logfile：文件地址，守护进程方式运行时日志发送给/dev/null
-        - 内存
-          1. vm-enabled：是否启用虚拟内存机制
-          1. vm-swap-file：虚拟内存文件路径，多Redis实例不可共享
-          1. vm-max-memory 0/vm-page-size 32/vm-pages 134217728/vm-max-threads 4
-1. 性能监控
-   - qps
-   - 客户端数
-   - cpu
-   - 内存
-   - 流量入和出
-1. 常见问题：连接数过多、慢查询、key或value较大、数据压缩处理、持久化写磁盘、短连接、长连接
-1. 性能测试
-   - redis-benchmark [option] [option value]
-     1. -h/-p：地址端口
-     1. -s：指定socket
-     1. -c：并发连接数
-     1. -n：请求数
-     1. -d：字节形式指定set/get大小
-     1. -k：1=keep alive 0=reconnect
-1. 阿里云架构：百万QPS，最好性能512G内存、最大连载数320000、最大吞吐1536M
-   - 负载均衡
-   - 多个proxy，负责故障转移
-   - 分片服务器，单节点，不需同步数据，不提供数据持久化和备份策略，节点故障会丢失数据。集群版是双节点
-   - 配置服务器，即Configserver，存储集群配置信息及分区策略，采用双副本的高可用架构
-1. 使用
-   - 避免产生hot-key，导致主库节点成为系统的短板
-   - 避免产生big-key，导致网卡撑爆、慢查询等
-   - zset服务器消耗最高，要排序还要去重，尽量少用
-1. 主库重启 checklist 
-   - 世纪互联主从库节点 zabbix 关闭报警
-   - 世纪互联主从库节点 注释脉搏脚本
-   - 切换Master到从库，修改参数并重启
-    ```
-    redis-cli -h 10.20.52.245 -p 8379 sentinel failover jy-courseware-redis
-    redis-cli -h 10.20.52.245 -p 9379 sentinel failover jy-tnt-redis
-
-    vim /boot/grub/grub.conf
-    isolcpus=10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29 
-    for i in {1..9}; do /etc/init.d/${i}379redis stop; done 
-    init 6
-    ```
-   - 重启完成后sysbench验证,重启redis服务
-    ```
-    /bin/rm -rf /root/scripts/sysbench.sh
-    cd /root/scripts && wget -N --http-user=XueRs --http-passwd=xxx http://soft.xesv5.com:88/dell/sysbench.sh
-    ./sysbench.sh  --test=cpu --num-threads=${v_cpu_num} --max-requests=600000 run
-    for i in {1..9}; do /etc/init.d/${i}379redis start;sleep 60; done 
-    for i in {1..9};do sed -i '/slaveof/d' /data/${i}379redis/etc/redis.conf;done
-    for i in {1..9};do cat /data/${i}379redis/etc/redis.conf |grep slaveof;done
-    ```
-   - 同步完成后，切回原主
-    ```
-    redis-cli -h 10.20.52.245 -p 8379 sentinel failover jy-courseware-redis
-    redis-cli -h 10.20.52.245 -p 9379 sentinel failover jy-tnt-redis
-    ```
-   - 开启zabbix报警和脉搏，sentinel reset 
-   - yf的同步节点挂到sjhl从库
-    ```
-    /etc/init.d/irqbalance restart
-    chkconfig irqbalance on
-    ```
-### 使用
-1. 使用规范
-   - key名设计
-     1. 【建议】：可读性和管理性
-以业务名为前缀，以一定规则分割，比如业务名:表名:id
-     1. 【建议】: 简洁性
-保证语义的前提下，控制key的长度，当key较长时，内存占用也不容易忽视
-     1. 【建议】：redis单实例内存控制在 10G以内，内存越大，触发持久化的操作阻塞主线程的时间越长
-   - value设计
-     1. 【强制】：禁止在redis中存储图片
-     1. 【强制】：禁止在集合结构中只存不清，对于集合结构中数据增加频繁必须要有删除机制
-     1. 【建议】：拒绝bigkey（防止网卡流量，慢查询)： string类型控制在10KB以内，hash、list、set、zset元素个数不要超过5000。
-     1. 【建议】：选择合适的数据类型： 存储数据时选择合适的数据类型，要合理控制key和value的大小和个数以使用更优化的数据结构，如 ziplist
-   - 命令使用
-     1. 【强制】：禁止使用 FLUSHDB FLUSHALL KEYS BGSZVE SAVE BGREWRITEAOF命令
-     1. 【强制】：使用 SCAN 命令时应该批次使用，单次扫描key数量不应超过 2万，间隔0.5s
-     1. 【建议】：使用批量操作以提高效率
-     1. 【建议】：谨慎全量操作 hash set 等集合结构，O(N)命令关注 N 的数量，如 hgetall, lrange, smembers, zrange 等并非不能使用，但是要明确 N 的值, 有遍历的需求可以使用hscan、sscan、zscan代替
-   - 客户端使用
-     1. 【强制】：新上线或者迁移的redis服务强制使用密码，应用层要进行配置
-     1. 【强制】：只允许读取本部门redis， 需要使用其他部门数据则将数据服务化
-     1. 【建议】：应用层自行处理长连接断开问题，db组只负责维护redis服务域名的存活，应用层要考虑dns切換之后原来的连接无法使用的状况
-### 架构
-1. 服务部署：![avatar](../images/redis_wx_framework.png)
-1. 缓存治理
-1. 缓存常见问题
-   - 缓存穿透：缓存和数据库中都没有数据，但是用户一直发起请求
-     1. 加强校验，避免非法请求
-     1. 缓存设置为key-null，过期时间设置短些：30s
-   - 缓存击穿：缓存数据过期，并发查同一条数据
-     1. 热点数据不过期，双写
-     1. 互斥读锁（请求KEY，进程ID，超时），读完后写缓存，其他请求区间随机时间等待，重试
-   - 缓存雪崩：大量数据同时过期
-     1. 热点数据不过期，双写
-     1. 缓存过期时间区间随机
-     1. 如果缓存通过代理访问，调整hash算法，确保热KEY均匀分布在不同分片上
-   - 热KEY
-     1. 收集数据（代理层，后台，客户端），提前准备预案
-     1. 数据冗余备份，通过随机数将key-value分散到不同分片中
-     1. 二级缓存，缓存到内存中
-   - 大key：拆
-     1. 加随机数前缀放到不同分片上
-     1. 用hash的hget方法只取精确的
-     1. 分成小key，用mget拿
+1. 网校redis架构
+   - 高可用：confd + etcd + tw + redis一从热备 + sentinel
+     1. tw本身高可用
+        - etcd集群做保活，设置10秒过期，tw每2秒续期，一旦tw发生变化，etcd切换tw，通知confd
+          1. etcd：go编写，支持watch并且主动通知
+        - confd收到etcd的通知后，完成客户端ip配置文件的更新
+     1. 客户端sdk负责负载均衡
+     1. 一从热备：假如从库一直提供服务，从库一旦重连导致从库数据不对
+     1. 哨兵监控：完成主从切换后，通知etcd，然后confd更新客户端ip配置文件
+   - 架构图：![avatar](../images/redis_wx_framework.png)
+   - 扩容：找新机器，用工具同步存量+增量的旧数据，然后挂到tw上
+1. 阿里云指标
+   - 认识：百万QPS，最好性能512G内存、最大连载数320000、最大吞吐1536M
+   - 功能
+     1. 负载均衡
+     1. 多个proxy，负责故障转移
+     1. 分片服务器，单节点，不需同步数据，不提供数据持久化和备份策略，节点故障会丢失数据。集群版是双节点
+     1. 配置服务器，即Configserver，存储集群配置信息及分区策略，采用双副本的高可用架构
 ### 中间件
 1. TwemProxy
    - 认识：twitter开源的redis/memcache的快速、轻量级的单线程代理服务器，可对多台redis/memcache进行管理和分配。就是分片、分布式方案
@@ -463,32 +481,12 @@
      1. 同时使用tw和pipeline时，如果对pipeline的执行顺序有要求，那么要设置tw对redis的server_connections数量为1，否则会导致顺序错乱。因为tw用epoll，每个连接有独立的队列，每个连接用完就会扔到队尾准备重复利用，就势必导致两个命令在两个不同的连接上进行，到了redis那里就有可能造成顺序错乱，如zadd和expire一起用
 1. Codis
    - 没有pipeline
-1. Pika：从rocksdb发展来的360开源类redis系统，redis容量过大的解决方案。用硬盘存储，速度慢，建议作Redis的备份仓库，可极大的降低运维成本
+1. Pika：从rocksdb发展来的开源类redis系统，redis容量过大的解决方案，建议作Redis的备份仓库，可极大的降低运维成本
+   - 用硬盘存储，速度慢
    - 支持redis协议，不是100%兼容
    - 数据在硬盘上是压缩的，迁移到redis需要将当前的容量乘以5
-1. cluster：太复杂，是去中心化的。没有tw的简单，用的稳定
-### wiki
-1. 历史
-   - 2009年，开源
-   - 2.6：set命令增加键存在与否的判断和过期时间的设置，新增lua环境
-   - 2.8：新增，支持复制的断线重连时有条件的增量数据传输，可用的哨兵机制
-   - 2.8.9：新增，HyperLogLog
-   - 2.8.18：新增，无硬盘复制(避免硬盘性能瓶颈)
-   - 3.0：2015年，新增，集群功能
-1. 数据类型的适用场景
-   - string：可持久化的缓存，如session_id为key的session，二进制安全，图片、文件什么的，原子计数器做粉丝数、关注数、ip封锁次数啥的
-   - hash：存对象数据，如用户基本信息，直接更新即可
-   - list：消息排行，消息队列，日志收集器，配合发布订阅
-     1. 队列的安全性：单个队列一旦pop出去客户端崩溃，消息丢失，利用rpoplpush弄个备份队列，数据丢了再去备份队列取一下
-   - set：做不重复的集合，存不重复用户名啦、每日投票一次啦
-   - zset：有序的不重复集合，如热门内容的排序，只需修改score，排行榜
-1. 编程语言客户端
-   - php：官方推荐两个
-     1. Predis：php代码实现的原生客户端
-     1. phpredis：c编写的php扩展，性能更好
-   - ruby：redis-rb，最稳定的客户端
-   - python：redis-py
-   - node：node_redis、ioredis，前者早，后者功能丰富
+1. Cluster：太复杂，是去中心化的。没有tw的简单，用的稳定
+### 设计
 1. 内存
    - 复杂的数据结构在内存中操作非常简单，redis可以做很复杂的操作
    - 达到最大内存后，Redis会先尝试清除已到期或即将到期的Key，当此方法处理后，仍然到达最大内存设置，将无法再进行写入操作，但仍然可以进行读取操作。Redis新的vm机制，会把Key存放内存，Value会存放在swap区
@@ -506,16 +504,24 @@
    - 用的是epoll,poll,select网络模型
    - 单线程处理所有的客户端连接请求，命令读写请求
    - 2个命令组合起来才算是完成一个业务，但是2个命令组合起来就不具备原子性，所有在两个命令之间其他客户端会出现读写脏数据的情况
-1. 网校redis架构
-   - 高可用：confd + etcd + tw + redis一从热备 + sentinel
-     1. tw本身高可用
-        - etcd集群做保活，设置10秒过期，tw每2秒续期，一旦tw发生变化，etcd切换tw，通知confd
-          1. etcd：go编写，支持watch并且主动通知
-        - confd收到etcd的通知后，完成客户端ip配置文件的更新
-     1. 客户端sdk负责负载均衡
-     1. 一从热备：假如从库一直提供服务，从库一旦重连导致从库数据不对
-     1. 哨兵监控：完成主从切换后，通知etcd，然后confd更新客户端ip配置文件
-   - 扩容：找新机器，用工具同步存量+增量的旧数据，然后挂到tw上
+### wiki
+1. 历史
+   - 2009年，开源
+   - 2.6：set命令增加键存在与否的判断和过期时间的设置，新增lua环境
+   - 2.8：新增，支持复制的断线重连时有条件的增量数据传输，可用的哨兵机制
+   - 2.8.9：新增，HyperLogLog
+   - 2.8.18：新增，无硬盘复制(避免硬盘性能瓶颈)
+   - 3.0：2015年，新增，集群功能
+   - 6.2：最新
+1. 编程语言客户端
+   - php：官方推荐两个
+     1. Predis：php代码实现的原生客户端
+     1. phpredis：c编写的php扩展，性能更好
+   - ruby：redis-rb，最稳定的客户端
+   - python：redis-py
+   - node：node_redis、ioredis，前者早，后者功能丰富
+1. Memcache：高性能分布式内存对象缓存系统，内存里维护一个统一的巨大的hash表，能够存储图像等数据
+### lua
 1. lua
    - 认识：高效的、简洁轻量的、动态类型的、可扩展的脚本语言，lua是葡萄牙语月亮的意思，是卫星语言，能够方便嵌入其他语言中
      1. redis内嵌lua就是为了提供给用户无限可能，因为命令不可能无限提供
@@ -604,4 +610,11 @@
         - 对随机数和随机结果进行了特殊处理，可以生成了当参数传递进去
         - 脚本执行是原子的，单线程的，lua-time-limit限制脚本最长执行时间，之后接受其他指令不执行返回busy，只执行两个指令：script kill和shutdown nosave。kill还是等到脚本执行完毕，因为要原子性，nosave可以立即终止，但是丢数据
         - 不应该在脚本中执行耗时的操作，因为redis单线程，程序却是多进/线程
-1. Memcache：高性能分布式内存对象缓存系统，内存里维护一个统一的巨大的hash表，能够存储图像等数据
+
+
+
+
+1. 细节
+1. 优点
+1. 缺点
+1. 最佳实践

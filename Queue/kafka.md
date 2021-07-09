@@ -370,9 +370,6 @@
      1. 使用基础
         - java nio channel.transforTo
         - linux sendfile系统调用：io不需上下文切换(内核和用户态之间)，利用直接存储器访问技术(DMA 内核缓冲区之间)
-          1. 之前是磁盘io ——— 内核页缓冲区  ——— 用户缓冲区 ——— 内核socket缓冲区 ——— 网卡缓冲区
-          1. 现在直接从磁盘io到网络io，用文件描述符控制就行，是用户空间零拷贝
-          1. 4步变2步，不仅节省了大量文件拷贝，而且节省用户上下文切换
    - 故障转移：基于zk的会话注册机制
    - 伸缩性：基于zk保存服务器状态和消费者信息
 ### 运维
@@ -416,6 +413,12 @@
      1. 高峰流量时段
      1. 低峰流量时段
 1. 配置
+   - broker
+     1. unclean.leader.election.enable：不严格的leader选举，助于集群健壮，但有丢失数据风险
+     1. min.insync.replicas：最小的同步状态的副本，否则不接受写入请求
+     1. cleanup.policy：生命周期结束的数据处理，默认删除
+     1. flush.messages：强制刷新写入的最大缓存消息数
+     1. flush.ms：强制刷新写入的最大等待时长
    - 消息大小：最大2G
      1. broker
         - message.max.bytes :524288000B(500M)，单消息最大值
@@ -426,11 +429,20 @@
         - fetch.message.max.bytes：524288000B(500M) 消费者能读取的消息最大值，大于或等于message.max.bytes
      1. jvm
         - 堆内存：kafka-server-start.sh文件的`export KAFKA_HEAP_OPTS="-Xmx6G -Xms6G"`
+   - 生产者
+     1. ack
+     1. 压缩
+     1. 生产方式：同步、异步
    - 消费者：设置不合理会频繁发生rebalance，造成消费不可用
      1. session.timeout.ms：超时时间
      1. heartbeat.interval.ms：心跳时间间隔，需要有心跳线程
      1. max.poll.interval.ms：每次消费的处理时间
      1. max.poll.records：每次消费的消息数
+   - 服务器
+     1. 文件描述符：10万以上
+     1. pagecache：和大多数的激活日志段大小相同
+     1. 禁用swap
+     1. 分区：单broker数量不超2000，大小不超25G
 1. 监控
    - web管理界面：cmak，即Kafka-Manager
    - 管理工具：kafka-run-class.sh
