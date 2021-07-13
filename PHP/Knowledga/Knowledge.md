@@ -31,13 +31,13 @@
      1. (binary)/b // 转为二进制字符串 V5.2
      1. settype()
 1. 代码执行顺序：自上而下，从左至右，从里到外
-```php
-function myfunc($a){
-    echo $a + 10;
-}
-$val = 10;
-echo "myfunc($val)=".myfunc($val);          //输出结果为20myfunc(10)
-```
+    ```php
+    function myfunc($a){
+        echo $a + 10;
+    }
+    $val = 10;
+    echo "myfunc($val)=".myfunc($val);          //输出结果为20myfunc(10)
+    ```
 1. 闭包
    - 理解：即匿名函数、闭包函数，最常用回调函数的参数，v5.3之后使用use传递外面的值(传引用)，将修改值生效。闭包类 Closure，闭包都是Closure类的实例
    - 示例
@@ -53,65 +53,70 @@ echo "myfunc($val)=".myfunc($val);          //输出结果为20myfunc(10)
 1. 使用`parent::__construct()`继承父级的初始化
 1. 静态方法：`public static function eat(){}`
 1. 简单的静态构造器：PHP没有静态构造器，你可能需要初始化静态类去给静态变量赋值
-```php
-function Demonstration(){
-    return 'This is the result of demonstration()';
-}
-class MyStaticClass {
-    //public static $MyStaticVar = Demonstration(); //!!! FAILS: syntax error
-    public static $MyStaticVar = null;
-
-    public static function MyStaticInit(){
-        //this is the static constructor
-        //because in a function, everything is allowed, including initializing using other functions
-        self::$MyStaticVar = Demonstration();
+    ```php
+    function Demonstration(){
+        return 'This is the result of demonstration()';
     }
-}
-//Call the static constructor
-MyStaticClass::MyStaticInit(); 
-echo MyStaticClass::$MyStaticVar;
-```
+    class MyStaticClass {
+        //public static $MyStaticVar = Demonstration(); //!!! FAILS: syntax error
+        public static $MyStaticVar = null;
+
+        public static function MyStaticInit(){
+            //this is the static constructor
+            //because in a function, everything is allowed, including initializing using other functions
+            self::$MyStaticVar = Demonstration();
+        }
+    }
+    //Call the static constructor
+    MyStaticClass::MyStaticInit(); 
+    echo MyStaticClass::$MyStaticVar;
+    ```
 1. 抽象类
-```php
-abstract class AbstractClass {
-    abstract protected function getValue();                             // 抽象方法
-    public function printOut() {print $this->getValue() . PHP_EOL;}     // // 普通方法
-}
-class ConcreteClass1 extends AbstractClass {
-    protected function getValue() {}
-}
-```
+    ```php
+    abstract class AbstractClass {
+        abstract protected function getValue();                             // 抽象方法
+        public function printOut() {print $this->getValue() . PHP_EOL;}     // // 普通方法
+    }
+    class ConcreteClass1 extends AbstractClass {
+        protected function getValue() {}
+    }
+    ```
 1. 接口
-```php
-interface demo {                         // 定义
-    function method();
-}
-class example implements demo{}          // 实现
-```
+    ```php
+    interface demo {                         // 定义
+        function method();
+    }
+    class example implements demo{}          // 实现
+    ```
 1. cookie：`setcookie(name,value,time() + 3600,'/');`
+1. +和array_merge的前后覆盖顺序不同
+1. json中的字段对比是否存在可用键的差值，减少两层循环
+1. 用printf代替复杂的字符串拼接
+1. create_time和modify_time用sql的自动更新，代码不用维护
+1. 统一日志记录
 ### 应用
 1. strtotime
-```php
-strtotime("10:38pm April 15 2015");
-strtotime("tomorrow");
-strtotime("next Saturday");
-strtotime("+3 Months");
-strtotime("+1 weeks",strtotime("Saturday"));    // 下周六的日期
-$d1=strtotime("December 31");                   // 12月30日之前的天数
-$d2=ceil(($d1-time())/60/60/24);
-echo "距离十二月三十一日还有：" . $d2 ." 天。";
-```
+    ```php
+    strtotime("10:38pm April 15 2015");
+    strtotime("tomorrow");
+    strtotime("next Saturday");
+    strtotime("+3 Months");
+    strtotime("+1 weeks",strtotime("Saturday"));    // 下周六的日期
+    $d1=strtotime("December 31");                   // 12月30日之前的天数
+    $d2=ceil(($d1-time())/60/60/24);
+    echo "距离十二月三十一日还有：" . $d2 ." 天。";
+    ```
 1. fopen
-```
-$fp = fopen("/tmp/lock.txt", "w+");
-if (flock($fp, LOCK_EX)) {                      // 排它型锁定
-    fwrite($fp, "Write something here\n");
-    flock($fp, LOCK_UN);                        // 释放锁定
-} else {
-    echo "Couldn't lock the file !";
-}
-fclose($fp);
-```
+    ```php
+    $fp = fopen("/tmp/lock.txt", "w+");
+    if (flock($fp, LOCK_EX)) {                      // 排它型锁定
+        fwrite($fp, "Write something here\n");
+        flock($fp, LOCK_UN);                        // 释放锁定
+    } else {
+        echo "Couldn't lock the file !";
+    }
+    fclose($fp);
+    ```
 1. php页面跳转方法
    - header
     ```php
@@ -122,20 +127,20 @@ fclose($fp);
    - javascript：`window.location.href`、`window.open`
    - echo标签跳转：META(HTTP-EQUIV)、script(window.location.href、window.open)
 1. 图像输出到浏览器或者文件
-```php
-header('Content-type: image/png');
-imagepng($im);
-imagedestroy($im);
-```
+    ```php
+    header('Content-type: image/png');
+    imagepng($im);
+    imagedestroy($im);
+    ```
 1. curl：curl_getinfo可获取Content-Length参数
-```php
-$ch = curl_init();
-curl_setopt($ch , CURLOPT_URL, $url);
-curl_setopt($ch , CURLOPT_RETURNTRANSFER, 1);
-curl_setopt($ch , CURLOPT_TIMEOUT, $timeout);
-$result = curl_exec($ch);
-curl_close($ch);
-```
+    ```php
+    $ch = curl_init();
+    curl_setopt($ch , CURLOPT_URL, $url);
+    curl_setopt($ch , CURLOPT_RETURNTRANSFER, 1);
+    curl_setopt($ch , CURLOPT_TIMEOUT, $timeout);
+    $result = curl_exec($ch);
+    curl_close($ch);
+    ```
 1. 数学
    - mt_rand产生随机数的速度是旧的rand函数的4倍
      1. mt_getrandmax 显示随机数的最大可能值
@@ -152,58 +157,58 @@ curl_close($ch);
    - memory_get_peak_usage 峰值内存
    - getrusage：CPU信息，win不行
 1. 输出缓存区：所有输出的内容放入缓存区
-```php
-// 实现动态内容静态化
-<?php
-$cache_name = md5(__FILE__).'.html';
-$cache_lifetime = 3600;
-if(filectime(__FILE__) <= filectime($cache_name) && file_exists($cache_name) && filectime($cache_name) + $cache_lifetime > time()) {
-    include $cache_name;
-    exit;
-}
-ob_start();
-?>
+    ```php
+    // 实现动态内容静态化
+    <?php
+    $cache_name = md5(__FILE__).'.html';
+    $cache_lifetime = 3600;
+    if(filectime(__FILE__) <= filectime($cache_name) && file_exists($cache_name) && filectime($cache_name) + $cache_lifetime > time()) {
+        include $cache_name;
+        exit;
+    }
+    ob_start();
+    ?>
 
-<p>This is page</p>
+    <p>This is page</p>
 
-<?php
-$content = ob_get_contents();
-ob_end_flush();
-file_put_content($cache_name, $content);
-?>
-```
+    <?php
+    $content = ob_get_contents();
+    ob_end_flush();
+    file_put_content($cache_name, $content);
+    ?>
+    ```
 ### pro
 1. spl_autoload_register
-```php
-// 遵守PSR-4规范的自动载入简单实现
-class Loader {                                                                  // 加载类
-    public static $vendorMap = array(                                           // 路径映射
-        'app' => __DIR__ . DIRECTORY_SEPARATOR . 'app',
-    );
-    public static function autoload($class) {                                   // 自动加载器
-        $file = self::findFile($class);
-        if (file_exists($file)) {
-            self::includeFile($file);
+    ```php
+    // 遵守PSR-4规范的自动载入简单实现
+    class Loader {                                                                  // 加载类
+        public static $vendorMap = array(                                           // 路径映射
+            'app' => __DIR__ . DIRECTORY_SEPARATOR . 'app',
+        );
+        public static function autoload($class) {                                   // 自动加载器
+            $file = self::findFile($class);
+            if (file_exists($file)) {
+                self::includeFile($file);
+            }
+        }
+        private static function findFile($class) {                                  // 解析文件路径
+            $vendor = substr($class, 0, strpos($class, '\\'));                      // 顶级命名空间
+            $vendorDir = self::$vendorMap[$vendor];                                 // 文件基目录
+            $filePath = substr($class, strlen($vendor)) . '.php';                   // 文件相对路径
+            return strtr($vendorDir . $filePath, '\\', DIRECTORY_SEPARATOR);        // 文件标准路径
+        }
+        private static function includeFile($file) {                                // 引入文件
+            if (is_file($file)) {
+                include $file;
+            }
         }
     }
-    private static function findFile($class) {                                  // 解析文件路径
-        $vendor = substr($class, 0, strpos($class, '\\'));                      // 顶级命名空间
-        $vendorDir = self::$vendorMap[$vendor];                                 // 文件基目录
-        $filePath = substr($class, strlen($vendor)) . '.php';                   // 文件相对路径
-        return strtr($vendorDir . $filePath, '\\', DIRECTORY_SEPARATOR);        // 文件标准路径
-    }
-    private static function includeFile($file) {                                // 引入文件
-        if (is_file($file)) {
-            include $file;
-        }
-    }
-}
-// 使用
-include 'Loader.php';                                       // 引入加载器
-spl_autoload_register('Loader::autoload');                  // 注册自动加载
+    // 使用
+    include 'Loader.php';                                       // 引入加载器
+    spl_autoload_register('Loader::autoload');                  // 注册自动加载
 
-new \app\mvc\view\home\Index();                             // 实例化未引用的类
-```
+    new \app\mvc\view\home\Index();                             // 实例化未引用的类
+    ```
 ### IoC、DI
 1. Ioc：Inversion of Control，控制反转，意味着将你设计好的对象交给容器控制，而不是传统的在你的对象内部直接控制。由外部负责其依赖需求的行为，我们可以称其为控制反转。容器控制应用程序，由容器反向的向应用程序注入应用程序所需要的外部资源
    - 为解决多个类之间的依赖

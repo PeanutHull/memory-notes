@@ -156,8 +156,16 @@
    - 格式
      1. COFF：Common Object File Format 通用对象文件格式，二进制文件格式
      1. PE：Portable Executable，windows上可移植可执行的标准文件格式，如exe、dll、vxd、sys、vdm
-     1. ELF：Executable and Linkable Format，unix上主要的二进制可执行文件格式，从COFF衍生出来
-        - readelf：linux命令
+     1. ELF
+        - 认识：Executable and Linkable Format，unix上主要的二进制可执行文件格式，编译、链接的基石，从COFF衍生出来
+          1. 链接器和加载器在使用ELF时只会使用自己感兴趣的部分
+        - 组成
+          1. header：包含基本信息，如版本/文件类型/机器类型
+             - Program header table：程序头表的开始地址，在整个文件的什么地方
+             - Section header table：节头表的开始地址，在整个文件的什么地方
+          1. section
+        - 操作
+          1. readelf：linux命令
      1. OMF：Object Module File 对象模型文件
    - 形式
      1. 可重定位目标文件：即代码段和数据段的地址还没有最终确定，可以和其他目标文件进行合并，创建一个可执行目标文件。如启动代码/库代码/目标代码

@@ -25,10 +25,12 @@
      1. scan：会使过期的key删除，带来内存占用的下降
      1. sort by xx*->xx desc get xx*->xx get # store xx：对队列、集合按照某些规则排序，by可用通配符，get用于获取指定键值，store结果存储
    - 过期时间
-     1. expire/pexpire：[用毫秒]设置过期时间
-     1. expireat/pexpireat：用[毫秒]时间戳设置过期时间
-     1. ttl/pttl：用[毫]秒返回剩余时间，time to live
-     1. persist：移除过期时间
+     1. 命令
+        - expire/pexpire：[用毫秒]设置过期时间
+        - expireat/pexpireat：用[毫秒]时间戳设置过期时间
+        - ttl/pttl：用[毫]秒返回剩余时间，time to live
+        - persist：移除过期时间
+     1. 删除机制：惰性(用时判断)、定时(内部定时任务)、主动(lru删除)
    - 修改
      1. rename/renamenx：[key不存在时]重命名
      1. del
@@ -219,18 +221,271 @@
      1. 范围：不同范围放到不同实例中，需要维护范围表
      1. hash：使用crc32将key转为数字，然后取模(模为实例数量)确定实例
    - 自动分区：cluster
+### 架构
+1. 单机
+   - 认识：简单，不需要数据同步，单点故障隐患，性能瓶颈
+1. 主从
+   - 认识：利用复制实现数据在不同库的同步，实现读写分离、冗余备份，可继续向下配置树状从
+   - 作用
+     1. 负载均衡、读写分离
+     1. 数据备份
+     1. 故障转移
+     1. Redis Sentinel 、Cluster的基石
+   - 命令
+     1. `slaveof ip port`：设置从，可实现同步和默认的从只读
+     1. `masterauth xxx`：主节点密码
+     1. `slaveof no one`：停止同步(也就是变成了主)
+   - 配置
+     1. 增量同步
+        - `repl-backlog-size`：积压队列长度，默认1M
+        - `repl-backlog-ttl`：主从断开连接后，多长时间释放积压队列的内存，默认1小时
+     1. 复制安全
+        - `min-slaves-to-write`：主可写的最少的从数量，即设置乐观复制的尺度
+        - `min-slaves-max-lag`：从最大的延迟
+   - 特性
+     1. 增量同步：offset、backlog、run_id一同起作用
+        - 标识唯一运行实例：`run_id`，用于保障主从复制安全
+        - 复制偏移量：`slave_repl_offset`
+        - 复制缓冲：`repl_backlog_*`，主保持一个默认大小1M的先进先出的队列，有从连接时主在把写操作发送给从的同时，也写入一份到缓冲区。用于增量复制/丢失命令补救
+     1. 主从心跳
+        - 维持长连接，每隔10s主ping从，`repl-ping-slave-period`
+        - 从回复offset，检查数据复制状况
+        - 断线重连
+          1. v2.8之前断开重连都会全量同步
+          1. 偏移量不在缓冲区中只能全量同步
+     1. 过期key处理：从不会让key过期，会等待主的del命令，v3.2从自己判断是否过期
+     1. 加速复制：`repl-diskless-sync yes`，主不写磁盘直接发送rdb，v2.8.18
+     1. 是否延迟发包：`repl-disable-tcp-nodelay`，是否合并较小的tcp数据包以节省宽带，发送时间间隔由一般默认40ms的linux内核设置决定，默认关闭，会加重主从延迟
+   - 状态：`info replication`
+    ```conf
+    role:master|slave
+    connected_slaves:2                                          // 连接的从节点数据
+    master_replid:xxxxxxxxxxxxxxxxxxxxxxxxxxx                   // 当前主节点id
+    master_replid2:00000000000000000000000000                   // 老主节点id，发生主从切换时写入
+    master_repl_offset:196                                      // 主节点已写入命令的偏移量，主节点会将命令转为字节写入队列，salve的offset对比得出延迟
+                                                                // 以下都是2.8新增
+    second_repl_offset:-1                                       // 避免每次的主从改变的全量复制
+    repl_backlog_active:1                                       // 缓冲区，1开启
+    repl_backlog_size:1048576                                   // 缓冲区大小，1M
+    repl_backlog_first_byte_offset:1                            // 缓冲区起始位置
+    repl_backlog_histlen:224                                    // 缓冲区当前长度
+
+    // 主
+    slave0:ip=xx,port=xx,state=online,offset=n,lag=1            // offset：当前从节点读取的偏移量，lag：延迟时间，秒
+    // 从
+    master_host:xx
+    master_port:n
+    master_link_status:up
+    master_last_io_seconds_age:5                                // 主从最后一次同步的时间
+    master_sync_in_process:0                                    // 主从同步状态，0未同步，1正在同步
+    slave_repl_offset:n                                         // 从复制命令的偏移量
+    slave_priority:100                                          // 从节点选举时的权重，0永远不可能
+    slave_read_only:1
+    ```
+   - 复制原理
+     1. 全量复制：v2.8之前，sync，![avatar](../images/redis_fullsync.png)
+        - 初始化阶段
+          1. slave发起sync命令(2.8之后使用psync  run id  断开前的命名偏移量)
+          1. master后台开始保存rdb快照，并缓存执行快照保存期间的命令，快照完成后，将缓存和命令发送给slave
+             - 进程fork进行全量备份，导致io和cpu消耗，以及写时复制的内存消耗，可能造成主节点毫秒或秒级的卡顿
+             - 发送GB级rdb，会导致网络出口爆增，磁盘顺序IO吞吐量高，会影响正常访问，并带来其他连锁影响
+             - 采用乐观复制，允许复制开始后一段时间内主从数据不一致，但是会最终同步。不会同步给从后再返回给客户端，保证主的性能
+          1. slave载入快照(和重启原理一致)，并执行缓存的命令
+             - 从同步时不会阻塞，可设置是否响应命令
+        - 同步阶段：master每次收到写命令时，就将命令同步给salve，贯穿始终
+     1. 增量复制：![avatar](../images/redis_psync.png)
+   - 从持久化：为提高性能，禁止主的持久化，开启从的持久化，从崩溃重启后主自动将数据同步过来。主崩溃后，严格顺序按照步骤，先从提升为主，主再切为从
+1. 哨兵
+   - 认识：针对redis主从的分布式独立进程，提供监控、提醒、自动故障转移、配置提供者，2.6版本的sentinel不能用
+     1. 属性
+        - 端口26379
+        - 最少3个sentinel实例，2个无法做投票
+        - 独立机器中运行，甚至需要多地部署
+     1. 优点
+        - 降低误报可能性
+        - 降低对客户端的影响
+        - 任意sentinel节点都可提供服务
+     1. 不足
+        - 主从切换需要时间
+        - 动态扩容复杂
+   - TILT模式：拿不到正确的系统时间时进入，这时候无法判断redis是否下线，是sentinel的被动模式
+   - 节点管理
+     1. sentinel
+        - 添加：直接启动
+        - 删除：不会完全清除已添加过的sentinel信息
+          1. 停止sentinel进程
+          1. 告诉其他sentinel，`sentinel reset masterName`，也是一个个操作
+          1. `sentinel master masterName`
+     1. 删除旧主或者无法访问的slave：`sentinel reset masterName`，重置所有状态信息
+   - 工作原理
+     1. 内部定时任务
+        - 每1秒每个sentinel对其他sentinel、redis执行ping
+        - 每2秒每个sentinel订阅一个master的channel交换信息，检测信息传播
+        - 每10秒每个sentinel对master和slave执行info
+     1. 下线
+        - 主观下线：sdown，单个sentinel得出的下线判断
+        - 客观下线：odown，多个sentinel相互交流后得出的下线判断，然后开启failover
+          1. 仲裁：少数服从多数原理，quonum
+     1. 选举：raft共识算法的Leader Election方法
+        - 故障迁移一致性：选择leader sentinel
+          1. 一个epoch内，只有一个leader
+          1. sentinel配置以最后写入者胜出的方式传播至其他sentinel
+        - 选择新主
+          1. 先根据权重
+          1. 权重一样，根据最少的lag
+          1. lag一样，run_id最小的
+     1. 故障转移
+        - 主恢复后会变为从
+        - 新从需要全量同步新主
+     1. 故障转移流程
+        - 每秒ping
+        - 有效回复ping的时间超时，认定主观下线
+        - 共同商议后满足客观下线条件
+          1. 投票选举主节点，从节点向新主全量同步数据
+          1. 主标记为客观下线时，info由10s一次改为1s一次，最快恢复节点全貌
+          1. sentinel节点集合更新
+          1. sentinel监控新的主
+        - 不满足客观下线
+          1. 主客观下线状态移除
+          1. 重新ping有效时，主观下线移除
+   - 使用
+     1. 命令
+        ```
+        redis-sentinel xx.conf                                  // 开启监控，只监控主数据库即可，会自动发现从，可同时监控多个主从系统
+        ```
+     1. 配置
+        ```
+        sentinel monitor masterName ip port quonum              // 执行恢复的最低哨兵通过票数，num是满足投票的比例，一般为二分之一加一
+        sentinel down-after milliseconds masterName 30000       // 认定断线的豪秒数，要比主从心跳的时间长点
+        sentinel failover-timeout masterName 180000             // failover操作的限定豪秒数
+        ```
+1. 集群
+   - 认识：cluster，用于解决容量和并发性能
+     1. 采用无中心架构，每个节点都保存数据和整个集群状态，每个节点都和其它所有节点连接(ping-pong机制)。可线性扩展到1000个节点
+     1. 客户端直连，免去了代理损耗
+     1. 要求客户端缓存slots mapping信息并及时更新
+     1. 不支持跨slot查询和修改，不支持跨solt事务操作
+     1. 不支持多数据库空间，集群模式只能用0
+     1. 不支持嵌套树状复制结构
+     1. 重试时间应该大于cluster-node-time时间
+        - 最少6个节点保证高可用，3主3从，因为集群最少3个主
+     1. 不建议使用pipeline和multi-keys操作，减少max redirect产生的场景
+
+
+     1. 优点：无中心结构、分布式、自动故障转移、高可用、可扩展
+     1. 缺点
+        - 数据异步复制，无法保证强一致性
+   - 实现：实现基础是分片，将分片指派给多个实例
+        - 主分配solt插槽，从做故障切换
+        - 所有节点通过Gossip流言协议通信，交换维护节点metadata
+     1. 分片：利用槽，redis使用虚拟槽来处理分区时节点变化的问题。将所有的物理节点映射到预分好的16384个slot中
+        - 槽：hash slot，根据`CRC16(key) Mod 16384`决定key在哪个槽中
+     1. 节点状态同步：Gossip协议，轻量的二进制协议，最终一致性。存放哈希槽的bitmap通过Gossip协议在结点之间传递
+     1. 高可用性：通过增加slave做热备数据副本，能够实现故障自动转移
+   - 实现方式
+     1. 查询路由：Query Routing，先到随机节点，这个节点保证你到正确的节点，或者客户端重新发起到正确节点
+     1. 客户端分片：Client Side Partitioning，客户端直接选择正确的节点，如Jedis
+        - 逻辑简单，性能高
+        - 业务逻辑和数据存储逻辑耦合，可运维性查。多业务各自使用redis，集群资源难以管理，不支持动态增删节点
+     1. 代理协助分片：代理根据配置的分片模式转发到正确的节点，如Twemproxy、Codis，比较成熟
+   - 分区方式
+     1. 范围：同一范围查询不需要跨节点
+     1. 节点取余：扩缩容数据迁移量大，翻倍扩容可相对减少迁移量
+     1. 一致性哈希：增删节点只影响哈希环中相邻节点，少量节点时节点变化将大范围影响哈希环中的数据映射，不适合少量节点 
+        - 顺时针的组成哈希环，节点为哈希环中的键，按照节点之间的哈希范围确定位置
+     1. 虚拟槽：每个node均匀分配slot范围，减少扩缩容的影响，需要存储node和slot的映射
+        - CRC16(key)&16384：哈希运算后取余
+   - 故障转移
+     1. 身份切换
+     1. 接管职权
+     1. 广而告之
+     1. 履行义务
+   - 使用
+     1. `cluster info`：查看状态
+     1. `cluster nodes`：查看节点
+     1. `cluster meet 127.0.0.1 6380`：连接节点
+     1. `cluster addslots {0...5461}`：分配槽位
+     1. `cluster replicate xx`：分配为某节点的从
+     1. `redis-cli -cluster`：连接集群，c是集群模式
+1. 网校tw架构
+   - hash分片数据到redis上
+   - 高可用：confd + etcd + tw + redis一从热备 + sentinel
+     1. tw本身高可用
+        - etcd集群做保活，设置10秒过期，tw每2秒续期，一旦tw发生变化，etcd切换tw，通知confd
+          1. etcd：go编写，支持watch并且主动通知
+        - confd收到etcd的通知后，完成客户端ip配置文件的更新
+     1. 高可用
+        - 每个业务最少提供两个 TwemProxy 供业务方连接
+        - redis 发生主从切换，TwemProxy 会实时生成新的配置文件，并自动重启
+     1. 客户端sdk负责负载均衡
+     1. 一从热备：假如从库一直提供服务，从库一旦重连导致从库数据不对
+     1. 哨兵监控：完成主从切换后，通知etcd，然后confd更新客户端ip配置文件
+   - 架构图：![avatar](../images/redis_wx_framework.png)
+   - 扩容：找新机器，用工具同步存量+增量的旧数据，然后挂到tw上
+1. 阿里云指标
+   - 认识：百万QPS，最好性能512G内存、最大连载数320000、最大吞吐1536M
+   - 功能
+     1. 负载均衡
+     1. 多个proxy，负责故障转移
+     1. 分片服务器，单节点，不需同步数据，不提供数据持久化和备份策略，节点故障会丢失数据。集群版是双节点
+     1. 配置服务器，即Configserver，存储集群配置信息及分区策略，采用双副本的高可用架构
+### 中间件
+1. TwemProxy
+   - 认识：twitter开源的redis/memcache的快速、轻量级的单线程代理服务器，可对多台redis/memcache进行管理和分配。就是分片、分布式方案
+     1. 支持失败节点自动删除
+     1. 支持设置HashTag：将两个key哈希到同一个实例
+     1. 和redis、客户端采用长链接，减少连接数
+     1. 数据自动分片
+        - hash：MD5、CRC16、CRC32、CRC32a、hsieh、murmur、Jenkins
+        - 分片：ketama、modular、random
+        - 可设置权重
+     1. 支持集群部署，上边接负载均衡
+     1. 支持状态监控：监控ip、端口、刷新间隔时间
+     1. 使用pipelining处理请求和响应
+     1. 不支持redis事务
+     1. 使用某些命令需要保证key都在同一个分片上：SIDFF,SDIFFSTORE,SINTER,SINTERSTORE,SMOVE,SUNION and SUNIONSTORE
+     1. 相对于官方较新的Redis Cluster架构，容量伸缩较麻烦
+     1. 支持memcached ASCII协议和redis协议
+   - 如何一份数据复制两份发到两个实例？
+   - 运维
+     1. 同时使用tw和pipeline时，如果对pipeline的执行顺序有要求，那么要设置tw对redis的server_connections数量为1，否则会导致顺序错乱。因为tw用epoll，每个连接有独立的队列，每个连接用完就会扔到队尾准备重复利用，就势必导致两个命令在两个不同的连接上进行，到了redis那里就有可能造成顺序错乱，如zadd和expire一起用
+1. Codis
+   - 没有pipeline
+1. Pika：从rocksdb发展来的开源类redis系统，redis容量过大的解决方案，建议作Redis的备份仓库，可极大的降低运维成本
+   - 用硬盘存储，速度慢
+   - 支持redis协议，不是100%兼容
+   - 数据在硬盘上是压缩的，迁移到redis需要将当前的容量乘以5
+1. Cluster：太复杂，是去中心化的。没有tw的简单，用的稳定
+### 设计
+1. 内存
+   - 复杂的数据结构在内存中操作非常简单，redis可以做很复杂的操作
+   - 达到最大内存后，Redis会先尝试清除已到期或即将到期的Key，当此方法处理后，仍然到达最大内存设置，将无法再进行写入操作，但仍然可以进行读取操作。Redis新的vm机制，会把Key存放内存，Value会存放在swap区
+   - 虚拟内存机制：VM机制将数据分页存放，由Redis将访问量较少的页即冷数据swap到磁盘上，访问多的页面由磁盘自动换出到内存中，突破了物理内存的限制
+1. 磁盘中是紧凑追加方式存在，不存在随机io
+1. 连接原理
+   - 认识Redis通过监听一个TCP端口或者Unix socket的方式来接收来自客户端的连接，当一个连接建立后，Redis内部会进行以下一些操作
+     1. 首先，客户端socket会被设置为非阻塞模式，因为Redis在网络事件处理上采用的是非阻塞多路复用模型
+     1. 然后为这个socket设置TCP_NODELAY属性，禁用Nagle算法
+     1. 然后创建一个可读的文件事件用于监听这个客户端socket的数据发送
+1. redis协议：流言协议
+1. 主从同步原理：主准备所有的命令，利用redis协议，发送到从，执行并且放入到内存中
+1. 哨兵机制：通过多个sentinel的订阅和发布，实现对主的监视
+1. Redis是单进程单线程的网络模型，命令是一个接着一个执行的，不存在并行执行的情况
+   - 用的是epoll,poll,select网络模型
+   - 单线程处理所有的客户端连接请求，命令读写请求
+   - 2个命令组合起来才算是完成一个业务，但是2个命令组合起来就不具备原子性，所有在两个命令之间其他客户端会出现读写脏数据的情况
 ### 运维
 1. 命令
    - 服务器
-     1. info：服务器信息
+     1. info：所有的服务器信息
+        - info replication：查看主从信息
      1. client list：客户端列表
      1. ping：查看是否运行
      1. monitor：实时打印接收到的命令，调试用
      1. debug segfault：让redis崩溃
-     1. 配置
-        - 密码
-          1. `config get requirepass`：查看
-          1. `config set requirepass xxx/''`：设置/取消
+     1. config
+        - `config get requirepass`：查看密码
+        - `config set requirepass xxx/''`：设置/取消密码
    - 数据
      1. save/bgsave/lastsave：默认生成dump.rdb文件，查看最后一次保存确认是否后台保存成功
      1. flushdb/flushall：删除当前/所有数据库的所有key
@@ -270,6 +525,14 @@
      1. -d：字节形式指定set/get大小
      1. -k：1=keep alive 0=reconnect
 1. 服务治理：连接数过多、慢查询、短连接、长连接
+   - 主从延迟：外部程序监听，进行报警
+   - 脏数据
+     1. 主从延迟
+     1. 从可写
+   - 复制
+     1. 规避全量复制：增大复制缓冲区
+     1. 规避复制风暴
+        - 主重启，多从全量复制：可先选从为主，或者改为树状复制结构
 1. 主库重启 checklist 
    - 世纪互联主从库节点 zabbix 关闭报警
    - 世纪互联主从库节点 注释脉搏脚本
@@ -303,6 +566,9 @@
     /etc/init.d/irqbalance restart
     chkconfig irqbalance on
     ```
+1. 日志
+   - redis.log：人可读
+   - sentinel.log：人可读
 ### 最佳实践
 1. 使用规范
    - key名设计
@@ -361,149 +627,6 @@
         - 损耗双倍资源
      1. key过期，消息队列异步更新redis
      1. key过期，从库订阅binlog来更新redis
-### 架构
-1. 单机
-   - 认识：简单，不需要数据同步，单点故障隐患，性能瓶颈
-1. 主从
-   - 认识：利用复制实现数据在不同库的同步，实现读写分离、冗余备份，可继续向下配置孙子辈的从
-   - 命令
-     1. `slaveof <masterip> <masterport>`：设置从：从库这么设置即可实现同步和默认的从只读
-     1. `slaveof no one`：停止同步(也就是变成了主)
-     1. `masterauth <master-password>`
-     1. `info replication`：查看同步状态
-   - 配置
-     1. `repl-backlog-size`：积压队列长度，默认1M
-     1. `repl-backlog-ttl`：主从断开连接后，多长时间释放积压队列的内存，默认1小时
-     1. `min-slaves-to-write`：依据从的数量可设置主可写的条件，即设置乐观复制的尺度
-     1. `min-slaves-max-lag`：可设置从的最长失去连接时间，从而利用上条配置控制主从不一致的问题，默认关闭
-   - 复制原理
-     1. 初始化阶段
-        - slave发起sync命令(2.8之后使用psync  run id  断开前的命名偏移量)
-        - master后台开始保存快照(rdb持久化)，并缓存执行快照保存期间的命令，快照完成后，将缓存和命令发送给slave
-          1. 进程fork进行全量备份，导致io和cpu消耗，以及写时复制的内存消耗，可能造成主节点毫秒或秒级的卡顿
-          1. 发送GB级rdb，会导致网络出口爆增，磁盘顺序IO吞吐量高，会影响正常访问，并带来其他连锁影响
-          1. 采用乐观复制，允许复制开始后一段时间内主从数据不一致，但是会最终同步。不会同步给从后再返回给客户端，保证主的性能
-        - slave载入快照(和重启原理一致)，并执行缓存的命令
-          1. 从同步时不会阻塞，可设置是否响应的命令
-     1. 同步阶段：master每次收到写命令时，就将命令同步给salve，贯穿始终
-   - 增量复制
-     1. 实现基础
-        - 从记录主的每次重启变更的run id
-        - 主同步给从时，会将命令放到backlog中，并记录命令的偏移量范围
-        - 从接收命名时，也记录下命令的偏移量
-     1. 断线重连判断标准
-        - run id是否一致
-        - 最后同步的命令偏移量是否在队列中，不在只能全量同步
-   - 从持久化：为提高性能，禁止主的持久化，开启从的持久化，从崩溃重启后主自动将数据同步过来。主崩溃后，严格顺序按照步骤，先从提升为主，主再切为从
-1. 哨兵
-   - 认识：独立的进程，可开多个，哨兵可相互监控，对节点做失败判定分为主观下线和客观下线，对从做主观下线不执行故障转移。2.6版本的哨兵不能用。最少3个，2个无法做投票
-     1. 故障检测：做redis的存活性检测，提供高可用
-        - 单点视角
-        - 检测信息传播
-        - 下线判决
-     1. 故障恢复：自动主从故障切换，
-        - 选举：Raft算法的Leader Election方法，节点拉票、拉票优先级、主节点投票
-   - 使用
-     1. 命令：`redis-sentinel xx.conf`，只监控主数据库即可，会自动发现从
-     1. conf内容：`sentinel monitor masterName ip port 执行恢复的最低哨兵通过票数`，可同时监控多个主从系统
-1. 集群
-   - 认识：cluster，用于解决容量和并发性能，单机受制于主库的内存容量，利用多台计算机内存来实现更大的数据库和带宽
-     1. 采用无中心架构，每个节点都保存数据和整个集群状态，每个节点都和其它所有节点连接(ping-pong机制)。可线性扩展到1000个节点
-     1. 一致性哈希思想
-     1. 客户端直连，免去了代理损耗
-     1. 要求客户端缓存slots mapping信息并及时更新
-     1. 不能保证数据强一致性
-     1. 不支持跨slot查询和修改，不支持跨solt事务操作，支持的不友好
-     1. 不支持多数据库空间，集群模式只能用0
-     1. 不支持嵌套树状复制结构
-     1. 重试时间应该大于cluster-node-time时间
-     1. 不建议使用pipeline和multi-keys操作，减少max redirect产生的场景
-   - 实现：实现基础是分片，将分片指派给多个实例
-     1. 分片：利用槽，redis使用虚拟槽来处理分区时节点变化的问题。将所有的物理节点映射到预分好的16384个slot中
-        - 槽：hash slot，根据`CRC16(key) Mod 16384`决定key在哪个槽中
-     1. 节点状态同步：Gossip协议，轻量的二进制协议，最终一致性。存放哈希槽的bitmap通过Gossip协议在结点之间传递
-     1. 高可用性：通过增加slave做热备数据副本，能够实现故障自动转移
-   - 实现方式
-     1. 查询路由：Query Routing，先到随机节点，这个节点保证你到正确的节点，或者客户端重新发起到正确节点
-     1. 客户端分片：Client Side Partitioning，客户端直接选择正确的节点，如Jedis
-        - 逻辑简单，性能高
-        - 业务逻辑和数据存储逻辑耦合，可运维性查。多业务各自使用redis，集群资源难以管理，不支持动态增删节点
-     1. 代理协助分片：代理根据配置的分片模式转发到正确的节点，如Twemproxy、Codis，比较成熟
-   - 故障转移
-     1. 身份切换
-     1. 接管职权
-     1. 广而告之
-     1. 履行义务
-   - 使用
-     1. `cluster info`：查看状态
-     1. `cluster nodes`：查看节点
-     1. `cluster meet 127.0.0.1 6380`：连接节点
-     1. `cluster addslots {0...5461}`：分配槽位
-     1. `cluster replicate xx`：分配为某节点的从
-     1. `redis-cli -c`：连接集群，c是集群模式
-1. 网校redis架构
-   - 高可用：confd + etcd + tw + redis一从热备 + sentinel
-     1. tw本身高可用
-        - etcd集群做保活，设置10秒过期，tw每2秒续期，一旦tw发生变化，etcd切换tw，通知confd
-          1. etcd：go编写，支持watch并且主动通知
-        - confd收到etcd的通知后，完成客户端ip配置文件的更新
-     1. 客户端sdk负责负载均衡
-     1. 一从热备：假如从库一直提供服务，从库一旦重连导致从库数据不对
-     1. 哨兵监控：完成主从切换后，通知etcd，然后confd更新客户端ip配置文件
-   - 架构图：![avatar](../images/redis_wx_framework.png)
-   - 扩容：找新机器，用工具同步存量+增量的旧数据，然后挂到tw上
-1. 阿里云指标
-   - 认识：百万QPS，最好性能512G内存、最大连载数320000、最大吞吐1536M
-   - 功能
-     1. 负载均衡
-     1. 多个proxy，负责故障转移
-     1. 分片服务器，单节点，不需同步数据，不提供数据持久化和备份策略，节点故障会丢失数据。集群版是双节点
-     1. 配置服务器，即Configserver，存储集群配置信息及分区策略，采用双副本的高可用架构
-### 中间件
-1. TwemProxy
-   - 认识：twitter开源的redis/memcache的快速、轻量级的单线程代理服务器，可对多台redis/memcache进行管理和分配。就是分片、分布式方案
-     1. 支持失败节点自动删除
-     1. 支持设置HashTag：将两个key哈希到同一个实例
-     1. 和redis、客户端采用长链接，减少连接数
-     1. 数据自动分片
-        - hash：MD5、CRC16、CRC32、CRC32a、hsieh、murmur、Jenkins
-        - 分片：ketama、modular、random
-        - 可设置权重
-     1. 支持集群部署，上边接负载均衡
-     1. 支持状态监控：监控ip、端口、刷新间隔时间
-     1. 使用pipelining处理请求和响应
-     1. 不支持redis事务
-     1. 使用某些命令需要保证key都在同一个分片上：SIDFF,SDIFFSTORE,SINTER,SINTERSTORE,SMOVE,SUNION and SUNIONSTORE
-     1. 相对于官方较新的Redis Cluster架构，容量伸缩较麻烦
-     1. 支持memcached ASCII协议和redis协议
-   - 如何一份数据复制两份发到两个实例？
-   - 运维
-     1. 同时使用tw和pipeline时，如果对pipeline的执行顺序有要求，那么要设置tw对redis的server_connections数量为1，否则会导致顺序错乱。因为tw用epoll，每个连接有独立的队列，每个连接用完就会扔到队尾准备重复利用，就势必导致两个命令在两个不同的连接上进行，到了redis那里就有可能造成顺序错乱，如zadd和expire一起用
-1. Codis
-   - 没有pipeline
-1. Pika：从rocksdb发展来的开源类redis系统，redis容量过大的解决方案，建议作Redis的备份仓库，可极大的降低运维成本
-   - 用硬盘存储，速度慢
-   - 支持redis协议，不是100%兼容
-   - 数据在硬盘上是压缩的，迁移到redis需要将当前的容量乘以5
-1. Cluster：太复杂，是去中心化的。没有tw的简单，用的稳定
-### 设计
-1. 内存
-   - 复杂的数据结构在内存中操作非常简单，redis可以做很复杂的操作
-   - 达到最大内存后，Redis会先尝试清除已到期或即将到期的Key，当此方法处理后，仍然到达最大内存设置，将无法再进行写入操作，但仍然可以进行读取操作。Redis新的vm机制，会把Key存放内存，Value会存放在swap区
-   - 虚拟内存机制：VM机制将数据分页存放，由Redis将访问量较少的页即冷数据swap到磁盘上，访问多的页面由磁盘自动换出到内存中，突破了物理内存的限制
-1. 磁盘中是紧凑追加方式存在，不存在随机io
-1. 连接原理
-   - 认识Redis通过监听一个TCP端口或者Unix socket的方式来接收来自客户端的连接，当一个连接建立后，Redis内部会进行以下一些操作
-     1. 首先，客户端socket会被设置为非阻塞模式，因为Redis在网络事件处理上采用的是非阻塞多路复用模型
-     1. 然后为这个socket设置TCP_NODELAY属性，禁用Nagle算法
-     1. 然后创建一个可读的文件事件用于监听这个客户端socket的数据发送
-1. redis协议：流言协议
-1. 主从同步原理：主准备所有的命令，利用redis协议，发送到从，执行并且放入到内存中
-1. 哨兵机制：通过多个sentinel的订阅和发布，实现对主的监视
-1. Redis是单进程单线程的网络模型，命令是一个接着一个执行的，不存在并行执行的情况
-   - 用的是epoll,poll,select网络模型
-   - 单线程处理所有的客户端连接请求，命令读写请求
-   - 2个命令组合起来才算是完成一个业务，但是2个命令组合起来就不具备原子性，所有在两个命令之间其他客户端会出现读写脏数据的情况
 ### wiki
 1. 历史
    - 2009年，开源
@@ -512,6 +635,8 @@
    - 2.8.9：新增，HyperLogLog
    - 2.8.18：新增，无硬盘复制(避免硬盘性能瓶颈)
    - 3.0：2015年，新增，集群功能
+   - 6.0
+     1. ACL安全策略
    - 6.2：最新
 1. 编程语言客户端
    - php：官方推荐两个

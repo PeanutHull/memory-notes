@@ -131,3 +131,11 @@
 1. 推送问题
    - 同一个APP用户切换账号：要更新userId和clientId绑定关系，否则推送错误
    - 应用卸载重装：重新生成clientId，防止误推
+### 动画
+1. 动画帧：如关键帧、空白帧和补间动画
+1. 制作工具
+   - ppt
+   - Synifg Studio：免费开源，2D矢量动画图形的创建
+   - Adobe Animate：flash改名，用于矢量图形和动画
+   - FlipaClip：逐帧动画工具，通过多帧图片自动合成一张动图或者短视频
+   - 专业的：3DSMax / Maya / C4D / Blender

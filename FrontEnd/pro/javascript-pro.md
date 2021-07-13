@@ -310,11 +310,13 @@
    - 跨平台：Linux、Android、IOS、Fuchsia
    - 原生：体验更好、性能更好，可以120fps
    - 开源：技术的生态环境，google推广
+1. 特点
+   - 基于底层Engine中的Skia库搭建起一套自渲染引擎，不需要在基于web内容的渲染，在性能上做到了媲美原生
 1. Dart：可用于全平台、web、脚本、服务端开发，google的开源的面向对象语言，立志成为下一代web开发语言，目前2.x版本
 1. Fuchsia：google的操作系统
 1. Hybrid App开发
    - 集成组件和打包的：flutter、appcan、Dcloud(组件库mui)、WeX5、APICloud
-   - 组件代码库：Ionic(放弃IOS6和Android4.1以下的版本支持)，React Native(生成原生app，但以view为基础嵌入)
+   - 组件代码库：Ionic(没落，放弃IOS6和Android4.1以下的版本支持)，React Native(生成原生app，但以view为基础嵌入)
    - 打包工具：Cordova、Phonegap
    - 安卓模拟器：genymotion、海马玩
    - weex、quasar、nativeScript

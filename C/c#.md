@@ -18,7 +18,7 @@
         - windows forms：gui类库
         - asp.net：用于开发动态网站和wed应用程序
      1. .net Core：目标运行机不需要.net framework了
-     1. Xamarin
+     1. Xamarin：没落的跨平台
      1. ml.net
 1. NuGet：.net的软件包管理器
 1. wiki
