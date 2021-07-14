@@ -96,6 +96,7 @@
         - net.core.netdev_max_backlog：65535，当个别接口接收包的速度快于内核处理速度时允许的最大的包数量
         - net.ipv4.tcp_max_syn_backlog：65535，还未获得连接的请求的最大数量，超出被抛弃
         - net.core.netdev_budget：每次软中断处理的网络包个数
+        - net.ipv4.tcp_max_tw_buckets＝5000：同时保持TIME_WAIT套接字的最大数量
 
         - net.ipv4.tcp_fin_timeout：10，tcp等待超时时间，加快tcp连接回收速度，适用于大量tcp连接的系统
         - net.ipv4.tcp_tw_reuse：1，
@@ -106,7 +107,8 @@
         - net.core.rmem_default：87380
         - net.core.rmem_max：16777216
 
-        - net.ipv4.tcp_keepalive_time：120，减少tcp失效连接占用系统资源的数量，加快资源回收的效率，发送keepalive的时间间隔，秒，用于确认tcp是否有效，应该小一些
+        - net.ipv4.tcp_keepalive_time：120，发送keepalive的时间间隔(秒)，用于确认tcp是否有效，应该小一些
+          1. 减少tcp失效连接占用系统资源的数量，加快资源回收效率
         - net.ipv4.tcp_keepalive_intvl：30，消息未获得响应时，重发该消息的间隔，秒
         - net.ipv4.tcp_keepalive_probes：3，认定tcp失效前最多发送多少keepalive消息
      1. 内存

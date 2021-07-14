@@ -370,7 +370,7 @@
      1. Accept queue：`/proc/sys/net/core/somaxconn`或/etc/sysctl.conf的`net.core.somaxconn=128`
      1. 重传SYN+ACK次数：`net.ipv4.tcp_synack_retries`：默认为5，表示重发5次，每次等待30~40秒，即半连接默认时间大约为180秒
      1. 查看进程连接、排队状况：`netstat -lntup`
-     1. 查看tcp状态数量：`netstat -an | awk '/^tcp/ {++S[$NF]}  END {for (a in S) print a,S[a]}'`
+     1. 查看各个tcp状态的数量：`netstat -an | awk '/^tcp/ {++S[$NF]}  END {for (a in S) print a,S[a]}'`
    - 队列
      1. 查看SYN queue溢出：`netstat -s | grep LISTEN`
      1. 查看Accept queue溢出：`netstat -s | grep TCPBacklogDrop`
@@ -495,6 +495,19 @@
      1. 端口号限制，根据tcp连接标识定义，连接数即客户端ip数×客户端port数，不考虑地址重用/地址分类，对于ipv4，server端单机最大tcp连接数约为2的48次方
 1. wiki
    - 子进程的fd限制会继承父进程
+   - 僵死进程
+     1. 认识：进程结束后绝大部分资源都清除了，进程表中还保留着这个进程项(entry)的(进程ID，退出状态，占用的资源等)
+        - 标记为defunct
+        - 父进程先于子进程去世，那么子进程将被init进程收养
+        - 
+     1. 产生原因：父进程长期运行，没有显式给子进程调用wait或者waitpid，同时也没有处理SIGCHLD信号，这个时候init进程就没有办法来替子进程接管
+     1. 危害
+        - 还占据PID，意味着海量的子进程会占据满进程表项，会使后来的进程无法fork
+        - 内核栈无法被释放掉（1K/2K大小），为啥会留着它的内核栈，因为在栈的最低端，有着thread_info结构，它包含着 struct_task 结构，这里面包含着一些退出信息。
+     1. 避免方法
+        - 在SIGCHLD信号处理函数中调用wait来释放资源
+        - 显示调用signal(SIGCHLD, SIG_IGN)来忽略SIGCHLD信号，这样子进程结束后，由内核来wait和释放资源
+        - fork两次，第一次fork的子进程在fork完成后直接退出，这样第二次fork得到的子进程就没有爸爸了，会自动被init接管
 ### 工具
 1. 定时任务
    - crontab：linux原生定时器

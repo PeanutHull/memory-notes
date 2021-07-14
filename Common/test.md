@@ -77,8 +77,6 @@
    - 添加监视器Listener：`View Results Tree`、`Summary Report`
    - 添加断言：`Assertion`、`Assert Results`
    - 点击运行、点击停止、点击清除结果等按钮：结果会累加，需要手动清楚
-1. qps
-1. tps
 1. 压测
    - 参数
      1. 线程数：N
@@ -119,3 +117,6 @@
         - -t：并发
         - -c：时间
    - 分布式压测
+   - 配套工具
+     1. jvisualvm：jdk提供的负载、进程监控插件，能够监控本地以及远程
+     1. jstack：jdk提供的java日志分析工具

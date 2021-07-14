@@ -921,6 +921,8 @@
    - 生态：![avatar](../images/about_sentinel.png)
 1. Loaclcache：bigcache、fastcache、freecache、Caffeine
    - Caffeine：基础存储没有采用复杂数据结构采用的是ConcurrentHashMap，所有的管理操作异步化、数据驱逐（淘汰）算法采用 W-TinyLFU，以及部分情况 LRF+LFU结合的方式，各种优秀的队列设计，冲突严重hash情况下链表降级采用红黑树来处理 等等优化处理
+1. 其他
+   - github.com/libi/dcron：基于一致性哈希的分布式定时任务库
 ### 运维
 1. 运行
    - 环境变量

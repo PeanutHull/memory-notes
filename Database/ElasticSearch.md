@@ -1061,6 +1061,7 @@
           1. drop
           1. date：字符串类型时间字段转为时间戳类型
         - output：stdout、es、redis、kafka
+     1. 其他：Fluentd，收集日志文件的开源软件，目前提供数百个插件可用于存储大数据用于日志搜索，数据分析和存储
    - kibana：数据的可视化显示
      1. 组成
         - discover：数据搜索查看
