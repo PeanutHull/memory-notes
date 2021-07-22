@@ -1,18 +1,83 @@
 ### 认识
-1. 理解：开源、基于内存、可持久化的日志型的Key-Value非关系型数据库，多客户端支持。对关系型数据库起到补充作用。常用作缓存、数据库、消息中间件，使用ANSI C编写
+1. 理解：开源、基于内存、可持久化的日志型的Key-Value非关系型数据库，对关系型数据库起到补充作用。常用作缓存、数据库、消息中间件，使用ANSI C编写
    - 速度快，性能高：读11万次/秒，写8万次/秒
-   - 多数据结构，key过期，发布/订阅模式
-   - 所有操作都是原子的、事务、Lua脚本
-   - 数据持久化、LRU收回
+   - 数据结构丰富
+   - 功能多，key过期，发布/订阅模式，事务、Lua脚本
+   - 所有操作都是原子的
+   - 数据持久化、LRU回收
    - 主从同步、Sentinel提供高可用，Cluster提供自动分区
+### 组成
+1. 数据类型
+   - string
+     1. 认识：字符串，键值对类型、二进制安全的字符串，意味着可包含任意对象(如一个图片)，最大512MB
+        - 自动扩展大小、数据类型自动转换
+     1. 命令
+        - set/get、mset/mget、setbit/getbit：单个、多个、位操作，按照偏移量设置位(可做Bloom过滤器)
+          1. set
+             - EX：过期时间秒
+             - PX：过期时间毫秒
+             - NX：不存在才设置
+             - XX：存在才设置
+        - setex/psetex、setnx/msetnx、setrange/getrange：设置过期时间、存在才设置、按照偏移量设置
+        - incr/incrby/incrbyfloat、decr/decrby：加/减、一/N，可当原子计数器
+        - getset、strlen、append：设置并返回旧值、长度、追加到末尾
+   - list
+     1. 认识：双向链表，首尾插入的按照插入顺序排序的字符串列表，访问中间的时间复杂度为O(N)，最多40亿个(2^232-1)
+        - 存储消耗要高于单个字符串，但是可以部分获取，不用像string整个取出来再解码
+     1. 命令
+        - lpush/rpush/lpop/rpop/rpoplpush/lpushx/rpushx：压入、弹出、存在时才压入
+        - blpop/brpop/brpoplpush：支持指定最大秒数的阻塞式弹出数据，单位秒
+        - lset/linsert：指定位置的设置、前/后插入元素
+        - lrange/lindex/llen：范围查看、指定位置查看、查看长度
+          1. `lrange xx 0 -1`：查看所有，-1表示从尾部开始
+        - lrem/ltrim：删除、指定范围删除
+   - hash
+     1. 认识：哈希，哈希类型的键值对集合，field为string类型，可存储对象，最多40亿对
+        - 存储消耗高于字符串
+     1. 命令
+        - hset/hmset/hsetnx：设置
+        - hget/hmget/hgetall：获取
+        - hkeys/hvals/hlen/hscan：键值对数量、迭代键值对
+        - hincrby/hincrbyfloat：单个key可以计数，加一
+        - hdel/hexists：删除n个字段、是否存在某个字段
+   - set
+     1. 认识：无序集合，string类型的成员唯一的无序集合。通过hash table实现，所有操作复杂度都是O(1)
+     1. 命令
+        - sadd/spop/smove/srem：移除某一随机元素、移到另一集合、移除n个
+        - sdiff/sdiffstone/sinter/sinterstone/sunion/sunionstone：求差集、求交集、求并集。[并储存到另一个集合]
+        - scard/sismember/smembers/sscan：成员数量、是否成员、返回所有成员、迭代元素
+   - zset
+     1. 认识：有序集合，string类型的成员唯一的有序集合，每个元素关联一个double类型的分数
+        - 成员唯一，分数可重复
+        - 可通过分数进行排序，通过哈希表实现，最多40亿个(2^232-1)
+        - 适用于有序且不重复
+     1. 命令
+        - zadd/zrem/zremrangebylex/zremrangebyscore/zremrangebyrank
+        - zcard/zcount/zlexcount/zscan：成员数、指定分数区间的成员数、指定字典区间的成员数
+        - zrange/zrangebylex/zrangebyscore：通过索引区间、字典区间、分数返回成员
+        - zrevrange/zrevrangebyscore/zrevrank：通过索引、分数返回指定区间成员、返回排名。分数都是从高到底
+        - zscore/zrank：返回分数值、返回指定成员索引
+        - zincrby：已存在的score值增量加increment，不存在则添加
+        - zinterstore/zunionstore：计算交并集
+   - HyperLogLog
+     1. 认识：基数统计的算法(集中不重复元素数量)
+        - 输入元素数量非常大时，计算基数所需的空间总是固定的、很小的。每个HyperLogLog键只需要花费12KB内存，就可以计算接近2^64个不同元素的基数
+        - 只计算基数，不储存输入元素
+        - 比如数据集{1,3,5,7,5,7,8}，那么基数集为{1,3,5,7,8}, 基数(不重复元素数量)为5
+     1. 命令
+        - pfadd/pfcount/pfmerge：添加、返回基数估算值、合并
+   - geospatial：地理空间，索引半径查找，如附近的人
+   - bitmaps
+     1. 认识：位图，即位的数组，用位可以表示两种情况，节省存储
+        - 其实就是普通的字符串，也就是byte数组，可以用get/set，也可以用getbit/setbit看成「位数组」来处理
+     1. 操作：「零存整取」、「零存零取」、「整存零取」都行，「零存」使用setbit对位值进行逐个设置，「整存」使用字符串一次性填充所有位数组
 1. 数据类型的适用场景
    - string：可持久化的缓存，如session_id为key的session，二进制安全，图片、文件什么的，原子计数器做粉丝数、关注数、ip封锁次数啥的
-   - hash：存对象数据，如用户基本信息，直接更新即可
    - list：消息排行，消息队列，日志收集器，配合发布订阅
      1. 队列的安全性：单个队列一旦pop出去客户端崩溃，消息丢失，利用rpoplpush弄个备份队列，数据丢了再去备份队列取一下
+   - hash：存对象数据，如用户基本信息，直接更新即可
    - set：做不重复的集合，存不重复用户名啦、每日投票一次啦
    - zset：有序的不重复集合，如热门内容的排序，只需修改score，排行榜
-### 组成
 1. key
    - 库
      1. select index：切换库，更像命名空间，隔离key名冲突。索引号只能是数字不能自定义，可设置数量，开始和默认是0
@@ -25,6 +90,8 @@
      1. scan：会使过期的key删除，带来内存占用的下降
      1. sort by xx*->xx desc get xx*->xx get # store xx：对队列、集合按照某些规则排序，by可用通配符，get用于获取指定键值，store结果存储
    - 过期时间
+     1. 认识
+        - string在set后会清除过期时间
      1. 命令
         - expire/pexpire：[用毫秒]设置过期时间
         - expireat/pexpireat：用[毫秒]时间戳设置过期时间
@@ -38,69 +105,6 @@
      1. randomkey：随机返回
      1. dump：序列化
      1. echo string：打印字符串
-1. 数据类型
-   - string
-     1. 认识：字符串，键值对类型、二进制安全的字符串，意味着可包含任意对象(如一个图片)，最大512MB
-     1. 命令
-        - set/get、mset/mget、setbit/getbit：单个、多个、按照偏移量设置位(可做Bloom过滤器)
-          1. set
-             - EX：过期时间秒
-             - PX：过期时间毫秒
-             - NX：不存在才设置
-             - XX：存在才设置
-          1. 布隆过滤器
-             - 认识：用于判断一个元素在不在一个集合里，
-               1. 空间和时间方面都有巨大的优势
-               1. 不需要存储元素本身，可用于保密场合
-               1. 存在误算率，数据越多，误算率越高
-               1. 不能删除元素，需要确保的确在集合里，另外计数器回绕也有问题
-             - 设计：元素hash后映射成位阵列中的一个点。只要看这个点是不是1就可以知道集合中有没有了。需要处理hash冲突，解决方法是使用多个hash，如果有一个说不在集合中，那肯定就不在
-        - setex/psetex、setnx/msetnx、setrange/getrange：设置过期时间、存在才设置、按照偏移量设置
-        - incr/incrby/incrbyfloat、decr/decrby：加/减、一/N，可当原子计数器
-        - getset、strlen、append：设置并返回旧值、长度、追加到末尾
-   - hash
-     1. 认识：哈希，哈希类型的键值对集合，field为string类型，可存储对象，最多40亿对
-     1. 命令
-        - hset/hmset/hsetnx：设置
-        - hget/hmget/hgetall：获取
-        - hkeys/hvals/hlen/hscan：键值对数量、迭代键值对
-        - hincrby/hincrbyfloat：加一
-        - hdel/hexists：删除n个字段、是否存在某个字段
-   - list
-     1. 认识：双向链表，首尾插入的按照插入顺序排序的字符串列表，访问中间的时间复杂度为O(N)，双向链表，最多40亿个(2^232-1)
-     1. 命令
-        - lpush/rpush/lpop/rpop/rpoplpush/lpushx/rpushx：压入、弹出、存在时才压入
-        - blpop/brpop/brpoplpush：带超时时间的弹出数据，单位秒
-        - lset/linsert：索引设置、在前/后插入元素
-        - lrem/ltrim：删除、范围删除
-        - lrange/lindex/llen：范围查看、索引查看、长度。`lrange xx 0 -1` 查看所有
-   - set
-     1. 认识：无序集合，string类型的成员唯一的无序集合。通过hash表实现，所有操作复杂度都是O(1)
-     1. 命令
-        - sadd/spop/smove/srem：移除某一随机元素、移到另一集合、移除n个
-        - sdiff/sdiffstone/sinter/sinterstone/sunion/sunionstone：求差集、求交集、求并集。[并储存到另一个集合]
-        - scard/sismember/smembers/sscan：成员数量、是否成员、返回所有成员、迭代元素
-   - zset
-     1. 认识：有序集合，string类型的成员唯一的有序集合，每个元素关联一个double类型的分数
-        - 适用于有序且不重复
-        - 成员唯一，分数可重复
-        - 可通过分数进行排序，通过哈希表实现，最多40亿个(2^232-1)
-     1. 命令
-        - zadd/zrem/zremrangebylex/zremrangebyscore/zremrangebyrank
-        - zcard/zcount/zlexcount/zscan：成员数、指定分数区间的成员数、指定字典区间的成员数
-        - zrange/zrangebylex/zrangebyscore：通过索引区间、字典区间、分数返回成员
-        - zrevrange/zrevrangebyscore/zrevrank：通过索引、分数返回指定区间成员、返回排名。分数都是从高到底
-        - zscore/zrank：返回分数值、返回指定成员索引
-        - zincrby/zinterstore/zunionstore
-   - HyperLogLog
-     1. 认识：基数统计的算法(集中不重复元素数量)
-        - 输入元素数量非常大时，计算基数所需的空间总是固定的、很小的。每个HyperLogLog键只需要花费12KB内存，就可以计算接近2^64个不同元素的基数
-        - 只计算基数，不储存输入元素
-        - 比如数据集{1,3,5,7,5,7,8}，那么基数集为{1,3,5,7,8}, 基数(不重复元素数量)为5
-     1. 命令
-        - pfadd/pfcount/pfmerge：添加、返回基数估算值、合并
-   - geospatial：地理空间，索引半径查找，如附近的人
-   - bitmaps：位图，即位的数组
 1. 功能
    - 管道
      1. 认识：pipeline，不直接响应，一次性发送多条命令，一次性返回所有响应。减少了多次数据往返时间，提高服务端利用率
@@ -119,12 +123,41 @@
         - 被动删除：读写时触发
         - 主动删除：后台每秒10次取出100检查是否超过25个过期，超过则继续如此处理
         - 内存超限时触发
-   - 发布订阅
-     1. 认识：pub/sub，一种消息通信模式，发送者发送消息，订阅者接收消息，是原子的
-     1. 使用
-        - subscribe/unsubscribe/psubscribe/punsubscribe：订阅/退订n个，[给定模式(通配符等)]
-        - publish：发布
-        - pubsub：查看订阅和发布系统状态
+   - 队列
+     1. 可靠队列：rpoplpush，实现一定程度的可靠队列，发给client前另存到另一个队列
+     1. 队列延迟：blpop/brpop阻塞读可以解决，list作队列的空队列的空轮询时进行睡眠的消息延迟问题
+        - 注意闲置连接主动断开重试的处理
+     1. 发布订阅
+        - 认识：pub/sub，一种消息通信模式，发送者发送消息，订阅者接收消息，是原子的
+        - 使用
+          1. subscribe/unsubscribe/psubscribe/punsubscribe：订阅/退订n个，[给定模式(通配符等)]
+          1. publish：发布
+          1. pubsub：查看订阅和发布系统状态
+     1. 延时队列
+        - zset实现，消息到期时间为score
+          1. 多线程作高可用轮询zset
+          1.  zrem决定多线程唯一的属主，zrangebyscore和zrem进行lua脚本原子化操作，多线程之间争抢任务不会浪费白取一次任务
+        - 实例
+        ```py
+        # 消费消息
+        def loop():
+            while True:
+                values = redis.zrangebyscore("delay-queue", 0, time.time(), start=0, num=1)         # 最多取 1 条
+                if not values: 
+                    time.sleep(1)                                               # 延时队列空的，休息 1s
+                    continue
+                value = values[0]                                               # 拿第一条，也只有一条
+                success = redis.zrem("delay-queue", value)                      # 从消息队列中移除该消息
+                if success:                                                     # 因为有多进程并发的可能，最终只会有一个进程可以抢到消息
+                    msg = json.loads(value)
+                    handle_msg(msg) 
+        # 添加消息
+        def delay(msg):
+            msg.id = str(uuid.uuid4()) # 保证 value 值唯一
+            value = json.dumps(msg)
+            retry_ts = time.time() + 5 # 5 秒后重试
+            redis.zadd("delay-queue", retry_ts, value) 
+        ```
    - 事务
      1. 认识：一组命令在一个步骤里执行，具有原子性
         - 不具备回滚机制，需要自己收拾烂摊子
@@ -138,11 +171,19 @@
         - discard：取消
    - 锁：锁的性能也是很高
      1. 使用incr的原子计数特性实现库存扣减，防止超卖
-     1. 单实例分布式锁：set nx ex val lua：排他，过期，一段时间内唯一的特性
-        - 存在执行时间超出锁时间，造成同时拥有锁，这就是setnx陷阱，可以在拿到锁三分之二时间后，进行锁的延时申请，这个申请要和一开始拿锁的校验等级相同
-          1. 实现有java的redisson。由于需要业务代码和定时触发器同时运行，php没有异步，除非扩充多进程
-        - 设置一个不可猜测的长随机字符串，作为口令串，防止误删他人锁
-        - 利用lua脚本，拿锁和删锁原子操作：防止持有过期锁的客户端误删现有锁的情况出现
+     1. 单实例分布式锁
+        - 实现
+          1. 加锁：set nx ex rangeValue，排他+过期+随机串，一段时间内唯一
+          1. 解锁：lua脚本判断随机value相等和删锁进行原子执行
+             - 设置一个不可猜测的长随机字符串作为口令串，防止持有过期锁的客户端误删现有锁
+        - 特性
+          1. 可重入性：支持线程在持有锁的情况下再次请求加锁就是可重入。程序要存储当前持有锁的计数，精确一点还需要考虑内存锁计数的过期时间
+          1. 过期性：存在执行时间超出锁时间，造成同时拥有锁，这就是setnx陷阱，可以在拿到锁三分之二时间后，进行锁的延时申请，这个申请要和一开始拿锁的校验等级相同
+             - 具体实现有java的redisson。由于需要业务代码和定时触发器同时运行，php没有异步，除非扩充多进程
+        - 加锁失败的处理
+          1. 直接抛出异常，通知用户稍后重试
+          1. sleep一会再重试：碰撞频繁不合适
+          1. 将请求转移至延时队列，过一会再试：合理
      1. 分布式锁
         - RedLock：一个集群中依次在大多数节点建锁(n/2+1)，建锁时间小于超时时间则成功，否则就删掉全部锁重抢(即使有的节点没有加锁成功)
           1. 基于集群都是独立master，不存在集群协调机制，否则主从的架构可能在主从切换时恰好导致同时拥有锁
@@ -166,6 +207,13 @@
         1. `script kill`：杀死脚本
         1. `script flush`：移除
 ### 应用
+1. 布隆过滤器
+   - 认识：用于判断一个元素在不在一个集合里，
+     1. 空间和时间方面都有巨大的优势
+     1. 不需要存储元素本身，可用于保密场合
+     1. 存在误算率，数据越多，误算率越高
+     1. 不能删除元素，需要确保的确在集合里，另外计数器回绕也有问题
+   - 设计：元素hash后映射成位阵列中的一个点。只要看这个点是不是1就可以知道集合中有没有了。需要处理hash冲突，解决方法是使用多个hash，如果有一个说不在集合中，那肯定就不在
 1. 持久化
    - 方式分类
      1. RDB：redis database，通过快照内存中数据定时将数据存储在硬盘，可以恢复redis的内容
@@ -460,6 +508,29 @@
    - 数据在硬盘上是压缩的，迁移到redis需要将当前的容量乘以5
 1. Cluster：太复杂，是去中心化的。没有tw的简单，用的稳定
 ### 设计
+1. 数据类型
+   - string
+     1. 是动态字符串，会自动转换类型，遇到计算了就转为数值
+     1. 预分配冗余空间
+        - 减少内存频繁分配
+        - 长度小于1M加倍扩容，超过一次只会多扩1M
+   - list
+     1. 快速链表的结构，不是数组，意味着插入和删除操作非常快，时间复杂度为O(1)，索引定位很慢，时间复杂度为O(n)
+     1. 内存分配：元素较少用连续内存的压缩列表(ziplist)存储；多时用快速链表(quicklist)，是将多个ziplist使用双向指针串起来使用，既满足了快速的插入删除性能，又不会出现太大的空间冗余
+        - 普通链表需要的附加指针空间太大，浪费空间、加重内存碎片化
+   - hash
+     1. 无序字典，类似java的HashMap，数组 + 链表二维结构。第一维hash的数组位置碰撞时，将碰撞元素使用链表串接起来
+     1. 渐进式rehash：保留新旧两个hash结构并同时查询，在后续的定时任务中及hash的子指令中渐进的迁移
+   - set
+     1. 相当于一个特殊字典，字典中所有value都是null
+   - zset
+     1. 使用跳跃列表的数据结构，结构特殊、复杂。
+        - 因为要支持随机插入和删除，链表操作就要二分查找，平层太慢，所以设计为多层元素，元素可以在不同层次之间进行「跳跃」，定位时一层层下潜
+        - 随机策略来决定新元素可以兼职到第几层，最顶层L31层，L2层25%的概率，只有极少数元素深入到顶层。元素越多越深入的层次就越深、概率越大
+1. 数据类型特性
+   - list/set/hash/zset
+     1. create if not exists 
+     1. drop if no elements：内存回收，最后一个元素弹出自动回收
 1. 内存
    - 复杂的数据结构在内存中操作非常简单，redis可以做很复杂的操作
    - 达到最大内存后，Redis会先尝试清除已到期或即将到期的Key，当此方法处理后，仍然到达最大内存设置，将无法再进行写入操作，但仍然可以进行读取操作。Redis新的vm机制，会把Key存放内存，Value会存放在swap区
@@ -575,12 +646,18 @@
 1. 目录
    - 配置，数据，日志
 ### 最佳实践
+1. 使用
+   - 结构体用hash还是string
+     1. string
+        - 每次访问大量字段
+        - 值不能存储为字符串的时候
+     1. hash
+        - 大多数情况中只访问少量字段
+        - 始终知道哪些字段可用
 1. 使用规范
    - key名设计
-     1. 【建议】：可读性和管理性
-以业务名为前缀，以一定规则分割，比如业务名:表名:id
-     1. 【建议】: 简洁性
-保证语义的前提下，控制key的长度，当key较长时，内存占用也不容易忽视
+     1. 【建议】：可读性和管理性，以业务名为前缀，以一定规则分割，比如业务名:表名:id
+     1. 【建议】: 简洁性，保证语义的前提下，控制key的长度，当key较长时，内存占用也不容易忽视
      1. 【建议】：redis单实例内存控制在 10G以内，内存越大，触发持久化的操作阻塞主线程的时间越长
    - value设计
      1. 【强制】：禁止在redis中存储图片
@@ -591,8 +668,8 @@
      1. 【强制】：禁止使用 FLUSHDB FLUSHALL KEYS BGSZVE SAVE BGREWRITEAOF命令
      1. 【强制】：使用 SCAN 命令时应该批次使用，单次扫描key数量不应超过 2万，间隔0.5s
      1. 【建议】：使用批量操作以提高效率
-     1. 【建议】：谨慎全量操作 hash set 等集合结构，O(N)命令关注 N 的数量，如 hgetall, lrange, smembers, zrange 等并非不能使用，但是要明确 N 的值, 有遍历的需求可以使用hscan、sscan、zscan代替
-     1. zset服务器消耗最高，要排序还要去重，尽量少用    
+     1. 【建议】：谨慎全量操作hash set等集合结构，O(N)命令关注N的数量，如hgetall/lrange/smembers/zrange要明确N的值, 遍历需求可用hscan、sscan、zscan代替
+     1. 【建议】：zset服务器消耗最高，要排序还要去重，尽量少用    
    - 客户端使用
      1. 【强制】：新上线或者迁移的redis服务强制使用密码，应用层要进行配置
      1. 【强制】：只允许读取本部门redis， 需要使用其他部门数据则将数据服务化

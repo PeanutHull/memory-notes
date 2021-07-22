@@ -200,6 +200,8 @@
    - windows：ReadDirectoryChangesW
    - Solaris 11：FEN
 ### 性能监控
+1. 集成方案
+   - cacti
 1. cpu工具
    - ps
      1. %CPU：cpu使用占比

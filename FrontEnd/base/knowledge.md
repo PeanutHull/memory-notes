@@ -221,3 +221,4 @@ tbody.append(html.join(''));
    - npm：前端工具/模块源。还有bower，前端模块源，维护模块的安装、升级、删除等
    - gulp/webpack/fis：构建工具
    - mock：接口服务、本地工具
+1. 断电续传协议：tus
