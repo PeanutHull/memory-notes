@@ -59,20 +59,29 @@
         - zscore/zrank：返回分数值、返回指定成员索引
         - zincrby：已存在的score值增量加increment，不存在则添加
         - zinterstore/zunionstore：计算交并集
-   - HyperLogLog
-     1. 认识：基数统计的算法(集中不重复元素数量)
-        - 输入元素数量非常大时，计算基数所需的空间总是固定的、很小的。每个HyperLogLog键只需要花费12KB内存，就可以计算接近2^64个不同元素的基数
-        - 只计算基数，不储存输入元素
-        - 比如数据集{1,3,5,7,5,7,8}，那么基数集为{1,3,5,7,8}, 基数(不重复元素数量)为5
-     1. 命令
-        - pfadd/pfcount/pfmerge：添加、返回基数估算值、合并
-   - geospatial：地理空间，索引半径查找，如附近的人
    - bitmaps
-     1. 认识：位图，即位的数组，用位可以表示两种情况，节省存储
+     1. 认识：位图，即位的数组，用位可以表示两种情况，节省存储，如员工全年签到数据
         - 其实就是普通的字符串，也就是byte数组，可以用get/set，也可以用getbit/setbit看成「位数组」来处理
      1. 操作：「零存整取」、「零存零取」、「整存零取」都行，「零存」使用setbit对位值进行逐个设置，「整存」使用字符串一次性填充所有位数组
+        - getbit/setbit
+        - bitcount/bitpos
+        - bitfield：v3.2，多个位的操作
+   - HyperLogLog
+     1. 认识：不精确的去重计数方案，标准误差0.81%，如统计千万级UV的页面，要个数就行
+        - 输入元素数量非常大时，计算基数所需的空间总是固定的、很小的，就可以计算接近2^64个不同元素的基数
+        - 只计算基数，不储存输入元素，无法知道在不在里边
+        - 稀疏矩阵占用空间渐渐超过了阈值时才会一次性转变成稠密矩阵，才会占用12k的空间
+        - 涉及概率论
+     1. 命令
+        - pfadd/pfmerge：添加、合并
+        - pfcount：返回估算值
+   - geospatial：地理空间，索引半径查找，如附近的人
 1. 数据类型的适用场景
    - string：可持久化的缓存，如session_id为key的session，二进制安全，图片、文件什么的，原子计数器做粉丝数、关注数、ip封锁次数啥的
+     1. incr
+        - 锁、原子计数器
+        - 限流
+        - 幂等：如MQ防止重复消费，订单防重，订单5分钟之内只能被消费一次，订单号作为key
    - list：消息排行，消息队列，日志收集器，配合发布订阅
      1. 队列的安全性：单个队列一旦pop出去客户端崩溃，消息丢失，利用rpoplpush弄个备份队列，数据丢了再去备份队列取一下
    - hash：存对象数据，如用户基本信息，直接更新即可
@@ -123,21 +132,60 @@
         - 被动删除：读写时触发
         - 主动删除：后台每秒10次取出100检查是否超过25个过期，超过则继续如此处理
         - 内存超限时触发
-   - 队列
-     1. 可靠队列：rpoplpush，实现一定程度的可靠队列，发给client前另存到另一个队列
-     1. 队列延迟：blpop/brpop阻塞读可以解决，list作队列的空队列的空轮询时进行睡眠的消息延迟问题
-        - 注意闲置连接主动断开重试的处理
-     1. 发布订阅
-        - 认识：pub/sub，一种消息通信模式，发送者发送消息，订阅者接收消息，是原子的
-        - 使用
-          1. subscribe/unsubscribe/psubscribe/punsubscribe：订阅/退订n个，[给定模式(通配符等)]
-          1. publish：发布
-          1. pubsub：查看订阅和发布系统状态
-     1. 延时队列
-        - zset实现，消息到期时间为score
-          1. 多线程作高可用轮询zset
-          1.  zrem决定多线程唯一的属主，zrangebyscore和zrem进行lua脚本原子化操作，多线程之间争抢任务不会浪费白取一次任务
-        - 实例
+   - 发布订阅
+     1. 认识：pub/sub，一种消息通信模式，发送者发送消息，订阅者接收消息，是原子的
+     1. 使用
+        - subscribe/unsubscribe/psubscribe/punsubscribe：订阅/退订n个，[给定模式(通配符等)]
+        - publish：发布
+        - pubsub：查看订阅和发布系统状态
+   - 事务
+     1. 认识：一组命令在一个步骤里执行，具有原子性
+        - 不具备回滚机制，需要自己收拾烂摊子
+        - 事务中不能获取同一事务其他命令执行的结果
+        - 错误处理：语法错误所有命令不执行，运行错误不影响其他命令执行(会造成问题)
+     1. 使用
+        - multi：标记开始
+        - watch：监视n个key，exec前值被改变则取消事务，即提供了CAS(check-and-set)行为
+        - unwatch：取消所有key的监视
+        - exec：执行事务
+        - discard：取消
+   - 脚本
+      - 认识：支持lua脚本，内嵌lua解释器
+      - 命令
+        1. `eval script numkeys key`：执行，会缓存sha1以便下次用evalsha调用
+           - 如`eval "return {KEYS[1],KEYS[2],ARGV[1],ARGV[2]}" 2 key1 key2 first second`
+        1. `evalsha sha1 numkeys key`：指定sha1码执行，可以第一次eval，之后省传输用evalsha
+        1. `script load script`：加载，不执行
+        1. `script exists script`：是否已加载
+        1. `script kill`：杀死脚本
+        1. `script flush`：移除
+1. 模块
+   - redis-cell
+     1. 认识：限流模块，提供原子限流指令，限流就变得简单了，使用漏斗算法，v4.0
+        - 如果被拒绝了，就需要丢弃或重试，连重试时间都帮你算好了，直接取返回结果数组的第四个值进行sleep即可
+     1. cl.throttle：只有1条指令，每xx秒最多xx次
+### 应用
+1. Bloom Filter
+   - 认识：布隆过滤器，可以理解为不怎么精确的set结构，空间能节省90%，如给用户推荐大量新闻用于判断是否已经读过，v4.0
+     1. 说某个值存在时，这个值可能不存在；当它说不存在时，那就肯定不存在
+     1. 不需要存储元素本身，可用于保密场合
+     1. 存在误算率，数据越多，误算率越高，可通过调整参数获得很高的准确率
+     1. 空间和时间有巨大的优势
+     1. 不能删除元素，需要确保的确在集合里，另外计数器回绕也有问题
+   - 设计：元素hash后映射成位阵列中的一个点。只要看这个点是不是1就可以知道集合中有没有了。需要处理hash冲突，解决方法是使用多个hash，如果有一个说不在集合中，那肯定就不在
+   - 操作
+     1. bf.reserve：参数设置，initial_size估计的过大浪费存储空间，过小影响准确率
+     1. bf.add/bf.madd
+     1. bf.exists/bf.mexists
+1. 队列
+   - 可靠队列：rpoplpush，实现一定程度的可靠队列，发给client前另存到另一个队列
+   - 轮询队列延迟解决：blpop/brpop阻塞读可以解决，list作队列的空队列的空轮询时进行睡眠的消息延迟问题
+     1. 注意闲置连接主动断开重试的处理
+   - 延时队列
+     1. zset实现，消息到期时间为score
+        - 多线程作高可用轮询zset
+        -  zrem决定多线程唯一的属主，zrangebyscore和zrem进行lua脚本原子化操作，多线程之间争抢任务不会浪费白取一次任务
+     1. 实例
         ```py
         # 消费消息
         def loop():
@@ -158,117 +206,134 @@
             retry_ts = time.time() + 5 # 5 秒后重试
             redis.zadd("delay-queue", retry_ts, value) 
         ```
-   - 事务
-     1. 认识：一组命令在一个步骤里执行，具有原子性
-        - 不具备回滚机制，需要自己收拾烂摊子
-        - 事务中不能获取同一事务其他命令执行的结果
-        - 错误处理：语法错误所有命令不执行，运行错误不影响其他命令执行(会造成问题)
-     1. 使用
-        - multi：标记开始
-        - watch：监视n个key，exec前值被改变则取消事务，即提供了CAS(check-and-set)行为
-        - unwatch：取消所有key的监视
-        - exec：执行事务
-        - discard：取消
-   - 锁：锁的性能也是很高
-     1. 使用incr的原子计数特性实现库存扣减，防止超卖
-     1. 单实例分布式锁
-        - 实现
-          1. 加锁：set nx ex rangeValue，排他+过期+随机串，一段时间内唯一
-          1. 解锁：lua脚本判断随机value相等和删锁进行原子执行
-             - 设置一个不可猜测的长随机字符串作为口令串，防止持有过期锁的客户端误删现有锁
-        - 特性
-          1. 可重入性：支持线程在持有锁的情况下再次请求加锁就是可重入。程序要存储当前持有锁的计数，精确一点还需要考虑内存锁计数的过期时间
-          1. 过期性：存在执行时间超出锁时间，造成同时拥有锁，这就是setnx陷阱，可以在拿到锁三分之二时间后，进行锁的延时申请，这个申请要和一开始拿锁的校验等级相同
-             - 具体实现有java的redisson。由于需要业务代码和定时触发器同时运行，php没有异步，除非扩充多进程
-        - 加锁失败的处理
-          1. 直接抛出异常，通知用户稍后重试
-          1. sleep一会再重试：碰撞频繁不合适
-          1. 将请求转移至延时队列，过一会再试：合理
-     1. 分布式锁
-        - RedLock：一个集群中依次在大多数节点建锁(n/2+1)，建锁时间小于超时时间则成功，否则就删掉全部锁重抢(即使有的节点没有加锁成功)
-          1. 基于集群都是独立master，不存在集群协调机制，否则主从的架构可能在主从切换时恰好导致同时拥有锁
-          1. 客户端应设置响应超时时间，防止集群挂掉傻傻等待，并在超时时删掉全部锁。还可轮询重试抢锁。同样服务端也不要留给某个节点太长时间，应该尽快尝试下一个
-          1. redlock内部在客户端无法取到锁时，应该在一个随机的并且大于拿锁时间的延迟后重试，尽可能防止多客户端在同时抢夺同一锁(防止脑裂，没人会拿到锁)
-             - 拿到锁的时间越短，脑裂概率越低
-             - 客户端拿锁失败时，应尽快释放锁，否则已经存在脑裂，只能等待锁自动释放，叫做惩罚
-          1. 使用当前时间减去开始拿锁时间即获取锁使用的时间
-          1. 时钟漂移带来的时间差对于失效时间来说几乎可以忽略不计
-          1. redis重启时，没有备份锁排斥性失效，有AOF没有fsync=always也不行，不过有AOF重启后失效时间还是按照之前的，可以设置重启机ttl后再提供服务，但可能会导致服务整体不可用的时间变长
-        - zk：抢锁就是节点尝试创建临时znode，建锁失败则注册监听器，解锁就是删除znode，然后zk通知客户端抢锁，也可弄成顺序节点，多个抢锁就依次监听上个znode
-        - 比较：zk设计定位就是分布式协调，注册监听器即可，但大并发压力会较大，比redis的轮询性能开销小
-   - 脚本
-      - 认识：支持lua脚本，内嵌lua解释器
-      - 命令
-        1. `eval script numkeys key`：执行，会缓存sha1以便下次用evalsha调用
-           - 如`eval "return {KEYS[1],KEYS[2],ARGV[1],ARGV[2]}" 2 key1 key2 first second`
-        1. `evalsha sha1 numkeys key`：指定sha1码执行，可以第一次eval，之后省传输用evalsha
-        1. `script load script`：加载，不执行
-        1. `script exists script`：是否已加载
-        1. `script kill`：杀死脚本
-        1. `script flush`：移除
-### 应用
-1. 布隆过滤器
-   - 认识：用于判断一个元素在不在一个集合里，
-     1. 空间和时间方面都有巨大的优势
-     1. 不需要存储元素本身，可用于保密场合
-     1. 存在误算率，数据越多，误算率越高
-     1. 不能删除元素，需要确保的确在集合里，另外计数器回绕也有问题
-   - 设计：元素hash后映射成位阵列中的一个点。只要看这个点是不是1就可以知道集合中有没有了。需要处理hash冲突，解决方法是使用多个hash，如果有一个说不在集合中，那肯定就不在
-1. 持久化
-   - 方式分类
-     1. RDB：redis database，通过快照内存中数据定时将数据存储在硬盘，可以恢复redis的内容
-        - 触发条件
-          1. 根据规则自动快照：save的配置
-          1. 执行save、bgsave：save会阻塞所有客户端请求，避免生产环境使用
-          1. 执行flushall
-          1. 执行replication：设置了主从时，复制初始化会自动快照
-        - 快照生成原理：fork出子进程进行数据存储，完成后替换旧的rdb文件
-          1. 快照结束时才替换rdb文件，说明任何时候rdb文件都是完整的
-          1. unix使用写时复制功能，fork之后到进程结束前的修改/新增不会被记录
-          1. 一旦redis异常，rdb方式会丢失最后一次快照之后的数据
-        - 运维
-          1. 如果修改/新增较多较大时，占用内存可能显著增大，因为写时复制会增加内存占用，需要设置linux的应用申请内存超过可用内存
-          1. rdb文件是默认设置被压缩的，1000万键值对，大小1G的rdb，载入内存花费20多秒
-        - 配置
-          1. dbfilename：默认dump.rdb
-          1. save <seconds> <changes>：n时间内，n次更新操作，就将数据同步到数据文件，可存在多条，或的关系
-          1. dir：目录
-          1. rdbcompression：是否压缩，关闭节约cpu，但是文件变的巨大
-        - 触发机制
-          1. save会造成redis阻塞的，得等着，因为redis是单线程的，复杂度O(N)
-             - 文件策略：新的替换老的
-          1. bgsave是fork新进程进行，fork过程中会造成阻塞，设计或使用不好同样阻塞很长时间，二者执行内容相同
-          1. 自动：通过多条配置，满足一个就触发
-     1. AOF
-        - 认识：append only file，更新数据后追加记录命令，搭配AOF降低数据丢失的可能性，默认不开启，和rdb文件位置相同，
-          1. redis启动时，相比于rdb，优先使用aof恢复数据，逐个执行aof命令来载入数据，比rdb方式慢
-          1. 由于操作系统的缓存机制，aof记录后没有真正写入硬盘，系统默认30秒同步一次，如果系统异常则数据丢失，可设置appendfsync同步硬盘的时机
-        - 实现：纯文本记录，是redis的原始通信协议内容，会按照一定条件进行aof优化重写，不和之前的aof相关，比如三条合一条，手动触发 bgrewriteaof
-        - 配置
-          1. appendonly：开关
-          1. appendfilename：默认appendonly.aof
-          1. appendfsync：记录方式，no等待系统将数据同步到磁盘(快)，always更新后将数据写到磁盘(慢，安全)，everysec每秒一次(折衷)
-          1. auto-aof-rewrite-percentage：aof重写触发机制，当前aof大小超过上一次重写时大小的百分比时，进行重写
-          1. auto-aof-rewrite-min-size：aof重写的最小文件大小
-   - 比较：![avatar](../images/save_vs_bgsave.png)
-     1. rdb是快照，aof是日志
-     1. 二者结合使用
-   - 日志
-     1. 有log文件和rdb文件，rdb是自己的协议不能直接cat查看，日志可以
-   - 备份恢复
-     1. 备份：save/bgsave
-     1. 恢复：将dump.rdb文件放到redis目录并启动即可
-1. 扩容：横向扩容、纵向扩容
-1. 守护进程
-   - daemonize no：yes
-1. 分区
-   - 认识：分割数据到多个Redis实例。提高容量，扩展计算能力和带宽
-     1. 不支持多个key同时操作，事务中也不行
-     1. 多实体数据库维护复杂，容量调整复杂，用presharding解决
-   - 类型
-     1. 范围：不同范围放到不同实例中，需要维护范围表
-     1. hash：使用crc32将key转为数字，然后取模(模为实例数量)确定实例
-   - 自动分区：cluster
+1. 锁：锁的性能也是很高
+   - 使用incr的原子计数特性实现库存扣减，防止超卖
+   - 单实例分布式锁
+     1. 实现
+        - 加锁：set nx ex rangeValue，排他+过期+随机串，一段时间内唯一
+        - 解锁：lua脚本判断随机value相等和删锁进行原子执行
+          1. 设置一个不可猜测的长随机字符串作为口令串，防止持有过期锁的客户端误删现有锁
+     1. 特性
+        - 可重入性：支持线程在持有锁的情况下再次请求加锁就是可重入。程序要存储当前持有锁的计数，精确一点还需要考虑内存锁计数的过期时间
+        - 过期性：存在执行时间超出锁时间，造成同时拥有锁，这就是setnx陷阱，可以在拿到锁三分之二时间后，进行锁的延时申请，这个申请要和一开始拿锁的校验等级相同
+          1. 具体实现有java的redisson。由于需要业务代码和定时触发器同时运行，php没有异步，除非扩充多进程
+     1. 加锁失败的处理
+        - 直接抛出异常，通知用户稍后重试
+        - sleep一会再重试：碰撞频繁不合适
+        - 将请求转移至延时队列，过一会再试：合理
+   - 分布式锁
+     1. RedLock：一个集群中依次在大多数节点建锁(n/2+1)，建锁时间小于超时时间则成功，否则就删掉全部锁重抢(即使有的节点没有加锁成功)
+        - 基于集群都是独立master，不存在集群协调机制，否则主从的架构可能在主从切换时恰好导致同时拥有锁
+        - 客户端应设置响应超时时间，防止集群挂掉傻傻等待，并在超时时删掉全部锁。还可轮询重试抢锁。同样服务端也不要留给某个节点太长时间，应该尽快尝试下一个
+        - redlock内部在客户端无法取到锁时，应该在一个随机的并且大于拿锁时间的延迟后重试，尽可能防止多客户端在同时抢夺同一锁(防止脑裂，没人会拿到锁)
+          1. 拿到锁的时间越短，脑裂概率越低
+          1. 客户端拿锁失败时，应尽快释放锁，否则已经存在脑裂，只能等待锁自动释放，叫做惩罚
+        - 使用当前时间减去开始拿锁时间即获取锁使用的时间
+        - 时钟漂移带来的时间差对于失效时间来说几乎可以忽略不计
+        - redis重启时，没有备份锁排斥性失效，有AOF没有fsync=always也不行，不过有AOF重启后失效时间还是按照之前的，可以设置重启机ttl后再提供服务，但可能会导致服务整体不可用的时间变长
+     1. zk：抢锁就是节点尝试创建临时znode，建锁失败则注册监听器，解锁就是删除znode，然后zk通知客户端抢锁，也可弄成顺序节点，多个抢锁就依次监听上个znode
+     1. 比较：zk设计定位就是分布式协调，注册监听器即可，但大并发压力会较大，比redis的轮询性能开销小
+1. 限流
+   - 计数器：incr设置有效期内的大于某个数量，触发限流，有效期就是限流时间单位，数量就是最高请求量，不是平均限流
+    ```java
+    /**
+     * 60秒内最大1000次
+     * @param key  可以设计为用户标识及接口标识组合
+     * @param expireMillis 过期时间60s
+     * @return
+     */
+    public Boolean limiter(String key, Long expireMillis) {
+        Long count = redisTemplate.opsForValue().increment(key, INCREMENT_STEP);
+        if (1 == count) {
+            redisTemplate.expire(key, expireMillis, TimeUnit.SECONDS);
+        }
+        if (count > 1000) {
+            return Boolean.TRUE;
+        }
+        return Boolean.FALSE;
+    }
+    ```
+   - 滑动窗口
+     1. 结构：zset结构，同一个用户同一种行为用一个zset记录，用score圈出时间窗口，value只需要保证唯一性即可用毫秒时间戳
+        - 如果是冷用户，滑动时间窗口内的行为是空记录，zset就可以从内存中移除，不再占用空间
+        - 如果限流值非常大，会消耗很大内存，不适合数据量大的
+     1. 实现
+        - 每一个行为到来时，都维护一次时间窗口，将时间窗口外记录清理掉，只保留窗口内记录
+        - 通过统计滑动窗口内的行为数量与阈值max_count进行比较就可以得出当前的行为是否允许
+     1. code
+        ```python
+        # coding: utf8
+        import time
+        import redis
+
+        client = redis.StrictRedis()
+
+        def is_action_allowed(user_id, action_key, period, max_count):
+            key = 'hist:%s:%s' % (user_id, action_key)
+            now_ts = int(time.time() * 1000)                                    # 毫秒时间戳
+            with client.pipeline() as pipe:
+                # 记录行为
+                pipe.zadd(key, now_ts, now_ts)                                  # value 和 score 都使用毫秒时间戳
+                # 移除时间窗口之前的行为记录，剩下的都是时间窗口内的
+                pipe.zremrangebyscore(key, 0, now_ts - period * 1000)
+                # 获取窗口内的行为数量
+                pipe.zcard(key)
+                # 设置 zset 过期时间，避免冷用户持续占用内存
+                # 过期时间应该等于时间窗口的长度，再多宽限 1s
+                pipe.expire(key, period + 1)
+                # 批量执行
+                _, _, current_count, _ = pipe.execute()
+            # 比较数量是否超标
+            return current_count <= max_count
+        
+        for i in range(20):
+        print is_action_allowed("laoqian", "reply", 60, 5)
+        ```
+   - 漏斗
+     1. code
+        ```python
+        # coding: utf8
+        import time
+        class Funnel(object):
+            def __init__(self, capacity, leaking_rate):
+                self.capacity = capacity # 漏斗容量
+                self.leaking_rate = leaking_rate # 漏嘴流水速率
+                self.left_quota = capacity # 漏斗剩余空间
+                self.leaking_ts = time.time() # 上一次漏水时间
+            def make_space(self):
+                now_ts = time.time()
+                delta_ts = now_ts - self.leaking_ts # 距离上一次漏水过去了多久
+                delta_quota = delta_ts * self.leaking_rate # 又可以腾出不少空间了
+                if delta_quota < 1: # 腾的空间太少，那就等下次吧
+                    return
+                self.left_quota += delta_quota # 增加剩余空间
+                self.leaking_ts = now_ts # 记录漏水时间
+                if self.left_quota > self.capacity: # 剩余空间不得高于容量
+                    self.left_quota = self.capacity
+
+            def watering(self, quota):
+                self.make_space()
+                if self.left_quota >= quota: # 判断剩余空间是否足够
+                    self.left_quota -= quota
+                    return True
+                return False
+        
+        funnels = {} # 所有的漏斗
+
+        # capacity 漏斗容量
+        # leaking_rate 漏嘴流水速率 quota/s
+        def is_action_allowed(user_id, action_key, capacity, leaking_rate):
+            key = '%s:%s' % (user_id, action_key)
+            funnel = funnels.get(key)
+            if not funnel:
+                funnel = Funnel(capacity, leaking_rate)
+                funnels[key] = funnel
+            return funnel.watering(1)
+
+        # 测试
+        for i in range(20):
+        print is_action_allowed('laoqian', 'reply', 15, 0.5)
+        ```
 ### 架构
 1. 单机
    - 认识：简单，不需要数据同步，单点故障隐患，性能瓶颈
@@ -458,6 +523,15 @@
      1. `cluster addslots {0...5461}`：分配槽位
      1. `cluster replicate xx`：分配为某节点的从
      1. `redis-cli -cluster`：连接集群，c是集群模式
+1. 扩容：横向扩容、纵向扩容
+1. 分区
+   - 认识：分割数据到多个Redis实例。提高容量，扩展计算能力和带宽
+     1. 不支持多个key同时操作，事务中也不行
+     1. 多实体数据库维护复杂，容量调整复杂，用presharding解决
+   - 类型
+     1. 范围：不同范围放到不同实例中，需要维护范围表
+     1. hash：使用crc32将key转为数字，然后取模(模为实例数量)确定实例
+   - 自动分区：cluster
 1. 网校tw架构
    - hash分片数据到redis上
    - 高可用：confd + etcd + tw + redis一从热备 + sentinel
@@ -590,6 +664,57 @@
           1. vm-enabled：是否启用虚拟内存机制
           1. vm-swap-file：虚拟内存文件路径，多Redis实例不可共享
           1. vm-max-memory 0/vm-page-size 32/vm-pages 134217728/vm-max-threads 4
+1. 日志
+   - redis.log：人可读
+   - sentinel.log：人可读
+1. 目录
+   - 配置，数据，日志
+1. 守护进程
+   - daemonize no：yes
+1. 持久化
+   - 方式分类
+     1. RDB：redis database，通过快照内存中数据定时将数据存储在硬盘，可以恢复redis的内容
+        - 触发条件
+          1. 根据规则自动快照：save的配置
+          1. 执行save、bgsave：save会阻塞所有客户端请求，避免生产环境使用
+          1. 执行flushall
+          1. 执行replication：设置了主从时，复制初始化会自动快照
+        - 快照生成原理：fork出子进程进行数据存储，完成后替换旧的rdb文件
+          1. 快照结束时才替换rdb文件，说明任何时候rdb文件都是完整的
+          1. unix使用写时复制功能，fork之后到进程结束前的修改/新增不会被记录
+          1. 一旦redis异常，rdb方式会丢失最后一次快照之后的数据
+        - 运维
+          1. 如果修改/新增较多较大时，占用内存可能显著增大，因为写时复制会增加内存占用，需要设置linux的应用申请内存超过可用内存
+          1. rdb文件是默认设置被压缩的，1000万键值对，大小1G的rdb，载入内存花费20多秒
+        - 配置
+          1. dbfilename：默认dump.rdb
+          1. save <seconds> <changes>：n时间内，n次更新操作，就将数据同步到数据文件，可存在多条，或的关系
+          1. dir：目录
+          1. rdbcompression：是否压缩，关闭节约cpu，但是文件变的巨大
+        - 触发机制
+          1. save会造成redis阻塞的，得等着，因为redis是单线程的，复杂度O(N)
+             - 文件策略：新的替换老的
+          1. bgsave是fork新进程进行，fork过程中会造成阻塞，设计或使用不好同样阻塞很长时间，二者执行内容相同
+          1. 自动：通过多条配置，满足一个就触发
+     1. AOF
+        - 认识：append only file，更新数据后追加记录命令，搭配AOF降低数据丢失的可能性，默认不开启，和rdb文件位置相同，
+          1. redis启动时，相比于rdb，优先使用aof恢复数据，逐个执行aof命令来载入数据，比rdb方式慢
+          1. 由于操作系统的缓存机制，aof记录后没有真正写入硬盘，系统默认30秒同步一次，如果系统异常则数据丢失，可设置appendfsync同步硬盘的时机
+        - 实现：纯文本记录，是redis的原始通信协议内容，会按照一定条件进行aof优化重写，不和之前的aof相关，比如三条合一条，手动触发 bgrewriteaof
+        - 配置
+          1. appendonly：开关
+          1. appendfilename：默认appendonly.aof
+          1. appendfsync：记录方式，no等待系统将数据同步到磁盘(快)，always更新后将数据写到磁盘(慢，安全)，everysec每秒一次(折衷)
+          1. auto-aof-rewrite-percentage：aof重写触发机制，当前aof大小超过上一次重写时大小的百分比时，进行重写
+          1. auto-aof-rewrite-min-size：aof重写的最小文件大小
+   - 比较：![avatar](../images/save_vs_bgsave.png)
+     1. rdb是快照，aof是日志
+     1. 二者结合使用
+   - 日志
+     1. 有log文件和rdb文件，rdb是自己的协议不能直接cat查看，日志可以
+   - 备份恢复
+     1. 备份：save/bgsave
+     1. 恢复：将dump.rdb文件放到redis目录并启动即可
 1. 性能测试
    - redis-benchmark
      1. -h/-p：地址端口
@@ -640,11 +765,6 @@
     /etc/init.d/irqbalance restart
     chkconfig irqbalance on
     ```
-1. 日志
-   - redis.log：人可读
-   - sentinel.log：人可读
-1. 目录
-   - 配置，数据，日志
 ### 最佳实践
 1. 使用
    - 结构体用hash还是string
