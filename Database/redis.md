@@ -59,23 +59,6 @@
         - zscore/zrank：返回分数值、返回指定成员索引
         - zincrby：已存在的score值增量加increment，不存在则添加
         - zinterstore/zunionstore：计算交并集
-   - bitmaps
-     1. 认识：位图，即位的数组，用位可以表示两种情况，节省存储，如员工全年签到数据
-        - 其实就是普通的字符串，也就是byte数组，可以用get/set，也可以用getbit/setbit看成「位数组」来处理
-     1. 操作：「零存整取」、「零存零取」、「整存零取」都行，「零存」使用setbit对位值进行逐个设置，「整存」使用字符串一次性填充所有位数组
-        - getbit/setbit
-        - bitcount/bitpos
-        - bitfield：v3.2，多个位的操作
-   - HyperLogLog
-     1. 认识：不精确的去重计数方案，标准误差0.81%，如统计千万级UV的页面，要个数就行
-        - 输入元素数量非常大时，计算基数所需的空间总是固定的、很小的，就可以计算接近2^64个不同元素的基数
-        - 只计算基数，不储存输入元素，无法知道在不在里边
-        - 稀疏矩阵占用空间渐渐超过了阈值时才会一次性转变成稠密矩阵，才会占用12k的空间
-        - 涉及概率论
-     1. 命令
-        - pfadd/pfmerge：添加、合并
-        - pfcount：返回估算值
-   - geospatial：地理空间，索引半径查找，如附近的人
 1. 数据类型的适用场景
    - string：可持久化的缓存，如session_id为key的session，二进制安全，图片、文件什么的，原子计数器做粉丝数、关注数、ip封锁次数啥的
      1. incr
@@ -93,10 +76,14 @@
      1. move：移动key到某个库中
    - 查看
      1. dbsize：key的数量
-     1. keys：查找符合给定模式的key
+     1. keys：查找符合给定模式的key，支持模式匹配，会阻塞单线程的redis
      1. exists：是否存在
      1. type：查看类型
-     1. scan：会使过期的key删除，带来内存占用的下降
+     1. scan：基于游标支持模式匹配遍历key，会使过期的key删除，带来内存占用的下降
+        - 不会阻塞线程，提供limit参数
+        - 返回结果可能重复，需要客户端去重
+        - 遍历的过程中的数据修改，改动后的数据能不能遍历到不确定
+        - 单次返回的结果是空的并不意味着遍历结束，而要看返回的游标值是否为零
      1. sort by xx*->xx desc get xx*->xx get # store xx：对队列、集合按照某些规则排序，by可用通配符，get用于获取指定键值，store结果存储
    - 过期时间
      1. 认识
@@ -117,6 +104,9 @@
 1. 功能
    - 管道
      1. 认识：pipeline，不直接响应，一次性发送多条命令，一次性返回所有响应。减少了多次数据往返时间，提高服务端利用率
+        - 本质由客户端改变指令的先后顺序，先一次性顺序发出去，再一次性顺序接收，真正只花费一个周期的等待实现多个周期等待的重叠，越多效率越高
+          1. 写的真正耗时：等待发送缓冲空出空闲空间
+          1. 读的真正耗时：等待空的接收缓冲有数据
      1. 使用
         ```php
         $redis->pipeline();
@@ -160,10 +150,41 @@
         1. `script kill`：杀死脚本
         1. `script flush`：移除
 1. 模块
-   - redis-cell
-     1. 认识：限流模块，提供原子限流指令，限流就变得简单了，使用漏斗算法，v4.0
-        - 如果被拒绝了，就需要丢弃或重试，连重试时间都帮你算好了，直接取返回结果数组的第四个值进行sleep即可
-     1. cl.throttle：只有1条指令，每xx秒最多xx次
+   - bitmaps
+     1. 认识：位图，即位的数组，用位可以表示两种情况，节省存储，如员工全年签到数据
+        - 其实就是普通的字符串，也就是byte数组，可以用get/set，也可以用getbit/setbit看成「位数组」来处理
+     1. 操作：「零存整取」、「零存零取」、「整存零取」都行，「零存」使用setbit对位值进行逐个设置，「整存」使用字符串一次性填充所有位数组
+        - getbit/setbit
+        - bitcount/bitpos
+        - bitfield：v3.2，多个位的操作
+   - hyperLogLog
+     1. 认识：不精确的去重计数方案，标准误差0.81%，如统计千万级UV的页面，要个数就行
+        - 输入元素数量非常大时，计算基数所需的空间总是固定的、很小的，就可以计算接近2^64个不同元素的基数
+        - 只计算基数，不储存输入元素，无法知道在不在里边
+        - 稀疏矩阵占用空间渐渐超过了阈值时才会一次性转变成稠密矩阵，才会占用12k的空间
+        - 涉及概率论
+     1. 命令
+        - pfadd/pfmerge：添加、合并
+        - pfcount：返回估算值
+   - GeoHash
+     1. 认识：geospatial，地理空间索引半径查找，如附近的人，v3.2
+        - 结构只是个zset，score是GeoHash的52位整数值
+     1. 操作
+        - geoadd：没有删除
+        - geopos/geohash：获取经纬度坐标、hash
+        - georadiusbymember/georadius：附近的其他元素
+        - geodist：计算两个元素之间的距离
+     1. wiki
+        - 最佳实践
+          1. 全部放在一个zset中，使用单独实例部署，不使用集群环境
+          1. 数据量大了，按国家/省/按市等拆分，降低单个zset集合大小
+        - 附近人实现
+          1. 勾股定理，经纬度坐标的密度不一样，勾股定律计算平方差时之后再求和时，需要按一定的系数比加权求和
+          1. 一般通过矩形区域来限定元素的数量，然后对区域内元素进行全量距离计算再排序
+          1. 矩形区域计算，r为半径：`select id from positions where x0-r < x < x0+r and y0-r < y < y0+r`
+        - 经纬度
+          1. 经度范围(-180, 180]，经度正负以本初子午线 (英国格林尼治天文台) 为界，东正西负
+          1. 纬度范围(-90,90]，纬度正负以赤道为界，北正南负
 ### 应用
 1. Bloom Filter
    - 认识：布隆过滤器，可以理解为不怎么精确的set结构，空间能节省90%，如给用户推荐大量新闻用于判断是否已经读过，v4.0
@@ -290,50 +311,10 @@
         print is_action_allowed("laoqian", "reply", 60, 5)
         ```
    - 漏斗
-     1. code
-        ```python
-        # coding: utf8
-        import time
-        class Funnel(object):
-            def __init__(self, capacity, leaking_rate):
-                self.capacity = capacity # 漏斗容量
-                self.leaking_rate = leaking_rate # 漏嘴流水速率
-                self.left_quota = capacity # 漏斗剩余空间
-                self.leaking_ts = time.time() # 上一次漏水时间
-            def make_space(self):
-                now_ts = time.time()
-                delta_ts = now_ts - self.leaking_ts # 距离上一次漏水过去了多久
-                delta_quota = delta_ts * self.leaking_rate # 又可以腾出不少空间了
-                if delta_quota < 1: # 腾的空间太少，那就等下次吧
-                    return
-                self.left_quota += delta_quota # 增加剩余空间
-                self.leaking_ts = now_ts # 记录漏水时间
-                if self.left_quota > self.capacity: # 剩余空间不得高于容量
-                    self.left_quota = self.capacity
-
-            def watering(self, quota):
-                self.make_space()
-                if self.left_quota >= quota: # 判断剩余空间是否足够
-                    self.left_quota -= quota
-                    return True
-                return False
-        
-        funnels = {} # 所有的漏斗
-
-        # capacity 漏斗容量
-        # leaking_rate 漏嘴流水速率 quota/s
-        def is_action_allowed(user_id, action_key, capacity, leaking_rate):
-            key = '%s:%s' % (user_id, action_key)
-            funnel = funnels.get(key)
-            if not funnel:
-                funnel = Funnel(capacity, leaking_rate)
-                funnels[key] = funnel
-            return funnel.watering(1)
-
-        # 测试
-        for i in range(20):
-        print is_action_allowed('laoqian', 'reply', 15, 0.5)
-        ```
+     1. 认识：redis-cell 限流模块，提供原子限流指令，限流就变得简单了，使用漏斗算法，v4.0
+        - 取漏斗容量，内存计算，再减去容量，都变成原子的了
+        - 如果被拒绝了，就需要丢弃或重试，连重试时间都帮你算好了，直接取返回结果数组的第四个值进行sleep即可
+     1. cl.throttle：只有1条指令，每xx秒最多xx次
 ### 架构
 1. 单机
    - 认识：简单，不需要数据同步，单点故障隐患，性能瓶颈
@@ -377,8 +358,10 @@
              - 从同步时是非阻塞的，可设置是否响应
         - 同步阶段：master每次收到写命令时，就将命令同步给salve，贯穿始终
      1. 增量复制：![avatar](../images/redis_psync.png)
-   - 醉驾实践
+   - 最佳实践
      1. 主从都要开启持久化
+        - 主不持久化，同时出现网络分区和主宕机就会丢失数据
+        - 设置最少同步的从数量，最少2个从防止网络分区
    - 命令
      1. `slaveof ip port`：设置从，可实现同步和默认的从只读
      1. `masterauth xxx`：主节点密码
@@ -582,6 +565,25 @@
    - 数据在硬盘上是压缩的，迁移到redis需要将当前的容量乘以5
 1. Cluster：太复杂，是去中心化的。没有tw的简单，用的稳定
 ### 设计
+1. 整体
+   - 单进程单线程，命令是串行执行
+     1. 处理所有的客户端连接、命令并发读写、内存数据结构逻辑读写的请求
+     1. 遇到阻塞，所有人等待
+   - 原子性
+     1. 2个命令组合起来才算是完成一个业务，但是2个命令组合起来就不具备原子性，所有在两个命令之间其他客户端会出现读写脏数据的情况
+   - 定时任务
+     1. 记录在一个最小堆的数据结构中
+        - 最快要执行的任务排在堆的最上方
+        - 在每个循环周期，Redis 都会将最小堆里面已经到点的任务立即进行处理
+        - 处理完毕后，将最快要执行的任务还需要的时间记录下来，知道可以安心睡觉了
+   - 通信协议
+     1. 认识：RESP Redis序列化协议，是直观的文本协议，优势在于实现异常简单，解析性能极好
+     1. 数据结构
+        - 单行字符串         + 符号开头
+        - 多行字符串         $ 符号开头，后跟字符串长度
+        - 整数值            : 符号开头，后跟整数的字符串形式
+        - 错误消息           - 符号开头
+        - 数组              * 号开头，后跟数组的长度
 1. 数据类型
    - string
      1. 是动态字符串，会自动转换类型，遇到计算了就转为数值
@@ -605,6 +607,10 @@
    - list/set/hash/zset
      1. create if not exists 
      1. drop if no elements：内存回收，最后一个元素弹出自动回收
+1. 命令
+   - scan
+     1. 采用高位进位加法遍历，考虑到字典的扩容和缩容时避免槽位的遍历重复和遗漏
+        - 普通加法/高位进位加法：高位进位法从左边加，进位往右边移动，同普通加法相反。但是最终它们都会遍历所有的槽位并且没有重复
 1. 内存
    - 复杂的数据结构在内存中操作非常简单，redis可以做很复杂的操作
    - 达到最大内存后，Redis会先尝试清除已到期或即将到期的Key，当此方法处理后，仍然到达最大内存设置，将无法再进行写入操作，但仍然可以进行读取操作。Redis新的vm机制，会把Key存放内存，Value会存放在swap区
@@ -618,10 +624,6 @@
 1. redis协议：流言协议
 1. 主从同步原理：主准备所有的命令，利用redis协议，发送到从，执行并且放入到内存中
 1. 哨兵机制：通过多个sentinel的订阅和发布，实现对主的监视
-1. Redis是单进程单线程的网络模型，命令是一个接着一个执行的，不存在并行执行的情况
-   - 用的是epoll,poll,select网络模型
-   - 单线程处理所有的客户端连接请求，命令读写请求
-   - 2个命令组合起来才算是完成一个业务，但是2个命令组合起来就不具备原子性，所有在两个命令之间其他客户端会出现读写脏数据的情况
 ### 运维
 1. 命令
    - 服务器
@@ -636,6 +638,9 @@
         - `config set requirepass xxx/''`：设置/取消密码
    - 数据
      1. save/bgsave/lastsave：默认生成dump.rdb文件，查看最后一次保存确认是否后台保存成功
+        - save会阻塞所有客户端请求，避免生产环境使用
+        - bgsave是fork新进程进行，fork过程中会造成阻塞，设计或使用不好同样阻塞很长时间，和save执行内容相同
+        - 比较：![avatar](../images/save_vs_bgsave.png)
      1. flushdb/flushall：删除当前/所有数据库的所有key
    - 其他
      1. slowlog subcommand：管理慢日志
@@ -664,57 +669,59 @@
           1. vm-enabled：是否启用虚拟内存机制
           1. vm-swap-file：虚拟内存文件路径，多Redis实例不可共享
           1. vm-max-memory 0/vm-page-size 32/vm-pages 134217728/vm-max-threads 4
-1. 日志
-   - redis.log：人可读
-   - sentinel.log：人可读
 1. 目录
    - 配置，数据，日志
-1. 守护进程
-   - daemonize no：yes
+1. 日志
+   - 分类
+     1. redis.log：人可读
+     1. sentinel.log：人可读
 1. 持久化
+   - 比较
+     1. rdb是全量快照，aof是增量日志
+     1. 二者结合使用
    - 方式分类
-     1. RDB：redis database，通过快照内存中数据定时将数据存储在硬盘，可以恢复redis的内容
+     1. RDB
+        - 认识：redis database，快照内存中数据存储，可以恢复全部数据
+          1. 内存数据的二进制序列化形式，存储上很紧凑
+          1. 异常会丢失最后一次快照之后的数据
+          1. 内存数据在进程产生的一瞬间就凝固了，接下来子进程就可安心遍历数据进行序列化写磁盘了，也就是叫快照的原因
         - 触发条件
-          1. 根据规则自动快照：save的配置
-          1. 执行save、bgsave：save会阻塞所有客户端请求，避免生产环境使用
-          1. 执行flushall
-          1. 执行replication：设置了主从时，复制初始化会自动快照
-        - 快照生成原理：fork出子进程进行数据存储，完成后替换旧的rdb文件
-          1. 快照结束时才替换rdb文件，说明任何时候rdb文件都是完整的
+          1. 根据配置：save，满足其中一条就触发
+          1. 执行命令：save/bgsave、flushall
+          1. 主从复制：复制初始化会自动快照
+        - 原理
+          1. fork子进程进行快照
+          1. 快照结束后替换rdb文件，任何时候rdb文件都是完整的
           1. unix使用写时复制功能，fork之后到进程结束前的修改/新增不会被记录
-          1. 一旦redis异常，rdb方式会丢失最后一次快照之后的数据
-        - 运维
-          1. 如果修改/新增较多较大时，占用内存可能显著增大，因为写时复制会增加内存占用，需要设置linux的应用申请内存超过可用内存
-          1. rdb文件是默认设置被压缩的，1000万键值对，大小1G的rdb，载入内存花费20多秒
         - 配置
           1. dbfilename：默认dump.rdb
           1. save <seconds> <changes>：n时间内，n次更新操作，就将数据同步到数据文件，可存在多条，或的关系
           1. dir：目录
           1. rdbcompression：是否压缩，关闭节约cpu，但是文件变的巨大
-        - 触发机制
-          1. save会造成redis阻塞的，得等着，因为redis是单线程的，复杂度O(N)
-             - 文件策略：新的替换老的
-          1. bgsave是fork新进程进行，fork过程中会造成阻塞，设计或使用不好同样阻塞很长时间，二者执行内容相同
-          1. 自动：通过多条配置，满足一个就触发
+        - 最佳实践
+          1. 如果修改/新增较多较大时，占用内存可能显著增大，因为写时复制会增加内存占用，需要设置linux的应用申请内存超过可用内存
+          1. rdb文件是默认设置被压缩的，1000万键值对，大小1G的rdb，载入内存花费20多秒
      1. AOF
-        - 认识：append only file，更新数据后追加记录命令，搭配AOF降低数据丢失的可能性，默认不开启，和rdb文件位置相同，
-          1. redis启动时，相比于rdb，优先使用aof恢复数据，逐个执行aof命令来载入数据，比rdb方式慢
+        - 认识：append only file，增量日志，更新数据后追加记录命令
+          1. 只记录修改的命令，文本形式
+          1. 搭配可降低数据丢失可能性
+          1. 启动时优先rdb先恢复数据，逐个执行aof命令载入数据，比rdb方式慢
           1. 由于操作系统的缓存机制，aof记录后没有真正写入硬盘，系统默认30秒同步一次，如果系统异常则数据丢失，可设置appendfsync同步硬盘的时机
-        - 实现：纯文本记录，是redis的原始通信协议内容，会按照一定条件进行aof优化重写，不和之前的aof相关，比如三条合一条，手动触发 bgrewriteaof
-        - 配置
+        - 重写：bgrewriteaof，手动触发，开辟子进程按照一定条件进行aof优化重写，序列化到一个新的aof文件中，比如三条合一条，序列化完毕后再追加增量的，然后立即替代
+        - 设计
+          1. 纯文本记录，是redis的原始通信协议内容
+          1. 先存到磁盘，再执行命令
+        - 配置：默认不开启，和rdb文件位置相同
           1. appendonly：开关
           1. appendfilename：默认appendonly.aof
           1. appendfsync：记录方式，no等待系统将数据同步到磁盘(快)，always更新后将数据写到磁盘(慢，安全)，everysec每秒一次(折衷)
           1. auto-aof-rewrite-percentage：aof重写触发机制，当前aof大小超过上一次重写时大小的百分比时，进行重写
           1. auto-aof-rewrite-min-size：aof重写的最小文件大小
-   - 比较：![avatar](../images/save_vs_bgsave.png)
-     1. rdb是快照，aof是日志
-     1. 二者结合使用
-   - 日志
-     1. 有log文件和rdb文件，rdb是自己的协议不能直接cat查看，日志可以
-   - 备份恢复
-     1. 备份：save/bgsave
-     1. 恢复：将dump.rdb文件放到redis目录并启动即可
+        - 最佳实践
+          1. aof长期运行会变的超级大，为防止重启漫长，需要定期aof重写瘦身
+     1. 混合持久化：v4.0，aof不再是全量的日志，而是rdb之后的增量日志，重启效率提升
+1. 守护进程
+   - daemonize no：yes
 1. 性能测试
    - redis-benchmark
      1. -h/-p：地址端口
@@ -723,6 +730,10 @@
      1. -n：请求数
      1. -d：字节形式指定set/get大小
      1. -k：1=keep alive 0=reconnect
+1. 备份恢复
+   - 备份：save/bgsave
+   - 恢复：将dump.rdb和aof文件放到redis目录并启动即可，即重放
+     1. 单纯使用rdb会丢失大量数据
 1. 服务治理：连接数过多、慢查询、短连接、长连接
    - 主从延迟：外部程序监听，进行报警
    - 脏数据
@@ -774,6 +785,10 @@
      1. hash
         - 大多数情况中只访问少量字段
         - 始终知道哪些字段可用
+   - 现象
+     1. 大key
+        - 扩容时产生卡顿，被删除内存会一次性回收，卡顿会再次产生
+        - redis-cli –-bigkeys -i 0.1：渐进式扫描排名靠前的大key
 1. 使用规范
    - key名设计
      1. 【建议】：可读性和管理性，以业务名为前缀，以一定规则分割，比如业务名:表名:id
@@ -848,6 +863,11 @@
    - python：redis-py
    - node：node_redis、ioredis，前者早，后者功能丰富
 1. Memcache：高性能分布式内存对象缓存系统，内存里维护一个统一的巨大的hash表，能够存储图像等数据
+1. 读书笔记
+   - 《深度历险》
+     1. 基础数据结构再看下，是深入的大头
+     1. scan看下
+     1. 通信协议看下
 ### lua
 1. lua
    - 认识：高效的、简洁轻量的、动态类型的、可扩展的脚本语言，lua是葡萄牙语月亮的意思，是卫星语言，能够方便嵌入其他语言中
@@ -937,11 +957,3 @@
         - 对随机数和随机结果进行了特殊处理，可以生成了当参数传递进去
         - 脚本执行是原子的，单线程的，lua-time-limit限制脚本最长执行时间，之后接受其他指令不执行返回busy，只执行两个指令：script kill和shutdown nosave。kill还是等到脚本执行完毕，因为要原子性，nosave可以立即终止，但是丢数据
         - 不应该在脚本中执行耗时的操作，因为redis单线程，程序却是多进/线程
-
-
-
-
-1. 细节
-1. 优点
-1. 缺点
-1. 最佳实践

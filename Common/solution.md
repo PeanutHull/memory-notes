@@ -362,8 +362,53 @@
      1. 不是平均速率限流，即一上来全部用光
    - 滑动窗口算法：把时间划片，一点点往前挪，抛弃前一个格子，进入下一个格子，能够保留前后固定时间窗口的请求统计
      1. 不存在临界问题。划分格子越多，限流统计越精准
-   - 漏桶算法：将所有请求放入桶中，然后定时拿出n个执行，桶满时抛弃
-     1. 严格限制了吞吐量
+   - 漏斗算法
+     1. 认识：将所有请求放入桶中，然后定时拿出n个执行，桶满时抛弃
+        - 严格限制了吞吐量
+     1. code：make_space是核心，给漏斗腾出空间，取决于于过去了多久及流水速率，
+        ```python
+        # coding: utf8
+        import time
+        class Funnel(object):
+            def __init__(self, capacity, leaking_rate):
+                self.capacity = capacity                                    # 漏斗容量
+                self.leaking_rate = leaking_rate                            # 漏嘴流水速率
+                self.left_quota = capacity                                  # 漏斗剩余空间
+                self.leaking_ts = time.time()                               # 上一次漏水时间
+            def make_space(self):
+                now_ts = time.time()
+                delta_ts = now_ts - self.leaking_ts                         # 距离上一次漏水过去了多久
+                delta_quota = delta_ts * self.leaking_rate                  # 又可以腾出不少空间了
+                if delta_quota < 1:                                         # 腾的空间太少，那就等下次吧
+                    return
+                self.left_quota += delta_quota                              # 增加剩余空间
+                self.leaking_ts = now_ts                                    # 记录漏水时间
+                if self.left_quota > self.capacity:                         # 剩余空间不得高于容量
+                    self.left_quota = self.capacity
+
+            def watering(self, quota):
+                self.make_space()
+                if self.left_quota >= quota:                                # 判断剩余空间是否足够
+                    self.left_quota -= quota
+                    return True
+                return False
+        
+        funnels = {}                                                        # 所有的漏斗
+
+        # capacity 漏斗容量
+        # leaking_rate 漏嘴流水速率 quota/s
+        def is_action_allowed(user_id, action_key, capacity, leaking_rate):
+            key = '%s:%s' % (user_id, action_key)
+            funnel = funnels.get(key)
+            if not funnel:
+                funnel = Funnel(capacity, leaking_rate)
+                funnels[key] = funnel
+            return funnel.watering(1)                                       # 进行漏水消费
+
+        # 测试
+        for i in range(20):
+        print is_action_allowed('laoqian', 'reply', 15, 0.5)
+        ```
    - 令牌桶算法：以固定速率往桶中放入令牌，令牌有最大数量，使用时减去相应令牌即可，适合突发特性的流量
 ### 技能树
 1. 开始
