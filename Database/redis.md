@@ -59,6 +59,27 @@
         - zscore/zrank：返回分数值、返回指定成员索引
         - zincrby：已存在的score值增量加increment，不存在则添加
         - zinterstore/zunionstore：计算交并集
+   - stream
+     1. 认识：强大的支持多播的可持久化消息队列，代替PubSub，借鉴kafka，v5.0
+        - 消息链表存储id和内容，是持久化的
+     1. 组成
+        - 消费组：，每个消费组都有last_delivered_id，状态独立不相互影响
+        - 消费者：消费组可以挂多个消费者，竞争关系，任一消费游标都往前
+          1. 消费者内部状态变量pending_ids，记录被读取没有被ack的消息，用来确保客户端至少消费一次
+        - 消息
+          1. 消息id：timestampInMillis-sequence形式，该毫秒内产生的第n条消息，
+          1. 消息内容：键值对，这没什么特别之处
+     1. 概念
+        - 独立消费：不定义消费组进行消费，当成普通消息队列使用，没有新消息可以阻塞等待，xread
+        - 定长队列：xadd maxlen
+     1. 使用
+        - del
+        - xadd/xdel/xrange/xlen
+        - xreadgroup/xack：读取、确认收到
+        - xread：使用上一个消息id获取新的
+        - xgroup create：消费组设置
+     1. 对比
+        - Kafka支持动态增加分区数量的能力，但这种调整能力蹩脚，不会把已存在的内容进行rehash。这种简单的动态调整的能力通过增加新的 Stream 就可以做到
 1. 数据类型的适用场景
    - string：可持久化的缓存，如session_id为key的session，二进制安全，图片、文件什么的，原子计数器做粉丝数、关注数、ip封锁次数啥的
      1. incr
@@ -93,10 +114,19 @@
         - expireat/pexpireat：用[毫秒]时间戳设置过期时间
         - ttl/pttl：用[毫]秒返回剩余时间，time to live
         - persist：移除过期时间
-     1. 删除机制：惰性(用时判断)、定时(内部定时任务)、主动(lru删除)
+     1. 删除机制
+        - 定时：内部定时任务，默认10秒
+          1. 不扫描所有key，简单的贪心策略，随机选20个过期超过四分之一就继续重复扫描
+          1. 设置扫描时间上限，默认25ms
+        - 惰性：用时判断
+        - 主动：达到最大内存占用的时候触发，使用近似的lru算法，lru本身太费内存，每个key增加24bit时间戳，随机拿5个淘汰最旧的
+          1. v3.0增加淘汰池，淘汰掉最旧的一个key之后，保留剩余较旧的key列表放入淘汰池中留待下一个循环
    - 修改
      1. rename/renamenx：[key不存在时]重命名
      1. del
+     1. unlink：v4.0，异步删除，防止大key卡顿
+        - key小了就直接删除
+        - 先删除引用，将key的内存回收操作包装成任务塞进异步任务队列
    - 其他
      1. randomkey：随机返回
      1. dump：序列化
@@ -124,18 +154,22 @@
         - 内存超限时触发
    - 发布订阅
      1. 认识：pub/sub，一种消息通信模式，发送者发送消息，订阅者接收消息，是原子的
+        - 挂掉的消费者重新连上期间的消息会被丢弃，重启消息不会持久化，因为相当于一个消费者都没有
      1. 使用
-        - subscribe/unsubscribe/psubscribe/punsubscribe：订阅/退订n个，[给定模式(通配符等)]
+        - subscribe/unsubscribe/psubscribe/punsubscribe：订阅/退订n个，[指定模式(通配符*等)]
         - publish：发布
         - pubsub：查看订阅和发布系统状态
    - 事务
-     1. 认识：一组命令在一个步骤里执行，具有原子性
-        - 不具备回滚机制，需要自己收拾烂摊子
+     1. 认识：exec之前不执行缓存在一个事务队列中，执行完毕后一次性返回所有指令的运行结果
         - 事务中不能获取同一事务其他命令执行的结果
-        - 错误处理：语法错误所有命令不执行，运行错误不影响其他命令执行(会造成问题)
+        - 语法错误所有命令不执行，运行错误不影响其他命令执行，不满足原子性，只满足隔离性(当前事务不被其它事务打断)
+          1. 单线程特性保证能得到原子执行
+        - 事务模型很不严格，不能原子执行，无回滚机制
+          1. 无回滚机制，需要自己收拾烂摊子
      1. 使用
         - multi：标记开始
-        - watch：监视n个key，exec前值被改变则取消事务，即提供了CAS(check-and-set)行为
+        - watch：监视n个key，exec前值被改变则取消事务，即提供了CAS(check-and-set)行为，即乐观锁
+          1. 在multi之前watch
         - unwatch：取消所有key的监视
         - exec：执行事务
         - discard：取消
@@ -320,6 +354,8 @@
    - 认识：简单，不需要数据同步，单点故障隐患，性能瓶颈
 1. 主从
    - 认识：利用复制实现数据在不同库的同步，实现读写分离、冗余备份，可继续向下配置树状从
+     1. 从从同步减轻同步负担
+     1. 数据安全的基础保障
    - 作用
      1. 负载均衡、读写分离
      1. 数据备份
@@ -329,7 +365,9 @@
      1. 一主多从
      1. 树状结构：不建议，会带来运维困难、数据一致性降低
    - 特性
-     1. 增量同步：offset、backlog、run_id一同起作用
+     1. 快照同步：主库bgsave生成文件后，发送到从，非常耗费资源；从全量加载，将当前内存清空，加载完毕后告诉主进行增量同步
+        - 如果快照同步的时间过长或者复制backlog太小，导致同步期间的增量指令在复制backlog中被覆盖，会陷入快照同步的死循环
+     1. 增量同步：定长的环形数组的复制内存backlog，offset、backlog、run_id组成
         - 标识唯一运行实例：`run_id`，用于保障主从复制安全
         - 复制偏移量：`slave_repl_offset`
         - 复制缓冲：`repl_backlog_*`，主保持一个默认大小1M的先进先出的队列，有从连接时主在把写操作发送给从的同时，也写入一份到缓冲区。用于增量复制/丢失命令补救
@@ -342,7 +380,8 @@
           1. v2.8之前断开重连都会全量同步
           1. 偏移量不在缓冲区中只能全量同步
      1. 过期key处理：从不会让key过期，会等待主的del命令，v3.2从自己判断是否过期
-     1. 加速复制：`repl-diskless-sync yes`，主不写磁盘直接发送rdb，v2.8.18
+     1. 加速复制：`repl-diskless-sync yes`，主不写磁盘直接发送rdb，一边遍历内存，一边发送，v2.8.18
+     1. 同步复制：`wait slaveNum waitTime`，等待n秒之前的所有写操作同步到n个从，v3.0
      1. 是否延迟发包：`repl-disable-tcp-nodelay`，是否合并较小的tcp数据包以节省宽带，发送时间间隔由一般默认40ms的linux内核设置决定，默认关闭，会加重主从延迟
    - 复制原理
      1. 全量复制：v2.8之前，sync，![avatar](../images/redis_fullsync.png)
@@ -422,6 +461,7 @@
           1. `sentinel master masterName`
      1. 删除旧主或者无法访问的slave：`sentinel reset masterName`，重置所有状态信息
    - 工作原理
+     1. 客户端找哨兵要主节点地址，监测对比新连接的主节点地址和readOnly Error
      1. 内部定时任务
         - 每1秒每个sentinel对其他sentinel、redis执行ping
         - 每2秒每个sentinel订阅一个master的channel交换信息，检测信息传播
@@ -466,6 +506,7 @@
 1. 集群
    - 认识：cluster，用于解决容量和并发性能，无中心结构、分布式、自动故障转移、高可用、可扩展。![avatar](../images/redis_cluster.png)
      1. 高可用性：通过增加slave做热备数据副本，能够实现故障自动转移
+     1. 官方亲儿子，去中心化，内部非常复杂，为了实现非中心化，混合使用raft和gossip协议，有大量调优参数，不好上手
    - 优点：
      1. 客户端直连，免去了代理损耗
      1. 重试时间应该大于cluster-node-time时间
@@ -478,6 +519,10 @@
      1. 不支持嵌套树状复制结构
      1. 要求客户端缓存slots mapping信息并及时更新
    - 实现
+     1. 客户端获取solt信息，自己计算判断要操作的solt
+     1. 跳转：节点发现不是自己的solt发出跳转，客户端自己更新配置
+     1. 迁移：手动
+     1. 容错
      1. 主分配solt插槽，从做故障切换
         - 最少6个节点保证高可用，3主3从，因为集群最少3个主
      1. 所有节点通过轻量的二进制流言Gossip协议连接，交换维护整个集群节点metadata，可扩展到1000个节点
@@ -558,7 +603,16 @@
    - 运维
      1. 同时使用tw和pipeline时，如果对pipeline的执行顺序有要求，那么要设置tw对redis的server_connections数量为1，否则会导致顺序错乱。因为tw用epoll，每个连接有独立的队列，每个连接用完就会扔到队尾准备重复利用，就势必导致两个命令在两个不同的连接上进行，到了redis那里就有可能造成顺序错乱，如zadd和expire一起用
 1. Codis
-   - 没有pipeline
+   - 认识：集群解决方案，中间件，集群形式部署，go开发
+     1. 支持分片，1024等倍数个solt，进行crc32取余，使用zk或者etcd共享solt关系
+   - 扩容，修改solt和redis关系，用soltsscan扫描迁移key，热迁移，新来的立即进行迁移
+     1. 自动均衡，空闲时自动扫描并迁移
+   - 代价
+     1. 事务、pipeline、rename不在一个redis的key等不支持
+     1. 单key不宜太大，造成迁移阻塞
+   - 优点：比官方cluster简单很多，分布式问题交给了第三方zk负责
+   - 设计
+     1. mget采用汇总形式
 1. Pika：从rocksdb发展来的开源类redis系统，redis容量过大的解决方案，建议作Redis的备份仓库，可极大的降低运维成本
    - 用硬盘存储，速度慢
    - 支持redis协议，不是100%兼容
@@ -584,6 +638,13 @@
         - 整数值            : 符号开头，后跟整数的字符串形式
         - 错误消息           - 符号开头
         - 数组              * 号开头，后跟数组的长度
+   - 内存占用
+     1. 小对象压缩：ziplist、zlbytes、zltail、zlend、intset
+        - 32bit编译，内部所有数据结构的指针空间占用少一半，可用于4G内存以下
+     1. 内存回收机制
+        - 页上还要一个key，也不会被操作系统回收依然占用那么多，redis会重用那些尚未回收的空闲内存
+     1. 内存分配算法
+        - 划分内存页，需要考虑内存碎片、平衡性能和效率，redis甩手掌柜，默认使用jemalloc库，也可用tcmalloc
 1. 数据类型
    - string
      1. 是动态字符串，会自动转换类型，遇到计算了就转为数值
@@ -592,7 +653,7 @@
         - 长度小于1M加倍扩容，超过一次只会多扩1M
    - list
      1. 快速链表的结构，不是数组，意味着插入和删除操作非常快，时间复杂度为O(1)，索引定位很慢，时间复杂度为O(n)
-     1. 内存分配：元素较少用连续内存的压缩列表(ziplist)存储；多时用快速链表(quicklist)，是将多个ziplist使用双向指针串起来使用，既满足了快速的插入删除性能，又不会出现太大的空间冗余
+     1. 内存分配：元素较少用连续内存的压缩列表(ziplist 紧凑的字节数组结构)存储；多时用快速链表(quicklist)，是将多个ziplist使用双向指针串起来使用，既满足了快速的插入删除性能，又不会出现太大的空间冗余
         - 普通链表需要的附加指针空间太大，浪费空间、加重内存碎片化
    - hash
      1. 无序字典，类似java的HashMap，数组 + 链表二维结构。第一维hash的数组位置碰撞时，将碰撞元素使用链表串接起来
@@ -628,10 +689,27 @@
 1. 命令
    - 服务器
      1. info：所有的服务器信息
-        - info replication：查看主从信息
+        - info Stats：通用统计
+          1. instantaneous_ops_per_sec：ops执行负载
+          1. rejected_connections：被拒绝的客户端连接次数，观察这个设置maxclients配置
+          1. sync_partial_err：示主从半同步复制失败的次数，观察这个设置是否需要扩大积压缓冲区
+        - info Server
+        - info Memory
+          1. used_memory_human:827.46K                  # 内存分配器 (jemalloc) 从操作系统分配的内存总量
+          1. used_memory_rss_human:3.61M                # 操作系统看到的内存占用 ,top 命令看到的内存
+          1. used_memory_peak_human:829.41K             # Redis 内存消耗的峰值
+          1. used_memory_lua_human:37.00K               # lua 脚本引擎占用的内存大小
+        - info CPU：
+        - info Persistence：持久化
+        - info Replication：主从
+          1. backlog相关：主从复制的效率
+        - info Cluster：集群
+        - info KeySpace：键值对统计
+        - info Clients
+          1. connected_clients：客户端连接数
      1. client list：客户端列表
      1. ping：查看是否运行
-     1. monitor：实时打印接收到的命令，调试用
+     1. monitor：实时打印接收到的命令，调试用，输出非常多，可以快速ctrl+c
      1. debug segfault：让redis崩溃
      1. config
         - `config get requirepass`：查看密码
@@ -654,8 +732,8 @@
           1. maxclients：最大连接数
           1. databases：数量
           1. maxmemory：最大占用内存，单位字节
-          1. maxmemory-policy：超最大内存后策略
-             - volatile-lru、allkeys-lru：根据lru算法(Least Recently Used)，删除过期/一个键。并不准确，随机取n(maxmemory-samples)个找最久未被使用
+          1. maxmemory-policy：超最大内存后淘汰策略
+             - volatile-lru、allkeys-lru：根据lru算法，删除过期/一个键。并不准确，随机取n(maxmemory-samples)个找最久未被使用
              - volatile-random、allkeys-random：随机删除过期/一个键
              - volatile-ttl：删除过期时间最近的一个键
              - noeviction：不删除，只报错
@@ -730,6 +808,10 @@
      1. -n：请求数
      1. -d：字节形式指定set/get大小
      1. -k：1=keep alive 0=reconnect
+1. 安全
+   - 命令改写：rename-command
+   - Lua脚本安全
+   - ssl连接：spiped，两边都安装，进行加密通信
 1. 备份恢复
    - 备份：save/bgsave
    - 恢复：将dump.rdb和aof文件放到redis目录并启动即可，即重放
@@ -789,6 +871,8 @@
      1. 大key
         - 扩容时产生卡顿，被删除内存会一次性回收，卡顿会再次产生
         - redis-cli –-bigkeys -i 0.1：渐进式扫描排名靠前的大key
+   - 过期
+     1. 设置随机过期：大量key设置相同过期时间，同一时间大批量的key过期，同时100个请求，每个请求耗费25ms回收时间，第101个请求需要等待2500ms，造成不可用
 1. 使用规范
    - key名设计
      1. 【建议】：可读性和管理性，以业务名为前缀，以一定规则分割，比如业务名:表名:id
@@ -868,6 +952,13 @@
      1. 基础数据结构再看下，是深入的大头
      1. scan看下
      1. 通信协议看下
+   - 《开发与运维》
+     1. 慢查询分析，记录下
+     1. 阻塞
+     1. 内存看下
+     1. 11章缓存设计，12.1，12.4大key
+     1. 13简单看下
+     1. 14可以当手册查
 ### lua
 1. lua
    - 认识：高效的、简洁轻量的、动态类型的、可扩展的脚本语言，lua是葡萄牙语月亮的意思，是卫星语言，能够方便嵌入其他语言中
