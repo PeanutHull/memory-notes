@@ -36,6 +36,7 @@
    - 大数据组件需要分场景使用，基础理论基本在hadoop基础上建立
 1. ![avatar](../images/bigData.jpeg)
 1. wiki
+   - 数据仓库维度建模：Inmon和Kimball架构
    - 概念词汇
      1. APP：数据产品层，报表层
      1. DW ：data warehouse，数据仓库，由下到上为 DWD,DWB,DWS

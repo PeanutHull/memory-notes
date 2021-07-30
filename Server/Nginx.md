@@ -57,7 +57,8 @@
         - $document_root              当前请求在root指令中指定的值
 
         - $server_protocol            请求使用的协议，通常是HTTP/1.0或HTTP/1.1
-        - $host                       请求主机头字段，否则为服务器名称
+        - $host                       先取请求行中host，再请求头host，再匹配的server_name，没有请求默认到nginx第一个虚拟主机下处理
+        - $http_host                  读取请求头，如$http_user_agent读取user_agent
         - $content_length             请求头中的Content-length字段
         - $content_type               请求头中的Content-Type字段
         - $http_cookie                客户端cookie信息
@@ -76,7 +77,7 @@
     server {
         listen       80;
         listen       somename:8080;
-        server_name  somename  alias  another.alias;
+        server_name  somename  alias  another.alias default_server;         # 指定默认server，先遍历所有配置的server_name，如果找到了，则执行对应的server，如果没有找到，则默认执行第一个server
     }
     ```
 1. location配置，匹配路径

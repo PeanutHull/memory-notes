@@ -228,6 +228,12 @@
      1. 浏览器发送请求、头信息
      1. 服务器发送应答头信息、数据
      1. 服务器关闭tcp连接
+   - 实例
+    ```http
+    GET xx/xx HTTP/1.1          // 请求行，可以包含server信息，如 GET www.xx.com/xx HTTP/1.1
+    Host: xxx.com
+    Cookie: xx=xx
+    ```
 1. http头
    - 通用
      1. Cache-Control：控制缓存的行为，如`Cache-Control: private, max-age=0, no-cache`，
@@ -250,7 +256,7 @@
      1. Warning：错误通知
    - 请求头
     ```
-    Host                            请求资源所在服务器
+    Host                            请求资源所在服务器，主要用来实现虚拟主机，v1.1必须存在，否则400 Bad Request
     Accept                          用户代理可处理的媒体类型
     Accept-Charset                  优先的字符集
     Accept-Encoding                 优先的内容编码
