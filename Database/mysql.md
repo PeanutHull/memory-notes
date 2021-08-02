@@ -656,3 +656,95 @@
         - 实用函数
         - 合并函数
         - 表函数
+### 实操
+1. 配置从
+   - 主配置
+    ```conf
+    # vi my.cnf
+    server-id = 3             #这个设置3
+    log-bin = mysql-bin         #开启binlog日志
+    max_binlog_size = 500M #每个bin-log最大大小，当此大小等于500M时会自动生成一个新的日志文件。一条记录不会写在2个日志文件中，所以有时日志文件会超过此大小。
+    binlog_cache_size = 128K  #日志缓存大小
+    slave-skip-errors = all      #跳过主从复制出现的错误
+    # 不同步哪些数据库 
+    binlog-ignore-db = mysql  
+    binlog-ignore-db = test  
+    binlog-ignore-db = information_schema  
+    
+    # 只同步哪些数据库，除此之外，其他不同步 
+    binlog-do-db = game  
+    
+    # 日志保留时间 
+    expire_logs_days = 10   #设置bin-log日志文件保存的天数，此参数mysql5.0以下版本不支持。
+
+    # 日志格式，建议mixed 
+    # statement 保存SQL语句 
+    # row 保存影响记录数据 
+    # mixed 前面两种的结合 
+    binlog_format = mixed  #设置bin-log日志文件格式为：MIXED，可以防止主键重复。
+    ```
+   - 主库创建同步账号：只有同步权限，`mysql > grant replication slave on *.* to ‘rep’@‘192.168.18.214’ identified by ‘123456’;`
+   - 从配置
+    ```conf
+    # vi my.cnf
+    [mysqld]
+
+    server-id=2
+    master-host=192.168.1.2
+    master-user=repl
+    master-password=123456
+    master-port=3306
+    master-connect-retry=30  #这个选项控制重试间隔，默认为60秒。
+
+    #开启日志
+    #log-bin=mysql-bin
+    #read_only=on
+
+    # 设置忽略数据库
+    replicate_do_db=test
+    replicate_wild_do_table=test.% #可以使用通配符
+    replicate_wild_ignore_table=mysql.%
+
+    slave-skip-errors=1062 # 忽略相关信息
+    ```
+   - 备份主库：`# mysqldump -uroot -p123 --routines --single_transaction --master-data=2 --databases weibo > weibo.sql`
+     1. --single_transaction：导出开始时设置事务隔离状态，并使用一致性快照开始事务，然后unlock tables;而lock-tables是锁住一张表不能写操作，直到dump完毕。
+     1. --master-data：默认等于1，将dump起始（change master to）binlog点和pos值写到结果中，等于2是将change master to写到结果中并注释。
+   - 把备份库拷贝到从库：`# scp weibo.sql root@192.168.18.214:/home/root`
+   - 在主库创建test_tb表，模拟数据库新增数据，weibo.sql是没有的：`# mysql> create table test_tb(id int,name varchar(30));`
+   - 从库导入备份库：`# mysql -uroot -p123 weibo < weibo.sql`
+   - 在备份文件weibo.sql查看binlog和pos值
+    ```
+    # head -25 weibo.sql
+    -- CHANGE MASTER TO MASTER_LOG_FILE='mysql-bin.000001', MASTER_LOG_POS=107;   #大概22行
+    ```
+   - 从库设置从这个日志点同步，并启动。可以看到IO和SQL线程均为YES，说明主从配置成功
+    ```
+    mysql> change master to master_host='192.168.18.212',
+        -> master_user='sync',
+        -> master_password='sync',
+        -> master_log_file='mysql-bin.000001',
+        -> master_log_pos=107;
+    mysql> start slave;
+
+
+    mysql> show slave status\G;
+    ERROR 2006 (HY000): MySQL server has gone away
+    No connection. Trying to reconnect...
+    Connection id:    90
+    Current database: *** NONE ***
+    *************************** 1. row ***************************
+                Slave_IO_State: Waiting for master to send event
+                    Master_Host: 192.168.18.212
+                    Master_User: sync
+                    Master_Port: 3306
+                    Connect_Retry: 60
+                Master_Log_File: mysql-bin.000001
+            Read_Master_Log_Pos: 358
+                Relay_Log_File: mysqld-relay-bin.000003
+                    Relay_Log_Pos: 504
+            Relay_Master_Log_File: mysql-bin.000001
+                Slave_IO_Running: Yes
+                Slave_SQL_Running: Yes
+    ```
+

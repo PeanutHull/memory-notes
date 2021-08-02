@@ -613,6 +613,9 @@
      1. 哨兵监控：完成主从切换后，通知etcd，然后confd更新客户端ip配置文件
    - 架构图：![avatar](../images/redis_wx_framework.png)
    - 扩容：找新机器，用工具同步存量+增量的旧数据，然后挂到tw上
+1. 普通tw架构：tw + sentinel + haproxy + keepalived
+   - haproxy：负载均衡
+   - keepalived：高可用
 1. 阿里云指标
    - 认识：百万QPS，最好性能512G内存、最大连载数320000、最大吞吐1536M
    - 功能
