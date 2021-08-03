@@ -1,21 +1,18 @@
 ### go
 1. 认识：全称golang，快速、静态强类型、编译型、具有垃圾回收的开源语言，感觉却像动态类型的解释型语言
    - 简洁清晰高效
-   - 并发机制/并发编程，goroutine跟channel，有效利用多核和网络，并发而生
+   - 并发机制，goroutine跟channel，有效利用多核和网络，并发而生
    - go的机器码迅速，可直接编译成机器码，支持跨平台编译
    - 方便的自动垃圾回收
-   - 强大的运行时反射机制
-   - 便于在线的性能分析，以及堆栈分析
-   - 丰富的标准库支持、强大的工具类库
    - 丰富的内置类型支持，支持函数多返回值、匿名函数和闭包、类型和接口、反射
+   - 丰富的标准库支持、强大的工具类库
+   - 强大的运行时反射机制，便于在线的性能分析，以及堆栈分析
    - 能与c语言交互
-   - 是静态类型的语言，类型系统没有层级，不需要在定义类型之间的关系上花费时间，这样感觉起来比典型的面向对象语言更轻量级
    - 缺少框架、软件包管理不完善
-   - go语言灵魂是：并发计算、共享内存；灵活性不如php，不太适合写复杂的业务逻辑。促销这边有两个逻辑适合用Go实现
 1. 特点
    - 性能、简单
    - 每个Go程序都是由包组成的
-   - 结合了解释型语言的游刃有余，动态类型语言的开发效率，以及静态类型的安全性。它也打算成为现代的，支持网络与多核计算的语言。要满足这些目标，需要解决一些语言上的问题：一个富有表达能力但轻量级的类型系统，并发与垃圾回收机制，严格的依赖规范等
+   - 现代的、支持网络与多核计算的语言，结合了解释型语言的游刃有余，动态类型语言的开发效率，以及静态类型的安全性
 1. 用途
    - 服务器编程：处理日志
    - 分布式系统：数据库代理器
@@ -28,21 +25,17 @@
 
     import "fmt"
 
+    // 声明变量
     const name string = "aa"
-
     var a string = "1"
 
+    // 声明类型
     type aInt int                           // 一般类型声明，相当于类型别名
+    type aStruct struct {}
+    type Ia interface{}
 
-    type aStruct struct {
-    }
-
-    type Ia interface{
-    }
-
-    func aFunc() {
-
-    }
+    // 定义函数
+    func aFunc() {}
 
     func main() {
         fmt.Println("Hello, 世界\n")
@@ -50,14 +43,11 @@
     ```
 ### 语法
 1. 语法
-   - 函数外的每个语句都必须以关键字(var/func/...)开始
    - main是入口函数，程序必须以package开头
-   - 注释：多行/* */、单行//
-   - 作用域：首字母大小写来区分，就是public、private那些，首字母大写的名称是被导出的，他包只能读取首字母大写的变量
+   - 首字母大小写来区分作用域，首字母大写的名称是被导出的，其他包只能读取首字母大写的变量
+   - 函数外的每个语句都必须以关键字(var/func/...)开始
    - 每行可以不加分号
-   - 语法糖
-     1. ...：可变参数
-     1. :=：声明、赋值、类型推断
+   - 注释：多行/* */、单行//
 1. 数据类型
    - 意义：将数据分为所需内存不同的，充分利用内存
    - 基本
@@ -72,95 +62,116 @@
         - int/uint：32位cpu为4byte，64位为8byte
         - byte：类似uint8
         - rune：类似int32，代表一个Unicode码
-        - uintptr：位，无符号整型，用于存放一个指针
+        - uintptr：无符号整型，足够大可以容纳任何指针的位模式，跟系统位数有关系
         - 引用：8byte
    - 派生
      1. array
      1. slice
      1. map
-     1. pointer：指针
      1. struct
      1. func
      1. interface
+     1. pointer：指针
      1. chan
    - 特点
-     1. 类型零值：变量无初始化时的默认值，可以表现为0，false，""
+     1. 类型零值：变量无初始化时的默认值，可以表现为0，false，""，nil
      1. 类型推导：不指定其类型时，由右值推导得出
-     1. 类型别名：`type aInt int`
      1. 类型转换：T(v)，将值v转换为类型T，不同类型相互转换的时候需要显式转换
-     1. 不像c，不支持地址的直接转换，只能用unsafe.Pointer()
-   - 用法
-     1. 字节大小：`unsafe.Sizeof()`
-     1. 数据类型：`reflect.TypeOf()`
+     1. 类型别名：`type aInt int`
+1. 标识符
+   - 认识
+     1. 可以直接使用，而不用声明
+   - 组成
+     1. nil：表示指针/map/slice/function/interface/channel的零值，表示声明了没有赋值，不是关键词只是变量名
+        - nil和empty不同，nil不会指向底层地址，empty会
 1. 运算符
    - + 字符串连接符
+   - 引号
+     1. 单引号：只能有一个ASCII码字符，也就是一个字节，输出会返回这个字符的ASCII码 ，如果想输出为字符需要用string()函数转换一下
+        ```go
+        var asc byte = 'a'
+        fmt.Println(asc)        // 输出a的ASCII码值 97
+        ```
    - 算术：++、--、+-*/%
    - 关系：==、!=、>、<、>=、<=
    - 逻辑：&&、||、!
    - 按位：&、|、^、<<、>>
    - 赋值：=、+=等
-1. array：数组
-   - 理解：[n]T有n个类型为T的值的数组，不能改变长度
+1. string
+   - 认识：字符串，是一个任意字节的变宽常量序列
+     1. 使用双引号或反引号创建
+        - 双引号：可解析的。可以转义，不能换行
+        - 反引号：原生的。不能转义，可以换行。一般用于sql、html等大段内容，以及正则表达式
+     1. 字符串不可改变
+        - 内部用指针指向UTF-8字节数组
+        - 想要改变：先将字符串转为字节数组`[]byte`或字符数组`[]rune`，有中文使用字符数组
+1. array
+   - 认识：数组，`[n]T`，相同类型T的值的定长数组
     ```go
     // 定义
     var a [2]string
     a[0]                // 访问
     a[1] = "World"      // 赋值
     ```
-1. slice 切片，s []byte为24byte，s [1024]byte为1024byte
-   - 理解：指向一个序列的值，包含了长度信息
+1. slice
+   - 认识：切片，`[]T`，相同类型的值的变长序列
        ```go
-        // 定义/赋值
-        s := []int                              // slice的零值是nil，长度和容量是0
-        s := []int{2, 3, 5, 7, 11, 13}
+        // 定义
+        s := []int                              // 零值是nil，长度和容量是0
         // 构造slice，分配一个零长度的数组并且返回一个slice指向这个数组
         s := make([]int, 5)                     // 5个0的元素
-        s := make([]int, 0, 5)                  // 0个元素，但是cap=5。cap即容量，返回的是数组切片分配的空间大小
+        s := make([]int, 0, 5)                  // 0个元素，但是cap=5，返回的是数组切片分配的空间大小
+        // 赋值
+        s := []int{2, 3, 5}
         // 访问
-        s[i]
+        a := s[i]
+        // 修改
+        s[i] = 1
+        // 添加
+        s = append(s, 2, 3, 4)
+        // 删除，没有提供现成的，原理是以被删除元素为分界点，将前后两个部分的内存重新连接起来
+        a = a[n:]                               // 删除头部n个
+        a = append(a[:i], a[i+n:]...)           // 删除中间n个，...表示多对使用
+        a = a[:i+copy(a[i:], a[i+n:])]
+        a = a[:len(a)-n]                        // 删除尾部n个
+        // 取子切片
+        s[1:4]
+        s[0:1:4]
+        s[:3]
+        s[4:]
+        s = s[:cap(s)]
+        s = s[1:]
         // 遍历，也适用于map
         for i, v := range pow {}                // 下标i，值v
         for i := range pow {}                   // 只需要下标
         for _, v := range pow {}                // 只需要值，忽略下标
-        // 赋值
-        s == nil                                // slice的默认值为nil，长度和容量都是0
-        // 添加
-        s = append(s, 2, 3, 4)                  // 添加所有的T类型，s的底层数组太小不够容纳自动分配更大的数组
-        // 切片
-        s[1:4]                                  // 即第1到第3个(后边为n-1)，从0开始
-        s[:3]
-        s[4:]
-        s = s[:cap(s)]                          // len(s)=5, cap(s)=5
-        s = s[1:]                               // len(s)=4, cap(s)=4
+
+        // s []byte为24byte，s [1024]byte为1024byte
         ```
-   - 操作
-     1. len(s)：长度
-     1. cap(s)：容量
-     1. append(s, 0)：新增
    - 二维slice
         ```go
         game := [][]string{                     // 定义
-            []string{"a", "a", "a"},
-            []string{"a", "a", "a"},
+            []string{"x",},
+            []string{"x",},
         }
         game[0][0] = "X"                        // 赋值
         ```
-1. map 映射
-   - 理解：键值对，key没有顺序，key唯一
+1. map
+   - 认识：字典，键值对，`map[keyType]valueType`，key没有顺序，key唯一
+     1. 遍历输出顺序与填充顺序无关，不要期望输出顺序的结果
         ```go
+        // 此情况value是一个结构体，可以是其他的基础类型
         type Vertex struct {
             Lat, Long int
         }
 
         // 定义
         var m map[string]Vertex
-        // 创建
         m = make(map[string]Vertex)
         // 定义、赋值
         var m = map[string]Vertex{
             "a": {1, 2},
-            "b": {3, 4},
-            "c": vertex{5, 6},
+            "b": vertex{5, 6},
         }
 
         // 获取
@@ -169,24 +180,25 @@
         m["a"] = Vertex{1, 2}
         // 删除
         delete(m, "key")
-        // 双赋值检测是否存在，ok为bool指示是否存在
+        // 检测是否存在，双赋值，ok为bool指示是否存在
         v, ok = m["key"]
+        if ok {}
         ```
-   - 操作
-     1. delete(m, key)：删除
 1. 变量
    - 认识：var或者:=
     ```go
     var i,j int = 1,2       // 声明、赋值
-    var i,j = 1,true
-    var (                   // 多个进行
+    var i,j = 1,true        // 类型推导
+    var (
         i int = 1
         j float32
     )
-    k := 3                  // 短声明、类型推导：:=，只能在函数内使用
+    
+    k := 3                  // 短声明 + 类型推导
     ```
-   - _：特殊变量，类似黑洞
-   - 变量类型转换：必须是显式的，只能发生在两种兼容的类型之间，如int和bool不可以。`a := int32(b)`
+   - 特点
+     1. _：匿名变量，类似黑洞
+     1. 变量类型转换：必须是显式的，只能发生在两种兼容的类型之间，如int和bool不可以。`a := int32(b)`
 1. 常量
    - 认识：const，只能是string、bool、数字类型，自定义函数操作常量会报错，只能内置函数操作
     ```go
@@ -294,7 +306,15 @@
     ```
    - 使用
      1. split(17)/hypot/compute：返回7和10
-   - 内建方法
+   - 内嵌方法
+     1. len(v T)：长度，string、array、slice、map、chan、pointer(指向元素的数量)
+     1. cap(v T)：容量，array、slice(返回cap)、chan、pointer(指向元素的数量)
+     1. `append(slice []T, elems ...T)`、copy(Dst, Src)：slice，容量够重新分配地址以容纳新元素，不够分配新底层数组，变长参数
+        ```go
+        append(x,4,5,6)                     // 支持多个参数
+	    append(x,y...)                      // 只支持两个参数，表示把y作为x的类型进行添加
+        ```
+     1. `delete(m map[T]T1, key T)`：map
      1. make
         - 认识：可以创建slice、map、chan三种类型，返回引用类型，即让帮忙将数据初始化好
         - 使用
@@ -317,14 +337,16 @@
             // chan
             mChan := make(chan int, 3)
             ```
-     1. append、copy：对slice进行操作，`mSlice = append(mSlice, "aa")`，`copy(Dst, Src)`，append会预判多加长度，copy只操作Dst原有长度范围的数据
-     1. delete：对map进行操作，`delete(mMap, xxKey)`
-     1. len、cap、close
-        - len：长度，string、array、slice、map、chan
-        - cap：容量，slice、array、chan
-        - close：关闭，chan
+     1. 异常
+        - `func panic(v interface{})`
+        - `func recover() interface{}`
+     1. 复数相关
+        - `func complex(r, i FloatType) ComplexType`
+        - `func real(c ComplexType) FloatType`
+        - `func imag(c ComplexType) FloatType`
+     1. `func close(c chan<- Type)`：关闭，chan
 1. * 指针
-   - 理解：保留了变量的内存地址，类型*T是指向类型T的值的指针，其零值是nil，即间接引用。与c不同go没有指针运算
+   - 认识：保留了变量的内存地址，类型*T是指向类型T的值的指针，其零值是nil，即间接引用。与c不同go没有指针运算
      1. 指向指针的指针
      1. 值传递和指针传递
         ```go
@@ -334,6 +356,12 @@
         *p              // 读取i，*又变为取值运算符
         *p = 21         // 设置i
         ```
+   - 特地那
+     1. 不像c，不支持地址的直接转换，只能用unsafe.Pointer()
+   - 分类
+     1. *：普通类型
+     1. unsafe.Pointer：通用类型
+     1. uintptr：运算类型
    - 指针数组
      1. 指针数据：是数组，数组中全是指针
         ```go
@@ -563,6 +591,12 @@
        1. .：点标识的包导入后，调用该包函数可以省略包名，不建议用，容易迷惑
        1. _：不导入整个包，只执行init函数，用来注册包中引擎
    - 导出：package，可执行命令必须使用main包
+1. unsafe
+     1. 字节大小：`unsafe.Sizeof()`
+1. fmt
+   - `fmt.Println(xx1,xx2)`：连续打印
+1. strconv
+   - `strconv.Quote("xx")`：可以输出双引号
 1. time
    - time
      1. `time.Now()`
@@ -647,7 +681,7 @@
    - `archive.tar`
    - `archive.zip`
 1. reflect
-   - TypeOf()/Type()
+   - TypeOf()/Type()：`reflect.TypeOf()`
    - ValueOf()/Value()
      1. CanSet()
    - Elem()：指针指向的元素类型
@@ -1007,6 +1041,11 @@
 1. 部署
    - supervisor来管理go程序，go自己用异常捕捉来处理
    - 打包linux的：`CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build main.go`
+### 实践
+1. 引号输出
+   - 使用反引号：`a := `"xx"``
+   - 使用转义：`a := "\"xx\""`
+   - 使用strconv包：`a := strconv.Quote("xx")`
 ### wiki
 1. 关键字和标识符
    - 关键字：25个
@@ -1024,9 +1063,13 @@
         - int、int8、int16、int32、int64、uint、uint8、uint16、uint32、uint64、uintptr、float32、float64、complex、complex64、complex128
         - imag、panic、recover
      1. 内嵌函数
-        - copy、append、cap、close、len、real
-        - make、new
+        - len、cap
+        - append、copy、delete
         - print、println
+        - make、new
+        - panic、recover
+        - complex、real、imag
+        - close
 1. 历史
    - 07年开发
    - 09年开源
@@ -1035,5 +1078,7 @@
    - 1.11
      1. 库文件管理模块go module
 1. wiki
-   - int/uint/uintptr受系统位数影响，64位系统就是64位
+   - 语法糖
+     1. ...：可变参数
+     1. :=：声明、赋值、类型推断
 1. 测试：go test和testing包
