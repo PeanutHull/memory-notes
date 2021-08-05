@@ -177,6 +177,41 @@
     file_put_content($cache_name, $content);
     ?>
     ```
+1. 上传文件夹下所有文件和文件夹
+    ```php
+    public function uploadAllFile($dir, $p, $uploadDir, $result = [], $content = '')
+    {
+        $handle = opendir($dir);
+        if ($handle) {
+            while (($file = readdir($handle)) !== false) {
+                if ($file != '.' && $file != '..') {
+                    $cur_path = $dir . DIRECTORY_SEPARATOR . $file;
+                    if (is_dir($cur_path)) {
+                        $result = $this->uploadAllFile($cur_path, $p, $uploadDir, $result, $content);
+                        $result = $result['data'];
+                    } else {
+                        $res = str_replace($p, $uploadDir, $cur_path);
+                        $res = str_replace('\\', '/', $res);
+                        $r = $this->uploadCloudServer($cur_path, $res, 1, '');
+                        if (empty($r['stat'])) {
+                            file_put_contents(
+                                '/tmp/fieldUpload.log',
+                                date('Y-m-d H:i:s') . $file . '上传失败' . $r['data'] . chr(10),
+                                8
+                            );
+                            $this->sendDindDindMsg($content . ", 资源{$cur_path}上传到{$res}失败，请查看");
+                            return $r;
+                        }
+                        array_push($result, $r['data']);
+                    }
+                }
+            }
+            closedir($handle);
+        }
+
+        return ['stat' => 1, 'data' => $result];
+    }
+    ```
 ### pro
 1. spl_autoload_register
     ```php

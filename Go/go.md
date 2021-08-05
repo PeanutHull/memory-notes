@@ -1,5 +1,5 @@
 ### go
-1. 认识：全称golang，快速、静态强类型、编译型、具有垃圾回收的开源语言，感觉却像动态类型的解释型语言
+1. 认识：全称golang，静态强类型、编译型、并发型具有垃圾回收的开源语言，感觉却像动态类型的解释型语言
    - 简洁清晰高效
    - 并发机制，goroutine跟channel，有效利用多核和网络，并发而生
    - go的机器码迅速，可直接编译成机器码，支持跨平台编译
@@ -44,7 +44,6 @@
 ### 语法
 1. 语法
    - main是入口函数，程序必须以package开头
-   - 首字母大小写来区分作用域，首字母大写的名称是被导出的，其他包只能读取首字母大写的变量
    - 函数外的每个语句都必须以关键字(var/func/...)开始
    - 每行可以不加分号
    - 注释：多行/* */、单行//
@@ -186,55 +185,62 @@
         ```
 1. 变量
    - 认识：var或者:=
+     1. 类型在变量名后边，避免了类c的含糊不清的定义
+     1. 默认类型推导
+   - 举例
     ```go
     var i,j int = 1,2       // 声明、赋值
-    var i,j = 1,true        // 类型推导
-    var (
+    k := 3                  // 简短格式：短声明 + 类型推导
+    var (                   // 批量格式
         i int = 1
         j float32
     )
-    
-    k := 3                  // 短声明 + 类型推导
+
+    var i,j = 1,true        // 类型推导
     ```
    - 特点
-     1. _：匿名变量，类似黑洞
+     1. _：匿名变量，类似黑洞，可像其他标识符那样用于变量的声明或任何类型都可以给它赋值，但任何赋给这个标识符的值都将被抛弃，可极大增强代码灵活性
      1. 变量类型转换：必须是显式的，只能发生在两种兼容的类型之间，如int和bool不可以。`a := int32(b)`
+     1. 作用域：局部(函数内)、全局(函数外)、形式参数(函数定义中)
 1. 常量
-   - 认识：const，只能是string、bool、数字类型，自定义函数操作常量会报错，只能内置函数操作
+   - 认识：const，是程序运行时不会被修改的简单值的标识符
+     1. 只能是string、bool、数字类型(整数、浮点、复数)
+     1. 常量表达式中只能是内置函数，自定义的会报错
+     1. 会自动类型推导，分显式类型和隐式类型定义
+   - 定义：`const identifier [type] = value`
     ```go
-    const Pi = 3.14
+    const PI = 3.14
     const i,j = 1,true
     const (
         a int = 1
         b int = 1
     )
+
+    const c = len(b)    // 通过内置函数定义
     ```
-   - iota：特殊常量，iota在const关键字出现时将被重置为0，const中每新增一行常量声明则+1，`const a = iota`
+   - iota：可被编译器修改的特殊常量，iota在const关键字出现时将被重置为0，在下一个const出现之前，每出现一次iota则iota+1，`const a = iota`
      1. 跳值使用法
         ```go
         const (
             a = iota
-            _ = iota        // 跳过了，b为3，中间不想有其他常量
+            _ = iota        // 跳过了，b为2，中间不想有其他常量，黑洞嘛
             b = iota
+        )
+
+        const (             // 简写，输出为012
+            a = iota
+            b
+            c
         )
         ```
      1. 插队使用法
         ```go
         const (
             a = iota
-            b = 1           // 插队了
+            b = 1           // 独立值，iota += 1，输出为012
             c = iota
         )
         ```
-     1. 表达式隐式使用法
-        ```go
-        const (
-            a,b = iota, iota+3
-            c,d             // c,d分别为1,4，隐式引用了上一个
-            c = iota
-        )
-        ```
-     1. 单行使用法：`const a,b = iota, iota+3`
 1. 流程控制
    - 判断：不能使用()
      1. if
@@ -245,31 +251,57 @@
             return 2
         }
         ```
-     1. switch：还可用于type-switch来判断某个interface变量的实际变量类型
-        ```go
-        switch os := runtime.GOOS; os {
-        case "darwin":          // 匹配则跳过剩下的case
-            return 1
-        case "linux":
-            return 1
-        case f():
-            return 1
-        default:
-        }
-        ```
+     1. switch
+        - 特点
+          1. 匹配则跳过剩下的case，不用加break，取消break用fallthrough
+          1. case后的所有val必须为同一类型或最终结果为相同类型的表达式
+        - 实例
+            ```go
+            switch os := runtime.GOOS; os {
+            case "darwin":                      
+                return 1
+            case "linux", "mac":                // 可写多个
+                return 1
+            case f():
+                return 1
+            default:
+            }
+            
+            // type-switch，判断某个interface变量的实际变量类型
+            switch x.(type){
+            case type:
+                statement(s);
+            case type:
+                statement(s);
+            default:
+                statement(s);
+            }
+            // 实例
+            switch i := x.(type) {
+            case nil:
+                fmt.Printf(" x 的类型 :%T",i)
+            case int:
+                fmt.Printf("x 是 int 型")
+            default:
+                fmt.Printf("未知型")
+            }
+            ```
    - 循环：不能使用()
      1. for
         ```go
+        // 形式
+        for init; condition; post {}        // 赋值表达式、关系表达式或逻辑表达式(循环控制条件)、赋值表达式
+        for condition {}
+        for {}
+
+
         sum := 0
         for i := 0; i < 10; i++ {
             sum += i
         }
-        // foreach
-        a := []string{"a","b"};
-        for key,value := range a{}
-        for _,value := range a{}
         // 无限循环
         for {}
+        for true{}
         ```
      1. while：for代替，没有分号
         ```go
@@ -277,16 +309,28 @@
             sum += sum
         }
         ```
-     1. range：后边跟一个可循环的，自动类型推断
-   - 跳转：goto
-    ```go
-    goto one
-    one:
-    // 无限循环
-    one:
-    goto one
-    ```
-   - 延迟：defer，会延迟函数的执行直到上层函数返回。所有的defer会压入栈中，并且先入后出
+     1. range：后边跟一个可循环的，自动类型推断，可针对string、array、slice、map
+        ```go
+        a := []string{"a","b"};
+        for key,value := range a{}
+        for _,value := range a{}
+        ```
+     1. 循环控制
+        - break：中断当前循环
+        - continue：跳过当前循环
+        - goto：跳跃
+            ```go
+            goto LABEL;
+            ...
+            LABEL: statement;       // 标记点，后边是表达式
+
+            // 无限循环
+            goto LABEL
+            LABEL:
+            LABEL:
+            goto LABEL
+            ```
+   - 延迟：defer，会延迟函数的执行直到上层函数返回。所有的defer会压入栈中，先入后出
     ```go
     defer fmt.Println("world")
 	fmt.Println("hello")
@@ -570,6 +614,7 @@
      1. go源代码开头都必须以package声明开头，用来表示所属代码包
      1. 同一个路径下只能存在一个package(同一个目录下包名相同)，一个package可拆成多个源文件(同一个目录下可有多个文件)
      1. 可执行的程序必须有main包，并且该包下有main函数
+     1. 首字母大小写来区分包的可见性，首字母大写的名称是被导出的，其他包只能读取首字母大写的变量
    - 导入
      1. 认识：import，顺序导入有依赖的包，两种导入方式，导入未使用的包会报错，包只会被导入一次，import只有这一个功能
         - 先导入最上层依赖的包
@@ -1050,12 +1095,11 @@
 1. 关键字和标识符
    - 关键字：25个
      1. var、const、map、struct、type
-     1. if、else、for、switch、select、break、continue、case、default、range
+     1. if、else、for、switch、fallthrough、select、break、continue、case、default、range
      1. goto、defer
      1. func、interface、return
      1. go、chan
      1. package、import
-     1. fallthrough
    - 标识符：36个
      1. 基础数据类型
         - iota

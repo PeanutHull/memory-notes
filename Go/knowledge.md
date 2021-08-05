@@ -12,6 +12,25 @@
         Big   = 1 << 100
         Small = Big >> 99
     )
+
+    // 存储数据的Byte、KB、MB、GB、TB、PB的计算
+    const(
+        b=1<<(10*iota)
+        kb
+        mb
+        gb
+        tb
+        pb
+    )
+
+    func dataByte() {
+        fmt.Println("b=",b)
+        fmt.Println("kb=",kb)
+        fmt.Println("mb=",mb)
+        fmt.Println("gb=",gb)
+        fmt.Println("tb=",tb)
+        fmt.Println("pb=",pb)
+    }
     ```
 1. if
     ```go
