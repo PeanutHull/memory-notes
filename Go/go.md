@@ -25,58 +25,16 @@
 
     import "fmt"
 
-    // 声明变量
-    const name string = "aa"
-    var a string = "1"
-
-    // 声明类型
-    type aInt int                           // 一般类型声明，相当于类型别名
-    type aStruct struct {}
-    type Ia interface{}
-
-    // 定义函数
-    func aFunc() {}
-
     func main() {
         fmt.Println("Hello, 世界\n")
     }
     ```
 ### 语法
 1. 语法
-   - main是入口函数，程序必须以package开头
-   - 函数外的每个语句都必须以关键字(var/func/...)开始
-   - 每行可以不加分号
+   - 关键字：函数外的每个语句都必须以关键字(var/func/...)开始
+   - 行分隔符：每行可以不加分号，写在一行可用;区分不推荐
    - 注释：多行/* */、单行//
-1. 数据类型
-   - 意义：将数据分为所需内存不同的，充分利用内存
-   - 基本
-     1. 布尔：bool，只能是true、false
-     1. 字符串：string，统一编码为utf-8，16byte
-     1. 数值
-        - 有符号整形：int8 int16 int32 int64，数字是位数，如int32为前后20亿
-        - 无符号整形：uint8 uint16 uint32 uint64
-        - 浮点型：float32 float64
-        - 复数：complex64 complex128，即实部和虚部
-     1. 其他
-        - int/uint：32位cpu为4byte，64位为8byte
-        - byte：类似uint8
-        - rune：类似int32，代表一个Unicode码
-        - uintptr：无符号整型，足够大可以容纳任何指针的位模式，跟系统位数有关系
-        - 引用：8byte
-   - 派生
-     1. array
-     1. slice
-     1. map
-     1. struct
-     1. func
-     1. interface
-     1. pointer：指针
-     1. chan
-   - 特点
-     1. 类型零值：变量无初始化时的默认值，可以表现为0，false，""，nil
-     1. 类型推导：不指定其类型时，由右值推导得出
-     1. 类型转换：T(v)，将值v转换为类型T，不同类型相互转换的时候需要显式转换
-     1. 类型别名：`type aInt int`
+   - 标识符：用来命名变量、类型等程序实体
 1. 标识符
    - 认识
      1. 可以直接使用，而不用声明
@@ -96,8 +54,45 @@
    - 逻辑：&&、||、!
    - 按位：&、|、^、<<、>>
    - 赋值：=、+=等
+1. 数据类型
+   - 意义：将数据分为所需内存不同的，充分利用内存
+   - 基本
+     1. 布尔：bool，只能是true、false
+     1. 字符串：string，统一编码为utf-8，16byte
+     1. 数值
+        - 有符号整形：int8 int16 int32 int64，数字是位数，如int32为前后20亿
+        - 无符号整形：uint8 uint16 uint32 uint64
+        - 浮点型：float32 float64
+        - 复数：complex64 complex128，即实部和虚部
+     1. 其他
+        - int/uint：32位cpu为4byte，64位为8byte
+        - byte：类似uint8
+        - rune：类似int32，代表一个Unicode码
+        - uintptr：无符号整型，足够大可以容纳任何指针的位模式，跟系统位数有关系，用于存放一个指针
+        - 引用：8byte
+   - 派生
+     1. array
+     1. slice
+     1. map
+     1. struct
+     1. func
+     1. interface
+     1. pointer：指针
+     1. chan
+   - 特点
+     1. 类型零值：变量无初始化时的默认值，可以表现为0，false，""，nil
+     1. 类型推导：不指定其类型时，由右值推导得出
+     1. 类型转换：T(v)，将值v转换为类型T，不同类型相互转换的时候需要显式转换
+     1. 类型别名：`type aInt int`
+   - 实例
+    ```go
+    // 声明类型
+    type aInt int                           // 一般类型声明，相当于类型别名
+    type aStruct struct {}
+    type Ia interface{}
+    ```
 1. string
-   - 认识：字符串，是一个任意字节的变宽常量序列
+   - 认识：字符串，是一串字符连接的任意字节的固定长度的变宽常量字符序列，由单个字节连接起来，使用utf-8编码
      1. 使用双引号或反引号创建
         - 双引号：可解析的。可以转义，不能换行
         - 反引号：原生的。不能转义，可以换行。一般用于sql、html等大段内容，以及正则表达式
@@ -189,12 +184,14 @@
      1. 默认类型推导
    - 举例
     ```go
+    // 声明变量
     var i,j int = 1,2       // 声明、赋值
     k := 3                  // 简短格式：短声明 + 类型推导
     var (                   // 批量格式
         i int = 1
         j float32
     )
+
 
     var i,j = 1,true        // 类型推导
     ```
@@ -303,17 +300,17 @@
         for {}
         for true{}
         ```
-     1. while：for代替，没有分号
-        ```go
-        for sum < 1000 {
-            sum += sum
-        }
-        ```
      1. range：后边跟一个可循环的，自动类型推断，可针对string、array、slice、map
         ```go
         a := []string{"a","b"};
         for key,value := range a{}
         for _,value := range a{}
+        ```
+     1. while：for代替，没有分号
+        ```go
+        for sum < 1000 {
+            sum += sum
+        }
         ```
      1. 循环控制
         - break：中断当前循环
@@ -330,29 +327,101 @@
             LABEL:
             goto LABEL
             ```
-   - 延迟：defer，会延迟函数的执行直到上层函数返回。所有的defer会压入栈中，先入后出
-    ```go
-    defer fmt.Println("world")
-	fmt.Println("hello")
-    ```
+   - 延迟
+     1. 认识：defer，会延迟函数的执行直到上层函数返回。所有的defer会压入栈中，先入后出，一般用于异常处理、释放资源、清理数据、记录日志等
+        - 每次defer语句执行时，defer修饰函数的返回值和参数取值会照常进行计算和保存，但是defer修饰的函数不会执行，丢弃被修饰函数的返回值
+        - 如果被修饰函数的值为nil，会在该函数执行时panic，不会在defer执行时panic。被修饰函数的上一级函数即使抛出异常，被修饰函数也会执行，确保资源被合法释放
+        - 有一定开销, 为节省性能可避免使用
+     1. 应用
+        ```go
+        // 简化资源回收，安全回收资源
+        mu.Lock() 
+        defer mu.Unlock()
+        // 捕获panic异常
+        // 函数return后修改返回值
+        // 
+        ```
+     1. 实例
+        ```go
+        defer fmt.Println("world")
+        fmt.Println("hello")
+        ```
 1. func 函数
-   - 定义
+   - 认识：`func xx() [T]{}`，是基本的代码块
+     1. 可以返回多个值
+     1. 函数参数：值传递(默认)、引用传递
+     1. 方法：包含了接受者的函数，`func (variable_name variable_data_type) function_name() [return_type]{}`
+   - 实例
     ```go
+    // 定义函数
     func add(x int, y int) int {            // 参数类型，返回值类型
         return x + y
     }
-    // 函数值
+    // 调用
+    aFunc()
+
+    // 返回多个值
+    func aFunc() {
+        return x, y
+    }
+
+    // 可变参数，value是形参名称，类型统一
+    func add(value...int) {
+        for _,v := range value {}
+    }
+
+    // 函数变量
     hypot := func(x, y int) int {}
-    func add(value...int) {                 // 可变参数，value是形参名称，类型统一
-        for _,v := range value {
+
+    // 匿名函数，可作闭包，函数内变量保留
+    func adder() func(int) int {
+        i:=0
+        return func(x int) int {
+            i += x
+            return i
         }
     }
+    pos := adder()
+    pos(i)                              // 使用匿名函数
+
+    // 方法
+    type Circle struct {                // 定义结构体
+        radius float64
+    }
+    func (c Circle) getArea() float64 { //method 属于 Circle 类型对象中的方法
     ```
-   - 使用
-     1. split(17)/hypot/compute：返回7和10
-   - 内嵌方法
-     1. len(v T)：长度，string、array、slice、map、chan、pointer(指向元素的数量)
-     1. cap(v T)：容量，array、slice(返回cap)、chan、pointer(指向元素的数量)
+   - 闭包
+     1. 认识：定义在一个函数内部的函数，是将函数内外部连接起来的桥梁
+     1. 实例
+        ```go
+        // 上边的普通型，参数和返回值中间加个func()
+
+        // defer模拟
+        x, y := 1,2
+        defer func(a int){
+            fmt.Println("defer x, y = ", a, y)  //y为闭包引用
+        }(x)                                        //x值拷贝 调用时传入参数
+        x += 100
+        y += 200
+        fmt.Println(x, y)
+
+        // 多个匿名函数
+        func calc(base int) (func(int) int, func(int) int) {
+            add := func(i int) int {
+                return base
+            }
+            sub := func(i int) int {
+                return base
+            }
+            return add, sub
+        }
+        f1, f2 := calc(100)
+
+        // goroutine模拟：闭包 + goroutine的死锁，goroutine未启动前，变量已经改变
+        ```
+   - 内嵌函数
+     1. `len(v T)`：长度，string、array、slice、map、chan、pointer(指向元素的数量)
+     1. `cap(v T)`：容量，array、slice(返回cap)、chan、pointer(指向元素的数量)
      1. `append(slice []T, elems ...T)`、copy(Dst, Src)：slice，容量够重新分配地址以容纳新元素，不够分配新底层数组，变长参数
         ```go
         append(x,4,5,6)                     // 支持多个参数
@@ -360,7 +429,7 @@
         ```
      1. `delete(m map[T]T1, key T)`：map
      1. make
-        - 认识：可以创建slice、map、chan三种类型，返回引用类型，即让帮忙将数据初始化好
+        - 认识：可以创建slice、map、chan三种类型，即让帮忙将数据初始化好，返回引用类型
         - 使用
             ```go
             // slice
@@ -390,46 +459,65 @@
         - `func imag(c ComplexType) FloatType`
      1. `func close(c chan<- Type)`：关闭，chan
 1. * 指针
-   - 认识：保留了变量的内存地址，类型*T是指向类型T的值的指针，其零值是nil，即间接引用。与c不同go没有指针运算
-     1. 指向指针的指针
+   - 认识：`var ptr_name *T`，保存变量的内存地址，即间接引用。指针类型*T是指向类型T的值的指针，零值是nil
+   - 特点
+     1. 和c不同，没有指针运算，不支持地址的直接转换，只能用unsafe.Pointer()
+     1. 二级指针：指向指针的指针变量，第一个指针存放第二个指针的地址，第二个指针存放变量的地址，`var pptr **int`
      1. 值传递和指针传递
-        ```go
-        i := 42
-        var p *int      // 声明指针类型
-        p = &i          // 赋值指针一个作用对象
-        *p              // 读取i，*又变为取值运算符
-        *p = 21         // 设置i
-        ```
-   - 特地那
-     1. 不像c，不支持地址的直接转换，只能用unsafe.Pointer()
    - 分类
-     1. *：普通类型
-     1. unsafe.Pointer：通用类型
-     1. uintptr：运算类型
+     1. *：普通类型，只能传递对象地址
+     1. unsafe.Pointer：通用类型，用于转换不同类型的指针，不能进行指针运算，不能读取内存存储的值
+     1. uintptr：运算类型，用于指针运算，GC不把uintptr当指针，无法持有对象，表示的地址的数据可能被GC回收
    - 指针数组
      1. 指针数据：是数组，数组中全是指针
         ```go
-        a,b := 1,2
-        pointArr := [...]*int(&a, &b)
+        a := []int{10,100,200}
+        var i int
+        var ptr [3]*int;        // 指针数组
+        ptr[i] = &a[i]
         ```
      1. 数组指针：是指针
         ```go
-        arr := [...]int(1,2)
+        arr := make([]int, 2)
         arrPoint := &arr
         ```
+   - 实例
+    ```go
+    var ptr *int      // 声明指针类型，ptr是指针变量名
+
+    i := 42
+    ptr = &i          // 赋值指针一个作用对象
+    *ptr              // 读取i，*又变为取值运算符
+    *ptr = 21         // 设置i
+    ```
 1. 错误和异常
-   - 错误
-     1. 认识：用error值表示错误状态，error是内在接口，为nil时表示成功；非nil表示错误
-        - error接口：fmt包处理error时会调用Error方法，使用`return 0, errors.New("math: square root of negative number")`
-            ```go
-            i, err := strconv.Atoi("42")
-            if err != nil {}
-            ```
-   - 比较
-     1. 在错误处理上采用了与C类似的检查返回值的方式，而异常定义为无法预测的，几乎不可能失败但是特殊条件下也没法返回错误，也无法继续执行，这时就会返回异常panic
+   - 错误处理：通过内置的error接口作为错误处理的标准模式，如果函数要返回错误，则返回值类型列表中肯定包含error。为nil时表示成功；非nil表示错误
+    ```go
+    // 定义
+    type error interface {
+        Error() string
+    }
+    // 抛出
+    return 0, errors.New("xxxx")
+    // 使用
+    i, err := strconv.Atoi("42")
+    if err != nil {}
+    ```
    - 异常
-     1. 认识：panic、recover，抛出，接收异常
+     1. 认识：`panic recover`，抛出、接收异常
+        - panic：可中断原有的控制流程，进入panic流程中
+          1. 已经载入的defer函数会正常执行
+          1. 可手动触发，可运行时错误产生，如访问越界的数组
+        - recover：可以捕获到panic的输入值，让进入panic流程中的goroutine恢复正常执行
+          1. 只能在defer语句中使用，直接使用返回nil没有任何效果
+          1. 没有用recover捕获，进程打印异常信息后直接退出
+     1. 实例
         ```go
+        // 定义
+        func panic(interface{})//接受任意类型参数 无返回值 
+        func recover() interface{}//可以返回任意类型 无参数
+
+        // 实例
         defer func() {                  // 直接执行的匿名方法
             msg := recover()            // 捕获，判断类型
             switch msg.(type) {
@@ -439,24 +527,32 @@
             }
         }()
         panic("haha")                   // string类型
-        panic(error.New("kuku"))        // string类型
+        panic(errors.New("kuku"))       // string类型
         ```
+   - 比较
+     1. 在错误处理上采用了与C类似的检查返回值的方式，而异常定义为无法预测的，几乎不可能失败但是特殊条件下也没法返回错误，也无法继续执行，这时就会返回异常panic
+1. 扩展类型
+   - 组合扩展：struct组合之前的类型
+   - 别名扩展：type定义别名再扩展
 ### 面向对象
 1. struct
-   - 理解：结构体，字段的组合
+   - 理解：结构体，`type struct`，字段的组合
+     1. 结构体方法定义在结构体作用域外，在函数声明中指定接收者，除了基础类型或其他包的，可以在任意类型里定义方法
+   - 实例
     ```go
+    // 定义
     type Dog struct {
         x int               // 封装
         y int
     }
-    // 赋值1
+    // 赋值方法1
     var dog Dog
     dog.x = 1
-    // 赋值2
+    // 赋值方法2
     dog := Dog{1, 2}
     Dog{x: 1}               // y:0 被省略
     Dog{}                   // 都被忽略
-    // 赋值3
+    // 赋值方法3
     dog := new(Dog)
     dog.x = 1
 
@@ -464,7 +560,7 @@
     dog.x
 
     // 添加方法
-    func (d *Dog) Run {}
+    func (d *Dog) Run {}    // 函数名前加接受者，即func (variable_name variable_data_type) function_name() [return_type]{}
 
     p = &Dog{1, 2}          // 类型为 *Dog
     ```
@@ -480,44 +576,71 @@
     dog.Color = "1"             // 就可以直接用了
     ```
 1. interface 接口
-   - 理解：接口类型是一组方法定义的集合。即抽象、封装、多态
-        ```go
-        type Abser interface {
-            Abs() float64
-        }
-
-        type MyFloat float64
-        f := MyFloat()
-
-        var a Abser                 // 1. 接口定义变量
-        a = f                       // 2. 方法赋值给变量，即a MyFloat实现了Abser
-        ```
-   - 隐式接口：接口的实现都是隐式的，实现接口的所有方法就隐式地实现了接口
-     1. 没有了显式声明的必要。解藕了实现接口的包和定义接口的包，因此无需在每个实现上增加新接口，也鼓励了明确的接口定义
+   - 理解：接口类型是一组具有共性的方法定义的集合。即抽象、封装、多态
      1. ‌interface{}类型不是任意类型，只是‌interface类型
+     1. 任何其它类型只要实现了接口定义的方法就是实现了接口。是duck-type编程的一种体现，不关心属性（数据），只关心行为（方法）
+     1. 接口是松散的结构，不与定义绑定，可以同时从多个维度对数据进行抽象，找出共同点，并使用同一套逻辑来处理。弱关联关系，接口已经可以在很多方面替代继承的作用，比如多态和泛型，而且接口的关系松散、随意，可以有更高的自由度、更多的抽象角度。
+   - 接口实现：接口的实现都是隐式的，实现接口的所有方法就隐式地实现了接口
+     1. 没有了显式声明的必要。解藕了实现接口的包和定义接口的包
      1. 结构体指针实现接口，结构体初始化变量不会编译通过，因为go的传参值拷贝特性，全新的变量不会指向原来的结构体，也就找不到了，所以提示未实现接口
         - 反之则可以，因为可以隐式的对变量解引用（dereference）获取指针指向的结构体
-1. go没有类，可以在任意类型里定义方法，除了基础类型或其他包的类型。方法接收者出现在func和方法名之间的参数中
+        - 实现接口的具体方法时，如果以指针作为接收者，接口的具体实现类型只能以指针方式使用，值接收者既可以按指针方式使用也可以按值方式使用
+   - 空接口类型：`interface{}`，可用于存储任意数据类型的实例，达到抽象数据类型的目的
+     1. 所有的数据类型都实现了空接口，参数是的话表明以使用任何类型的数据，函数内部该变量仍然为空接口类型，而不是传入的实参类型
+     1. 类型断言：即接口类型向普通类型的转换，运行期确定
+        ```go
+        func printArray(arr interface{}){
+            a,ok := arr.([]int)                 //通过断言实现类型转换，同时加上判断，房子断言失败导致运行错误
+            if ok {}
+        }
+        ```
+   - 接口赋值
+     1. 认识：要保证这个值实现了接口的所有方法
+     1. 方式
+        - 实现接口的对象实例赋值给接口
+        - 另外一个接口赋值给接口
+   - 接口组合：和struct一样，支持组合
     ```go
-    func (v *Vertex) Abs() float64 {}           // 接收者为指针，大结构体的话更有效率
-    v := &Vertex{3, 4}
-    v.Abs()
-    // 如
-    type MyFloat float64
-    func (f MyFloat) Abs() float64 {}
-    f := MyFloat()
-    f.Abs()
-    ```
-1. 内建接口
-   - Stringer
-    ```go
-    func (p Person) String() string {                                   // 改变了结构体输出时的样式，Stringer是一个用字符串描述自己的类型
-        return fmt.Sprintf("(name is %v) (%v years)", p.Name, p.Age)
+    type IReader interface {
+       Read(file string) []byte
     }
-    a := Person{"Arthur Dent", 42}
-    z := Person{"Zaphod Beeblebrox", 9001}
-    fmt.Println(a, z)
+    type IWriter interface {
+        Write(file string, data string)
+    }
+
+    // 接口组合,默认继承了IReader和IWriter中的抽象方法
+    type IReadWriter interface {
+        IReader
+        IWriter
+    }
     ```
+   - 实例
+    ```go
+    // 定义
+    type ISayHello interface {
+        sayHello()
+    }
+    // 实现
+    type AmericalPerson struct {}
+    func (person AmericalPerson) sayHello(){
+        fmt.Println("Hello！")
+    }
+    // 使用
+    ameriacal := AmericalPerson{}
+    var i ISayHello                             // 1. 定义接口变量
+    i = ameriacal                               // 2. 赋值给变量，即ameriacal实现了ISayHello
+    i.sayHello()                   
+    ```
+   - 内建接口
+     1. Stringer
+        ```go
+        func (p Person) String() string {                                   // 改变了结构体输出时的样式，Stringer是一个用字符串描述自己的类型
+            return fmt.Sprintf("(name is %v) (%v years)", p.Name, p.Age)
+        }
+        a := Person{"Arthur Dent", 42}
+        z := Person{"Zaphod Beeblebrox", 9001}
+        fmt.Println(a, z)
+        ```
 ### 协程
 1. 认识
    - 并行与并发：并发只是假装同时进行
@@ -610,22 +733,23 @@
    - 传递数据：传递给所有树节点
 ### 包
 1. package
-   - 认识：包，是最基本的分发单位和工程管理中依赖的体现
-     1. go源代码开头都必须以package声明开头，用来表示所属代码包
-     1. 同一个路径下只能存在一个package(同一个目录下包名相同)，一个package可拆成多个源文件(同一个目录下可有多个文件)
-     1. 可执行的程序必须有main包，并且该包下有main函数
-     1. 首字母大小写来区分包的可见性，首字母大写的名称是被导出的，其他包只能读取首字母大写的变量
+   - 认识：包，封装，是最基本的分发单位和工程管理中依赖的体现，提供更好的可重用性与封装性
+   - 定义
+     1. 程序必须以package开头，用来表示所属代码包，`package packageName`
+     1. 同一个目录下包名必须相同，一个包可拆成多个源文件，即同一个目录下可有多个文件
+     1. 可执行的程序必须有main包，并且main包有main函数
+     1. 首字母大小写来区分包的可见性，首字母大写的名称是被导出的可被其他包读取的
    - 导入
-     1. 认识：import，顺序导入有依赖的包，两种导入方式，导入未使用的包会报错，包只会被导入一次，import只有这一个功能
+     1. 认识：import，`import path`，顺序导入有依赖的包，两种导入方式，导入未使用的包会报错，包只会被导入一次，import只有这一个功能
         - 先导入最上层依赖的包
         - 然后初始化包中常量和变量
-        - 然后包中有init方法则执行
+        - 所有包可包含一个没有任何返回值和参数的不能显式调用的导入时自动执行的init函数
         - 所有包导入完成后，对main初始化常量和变量、执行init方法
      1. 导入方式
         ```go
         import "fmt"
         import "math"
-        // 推荐下面的
+        // 多包导入，推荐
         import (
             "fmt"
             "math"
@@ -636,8 +760,16 @@
        1. .：点标识的包导入后，调用该包函数可以省略包名，不建议用，容易迷惑
        1. _：不导入整个包，只执行init函数，用来注册包中引擎
    - 导出：package，可执行命令必须使用main包
+1. errors
+   - `errors.New("xxxx")`
 1. unsafe
-     1. 字节大小：`unsafe.Sizeof()`
+   - 认识：只有两个类型，三个函数
+   - 组成
+     1. `type ArbitraryType int`：int别名，代表一个任意go表达式类型
+     1. `type Pointer *ArbitraryType`：int指针类型别名，可理解成任何指针的父类型
+     1. `unsafe.Sizeof()`：接受任意类型的值或表达式，返回其占用的字节数    
+     1. `func Offsetof(x ArbitraryType) uintptr`：返回结构体中元素所在内存的偏移量
+     1. `func Alignof(x ArbitraryType) uintptr`：返回变量对齐字节数量
 1. fmt
    - `fmt.Println(xx1,xx2)`：连续打印
 1. strconv
@@ -1005,8 +1137,8 @@
 ### 运维
 1. 运行
    - 环境变量
-     1. GOROOT：告知当前go的位置，可以不设置，默认在/usr/local/go，编译的时候从GOROOT找system libariry
-     1. GOPATH：告知去哪里找代码，必须设置，可以修改，工作空间为
+     1. GOROOT：go的安装路径，可以不设置，默认在/usr/local/go，编译的时候从GOROOT找system libariry
+     1. GOPATH：开发的工作空间，作为编译后二进制的存放目的地和import包时的搜索路径。必须设置，可以有多个。可以弄俩，第一个放第三方包(因为默认安装到第一个)，第二个自己的
         - src：源码目录，import时来src查找
         - bin：可执行命令，go get二进制文件下载的目的地
         - pkg：包对象，编译生成的lib文件存储的地方
@@ -1092,7 +1224,7 @@
    - 使用转义：`a := "\"xx\""`
    - 使用strconv包：`a := strconv.Quote("xx")`
 ### wiki
-1. 关键字和标识符
+1. 关键字和标识符、符号：程序一般由关键字、常量、变量、运算符、类型和函数组成
    - 关键字：25个
      1. var、const、map、struct、type
      1. if、else、for、switch、fallthrough、select、break、continue、case、default、range
