@@ -534,3 +534,5 @@
         - 可以直接调用java API
         - JDK支持三大操作系统
         - css定义外观，有WebView、3D图形、富文本、多点触控
+   - jython：java版本的python解释器，可以在java环境中运行python，在python中调试java，自由混合两种语言
+   - Py4J：同jython，python和java的桥梁

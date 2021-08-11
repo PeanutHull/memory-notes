@@ -40,7 +40,7 @@
      1. 可以直接使用，而不用声明
    - 组成
      1. nil：表示指针/map/slice/function/interface/channel的零值，表示声明了没有赋值，不是关键词只是变量名
-        - nil和empty不同，nil不会指向底层地址，empty会
+        - nil和空不同，nil不会指向底层地址，空会
 1. 运算符
    - + 字符串连接符
    - 引号
@@ -101,6 +101,8 @@
         - 想要改变：先将字符串转为字节数组`[]byte`或字符数组`[]rune`，有中文使用字符数组
 1. array
    - 认识：数组，`[n]T`，相同类型T的值的定长数组
+     1. […]：语法糖，让编译器自动推导数组长度
+   - 代码
     ```go
     // 定义
     var a [2]string
@@ -329,7 +331,7 @@
             ```
    - 延迟
      1. 认识：defer，会延迟函数的执行直到上层函数返回。所有的defer会压入栈中，先入后出，一般用于异常处理、释放资源、清理数据、记录日志等
-        - 每次defer语句执行时，defer修饰函数的返回值和参数取值会照常进行计算和保存，但是defer修饰的函数不会执行，丢弃被修饰函数的返回值
+        - 每次defer语句执行时，defer修饰函数的返回值和参数取值会照常进行计算和保存，但是defer修饰的函数不会执行，同时丢弃被修饰函数的返回值
         - 如果被修饰函数的值为nil，会在该函数执行时panic，不会在defer执行时panic。被修饰函数的上一级函数即使抛出异常，被修饰函数也会执行，确保资源被合法释放
         - 有一定开销, 为节省性能可避免使用
      1. 应用
@@ -339,7 +341,6 @@
         defer mu.Unlock()
         // 捕获panic异常
         // 函数return后修改返回值
-        // 
         ```
      1. 实例
         ```go
@@ -359,6 +360,9 @@
     }
     // 调用
     aFunc()
+    // 直接执行函数
+    func() {
+    }()
 
     // 返回多个值
     func aFunc() {
@@ -498,7 +502,9 @@
         Error() string
     }
     // 抛出
-    return 0, errors.New("xxxx")
+    func Sleep() (int,error) {
+        return 0, errors.New("xxxx")
+    }
     // 使用
     i, err := strconv.Atoi("42")
     if err != nil {}
@@ -508,9 +514,11 @@
         - panic：可中断原有的控制流程，进入panic流程中
           1. 已经载入的defer函数会正常执行
           1. 可手动触发，可运行时错误产生，如访问越界的数组
+          1. panic无法跨协程, 当前协程产生的异常, 必须由当前协程处理，没有用recover捕获的话，进程打印异常信息后直接退出
+          1. panic可以嵌套
         - recover：可以捕获到panic的输入值，让进入panic流程中的goroutine恢复正常执行
           1. 只能在defer语句中使用，直接使用返回nil没有任何效果
-          1. 没有用recover捕获，进程打印异常信息后直接退出
+          1. recover后, 当前函数panic后面没执行的代码也不会再继续执行
      1. 实例
         ```go
         // 定义
@@ -522,12 +530,14 @@
             msg := recover()            // 捕获，判断类型
             switch msg.(type) {
                 case string:
+                    fmt.Print("string", msg)
                 case error:
+                    fmt.Print("error", msg)
                 default:
             }
         }()
         panic("haha")                   // string类型
-        panic(errors.New("kuku"))       // string类型
+        panic(errors.New("kuku"))       // error类型
         ```
    - 比较
      1. 在错误处理上采用了与C类似的检查返回值的方式，而异常定义为无法预测的，几乎不可能失败但是特殊条件下也没法返回错误，也无法继续执行，这时就会返回异常panic
@@ -537,7 +547,27 @@
 ### 面向对象
 1. struct
    - 理解：结构体，`type struct`，字段的组合
-     1. 结构体方法定义在结构体作用域外，在函数声明中指定接收者，除了基础类型或其他包的，可以在任意类型里定义方法
+     1. 结构体方法
+        - 定义在结构体作用域外，在函数声明中指定接收者，除了基础类型或其他包的，可以在任意类型里定义方法
+        - `func (variable_name variable_data_type) function_name() [return_type]{}`
+     1. 匿名组合：类似继承
+        ```go
+        // 结构体组合
+        type Animal struct{
+            Color string
+        }
+        type Dog1 struct{
+            Animal                  // 匿名组合：可以直接用父结构体的属性和方法
+            name string
+        }
+        dog.Color = "1"             // 直接使用
+
+        type Dog2 struct{
+            someAnimal Animal       // 把父结构体作为一个属性使用
+            name string
+        }
+        ```
+     1. 不支持多态
    - 实例
     ```go
     // 定义
@@ -545,46 +575,43 @@
         x int               // 封装
         y int
     }
+
     // 赋值方法1
-    var dog Dog
-    dog.x = 1
-    // 赋值方法2
+    dog := Dog{x: 1}               	// 指定字段，y:0可以被省略
     dog := Dog{1, 2}
-    Dog{x: 1}               // y:0 被省略
-    Dog{}                   // 都被忽略
-    // 赋值方法3
+    dog := Dog{}                    // 都用零值初始化
+    // 赋值方法2
     dog := new(Dog)
+    var dog *Dog = new(Dog)         // 返回的是指针类型
+    dog.x = 1
+    // 赋值方法3
+    var dog Dog
     dog.x = 1
 
     // 访问
     dog.x
 
     // 添加方法
-    func (d *Dog) Run {}    // 函数名前加接受者，即func (variable_name variable_data_type) function_name() [return_type]{}
+    func (d *Dog) Run {}            // 函数名前加接受者
+    func (d Dog) Run {}				// 深拷贝，会复制一个出来
 
-    p = &Dog{1, 2}          // 类型为 *Dog
-    ```
-   - 组合：继承
-    ```go
-    type Animal struct{
-        Color string
-    }
-    type Dog struct{
-        Animal                  // 就组合了，可以用父结构体的属性和方法
-        name string
-    }
-    dog.Color = "1"             // 就可以直接用了
+    var p *Dog
+    p = &Dog{1, 2}                  // 类型为 *Dog
     ```
 1. interface 接口
-   - 理解：接口类型是一组具有共性的方法定义的集合。即抽象、封装、多态
-     1. ‌interface{}类型不是任意类型，只是‌interface类型
-     1. 任何其它类型只要实现了接口定义的方法就是实现了接口。是duck-type编程的一种体现，不关心属性（数据），只关心行为（方法）
+   - 理解：接口类型是一组具有共性的方法定义在一起的集合。即抽象、封装、多态
+     1. ‌是派生类型
      1. 接口是松散的结构，不与定义绑定，可以同时从多个维度对数据进行抽象，找出共同点，并使用同一套逻辑来处理。弱关联关系，接口已经可以在很多方面替代继承的作用，比如多态和泛型，而且接口的关系松散、随意，可以有更高的自由度、更多的抽象角度。
-   - 接口实现：接口的实现都是隐式的，实现接口的所有方法就隐式地实现了接口
+   - 接口实现：接口的实现都是隐式的，实现接口了的所有方法就隐式地实现了接口，是duck-type编程的一种体现，不关心属性（数据），只关心行为（方法）
      1. 没有了显式声明的必要。解藕了实现接口的包和定义接口的包
      1. 结构体指针实现接口，结构体初始化变量不会编译通过，因为go的传参值拷贝特性，全新的变量不会指向原来的结构体，也就找不到了，所以提示未实现接口
         - 反之则可以，因为可以隐式的对变量解引用（dereference）获取指针指向的结构体
         - 实现接口的具体方法时，如果以指针作为接收者，接口的具体实现类型只能以指针方式使用，值接收者既可以按指针方式使用也可以按值方式使用
+   - 接口变量赋值
+     1. 认识：要保证这个值实现了接口的所有方法，在使用接口时，我们要将接口看成一个特殊的容器，这个容器只能容纳一个对象，只有实现了这个接口类型的对象才可以放进去
+     1. 方式
+        - 实现接口的对象实例赋值给接口
+        - 另外一个接口赋值给接口
    - 空接口类型：`interface{}`，可用于存储任意数据类型的实例，达到抽象数据类型的目的
      1. 所有的数据类型都实现了空接口，参数是的话表明以使用任何类型的数据，函数内部该变量仍然为空接口类型，而不是传入的实参类型
      1. 类型断言：即接口类型向普通类型的转换，运行期确定
@@ -594,13 +621,9 @@
             if ok {}
         }
         ```
-   - 接口赋值
-     1. 认识：要保证这个值实现了接口的所有方法
-     1. 方式
-        - 实现接口的对象实例赋值给接口
-        - 另外一个接口赋值给接口
-   - 接口组合：和struct一样，支持组合
+   - 接口组合：继承，和struct一样，支持组合
     ```go
+    // 接口组合,默认继承了IReader和IWriter中的抽象方法
     type IReader interface {
        Read(file string) []byte
     }
@@ -608,7 +631,6 @@
         Write(file string, data string)
     }
 
-    // 接口组合,默认继承了IReader和IWriter中的抽象方法
     type IReadWriter interface {
         IReader
         IWriter
@@ -619,11 +641,15 @@
     // 定义
     type ISayHello interface {
         sayHello()
+        sayGoodbye()
     }
     // 实现
     type AmericalPerson struct {}
     func (person AmericalPerson) sayHello(){
         fmt.Println("Hello！")
+    }
+    func (person AmericalPerson) sayGoodbye(){
+        fmt.Println("Goodbye！")
     }
     // 使用
     ameriacal := AmericalPerson{}
@@ -631,16 +657,25 @@
     i = ameriacal                               // 2. 赋值给变量，即ameriacal实现了ISayHello
     i.sayHello()                   
     ```
-   - 内建接口
+   - 内置接口
      1. Stringer
-        ```go
-        func (p Person) String() string {                                   // 改变了结构体输出时的样式，Stringer是一个用字符串描述自己的类型
-            return fmt.Sprintf("(name is %v) (%v years)", p.Name, p.Age)
+        ```go    
+        type Person struct {
+	        name string
+	        age int
         }
-        a := Person{"Arthur Dent", 42}
-        z := Person{"Zaphod Beeblebrox", 9001}
-        fmt.Println(a, z)
+
+        func (p Person) String() string {                                   // 改变了结构体输出时的样式，Stringer是一个用字符串描述自己的类型
+	        return fmt.Sprintf("(name is %v) (%v years)", p.name, p.age)
+        }
+
+        func main() {
+            a := Person{"Arthur Dent", 42}
+            z := Person{"Zaphod Beeblebrox", 9001}
+            fmt.Println(a, z)
+        }
         ```
+     1. error
 ### 协程
 1. 认识
    - 并行与并发：并发只是假装同时进行
@@ -1258,3 +1293,11 @@
      1. ...：可变参数
      1. :=：声明、赋值、类型推断
 1. 测试：go test和testing包
+
+
+
+结构体指针方法和值方法在调用时形式上是没有区别的，只不过一个可以改变结构体内部状态，而另一个不会。指针方法使用结构体值变量可以调用，值方法使用结构体指针变量也可以调用。
+
+通过指针访问内部的字段需要 2 次内存读取操作，第一步是取得指针地址，第二部是读取地址的内容，它比值访问要慢。但是在方法调用时，指针传递可以避免结构体的拷贝操作，结构体比较大时，这种性能的差距就会比较明显。
+
+还有一些特殊的结构体它不允许被复制，比如结构体内部包含有锁时，这时就必须使用它的指针形式来定义方法，否则会发生一些莫名其妙的问题。
