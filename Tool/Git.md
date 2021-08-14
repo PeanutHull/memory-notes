@@ -316,9 +316,15 @@
         gitlab-rake cache:clear RAILS_ENV=production
         ```
 ### CI/CD
-1. 工具
-   - Jenkins
-     1. 2.0：精髓Pipeline as Code，使用Groovy脚本构建code工作流，包含阶段、节点、步骤
+1. Jenkins
+   - 认识：开源的自动化测试、持续集成工具
+     1. pipeline as code，构建code工作流，包含阶段、节点、步骤
+   - 操作
+     1. 插件管理
+     1. 配置
+        - 添加用户、权限控制
+     1. 任务：创建jenkins自动化部署任务：使用groovy或者shell脚本
+   - 启动：java jenkins.war
 ### SVN
 1. 获取：svn checkout address localDir --username 用户名 --password 密码
 1. 更新：svn update

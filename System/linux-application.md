@@ -672,7 +672,8 @@
 ### 优化
 1. 问题定位
    - network
-     1. telnet：用于连接
+     1. ping：有些可能禁止检测
+     1. telnet：检测端口是否正常
      1. strace：跟踪系统调用的执行
         - 查看统计：`strace -p xx -c`
         - 查看实时：`strace -p xx -T -s 4094`

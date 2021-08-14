@@ -222,7 +222,7 @@
         - 服务器则等待ACK超时，会重传SYN+ACK给客户端
    - TIME_WAIT巨大：可能是短连接太多占用了TW，尽量使用长连接，否则会有TCP drop风险
 ### HTTP
-1. 认识：HyperText Transfer Protocol，超文本传输协议，以字节为单位，以ascii码传输。无状态、通信开销小，简单快速、基于BS模式
+1. 认识：HyperText Transfer Protocol，超文本传输协议，通信开销小，简单快速
    - 请求过程：不止这些，基于浏览器的策略和长连接，nginx的策略肯定比这复杂的多
      1. 建立tcp连接
      1. 浏览器发送请求、头信息
@@ -234,6 +234,11 @@
     Host: xxx.com
     Cookie: xx=xx
     ```
+1. 特点
+   - 请求响应模式
+   - 无状态
+   - 以ascii码传输，以字节为单位
+   - 信息安全交由tls解决
 1. http头
    - 通用
      1. Cache-Control：控制缓存的行为，如`Cache-Control: private, max-age=0, no-cache`，
@@ -382,6 +387,15 @@
      1. session的恢复、优化传输
         - session ID：双方都有直接用，只能保留在一台服务器上
         - session ticket：只有服务器才能解密，解密后就不必重新生成对话密钥了
+     1. wiki
+        - 历史
+          1. ssl3.0：1995
+          1. tls1.0：1999
+          1. tls1.1：2006
+          1. tls1.2：2008
+          1. tls1.3：2018
+             - 握手时间降低一半
+             - 废物不安全的秘钥协商方式：解决1.2太多安全套件中那些不安全的，
 1. webSocket
    - 理解：全双工通讯的网络技术，属于应用层协议，基于tcp传输协议，并复用http的握手通道，属于http1.1
      1. 更好的二进制支持
@@ -402,6 +416,16 @@
      1. Sec-WebSocket-Protocol 需要的服务名称
      1. Sec-WebSocket-Version 版本号
 1. http2.0
+   - 场景
+     1. 需要请求的资源数更多了
+     1. 实时性要求高
+     1. 浏览器只能最多6个并发链接
+   - 1.1的不足
+     1. 采取行尾\r\n方式切分消息，需要计算量大的状态机解析消息
+     1. 请求响应模式导致了等待，没有利用tcp全双工双向通信
+     1. ascii传输效率低，空间浪费
+     1. 无状态需要重复发送头部等数据
+     1. 网络安全风险
    - 多路复用
      1. 客户端一次发起多个请求，服务器一次返回多个响应
      1. 双方可以同时互相发送数据
@@ -497,6 +521,8 @@
           1. frame：帧，通信最小单位，会标识所属的流，可以乱序发送，然后再根据帧头部的流标识符重新组装
         - 头部压缩：1.x头部元数据以纯文本形式发送，给请求增加几百字节的负荷，如cookie。使用encoder，通讯双方各自cache一份header fields表，避免header重复传输，减小传输大小
         - 服务器推送：服务器可主动推送
+     1. http 3：quic，Quick UDP Internet Connection，谷歌制定的基于UDP的低时延传输层协议。融合了包括TCP，TLS，HTTP/2等协议的特性
+        - 2016年，第一次QUIC工作组会议，受到关注
 1. wiki
    - web使用http协议作应用层协议，然后使用tcp/ip做传输层协议将它发到网络上
    - ajax的['HTTP_X_REQUESTED_WITH']为'xmlhttprequest'
@@ -518,8 +544,6 @@
 1. URI：通用资源标志符，唯一标识一个资源，一个字符串格式规范，并没有指定用途。包含URL和URN
    - URL:统一资源定位符，即网址
    - URN:统一资源命名，用名字标识资源。文件 `file://ftp.yesky.com/soft/file/robots.txt`
-1. QUIC：Quick UDP Internet Connection，谷歌制定的基于UDP的低时延传输层协议。融合了包括TCP，TLS，HTTP/2等协议的特性
-   - 2016年，第一次QUIC工作组会议，受到关注
 1. IDC：互联网数据中心
    - IDC机房
 1. BGP：边界网关协议，运行于TCP上的一种自治系统的路由协议，可选择最佳路由距离
