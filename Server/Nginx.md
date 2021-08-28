@@ -255,25 +255,38 @@
         - http_x_forwarded_for
         - http_cookie
    - http响应相关
-     1. $remote_addr|$binary_remote_addr    客户端ip，binary为整型格式，ipv4是4字节，ipv6是16字节
-     1. $remote_port                客户端的端口
+     1. $body_bytes_sent            body长度
+     1. $bytes_sent                 全部响应长度
+     1. $status                     返回码
+     1. $sent_trailer_名字           响应结尾内容里值返回
+     1. $sent_http_头部名字          具体响应头值，以下九个会做特殊处理
+        - $sent_http_content_type
+        - $sent_http_content_length
+   - tcp连接相关：四元组
+     1. $remote_addr|$binary_remote_addr|$remote_port                   客户端，binary为整型格式，ipv4是4字节，ipv6是16字节
+     1. $server_port|$server_addr|$server_protocol                      服务端，端口、地址、协议，完成一次系统调用后可以确定这个值
      1. $connection                 递增的连接序号
      1. $connection_requests        当前连接上执行过的请求数，对keepalive有意义
-     1. $proxy_protocol_addr        返回使用了proxy_protocol协议的地址或空
-   - tcp连接相关：四元组
-   - 系统变量
+     1. $proxy_protocol_addr|$proxy_protocol_port                       返回使用了proxy_protocol协议的地址或空
+     1. $TCP_INFO                   tcp内核层参数
    - 处理过程中产生的
-     1. 请求类
-     1. $request_filename           当前请求的文件路径，由root或alias指令与URI请求生成
-        - $document_root              当前请求在root指令中指定的值
-
-        
-        - $server_protocol            请求使用的协议，通常是HTTP/1.0或HTTP/1.1
-     1. 自身配置
-        - $limit_rate                 可以限制连接速率
-        - $server_addr                服务器地址，在完成一次系统调用后可以确定这个值
-        - $server_name                服务器名称
-        - $server_port                请求到达服务器的端口号
+     1. $https                      是否开始tls/ssl
+     1. $server_name                匹配上的那个值
+     1. $server_protocol            请求使用的协议，通常是HTTP/1.0或HTTP/1.1
+     1. $request_time               请求处理到现在的耗时
+     1. $request_id                 16进制输出请求标识id
+     1. $request_completion         是否处理完成
+     1. request_filename            待访问文件的完整路径
+     1. document_root               由uri和root/alias规则生成的文件夹路径
+     1. realpath_root               将document_root中的可能的软连接等换成真实路径
+     1. $limit_rate                 返回客户端响应时的速度上限，bytes/s
+   - 系统变量
+     1. $time_local|$time_iso8601   本地时间，8601标准的时间
+     1. $nginx_version
+     1. $pid                        所属worker进程的pid
+     1. $pipe                       是否使用管道
+     1. $hostname                   服务器主机名
+     1. $msee                       毫秒时间戳
    - 存放变量的哈希表
      1. `variables_hash_bucket_size`
      1. `variables_hash_max_size`
@@ -474,7 +487,40 @@
     proxy_cache_valid 200 304 302 1d;           // 为不同响应码设置缓存时间      
     proxy_pass http://xx;                       // 缓存的是这个结果
     ```
+1. map
+   - 认识：通过组合一系列已有变量映射新变量，提供更多可能，类似switch、case形式
+   - 指令
+     1. map
+     1. map_hash_bucket_size
+     1. map_hash_max_size
+1. geo
+   - 认识：匹配ip范围生成新变量
+   - demo
+    ```
+    geo $country {
+        default        ZZ;
+        include        conf/geo.conf;
+        delete         127.0.0.0/16;
+        proxy          192.168.100.0/24;
+        proxy          2001:0db8::/32;
+
+        127.0.0.0/24   US;
+        127.0.0.1/32   RU;
+        10.1.0.0/16    RU;
+        192.168.1.0/24 UK;
+    }
+    ```
+1. geoip
+   - 认识：基于maxMind数据库计算ip的地理位置，也是生成新变量
+1. split_client
+   - 认识：通过变量值按照百分比指定少量用户实现AB测试
+   - 指令
+     1. split_client
 ### 应用
+1. keepalive控制
+   - keepalive_disable：指定某些浏览器禁用
+   - keepalive_requests：一个tcp最多执行的http请求
+   - keepalive_timeout timeout [header_timeout]：两个时间，没有http请求的超时时间，连接的保留时间
 1. 超时时间
    - proxy_connect_timeout：和后端服务器的连接(发起握手后的)等待超时时间
    - proxy_read_timeout：等待后端服务器的响应超时时间
@@ -552,21 +598,42 @@
         }
     }
     ```
-1. 防盗链：通过Referer或者签名，检测访问的来源网页
+1. 防盗链
+   - 认识：校验referer或签名，检测访问的来源网页，防止非法访问referer模块
+   - referer模块
     ```lua
     location ~ .*\.(gif|jpg|png|fiv|swf)$ {
+
         valid_referers none blocked imooc.com *.imooc.com       # 针对referer
         if($invalid_referer) {
             rewrite ^/ http://403.jpg
         }
 
-        # 针对伪造referer，第三方模块HttpAccessKeyModule
-        accesskey on;
+        accesskey on;                                           # 针对伪造referer，第三方模块HttpAccessKeyModule
         accesskey_hashmethod md5;
         accesskey_arg "key";                                    # get参数名称
         accesskey_signature "mypass$remote_addr"                # 加密规则，nginx会检查签名的正误
     }
     ```
+   - secure_link模块：通过校验url中hash值实现，通过某服务器(或nginx)生成加密安全链接url，请求来时判断
+     1. 使用hash不可逆
+     1. 包含时间戳，和加密后的串来校验
+     1. demo
+        ```
+        location / {
+            secure_link $arg_md5,$arg_expires;
+            secure_link_md5 "$secure_link_expires$uri$remote_addr secret";
+
+            if($secure_link = "") {
+                return 403;
+            }
+            if($secure_link = "0") {
+                return 410;
+            }
+
+            return 200;
+        }
+        ``` 
 1. CORS
     ```lua
     location / {

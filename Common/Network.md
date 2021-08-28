@@ -366,6 +366,14 @@
         - 504 gateway timeout，响应超时
    - 响应头：服务器类型(UA)、日期时间、内容类型和长度
    - 响应正文
+1. keepalive
+   - 认识：复用tcp连接，要和tcp的keepalive区别
+     1. 减少握手次数
+     1. 通过减少并发连接数减少服务器资源消耗
+     1. 降低tcp拥塞控制的影响
+   - 协议
+     1. connection头：keepalive或close，采用哪种形式
+     1. keep_alice头：连接最少保持时间
 1. https
    - http的攻击方式
      1. http代理攻击
