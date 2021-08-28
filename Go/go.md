@@ -541,6 +541,199 @@
         ```
    - 比较
      1. 在错误处理上采用了与C类似的检查返回值的方式，而异常定义为无法预测的，几乎不可能失败但是特殊条件下也没法返回错误，也无法继续执行，这时就会返回异常panic
+1. 反射
+   - 认识：reflect，反射是在运行时动态的针对对象，获取属性、调用方法，go是静态类型的语言
+     1. go的反射是基于interface的
+     1. go会记录变量的类型等信息
+     1. 应用在必须传参类型不固定的场景下（业务开发一般用不到）
+   - 最佳实践
+     1. 尽量避免使用，涉及内存copy、内存逃逸，性能相对差，导致代码可读性变差
+     1. 优先使用TypeOf，不会产生内存逃逸，性能更高，ValueOf包含了TypeOf
+     1. 一定注意不同的数据类型使用对应的函数，否则会导致panic
+     1. 官方反射三定律
+        - Reflection goes from interface value to reflection object.
+        - Reflection goes from reflection object to interface value.
+        - To modify a reflection object, the value must be settable.
+   - 应用
+     1. orm库、json序列化库、运行时
+   - 组成
+     1. 类型
+        - `reflect.Kind`：内置元类型，表示reflect包中定义的十几种，每种有一个整数编号
+            ```go
+            const (
+                Invalid Kind = iota         // 不存在的无效类型
+                Bool
+                Int
+                Int8
+                Int16
+                Int32
+                Int64
+                Uint
+                Uint8
+                Uint16
+                Uint32
+                Uint64
+                Uintptr                     // 指针的整数类型，对指针进行整数运算时使用
+                Float32
+                Float64
+                Complex64
+                Complex128
+                Array
+                Chan
+                Func
+                Interface
+                Map
+                Ptr                         // 指针类型
+                Slice 
+                String
+                Struct                      // 结构体类型
+                UnsafePointer               // unsafe.Pointer 类型
+            )
+            ```
+        - `reflect.Type`：接口
+            ```go
+            type Type interface {
+                // 返回接口原类型
+                Kind() Kind
+                // 自身包内的类型名，如果是未命名类型会返回""
+                Name() string
+                // 返回类型的包路径，即明确指定包的import路径，如"encoding/base64"
+                // 如果类型为内建类型(string, error)或未命名类型(*T, struct{}, []int)，会返回""
+                PkgPath() string
+                // 返回类型的字符串表示。该字符串可能会使用短包名（如用base64代替"encoding/base64"）
+                // 也不保证每个类型的字符串表示不同。如果要比较两个类型是否相等，请直接用Type类型比较。
+                String() string
+                // 返回要保存一个该类型的值需要多少字节；类似unsafe.Sizeof
+                Size() uintptr
+                // 返回当从内存中申请一个该类型值时，会对齐的字节数
+                Align() int
+                // 返回当该类型作为结构体的字段时，会对齐的字节数
+                FieldAlign() int
+                // 如果该类型实现了u代表的接口，会返回真
+                Implements(u Type) bool
+                // 如果该类型的值可以直接赋值给u代表的类型，返回真
+                AssignableTo(u Type) bool
+                // 如该类型的值可以转换为u代表的类型，返回真
+                ConvertibleTo(u Type) bool
+                // 返回该类型的字位数。如果该类型的Kind不是Int、Uint、Float或Complex，会panic
+                Bits() int
+                // 返回array类型的长度，如非数组类型将panic
+                Len() int
+                // 返回该类型的元素类型，如果该类型的Kind不是Array、Chan、Map、Ptr或Slice，会panic
+                Elem() Type
+                // 返回map类型的键的类型。如非映射类型将panic
+                Key() Type
+                // 返回一个channel类型的方向，如非通道类型将会panic
+                ChanDir() ChanDir
+                // 返回struct类型的字段数（匿名字段算作一个字段），如非结构体类型将panic
+                NumField() int
+                // 返回struct类型的第i个字段的类型，如非结构体或者i不在[0, NumField())内将会panic
+                Field(i int) StructField
+                // 返回索引序列指定的嵌套字段的类型，
+                // 等价于用索引中每个值链式调用本方法，如非结构体将会panic
+                FieldByIndex(index []int) StructField
+                // 返回该类型名为name的字段（会查找匿名字段及其子字段），
+                // 布尔值说明是否找到，如非结构体将panic
+                FieldByName(name string) (StructField, bool)
+                // 返回该类型第一个字段名满足函数match的字段，布尔值说明是否找到，如非结构体将会panic
+                FieldByNameFunc(match func(string) bool) (StructField, bool)
+                // 如果函数类型的最后一个输入参数是"..."形式的参数，IsVariadic返回真
+                // 如果这样，t.In(t.NumIn() - 1)返回参数的隐式的实际类型（声明类型的切片）
+                // 如非函数类型将panic
+                IsVariadic() bool
+                // 返回func类型的参数个数，如果不是函数，将会panic
+                NumIn() int
+                // 返回func类型的第i个参数的类型，如非函数或者i不在[0, NumIn())内将会panic
+                In(i int) Type
+                // 返回func类型的返回值个数，如果不是函数，将会panic
+                NumOut() int
+                // 返回func类型的第i个返回值的类型，如非函数或者i不在[0, NumOut())内将会panic
+                Out(i int) Type
+                // 返回该类型的方法集中方法的数目
+                // 匿名字段的方法会被计算；主体类型的方法会屏蔽匿名字段的同名方法；
+                // 匿名字段导致的歧义方法会滤除
+                NumMethod() int
+                // 返回该类型方法集中的第i个方法，i不在[0, NumMethod())范围内时，将导致panic
+                // 对非接口类型T或*T，返回值的Type字段和Func字段描述方法的未绑定函数状态
+                // 对接口类型，返回值的Type字段描述方法的签名，Func字段为nil
+                Method(int) Method
+                // 根据方法名返回该类型方法集中的方法，使用一个布尔值说明是否发现该方法
+                // 对非接口类型T或*T，返回值的Type字段和Func字段描述方法的未绑定函数状态
+                // 对接口类型，返回值的Type字段描述方法的签名，Func字段为nil
+                MethodByName(string) (Method, bool)
+                // 内含隐藏或非导出方法
+            }
+            ```
+        - `reflect.Value`：结构体类型
+            ```go
+            func (v Value) IsNil() bool
+            func (v Value) IsValid() bool       // 返回v是否持有一个值。如v是Value零值会返回假，此时v除了IsValid、String、Kind之外方法都导致panic
+            func (v Value) Kind() Kind          // Kind返回v持有的值的分类，如果v是Value零值，返回值为Invalid
+            func (v Value) Type() Type          // 返回v持有的值的类型的Type表示
+            // Elem返回v持有的接口保管的值的Value封装，或者v持有的指针指向的值的Value封装。
+            // 如果v的Kind不是Interface或Ptr会panic；如果v持有的值为nil，会返回Value零值。
+            func (v Value) Elem() Value
+            func (v Value) Bool() bool          // 返回v持有的布尔值，如果v的Kind不是Bool会panic
+            ......
+            func (v Value) NumField() int       // 返回v持有的结构体类型值的字段数，如果v的Kind不是Struct会panic
+            func (v Value) Field(i int) Value   // 返回结构体的第i个字段（的Value封装）。如果v的Kind不是Struct或i出界会panic
+            ......
+            func (v Value) Send(x Value)        // 方法向v持有的通道发送x持有的值。如果v的Kind不是Chan或x持有值不能直接赋值给v持有通道的元素类型，会panic
+            .......
+            func (v Value) Call(in []Value) []Value     // Call方法使用输入的参数in调用v持有的函数
+            ....
+            func (v Value) CanAddr() bool       // 返回是否可以获取v持有值的指针
+            func (v Value) CanSet() bool        // 返回v是不是可被设定的
+            func (v Value) SetBool(x bool)      // 设置v的持有值。如果v的Kind不是Bool或者v.CanSet()返回假，会panic。
+            func (v Value) SetInt(x int64)      // 设置v的持有值。如果v的Kind不是Int、Int8、Int16、Int32、Int64之一或者v.CanSet()返回假，会panic。
+            .......
+            ......
+            func DeepEqual(a1, a2 interface{}) bool     // 判断两个值是否深度相等.结构体会对字段进行深度对比，array/slice对比成员/长度等，map深度对比键值对
+            ```
+     1. 基础反射方法
+        - reflect.TypeOf()：，`func TypeOf(v interface{}) Type`，返回type对象
+        - reflect.ValueOf()：`func ValueOf(v interface{}) Value`，返回value结构体
+          1. CanSet()
+          1. Elem()：指针指向的元素类型
+   - 实例
+    ```go
+    // 常规操作
+    var demoV1 DemoInt
+    demoV1 = 100
+
+    reflectTDV1 := reflect.TypeOf(demoV1)
+    reflectTDV1.Kind()                          // int，原始类型
+    reflectTDV1.Name()                          // demoInt，如果是原int则是int
+    reflectTDV1.String()                        // main.demoInt
+    reflectTDV1.Align()                         // 8
+
+    reflectVDV1 := reflect.ValueOf(demoV1)
+    reflectVDV1.Type()                          // main.demoInt
+    reflectVDV1.Kind()                          // int
+
+    // CanAddr
+    demoV1 := 100
+    reflect.ValueOf(&demoV1).CanAddr()          //false
+    //reflect.ValueOf(&demoV1).Elem().CanAddr()   //true
+
+    // Set
+    var a []int
+    ra := reflect.ValueOf(&a)
+    aElem := ra.Elem()
+    fmt.Println("elem ", aElem, " source slice:", a)    //elem  []  source slice: []
+
+    aElem.Set(reflect.ValueOf([]int{11}))
+    // Comparable，判断是否可比较
+    func canCompare(source interface{}) {
+        sType := reflect.TypeOf(source)
+        sType.Comparable()
+    }
+
+    // Call
+    val := reflect.ValueOf(a)
+    val.Method(1).Call(nil)                             //获取到第二个方法，调用它
+    val.MethodByName("SumNum").Call(nil)
+    ```
 1. 扩展类型
    - 组合扩展：struct组合之前的类型
    - 别名扩展：type定义别名再扩展
@@ -798,13 +991,54 @@
 1. errors
    - `errors.New("xxxx")`
 1. unsafe
-   - 认识：只有两个类型，三个函数
+   - 认识：不安全的直接操作内存，避免使用，只有两个类型，三个函数
    - 组成
-     1. `type ArbitraryType int`：int别名，代表一个任意go表达式类型
-     1. `type Pointer *ArbitraryType`：int指针类型别名，可理解成任何指针的父类型
-     1. `unsafe.Sizeof()`：接受任意类型的值或表达式，返回其占用的字节数    
-     1. `func Offsetof(x ArbitraryType) uintptr`：返回结构体中元素所在内存的偏移量
-     1. `func Alignof(x ArbitraryType) uintptr`：返回变量对齐字节数量
+     1. 类型
+        - `type ArbitraryType int`：int别名，代表一个任意go表达式类型
+        - `type Pointer *ArbitraryType`：int指针类型别名，可理解成任何指针的父类型
+     1. 函数
+        - `unsafe.Sizeof()`：接受任意类型的值或表达式，返回其占用的字节数    
+        - `func Offsetof(x ArbitraryType) uintptr`：返回结构体中元素所在内存的偏移量
+        - `func Alignof(x ArbitraryType) uintptr`：返回变量对齐字节数量，对齐因子
+   - 用法
+    ```go
+    // 修改、读取不可访问的私有变量
+    func GetDemoStruct() DemoStruct {                                                   // 获取一个DemoStruct对象
+        return DemoStruct{age: 21, Name: "hong", Id: 2, Man: false, china: true}
+    }
+    func changeUnreadField()  {                                                         // 修改不可读取的变量
+        demo := common.GetDemoStruct()
+        fmt.Println("demo is ",demo)
+        *(*uint8)(unsafe.Pointer(uintptr(unsafe.Pointer(&demo)) + 32) ) = 100           // 32是结构体的内存偏移量
+        fmt.Println("demo now is ",demo)
+    }
+
+    // 绕开编译器的对类型做强制转换
+    func Float64ToUint64(f float64) uint64 {
+        p := unsafe.Pointer(&f)                     // 拿到指向f的指针(通过f的地址拿到可操作的指针Pointer)
+        p2 := (*uint64) (p)                         // 将指针(*float)转换为uint64指针(*uint64)类型。因为uint64为无符号位，所有能够拿出当前64位bit内容
+        return * p2
+    }
+    
+    // 保存任意类型，用于系统函数交互、cgo等
+    syscall.Syscall(SYS_READ, uintptr(fd), uintptr(unsafe.Pointer(p)), uintptr(n))
+    ```
+   - 最佳实践
+     1. 类型转换必须是可相互转的类型，否则panic
+     1. uintptr指针失效
+        ```go
+        func UitptrDisable() {
+            demo := common.GetDemoStruct()
+            //引入临时变量
+            tmp := uintptr(unsafe.Pointer(&demo)) + 32
+            demoAge := (*uint8)(unsafe.Pointer(tmp))
+            demoAge = nil                                   //临时变量可能会被gc回收
+            *demoAge  = 98
+            fmt.Println("demo now is ",demo)
+        }
+        ```
+   - wiki
+     1. 内存对齐：每种类型占用内存不同，结构体8byte对齐，占不满8byte的不连续的独占，连续的n个类型共同8byte
 1. fmt
    - `fmt.Println(xx1,xx2)`：连续打印
 1. strconv
@@ -893,10 +1127,6 @@
    - `archive.tar`
    - `archive.zip`
 1. reflect
-   - TypeOf()/Type()：`reflect.TypeOf()`
-   - ValueOf()/Value()
-     1. CanSet()
-   - Elem()：指针指向的元素类型
 1. runtime
    - `runtime.GOMAXPROCS`：使用最大核心数
    - `runtime.NumCPU`：cpu核心数

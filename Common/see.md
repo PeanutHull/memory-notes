@@ -208,11 +208,14 @@
    - 服务->客户
      1. RTSP分组(TCP)
 1. 传输协议
+   - rtp
    - RTMP：流媒体协议，是Adobe私有协议未完全公开，一般传输flv、f4v，一般在TCP1个通道上传输命令和数据
    - rtsp
-   - rtp
    - rtcp
+1. 关键帧
+   - 分类：I帧，P帧，B帧
 1. wiki
+   - 流媒体：即时传输，一边传输一边播放
    - 直播架构：采集 → 处理 → 编码 → 传输 → 分发 → 拉取→ 解码 → 渲染
      1. 推流工具：推到流媒体服务器，如obs、ffplay
         - 采集、编码(有损、无损)
@@ -233,6 +236,7 @@ ffmpeg、ffplay、ffprobe
      1. opencv
      1. directshow
 ### 直播
+1. 认识：常用rtmp
 1. 直播系统
    - 播放协议：RTMP、HTTP-FLV、HLS-TS
    - 分发、订阅、鉴权访问、切片服务、流加速、录制
@@ -286,6 +290,12 @@ ffmpeg、ffplay、ffprobe
    - 正常情况下客户端编码器将视频流推到直播服务器，直播服务器顺序地按配置好的时间周期将视频流切成一系列小的媒体切片
    - 同时直播服务器还会创建包含上述媒体切片的索引文件，这个索引文件和媒体切片都会发布到Web服务器，客户端通过URL下载到索引文件后，会顺序请求索引文件列出的媒体切片文件，然后顺序地无缝地播放这些媒体切片文件，即播放流的索引文件就可以实时观看直播流
    - 当播放列表是直播模式时，播放列表中会保持若干个最新的切片媒体URI，学生端在播完所有切片后会重新请求播放列表得到新的切片媒体，如此反复直到流结束
+1. 搭建
+   - 推拉流：简单，https://guoruibiao.blog.csdn.net/article/details/78669332
+     1. ffmpeg读取本地文件推流到rtmp地址
+     1. 搭建nginx-rtmp-module服务器
+     1. 使用vlc读取相同的rtmp地址实现播放
+   - 调用摄像头推拉流
 ### webRTC
 1. 认识：音视频实时通信，3A处理，网络传输策略，由谷歌推广的开源实时音视频技术栈，是W3C标准，还有对应的IETF工作组(RTCWEB)
    - 主流浏览器都支持，省去客户端工作，回声消除，双讲抑制
@@ -309,6 +319,10 @@ ffmpeg、ffplay、ffprobe
    - 创世节点
    - 节点通信建立，NAT穿透：Network Address Translation，网络地址转换，网络地址翻译技术，将内部的私有IP转换成公网IP，一个解决地址不够，二是安全(不在转换列表的全都拒绝)
 1. irc：古老简单的网络聊天协议，linux的server：ircd-hybrid，客户端：irssi/weechat，小圈子，因为古老而有门槛和纯粹
+1. webrtc媒体服务器
+   - Kurento https://github.com/Kurento/kurento-media-server
+   - licode https://github.com/lynckia/licode
+   - janus https://github.com/meetecho/janus-gateway
 ### wiki
 1. 颜色空间
    - 认识：即彩色模型，用于描述色彩

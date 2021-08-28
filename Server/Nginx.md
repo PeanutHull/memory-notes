@@ -1,29 +1,104 @@
 ### 认识
-1. 认识：基于事件驱动，轻量级、高性能非阻塞的http/反向代理/负载均衡服务器。C编写，官方测试5万并发。windows系统不能发挥全部的性能
+1. 认识：基于事件驱动、高性能非阻塞的轻量级http/反向代理/负载均衡服务器。C编写，官方测试5万并发。windows系统不能发挥全部的性能
    - 资源消耗低，运行稳定，并发高
-   - 分阶段资源分配技术，cpu/内存占用率低
+     1. 分阶段资源分配技术，cpu/内存占用率低
    - 静态文件可开启索引和描述符缓冲
-   - 简单的负载均衡
-   - 支持热部署
-   - 不支持cgi
+   - 32核64G，千万qps，简单静态文件百万qps
+1. 特点
+   - 高并发，高性能
+   - 模块化，扩展性好
+   - 高可靠性，热部署
+   - BSD许可证
 1. 使用场景
-   - 静态资源服务器：如js、images
+   - 静态资源服务器：如js、images，本地文件系统
+   - 反向代理：负载均衡、缓存
+   - api服务：openresty
    - 虚拟主机：实现一台服务器虚拟出多个网站
-   - 反向代理、负载均衡
+1. nginx
+   - 认识
+     1. 是多进程结构，多线程会共享地址空间如果段错误越界访问进程都挂掉，不安全
+     1. 进程间通信使用共享内存，如缓存模块
+     1. 进程间使用信号通信，子进程退出会告诉主进程，主再起一个
+   - 组成，执行文件，配置，access log，error log
+   - 单位
+     1. 时间：ms、s、m(分钟)、h、d、w(周)、M(月，30天)、y(年)
+     1. 空间：bytes、k/K、m/M、g/G
+   - 处理流程
+     1. web、email、tcp流量进入
+     1. nginx整体
+        - 状态机处理机制
+          1. 特点
+             - 非阻塞事件驱动处理器，线程池处理磁盘阻塞调用
+          1. 功能
+             - access、error日志
+          1. 组成
+             - 传输层状态机
+             - http状态机
+             - mail状态机
+        - 代理机制
+          1. http、email、stream(tcp)网络层协议的代理
+          1. fastCGI、uWCGI、memcached等应用层协议的代理
+   - 进程结构
+     1. 请求切换
+        - apache：一个线程只处理一个连接，不做连接的切换，依赖os的进程调度实现并发
+          1. 切换成本会随着请求数指数增加
+        - nginx：用户态代码完成连接切换，尽量减少os进程切换
+          1. 省去了进程线程间切换成本，增大worker的cpu时间片，让其更好的完成任务，更多保留在用户态，让操作系统少做无用功
+     1. 组成
+        - master：通过master管理worker进程
+        - cache manager
+        - cache loader
+        - worker
+   - 信号
+     1. 命令行：跟直接给nginx发信号一样
+        - reload：HUP
+        - reopen：USR1
+        - stop：TERM
+        - quit：QUIT
+     1. master
+        - USR2
+        - WINCH
+     1. worker：TERM、QUIT、USR1、WINCH
+   - 优雅关闭
+     1. 只针对http，websocket协议无法做到因为不解析后边的frame帧，tcp/udp不知道后边还有无数据包，不会发送tcp的reset
+     1. reload流程
+        - 收到HUP信号
+        - 检验配置、打开新配置的端口
+        - 启动新w子进程
+        - 老w子进程发送QUIT信号
+        - 老w子进程关闭监听句柄，处理完当前连接后结束进程
+          1. 设置定时器
+          1. 关闭监听句柄：不会接收新的连接
+          1. 关闭空闲连接
+          1. 在循环中等待全部连接关闭：为了资源最大化，保存了一些空闲连接没断开，循环中每一个请求关闭就连接关闭
+          1. 退出进程
+   - tcp协议与非阻塞接口：事件收集分发者，![avatar](../images/nginx_tcp_and_ioevent.png)
+     1. 无非是读写事件
+     1. 给tcp各种事件设置定时器，记录网络事件的到期时间
+   - 事件循环：![avatar](../images/nginx_events_loop.jpeg)
+     1. 事件循环中用epoll_wait阻塞，操作系统把事件放队列中
+        - 设置超时时间，不能容忍处理程序长时间占用cpu导致处理时间长，大量任务连接都超时断开从而恶性循环，资源消耗在处理大量不正常的断开上
+   - epoll
+     1. 大量连接中只有少数是活跃的，epoll仅遍历活跃连接，采用红黑树、链表，增删改查都快
 ### 配置
 1. 认识：一门微型的编程语言
    - 层级：http-->server-->location
+   - 语法
+     1. 由指令和指令块组成
+        - 每条指令;结尾，指令与参数空格分隔，#注释，$变量，部分指令参数支持正则
+        - 指令块用{}组织，可以有名称
+     1. include用于组合多个配置文件
 1. nginx.conf配置
-    ```lua
+    ```conf
     user                        www;                            # 用户和用户组
     worker_processes            8;                              # 同时工作的进程数，建议设置为cpu核心数
-    error_log                   /var/nginx/error.log;           # 全局错误日志，类型有debug|info|notice|warn|error|crit
+    error_log                   /var/nginx/error.log error;     # 全局错误日志，类型有debug|info|notice|warn|error|crit
     pid                         /var/nginx.pid;                 # 进程文件
-    worker_rlimit_nofile        65535                           # 一个nginx进程打开的最多文件描述符数
+    worker_rlimit_nofile        65535;                          # 一个nginx进程打开的最多文件描述符数
 
     events {                                                    # 工作模式
         worker_connections      1024;                           # 单个进程最大连接数，最大连接数=连接数*进程数
-        use epoll               kqueue|epoll|poll
+        use epoll               kqueue|epoll|poll;
     }
 
     http {                                                      # 服务器配置
@@ -72,25 +147,25 @@
         - $server_addr                服务器地址，在完成一次系统调用后可以确定这个值
         - $server_name                服务器名称
         - $server_port                请求到达服务器的端口号
-1. server配置，决定虚拟主机
-    ```lua
+1. server配置，决定域名、虚拟主机
+    ```conf
     server {
         listen       80;
-        listen       somename:8080;
+        listen       somename:8080;                                         # 可以指定ip或者域名，其他的就无法访问了
         server_name  somename  alias  another.alias default_server;         # 指定默认server，先遍历所有配置的server_name，如果找到了，则执行对应的server，如果没有找到，则默认执行第一个server
     }
     ```
 1. location配置，匹配路径
    - 语法：优先级递减
-     1. =     精确匹配    1
-     1. ^~    以某个字符串开头，不以开头的可以新建另一个server不同port解决    2
-     1. ~     开头表示区分大小写的正则匹配    3
-     1. ~*    开头表示不区分大小写的正则匹配    4
-     1. !~    区分大小写不匹配的正则    5
-     1. !~*   不区分大小写不匹配的正则    6
-     1. /     通用匹配，任何请求都会匹配到    7
+     1. =     精确匹配 1
+     1. ^~    以某个字符串开头，不以开头的可以新建另一个server不同port解决 2
+     1. ~     开头表示区分大小写的正则匹配 3
+     1. ~*    开头表示不区分大小写的正则匹配 4
+     1. !~    区分大小写不匹配的正则 5
+     1. !~*   不区分大小写不匹配的正则 6
+     1. /     通用匹配，任何请求都会匹配到 7
    - 实例
-    ```lua
+    ```conf
     location / {
         root   html;
         index  index.html index.htm;
@@ -104,36 +179,10 @@
     }
 
     location ~* .(gif|png|jpg|jpeg|zip|apk)$ {                                  # 定向文件
-        root   /mnt/opt/wecook-base/uploads;
-        expires 7d;                                     // 缓存时间
-        access_log off;
-    }
     location ~* (^/statics/dishes/.*\.(html|js|css|eot|svg|ttf|woff)$){
-        root /Users/Treri/project/wecook/mobile;
-    }
-
-    location / {                                                                # 重定向
-        if (!-e $request_filename) {
-            rewrite  ^(.*)$  /index.php?s=$1  last;
-            break;
-        }
-
-        if (-d $request_filename) { 
-            rewrite [^/]$ $uri/?$query_string break;                            # 携带参数跳转
-        }
-    }
-    # last – 基本上都用这个Flag。
-    # break – 中止Rewirte，不在继续匹配
-    # redirect – 返回临时重定向的HTTP状态302
-    # permanent – 返回永久重定向的HTTP状态301
-
-    location / {                                                                # 反向代理，请求转发
-        proxy_pass http://localhost:99;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_redirect off;             # 当上游服务器返回的响应是重定向或刷新请求时，是否重设http头部的location或refresh字段
-        proxy_next_upstream off;        # 当请求服务器发生错误或超时时，转发到下一台服务器，默认off
+        root   /mnt/opt/wecook-base/uploads;
+        expires 7d;                                                             # 缓存时间
+        access_log off;
     }
 
     error_page   500 502 503 504  /50x.html;                                    # 错误页面
@@ -154,6 +203,18 @@
     }
     ```
 1. if
+   - 实例
+    ```lua
+    // php去除index.php
+    if (!-e $request_filename) {
+        rewrite  ^(.*)$  /index.php?s=$1  last;
+        break;
+    }
+
+    if (-d $request_filename) { 
+        rewrite [^/]$ $uri/?$query_string break;                            # 
+    }
+    ```
 1. rewrite
    - 认识：重定向的重要指令，根据正则匹配内容跳转到replacement
    - 场景
@@ -177,6 +238,8 @@
      1. `rewrite /last.html /index.html last;`
      1. `rewrite ^/html/(.+?).html$ /post/$1.html permanent;`：把/html/*.html => /post/*.html，301定向
      1. `rewrite ^/(.*) http://www.jd.com/$1 permanent;`：把当前域名的请求，跳转到新域名上，域名变化但路径不变
+     1. `rewrite  ^(.*)$  /index.php?s=$1  last;`：
+     1. `rewrite [^/]$ $uri/?$query_string break;`：携带参数跳转
 1. 超时时间
    - proxy_connect_timeout：和后端服务器的连接(发起握手后的)等待超时时间
    - proxy_read_timeout：等待后端服务器的响应超时时间
@@ -223,6 +286,31 @@
    - mime.types：文件扩展名与文件类型映射表，找不到使用默认default_type
    - fastcgi.conf/fastcgi_params/uwsgi_params/scgi_params：使用对应cgi时，向cgi传递的变量
    - koi-utf/koi-win/win-utf：编码转换映射文件
+### 模块
+1. 分类
+   - 官方
+     1. ngx_event_module
+     1. core_module
+        - core
+        - errlog
+        - thread_pool
+        - openssl
+     1. http_module
+     1. conf_module
+     1. stream_module
+     1. mail_module
+   - 第三方
+1. limit：限流
+   - limit_conn_zone $binary_remote_addr zone=addr:10m;
+   - limit_req_zone $binary_remote_addr zone=one:10m rate=1r/s;
+1. cache：缓存
+   - proxy_cache
+    ```conf
+    proxy_cache cacheName;
+    proxy_cache_key $host$uri$is_args$args;     // 设置缓存的key
+    proxy_cache_valid 200 304 302 1d;           // 为不同响应码设置缓存时间      
+    proxy_pass http://xx;                       // 缓存的是这个结果
+    ```
 ### 应用
 1. gzip压缩：可在任何层级定义，越细优先级越高
     ```lua
@@ -237,6 +325,19 @@
     gzip_vary on;
     gzip_proxied any;
     limit_zone crawler $binary_remote_addr 10m;         // 开启限制IP连接数的时候需要使用
+    ```
+1. 反向代理
+   - 认识：请求转发
+   - 实例
+    ```conf
+    location / {
+        proxy_pass http://localhost:99;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_redirect off;             # 当上游服务器返回的响应是重定向或刷新请求时，是否重设http头部的location或refresh字段
+        proxy_next_upstream off;        # 当请求服务器发生错误或超时时，转发到下一台服务器，默认off
+    }
     ```
 1. 负载均衡
    - 特点：实现了七层负载均衡，功能多、性能好、运行稳定，自动剔除不正常服务器，上传文件使用异步模式，有权重等多种分配策略
@@ -345,27 +446,6 @@
         keepalive 100;
     }
     ```
-1. 网关：应用服务管理、流量调度策略、业务监控告警，扩容铺机器就可以
-   - 权限校验
-   - vhost和upstream管理
-   - 流量控制和限流：可根据接口响应时间判断服务健康度制定限流值，也可根据某特征实现访问控制
-   - 分流：指定请求转发，用于A\B测试
-   - 缓存：vanish
-   - 放火：故障模拟，如500、502、504等故障和响应时长变长，可用于制定容灾方案
-   - 流量克隆：请求在网关层的完全复制，可用于业务重构时流量双写到新的b系统
-   - 防火墙
-   - 健康检查
-     1. 检查类型
-        - tcp检测
-        - http检测：基于检测接口，如php7fpmstatus
-     1. 检查项
-        - 超时时间
-        - 检查间隔时间
-        - 合法状态码
-        - 累计失败数：连续检测多少次失败后网关认为该节点已挂
-        - 累计成功数：连续检测多少次成功后网关认为该节点已恢复
-        - 是否通知
-        - 是否摘除
 1. 网关接口
    - CGI
      1. 理解：Common Gateway Interface，通用网关接口，外部应用程序和web服务器的数据交换的接口标准，允许web服务器执行外部程序，并将输出发回web服务器。早期动态网页处理程序一次只能处理一个请求。跨平台好，性能低下，NCSA维护
@@ -386,7 +466,7 @@
    - SCGI：Simple CGI，精简数据协议和响应过程的FCGI，为适应ajax和rest，做出更快更简介应答，并规定http响应后立刻关闭链接，适合SOA提倡的请求-忘记的通信模式
    - WSGI：Web Server Gateway Interface，
    - GRPC
-    ```
+    ```conf
     server {
         listen 1443 ssl http2;
         ssl_certificate     ssl/xx.pem;
@@ -411,15 +491,9 @@
     }
     ```
 ### 调优
-1. worker_processes
-1. worker_rlimit_nofile
-1. worker_connections
-1. tcp_max_syn_backlog
-   - 太大：php-fpm处理不过来，nginx等待超时断开连接，报504 gateway timeout，同时php-fpm处理完准备write数据给nginx时发现TCP连接断开报Broken pipe
-   - 太小：进不了php-fpm的accept queue，报502 Bad Gateway
-1. 优化：修改配置项目
+1. 配置
    - worker_processes auto;                                 # 进程数
-   - worker_cpu_affinity 1000 0100 0010 0001;               # 每个进程分配cpu，这是4核
+   - worker_cpu_affinity 1000 0100 0010 0001;               # 每个进程分配cpu，这是4核，worker进程数量和核数相同，并且和cpu绑定
    - worker_connections 65535;                              # 连接数=进程数*单个进程连接数
    - worker_rlimit_nofile 65535;                            # 打开的最多文件描述符
    - worker_priority -20;                                   # 数字越小，cpu优先级越高，默认120，-20就是100
@@ -427,9 +501,12 @@
    - keepalive_timeout 60;
    - gzip on;
    - listen 80 deferred;                                    # 延迟处理新连接，deferred是发送数据过来才激活nginx，建立连接不激活
-1. nginx绑定cpu为了尽可能复用cpu缓冲
-1. 为了性能不会混部运行其他耗性能的程序
-1. 原则
+   - tcp_max_syn_backlog
+     1. 太大：php-fpm处理不过来，nginx等待超时断开连接，报504 gateway timeout，同时php-fpm处理完准备write数据给nginx时发现TCP连接断开报Broken pipe
+     1. 太小：进不了php-fpm的accept queue，报502 Bad Gateway
+1. wiki
+   - nginx绑定cpu为了尽可能复用cpu缓冲
+   - 为了性能不会混部运行其他耗性能的程序
    - cpu
      1. 尽可能占用全部cpu
      1. 尽可能占用更大的cpu时间片、减少进程间切换
@@ -484,17 +561,28 @@
     make && make install
     ```
 1. 操作
-   - 启动：`nginx`
-   - 热重启：`nginx -s stop/reload`
+   - `nginx`：启动
+   - -p：运行指定目录
+   - -s：发送信号
+     1. stop：立即停止
+     1. quit：优雅停止
+     1. reload：重载配置文件，热重启
+     1. reopen：重新开始记录日志文件
+   - -c：指定配置文件
+   - -t：测试配置文件是否有语法错误
+   - -v：版本
 ### 架构
-1. 网关
-   - 作用
-     1. 反向代理
-     1. 负载均衡
-     1. api管理
-        - 限流
-   - 架构：cdn——负载均衡器——api网关——k8s的ingress控制器——web服务
-### 中间件
+1. nginx + keepalived
+   - nginx_health.sh
+    ```shell
+    #!/bin/bash
+    #
+
+    ps -ef | grep nginx | grep -v grep &> /dev/null
+    if [ $? -ne 0 ];then
+        killall keepalived
+    if
+    ```
 1. nginx + lua
    - 认识：结合nginx的并发处理epoll优势，和lua的轻量实现简单的功能切高并发的场景
      1. 用命令行进入能执行代码的，就是这个语言的解释器
@@ -582,23 +670,12 @@
         - ngx_devel_kit、ua-nginx-module
         - 重新编译nginx
      1. 步骤：https://www.imooc.com/article/19597
-1. nginx + keepalived
-   - nginx_health.sh
-    ```shell
-    #!/bin/bash
-    #
-
-    ps -ef | grep nginx | grep -v grep &> /dev/null
-    if [ $? -ne 0 ];then
-        killall keepalived
-    if
-    ```
+1. kong
 1. OpenResty：ngx_openresty，基于nginx与lua的高性能web平台，用于方便地搭建处理高并发、扩展性的服务和动态网关
    - 可以使用lua脚本语言调动nginx的各种c、lua模块，让web服务直接跑在nginx内部
    - 针对域名、目录结构做分流、转发的策略，既能做负载又能做反向代理
    - 具有Lua协程 + Nginx 事件驱动的事件循环回调机制，即Cosoket，对远程后端如MySQL、Memcached、Redis等都可实现同步写代码的方式实现非阻塞I/O
    - 依托于LuaJit，即时编译器会将频繁执行的代码编译成机器码缓存起来，当下次调用时将直接执行机器码，相比原生逐条执行虚拟机指令效率更高，而对于那些只执行一次的代码仍然可以逐条执行
-1. kong
 1. wiki
    - C10K：OpenResty、JavaNetty、Golang、NodeJS 
    - 调整文件打开数、设置 TCP Buckets、设置 TIME_WAIT等
@@ -622,7 +699,7 @@
         - log_by_lua阶段：负责日志落盘等业务
      1. 分流器业务：NodeJS上报cpu、内存使用情况；Lua脚本调用RedisCluster获取时间窗口内NodeJS集群使用情况，计算出负载较高的，进行熔断、降级、限流等处理；将监控数据同步InfluxDB，进行时序监测
      1. 小型web防火墙：使用第三方开源 lua_resty_waf 类库实现，支持 IP 白名单和黑名单、URL 白名单、UA 过滤、CC 攻击防护功能。在此基础上增加WAF对InfluxDB 的支持，进行时序监控和服务预警
-### 实际应用
+### 最佳实践
 1. 代理线上配置
     ```lua
     server { 
@@ -638,7 +715,7 @@
             add_header 'Access-Control-Allow-Methods' 'GET,POST,OPTIONS';
             add_header 'Access-Control-Allow-Credentials' 'true';
             add_header 'Access-Control-Allow-Origin' '$http_origin';
-            add_header 'Access-Control-Allow-Headers' 'prelogid,Authorization,DNT,User-Agent,Keep-Alive,Content-Type,accept,origin,X-Requested-With,rpcid,traceid,jytoken';
+            add_header 'Access-Control-Allow-Headers' 'prelogid,Authorization,DNT,User-Agent,Keep-Alive,Content-Type,rpcid,traceid,jytoke';
             proxy_pass http://tntapi.xesv5.com;
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
@@ -762,6 +839,14 @@
    - 新老版本安装目录一致
    - 老版本备份：nginx -> nginx.old
    - reload重启
+     1. 老master发送USR2信号
+     1. 老pid改为pid.oldbin
+     1. 启动新master
+     1. 向老master发送WINCH信号，关闭老w子进程
+     1. 回滚：向老master发送HUP，新的发送QUIT
+1. 工具
+   - Goaccess：开源的且具有交互视图界面的实时web日志分析工具，分析access日志
+   - python2-certbot-nginx：nginx证书安装工具，`certbot --nginx --nginx-server-root=/etc/nginx/conf -d xx.pub`
 ### 原理
 1. 内存池，连接池，自旋锁，红黑树
 1. 进程模型：管理进程(master)和工作进程(worker)
@@ -771,31 +856,67 @@
    - apache是线程池实现多请求，占用资源多
    - nginx是io多路复用
 ### wiki
-1. 版本
+1. 版本：偶数是稳定的
    - 1.13.10：支持grpc
-1. nginx依赖
-   - pcre：nginx的http模块使用pcre来解析正则表达式
-   - zlib：提供了多种压缩/解压缩的方式。nginx使用zlib对http包的内容进行gzip
-   - openssl
-1. Lighttpd：web服务器，低内存开销、模块丰富、动态页面处理能力很强
-1. HaProxy
-   - 认识：基于tcp、http的提供高可用、高并发、负载均衡的应用代理。c语言编写，通过反向代理实现负载均衡，不是web服务器，是专门的应用代理
-     1. 快速、免费、可靠
-     1. 事件驱动、单一进程模型，可以支持很大的并发连接数
-     1. 适用场景：需要会话保持、负载均衡的高并发、多连接数的场景
-   - 功能
-     1. 支持负载均衡，支持长连接，支持正则调度
-     1. 支持添加cookie后调度，支持基于cookie调度
-     1. 支持双向http的header数据增删改查
-     1. 支持基于端口的监控、故障切换
-     1. 支持停机模式、支持监控界面、监控api输出
-     1. 支持虚拟主机
-   - 配置
-    ```conf
-    listen rabbitmq_cluster
-    bind 0.0.0.0:5672
-    mode tcp                                                            # tcp模式
-    balance roundrobin                                                  # 简单轮询
-    server xxx1 x.x.x.x:5672 check inter 5000 rise 2 fall 3             # 主节点，每5秒健康检查，2次成功服务可用，3次失败服务不可用
-    server xxx2 x.x.x.x:5672 backup check inter 5000 rise 2 fall 3      # 备用节点
-    ```
+   - x.x：2018年，支持TLSv1.3
+   - x.x：2016年，支持动态模块
+   - x.x：2015年，支持thread pool、stream四层反向代理、httpv2协议、reuseport特性
+   - x.x：2013年，支持websocket、TFO协议
+   - 1.0：2011年，支持keepalive的http长连接
+   - 0.7.52：09年，支持windows
+   - 0.1.0：04年
+1. wiki
+   - nginx模块具有非常好的设计，第一个模块到现在都没有修改过
+   - 依赖组件
+     1. pcre：nginx的http模块使用pcre来解析正则表达式
+     1. zlib：提供了多种压缩/解压缩的方式。nginx使用zlib对http包的内容进行gzip
+     1. openssl
+1. 同类
+   - Lighttpd：web服务器，低内存开销、模块丰富、动态页面处理能力很强
+   - HaProxy
+     1. 认识：基于tcp、http的提供高可用、高并发、负载均衡的应用代理。c语言编写，通过反向代理实现负载均衡，不是web服务器，是专门的应用代理
+        - 快速、免费、可靠
+        - 事件驱动、单一进程模型，可以支持很大的并发连接数
+        - 适用场景：需要会话保持、负载均衡的高并发、多连接数的场景
+     1. 功能
+        - 支持负载均衡，支持长连接，支持正则调度
+        - 支持添加cookie后调度，支持基于cookie调度
+        - 支持双向http的header数据增删改查
+        - 支持基于端口的监控、故障切换
+        - 支持停机模式、支持监控界面、监控api输出
+        - 支持虚拟主机
+     1. 配置
+        ```conf
+        listen rabbitmq_cluster
+        bind 0.0.0.0:5672
+        mode tcp                                                            # tcp模式
+        balance roundrobin                                                  # 简单轮询
+        server xxx1 x.x.x.x:5672 check inter 5000 rise 2 fall 3             # 主节点，每5秒健康检查，2次成功服务可用，3次失败服务不可用
+        server xxx2 x.x.x.x:5672 backup check inter 5000 rise 2 fall 3      # 备用节点
+        ```
+1. 网关
+   - 功能点
+     1. 应用服务管理
+        - 权限校验
+        - vhost和upstream管理
+     1. 流量调度策略
+        - 负载均衡
+        - 流量控制和限流：可根据接口响应时间判断服务健康度制定限流值，也可根据某特征实现访问控制
+        - 分流：指定请求转发，用于A\B测试
+     1. 业务监控告警
+        - 健康检查类型
+          1. tcp检测
+          1. http检测：基于检测接口，如php7fpmstatus
+        - 健康检查项
+          1. 超时时间
+          1. 检查间隔时间
+          1. 合法状态码
+          1. 累计失败数：连续检测多少次失败后网关认为该节点已挂
+          1. 累计成功数：连续检测多少次成功后网关认为该节点已恢复
+          1. 是否通知
+          1. 是否摘除
+     1. 流量管理
+        - 缓存：vanish
+        - 放火：故障模拟，如500、502、504等故障和响应时长变长，可用于制定容灾方案
+        - 流量克隆：请求在网关层的完全复制，可用于业务重构时流量双写到新的b系统
+        - 防火墙
