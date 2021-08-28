@@ -343,9 +343,14 @@
      1. 1xx：请求处理中
      1. 2xx：正常处理。200 ok，206 范围请求
      1. 3xx：重定向
-        - 301 永久重定向
-        - 302 临时重定向
-        - 304 未修改(未符合If-Match，If-None-Match，If-Modified-Since，If-Unmodified-Since、If-Range)
+        1. 1.0标准
+           - 301 永久重定向
+           - 302 临时重定向
+           - 304 未修改(未符合If-Match，If-None-Match，If-Modified-Since，If-Unmodified-Since、If-Range)
+        1. 1.1标准
+           - 303：临时重定向，允许改变方法，禁止被缓存
+           - 307：临时重定向，不允许改变方法，禁止被缓存
+           - 308：永久重定向，不允许改变方法
      1. 4xx：客户端错误
         - 400 请求报文语法错误
         - 401 未认证
@@ -504,7 +509,7 @@
    - 获取客户端ip
      1. 参数
         - HTTP_CLIENT_IP：未成标准，不一定服务器都实现，一和二可以用来表示负载均衡后的真实ip
-        - HTTP_X_FORWARDED_FOR：有标准定义，用来识别经HTTP代理后的客户端IP地址，没有代理则为空，格式：clientip,proxy1,proxy2(因为可能多个代理)
+        - HTTP_X_FORWARDED_FOR：有标准定义，用来识别经HTTP代理后的客户端IP地址，没有代理则为空，多个代理ip空格隔开追加，如：clientip,proxy1,proxy2
         - REMOTE_ADDR：是可靠的，是最后一个跟你握手的ip，因为否则reponse不会达到，这个可能为代理ip
         - HTTP_VIA：代理服务器ip
      1. 代理类型
@@ -512,6 +517,9 @@
         - 普通匿名代理：HTTP_X_FORWARDED_FOR传真实代理ip，HTTP_VIA如实
         - 欺骗性代理：HTTP_X_FORWARDED_FOR传随机ip，HTTP_VIA如实
         - 高匿名代理：HTTP_X_FORWARDED_FOR和HTTP_VIA无数值
+     1. 请求头
+        - x-forwarded-for；累加的逐级ip，因为代理往上走会再新加一层连接
+        - x-real-ip：真实ip
    - 登录认证
      1. BASIC 基本认证，使用base64认证，直接传输账号密码
      1. DIGEST 摘要认证，接收服务端的质询码，计算后服务端验证

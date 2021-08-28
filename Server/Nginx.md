@@ -80,14 +80,6 @@
         - 设置超时时间，不能容忍处理程序长时间占用cpu导致处理时间长，大量任务连接都超时断开从而恶性循环，资源消耗在处理大量不正常的断开上
    - epoll
      1. 大量连接中只有少数是活跃的，epoll仅遍历活跃连接，采用红黑树、链表，增删改查都快
-### 配置
-1. 认识：一门微型的编程语言
-   - 层级：http-->server-->location
-   - 语法
-     1. 由指令和指令块组成
-        - 每条指令;结尾，指令与参数空格分隔，#注释，$变量，部分指令参数支持正则
-        - 指令块用{}组织，可以有名称
-     1. include用于组合多个配置文件
 1. nginx.conf配置
     ```conf
     user                        www;                            # 用户和用户组
@@ -117,53 +109,89 @@
         include /etc/nginx/conf.d/*.conf;
     }
     ```
-1. 变量
-   - 认识：$开头
-   - 内置全局环境变量
-     1. 请求类
-        - $remote_addr                客户端的IP地址
-        - $remote_port                客户端的端口
-        - $remote_user                已经经过Auth Basic Module验证的用户名
-        
-        - $request_uri                包含请求参数的原始URI，不包含主机名，如：”/foo/bar.php?arg=baz”
-        - $uri                        不带请求参数的当前URI，$uri不包含主机名，如”/foo/bar.html”
-        - $document_uri               与$uri相同
-        - $args                       等于请求行中的参数，同$query_string
-        - $document_root              当前请求在root指令中指定的值
-
-        - $server_protocol            请求使用的协议，通常是HTTP/1.0或HTTP/1.1
-        - $host                       先取请求行中host，再请求头host，再匹配的server_name，没有请求默认到nginx第一个虚拟主机下处理
-        - $http_host                  读取请求头，如$http_user_agent读取user_agent
-        - $content_length             请求头中的Content-length字段
-        - $content_type               请求头中的Content-Type字段
-        - $http_cookie                客户端cookie信息
-        - $http_user_agent            客户端agent信息
-
-        - $scheme                     HTTP方法（如http，https）
-        - $request_method             客户端请求的动作，通常为GET或POST
-        - $request_filename           当前请求的文件路径，由root或alias指令与URI请求生成
-     1. 自身配置
-        - $limit_rate                 可以限制连接速率
-        - $server_addr                服务器地址，在完成一次系统调用后可以确定这个值
-        - $server_name                服务器名称
-        - $server_port                请求到达服务器的端口号
-1. server配置，决定域名、虚拟主机
+### 指令
+1. 认识：一门微型的编程语言
+1. 语法
+   - 嵌套结构：main-->http-->server-->location
+   - include用于组合多个配置文件
+   - 组成
+     1. 指令
+        - 组成
+          1. synta：语法
+          1. default：默认值
+          1. context：作用域
+        - 每条指令;结尾
+        - 指令与参数空格分隔，部分指令参数支持正则
+        - #注释，$变量
+     1. 指令块：用{}组织，可以有名称
+   - 特点
+     1. 指令的合并
+        - 值指令：可以，子配置不存在使用父的，子存在覆盖父的
+        - 动作指令：不可以
+1. server
+   - 认识：执行处理哪些域名、虚拟主机
+   - listen：设置server监听的地址和端口
+     1. default：`listen *:80|*:8000`
+     1. context：server
+     1. demo
+        - `listen 80;`：等于`listen *:80;`
+        - `listen host|ip:8080;`：单独指定ip或域名，其他就无法访问了
+        - `listen unix:/tmp/xx.sock;`：只能本机通信
+        - `listen [::]80 ipv6only=on;`
+        - `listen 80 default_server;`
+   - server_name：设置server匹配host请求头的路由
+     1. 匹配规则
+        - 设置多个，第一个是主域名，通过`server_name_in_redirect on|off`，设置请求跳转时是否用主域名返回，默认off
+        - 泛域名：最前或最后加*号全匹配
+        - 正则：加~前缀，可用()设置匹配到的变量
+            ```
+            server{
+                server_name ~^(www\.)?(.+)$;
+                location / { root /sites/$2;}               # $2使用上边第二个括号里内容
+            }
+            server{
+                server_name ~^(www\.)?(<domain>.+)$;
+                location / { root /sites/$domain;}          # 指定变量名
+            }
+            ```
+        - 其他
+          1. .xx.com可以匹配xx.com和*.xx.com
+          1. _匹配所有
+          1. ”“匹配无host请求头的
+     1. 匹配顺序：上边的优先，先遍历所有配置的server_name，如果找到了则执行对应的server，如果没有找到，则默认执行第一个server或default
+        - 精确
+        - *在前的泛域名
+        - *在后的泛域名
+        - 正则：都匹配的按配置文件中顺序来
+        - default_server
+          1. 第一个
+          1. listen指定default
+   - root
+   - demo
     ```conf
     server {
-        listen       80;
-        listen       somename:8080;                                         # 可以指定ip或者域名，其他的就无法访问了
-        server_name  somename  alias  another.alias default_server;         # 指定默认server，先遍历所有配置的server_name，如果找到了，则执行对应的server，如果没有找到，则默认执行第一个server
+        listen 127.0.0.1:80;
+        server_name  somename;
+        root /var/html;
     }
     ```
-1. location配置，匹配路径
-   - 语法：优先级递减
-     1. =     精确匹配 1
-     1. ^~    以某个字符串开头，不以开头的可以新建另一个server不同port解决 2
-     1. ~     开头表示区分大小写的正则匹配 3
-     1. ~*    开头表示不区分大小写的正则匹配 4
-     1. !~    区分大小写不匹配的正则 5
-     1. !~*   不区分大小写不匹配的正则 6
-     1. /     通用匹配，任何请求都会匹配到 7
+1. location
+   - 认识：匹配路径
+   - syntax
+     1. `location [=|~|~*|^~] uri {...}`：优先级递减
+     1. `location @name {...}`
+   - context：server、location，location可相互嵌套
+   - 匹配规则：仅匹配uri，忽略参数
+     1. 前缀字符串
+        - =     精确匹配 1
+        - ^~    以某个字符串开头，不以开头的可以新建另一个server不同port解决 2
+     1. 正则
+        - ~     开头表示区分大小写的正则匹配 3
+        - ~*    开头表示不区分大小写的正则匹配 4
+        - !~    区分大小写不匹配的正则 5
+        - !~*   不区分大小写不匹配的正则 6
+        - /     通用匹配，任何请求都会匹配到 7
+     1. 用于内部跳转的命名location
    - 实例
     ```conf
     location / {
@@ -202,91 +230,60 @@
         add_header headerName headerValue
     }
     ```
-1. if
-   - 实例
-    ```lua
-    // php去除index.php
-    if (!-e $request_filename) {
-        rewrite  ^(.*)$  /index.php?s=$1  last;
-        break;
-    }
+1. 变量
+   - http请求相关
+     1. $query_string|$args         全部url参数
+     1. $arg_参数名                  映射到url中某个具体参数的值
+     1. $is_args                    返回参数或空
+     1. $uri|$document_uri          不带请求参数的当前URI，不含主机名，如'/foo/bar.html'
+     1. $request_uri                包含请求参数的原始URI，不含主机名
+     1. $scheme                     协议名，http/https
+     1. $request_method             请求方法
+     1. $request_length             请求头中的Content-length字段，所有请求内容的大小，包括请求行、请求头、包体
+     1. $content_length             请求头中的Content-length字段
+     1. $content_type               请求头中的Content-Type字段
+     1. $remote_user                已经经过Auth Basic Module验证的用户名
+     1. $request_body_file          临时存放请求包体的文件，非常小不存，`client_body_in_file_only`设置是否强制存入
+     1. $request_body               包体，仅当使用反向代理并且内存暂存包时有效
+     1. $request                    原始的url请求
+     1. $host                       先从请求行取，如果有host头则替换，前二者都没有用匹配上的server_name
+     1. $http_头部名字                返回具体请求头的信息，以下会做特殊处理
+        - http_host
+        - http_user_agent
+        - http_referer
+        - http_via
+        - http_x_forwarded_for
+        - http_cookie
+   - http响应相关
+     1. $remote_addr|$binary_remote_addr    客户端ip，binary为整型格式，ipv4是4字节，ipv6是16字节
+     1. $remote_port                客户端的端口
+     1. $connection                 递增的连接序号
+     1. $connection_requests        当前连接上执行过的请求数，对keepalive有意义
+     1. $proxy_protocol_addr        返回使用了proxy_protocol协议的地址或空
+   - tcp连接相关：四元组
+   - 系统变量
+   - 处理过程中产生的
+     1. 请求类
+     1. $request_filename           当前请求的文件路径，由root或alias指令与URI请求生成
+        - $document_root              当前请求在root指令中指定的值
 
-    if (-d $request_filename) { 
-        rewrite [^/]$ $uri/?$query_string break;                            # 
-    }
-    ```
-1. rewrite
-   - 认识：重定向的重要指令，根据正则匹配内容跳转到replacement
-   - 场景
-     1. 调整用户浏览的URL，看起来规范
-     1. 为了让搜索引擎收录网站内容，让用户体验更好
-     1. 网站更换新域名后
-     1. 根据特殊的变量、目录、客户端信息进行跳转
-   - 使用
-     1. 应用位置：server、location、if
-     1. 默认值：none
-   - 指令：`rewrite regex replacement [flag];`
-     1. regex：表示想要匹配的目标URL
-     1. replacement：将正则匹配的内容替换成replacement
-        - $1是取自regex部分()里的内容
-     1. flag
-        - last	本条规则匹配完成后继续向下匹配新的location URI规则
-        - break	本条规则匹配完成后终止，不在匹配任何规则
-        - redirect	返回302临时重定向
-        - permanent	返回301永久重定向
-   - 实例
-     1. `rewrite /last.html /index.html last;`
-     1. `rewrite ^/html/(.+?).html$ /post/$1.html permanent;`：把/html/*.html => /post/*.html，301定向
-     1. `rewrite ^/(.*) http://www.jd.com/$1 permanent;`：把当前域名的请求，跳转到新域名上，域名变化但路径不变
-     1. `rewrite  ^(.*)$  /index.php?s=$1  last;`：
-     1. `rewrite [^/]$ $uri/?$query_string break;`：携带参数跳转
-1. 超时时间
-   - proxy_connect_timeout：和后端服务器的连接(发起握手后的)等待超时时间
-   - proxy_read_timeout：等待后端服务器的响应超时时间
-   - proxy_send_timeout：发送请求给后端服务器的超时时间，规定时间之内后端服务器接收完所有的数据
-1. 缓存大小
-   - proxy_buffer_size：缓存区大小
-   - proxy_buffers：缓存区大小和数量
-   - proxy_busy_buffers_size：高负荷下缓存大小
-   - proxy_temp_file_write_size：缓存临时文件大小
-
-   - client_max_body_size 500m;              # 客户端请求服务器最大允许大小
-   - client_body_buffer_size     128k;       # nginx分配给请求数据的Buffer大小
-   - proxy_ignore_client_abort   on;         # 是否开启proxy忽略客户端中断
-1. https：`listen 443 ssl;`
-1. fastcgi：`fastcgi.conf`
-    ```conf
-    fastcgi_param  SCRIPT_FILENAME    $document_root$fastcgi_script_name;
-    fastcgi_param  QUERY_STRING       $query_string;
-    fastcgi_param  REQUEST_METHOD     $request_method;
-    fastcgi_param  CONTENT_TYPE       $content_type;
-    fastcgi_param  CONTENT_LENGTH     $content_length;
-
-    fastcgi_param  SCRIPT_NAME        $fastcgi_script_name;
-    fastcgi_param  REQUEST_URI        $request_uri;
-    fastcgi_param  DOCUMENT_URI       $document_uri;
-    fastcgi_param  DOCUMENT_ROOT      $document_root;
-    fastcgi_param  SERVER_PROTOCOL    $server_protocol;
-    fastcgi_param  REQUEST_SCHEME     $scheme;
-    fastcgi_param  HTTPS              $https if_not_empty;
-
-    fastcgi_param  GATEWAY_INTERFACE  CGI/1.1;
-    fastcgi_param  SERVER_SOFTWARE    nginx/$nginx_version;
-
-    fastcgi_param  REMOTE_ADDR        $remote_addr;
-    fastcgi_param  REMOTE_PORT        $remote_port;
-    fastcgi_param  SERVER_ADDR        $server_addr;
-    fastcgi_param  SERVER_PORT        $server_port;
-    fastcgi_param  SERVER_NAME        $server_name;
-
-    # PHP only, required if PHP was built with --enable-force-cgi-redirect
-    fastcgi_param  REDIRECT_STATUS    200;
-    ```
+        
+        - $server_protocol            请求使用的协议，通常是HTTP/1.0或HTTP/1.1
+     1. 自身配置
+        - $limit_rate                 可以限制连接速率
+        - $server_addr                服务器地址，在完成一次系统调用后可以确定这个值
+        - $server_name                服务器名称
+        - $server_port                请求到达服务器的端口号
+   - 存放变量的哈希表
+     1. `variables_hash_bucket_size`
+     1. `variables_hash_max_size`
 1. 其他配置文件
    - mime.types：文件扩展名与文件类型映射表，找不到使用默认default_type
    - fastcgi.conf/fastcgi_params/uwsgi_params/scgi_params：使用对应cgi时，向cgi传递的变量
    - koi-utf/koi-win/win-utf：编码转换映射文件
 ### 模块
+1. 认识
+   - 不同模块在不同的阶段执行，其执行顺序受阶段的顺序决定
 1. 分类
    - 官方
      1. ngx_event_module
@@ -300,9 +297,175 @@
      1. stream_module
      1. mail_module
    - 第三方
-1. limit：限流
-   - limit_conn_zone $binary_remote_addr zone=addr:10m;
-   - limit_req_zone $binary_remote_addr zone=one:10m rate=1r/s;
+1. realip
+   - 认识：识别用户真实ip并修改客户端地址为在指定头字段中发送的，用于覆盖binary_remote_addr、remote_addr变量，否则这俩变量就是和nginx建立连接的ip，不准
+     1. binary_remote_addr是二进制的，效率更高
+   - 变量
+     1. realip_remote_addr
+     1. realip_remote_port
+   - 指令
+     1. set_real_ip_from：设置对于什么样的地址才做转换，比如自己集群中的上游，自己的cdn
+     1. real_ip_header：设置从哪个请求头字段取ip
+     1. real_ip_recursive：环回地址
+1. rewrite
+   - 认识：重定向，根据正则匹配内容跳转到replacement
+   - 场景
+     1. 调整用户浏览的URL，看起来规范
+     1. 为了让搜索引擎收录网站内容，让用户体验更好
+     1. 网站更换新域名后
+     1. 根据特殊的变量、目录、客户端信息进行跳转
+   - 使用
+     1. 应用位置：server、location、if
+     1. 默认值：none
+   - 指令
+     1. rewrite：`rewrite regex replacement [flag];`
+        - regex：表示想要匹配的目标URL
+        - replacement：将正则匹配的内容替换成replacement，可作分组和变量提取，$1是取自regex部分()里的内容
+        - flag
+          1. last	本条规则匹配完成后继续向下匹配新的location URI规则
+          1. break	本条规则匹配完成后终止，不在匹配任何规则
+          1. redirect	返回302临时重定向
+          1. permanent	返回301永久重定向
+     1. if
+        - syntax：`if (condition) {...}`，条件为真执行
+          1. 变量是否为空或0、变量和字符串(= !+)、变量和正则表达式(~ !~ ~* !~*)
+          1. 文件(-f !-f)、目录(-d !-d)、软连接(-e !-e)是否存在
+          1. 是否为可执行文件(-x !-x)
+        - context：server、location
+        - demo
+            ```lua
+            if ($http_cookie ~* "id=([^;]+)(?:;|$)") {
+                set $id $1                                  // cookie中提取值
+            }
+
+            if ($request_method = POST) {}
+
+            if (!-e $request_filename) {                    // php去除index.php
+                rewrite  ^(.*)$  /index.php?s=$1  last;
+            }
+            ```
+     1. return
+        - syntax
+          1. return code [text]：body中返回text，444，nginx自定义，立刻关闭连接不返回任何
+          1. return code url
+          1. return url
+     1. error_page
+        - syntax：error_page code ... [=[response]] uri;
+        - context：可在if in location
+        - demo：`error_page 404 /my404.html`
+     1. rewrite_log：是否打开记录
+     1. break
+     1. set
+   - 实例
+     1. `rewrite /last.html /index.html last;`
+     1. `rewrite ^/html/(.+?).html$ /post/$1.html permanent;`：把/html/*.html => /post/*.html，301定向
+     1. `rewrite ^/(.*) http://www.jd.com/$1 permanent;`：把当前域名的请求，跳转到新域名上，域名变化但路径不变
+     1. `rewrite  ^(.*)$  /index.php?s=$1  last;`：
+     1. `rewrite [^/]$ $uri/?$query_string break;`：携带参数跳转
+1. limit
+   - 认识：限流
+     1. 全部w进程，生效开始阶段：preaccess
+     1. limit_conn依赖有效性取决于key的设计，依赖postread阶段的realip模块的真实ip
+     1. limit_req是漏桶算法
+   - 组成
+     1. limit_conn：限制同时存在的连接数
+     1. limit_req：限制每秒请求处理数
+   - limit_conn模块指令
+     1. `limit_conn_zone $binary_remote_addr zone=addr:10m;`：定义共享内存大小，key关键字
+     1. `limit_conn zone number`：定义限制的数量
+     1. `limit_conn_log_level`：限制发生时的日志级别
+     1. `limit_conn_status`：限制发生时的返回码
+     1. `limit_rate`
+   - limit_req模块指令
+     1. `limit_req_zone $binary_remote_addr zone=one:10m rate=1r/s;`
+     1. `limit_req`：限制数量
+     1. `limit_req_log_level`：限制发生时的日志级别
+     1. `limit_req_status`：限制发生时的返回码
+1. access阶段
+   - access：控制ip可以访问的url，access阶段
+     1. 指令
+        - allow：`allow address | CIDR | unix: | all`
+        - deny
+     1. demo
+        ```lua
+        location / {
+            deny 192.168.1.1;
+            allow 192.168.1.0/24;
+            deny all;
+        }
+        ```
+   - auth_basic：使用账号密码校验，RFC2617协议的http basic authentication
+   - auth_request：生成子请求询问是否能通过
+   - satisfy：决定是否需要通过全部以上三个
+1. precontent阶段
+   - try_files：是模块也是指令，依次访问文件，存在返回内容，不存在按最后一个url结果或code返回，常用于反向代理
+     1. syntax
+        - `try_files file ... uri`
+        - `try_files file ... =code`
+     1. context：server location
+     1. demo
+        ```lua
+        location /aa {
+            try_files /tmp/main.html $uri $uri/index.html @lasturl
+            try_files /tmp/main.html $uri $uri/index.html =404
+        }
+        location @lasturl {
+            return 200 'lasturl\n';
+        }
+        ```
+   - mirror模块：处理请求时生成不处理返回值的子请求
+     1. 指令
+        - mirror url | off：默认关闭
+        - mirror_request_body on | off：是否转发body
+1. content阶段
+   - static模块
+     1. 指令
+        - root：将完整url映射为文件路径，以返回静态文件内容，使用更广，因为可以在多个指令块中继承使用
+        - alias：将location后的url映射为文件路径，以返回静态文件内容，只在location中
+        - type：文件扩展名作映射，即响应值content-type
+          1. default_type
+          1. types_hash_bucket_size
+          1. types_hash_max_size
+        - 重定向跳转设置
+          1. server_name_in_redirect：是否返回主域名
+          1. port_in_redirect：是否返回端口
+          1. absolute_redirect：是否添加域名
+        - log_not_found：未找到文件时的错误日志，关闭提高性能，默认开
+     1. 变量
+        - request_filename：待访问文件的完整路径
+        - document_root：由uri和root/alias规则生成的文件夹路径
+        - realpath_root：将document_root中的可能的软连接等换成真实路径
+   - index模块：指定默认的文件名称
+   - autoindex模块：url以/结尾时，尝试以html/xml/json/jsonp等格式返回root/alias指向目录的目录结构
+     1. 指令
+        - autoindex：是否打开
+        - autoindex_exact_size
+   - merge_slashes on|off：默认开，合并连续的/符号
+   - concat模块：一次请求返回多个文件内容，提升小文件性能。uri后面加上??，通过多个,分隔文件，参数用?
+     1. 指令
+        - concat：是否打开
+        - concat_types
+1. log
+   - 认识：记日志的，log阶段
+   - log_format
+     1. syntax：`log_format name [escape=default|json] string ...`
+     1. context：http
+   - access_log
+     1. syntax：`access_log path [format [buffer=size] [gzip[=level]] [flush=time] [if=condition]];`
+        - 配置日志缓存，多次积累一次性写入
+        - 配置if符合条件才记录
+        - 配置压缩
+     1. context：server location
+     1. demo
+   - open_log_file_cache：对打开的日志文件句柄进行管理，省去记录日志时重复的打开、关闭操作，提升性能，超出最大时使用lru淘汰，设置最少使用数才缓存
+     1. syntax：`open_log_file_cache max=N [inactive=time] [min_uses=N] [valid=time];`
+1. 过滤模块
+   - sub模块：将响应中指定字符串替换为新字符串
+     1. sub_filter
+     1. sub_filter_last_modified
+     1. sub_filter_once
+     1. sub_filter_types
+   - addition模块：在响应前后增加内容，通过新增子请求的响应完成
 1. cache：缓存
    - proxy_cache
     ```conf
@@ -312,6 +475,19 @@
     proxy_pass http://xx;                       // 缓存的是这个结果
     ```
 ### 应用
+1. 超时时间
+   - proxy_connect_timeout：和后端服务器的连接(发起握手后的)等待超时时间
+   - proxy_read_timeout：等待后端服务器的响应超时时间
+   - proxy_send_timeout：发送请求给后端服务器的超时时间，规定时间之内后端服务器接收完所有的数据
+1. 缓存大小
+   - proxy_buffer_size：缓存区大小
+   - proxy_buffers：缓存区大小和数量
+   - proxy_busy_buffers_size：高负荷下缓存大小
+   - proxy_temp_file_write_size：缓存临时文件大小
+
+   - client_max_body_size 500m;              # 客户端请求服务器最大允许大小
+   - client_body_buffer_size     128k;       # nginx分配给请求数据的Buffer大小
+   - proxy_ignore_client_abort   on;         # 是否开启proxy忽略客户端中断
 1. gzip压缩：可在任何层级定义，越细优先级越高
     ```lua
     gzip on;
@@ -423,6 +599,7 @@
         }
     }
     ```
+1. https：`listen 443 ssl;`
 1. 改为长连接
     ```lua
     server {
@@ -445,6 +622,34 @@
         // 改为长连接同时需要搭配这个
         keepalive 100;
     }
+    ```
+1. fastcgi：`fastcgi.conf`
+    ```conf
+    fastcgi_param  SCRIPT_FILENAME    $document_root$fastcgi_script_name;
+    fastcgi_param  QUERY_STRING       $query_string;
+    fastcgi_param  REQUEST_METHOD     $request_method;
+    fastcgi_param  CONTENT_TYPE       $content_type;
+    fastcgi_param  CONTENT_LENGTH     $content_length;
+
+    fastcgi_param  SCRIPT_NAME        $fastcgi_script_name;
+    fastcgi_param  REQUEST_URI        $request_uri;
+    fastcgi_param  DOCUMENT_URI       $document_uri;
+    fastcgi_param  DOCUMENT_ROOT      $document_root;
+    fastcgi_param  SERVER_PROTOCOL    $server_protocol;
+    fastcgi_param  REQUEST_SCHEME     $scheme;
+    fastcgi_param  HTTPS              $https if_not_empty;
+
+    fastcgi_param  GATEWAY_INTERFACE  CGI/1.1;
+    fastcgi_param  SERVER_SOFTWARE    nginx/$nginx_version;
+
+    fastcgi_param  REMOTE_ADDR        $remote_addr;
+    fastcgi_param  REMOTE_PORT        $remote_port;
+    fastcgi_param  SERVER_ADDR        $server_addr;
+    fastcgi_param  SERVER_PORT        $server_port;
+    fastcgi_param  SERVER_NAME        $server_name;
+
+    # PHP only, required if PHP was built with --enable-force-cgi-redirect
+    fastcgi_param  REDIRECT_STATUS    200;
     ```
 1. 网关接口
    - CGI
