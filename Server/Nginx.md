@@ -521,19 +521,6 @@
    - keepalive_disable：指定某些浏览器禁用
    - keepalive_requests：一个tcp最多执行的http请求
    - keepalive_timeout timeout [header_timeout]：两个时间，没有http请求的超时时间，连接的保留时间
-1. 超时时间
-   - proxy_connect_timeout：和后端服务器的连接(发起握手后的)等待超时时间
-   - proxy_read_timeout：等待后端服务器的响应超时时间
-   - proxy_send_timeout：发送请求给后端服务器的超时时间，规定时间之内后端服务器接收完所有的数据
-1. 缓存大小
-   - proxy_buffer_size：缓存区大小
-   - proxy_buffers：缓存区大小和数量
-   - proxy_busy_buffers_size：高负荷下缓存大小
-   - proxy_temp_file_write_size：缓存临时文件大小
-
-   - client_max_body_size 500m;              # 客户端请求服务器最大允许大小
-   - client_body_buffer_size     128k;       # nginx分配给请求数据的Buffer大小
-   - proxy_ignore_client_abort   on;         # 是否开启proxy忽略客户端中断
 1. gzip压缩：可在任何层级定义，越细优先级越高
     ```lua
     gzip on;
@@ -549,7 +536,107 @@
     limit_zone crawler $binary_remote_addr 10m;         // 开启限制IP连接数的时候需要使用
     ```
 1. 反向代理
-   - 认识：请求转发
+   - 认识：请求转发，支持多种协议
+     1. tcp/udp：直接转发，没啥可做的
+     1. http：转为http、fastcgi、grpc等
+   - 指令
+     1. 属性设置
+        - `proxy_pass url`：对上游服务使用http/https进行反向代理，url必须以`http://`或`https://`开头，接下来是ip/域名/socket/upstream名称，可以带变量，可以用rewrite改写，不带url就原封转发(如location的@方式)，带就是location匹配到的地址，即地址是location匹配到的地址
+        - `proxy_method method;`
+        - `proxy_http_version 1.0 | 1.1;`
+
+        - `proxy_pass_request_headers on | off;`                              是否将用户header、body发给上游
+        - `proxy_pass_request_body on | off;`
+        - `proxy_set_header field value;`
+        - `proxy_set_body value;`                                             手动设置包体
+
+        - `client_body_in_single_buffer on | off;`
+        - `client_body_buffer_size size`                                      接收上游包体的内存
+
+        - `proxy_request_buffering on | off;`                                 客户端的包体是否边收边发
+        - `client_max_body_size size`                                         最大包体长度，仅对有content-length且超出的返回413
+        - `client_body_timeout time;`                                         读取包体超时，返回408
+
+        - `client_body_in_file_only on | clean | off;`                        是否放入临时文件
+        - `client_body_temp_path path [level1 [level2 [level3]]];`          临时文件地址，一个文件夹不能太多文件，性能非常慢
+     1. 发起连接
+        - `proxy_connect_timeout time;`：
+        - `proxy_next_upstream http_502 | ..;`：
+
+        - `proxy_socket_keepalive on | off;`：启用tcp的keepalive
+        - `keepalive connections;`：启用http的keepalive
+        - `keepalive_requests number;`：
+
+        - `proxy_bind address [transparent] | off;`：
+        - `proxy_ignore_client_abort on | off;`：
+        - `proxy_send_timeout time;`：
+        - `proxy_buffer_size size;`：
+     1. 接收上游
+        - `proxy_buffers number size;`：
+        - `proxy_buffering on | off;`：
+        - `proxy_max_temp_file_size size;`：
+        - `proxy_temp_file_write_size size;`：
+        - `proxy_temp_path path [level1 [level2 [level3]]];`：
+        - `proxy_busy_buffers_size size;`：
+        - `proxy_read_timeout time;`：
+        - `proxy_limit_rate rate;`：
+        - `proxy_store_access users:permissions ...;`：
+        - `proxy_store on | off | string;`：
+        - `proxy_cookie_domain off;`：
+        - `proxy_cookie_path off;`：
+        - `proxy_redirect default;`：
+        - `proxy_next_upstream error | timeout | invalid_header | http_500 | http_502 | http_503 | http_504 | http_403 | http_404 | http_429 | non_idempotent | off ...;`：
+          1. `proxy_next_upstream_timeout time;`：
+          1. `proxy_next_upstream_tries number;`：
+        - `proxy_intercept_errors on | off;`：
+1. 超时时间
+   - proxy_connect_timeout：和后端服务器的连接(发起握手后的)等待超时时间
+   - proxy_read_timeout：等待后端服务器的响应超时时间
+   - proxy_send_timeout：发送请求给后端服务器的超时时间，规定时间之内后端服务器接收完所有的数据
+1. 缓存
+   - proxy_buffer_size：缓存区大小
+   - proxy_buffers：缓存区大小和数量
+   - proxy_busy_buffers_size：高负荷下缓存大小
+   - proxy_temp_file_write_size：缓存临时文件大小
+
+   - client_max_body_size 500m;              # 客户端请求服务器最大允许大小
+   - client_body_buffer_size     128k;       # nginx分配给请求数据的Buffer大小
+   - proxy_ignore_client_abort   on;         # 是否开启proxy忽略客户端中断
+
+
+   - 最佳实践
+     1. 客户端请求是否边收边发，proxy_request_buffering
+        - on
+          1. 客户端网速慢
+          1. 上游并发能力低
+          1. 适应高吞吐
+        - off
+          1. 更及时的响应
+          1. 降低nginx io消耗
+          1. 一旦开始发送内容，proxy_next_upstream功能失效
+     1. 使用长连接：降低和上游建立/关闭连接的损耗，提升吞吐量，降低时延
+        ```lua
+        server {
+            location /api/wx1matrix/ {
+                rewrite ^.+api/wx1matrix/?(.*)$ /$1 break;
+                proxy_set_header Host wx1matrix.xueersi.com;
+
+                // 改为长连接用这俩，必须都有，否则不生效
+                proxy_http_version 1.1;                         // 防止使用http1.0
+                proxy_set_header Connection "";                 // 防止关掉长连接
+
+                proxy_redirect off;
+                proxy_pass http://images;
+            }
+        }
+        upstream images {
+            server 10.20.27.13:80;
+            server 10.20.27.14:80;
+            
+            // 改为长连接同时需要搭配这个
+            keepalive 100;
+        }
+        ```
    - 实例
     ```conf
     location / {
@@ -562,15 +649,42 @@
     }
     ```
 1. 负载均衡
-   - 特点：实现了七层负载均衡，功能多、性能好、运行稳定，自动剔除不正常服务器，上传文件使用异步模式，有权重等多种分配策略
+   - 特点：实现了四七层负载均衡，功能多、性能好、运行稳定，自动剔除不正常服务器，上传文件使用异步模式，有权重等多种分配策略
+   - 指令
+     1. 指向上游服务
+        - `upstream name {...}`：指定上游服务组，只在http中
+        - `server address [param]`：指定上游服务地址，可以是ip/域名/本机socket地址，默认用80端口，参数backup非备份不可用才用，down标识下线
+          1. weight：权重
+          1. max_conns：最大并发连接数
+          1. max_fails：最大失败次数
+          1. fail_timeout：max_fails的时间范围；max_fails的紧闭时长 
+        - `keepalive conns`：这一组upstream和上游服务的最多保持的空闲tcp连接，只在upstream中
+          1. keepalive_requests：v1.15.3不稳定，最多请求数
+          1. keepalive_timeout：v1.15.3不稳定，没有请求的断开等待时长
+        - `resolver address ... [valid=time][ipv6-on|off]`：指定上游域名dns服务器
+   - 变量
+     1. $upstream_addr：格式为可读字符串，如127.0.0.1:8012
+     1. $upstream_connect_time：上游建立连接的耗时
+     1. $upstream_header_time：上游接收发回响应中http头的耗时，因为先发头部，nginx需要根据header做出处理，很关键
+     1. $upstream_response_time：上游接收完整响应的耗时
+     1. $upstream_http_名称：上游响应头的值
+     1. $upstream_bytes_received：上游接收的响应长度，单位字节
+     1. $upstream_response_length：上游返回的包长度，单位字节
+     1. $upstream_status：状态码，未连接上是502
+     1. $upstream_cookies_名称
+     1. $upstream_trailer_名称：上游响应尾部的值
    - 内置策略
-     1. ip hash：变相轮询算法，将访问固定到某一机器上
-     1. 加权轮询：一直给高权重机器，分配请求会权重降低。先给高权重机器，直到该机器权值降到了比其他机器低才给其他机器，weight是权重。当所有机器都down时，nginx会立即将所有机器标志位变初始状态，避免全部timeout的状态
-   - 扩展策略
+     1. hash：变相轮询算法，将请求固定到某一机器上
+        - `ip_hash`：根据客户端ip划分
+        - `hash key [consistent]`
+          1. 通用hash：以nginx内置的变量为key进行hash
+          1. 一致性hash：加consistent，使用nginx内置的一致性hash环。解决以上hash算法宕机/扩容时，引发大量路由变更，导致缓存失效
+     1. weight：加权round-robin轮询算法，优先给高权重机器直到其权值降到比其他低才给其他机器，当所有机器都down时nginx立即初始所有机器标志位，避免全部timeout
+     1. least_conn：最少连接算法，跨w进程
+        - `least_conn`
+        - `zone name [size]`：分配存储其他upstream的策略、上游服务状态的共享内存
      1. fair策略：根据机器响应时间判断负载情况，选出最快的
-     1. 通用hash：以nginx内置的变量为key进行hash
-     1. 一致性hash：使用nginx内置的一致性hash环
-   - 内置策略：nginx的proxy
+   - demo
     ```lua
     --print("七层")
     http{
@@ -666,30 +780,34 @@
         }
     }
     ```
-1. https：`listen 443 ssl;`
-1. 改为长连接
-    ```lua
-    server {
-        location /api/wx1matrix/ {
-            rewrite ^.+api/wx1matrix/?(.*)$ /$1 break;
-            proxy_set_header Host wx1matrix.xueersi.com;
-
-            // 改为长连接用这俩，必须都有，否则不生效
-            proxy_http_version 1.1;
-            proxy_set_header Connection "";
-
-            proxy_redirect off;
-            proxy_pass http://images;
-        }
-    }
-    upstream images {
-        server 10.20.27.13:80;
-        server 10.20.27.14:80;
-        
-        // 改为长连接同时需要搭配这个
-        keepalive 100;
-    }
-    ```
+1. https
+   - 使用：`listen 443 ssl;`
+   - 指令
+     1. 对下游使用证书
+        - `ssl_certificate file;`：
+        - `ssl_certificate_key file;`：
+     1. 验证下游证书
+        - `ssl_verify_client on | off | optional | optional_no_ca;`：
+        - `ssl_client_certificate file;`：
+     1. 对上游使用证书
+        - `proxy_ssl_certificate file;`：
+        - `proxy_ssl_certificate_key file;`：
+     1. 验证上游游证书
+        - `proxy_ssl_trusted_certificate file;`：
+        - `proxy_ssl_verify on | off;`：
+        - ``：
+        - ``：
+   - 变量
+     1. 安全套件
+        - ssl_cipher/ssl_ciphers
+        - ssl_protocol
+        - ssl_curves
+        - 
+        - 
+        - 
+        - 
+     1. 证书
+        - 
 1. fastcgi：`fastcgi.conf`
     ```conf
     fastcgi_param  SCRIPT_FILENAME    $document_root$fastcgi_script_name;
@@ -943,11 +1061,12 @@
         - 重新编译nginx
      1. 步骤：https://www.imooc.com/article/19597
 1. kong
-1. OpenResty：ngx_openresty，基于nginx与lua的高性能web平台，用于方便地搭建处理高并发、扩展性的服务和动态网关
+1. OpenResty：ngx_openresty，基于nginx与lua的高性能web平台，用于方便地搭建处理高并发、扩展性的服务和动态网关，给nginx赋予lua脚本编程的能力同时保持高并发
    - 可以使用lua脚本语言调动nginx的各种c、lua模块，让web服务直接跑在nginx内部
    - 针对域名、目录结构做分流、转发的策略，既能做负载又能做反向代理
    - 具有Lua协程 + Nginx 事件驱动的事件循环回调机制，即Cosoket，对远程后端如MySQL、Memcached、Redis等都可实现同步写代码的方式实现非阻塞I/O
    - 依托于LuaJit，即时编译器会将频繁执行的代码编译成机器码缓存起来，当下次调用时将直接执行机器码，相比原生逐条执行虚拟机指令效率更高，而对于那些只执行一次的代码仍然可以逐条执行
+   - lua和nginx的c交互
 1. wiki
    - C10K：OpenResty、JavaNetty、Golang、NodeJS 
    - 调整文件打开数、设置 TCP Buckets、设置 TIME_WAIT等
