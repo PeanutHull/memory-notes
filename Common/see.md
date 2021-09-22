@@ -638,6 +638,7 @@
      1. 音频采集：`ffmpeg -f avfoundation -i :0 out.wav`
      1. 录屏：gdigrab
 1. 图形API
+   - openGL
    - DirectX
      1. 分类
         - Direct3D：微软制定的3D图形API，可绕过图形显示接口（GDI）直接进行硬件的底层操作，提高游戏的运行速度。基于微软的通用对象模式COM（Common Object Mode）。简称D3D
@@ -645,6 +646,8 @@
      1. 版本：DirectX 12，刚刚迁移到win7
    - Angle：D3D API的映射，但其语法本身依旧基于OpenGL
    - Metal：Apple推出的游戏渲染平台Metal，是低层次的渲染接口
+   - CUDA：比openGL更底层，NVIDIA推出的通用并行运算平台(计算架构)，用c、c++
+     1. 组成：CUDA指令集架构(ISA)、GPU内部并行计算引擎
 1. wiki
    - 人工智能：使计算机模拟人的思维过程和行为：学习、推理、思考、规划、情感、记忆、自我、听说、行动
      1. 人工智能->机器学习->深度学习：一层层包含，深度学习是主流技术

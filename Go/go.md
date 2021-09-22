@@ -217,7 +217,7 @@
 
     const c = len(b)    // 通过内置函数定义
     ```
-   - iota：可被编译器修改的特殊常量，iota在const关键字出现时将被重置为0，在下一个const出现之前，每出现一次iota则iota+1，`const a = iota`
+   - iota：无类型整数常量，可被编译器修改，iota在const关键字出现时将被重置为0，在下一个const出现之前，每出现一次iota则iota+1，`const a = iota`
      1. 跳值使用法
         ```go
         const (
@@ -252,7 +252,7 @@
         ```
      1. switch
         - 特点
-          1. 匹配则跳过剩下的case，不用加break，取消break用fallthrough
+          1. 默认匹配跳过剩下的case，不用加break，取消break用fallthrough
           1. case后的所有val必须为同一类型或最终结果为相同类型的表达式
         - 实例
             ```go
@@ -317,6 +317,7 @@
      1. 循环控制
         - break：中断当前循环
         - continue：跳过当前循环
+        - fallthrough：强制执行后面的case代码，不能用在最后一个分支上
         - goto：跳跃
             ```go
             goto LABEL;
@@ -465,7 +466,6 @@
 1. * 指针
    - 认识：`var ptr_name *T`，保存变量的内存地址，即间接引用。指针类型*T是指向类型T的值的指针，零值是nil
    - 特点
-     1. 和c不同，没有指针运算，不支持地址的直接转换，只能用unsafe.Pointer()
      1. 二级指针：指向指针的指针变量，第一个指针存放第二个指针的地址，第二个指针存放变量的地址，`var pptr **int`
      1. 值传递和指针传递
    - 分类
@@ -485,6 +485,10 @@
         arr := make([]int, 2)
         arrPoint := &arr
         ```
+   - 结构体指针
+     1. 结构体指针方法和值方法调用时形式上没有区别，一个可以改变结构体内部状态另一个不会。指针方法使用结构体值变量可以调用，值方法使用结构体指针变量也可调用
+     1. 通过指针访问内部字段需要2次内存读取操作，第一步取得指针地址，第二步读取地址内容，比值访问要慢。但在方法调用时，指针传递可避免结构体的拷贝操作，结构体比较大时，性能差距会比较明显
+     1. 一些特殊结构体不允许被复制，如结构体内部包含锁时，这时就必须使用它的指针形式来定义方法，否则会发生一些莫名其妙的问题
    - 实例
     ```go
     var ptr *int      // 声明指针类型，ptr是指针变量名
@@ -540,7 +544,8 @@
         panic(errors.New("kuku"))       // error类型
         ```
    - 比较
-     1. 在错误处理上采用了与C类似的检查返回值的方式，而异常定义为无法预测的，几乎不可能失败但是特殊条件下也没法返回错误，也无法继续执行，这时就会返回异常panic
+     1. 在错误处理上采用了与c类似的检查返回值方式
+     1. 异常定义为无法预测的，几乎不可能失败但是特殊条件下也没法返回错误，也无法继续执行
 1. 反射
    - 认识：reflect，反射是在运行时动态的针对对象，获取属性、调用方法，go是静态类型的语言
      1. go的反射是基于interface的
@@ -559,181 +564,13 @@
    - 组成
      1. 类型
         - `reflect.Kind`：内置元类型，表示reflect包中定义的十几种，每种有一个整数编号
-            ```go
-            const (
-                Invalid Kind = iota         // 不存在的无效类型
-                Bool
-                Int
-                Int8
-                Int16
-                Int32
-                Int64
-                Uint
-                Uint8
-                Uint16
-                Uint32
-                Uint64
-                Uintptr                     // 指针的整数类型，对指针进行整数运算时使用
-                Float32
-                Float64
-                Complex64
-                Complex128
-                Array
-                Chan
-                Func
-                Interface
-                Map
-                Ptr                         // 指针类型
-                Slice 
-                String
-                Struct                      // 结构体类型
-                UnsafePointer               // unsafe.Pointer 类型
-            )
-            ```
         - `reflect.Type`：接口
-            ```go
-            type Type interface {
-                // 返回接口原类型
-                Kind() Kind
-                // 自身包内的类型名，如果是未命名类型会返回""
-                Name() string
-                // 返回类型的包路径，即明确指定包的import路径，如"encoding/base64"
-                // 如果类型为内建类型(string, error)或未命名类型(*T, struct{}, []int)，会返回""
-                PkgPath() string
-                // 返回类型的字符串表示。该字符串可能会使用短包名（如用base64代替"encoding/base64"）
-                // 也不保证每个类型的字符串表示不同。如果要比较两个类型是否相等，请直接用Type类型比较。
-                String() string
-                // 返回要保存一个该类型的值需要多少字节；类似unsafe.Sizeof
-                Size() uintptr
-                // 返回当从内存中申请一个该类型值时，会对齐的字节数
-                Align() int
-                // 返回当该类型作为结构体的字段时，会对齐的字节数
-                FieldAlign() int
-                // 如果该类型实现了u代表的接口，会返回真
-                Implements(u Type) bool
-                // 如果该类型的值可以直接赋值给u代表的类型，返回真
-                AssignableTo(u Type) bool
-                // 如该类型的值可以转换为u代表的类型，返回真
-                ConvertibleTo(u Type) bool
-                // 返回该类型的字位数。如果该类型的Kind不是Int、Uint、Float或Complex，会panic
-                Bits() int
-                // 返回array类型的长度，如非数组类型将panic
-                Len() int
-                // 返回该类型的元素类型，如果该类型的Kind不是Array、Chan、Map、Ptr或Slice，会panic
-                Elem() Type
-                // 返回map类型的键的类型。如非映射类型将panic
-                Key() Type
-                // 返回一个channel类型的方向，如非通道类型将会panic
-                ChanDir() ChanDir
-                // 返回struct类型的字段数（匿名字段算作一个字段），如非结构体类型将panic
-                NumField() int
-                // 返回struct类型的第i个字段的类型，如非结构体或者i不在[0, NumField())内将会panic
-                Field(i int) StructField
-                // 返回索引序列指定的嵌套字段的类型，
-                // 等价于用索引中每个值链式调用本方法，如非结构体将会panic
-                FieldByIndex(index []int) StructField
-                // 返回该类型名为name的字段（会查找匿名字段及其子字段），
-                // 布尔值说明是否找到，如非结构体将panic
-                FieldByName(name string) (StructField, bool)
-                // 返回该类型第一个字段名满足函数match的字段，布尔值说明是否找到，如非结构体将会panic
-                FieldByNameFunc(match func(string) bool) (StructField, bool)
-                // 如果函数类型的最后一个输入参数是"..."形式的参数，IsVariadic返回真
-                // 如果这样，t.In(t.NumIn() - 1)返回参数的隐式的实际类型（声明类型的切片）
-                // 如非函数类型将panic
-                IsVariadic() bool
-                // 返回func类型的参数个数，如果不是函数，将会panic
-                NumIn() int
-                // 返回func类型的第i个参数的类型，如非函数或者i不在[0, NumIn())内将会panic
-                In(i int) Type
-                // 返回func类型的返回值个数，如果不是函数，将会panic
-                NumOut() int
-                // 返回func类型的第i个返回值的类型，如非函数或者i不在[0, NumOut())内将会panic
-                Out(i int) Type
-                // 返回该类型的方法集中方法的数目
-                // 匿名字段的方法会被计算；主体类型的方法会屏蔽匿名字段的同名方法；
-                // 匿名字段导致的歧义方法会滤除
-                NumMethod() int
-                // 返回该类型方法集中的第i个方法，i不在[0, NumMethod())范围内时，将导致panic
-                // 对非接口类型T或*T，返回值的Type字段和Func字段描述方法的未绑定函数状态
-                // 对接口类型，返回值的Type字段描述方法的签名，Func字段为nil
-                Method(int) Method
-                // 根据方法名返回该类型方法集中的方法，使用一个布尔值说明是否发现该方法
-                // 对非接口类型T或*T，返回值的Type字段和Func字段描述方法的未绑定函数状态
-                // 对接口类型，返回值的Type字段描述方法的签名，Func字段为nil
-                MethodByName(string) (Method, bool)
-                // 内含隐藏或非导出方法
-            }
-            ```
         - `reflect.Value`：结构体类型
-            ```go
-            func (v Value) IsNil() bool
-            func (v Value) IsValid() bool       // 返回v是否持有一个值。如v是Value零值会返回假，此时v除了IsValid、String、Kind之外方法都导致panic
-            func (v Value) Kind() Kind          // Kind返回v持有的值的分类，如果v是Value零值，返回值为Invalid
-            func (v Value) Type() Type          // 返回v持有的值的类型的Type表示
-            // Elem返回v持有的接口保管的值的Value封装，或者v持有的指针指向的值的Value封装。
-            // 如果v的Kind不是Interface或Ptr会panic；如果v持有的值为nil，会返回Value零值。
-            func (v Value) Elem() Value
-            func (v Value) Bool() bool          // 返回v持有的布尔值，如果v的Kind不是Bool会panic
-            ......
-            func (v Value) NumField() int       // 返回v持有的结构体类型值的字段数，如果v的Kind不是Struct会panic
-            func (v Value) Field(i int) Value   // 返回结构体的第i个字段（的Value封装）。如果v的Kind不是Struct或i出界会panic
-            ......
-            func (v Value) Send(x Value)        // 方法向v持有的通道发送x持有的值。如果v的Kind不是Chan或x持有值不能直接赋值给v持有通道的元素类型，会panic
-            .......
-            func (v Value) Call(in []Value) []Value     // Call方法使用输入的参数in调用v持有的函数
-            ....
-            func (v Value) CanAddr() bool       // 返回是否可以获取v持有值的指针
-            func (v Value) CanSet() bool        // 返回v是不是可被设定的
-            func (v Value) SetBool(x bool)      // 设置v的持有值。如果v的Kind不是Bool或者v.CanSet()返回假，会panic。
-            func (v Value) SetInt(x int64)      // 设置v的持有值。如果v的Kind不是Int、Int8、Int16、Int32、Int64之一或者v.CanSet()返回假，会panic。
-            .......
-            ......
-            func DeepEqual(a1, a2 interface{}) bool     // 判断两个值是否深度相等.结构体会对字段进行深度对比，array/slice对比成员/长度等，map深度对比键值对
-            ```
      1. 基础反射方法
         - reflect.TypeOf()：，`func TypeOf(v interface{}) Type`，返回type对象
         - reflect.ValueOf()：`func ValueOf(v interface{}) Value`，返回value结构体
           1. CanSet()
           1. Elem()：指针指向的元素类型
-   - 实例
-    ```go
-    // 常规操作
-    var demoV1 DemoInt
-    demoV1 = 100
-
-    reflectTDV1 := reflect.TypeOf(demoV1)
-    reflectTDV1.Kind()                          // int，原始类型
-    reflectTDV1.Name()                          // demoInt，如果是原int则是int
-    reflectTDV1.String()                        // main.demoInt
-    reflectTDV1.Align()                         // 8
-
-    reflectVDV1 := reflect.ValueOf(demoV1)
-    reflectVDV1.Type()                          // main.demoInt
-    reflectVDV1.Kind()                          // int
-
-    // CanAddr
-    demoV1 := 100
-    reflect.ValueOf(&demoV1).CanAddr()          //false
-    //reflect.ValueOf(&demoV1).Elem().CanAddr()   //true
-
-    // Set
-    var a []int
-    ra := reflect.ValueOf(&a)
-    aElem := ra.Elem()
-    fmt.Println("elem ", aElem, " source slice:", a)    //elem  []  source slice: []
-
-    aElem.Set(reflect.ValueOf([]int{11}))
-    // Comparable，判断是否可比较
-    func canCompare(source interface{}) {
-        sType := reflect.TypeOf(source)
-        sType.Comparable()
-    }
-
-    // Call
-    val := reflect.ValueOf(a)
-    val.Method(1).Call(nil)                             //获取到第二个方法，调用它
-    val.MethodByName("SumNum").Call(nil)
-    ```
 1. 扩展类型
    - 组合扩展：struct组合之前的类型
    - 别名扩展：type定义别名再扩展
@@ -870,21 +707,31 @@
         ```
      1. error
 ### 协程
-1. 认识
-   - 并行与并发：并发只是假装同时进行
-   - 协程调度模仿的就是linux的进程调度，在其之上自己实现了一套。m就是machine，相当于cpu，g相当于进程，g在m上跑和运行，是没有专门的调度程序的，是p按照提前定义好的规则自己给自己做调度的，调度室是代码+数据
-   - io密集的可以使用协程如读数据库，cpu密集的就不要了比如网站的逻辑层
-   - 协程的意义
-     1. 不必陷入内核态，而且占用资源少、切换快，堆当栈用
-     1. 其他操作耗时的时候让出cpu，不用等待
-     1. 给了我们自己调度的自由
 1. goroutine：go的协程(coroutine)，协程间需要通信、同步，是并行运行的(多处理器同时)，需要的内存极小，实际可以cpu核数减一来设置，给系统留下
     ```go
     go say("hello")
     go say("world")
     ```
+1. 认识
+   - 并行与并发：并发只是假装同时进行
+   - 协程调度模仿的就是linux的进程调度，在其之上自己实现了一套。m是machine相当于cpu，g相当于进程，g在m上运行，p按照规则自己给自己做调度，调度室代码+数据
+   - io密集的可以使用协程如读数据库，cpu密集的就不要了比如网站的逻辑层
+   - 协程的意义
+     1. 不必陷入内核态，而且占用资源少、切换快，堆当栈用
+     1. 其他操作耗时的时候让出cpu，不用等待
+     1. 给了我们自己调度的自由
 1. channel
-   - 认识：有类型的管道，用于协程间通信。默认另一端准备好之前发送和接收都会阻塞，使得goroutine可以在没有明确的锁或竞态变量的情况下同步
+   - 认识：有类型的管道，用于协程间通信。使得goroutine可以在没有明确的锁或竞态变量的情况下同步
+     1. 默认另一端准备好之前发送和接收都会阻塞
+     1. 无缓冲channel
+        - 读时没有数据会阻塞
+        - 没有取数据时goroutine会阻塞
+        - 读写不能放一个协程里，写读颠倒会死锁
+     1. 是nil的channel：发送、接收数据，造成永远阻塞 
+     1. 已关闭的channel
+        - 发送数据，引起panic 
+        - 接收数据，返回channel中缓存的值，如果通道中无缓存，返回0
+   - 定义
         ```go
         ch := make(chan int)
         ch <- v                     // 写
@@ -893,6 +740,11 @@
         // 单向通道
         var send chan <- int         // 只能发送
         var receive <- chan int      // 只能接收
+        ```
+   - 缓冲
+        ```go
+        ch := make(chan int, 100)   // 有缓冲通道，只有缓冲区满时才会阻塞，当缓冲区清空的时候接收操作会阻塞
+        ch := make(chan int)        // 无缓冲通道/同步通道，即通道大小为0，不会存储数据
         ```
    - 关闭
         ```go
@@ -908,11 +760,6 @@
         }
         for v := range ch{}         // 简便写法，不断从channel接收值，直到它被关闭
         ```
-   - 缓冲
-        ```go
-        ch := make(chan int, 100)   // 有缓冲通道，只有缓冲区满时才会阻塞，当缓冲区清空的时候接收操作会阻塞
-        ch := make(chan int)        // 无缓冲通道/同步通道，即通道大小为0，不会存储数据
-        ```
    - select：同时监听多个管道并收发消息，会阻塞直到条件分支中的某个可以继续执行。多个都准备好的随机选一个。可用于多个写入，一个读取场景
         ```go
         select {
@@ -922,12 +769,6 @@
             default:                                    // 其他分支没准备好的时候default分支会被执行，可用于非阻塞的发送或者接收
         }
         ```
-   - 特性
-     1. 无缓冲通道读时没有数据会阻塞，没有取数据时goroutine会阻塞，读写不能放一个协程里，写读颠倒会死锁
-     1. 给一个nil的channel发送数据，造成永远阻塞 
-     1. 从一个nil的channel接收数据，造成永远阻塞
-     1. 给一个已经关闭的channel发送数据，引起panic 
-     1. 从一个已经关闭的channel接收数据，返回channel中缓存的值，如果通道中无缓存，返回0
 1. sync
    - 同步器：`sync.WaitGroup`，是信号量，需要一个条件完成，才能继续
      1. 方法
@@ -951,7 +792,7 @@
      1. 互斥锁：`sync.Mutex`，保证同时只有一个goroutine能访问一个共享的变量从而避免冲突
         ```go
         c.mux.Lock()
-        c.v[key]++      // Lock 之后同一时刻只有一个goroutine能访问 c.v
+        c.v[key]++          // Lock 之后同一时刻只有一个goroutine能访问 c.v
         c.mux.Unlock()
         ```
      1. 读写互斥锁：`sync.RWMutex`
@@ -988,94 +829,159 @@
        1. .：点标识的包导入后，调用该包函数可以省略包名，不建议用，容易迷惑
        1. _：不导入整个包，只执行init函数，用来注册包中引擎
    - 导出：package，可执行命令必须使用main包
-1. errors
-   - `errors.New("xxxx")`
-1. unsafe
-   - 认识：不安全的直接操作内存，避免使用，只有两个类型，三个函数
-   - 组成
-     1. 类型
-        - `type ArbitraryType int`：int别名，代表一个任意go表达式类型
-        - `type Pointer *ArbitraryType`：int指针类型别名，可理解成任何指针的父类型
-     1. 函数
-        - `unsafe.Sizeof()`：接受任意类型的值或表达式，返回其占用的字节数    
-        - `func Offsetof(x ArbitraryType) uintptr`：返回结构体中元素所在内存的偏移量
-        - `func Alignof(x ArbitraryType) uintptr`：返回变量对齐字节数量，对齐因子
-   - 用法
-    ```go
-    // 修改、读取不可访问的私有变量
-    func GetDemoStruct() DemoStruct {                                                   // 获取一个DemoStruct对象
-        return DemoStruct{age: 21, Name: "hong", Id: 2, Man: false, china: true}
-    }
-    func changeUnreadField()  {                                                         // 修改不可读取的变量
-        demo := common.GetDemoStruct()
-        fmt.Println("demo is ",demo)
-        *(*uint8)(unsafe.Pointer(uintptr(unsafe.Pointer(&demo)) + 32) ) = 100           // 32是结构体的内存偏移量
-        fmt.Println("demo now is ",demo)
-    }
-
-    // 绕开编译器的对类型做强制转换
-    func Float64ToUint64(f float64) uint64 {
-        p := unsafe.Pointer(&f)                     // 拿到指向f的指针(通过f的地址拿到可操作的指针Pointer)
-        p2 := (*uint64) (p)                         // 将指针(*float)转换为uint64指针(*uint64)类型。因为uint64为无符号位，所有能够拿出当前64位bit内容
-        return * p2
-    }
-    
-    // 保存任意类型，用于系统函数交互、cgo等
-    syscall.Syscall(SYS_READ, uintptr(fd), uintptr(unsafe.Pointer(p)), uintptr(n))
-    ```
-   - 最佳实践
-     1. 类型转换必须是可相互转的类型，否则panic
-     1. uintptr指针失效
-        ```go
-        func UitptrDisable() {
-            demo := common.GetDemoStruct()
-            //引入临时变量
-            tmp := uintptr(unsafe.Pointer(&demo)) + 32
-            demoAge := (*uint8)(unsafe.Pointer(tmp))
-            demoAge = nil                                   //临时变量可能会被gc回收
-            *demoAge  = 98
-            fmt.Println("demo now is ",demo)
-        }
-        ```
-   - wiki
-     1. 内存对齐：每种类型占用内存不同，结构体8byte对齐，占不满8byte的不连续的独占，连续的n个类型共同8byte
-1. fmt
-   - `fmt.Println(xx1,xx2)`：连续打印
-1. strconv
-   - `strconv.Quote("xx")`：可以输出双引号
-1. time
-   - time
-     1. `time.Now()`
-     1. `time.Sleep(time.Second * 5)`
-1. os
-   - 目录：Mkdir/MkdirAll/Remove/RemoveAll：`os.Mkdir("a", 0777)`
-   - 文件
-     1. Create/NewFile
-     1. Open/OpenFile
-     1. Read/ReadAt
-     1. Write/WriteString
-     1. Remove
-   - Reader接口：go的标准库，包括了文件、网络连接、压缩、加密等实现
-     1. 方法：`func (T) Read(b []byte) (n int, err error)`，数据填充指定字节的slice，数据流结尾返回io.EOF错误
-        ```go
-        // 以每次8字节的速度读取
-        r := strings.NewReader("Hello, Reader!")
-        b := make([]byte, 8)
-        for {
-            n, err := r.Read(b)
-            fmt.Printf("n = %v err = %v b = %v\n", n, err, b)
-            fmt.Printf("b[:n] = %q\n", b[:n])
-            if err == io.EOF {
-                break
+1. 标准库
+   - 语法相关
+     1. unsafe
+        - 认识：不安全的直接操作内存，避免使用，只有两个类型，三个函数
+          1. 内存对齐：每种类型占用内存不同，结构体8byte对齐，占不满8byte的不连续的独占，连续的n个类型共同8byte
+        - 组成
+          1. 类型
+             - `type ArbitraryType int`：int别名，代表一个任意go表达式类型
+             - `type Pointer *ArbitraryType`：int指针类型别名，可理解成任何指针的父类型
+          1. 函数
+             - `unsafe.Sizeof()`：接受任意类型的值或表达式，返回其占用的字节数
+             - `func Offsetof(x ArbitraryType) uintptr`：返回结构体中元素所在内存的偏移量
+             - `func Alignof(x ArbitraryType) uintptr`：返回变量对齐字节数量，对齐因子
+        - 用法
+            ```go
+            // 修改、读取不可访问的私有变量
+            func GetDemoStruct() DemoStruct {                                                   // 获取一个DemoStruct对象
+                return DemoStruct{age: 21, Name: "hong", Id: 2, Man: false, china: true}
             }
-        }
-        ```
-1. bufio：os包的增强版，如可读取一行
-1. net、log
-   - 核心功能
-     1. Conn：使用goroutines保证请求独立性
-     1. ServeMux：数据路由
-   - web服务器
+            func changeUnreadField()  {                                                         // 修改不可读取的变量
+                demo := common.GetDemoStruct()
+                fmt.Println("demo is ",demo)
+                *(*uint8)(unsafe.Pointer(uintptr(unsafe.Pointer(&demo)) + 32) ) = 100           // 32是结构体的内存偏移量
+                fmt.Println("demo now is ",demo)
+            }
+
+            // 绕开编译器的对类型做强制转换
+            func Float64ToUint64(f float64) uint64 {
+                p := unsafe.Pointer(&f)                     // 拿到指向f的指针(通过f的地址拿到可操作的指针Pointer)
+                p2 := (*uint64) (p)                         // 将指针(*float)转换为uint64指针(*uint64)类型。因为uint64为无符号位，所有能够拿出当前64位bit内容
+                return * p2
+            }
+            
+            // 保存任意类型，用于系统函数交互、cgo等
+            syscall.Syscall(SYS_READ, uintptr(fd), uintptr(unsafe.Pointer(p)), uintptr(n))
+            ```
+        - 最佳实践
+          1. 类型转换必须是可相互转的类型，否则panic
+          1. uintptr指针失效
+            ```go
+            func UitptrDisable() {
+                demo := common.GetDemoStruct()
+                //引入临时变量
+                tmp := uintptr(unsafe.Pointer(&demo)) + 32
+                demoAge := (*uint8)(unsafe.Pointer(tmp))
+                demoAge = nil                                   //临时变量可能会被gc回收
+                *demoAge  = 98
+                fmt.Println("demo now is ",demo)
+            }
+            ```
+     1. reflect
+     1. fmt
+        - `fmt.Println(xx1,xx2)`：连续打印
+     1. errors
+        - `errors.New("xxxx")`
+     1. builtin：为go的预声明标识符提供文档
+     1. bytes：实现操作[]byte的常用函数
+     1. sort：切片、集合的排序操作
+     1. expvar：提供公共变量的标准接口
+   - 文本相关
+     1. text
+     1. encoding：编码
+        - json
+        - xml
+        - base64
+        - base32
+        - csv：csv读写逗号分隔值（csv）的文件.
+        - hex：hex包实现了16进制字符表示的编解码.
+        - binary：实现数字与字节序列的转换、变长值的编解码
+
+        - ascii85：ascii85数据编码
+        - asn1：DER编码的ASN.1数据结构
+        - gob：gob流——在编码器（发送器）和解码器（接受器）之间交换的binary值.
+        - pem：PEM数据编码
+     1. unicode：提供测试Unicode码点属性的数据和函数
+        - utf16
+        - utf8
+     1. html：转义和解转义HTML文本的函数
+        - template：实现数据驱动模板，用于生成可对抗代码注入的安全html输出
+     1. mime：实现了MIME的部分规定
+        - multipart：实现MIME的multipart解析
+        - quotedprintable
+
+     1. regexp：正则
+        - syntax
+     1. strings：操作字符
+     1. strconv：基本数据类型和其字符串表示的相互转换
+        - `strconv.Quote("xx")`：可以输出双引号
+   - 编码相关
+     1. compress：解压缩
+        - zlib
+        - gzip
+        - bzip2
+        - flate：deflate压缩数据格式
+        - lzw：Lempel-Ziv-Welch数据压缩格式
+     1. crypto：加解密
+        - rand：实现用于加解密的更安全的随机数生成器
+
+        - md5
+        - sha1
+        - sha256：实现SHA224和SHA256哈希算法
+        - sha512：实现SHA384和SHA512哈希算法
+
+        - des：实现DES标准和TDEA算法
+        - aes
+
+        - rsa：RSA加密算法
+        - dsa：DSA算法
+        - ecdsa：实现椭圆曲线数字签名算法
+
+        - hmac
+        - tls
+
+        - cipher：实现多个标准的用于包装底层块加密算法的加密算法实现
+        - elliptic：实现几条覆盖素数有限域的标准椭圆曲线
+        - rc4：RC4加密算法
+        - subtle
+        - x509：x509包解析X.509编码的证书和密钥.
+        - pkix：pkix包提供了共享的、低层次的结构体，用于ASN.1解析和X.509证书、CRL、OCSP的序列化.
+     1. hash：哈希函数
+        - adler32
+        - crc32
+        - crc64
+        - fnv：实现了FNV-1和FNV-1a（非加密hash函数）
+   - io相关
+     1. io：提供i/o原语的基础接口
+     1. bufio：带缓存增强版，如可读取一行
+     1. path：路径
+        - filepath：兼容各操作系统文件路径的实用操作函数
+     1. archive：文件解压缩
+        - `archive.tar`
+        - `archive.zip`
+   - net
+     1. 子包
+        - http：提供http客户端和服务端的实现
+          1. cgi：实现RFC3875协议描述的CGI（公共网关接口）
+          1. fcgi：实现FastCGI协议
+          1. httputil：提供http公用函数，是http的函数补充
+          1. cookiejar：实现保管在内存中的符合RFC 6265标准的httpCookieJar接口
+          1. pprof：pprof 包通过提供HTTP服务返回runtime的统计数据，这个数据是以pprof可视化工具规定的返回格式返回的
+          1. httptest：http测试的单元工具
+          1. httptrace
+        - url
+        - rpc
+          1. jsonrpc
+        - mail：解析邮件消息
+        - smtp：简单邮件传输协议
+        - textproto：实现对基于文本的请求/回复协议的一般性支持
+     1. 核心功能
+        - Conn：使用goroutines保证请求独立性
+        - ServeMux：数据路由
+     1. ip：`addr := net.ParseIP()`
+     1. web服务器
         ```go
         import (
             "log"
@@ -1112,32 +1018,100 @@
             log.Fatal(err)
         }
         ```
-   - ip：`addr := net.ParseIP()`
-1. image
-    ```go
-    m := image.NewRGBA(image.Rect(0, 0, 100, 100))
-	m.Bounds()
-	m.At(0, 0).RGBA()
-    ```
-1. math
-   - `math.Nextafter(2, 3)`
-   - `rand.Intn(10)`："math/rand"
-1. database/sql：数据库驱动的标准接口
-1. archive
-   - `archive.tar`
-   - `archive.zip`
-1. reflect
-1. runtime
-   - `runtime.GOMAXPROCS`：使用最大核心数
-   - `runtime.NumCPU`：cpu核心数
-   - `runtime.Gosched()`：使goroutine让出cpu时间片
-   - `runtime.Goexit()`：使goroutine立即终止
-   - 多线程
-     1. Goexit
-     1. Gosched
-     1. NumCPU
-     1. NumGoroutine
-     1. GOMAXPROCS
+   - 常用
+     1. time
+        - `time.Now()`
+        - `time.Sleep(time.Second * 5)`
+     1. database/sql：数据库驱动的标准接口
+   - 系统相关
+     1. os
+        - 子包
+          1. exec：执行外部命令
+          1. signal：对输入信号的访问
+          1. user：查询用户帐户
+        - 目录：Mkdir/MkdirAll/Remove/RemoveAll：`os.Mkdir("a", 0777)`
+        - 文件
+          1. Create/NewFile
+          1. Open/OpenFile
+          1. Read/ReadAt
+          1. Write/WriteString
+          1. Remove
+        - Reader接口：`func (T) Read(b []byte) (n int, err error)`，数据填充指定字节的slice，数据流结尾返回io.EOF错误
+            ```go
+            // 以每次8字节的速度读取
+            r := strings.NewReader("Hello, Reader!")
+            b := make([]byte, 8)
+            for {
+                n, err := r.Read(b)
+                fmt.Printf("n = %v err = %v b = %v\n", n, err, b)
+                fmt.Printf("b[:n] = %q\n", b[:n])
+                if err == io.EOF {
+                    break
+                }
+            }
+            ```
+     1. syscall
+     1. log：简单的日志服务
+        - syslog：简单的系统日志服务的接口
+     1. sync：互斥锁的同步原语
+        - atomic：底层的原子性内存原语
+   - 语言相关
+     1. runtime
+        - 子包
+          1. cgo：含有cgo工具生成的代码的运行时支持
+          1. debug：debug包含有程序在运行时调试其自身的功能
+          1. pprof：按照可视化工具pprof所要求的格式写出运行时分析数据
+          1. race：实现数据竞争检测逻辑
+          1. trace：Go execution tracer
+        - 组成
+          1. `runtime.GOMAXPROCS`：使用最大核心数
+          1. `runtime.NumCPU`：cpu核心数
+          1. `runtime.Gosched()`：使goroutine让出cpu时间片
+          1. `runtime.Goexit()`：使goroutine立即终止
+          1. NumGoroutine
+     1. go：语法包
+     1. debug：调试包
+        - dwarf
+        - elf
+        - gosym
+        - macho
+        - pe
+        - plan9obj
+     1. plugin：go的组件包
+     1. testing：go包的自动测试支持
+        - iotest
+        - quick
+   - 其他
+     1. container：数据结构
+        - heap：任意类型的堆操作
+        - list：双向链表
+        - ring：环形链表
+     1. flag：命令行标签解析
+     1. math
+        - 子包
+          1. big：大数的高精度运算
+          1. cmplx：为复数提供基本常量和数学函数
+          1. rand：伪随机数生成器
+        - 组成
+          1. `math.Nextafter(2, 3)`
+          1. `rand.Intn(10)`："math/rand"
+     1. image
+        - 子包
+          1. color：基本的颜色库
+             - palette：标准的调色板
+          1. draw：提供组装图片的方法
+          1. gif
+          1. jpeg
+          1. png
+        - 实例
+        ```go
+        m := image.NewRGBA(image.Rect(0, 0, 100, 100))
+        m.Bounds()
+        m.At(0, 0).RGBA()
+        ```
+     1. index	    	
+        - suffixarray：suffixarrayb包通过使用内存中的后缀树实现了对数级时间消耗的子字符串搜索
+1. 其他包
 ### 应用
 1. 文本处理
    - string：分割、连接、转换等
@@ -1232,7 +1206,7 @@
    - MySQL：github的go-sql-driver/mysql，beego的orm
    - NOSQL：github的garyburd/redigo
 1. web服务
-   - Socket：Socket数据传输是Unix特殊的I/O，分为流式Socket(SOCK_STREAM，面向连接，TCP)、数据报式Socket(SOCK_DGRAM，无连接，UDP)
+   - socket：Socket数据传输是Unix特殊的I/O，分为流式Socket(SOCK_STREAM，面向连接，TCP)、数据报式Socket(SOCK_DGRAM，无连接，UDP)
      1. tcp
         ```go
         // client
@@ -1279,9 +1253,9 @@
             conn.WriteToUDP([]byte(), addr)
         }
         ```
-     1. 控制连接：DialTimeout、SetReadDeadline、SetWriteDeadline、SetKeepAlive
-   - WebSocket：go.net子包有，`golang.org/x/net/websocket`
-   - RPC：标准包提供，支持三个级别：TCP、HTTP、JSONRPC，只支持go内部，使用Gob编码
+     1. 连接控制：DialTimeout、SetReadDeadline、SetWriteDeadline、SetKeepAlive
+   - webSocket：go.net子包有，`golang.org/x/net/websocket`
+   - rpc：标准包提供，支持三个级别：TCP、HTTP、JSONRPC，只支持go内部，使用Gob编码
      1. 访问条件：`func (t *T) MethodName(argType T1, replyType *T2) error`，T/T1/T2必须能被encoding/gob包编解码
         - 函数必须是导出的(首字母大写)
         - 必须有两个导出类型的参数，第一个参数是接收的参数，第二个参数是返回给客户端的参数，第二个参数必须是指针类型的
@@ -1390,15 +1364,7 @@
             C.print(cs)
         }
         ```
-### 中间件
-1. Sentinel
-   - 认识：面向分布式服务架构的高可用流量防护组件，以流量为切入点，从限流、流量整形、熔断降级、系统负载保护、热点防护等多个维度来帮助开发者保障微服务的稳定性
-     1. 承接ali的双11流量
-   - 生态：![avatar](../images/about_sentinel.png)
-1. Loaclcache：bigcache、fastcache、freecache、Caffeine
-   - Caffeine：基础存储没有采用复杂数据结构采用的是ConcurrentHashMap，所有的管理操作异步化、数据驱逐（淘汰）算法采用 W-TinyLFU，以及部分情况 LRF+LFU结合的方式，各种优秀的队列设计，冲突严重hash情况下链表降级采用红黑树来处理 等等优化处理
-1. 其他
-   - github.com/libi/dcron：基于一致性哈希的分布式定时任务库
+1. 测试：go test和testing包
 ### 运维
 1. 运行
    - 环境变量
@@ -1407,6 +1373,7 @@
         - src：源码目录，import时来src查找
         - bin：可执行命令，go get二进制文件下载的目的地
         - pkg：包对象，编译生成的lib文件存储的地方
+1. 依赖管理
    - module
      1. 认识：go Module，模块的版本管理工具，命令行支持modules操作，modules用来替换GOPATH的
      1. 组成
@@ -1483,34 +1450,34 @@
 1. 部署
    - supervisor来管理go程序，go自己用异常捕捉来处理
    - 打包linux的：`CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build main.go`
-### 实践
-1. 引号输出
-   - 使用反引号：`a := `"xx"``
-   - 使用转义：`a := "\"xx\""`
-   - 使用strconv包：`a := strconv.Quote("xx")`
 ### wiki
 1. 关键字和标识符、符号：程序一般由关键字、常量、变量、运算符、类型和函数组成
    - 关键字：25个
      1. var、const、map、struct、type
-     1. if、else、for、switch、fallthrough、select、break、continue、case、default、range
+     1. if、else、for、range、switch、case、fallthrough、break、continue、default
      1. goto、defer
      1. func、interface、return
-     1. go、chan
+     1. go、chan、select
      1. package、import
-   - 标识符：36个
-     1. 基础数据类型
-        - iota
-        - nil、bool、false、true、byte、string
-        - int、int8、int16、int32、int64、uint、uint8、uint16、uint32、uint64、uintptr、float32、float64、complex、complex64、complex128
-        - imag、panic、recover
-     1. 内嵌函数
-        - len、cap
-        - append、copy、delete
-        - print、println
-        - make、new
-        - panic、recover
-        - complex、real、imag
-        - close
+   - 标识符：39个
+     1. 分类
+        - 空白标识符：_，用作匿名占位
+        - 预先声明的标识符
+          1. 类型
+             - bool、byte、string、uintptr
+             - int、int8、int16、int32、int64、uint、uint8、uint16、uint32、uint64、float32、float64、complex64、complex128
+             - error、rune
+          1. 常量
+             - true、false、iota
+          1. 零值
+             - nil
+          1. 功能
+             - len、cap
+             - append、copy、delete
+             - print、println
+             - make、new、close
+             - panic、recover
+             - complex、real、image
 1. 历史
    - 07年开发
    - 09年开源
@@ -1522,12 +1489,3 @@
    - 语法糖
      1. ...：可变参数
      1. :=：声明、赋值、类型推断
-1. 测试：go test和testing包
-
-
-
-结构体指针方法和值方法在调用时形式上是没有区别的，只不过一个可以改变结构体内部状态，而另一个不会。指针方法使用结构体值变量可以调用，值方法使用结构体指针变量也可以调用。
-
-通过指针访问内部的字段需要 2 次内存读取操作，第一步是取得指针地址，第二部是读取地址的内容，它比值访问要慢。但是在方法调用时，指针传递可以避免结构体的拷贝操作，结构体比较大时，这种性能的差距就会比较明显。
-
-还有一些特殊的结构体它不允许被复制，比如结构体内部包含有锁时，这时就必须使用它的指针形式来定义方法，否则会发生一些莫名其妙的问题。

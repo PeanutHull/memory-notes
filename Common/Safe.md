@@ -198,6 +198,7 @@
    - 分类
      1. MD5：Message-Digest Algorithm 5，报文摘要算法，单向加密
      1. SHA：单向加密，SHA-256、SHA-1
+     1. HMAC：把key混入计算哈希的过程，对所有哈希算法都通用
 1. 对称加密算法
    - DES：Data Encryption Standard，对称加密标准，被AES替代
    - AES

@@ -172,6 +172,8 @@
    - 用8代替8个字符“ubernete”而成的缩写
    - 前端发布：k8s + skaffold + kaniko + gitops
    - 使用etcd作为数据库
+   - ingress相当于7层负载均衡器，工作原理类似nginx
+   - service为了访问pod方便，kube-proxy是service的一部分，有四种类型，可以实现接受外边的访问
 ### 云计算
 1. 认识
    - 云部署形式
