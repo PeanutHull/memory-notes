@@ -802,12 +802,7 @@
         - ssl_cipher/ssl_ciphers
         - ssl_protocol
         - ssl_curves
-        - 
-        - 
-        - 
-        - 
      1. 证书
-        - 
 1. fastcgi：`fastcgi.conf`
     ```conf
     fastcgi_param  SCRIPT_FILENAME    $document_root$fastcgi_script_name;

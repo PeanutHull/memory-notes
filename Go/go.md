@@ -577,6 +577,13 @@
 ### 面向对象
 1. struct
    - 理解：结构体，`type struct`，字段的组合
+     1. 字段标签：tag，不是注释是描述字段的元数据。不属于数据的组成部分是类型的组成部分
+        ```go
+        type user struct {
+            name string `昵称`
+            age  int    `年龄`
+        }
+        ```
      1. 结构体方法
         - 定义在结构体作用域外，在函数声明中指定接收者，除了基础类型或其他包的，可以在任意类型里定义方法
         - `func (variable_name variable_data_type) function_name() [return_type]{}`
@@ -823,11 +830,12 @@
             "fmt"
             "math"
             "math/rand"         // 导入某一个包
+
+            xx "math"           // 别名
+            . "math"            // 调用该包函数可省略包名，不建议用，容易迷惑
+            _ "math"            // 不导入整个包，只执行init函数，用来注册包中引擎
         )
         ```
-     1. 别名：`import xx/./_ "fmt"`
-       1. .：点标识的包导入后，调用该包函数可以省略包名，不建议用，容易迷惑
-       1. _：不导入整个包，只执行init函数，用来注册包中引擎
    - 导出：package，可执行命令必须使用main包
 1. 标准库
    - 语法相关
@@ -881,7 +889,17 @@
             ```
      1. reflect
      1. fmt
-        - `fmt.Println(xx1,xx2)`：连续打印
+        - 认识：类似c的printf和scanf的格式化I/O
+          1. 格式化动作('verb')源自c但更简单
+          1. scann扫描格式化文本以生成值
+        - 方法分类
+          1. print：输出到标准输出流，支持多个参数输出
+             - 后边加f：根据format参数，默认采用默认格式
+             - 前边加F：写入给定源，默认写入标准输出
+             - 后边加Ln：总是用空格分隔，并且加换行符
+             - 前边加S：返回该字符串
+          1. scann
+          1. Errorf 
      1. errors
         - `errors.New("xxxx")`
      1. builtin：为go的预声明标识符提供文档
@@ -968,7 +986,7 @@
           1. fcgi：实现FastCGI协议
           1. httputil：提供http公用函数，是http的函数补充
           1. cookiejar：实现保管在内存中的符合RFC 6265标准的httpCookieJar接口
-          1. pprof：pprof 包通过提供HTTP服务返回runtime的统计数据，这个数据是以pprof可视化工具规定的返回格式返回的
+          1. pprof：返回runtime的统计数据，返回pprof可视化工具规定的格式
           1. httptest：http测试的单元工具
           1. httptrace
         - url
@@ -1055,6 +1073,7 @@
         - syslog：简单的系统日志服务的接口
      1. sync：互斥锁的同步原语
         - atomic：底层的原子性内存原语
+     1. flag：命令行标签解析
    - 语言相关
      1. runtime
         - 子包
@@ -1086,7 +1105,6 @@
         - heap：任意类型的堆操作
         - list：双向链表
         - ring：环形链表
-     1. flag：命令行标签解析
      1. math
         - 子包
           1. big：大数的高精度运算
@@ -1145,6 +1163,28 @@
         if err != nil {
             return err.Error()
         }
+
+        // 另一个例子
+        type User struct {
+            Name        string `json:"name"`
+            Age         int    `json:"age,omitempty"`
+            IgnoreField int    `json:"-"`
+            ID          int64  `json:"id,string"`
+        }
+
+        u := User{
+            Name:        "zhangsan",
+            Age:         10,
+            IgnoreField: 88,
+            ID:          374827929374927394,
+        }
+
+        byts, err := json.Marshal(u)
+        if err != nil {
+            panic(err)
+        }
+
+        fmt.Println(string(byts))
         ```
      1. Unmarshal：反序列化
         - struct
@@ -1373,6 +1413,31 @@
         - src：源码目录，import时来src查找
         - bin：可执行命令，go get二进制文件下载的目的地
         - pkg：包对象，编译生成的lib文件存储的地方
+1. cli
+   - 基础
+     1. `go help`
+     1. `go version`
+   - 编写
+     1. `go env`：查看当前go的环境变量
+     1. `go fmt`：格式化代码文件，`gofmt -w src`格式化src下全部
+     1. `go doc`：用于查看文档
+     1. `go test`：自动读取源码目录下*_test.go文件，生成并运行测试用的可执行文件
+     1. `go fix`：转换老版本的代码到新版本
+   - 调试
+     1. `go bug`：调试
+     1. `go tool`
+        - `go tool compile -N -l -S main.go`：不优化编译，可用dlv调试
+     1. `go vet`：静态检查工具，项目快完成时进行优化
+   - 运行和编译
+     1. `go run hello.go`：进行高速编译，用作脚本语言
+     1. `go build`：用于测试编译，普通包不产生任何文件，main包生成可执行文件，会在GOROOT/src和GOPATH/src搜索包
+        - `go build -ldflags "-s -w"`：-s 去掉符号信息。-w 去掉DWARF调试信息
+        - `go build -gcflags "-N -l"`：关闭内联优化
+     1. `go install`：生成可执行文件，结果移到$GOPATH/pkg(bin)
+     1. `go clean`：移除当前源码包里面编译生成的文件
+   - 模块
+     1. `go get`：动态获取远程代码包，下载和install，下载到GOROOT/src
+     1. `go list`：查看安装的packag
 1. 依赖管理
    - module
      1. 认识：go Module，模块的版本管理工具，命令行支持modules操作，modules用来替换GOPATH的
@@ -1395,10 +1460,9 @@
           1. 打印：`go mod graph`
           1. 展示依赖关系：`go mod why`
         - 操作
-          1. 下载：`go get`
-          1. 下载：`go build`
-          1. 编辑：`go mod edit -module/require/version/print xx`
+          1. 下载：`go get/build`
           1. 下载：`go mod download`
+          1. 编辑：`go mod edit -module/require/version/print xx`
           1. 将依赖放入vendor目录：`go mod vendor`，将GOPATH分开，用于打包构建
           1. 验证：`go mod verify`
           1. 整理：`go mod tidy`，需要的加，不要的删
@@ -1407,7 +1471,7 @@
      1. 组成
         - `Gopkg.toml`：配置文件，可以手工修改
         - `Gopkg.lock`
-        - vendor：依赖管理目录，vendor属性是go编译时，先从项目根目录的vendor目录查找代码，有则不再去GOPATH中去查找
+        - vendor：依赖管理目录，vendor属性是go编译时，先从项目根目录的vendor目录查找代码，有则不再去GOPATH中查找
      1. 命令
         - `dep init`：初始化新项目
         - `dep status`
@@ -1422,31 +1486,6 @@
         - glide：glide.yaml、glide.lock，官方建议迁移到dep
         - govendor
         - gvt
-1. cli
-   - 基础
-     1. `go help`
-     1. `go version`
-   - 编写
-     1. `go env`：查看当前go的环境变量
-     1. `go fmt`：格式化代码文件，`gofmt -w src`格式化全部
-     1. `go doc`：用于查看文档
-     1. `go test`：自动读取源码目录下*_test.go文件，生成并运行测试用的可执行文件
-     1. `go fix`：转换老版本的代码到新版本
-   - 调试
-     1. `go bug`：调试
-     1. `go tool`：pprof性能检查工具，cgo跟C语言和GO语言有关的命令
-        - `go tool compile -N -l -S main.go`：不优化编译，可用dlv调试
-     1. `go vet`：静态检查工具，项目快完成时进行进行优化
-   - 运行和编译
-     1. `go run hello.go`
-     1. `go build`：用于测试编译，普通包不产生任何文件，main包生成可执行文件，会在GOROOT/src和GOPATH/src搜索包
-        - `go build -ldflags "-s -w"`：-s 去掉符号信息。-w 去掉DWARF调试信息
-        - `go build -gcflags "-N -l"`：关闭内联优化
-     1. `go install`：生成可执行文件，结果移到$GOPATH/pkg(bin)
-     1. `go clean`：移除当前源码包里面编译生成的文件
-   - 模块
-     1. `go get`：动态获取远程代码包，下载和install，下载到GOROOT/src
-     1. `go list`：查看安装的packag
 1. 部署
    - supervisor来管理go程序，go自己用异常捕捉来处理
    - 打包linux的：`CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build main.go`
@@ -1471,10 +1510,10 @@
              - true、false、iota
           1. 零值
              - nil
-          1. 功能
+          1. 方法
              - len、cap
              - append、copy、delete
-             - print、println
+             - print、println：输出到标准错误流，不建议写程序使用，debug可以用
              - make、new、close
              - panic、recover
              - complex、real、image
