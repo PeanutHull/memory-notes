@@ -1413,13 +1413,28 @@
         - src：源码目录，import时来src查找
         - bin：可执行命令，go get二进制文件下载的目的地
         - pkg：包对象，编译生成的lib文件存储的地方
+     1. GO111MODULE：mod功能是否打开
+        - off：使用$GOPATH/src或vendor
+        - on：在$GOPATH/src不找也不存放，放在$GOPATH/pkg/mod，多项目可共享
+        - auto：检测到go.mod就开启
+     1. CGO_ENABLED
+     1. 代理
+        - `GOPROXY=https://proxy.golang.org,direct|off`
+          1. 多个代理逗号分隔
+          1. direct：回源到模块版本的源地址去抓取
+        - `GOSUMDB=sum.golang.org|off`：校验是否被篡改
+
+        - `GOPRIVATE=*.100tal.com`：设置不走代理的，GOPRIVATE会作为另外俩的默认值
+        - `GONOPROXY=*.100tal.com`
+        - `GONOSUMDB=*.100tal.com`
 1. cli
    - 基础
      1. `go help`
      1. `go version`
    - 编写
      1. `go env`：查看当前go的环境变量
-     1. `go fmt`：格式化代码文件，`gofmt -w src`格式化src下全部
+     1. `go fmt`：格式化代码文件
+        - `gofmt -w src`：格式化src下全部
      1. `go doc`：用于查看文档
      1. `go test`：自动读取源码目录下*_test.go文件，生成并运行测试用的可执行文件
      1. `go fix`：转换老版本的代码到新版本
@@ -1427,65 +1442,105 @@
      1. `go bug`：调试
      1. `go tool`
         - `go tool compile -N -l -S main.go`：不优化编译，可用dlv调试
-     1. `go vet`：静态检查工具，项目快完成时进行优化
+        - `go tool pprof`：性能检查工具
+        - `go tool cover`
+        - `go tool cgo`
+     1. `go vet`：静态错误检查
    - 运行和编译
      1. `go run hello.go`：进行高速编译，用作脚本语言
-     1. `go build`：用于测试编译，普通包不产生任何文件，main包生成可执行文件，会在GOROOT/src和GOPATH/src搜索包
-        - `go build -ldflags "-s -w"`：-s 去掉符号信息。-w 去掉DWARF调试信息
-        - `go build -gcflags "-N -l"`：关闭内联优化
+     1. `go build`
+        - 认识：用于测试编译
+          1. 会同时编译依赖包，会在GOROOT/src和GOPATH/src搜索包，默认编译当前目录下的所有go文件，可指定要编译的文件名，会忽略_或.开头的go文件，会根据当前系统选择性地编译以系统名结尾的文件(_linux|darwin|windows|freebsd.go)
+          1. 普通包不产生任何文件只做检查性编译，main包生成可执行文件
+        - 参数
+          1. -v：打印包名
+          1. -o：指定输出的可执行文件
+          1. -ldflags "-s -w"：-s 去掉符号信息。-w 去掉DWARF调试信息
+          1. -gcflags "-N -l"：关闭内联优化
      1. `go install`：生成可执行文件，结果移到$GOPATH/pkg(bin)
-     1. `go clean`：移除当前源码包里面编译生成的文件
+     1. `go clean`：移除当前源码包里面编译生成的文件，如_obj/、_test/、test.out
    - 模块
-     1. `go get`：动态获取远程代码包，下载和install，下载到GOROOT/src
+     1. `go get`
+        - 认识：动态获取远程代码包，包含下载和安装。本质是先通过源码工具clone代码到GOROOT/src目录，然后执行go install
+          1. 会回写go.mod文件，更新直接的模块依赖
+          1. 会自动根据不同域名调用不同源码工具，如git或svn
+        - 参数
+          1. `golang.org/x/text@latest`：指定版本
+             - latest：拉取最新的版本，若存在tag，则优先使用
+             - master：拉取 master 分支的最新 commit
+             - v0.3.2：指定tag
+             - 342b2e：指定commit，最终转换为tag
+          1. `-u`：更新直接或间接的依赖模块
+          1. `-u -t ./...`：更新所有直接依赖和间接依赖的模块版本，包括单元测试中用到的
      1. `go list`：查看安装的packag
 1. 依赖管理
-   - module
-     1. 认识：go Module，模块的版本管理工具，命令行支持modules操作，modules用来替换GOPATH的
+   - Go Module
+     1. 认识：官方的包依赖版本管理工具，前身vgo
+        - 支持vendor、GOPATH
+        - go命令内置对模块的支持
+        - 至少1.11及以上版本，最好1.13或以上，撑13以下是老版本，哈哈
      1. 组成
         - go.mod文件，可以将工程从GOPATH中移出来
-            ```
-            module rsc.io/hello
+            ```conf
+            module rsc.io/hello                                             // 模块名
 
             go 1.12
 
             require (
-                "golang.org/x/text" v0.0.0-20180208041248-4e4a3210bb54
-                "rsc.io/quote" v1.5.2
+                golang.org/x/text v0.0.0-20180208041248-4e4a3210bb54
+                rsc.io/quote v1.5.2
+                github.com/BurntSushi/toml v0.4.1 // indirect               // 表示该模块为间接依赖
             )
+
+            replace (                                                       // 指定替换包
+                golang.org/x/text => github.com/golang/text v0.3.0
+            )
+            exclude example.com/thismodule v1.3.0                           // 从使用中排除特定模块版本
             ```
         - go.sum文件：用来校验文件，都是命令行自动操作
-     1. 使用
-        - 初始化：`go mod init`
-        - 查看
-          1. 打印：`go mod graph`
-          1. 展示依赖关系：`go mod why`
-        - 操作
-          1. 下载：`go get/build`
-          1. 下载：`go mod download`
-          1. 编辑：`go mod edit -module/require/version/print xx`
-          1. 将依赖放入vendor目录：`go mod vendor`，将GOPATH分开，用于打包构建
-          1. 验证：`go mod verify`
-          1. 整理：`go mod tidy`，需要的加，不要的删
-   - 依赖管理
-     1. 认识：dep，实现了tag管理代码，而不是trunk/mainline，如go get下载的代码，依赖管理工具为应用管理代码，go get为GOPATH管理代码
-     1. 组成
-        - `Gopkg.toml`：配置文件，可以手工修改
-        - `Gopkg.lock`
-        - vendor：依赖管理目录，vendor属性是go编译时，先从项目根目录的vendor目录查找代码，有则不再去GOPATH中查找
-     1. 命令
-        - `dep init`：初始化新项目
-        - `dep status`
-        - `dep check`：检查toml和lock文件是否同步
-        - `dep ensure`
-          1. `dep ensure`：安装依赖
-          1. `dep ensure -update`：更新依赖
-          1. `dep ensure -add github.com/pkg/errors`：添加依赖
-        - `dep version`：dep的版本
-     1. 其他依赖管理工具
-        - godep：Godeps/Godeps.json
-        - glide：glide.yaml、glide.lock，官方建议迁移到dep
-        - govendor
-        - gvt
+     1. 命令：`go mod <command> [arguments]`
+        - init：初始化
+
+        - tidy：整理，需要的加，不要的删
+        - download：下载
+        - edit -module/require/version/print xx：手动修改依赖文件
+        - vendor：导出依赖放入vendor目录
+        - verify：验证是否被篡改过
+
+        - graph：查看现有的依赖结构
+        - why：查看为什么需要依赖某模块
+   - 发展
+     1. 阶段
+        - GOPATH：所有包放GOPATH目录下，无法支持不同版本包存在
+        - Vendor：工程子目录存放依赖包，没有版本记录
+        - Module：官方指定默认开启
+     1. 时间线
+        - 13年：Godep
+        - 16年：vendor机制 默认开启，v1.6
+        - 17年：Dep作为准官方试验
+        - 18年：Modules作为官方试验，v1.11
+        - 19年：默认开启Go Mod，v1.13
+   - 其他
+     1. dep
+        - 认识：实现了tag管理代码，而不是trunk/mainline，如go get下载的代码
+          1. 依赖管理工具为应用管理代码，而go get为GOPATH管理代码
+        - 组成
+          1. `Gopkg.toml`：配置文件，可以手工修改
+          1. `Gopkg.lock`
+          1. vendor：依赖管理目录，vendor属性是go编译时，先从项目根目录的vendor目录查找代码，有则不再去GOPATH中查找
+        - 命令
+          1. `dep init`：初始化新项目
+          1. `dep status`
+          1. `dep check`：检查toml和lock文件是否同步
+          1. `dep ensure`
+             - `dep ensure`：安装依赖
+             - `dep ensure -update`：更新依赖
+             - `dep ensure -add github.com/pkg/errors`：添加依赖
+          1. `dep version`：dep的版本
+     1. godep：Godeps/Godeps.json
+     1. glide：glide.yaml、glide.lock，官方建议迁移到dep
+     1. govendor
+     1. gvt
 1. 部署
    - supervisor来管理go程序，go自己用异常捕捉来处理
    - 打包linux的：`CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build main.go`

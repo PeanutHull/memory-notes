@@ -179,3 +179,16 @@
 ### API
 1. GraphQL：用于api接口的查询语言，client可自由获取、组合server提前定义好的数据，提高了接口的灵活性。可替代rest，玩不转，后端太重
 1. APIJSON：
+### brew
+1. brew update
+
+1. brew info/search：查看
+
+1. brew install go@1.16.8：安装指定版本
+1. brew upgrade go：安装最新版
+
+1. brew switch go 1.17.1：切换版本
+1. brew unlink go：将当前软链移除
+1. brew link go@1.12：指定新的软链
+
+1. brew cleanup go
