@@ -1436,8 +1436,11 @@
      1. `go fmt`：格式化代码文件
         - `gofmt -w src`：格式化src下全部
      1. `go doc`：用于查看文档
+     1. `godoc -http=:8080`：生成本机的go官网，可用浏览器打开
      1. `go test`：自动读取源码目录下*_test.go文件，生成并运行测试用的可执行文件
      1. `go fix`：转换老版本的代码到新版本
+     1. `go generate`：用于在编译前自动化生成某类代码
+        - 写法举例：`//go:generate go tool yacc -o gopher.go -p parser gopher.y`
    - 调试
      1. `go bug`：调试
      1. `go tool`
@@ -1457,21 +1460,26 @@
           1. -o：指定输出的可执行文件
           1. -ldflags "-s -w"：-s 去掉符号信息。-w 去掉DWARF调试信息
           1. -gcflags "-N -l"：关闭内联优化
-     1. `go install`：生成可执行文件，结果移到$GOPATH/pkg(bin)
+     1. `go install`：编译和安装，将编译好的结果移到$GOPATH/pkg或$GOPATH/bin。.a移到$GOPATH/pkg，可执行文件移到$GOPATH/bin中，给$GOPATH/bin添加PATH就可以直接执行了
+        - `go install example.com/pkg@v1.2.3`：指定版本，忽略mod文件
      1. `go clean`：移除当前源码包里面编译生成的文件，如_obj/、_test/、test.out
    - 模块
      1. `go get`
-        - 认识：动态获取远程代码包，包含下载和安装。本质是先通过源码工具clone代码到GOROOT/src目录，然后执行go install
+        - 认识：动态获取远程代码包，包含clone和install，不推荐使用。本质是先通过源码工具clone代码到GOROOT/src目录，然后执行go install
           1. 会回写go.mod文件，更新直接的模块依赖
           1. 会自动根据不同域名调用不同源码工具，如git或svn
         - 参数
-          1. `golang.org/x/text@latest`：指定版本
+          1. 支持build的参数
+          1. `golang.org/x/text@latest`：指定包名和版本
              - latest：拉取最新的版本，若存在tag，则优先使用
              - master：拉取 master 分支的最新 commit
              - v0.3.2：指定tag
              - 342b2e：指定commit，最终转换为tag
-          1. `-u`：更新直接或间接的依赖模块
-          1. `-u -t ./...`：更新所有直接依赖和间接依赖的模块版本，包括单元测试中用到的
+             - none：
+          1. `-u`：强制使用网络更新直接或间接的依赖模块
+          1. `-t ./...`：包括单元测试中用到的
+          1. `-d`：不构建或安装，只下载
+          1. `-v`：显示执行的命令
      1. `go list`：查看安装的packag
 1. 依赖管理
    - Go Module
@@ -1511,7 +1519,7 @@
         - why：查看为什么需要依赖某模块
    - 发展
      1. 阶段
-        - GOPATH：所有包放GOPATH目录下，无法支持不同版本包存在
+        - GOPATH：所有包必须放GOPATH目录下，无法支持不同版本包存在
         - Vendor：工程子目录存放依赖包，没有版本记录
         - Module：官方指定默认开启
      1. 时间线
