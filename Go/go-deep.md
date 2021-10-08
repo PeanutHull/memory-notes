@@ -101,3 +101,7 @@
    - 调度算法：优先级、时间片
    - 特性
      1. 逃逸分析
+### wiki
+1. goyacc：和yacc的功能一样，根据输入的语法规则文件，生成该语法规则的golang版的yacc
+   - Lex & Yacc：用来生成词法分析器和语法分析器的工具，yacc用c写的
+     1. Flex&Bison：Flex是由Vern Paxon实现的一个Lex，Bison则是GNU版本的YACC

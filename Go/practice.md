@@ -1,0 +1,73 @@
+### 框架
+1. beego
+   - 用于开发api、web的http框架，自带orm，大而全，最后一次更新20年12月
+     1. 简单：RESTFul、mvc，支持热编译，自动化打包
+     1. 智能：路由、监控
+     1. 模块：Session、缓存、日志、配置解析、性能监控、上下文操作、ORM 模块、请求模拟
+     1. 性能：原生http包、goroutine
+   - 架构
+     1. cache
+     1. config
+     1. context
+     1. httplibs
+     1. logs
+     1. orm
+     1. session
+     1. toolbox
+   - 组成
+     1. mvc
+     1. 路由
+     1. orm
+     1. 配置
+     1. 模块
+     1. 进程内监控
+     1. 部署
+        - 独立部署：`nohup ./beepkg &`
+        - supervisor部署
+        - nginx反向代理
+1. Gin：以更好的性能实现类似Martini框架的API，5万star
+   - 简洁
+   - 高性能路由
+1. Echo：简约、高性能，2万star
+1. Iris：最快，完善的mvc
+1. Buffalo：快速构建web
+1. Revel：高效、全栈
+1. Martini：轻巧、功能强大、模块化web，不再维护
+### ORM
+1. gorm
+1. xorm
+1. ent
+### 日志
+1. logrus：最活跃的日志库
+1. zap：日志库
+### 微服务
+1. 非常适合微服务
+### 库、中间件
+1. Sentinel
+   - 认识：面向分布式服务架构的高可用流量防护组件，以流量为切入点，从限流、流量整形、熔断降级、系统负载保护、热点防护等多个维度来帮助开发者保障微服务的稳定性
+     1. 承接ali的双11流量
+   - 生态：![avatar](../images/about_sentinel.png)
+1. Loaclcache：bigcache、fastcache、freecache、Caffeine
+   - Caffeine：基础存储没有采用复杂数据结构采用的是ConcurrentHashMap，所有的管理操作异步化、数据驱逐（淘汰）算法采用 W-TinyLFU，以及部分情况 LRF+LFU结合的方式，各种优秀的队列设计，冲突严重hash情况下链表降级采用红黑树来处理 等等优化处理
+1. Viper：配置信息处理框架，各种文件格式、环境变量、ETCD等，检测文件变动
+1. fsnotify：viper的内部就是fsnotify
+1. 其他
+   - github.com/libi/dcron：基于一致性哈希的分布式定时任务库
+   - NSQ
+   - GoDotEnv：Ruby dotenv项目的go版本
+     1. 支持yaml语法
+     1. 支持不写入环境变量，使用`myEnv, err := godotenv.Read()`读取
+### wiki
+1. 脚手架
+   - 认识：比喻各类语言的前期工作环境，方便直接进行开发
+   - 组成举例
+     1. git代码管理工具
+     1. gin框架
+     1. gorm操作数据库
+     1. godotenv加载
+     1. go-playground/validator
+     1. golang-jwt/jwt
+     1. logker日志库 
+1. 目标
+   - 编码能力和质量
+   - 并发编程实践、设计模式实践
