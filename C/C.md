@@ -643,7 +643,79 @@
     };
     #endif
     ```
-### 编译
+### 构建
+1. c的编译过程
+   - 编译
+     1. 预处理：生成.i预编译文件
+        - 删除所有#define，并展开所有的宏定义
+        - 处理所有条件编译指令，#ifdef #ifndef #endif等
+        - 处理#include，将#include指向的文件插入到该行处
+        - 删除所有注释
+        - 添加行号和文件标示。这样在调试和编译出错的时候才能定位问题
+     1. 编译：生成.s汇编文件
+        - 词法分析
+        - 语法分析
+        - 语义分析
+        - 源代码转为汇编代码
+     1. 汇编：生成.o机器指令
+   - 链接：多文件组合
+     1. 根据链接时机
+        - 静态链接
+          1. 认识：程序执行前完成所有的组装工作，一起打包到可执行文件中。windows的库后缀为.lib，Linux的库后缀为.a
+          1. 特点
+             - 在编译时期完成
+             - 程序在运行时与函数库再无联系，移植方便
+             - 浪费空间和资源，更新、部署、发布麻烦
+          1. 示例
+            ```c
+            // 将源代码编译成.o文件
+            gcc -c test1.c -o test1.o
+            // 将.o文件使用ar工具，生成静态链接库
+            ar crv libtest1_lib.a test1.o
+            // 调用静态链接库
+            gcc main.c -o main -I ./ -L ./ -ltest1_lib
+            -I：指定头文件路径
+            -L：指定静态链接库的路径
+            -l：指定静态链接库名字
+            ```
+        - 动态链接
+          1. 认识：程序已经执行被装入内存之后完成链接工作，内存中一般只保留该编译单元的一份拷贝。windows的库后缀为.dll，Linux的库后缀为.so
+          1. 特点
+             - 节省空间
+             - 可实现增量更新
+             - 可通过显式调用，实现自由控制
+          1. 示例
+             - 生成.so库：`gcc -fPIC -shared test1.c -o libtest1_lib.so`
+               1. -fPIC：告诉编译器产生与位置无关代码。即产生的代码中，没有绝对地址，全部使用相对地址，故而代码可以被加载器加载到内存的任意位置，都可以正确的执行。这正是共享库所要求的，共享库被加载时，在内存的位置不是固定的。PIC是简写
+               1. -shared：为生成共享目标文件
+             - 隐式调用
+               1. export LD_LIBRARY_PATH=$(pwd)：通过export将LD_LIBRARY_PATH环境变量设置为当前目录
+               1. gcc main.c -o main -I ./ -L ./ -ltest1_lib：同静态链接库一样，调用动态链接库
+             - 显式调用：用到dlfcn.h头文件，dlopen等函数
+                ```c
+                #include "stdio.h"
+                #include <dlfcn.h>
+
+                void main()
+                {
+                    void* handler = dlopen("./libtest1_lib.so",RTLD_NOW | RTLD_DEEPBIND);
+
+                    if(dlerror() != NULL)
+                    {
+                            printf("%s",dlerror());
+                        }
+
+                    void(*test1_fun)()=dlsym(handler,"test1_fun");
+                        if(dlerror()!=NULL)
+                    {
+                        printf("%s",dlerror());
+                        }
+
+                    test1_fun();
+
+                    dlclose(handler);
+                }
+                ```
 1. 预处理器
    - 认识；CPP，C Preprocessor，不是编译器的组成，是编译过程一个单独的步骤，不做语法检查，就是简单的文本替换，没有运行，没有优先级，没有参数类型
      1. 处理流程：映射字符到字符集，合并换行符\，划分为不同序列(空格替换注释)

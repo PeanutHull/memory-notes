@@ -356,7 +356,6 @@
 1. scapy：数据包构造工具
 1. Dash：数据可视化，Flask，Plotly.js，React.js的混合体
 1. Pygame：是SDL多媒体库的Python装饰器
-   - SDL：Simple DirectMedia Layer，是一个跨平台开发库，旨在提供对以下内容的低级接口，音频、键盘、鼠标、游戏杆、基于OpenGL和Direct3D的图形硬件
 1. Pillow：处理图，缩略图、文件格式转换、旋转、应用滤镜等
 1. Colorama：允许在终端使用颜色
 1. JmesPath/：json增强处理器

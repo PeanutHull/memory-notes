@@ -288,7 +288,101 @@
    - 使用反引号：`a := `"xx"``
    - 使用转义：`a := "\"xx\""`
    - 使用strconv包：`a := strconv.Quote("xx")`
+1. 函数可选参数实践
+    ```go
+    // 使用NewQueue，动态改变可选的新参数的方法
+    // 用新的方法处理不同情况下不同的参数，NewQueue相当于一个代理方法
+
+
+    type Queue struct {
+        Name     string
+        MaxLimit int
+
+        // monitor
+        MonitorInterval int
+    }
+
+    type QueueOption func(*Queue)
+
+    func WithMaxLimit(max int) QueueOption {
+        return func(q *Queue) {
+            q.MaxLimit = max
+        }
+    }
+
+    func WithMonitorInterval(seconds int) QueueOption {
+        return func(q *Queue) {
+            q.MonitorInterval = seconds
+        }
+    }
+
+    func NewQueue(name string, options ...QueueOption) *Queue {
+        queue := &Queue{name, 10, 5}
+
+        for _, o := range options {
+            o(queue)
+        }
+
+        return queue
+    }
+    ```
 ### 应用demo
+1. 读取二进制的bmp文件头
+    ```go
+    import (
+        "encoding/binary"
+        "fmt"
+        "os"
+    )
+
+    type BitmapInfoHeader struct {
+        Size           uint32 // 结构体大小
+        Width          int32  // 宽度
+        Height         int32  // 高度
+        Planes         uint16 // 面， 恒定为1
+        BitCount       uint16 // 每个像素占用的字节数
+        Compression    uint32 // 压缩类型
+        SizeImage      uint32 // 图形大小
+        XPerlsPerMeter int32  // 水平分辨率 每米的像素数
+        YPerlsPerMeter int32  // 每米的像素数
+        ClrUsed        uint32 // 颜色数
+        ClrImportant   uint32 // 调色版
+    }
+
+    func main() {
+        // 读取文件
+        file, err := os.Open("image.bmp")
+        if err != nil {
+            fmt.Println(err)
+            return
+        }
+
+        // 逐个部门一点点读取属性
+        var headA, headB byte                                   // 读文件头，为 BM
+        binary.Read(file, binary.LittleEndian, &headA)
+        binary.Read(file, binary.LittleEndian, &headB)
+
+        var size uint32                                         // 读文件大小
+        binary.Read(file, binary.LittleEndian, &size)
+
+        var reserveA, reserveB uint16
+        binary.Read(file, binary.LittleEndian, &reserveA)
+        binary.Read(file, binary.LittleEndian, &reserveB)
+
+        var offbits uint32                                      // 读偏移数据，文件真正开始的地方
+        binary.Read(file, binary.LittleEndian, &offbits)
+
+        fmt.Println(headA, headB, size, reserveA, reserveB, offbits)
+
+        // 读接下来的数据：构造好结构体绑定，一次性获取属性，快速
+        infoHeader := new(BitmapInfoHeader)
+        if err := binary.Read(file, binary.LittleEndian, infoHeader); err != nil {
+            fmt.Println(err)
+            return
+        }
+        fmt.Println(infoHeader)
+    }
+    ```
 1. 自定义时间格式
     ```go
     en["date_format"]="%Y-%m-%d %H:%M:%S"

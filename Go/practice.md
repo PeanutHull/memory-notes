@@ -49,6 +49,15 @@
    - 生态：![avatar](../images/about_sentinel.png)
 1. Loaclcache：bigcache、fastcache、freecache、Caffeine
    - Caffeine：基础存储没有采用复杂数据结构采用的是ConcurrentHashMap，所有的管理操作异步化、数据驱逐（淘汰）算法采用 W-TinyLFU，以及部分情况 LRF+LFU结合的方式，各种优秀的队列设计，冲突严重hash情况下链表降级采用红黑树来处理 等等优化处理
+1. grace
+   - 认识：零停机部署的开源库，facebook开发
+     1. 优雅重启：SIGUSR2
+     1. 优雅结束：SIGTERM
+   - 过程
+     1. 构造server
+     1. 设置ConnState，监听各连接的状态变化
+     1. 启动新协程，接管各chan信号
+     1. 在新协程中正式启动服务
 1. Viper：配置信息处理框架，各种文件格式、环境变量、ETCD等，检测文件变动
 1. fsnotify：viper的内部就是fsnotify
 1. 其他
@@ -71,3 +80,6 @@
 1. 目标
    - 编码能力和质量
    - 并发编程实践、设计模式实践
+1. 架构方案
+   - 千万级WebSocket消息推送服务
+     1. http2支持连接复用，可以在单个连接上可以实现高吞吐的通讯，作为内部通讯rpc很适合

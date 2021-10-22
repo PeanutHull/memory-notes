@@ -83,13 +83,120 @@
      1. 类型零值：变量无初始化时的默认值，可以表现为0，false，""，nil
      1. 类型推导：不指定其类型时，由右值推导得出
      1. 类型转换：T(v)，将值v转换为类型T，不同类型相互转换的时候需要显式转换
-     1. 类型别名：`type aInt int`
+     1. 类型别名：type可以定义任何自定义的类型
    - 实例
     ```go
-    // 声明类型
-    type aInt int                           // 一般类型声明，相当于类型别名
+    // 声明自定义类型
     type aStruct struct {}
     type Ia interface{}
+
+    type aInt int                           // 一般类型声明，相当于类型别名。类型别名与原类型是两种类型，不能直接操作，需要进行类型转换
+    type 字符串 = string
+    type myFunc func(int) int               // 自定义一个叫myFunc的函数类型，函数的签名必须符合输入为int，输出为int。有时会使代码更加简洁
+    newFunc := myFunc(sum10)                // newFunc是一个变量，变量类型为myFunc，值为sum10函数
+
+    // 给新加的自定义int类型添加方法
+    type myInt int
+ 
+    func (mi myInt) IsZero() bool {
+        return mi == 0
+    }
+    
+    func main() {
+        var a myInt
+        a = 0
+        fmt.Println(a.IsZero())        // true
+    }
+
+    // 给新加的自定义函数添加方法
+    type myFunc func(int) int
+ 
+    func (mf myfunc) sum(a,b int) int {
+        c := a + b
+        return mf(c)
+    }
+
+    type myFunc func(int) int
+ 
+    // 用处举例：外部注入(干预)自定义handlerSum函数的执行过程
+        1. 不变的共用的是sum方法
+        1. 可以使得handlerSum接受的外部更抽象化，只要是继承实现了sum接口的变量就可以了，可以是一个struct变量，也可以是一个自定义函数类型变量
+    func (f myFunc) sum (a, b int) int {
+        res := a + b
+        return f(res)
+    }
+    
+    func sum10(num int) int {
+        return num * 10
+    }
+    
+    func sum100(num int) int {
+        return num * 100
+    }
+    
+    func handlerSum(handler myFunc, a, b int) int {
+        res := handler.sum(a, b)
+        fmt.Println(res)
+        return res
+    }
+    
+    func main() {
+        newFunc1 := myFunc(sum10)
+        newFunc2 := myFunc(sum100)
+    
+        handlerSum(newFunc1, 1, 1)    // 20
+        handlerSum(newFunc2, 1, 1)    // 200
+    }
+
+    // 抽象化封装
+    type sumable interface {
+        sum(int, int) int
+    }
+    
+    // myFunc继承sumable接口
+    type myFunc func(int) int
+    
+    func (f myFunc) sum (a, b int) int {
+        res := a + b
+        return f(res)
+    }
+    
+    func sum10(num int) int {
+        return num * 10
+    }
+    
+    func sum100(num int) int {
+        return num * 100
+    }
+    
+    // icansum结构体继承sumable接口
+    type icansum struct {
+        name string
+        res int
+    }
+    
+    func (ics *icansum) sum(a, b int) int {
+        ics.res = a + b
+        return ics.res
+    }
+    
+    // handler只要是继承了sumable接口的任何变量都行，我只需要你提供sum函数就好
+    func handlerSum(handler sumable, a, b int) int {
+        res := handler.sum(a, b)
+        fmt.Println(res)
+        return res
+    }
+    
+    func main() {
+        newFunc1 := myFunc(sum10)
+        newFunc2 := myFunc(sum100)
+    
+        handlerSum(newFunc1, 1, 1)    // 20
+        handlerSum(newFunc2, 1, 1)    // 200
+    
+        ics := &icansum{"I can sum", 0}
+        handlerSum(ics, 1, 1)         // 2
+    }
     ```
 1. string
    - 认识：字符串，是一串字符连接的任意字节的固定长度的变宽常量字符序列，由单个字节连接起来，使用utf-8编码
@@ -111,75 +218,80 @@
     ```
 1. slice
    - 认识：切片，`[]T`，相同类型的值的变长序列
-       ```go
-        // 定义
-        s := []int                              // 零值是nil，长度和容量是0
-        // 构造slice，分配一个零长度的数组并且返回一个slice指向这个数组
-        s := make([]int, 5)                     // 5个0的元素
-        s := make([]int, 0, 5)                  // 0个元素，但是cap=5，返回的是数组切片分配的空间大小
-        // 赋值
-        s := []int{2, 3, 5}
-        // 访问
-        a := s[i]
-        // 修改
-        s[i] = 1
-        // 添加
-        s = append(s, 2, 3, 4)
-        // 删除，没有提供现成的，原理是以被删除元素为分界点，将前后两个部分的内存重新连接起来
-        a = a[n:]                               // 删除头部n个
-        a = append(a[:i], a[i+n:]...)           // 删除中间n个，...表示多对使用
-        a = a[:i+copy(a[i:], a[i+n:])]
-        a = a[:len(a)-n]                        // 删除尾部n个
-        // 取子切片
-        s[1:4]
-        s[0:1:4]
-        s[:3]
-        s[4:]
-        s = s[:cap(s)]
-        s = s[1:]
-        // 遍历，也适用于map
-        for i, v := range pow {}                // 下标i，值v
-        for i := range pow {}                   // 只需要下标
-        for _, v := range pow {}                // 只需要值，忽略下标
-
-        // s []byte为24byte，s [1024]byte为1024byte
-        ```
    - 二维slice
-        ```go
-        game := [][]string{                     // 定义
-            []string{"x",},
-            []string{"x",},
-        }
-        game[0][0] = "X"                        // 赋值
-        ```
+    ```go
+    // 定义
+    s := [][]int{                     
+        []int{1},
+        []int{2},
+    }
+
+    // 赋值
+    s[0][0] = 3                        
+    ```
+   - 使用
+    ```go
+    // 构造slice，分配一个零长度的数组并且返回一个slice指向这个数组
+    s := make([]int, 5)                     // 5个0的元素
+    s := make([]int, 0, 5)                  // 0个元素，但是cap=5，返回的是数组切片分配的空间大小
+    // 定义
+    s := []int{}                            // 零值是nil，长度和容量是0
+    // 赋值
+    s := []int{2, 3, 5}
+    // 访问
+    a := s[i]
+    // 修改
+    s[i] = 1
+    // 添加
+    s = append(s, 2, 3, 4)
+    // 删除，没有提供现成的，原理是以被删除元素为分界点，将前后两个部分的内存重新连接起来
+    s = s[n:]                               // 删除头部n个
+    s = append(s[:i], s[i+n:]...)           // 删除中间n个，...表示多对使用
+    s = s[:i+copy(s[i:], s[i+n:])]
+    s = s[:len(s)-n]                        // 删除尾部n个
+    // 取子切片
+    s[1:4]
+    s[0:1:4]
+    s[:3]
+    s[4:]
+    s = s[:cap(s)]
+    s = s[1:]
+    // 遍历，也适用于map
+    for i, v := range pow {}
+    for i := range pow {}
+    for _, v := range pow {}
+
+    // s []byte为24byte，s [1024]byte为1024byte
+    ```
 1. map
    - 认识：字典，键值对，`map[keyType]valueType`，key没有顺序，key唯一
      1. 遍历输出顺序与填充顺序无关，不要期望输出顺序的结果
-        ```go
-        // 此情况value是一个结构体，可以是其他的基础类型
-        type Vertex struct {
-            Lat, Long int
-        }
+   - 使用
+    ```go
+    // 此情况value是一个结构体，可以是其他的基础类型
+    type Vertex struct {
+        Lat, Long int
+    }
 
-        // 定义
-        var m map[string]Vertex
-        m = make(map[string]Vertex)
-        // 定义、赋值
-        var m = map[string]Vertex{
-            "a": {1, 2},
-            "b": vertex{5, 6},
-        }
+    // 定义
+    var m map[string]Vertex
+    m = make(map[string]Vertex)
+    // 定义、赋值
+    var m = map[string]Vertex{
+        "a": {1, 2},
+        "b": vertex{5, 6},
+    }
 
-        // 获取
-        m["key"]
-        // 插入或修改
-        m["a"] = Vertex{1, 2}
-        // 删除
-        delete(m, "key")
-        // 检测是否存在，双赋值，ok为bool指示是否存在
-        v, ok = m["key"]
-        if ok {}
-        ```
+    // 获取
+    m["key"]
+    // 插入或修改
+    m["a"] = Vertex{1, 2}
+    // 删除
+    delete(m, "key")
+    // 检测是否存在，双赋值，ok为bool指示是否存在
+    v, ok := m["key"]
+    if ok {}
+    ```
 1. 变量
    - 认识：var或者:=
      1. 类型在变量名后边，避免了类c的含糊不清的定义
@@ -188,14 +300,15 @@
     ```go
     // 声明变量
     var i,j int = 1,2       // 声明、赋值
-    k := 3                  // 简短格式：短声明 + 类型推导
+
+    var i,j = 1,true        // 类型推导
+
     var (                   // 批量格式
         i int = 1
         j float32
     )
 
-
-    var i,j = 1,true        // 类型推导
+    k := 3                  // 简短格式：短声明 + 类型推导
     ```
    - 特点
      1. _：匿名变量，类似黑洞，可像其他标识符那样用于变量的声明或任何类型都可以给它赋值，但任何赋给这个标识符的值都将被抛弃，可极大增强代码灵活性
@@ -305,8 +418,10 @@
      1. range：后边跟一个可循环的，自动类型推断，可针对string、array、slice、map
         ```go
         a := []string{"a","b"};
-        for key,value := range a{}
-        for _,value := range a{}
+        for i,v := range a{}                // 下标i，值v
+        for i,v := range a{}                // 只需要下标
+        for _,v := range a{}                // 只需要值，忽略下标
+
         ```
      1. while：for代替，没有分号
         ```go
@@ -434,7 +549,7 @@
         ```
      1. `delete(m map[T]T1, key T)`：map
      1. make
-        - 认识：可以创建slice、map、chan三种类型，即让帮忙将数据初始化好，返回引用类型
+        - 认识：只用于slice、map、chan三种类型的内存分配，帮忙将数据初始化好，返回有初始值非零的T类型
         - 使用
             ```go
             // slice
@@ -445,7 +560,7 @@
             mChan := make(chan int, 3)
             ```
      1. new
-        - 认识：传入的内存置零，返回传入类型的指针
+        - 认识：用于各种类型的内存分配，传入的内存置零，返回传入类型的零值的指针
         - 使用
             ```go
             // slice
@@ -475,9 +590,12 @@
    - 指针数组
      1. 指针数据：是数组，数组中全是指针
         ```go
-        a := []int{10,100,200}
         var i int
-        var ptr [3]*int;        // 指针数组
+        // 数组
+        a := []int{10,100,200}
+        
+        // 指针数组
+        var ptr [3]*int;
         ptr[i] = &a[i]
         ```
      1. 数组指针：是指针
@@ -612,6 +730,9 @@
         x int               // 封装
         y int
     }
+    var Dog struct{
+        x int  
+    }{}
 
     // 赋值方法1
     dog := Dog{x: 1}               	// 指定字段，y:0可以被省略
@@ -624,6 +745,13 @@
     // 赋值方法3
     var dog Dog
     dog.x = 1
+
+    // 定义+赋值
+    dog := struct {
+        x int
+    }{
+        1,
+    }
 
     // 访问
     dog.x
@@ -776,10 +904,12 @@
             default:                                    // 其他分支没准备好的时候default分支会被执行，可用于非阻塞的发送或者接收
         }
         ```
-1. sync
+1. sync：提供了并发编程中基本的同步原语，保证执行不会出现混乱，更高级别的同步最好通过通道和通信来完成
    - 同步器：`sync.WaitGroup`，是信号量，需要一个条件完成，才能继续
+     1. 认识：拥有一个内部计数器。当计数器等于0时，则Wait()方法会立即返回。否则一直阻塞执行Wait()方法的goroutine
+        - 场景：在一个goroutine等待一组goroutine执行完成
      1. 方法
-        - Add(n)：设置计数器数量n
+        - Add(n)：设置计数器数量n，传负数就是减n
         - Done()：计数器数量减一
         - Wait()：等待，同步等待所有的记录的协程全部结束
      1. 示例
@@ -802,8 +932,30 @@
         c.v[key]++          // Lock 之后同一时刻只有一个goroutine能访问 c.v
         c.mux.Unlock()
         ```
-     1. 读写互斥锁：`sync.RWMutex`
-     1. map：`sync.Map`
+     1. 读写互斥锁：`sync.RWMutex`。RWMutex允许至少一个读锁或一个写锁存在，而sync.Mutex允许一个读锁或一个写锁存在
+        - RLock、RUnlock：可进行并发读取
+   - 并发池：`sync.Pool`
+     1. 认识：安全地保存一组对象
+     1. 方法
+        - Get()：随机取，无法保证以固定的顺序
+        - Put()
+   - 并发版map：`sync.Map`
+     1. 方法
+        - Load()：检索
+        - Range()：遍历
+        - Store()：添加
+        - Delete()：删除
+        - LoadOrStore()：检索或新增
+   - 一个函数在所有goroutine仅执行一次：`sync.Once`
+     1. 执行方法：`once.Do()`
+   - 发送信号：`sync.Cond`
+     1. 认识：用于发出信号（一对一）或广播信号（一对多）到goroutine
+        - 创建sync.Cond需要sync.Locker对象（sync.Mutex或sync.RWMutex）
+        - 破坏了go的基本原则：不要通过共享内存进行通信；而是通过通信共享内存，但是通过channel模拟广播的唯一方法是关闭channel，只能广播一次，cond可以多次
+     1. 方法
+        - `sync.NewCond(&sync.Mutex{})`：创建
+        - `Signal`：发送单个信号
+        - `Broadcast`：发送广播信号
 1. context：库，1.7加入，跟踪goroutine调用树，并在这些树中传递通知和元数据
    - 退出通知机制：传递给所有树节点
    - 传递数据：传递给所有树节点
@@ -973,7 +1125,10 @@
         - fnv：实现了FNV-1和FNV-1a（非加密hash函数）
    - io相关
      1. io：提供i/o原语的基础接口
-     1. bufio：带缓存增强版，如可读取一行
+        - `io.Reader`
+     1. bufio：带缓存增强版，
+        - 可读取一行
+        - 会缓存下来，遇到flush才输出
      1. path：路径
         - filepath：兼容各操作系统文件路径的实用操作函数
      1. archive：文件解压缩
@@ -1073,7 +1228,7 @@
         - syslog：简单的系统日志服务的接口
      1. sync：互斥锁的同步原语
         - atomic：底层的原子性内存原语
-     1. flag：命令行标签解析
+     1. flag：用于命令行的标签解析
    - 语言相关
      1. runtime
         - 子包
