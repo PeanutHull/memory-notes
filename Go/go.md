@@ -29,6 +29,8 @@
         fmt.Println("Hello, 世界\n")
     }
     ```
+1. 原则
+   - 通过通信共享，不要通过共享来通信
 ### 语法
 1. 语法
    - 关键字：函数外的每个语句都必须以关键字(var/func/...)开始
@@ -515,6 +517,8 @@
      1. 实例
         ```go
         // 上边的普通型，参数和返回值中间加个func()
+        // 定义
+        var varClosure func() = func() {}
 
         // defer模拟
         x, y := 1,2
@@ -693,6 +697,7 @@
    - 组合扩展：struct组合之前的类型
    - 别名扩展：type定义别名再扩展
 ### 面向对象
+1. 理解：核心是合成复用
 1. struct
    - 理解：结构体，`type struct`，字段的组合
      1. 字段标签：tag，不是注释是描述字段的元数据。不属于数据的组成部分是类型的组成部分
@@ -905,8 +910,12 @@
         }
         ```
 1. sync：提供了并发编程中基本的同步原语，保证执行不会出现混乱，更高级别的同步最好通过通道和通信来完成
-   - 同步器：`sync.WaitGroup`，是信号量，需要一个条件完成，才能继续
-     1. 认识：拥有一个内部计数器。当计数器等于0时，则Wait()方法会立即返回。否则一直阻塞执行Wait()方法的goroutine
+   - atomic：底层的原子性内存原语
+     1. 方法
+        - AddInt32()
+   - 同步器
+     1. 认识：`sync.WaitGroup`，是信号量，需要某个条件完成才能继续，用于并发控制
+     1. 原理：拥有一个内部计数器。当计数器等于0时，则Wait()方法会立即返回。否则一直阻塞执行Wait()方法的goroutine
         - 场景：在一个goroutine等待一组goroutine执行完成
      1. 方法
         - Add(n)：设置计数器数量n，传负数就是减n
@@ -951,7 +960,7 @@
    - 发送信号：`sync.Cond`
      1. 认识：用于发出信号（一对一）或广播信号（一对多）到goroutine
         - 创建sync.Cond需要sync.Locker对象（sync.Mutex或sync.RWMutex）
-        - 破坏了go的基本原则：不要通过共享内存进行通信；而是通过通信共享内存，但是通过channel模拟广播的唯一方法是关闭channel，只能广播一次，cond可以多次
+        - 破坏了go的基本原则：不要通过共享进行通信；而是通过通信共享，但是通过channel模拟广播的唯一方法是关闭channel，只能广播一次，cond可以多次
      1. 方法
         - `sync.NewCond(&sync.Mutex{})`：创建
         - `Signal`：发送单个信号
@@ -1226,8 +1235,6 @@
      1. syscall
      1. log：简单的日志服务
         - syslog：简单的系统日志服务的接口
-     1. sync：互斥锁的同步原语
-        - atomic：底层的原子性内存原语
      1. flag：用于命令行的标签解析
    - 语言相关
      1. runtime
@@ -1255,6 +1262,9 @@
      1. testing：go包的自动测试支持
         - iotest
         - quick
+        - B
+          1. 方法
+             - RunParallel
    - 其他
      1. container：数据结构
         - heap：任意类型的堆操作
@@ -1287,16 +1297,14 @@
 1. 其他包
 ### 应用
 1. 文本处理
-   - string：分割、连接、转换等
+   - string：分割、连接、转换、取索引、前后缀检测等
      1. strings包
-        - 查找：`strings.Index/Contains(src))`
-        - 修改：`strings.Join/Trim/TrimSpace/Fields/Repeat/Replace/Split(src))`
+        - 查找：`strings.Index/Contains/HasPrefix/HasSuffix(src))`：索引、是否包含
+        - 修改：`strings.Trim/TrimSpace/Fields/Repeat/Replace/Join/Split(src))/ToLower/ToUpper`
      1. strconv包
-        ```go
-        strconv.AppendInt/AppendBool/AppendQuote/AppendQuoteRune()         // 转换为字符串后添加到字节数组中
-        strconv.FormatBool/FormatInt/FormatUint/FormatFloat/Itoa()         // 转换为字符串
-        strconv.ParseBool/ParseInt/ParseUint/ParseFloat/Atoi()             // 字符串转换为其他类型
-        ```
+        - 转换为字符串：`strconv.FormatBool/FormatInt/FormatUint/FormatFloat/Itoa()`：Itoa/Atoi针对int，FormatInt/ParseInt针对int64，可支持进制
+        - 字符串转换为其他类型：`strconv.ParseBool/ParseInt/ParseUint/ParseFloat/Atoi()`
+        - 转换为字符串后添加到字节数组中：`strconv.AppendInt/AppendBool/AppendQuote/AppendQuoteRune()`
    - reg：regexp包，实现RE2标准，实现搜索、替换、解析，strings包优先
         ```go
         regexp.MatchString("^[0-9]+$", os.Args[1])
@@ -1388,7 +1396,17 @@
             i, _ := js.Get("servers").Get("name").Int()
             ms := js.Get("servers").Get("name").MustString()
             ```
-   - 命令行：`os.Args/os.Args[1]`
+   - 命令行
+     1. 简单：`os.Args/os.Args[1]`
+     1. 复杂：`flag`
+        ```go
+        // 格式化定义
+        ptr := flag.String/Int("name", "default", "demo")
+        // 解析
+        flag.Parse()
+        // 使用
+        *ptr
+        ```
 1. 加解密
    - base64
      1. `base64.StdEncoding.EncodeToString(src)`

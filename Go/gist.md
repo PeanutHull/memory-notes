@@ -284,6 +284,67 @@
     val.MethodByName("SumNum").Call(nil)
     ```
 ### 最佳实践
+1. 避坑指南
+   - 谨慎使用全局变量，全局变量不会像PHP一样，在完成一次请求之后被销毁，而是会被改变
+   - 形参是slice、map类型的参数，注意值可被全局修改，array则不会
+     1. 因为：浅复制过程中slice和map底层的类型是个结构体，实际存储值的类型是个指针
+     1. 解决：深拷贝，开辟新内存，指针指向新内存地址，并把原有的值复制过去
+        ```go
+        package main
+
+        import "fmt"
+
+        func main() {
+            paramDemo := []int32{1}
+            fmt.Println("main.paramDemo 1", paramDemo)
+            // 初始化新空间
+            paramDemoCopy := make([]int32, len(paramDemo))
+            // 深拷贝
+            copy(paramDemoCopy, paramDemo)
+            demo(paramDemoCopy)
+            fmt.Println("main.paramDemo 2", paramDemo)
+        }
+
+        func demo(paramDemo []int32) ([]int32, error) {
+            paramDemo[0] = 2
+            return paramDemo, nil
+        }
+
+        // [Running] go run ".../demo/main.go"
+        // main.paramDemo 1 [1]
+        // main.paramDemo 2 [1]
+        ```
+   - 资源使用完毕，记得释放资源或回收资源
+     1. 资源连接数线性增长
+     1. 如果一直持有，资源服务端也有超时时间
+   - 不要依赖map遍历的顺序
+     1. 因为：底层实现都是数组+类似拉链法，以下3点都决定了map本来就是无序的，所以Go语言为了避免开发者依赖元素顺序，每次遍历的时候都是随机了一个索引起始值。然后PHP通过额外的内存空间维护了map元素的顺序
+        - hash函数无序写入
+        - 成倍扩容
+        - 等量扩容
+   - 不要并发写map，会触发panic
+   - 注意判断指针类型不为空nil，再操作
+    ```go
+    resp, err := http.Get("https://www.example.com")
+
+    // 错误示范
+	if resp.StatusCode != http.StatusOK || err != nil {
+		// 当 resp为nil时 会触发panic
+		// 当 resp.StatusCode != http.StatusOK 时err可能为nil 触发panic
+		log.Printf("err: %s", err.Error())
+	}
+
+    // 正确示范
+    if err != nil {
+		// 报错并记录异常日志
+		log.Printf("err: %s", err.Error())
+		return
+	}
+	// 模拟业务code不为成功的code
+	if resp != nil && resp.StatusCode != http.StatusOK {
+		// 报错并记录异常日志
+	}
+    ```
 1. 引号输出
    - 使用反引号：`a := `"xx"``
    - 使用转义：`a := "\"xx\""`

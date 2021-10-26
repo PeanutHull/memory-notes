@@ -571,8 +571,26 @@
 ### 唯一id
 1. 数据库自增
 1. UUID
+   - 认识：128bit的string类型，一般用十六进制。为保证唯一性，规范定义了包括网卡MAC地址、时间戳、名字空（Namespace）、随机或伪随机数、时序等元素，以及从这些元素生成 UUID 的算法
+     1. 没有排序，无法保证按序递增
+     1. 太长了
+   - 版本
+     1. 版本1：基于时间戳和mac地址
+     1. 版本2：基于时间戳，mac地址和POSIX UID/GID
+     1. 版本3：基于MD5哈希算法
+     1. 版本4：基于随机数
+     1. 版本5：基于SHA-1哈希算法
 1. redis原子步长：多台可负载均衡
-1. 雪花算法：snowflake，https://github.com/twitter-archive/snowflake
+1. 雪花算法：
+   - 认识：64bit的int64类型，来自twitter的scala编写
+     1. 能满足高并发分布式系统环境下ID不重复
+     1. 基于时间戳，可以保证基本有序递增
+     1. 不依赖于第三方的库或者中间件
+   - 组成
+     1. 0～11bit	12bits	序列号，用来对同一个毫秒之内产生不同的ID，可记录4095个
+     1. 12～21bit	10bits	10bit用来记录机器ID，总共可以记录1024台机器
+     1. 22～62bit	41bits	用来记录时间戳，这里可以记录69年
+     1. 63bit	1bit	符号位，不做处理
 1. 百度uid-generator：https://github.com/baidu/uid-generator
 1. 美团leaf：https://tech.meituan.com/MT_Leaf.html
 1. 滴滴tinyid：https://github.com/didi/tinyid/wiki

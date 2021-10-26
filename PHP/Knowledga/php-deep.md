@@ -229,6 +229,7 @@ ipv4的udp一次最多发64k，dgram最大2M
      1. 单引号代替双引号
 1. 工具
    - xdebug
+   - tideways
    - xhprof
      1. 认识：php的层次性能分析工具，查看资源占用和各个调用的耗时，搭配graphviz图显示更直接，还有xhGui。facebook开源，性能开销低，可用在生产活动中
         - graphviz：开源的图形可视化软件，以简单的文本语言获取图形的描述，应用于网页、svg、pdf、postscript中，有颜色，字体，表格节点布局，线条样式，超链接和自定义形状的选项

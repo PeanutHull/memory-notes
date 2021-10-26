@@ -68,6 +68,7 @@
 1. 流程控制：选择if，循环while/for/switch-case，break离开循环，continue跳过本次循环进入下次，每执行一次低级语句就判断一下declare
 1. 函数
    - 系统内置函数
+   - 闭包：`$varClosure = function() {};`
 1. 引用 &
    - 绑定
      1. `&$a`：变量引用，绑定两个变量到同一内存地址
