@@ -84,18 +84,46 @@
    - unix/mac的文件windows打开，所有文字变成一行
    - windows的文件在unix/mac打开，每行结尾可能会多出一个^M符号
 1. 数据序列化
-   - protobuf
+   - protocol buffers
      1. 认识：语言无关、平台无关、可扩展的序列化结构数据的方法，二进制格式，用于网络通信、通用数据交换、数据存储等场景，google推出
         - 比xml、json小几倍，快几十倍
         - 更高的时间效率和空间效率，适合对数据大小和传输速率比较敏感的场合使用
-     1. 使用
-        - 创建.proto文件，定义数据结构
-        - protoc编译.proto 文件生成读写接口
-        - 调用接口实现序列化、反序列化以及读写
+     1. 作用
+        - 加速数据传输速度
+        - 解决数据传输不规范
      1. 比较
         - XML、JSON、protobuf都具有数据结构化和数据序列化的能力
         - XML、JSON更注重数据结构化，关注人类可读性和语义表达。protoBuf更注重数据序列化，关注效率、空间、速度，人类可读性差，语义表达能力不足（为保证极致的效率，会舍弃一部分元信息）
         - protoBuf的应用场景更为明确，XML、JSON的应用场景更为丰富
+     1. 组成
+        - messages：消息格式
+        - 字段修饰符：每个字段唯一的数值标签
+          1. singular：成员0或1个，一般省略
+          1. repeated：该字段可包含0~n个元素
+        - 常用数据类型：double、float、int32/64、bool、string、bytes
+        - service：可以定义一个rpc服务接口
+     1. 使用
+        - 创建.proto文件，定义数据结构
+        - protoc编译.proto文件生成读写接口
+        - 调用接口实现序列化、反序列化以及读写
+     1. 实例
+        ```proto
+        syntax = "proto3";
+
+        package = xx.xx.xx;                     // 包名
+
+        service Product {                       // 定义的服务
+            rpc AddProduct() returns () {}
+        }
+
+        message ProductInfo {
+            int64 id = 1;                       // 1是字段标识符
+            string name = 2;
+        }
+        message ResponseProduct {
+            int64 id = 1;
+        }
+        ```
    - msgpack
      1. 认识：高效的二进制序列化格式，比json更快、更小
         - msgpack可以直接序列化类对象，protobuf需要先写描述映射文件(.proto)
@@ -344,7 +372,7 @@
 1. 一致性算法
    - es的hash路由算法
    - haproxy的hash算法
-   - cassandra的gossip闲话算法
+   - cassandra、consul的gossip闲话算法
    - redis的raft算法
 1. 问题
    - 八皇后问题方案：递归回溯，本质上是一种枚举法，不满足就调整上一级数据

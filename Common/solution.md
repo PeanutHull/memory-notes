@@ -220,7 +220,10 @@
 1. 服务治理框架
 1. 数据一致性
 ### RPC
-1. 理解：Remote Procedure Call Protocol，远程过程调用协议，打通了应用层和传输层，不需要关注通信细节直接调用远程方法，实现函数调用模式的网络化。内含多种实现方案(socket/管道)，linux的固定端口111
+1. 理解：Remote Procedure Call Protocol，远程过程调用协议，打通了应用层和传输层，不需要关注通信细节直接调用远程方法，实现函数调用模式的网络化
+   - 包含了传输协议、编码协议
+   - 内含多种实现方案(socket/管道)，linux的固定端口111
+1. 分类
    - java：dobbu、spring cloud
    - 其他：grpc(使用protobuf)、phprpc、yar、swoole、hprose、thrift
 1. 意义
@@ -228,6 +231,13 @@
    - 分布式部署
    - 程序内连接，解耦
    - 面向过程，restful面向资源
+1. gRPC
+   - 认识：基于http2.0的cs型的高性能、开源的rpc框架，比webSocket高效，google主导开发
+     1. 支持多语音，默认采用protocol buffers数据序列化协议
+     1. 可实现多路复用，就是并发的请求和接收
+   - 模式
+     1. 简单模式：单调的顺序请求、响应
+     1. 双向数据流模式：请求、响应并行起来
 1. 跨语言RPC
    - 实现基础
      1. 通用数据结构
