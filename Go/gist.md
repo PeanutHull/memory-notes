@@ -641,3 +641,20 @@
             return Merge(MergeN(inputs[:m]...), MergeN(inputs[m:]...))      // slide和可变参数的转换
         }
         ```
+### 部署
+1. 编译脚本
+    ```shell
+    #!/bin/bash
+
+    # 设置环境变量
+    export GOPROXY=https://goproxy.cn,direct
+    export GOPRIVATE=*.100tal.com
+    export GO111MODULE=on
+    export GOSUMDB="off"
+
+    # 配置git，能够拉取gitlab依赖
+    git config --global url."ssh://git@git.100tal.com/".insteadOf https://git.100tal.com/
+
+    # 编译
+    make
+    ```
