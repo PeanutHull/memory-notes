@@ -111,12 +111,13 @@
      1. Send KB/Sec
    - 其他压测工具
      1. ab：`ab -n total -c runNum http://`，QPS/TPS=并发数/平均响应时间
-     1. LoadRunner：收费
-     1. http_load
-     1. wrk：轻量级HTTP性能测试工具，比ab好用？
      1. webbench：最多可以模拟3万个并发连接，`webbench -c 1000 -t 30 http://xxx`
         - -t：并发
         - -c：时间
+     1. siege
+     1. LoadRunner：收费
+     1. http_load
+     1. wrk：轻量级HTTP性能测试工具，比ab好用？
    - 分布式压测
    - 配套工具
      1. jvisualvm：jdk提供的负载、进程监控插件，能够监控本地以及远程

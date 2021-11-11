@@ -366,3 +366,8 @@
      1. Graylog日志
    - vagrant：基于Ruby的工具，用于创建和部署虚拟化开发环境。使用Oracle的开源VirtualBox，使用Chef创建自动化虚拟环境
 1. 和虚拟机比较：![avatar](../images/compareWithHypervisor.jpg)
+1. DevOps
+   - CICD
+     1. 持续集成：将各个开发人员的工作集合到一个代码仓库中
+     1. 持续交付：将构建部署的每个步骤自动化
+     1. 持续部署：代码如何改变都会自动进行构建/部署

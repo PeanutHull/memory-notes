@@ -143,6 +143,7 @@
      1. Gossip Protocol：八卦，一个事件发生时，其他节点需要知道这个事件
         - lan pool：局域网池
         - wan pool
+1. tars：性能强
 1. 配置中心
 ### 技术解决方案
 1. 千万级WebSocket弹幕消息推送服务

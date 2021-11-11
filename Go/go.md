@@ -14,7 +14,7 @@
    - 每个Go程序都是由包组成的
    - 现代的、支持网络与多核计算的语言，结合了解释型语言的游刃有余，动态类型语言的开发效率，以及静态类型的安全性
 1. 原则
-   - 通过通信共享，不要通过共享来通信
+   - 通过通信共享内存，不要通过共享内存来通信
 1. 编程范式
    - 面向接口
    - 函数式编程
@@ -943,9 +943,6 @@
         }
         ```
 1. sync：提供了并发编程中基本的同步原语，保证执行不会出现混乱，更高级别的同步最好通过通道和通信来完成
-   - atomic：底层的原子性内存原语
-     1. 方法
-        - AddInt32()
    - 同步器
      1. 认识：`sync.WaitGroup`，是信号量，需要某个条件完成才能继续，用于并发控制
      1. 原理：拥有一个内部计数器。当计数器等于0时，则Wait()方法会立即返回。否则一直阻塞执行Wait()方法的goroutine
@@ -968,29 +965,15 @@
         wg.Wait()                       // 阻塞，使其等待
         ```
    - 锁
-     1. 互斥锁：`sync.Mutex`，保证同时只有一个goroutine能访问一个共享的变量从而避免冲突
-        ```go
+     1. 互斥锁：sync.Mutex，保证同时只有一个goroutine能访问一个共享的变量从而避免冲突
+        ```go
         c.mux.Lock()
         c.v[key]++          // Lock 之后同一时刻只有一个goroutine能访问 c.v
         c.mux.Unlock()
         ```
-     1. 读写互斥锁：`sync.RWMutex`。RWMutex允许至少一个读锁或一个写锁存在，而sync.Mutex允许一个读锁或一个写锁存在
+     1. 读写互斥锁：sync.RWMutex。RWMutex允许至少一个读锁或一个写锁存在，而sync.Mutex允许一个读锁或一个写锁存在
         - RLock、RUnlock：可进行并发读取
-   - 并发池：`sync.Pool`
-     1. 认识：安全地保存一组对象
-     1. 方法
-        - Get()：随机取，无法保证以固定的顺序
-        - Put()
-   - 并发版map：`sync.Map`
-     1. 方法
-        - Load()：检索
-        - Range()：遍历
-        - Store()：添加
-        - Delete()：删除
-        - LoadOrStore()：检索或新增
-   - 一个函数在所有goroutine仅执行一次：`sync.Once`
-     1. 执行方法：`once.Do()`
-   - 发送信号：`sync.Cond`
+   - 发送信号：sync.Cond
      1. 认识：用于发出信号（一对一）或广播信号（一对多）到goroutine
         - 创建sync.Cond需要sync.Locker对象（sync.Mutex或sync.RWMutex）
         - 破坏了go的基本原则：不要通过共享进行通信；而是通过通信共享，但是通过channel模拟广播的唯一方法是关闭channel，只能广播一次，cond可以多次
@@ -998,11 +981,60 @@
         - `sync.NewCond(&sync.Mutex{})`：创建
         - `Signal`：发送单个信号
         - `Broadcast`：发送广播信号
+   - 并发池：sync.Pool
+     1. 认识：安全地保存一组对象
+     1. 方法
+        - Get()：随机取，无法保证以固定的顺序
+        - Put()
+   - sync/singleflight
+     1. 认识：重复函数调用抑制
+   - sync.Map
+     1. 认识：并发版map
+     1. 方法
+        - Load()：检索
+        - Range()：遍历
+        - Store()：添加
+        - Delete()：删除
+        - LoadOrStore()：检索或新增
+   - atomic：底层的原子性内存原语
+     1. 方法
+        - AddInt32()
+   - 一个函数在所有goroutine仅执行一次：sync.Once
+     1. 执行方法：`once.Do()`
 1. context
    - 认识：追踪协程调用树、声明周期管理，在这些树中传递通知和元数据，v1.7
      1. 退出通知机制：即中断，传递给所有树节点
      1. 传递数据：传递给所有树节点
-   - demo
+   - 作用：第一形参通常都为context.Context类型
+     1. 传递上下文
+     1. 控制子Goroutine超时退出
+     1. 控制子Goroutine定时退出    
+   - demo1
+    ```go
+    ctx, cancel := context.WithTimeout(context.TODO(), 5*time.Second)
+	defer cancel()
+	go func(ctx context.Context) {
+		execResult := make(chan bool)
+		// 模拟业务逻辑
+		go func(execResult chan<- bool) {
+			// 模拟处理超时
+			time.Sleep(6 * time.Second)
+			execResult <- true
+		}(execResult)
+		// 等待结果
+		select {
+		case <-ctx.Done():
+			fmt.Println("超时退出")
+			return
+		case <-execResult:
+			fmt.Println("处理完成")
+			return
+		}
+	}(ctx)
+
+	time.Sleep(10 * time.Second)
+    ```
+   - demo2
     ```go
     // 初始化一个context
 	parent := context.Background()
@@ -1209,6 +1241,7 @@
      1. bufio：带缓存增强版，比io写的快多了
         - 可读取一行
         - 会缓存下来，遇到flush才输出`bufio.NewWriter.Flush()`
+     1. io/ioutil：实现一些io实用功能，v1.16后逐步放到了io、os中
      1. path：路径
         - filepath：兼容各操作系统文件路径的实用操作函数
      1. archive：文件解压缩
@@ -1540,9 +1573,9 @@
         ```
      1. 连接控制：DialTimeout、SetReadDeadline、SetWriteDeadline、SetKeepAlive
    - webSocket：go.net子包有，`golang.org/x/net/websocket`
-   - rpc：标准包提供，支持三个级别：TCP、HTTP、JSONRPC，只支持go内部，使用Gob编码
+   - rpc：`net/rpc`提供，支持三个级别：TCP、HTTP、JSONRPC，只支持go内部，使用Gob编码
      1. 访问条件：`func (t *T) MethodName(argType T1, replyType *T2) error`，T/T1/T2必须能被encoding/gob包编解码
-        - 函数必须是导出的(首字母大写)
+        - 函数必须是导出的
         - 必须有两个导出类型的参数，第一个参数是接收的参数，第二个参数是返回给客户端的参数，第二个参数必须是指针类型的
         - 函数要有一个返回值error
      1. http协议
@@ -1578,7 +1611,7 @@
             rpc.ServeConn(conn)                             // 有连接后，把连接交给rpc来处理
 	    }
         ```
-     1. JSON RPC：使用json编码，不是gob
+     1. json rpc：使用json编码，不是gob，支持跨语言调用
         ```go
         // client
         client, err := jsonrpc.Dial("tcp", service)
@@ -1597,6 +1630,68 @@
             jsonrpc.ServeConn(conn)
         }
         ```
+     1. proto rpc
+        - 编写proto文件，生成.pb.go代码：`protoc --go_out= plugin= protorpc=. arith.proto`，包含了rpc方法定义和服务注册的代码
+        - 使用
+          1. 服务端：`pb.ListenAndServeArithService("tcp", "127.0.0.1:8097", new(Arith))`
+          1. 客户端
+            ```go
+            conn, err := pb.DialArithService("tcp", "127.0.0.1:8097")
+            if err != nil {
+                log.Fatalln("dailing error: ", err)
+            }
+            defer conn.Close()
+
+            req := &pb.ArithRequest{9, 2}
+
+            res, err := conn.Multiply(req)
+            if err != nil {
+                log.Fatalln("arith error: ", err)
+            }
+            ```
+     1. grpc
+        - 包：`google.golang.org/grpc`
+        - 使用
+          1. 编写proto或protoc(有service)文件，
+          1. 实现pb.go的RegisterXXServiceServer接口
+          1. 服务端
+            ```go
+            // 1. new一个grpc的server
+            rpcServer := grpc.NewServer()
+
+            // 2. 将刚刚我们新建的ProdService注册进去
+            service.RegisterProdServiceServer(rpcServer, new(service.ProdService))
+
+            // 3. 新建一个listener，以tcp方式监听8082端口
+            listener, err := net.Listen("tcp", ":8082")
+            if err != nil {
+                log.Fatal("服务监听端口失败", err)
+            }
+
+            // 4. 运行rpcServer，传入listener
+            _ = rpcServer.Serve(listener)
+            ```
+          1. 客户端
+            ```go
+            conn, err := grpc.Dial(":8082", grpc.WithInsecure())
+            if err != nil {
+                log.Fatal(err)
+            }
+
+            // 退出时关闭链接
+            defer conn.Close()
+
+            // 2. 调用Product.pb.go中的NewProdServiceClient方法
+            productServiceClient := service.NewProdServiceClient(conn)
+
+            // 3. 直接像调用本地方法一样调用GetProductStock方法
+            resp, err := productServiceClient.GetProductStock(context.Background(), &service.ProductRequest{ProdId: 233})
+            if err != nil {
+                log.Fatal("调用gRPC方法错误: ", err)
+            }
+
+            fmt.Println("调用gRPC方法成功，ProdStock = ", resp.ProdStock)
+            ```
    - SOAP RPC：不支持
 1. 国际化
    - 地区：`i18n.SetLocale("zh-CN")`
@@ -1649,7 +1744,197 @@
             C.print(cs)
         }
         ```
-1. 测试：go test和testing包
+1. 测试
+   - 组成
+     1. go test：自动读取源码目录下*_test.go文件，生成并运行测试用的可执行文件
+     1. testing包
+   - 分类
+     1. 单元测试：`go test -timeout 30s -run ^TestDemo$ demo -v -count=1`
+        ```go
+        // 简单
+        func TestDemo(t *testing.T) {
+            t.Parallel()
+            // 模拟调用接口
+            resp, err := http.Get("http://example.com?user_id=121212")
+            if err != nil {
+                t.Error(err)
+                return
+            }
+            body, err := ioutil.ReadAll(resp.Body)
+            if err != nil {
+                t.Error(err)
+                return
+            }
+            t.Log("body", string(body))
+        }
+        // 多个测试用例
+        func TestDemo(t *testing.T) {
+            t.Parallel()
+            tests := []struct {
+                TestName string
+                *Req
+            }{
+                {
+                    TestName: "测试用例1",
+                    Req: &Req{
+                        UserID: 12121212,
+                    },
+                },
+                {
+                    TestName: "测试用例2",
+                    Req: &Req{
+                        UserID: 829066,
+                    },
+                },
+            }
+            for _, v := range tests {
+                t.Run(v.TestName, func(t *testing.T) {
+                    // 模拟调用接口
+                    url := fmt.Sprintf("http://example.com?user_id=%d", v.UserID)
+                    resp, err := http.Get(url)
+                    if err != nil {
+                        t.Error(err)
+                        return
+                    }
+                    body, err := ioutil.ReadAll(resp.Body)
+                    if err != nil {
+                        t.Error(err)
+                        return
+                    }
+                    t.Log("body", string(body), url)
+                })
+            }
+        }
+        ```
+     1. 基准测试：`go test -benchmem -run=^$ -bench ^(BenchmarkSyncMap)$ demo -v -count=1 -cpuprofile=cpu.profile -memprofile=mem.profile -benchtime=10s`
+        ```go
+        // 简单
+        func BenchmarkSyncMap(b *testing.B) {
+            demoMap := &sync.Map{}
+            b.RunParallel(func(pb *testing.PB) {
+                for pb.Next() {
+                    demoMap.Store("a", "a")
+                    for i := 0; i < 1000; i++ {
+                        demoMap.Load("a")
+                    }
+                }
+            })
+        }
+
+        // 对比
+        // 压力测试sync.Map
+        func BenchmarkSyncMap(b *testing.B) {
+            demoMap := &sync.Map{}
+            b.RunParallel(func(pb *testing.PB) {
+                for pb.Next() {
+                    demoMap.Store("a", "a")
+                    for i := 0; i < 1000; i++ {
+                        demoMap.Load("a")
+                    }
+                }
+            })
+        }
+
+        // 用读写锁实现一个并发map
+        type ConcurrentMap struct {
+            value map[string]string
+            mutex sync.RWMutex
+        }
+
+        // 写
+        func (c *ConcurrentMap) Store(key string, val string) {
+            c.mutex.Lock()
+            defer c.mutex.Unlock()
+            if c.value == nil {
+                c.value = map[string]string{}
+            }
+            c.value[key] = val
+        }
+
+        // 读
+        func (c *ConcurrentMap) Load(key string) string {
+            c.mutex.Lock()
+            defer c.mutex.Unlock()
+            return c.value[key]
+        }
+
+        // 压力测试并发map
+        func BenchmarkConcurrentMap(b *testing.B) {
+            demoMap := &ConcurrentMap{}
+            b.RunParallel(func(pb *testing.PB) {
+                for pb.Next() {
+                    demoMap.Store("a", "a")
+                    for i := 0; i < 1000; i++ {
+                        demoMap.Load("a")
+                    }
+                }
+            })
+        }
+        ```
+1. 性能分析
+   - 基准测试：get test，会生成cpu.profile文件和mem.profile文件
+     1. 参数
+        - -benchmem: 输出内存指标
+        - -run: 正则，指定需要test的方法
+        - -bench: 正则，指定需要benchmark的方法
+        - -v: 即使成功也输出打印结果和日志
+        - -count: 执行次数
+        - -cpuprofile: 输出cpu的profile文件
+        - -memprofile: 输出内存的profile文件
+        - -benchtime: 执行时间
+   - trace：调用链路
+     1. 作用：清晰查看每个逻辑处理器中Goroutine的执行过程，可以很直观看出Goroutine的阻塞消耗，包含网络阻塞、同步阻塞(锁)、系统调用阻塞、调度等待、GC执行耗时、GC STW(Stop The World)耗时
+     1. 步骤
+        - 生成trace.out文件命令：`go test -benchmem -run=^$ -bench ^BenchmarkDemo_Pool$ demo -v -count=1 -trace=trace.out `
+        - web版：`curl http://localhost:8888/debug/pprof/trace?seconds=20 > trace.out`
+        - 分析trace.out文件命令：`go tool trace -http=127.0.0.1:8000 trace.out`
+   - 性能分析
+     1. 静态应用：`go tool pprof -http=:8000 cpu.profile`，可视化看到火焰图、调用链路图、Top函数
+        - -http: 指定ip:port，启动web服务可视化查看分析，浏览器会自动打开页面 
+     1. web应用
+        ```go
+        // 开启访问入口
+        go func() {
+            http.ListenAndServe(":8888", nil)
+        }()
+        // 直接访问
+        http://localhost:8888/debug/pprof/
+        // pprof工具获取
+        go tool pprof -http=:8000 http://localhost:8888/debug/pprof/profile?seconds=5
+
+        // 另一边可以施加流量，用以观察
+        siege -c 50 -t 100 "http://localhost:8080/ping"
+
+
+        // demo
+        import (
+            "net/http"
+            _ "net/http/pprof"
+            "github.com/gin-gonic/gin"
+        )
+
+        var GlobalVarDemo int32 = 0
+
+        // 模拟接口逻辑
+        func main() {
+            r := gin.Default()
+            r.GET("/ping", func(c *gin.Context) {
+                GlobalVarDemo++
+                c.JSON(200, gin.H{
+                    "message": GlobalVarDemo,
+                })
+            })
+            // 再开启一个端口获取pprof数据
+            go func() {
+                http.ListenAndServe(":8888", nil)
+            }()
+            // 启动web服务
+            r.Run()
+        }
+        ```
+   - 断点调试：dlv
+   - 逃逸分析：`go build -gcflags "-m -l" *.go`
+   - 汇编代码：`go run -gcflags -S main.go`
 ### 运维
 1. 运行
    - 环境变量
@@ -1682,7 +1967,7 @@
         - `gofmt -w src`：格式化src下全部
      1. `go doc`：用于查看文档
      1. `godoc -http=:8080`：生成本机的go官网，可用浏览器打开
-     1. `go test`：自动读取源码目录下*_test.go文件，生成并运行测试用的可执行文件
+     1. `go test`
      1. `go fix`：转换老版本的代码到新版本
      1. `go generate`：用于在编译前自动化生成某类代码
         - 写法举例：`//go:generate go tool yacc -o gopher.go -p parser gopher.y`

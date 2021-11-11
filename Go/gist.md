@@ -286,12 +286,199 @@
 ### 最佳实践
 1. 编写思路
    - 编程起势：首先通过划分结构体，定义不同的功能模块，然后分别实现，最终实现功能
-   - 之前用的读io然后处理的单线程模式，改为：起多个不同的协程(有的处理读io，有的处理逻辑)，协程之间通过chan传递数据，一边读取一边处理的协程模式了
+   - 并行思想：之前用的读io然后处理的单线程模式，改为：起多个不同的协程(有的处理读io，有的处理逻辑)，协程之间通过chan传递数据，一边读取一边处理的协程模式了
      1. 耗时的goroutine可以多起几个
-   - 实用技巧
-     1. 全局变量可以避免重复申请带来的内存交互空间
 1. 应用场景
-   - channel：通过设置为缓存通道，实现抢购场景的解决方案
+   - channel
+     1. 通过设置为缓存通道，实现抢购场景的解决方案
+     1. 通过通信共享内存，不要通过共享内存来通信
+        ```go
+        // 响应公共结构体
+        type APIBase struct {
+            Code    int32  `json:"code"`
+            Message string `json:"message"`
+        }
+
+        // 模拟接口A的响应结构体
+        type APIDemoA struct {
+            APIBase
+            Data APIDemoAData `json:"data"`
+        }
+
+        type APIDemoAData struct {
+            Title string `json:"title"`
+        }
+
+        // 模拟接口B的响应结构体
+        type APIDemoB struct {
+            APIBase
+            Data APIDemoBData `json:"data"`
+        }
+
+        type APIDemoBData struct {
+            SkuList []int64 `json:"sku_list"`
+        }
+
+        // 模拟接口逻辑
+        func main() {
+            // 创建接口A传输结果的通道
+            execAResult := make(chan APIDemoA)
+            // 创建接口B传输结果的通道
+            execBResult := make(chan APIDemoB)
+
+            // 并发调用接口A
+            go func(execAResult chan<- APIDemoA) {
+                // 模拟接口A远程调用过程
+                time.Sleep(2 * time.Second)
+                execAResult <- APIDemoA{}
+            }(execAResult)
+
+            // 并发调用接口B
+            go func(execBResult chan<- APIDemoB) {
+                // 模拟接口B远程调用过程
+                time.Sleep(1 * time.Second)
+                execBResult <- APIDemoB{}
+            }(execBResult)
+
+            var resultA APIDemoA
+            var resultB APIDemoB
+            i := 0
+            for {
+                if i >= 2 {
+                    fmt.Println("退出")
+                    break
+                }
+                select {
+                case resultA = <-execAResult: // 等待接口A的响应结果
+                    i++
+                    fmt.Println("resultA", resultA)
+                case resultB = <-execBResult: // 等待接口B的响应结果
+                    i++
+                    fmt.Println("resultB", resultB)
+                }
+            }
+        }
+        ```
+   - io/ioutil：读取所有字符
+    ```go
+    resp, err := http.Get("http://example.com?user_id=121212")
+	if err != nil {
+	}
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+	}
+    ```
+1. 实用技巧
+   - 全局变量：可以避免重复申请带来的内存交互
+   - sync.Pool：重复申请的对象，可以减少GC的成本
+    ```go
+    // 使用sync.Pool
+    func BenchmarkDemo_Pool(b *testing.B) {
+        // 使用缓存池sync.Pool
+        demoPool := &sync.Pool{
+            // 定义初始化结构体的匿名函数
+            New: func() interface{} {
+                return &AddressModule{
+                    Country: &Country{
+                        ID:   0,
+                        Name: "",
+                    },
+                    Province: &Province{
+                        ID:   0,
+                        Name: "",
+                    },
+                    City: &City{
+                        ID:   0,
+                        Name: "",
+                    },
+                    County: &County{
+                        ID:   0,
+                        Name: "",
+                    },
+                    Street: &Street{
+                        ID:   0,
+                        Name: "",
+                    },
+                }
+            },
+        }
+        b.RunParallel(func(pb *testing.PB) {
+            for pb.Next() {
+                // 从缓存池中获取对象
+                addressModule, _ := (demoPool.Get()).(*AddressModule)
+                // 下面这段代码没意义 只是为了不报语法错误
+                if addressModule == nil {
+                    return
+                }
+
+                // 重置对象 准备归还对象到缓存池
+                addressModule.Consignee = ""
+                addressModule.Email = ""
+                addressModule.Mobile = 0
+                addressModule.Country.ID = 0
+                addressModule.Country.Name = ""
+                addressModule.Province.ID = 0
+                addressModule.Province.Name = ""
+                addressModule.County.ID = 0
+                addressModule.County.Name = ""
+                addressModule.Street.ID = 0
+                addressModule.Street.Name = ""
+                addressModule.DetailedAddress = ""
+                addressModule.PostalCode = ""
+                addressModule.IsDefault = false
+                addressModule.Label = ""
+                addressModule.Longitude = ""
+                addressModule.Latitude = ""
+                // 还对象到缓存池
+                demoPool.Put(addressModule)
+            }
+        })
+    }
+
+    // 使用sync.Pool执行结果
+    // goos: darwin
+    // goarch: amd64
+    // pkg: demo
+    // cpu: Intel(R) Core(TM) i5-7360U CPU @ 2.30GHz
+    // BenchmarkDemo_Pool-4   	988550808	        12.41 ns/op	       0 B/op	       0 allocs/op
+    // PASS
+    // ok  	demo	14.215s
+    ```
+   - sync/singleflight：缓存等穿透时减少请求数
+    ```go
+    func TestDemo_Singleflight(t *testing.T) {
+        t.Parallel()
+        singleGroup := singleflight.Group{}
+        wg := sync.WaitGroup{}
+        // 模拟并发远程调用
+        for i := 0; i < 3; i++ {
+            wg.Add(1)
+            go func() {
+                defer wg.Done()
+                // 使用singleflight
+                res, err, shared := singleGroup.Do("cache_key", func() (interface{}, error) {
+                    resp, err := http.Get("http://example.com")
+                    if err != nil {
+                        return nil, err
+                    }
+                    body, err := ioutil.ReadAll(resp.Body)
+                    if err != nil {
+                        return nil, err
+                    }
+                    return body, nil
+                })
+                if err != nil {
+                    t.Error(err)
+                    return
+                }
+                _, _ = res.([]byte)
+                t.Log("log", shared, err)
+            }()
+        }
+
+        wg.Wait()
+    }
+    ```
 1. 避坑指南
    - 谨慎使用全局变量，全局变量不会像PHP一样，在完成一次请求之后被销毁，而是会被改变
    - 形参是slice、map类型的参数，注意值可被全局修改，array则不会
