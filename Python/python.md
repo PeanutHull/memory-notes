@@ -1,6 +1,7 @@
 ### 认识
 1. 认识：是一种解释型(解释执行)、动态数据类型、面向对象的高级编程语言。开源，版权与许可证在python软件基金会
-   - 易于理解、学习，简单优雅、易于开发。抽象层次高，表达能力强
+   - 抽象层次高，表达能力强
+   - 易于理解、学习，简单优雅、易于开发
    - 执行效率换来了开发效率
    - 内置包多：官方提供完善广泛的标准库，众多第三方库远超其他语言，如网络编程、输入输出、文件系统、图形处理、数据库、文本处理等
    - 胶水语言：具有可扩展性，丰富api和工具，轻松使用其他语言的模块
@@ -11,7 +12,7 @@
    - 数据分析：商业智能
 1. 示例
    - python3 hello.py
-    ```python
+    ```py
     #!/usr/bin/python3
     print("Hello, World!");
     ```
@@ -23,11 +24,11 @@
     reload(sys)
     sys.setdefaultencoding("utf-8")
     ```
+   - 行与缩进：用缩进代表代码块，无需大括号包裹。同一代码块的缩进空格数必须相等。使用反斜杠实现多行语句，使用分号表示多条语句在一行
    - 标识符：不能以数字开头，大小写敏感
    - 注释
      1. 单行 #
      1. 多行 '''或"""
-   - 行与缩进：用缩进代表代码块，无需大括号包裹。同一代码块的缩进空格数必须相等。使用反斜杠实现多行语句，使用分号表示多条语句在一行
 1. 数据类型
    - Bool：True/False，表示1/0，可以和数字直接运算，""也是假，不是基本数据类型
    - Number
@@ -49,7 +50,7 @@
         - 字符串截取：从左往右以0开始，从右往左以-1开始
         - 连接符+，转义符\，复制符*
      1. 三引号：从引号和特殊字符串的泥潭中走出来
-        ```python
+        ```py
         cursor.execute('''
         CREATE TABLE users (
         login VARCHAR(8),
@@ -67,6 +68,19 @@
         - 旧版：支持格式化输出字符串，就是将值插入到有格式符%s的字符串中，和c的sprintf一样的语法，如`print("我叫 %s 今年 %d 岁!" % ('小明', 10)`
           1. 格式化符号：%c符合和ACSII，%d整数，%u无符号整数，%o八进制，%x十六进制，%X十六进制(大写)，%s字符串...
           1. 辅助指令：*定义宽度或小数点精度，-左对齐，(var)映射变量...
+1. 类型转换
+   - int/long/float/complex()
+   - chr(整数转字符)/unichr(整数转unicode)/ord(字符转整数)/hex(整数转十六进制字符串)/oct(整数转八进制字符串)
+   - str/repr(表达式字符串)/eval(执行字符串中的python表达式)()
+   - list/tuple/set/dict/frozenset(不可变集合)()
+1. 运算符
+   - 算术运算符：+-*/%，a**b次幂，//取整除
+   - 比较运算符：== != > < >= <=
+   - 赋值运算符：= += -= *= /= %= **= //=
+   - 位运算符：& | ^ ~ << >>
+   - 逻辑运算符：and or not，如`if(a and b)`，and从左到右计算表达式，若所有值均为真，返回最后一个值，若存在假，返回第一个假值；or从左到右返回第一个为真的值
+   - 成员运算符：in/not in，是否存在于序列中，如`if(a in list)`
+   - 身份运算符：is/is not，两个标识符是否引用自一个对象，如`if(a is b)`，a是20b是30都不同。==比较的是值，is比较引用对象
 1. 数据结构：相关操作、推导式
    - List
      1. 理解：列表，数字为索引的数组，使用最频繁，可被索引和切片、元素可被改变、可用+拼接、可继续嵌套
@@ -85,19 +99,6 @@
      1. 方法
         - clear()
         - keys()/items()
-1. 类型转换
-   - int/long/float/complex()
-   - chr(整数转字符)/unichr(整数转unicode)/ord(字符转整数)/hex(整数转十六进制字符串)/oct(整数转八进制字符串)
-   - str/repr(表达式字符串)/eval(执行字符串中的python表达式)()
-   - list/tuple/set/dict/frozenset(不可变集合)()
-1. 运算符
-   - 算术运算符：+-*/%，a**b次幂，//取整除
-   - 比较运算符：== != > < >= <=
-   - 赋值运算符：= += -= *= /= %= **= //=
-   - 位运算符：& | ^ ~ << >>
-   - 逻辑运算符：and or not，如`if(a and b)`，and从左到右计算表达式，若所有值均为真，返回最后一个值，若存在假，返回第一个假值；or从左到右返回第一个为真的值
-   - 成员运算符：in/not in，是否存在于序列中，如`if(a in list)`
-   - 身份运算符：is/is not，两个标识符是否引用自一个对象，如`if(a is b)`，a是20b是30都不同。==比较的是值，is比较引用对象
 1. 变量
    - 理解：不需要声明，使用前必须赋值，赋值之后变量才会被创建。变量的类型由赋予它的值来决定，以值为基准，一个值一个内存地址，多个变量可以指向一个内存地址，变量没有类型，仅仅是一个对象的引用
    - 操作
@@ -121,7 +122,7 @@
    - 列表生成式
 1. 函数
    - 定义：def
-    ```python
+    ```py
     def 函数名( 参数 ):
         "可以第一行为注释"
         return              # 没有return，函数返回None
@@ -140,7 +141,7 @@
         - 有自己的命名空间，不能访问自己参数之外或全局命名空间里的参数
         - 是一个表达式，只能写一行，不同于C的内联函数，后者的目的是调用小函数时不占用栈内存从而增加运行效率
      1. 实例
-        ```python
+        ```py
         sum = lambda arg1, arg2: arg1 + arg2;   # 可以无限参数，像函数一样
         sum(1, 2)                               # 输出3
         ```
@@ -161,13 +162,13 @@
 1. lambda
 1. 流程控制
    - 判断
-    ```python
+    ```py
     if 表达式1:
     elif 表达式2:
     else:
     ```
    - 循环：跳出循环，continue/break，但是不会执行else里的语句
-    ```python
+    ```py
     # for
     for x in y:
     else:
@@ -183,6 +184,7 @@
      1. 不管import多少次，都只会引入一次
      1. 搜索目录：文件只要存在于sys.path输出的目录下即可，结果第一个表示当前脚本目录
    - 组成
+     1. 包：用.实现不同模块间的命名空间，如`import sound.effects.echo`
      1. `__name__`：当值为'__main__'时，模块为自身运行，否则被引入执行
    - 使用
      1. 使用
@@ -247,7 +249,7 @@
      1. psutil：系统监控
 1. 错误和异常
    - 异常处理：try/except
-    ```python
+    ```py
     try:
     except OSError:
     except ValueError as err:                       # 单个
@@ -257,12 +259,12 @@
     finally:                                        # 无论如何都会执行。如果有异常，没有except接住的话，会再抛一次
     ```
    - 抛出异常：raise
-    ```python
+    ```py
     raise                                           # 抛出一个异常
     raise NameError('HiThere')                      # 抛出指定异常，参数必须为异常的实例或者异常的类(即Exception的子类)
     ```
    - 自定义异常
-    ```python
+    ```py
     class Error(Exception):                         # 定义一个基础的类，通过继承扩展异常类型
     class InputError(Error):
     class TransitionError(Error):
@@ -275,6 +277,7 @@
      1. 私有属性/方法：以两个下划线开头，不能在类外部访问和直接访问
      1. 方法访问：直接向上的、从左至右的查找
      1. 方法重写：子类直接覆盖方法名
+   - 定义：`class Name():`
    - 类的专有方法
      1. `__init__`
      1. `__del__`：析构
@@ -473,13 +476,13 @@
           1. @tornado/tornado/gen.py
           1. @tornado/tornado/platform/asyncio.py：官方协程
    - gevent
-### pro
+### 高级
 1. 函数式编程
    - 基础函数：filter、map、reduce
    - 返回函数
    - 匿名函数
    - 装饰器：coroutine
-    ```python
+    ```py
     # 定义
     def log(func):
         @functools.wraps(func)                                  # 减少副作用
@@ -515,7 +518,7 @@
      1. 每个线程都有一组cpu寄存器，如指令指针、堆栈指针
      1. 线程可以被抢占(中断)、搁置(睡眠)
      1. 分为：内核线程、用户线程
-     1. python是伪多线程，只有一个核工作
+     1. python是伪多线程，因为GIL的存在同时只有一个核工作
         - cpu密集型的用多线程效率下降70%，线程上下文切换，线程越多，上下文切换越多
         - 核数和线程数
           1. cpu密集型：n + 1
@@ -542,6 +545,11 @@
         - 线程创建和业务处理解耦，更加优雅
         - 线程池是使用线程的最佳实践，不建议直接使用线程
      1. ThreadPoolExecutor：官方线程库
+1. 异步io
+   - 协程
+   - asyncio
+   - async/await
+   - aiohttp
 1. 优先级队列
    - 理解：Queue模块提供了同步的、线程安全的队列类，实现了锁原语，可以使用队列实现线程间的同步
    - 分类
@@ -554,18 +562,13 @@
      1. Queue.put(item)/put_nowait()：写入队列，put_nowait()相当于put(item, False)
      1. Queue.task_done()：完成一项工作后，向已完成的队列发送一个信号
      1. Queue.join()：等到队列为空，再执行别的操作
-1. 异步io
-   - 协程
-   - asyncio
-   - async/await
-   - aiohttp
 1. 网络编程
    - 分类
      1. 低级别：提供了标准的BSD Sockets API，可以访问底层操作系统Socket接口的全部方法
      1. SocketServer：简化网络服务开发
      1. tcp/udp
    - 定义
-    ```python
+    ```py
     import socket
     # 参一套接字家族，为AF_UNIX或者AF_INET
     # 参二套接字类型，SOCK_STREAM或SOCK_DGRAM
@@ -615,14 +618,23 @@
      1. lua：只支持单线程，但支持多进程
      1. js：单线程，但是异步接口丰富
 ### 运维
-1. 运行模式
-   - 交互式：python3、IDLE
-     1. help()：打印文档，:q退出说明文档
-     1. 等待用户输入：`input("按下 enter 键后退出")`
-     1. 构造函数：dict([('a', 1), ('b', 2), ('c', 3)])
-   - 脚本：指定shell脚本解释器，作为脚本文件执行
-     1. 添加：`#!/usr/bin/env python3`
-     1. 执行：`./hello.py`
+1. 运行
+   - 运行模式
+     1. 交互式：python3、IDLE
+        - help()：打印文档，:q退出说明文档
+        - 等待用户输入：`input("按下 enter 键后退出")`
+        - 构造函数：dict([('a', 1), ('b', 2), ('c', 3)])
+     1. 脚本：指定shell脚本解释器，作为脚本文件执行
+        - 添加：`#!/usr/bin/env python3`
+        - 执行：`./hello.py`
+   - venv：virtual environment，虚拟且独立的python运行环境，用于隔离不同项目的依赖包。项目下有venv文件夹
+     1. 安装：python3 install virtualenv
+     1. 在当前目录创建虚拟环境：python3 -m venv .
+     1. 在当前目录创建独立的python环境：virtualenv --no-site-packages venv
+     1. 激活虚拟环境：source venv/bin/activate
+     1. 停用：deactivate
+     1. 删除：rm -rf venv
+   - conda：依赖和环境管理工具，和venv一样，适用于多种语言Python, R, Scala, Java, Javascript, C/ C++
 1. 交互
    - 输入输出
      1. 标准输入：input()，默认标准输入为键盘
@@ -647,7 +659,7 @@
         - 最新版本：`pip install/uninstall package`
         - 指定版本：`pip install package ==/>= 1.0.4`
      1. 查看：`pip list/show/search package`
-### WIKI
+### wiki
 1. 保留字
    - class，from，import，return，
    - if，elif，else，for，while，continue，break，finally，pass，
@@ -667,3 +679,12 @@
 1. mail
    - smtp
    - pop3
+1. 2和3的区别
+   - print由语句变为函数
+   - 编码默认由asscii变为utf-8，阻止了编码错误
+   - 字符串：阻止了编码错误
+     1. 2：字符串有两个类型unicode/str，表示文本字符串/字节序列
+     1. 3：str表示字符串，byte表示字节序列
+   - True和False由全局变量变为关键字，不允许再被重新赋值，因为违背Explicit is better than implicit
+   - 迭代器：返回列表对象的内置函数和方法改为迭代器，迭代器的惰性加载特性使得操作大数据更有效率
+   - 新增nonlocal，声明非局部变量

@@ -27,7 +27,7 @@
    - 云平台：k8s
 1. 示例
     ```go
-    package main
+    package main
 
     import "fmt"
 

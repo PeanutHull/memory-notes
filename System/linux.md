@@ -421,6 +421,17 @@
 1. 查看
    - iotop: 查看进程和磁盘，将进程按磁盘读写次数、频率排序，无法统计内核的io
    - iostat：查看io状态，`iostat/iostat 3/iostat 3 3`：用法和mpstat一致。`iostat -dxm 3`
+1. 实用
+   - 经验
+     1. df -m以兆为结尾查看磁盘空间，du查看文件占用
+     1. 进程不重启，删除这个进程创建的文件，磁盘空间不释放，造成df和du对不上，因为进程持有的文件描述符没释放，解决如下
+        - 重启进程
+        - 不重启进程
+          1. lsof -n /|grep delete：查看删除的文件
+          1. cd /proc/30504/fd
+          1. echo -> 16：覆盖指向的那个文件编号
+   - 查询大于200M的文件：`find / -type f -size +200M | xargs ls -Slh`
+   - 查看占用：`du -h --max-depth=1 /*`
 ### 内存
 1. free：-m 以兆显示内存状态
 1. vmstat：Virtual Meomory Statistics，虚拟内存统计信息，是实时系统监控工具，包括进程情况、内存情况、交换页、I/O、系统中断、CPU。`vmstat/vmstat 3/vmstat 3 3`：用法和mpstat一致
