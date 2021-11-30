@@ -144,7 +144,7 @@
           1. MinGW：Minimalist GNU on Windows，开源，包含几乎所有win32API。主要方向是能使用win32API来编程，最接近win32，更像是vc的替代品
           1. Cygwin：在windows平台上提供一个类UNIX模拟环境，当然包括gcc了，目标是让unix程序在windows下直接被编译。是cygnus solutions公司开发的自由软件
           1. Djgpp：应用于dos系统
-        - MSVC：微软(ms)的VC编译器
+        - MSVC：微软(ms)的VC编译器，windows下默认的C编译器
      1. windows的unix环境
         - MSYS：Minimal GNU（POSIX）system on Windows，是windows下最优秀的小型GNU环境，提供模拟unix环境来使用MinGW
         - WSL：Windows Subsystem for Linux，windows下的linux子系统

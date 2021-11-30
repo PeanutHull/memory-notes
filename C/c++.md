@@ -468,6 +468,10 @@
     ```
 ### 高级
 1. 泛型编程
+1. OpenMP：用于并行计算
+   - 如好几层循环嵌套，用`#pragma omp parallel for`替代
+   - GCC，ICC，MSVC支持
+   - 2017 年再看 OpenMP 已经是个半死的技术了。Multi-core 的并发基本上都在采用类似 GCD/TBB 的技术。当年 OpenMP 采用编译器扩展能赢得开发者，主要是因为 lexical scope closure 没有被广泛支持。2017 年各种主要语言都支持 lambda/closure，根本没有必要再使用 compiler 扩展来隐式并发。更好粒度的并行算法可以在 GPU 上实现
 ### wiki
 1. 关键是要理解概念，而不应过于深究语言的技术细节
 1. 历史
