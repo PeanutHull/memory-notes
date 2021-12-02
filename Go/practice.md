@@ -2,7 +2,7 @@
 1. Gin：以更好的性能实现类似Martini框架的API，5万star
    - 简洁
    - 高性能路由
-1. tars
+1. tars：性能强
 1. beego
    - 用于开发api、web的http框架，自带orm，大而全，最后一次更新20年12月
      1. 简单：RESTFul、mvc，支持热编译，自动化打包
@@ -144,7 +144,13 @@
      1. Gossip Protocol：八卦，一个事件发生时，其他节点需要知道这个事件
         - lan pool：局域网池
         - wan pool
-1. tars：性能强
+1. jarger
+   - 认识：链路追踪
+     1. 高扩展
+     1. 可观察
+     1. 原生支持openTracing
+   - 组成
+     1. span：逻辑工作单元，有操作名称、开始时间、持续时间，跨度可以嵌套并排序，建立因果关系模型
 1. 配置中心
 ### 技术解决方案
 1. 千万级WebSocket弹幕消息推送服务

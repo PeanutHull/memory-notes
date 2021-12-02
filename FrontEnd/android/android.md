@@ -18,6 +18,11 @@
         - 当java程序编译成class后，还需要使用dx工具将所有的class文件整合到一个dex文件，目的是其中各个类能够共享数据，在一定程度上降低了冗余，同时也是文件结构更加经凑，实验表明，dex文件是传统jar文件大小的50%左右
      1， 作用
         - dex里面包含了所有app代码，利用反编译工具可以获取java源码。理解并修改dex文件，就能更好的apk破解和防破解
+1. am
+   - 认识：activity manager，Android下的实用命令，代码在frameworks\base\cmds\am\src\com\android\commands\am
+   - 使用
+     1. 获取package和launch_activity：`adb shell dumpsys window windows | findstr "Current"`
+     1. 启动：`am start`
 ### wiki
 1. root方式
    - 以前版本中最流行的 root 方法 —— 即，将 su守护程序 放置到 /system 分区，并在启动时取得所需的权限

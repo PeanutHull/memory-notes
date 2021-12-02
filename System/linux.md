@@ -349,7 +349,7 @@
    - hostname
    - ifdown/ifup
    - ethtool
-   - 防火墙
+   - 防火墙：都是内核的netfilter在干活，以下2个作用都是维护规则
      1. iptables
         - 编辑：`vim /etc/sysconfig/iptables`
         - 增加：`-A INPUT -m state --state NEW -m tcp -p tcp –-dport 80 -j ACCEPT`
