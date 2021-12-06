@@ -75,8 +75,9 @@
      1. 快速迭代
      1. 多语音组合
 1. DDD
-   - 认识：真正决定软件复杂性的是设计方法
-     1. 康威定律：微服务的拆分要对应组织
+   - 认识
+     1. 实体和值对象分开
+     1. 实现聚合和聚合根
    - 好处
      1. 指导确定系统边界
      1. 聚焦核心元素
@@ -88,6 +89,18 @@
         - 支撑子域：专用的
      1. 界限上下文：不在于如何划分边界，在于如何控制边界
      1. 领域模型：针对的解决方案
+   - wiki
+     1. 真正决定软件复杂性的是设计方法
+     1. 康威定律：微服务的拆分要对应组织
+   - 开发方式
+     1. TDD：测试驱动开发，先写测试后写实现，red=>green=>refactor(错误=>正确=>重构)
+        - PHPUnit
+        - Enhance PHP
+        - SimpleTest
+     1. BDD：行为驱动开发
+        - 分支
+          1. SpecBDD：专注代码层面，如phpspec
+          1. StoryBDD：专注功能测试，如Behat、Codeception
 1. 微服务架构：![avatar](../images/micro_service_struct.png)
    - DDD域微服务四层架构
      1. interface：接口层
@@ -144,13 +157,26 @@
      1. Gossip Protocol：八卦，一个事件发生时，其他节点需要知道这个事件
         - lan pool：局域网池
         - wan pool
-1. jarger
-   - 认识：链路追踪
+1. jaeger
+   - 认识：链路追踪，![avatar](../images/jaeger_struct.jpg)
      1. 高扩展
      1. 可观察
      1. 原生支持openTracing
+   - 设计
+     1. jaeger-client：使用thrift通过udp发送给agent
+     1. jaeger-agent：go，使用thrift通过Tchannel发送给collector
+     1. jaeger-collector：go，队列入存储
+     1. jaeger-query：go
+     1. jaeger-ui：react
+     1. 存储：cassandra
    - 组成
      1. span：逻辑工作单元，有操作名称、开始时间、持续时间，跨度可以嵌套并排序，建立因果关系模型
+        - 对象
+          1. tag：标签集合
+          1. log：一组span日志集合
+          1. spanContext：上下文对象
+          1. reference：span间关系
+   - 项目应用原理：![avatar](../images/jaeger_in_project.jpg)
 1. 配置中心
 ### 技术解决方案
 1. 千万级WebSocket弹幕消息推送服务

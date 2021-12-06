@@ -325,15 +325,6 @@
         - 你希望在哪怕好几个月以后也能轻松地阅读并理解测试代码
      1. 需要编写的是那些觉得能运作但却失败或觉得必将失败但却成功的测试。另外一种思考方式是从成本/收益的关系上去考量。需要编写的是能够给出反馈信息的测试。
 1. wiki
-   - 开发方式
-     1. TDD：测试驱动开发，先写测试后写实现，red=>green=>refactor(错误=>正确=>重构)
-        - PHPUnit
-        - Enhance PHP
-        - SimpleTest
-     1. BDD：行为驱动开发
-        - 分支
-          1. SpecBDD：专注代码层面，如phpspec
-          1. StoryBDD：专注功能测试，如Behat、Codeception
    - 具体操作
      1. get/post()：发出http请求
      1. assertXxx()：判断

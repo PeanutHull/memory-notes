@@ -262,7 +262,7 @@
 ### 链路追踪
 1. 实现原理
    - 链路是
-   - 根据时间线去看，一个个请求有开始时间、持续时间，上下层级关系
+   - 根据时间线去看，一个个请求有开始时间、持续时间，上下层级关系，![avatar](../images/trace_timeline.jpg)
 1. 网校trace
    - 组成
      1. 关键三要素：接口url(名称)、开始时间、持续时间
@@ -654,7 +654,7 @@
      1. 号段：需要leaf_alloc表
      1. 雪花：依赖zk的顺序id作worker_id，
 1. 滴滴tinyid
-   - 认识：支持号段，https://github.com/didi/tinyid/wiki
+   - 认识：号段模式，https://github.com/didi/tinyid/wiki
      1. 提供http和tinyid-client两种方式接入
 ### 测试
 1. 分类
