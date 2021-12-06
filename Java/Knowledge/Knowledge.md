@@ -176,7 +176,7 @@
      1. getLastModified()/getExpiration
      1. InputStream/OutputStream
 1. UUID
-   - 理解：算法的核心思想是结合机器的网卡、当地时间、一个随即数来生成GUID，从理论上讲，如果一台机器每秒产生10000000个GUID，则可以保证（概率意义上）3240年不重复。java 5新增
+   - 理解：算法的核心思想是结合机器的网卡、当地时间、一个随机数来生成GUID，从理论上讲，如果一台机器每秒产生10000000个GUID，则可以保证（概率意义上）3240年不重复。java 5新增
     ```Java
     import java.util.UUID;
     UUID.randomUUID().toString();

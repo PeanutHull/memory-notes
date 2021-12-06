@@ -596,33 +596,66 @@
    - 数据算法
    - 数据可视化
 ### 唯一id
+1. 分布式ID：即全局唯一ID
+   - 全局唯一
+   - 高性能
+   - 高可用
+   - 好接入
+   - 趋势递增
 1. 数据库自增
 1. UUID
-   - 认识：128bit的string类型，一般用十六进制。为保证唯一性，规范定义了包括网卡MAC地址、时间戳、名字空（Namespace）、随机或伪随机数、时序等元素，以及从这些元素生成 UUID 的算法
-     1. 没有排序，无法保证按序递增
-     1. 太长了
+   - 认识：128bit的string类型，一般用十六进制。为保证唯一性，规范定义了包括网卡MAC地址、时间戳、名字空（Namespace）、随机或伪随机数、时序等元素，以及从这些元素生成 UUID 的算法，可实现全球唯一
+   - 优点
+     1. 生成简单，无网络消耗，可以唯一
+   - 缺点
+     1. 太长了，存了数据库性能低
+     1. 没有排序，无法按序递增
+     1. 内容没有意义
    - 版本
      1. 版本1：基于时间戳和mac地址
      1. 版本2：基于时间戳，mac地址和POSIX UID/GID
      1. 版本3：基于MD5哈希算法
      1. 版本4：基于随机数
      1. 版本5：基于SHA-1哈希算法
+   - 举例
+     1. c2b8c2b9e46c47e3b30dca3b0d447718
+     1. aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
+1. mysql步长
+   - 简单，单调自增
+   - 无法高并发、高可用
+1. mysql号段模式
+   - 组成：从数据库批量获取id放入内存。每次申请时，根据乐观锁version更新max_id=max_id + step，更新成功表示申请成功
+     1. 建表，max_id记录最大id，step代表每次申请的步长，version乐观锁，biz_type业务类型
+   - 特点
+     1. 数据库访问频次低，压力小
+     1. 性能较好
 1. redis原子步长
    - 多台redis设置不同步长，每天重新生成一个id，然后累加获得，实现高可用、负载均衡，性能好，数字ID天然排序
-1. 雪花算法：
-   - 认识：64bit的int64类型，来自twitter的scala编写
+1. 雪花算法
+   - 认识：64bit的int64类型，来自twitter的scala编写，正数位(1byte)+ 时间戳(41byte)+ 机器ID(5byte)+ 数据中心(5byte)+ 自增值(12byte)
+     1. 正数位：一般为0，正数
+     1. 时间戳：毫秒时间戳，不建议存当前时间戳，而是用（当前时间戳 - 固定开始时间戳）的差值，可以使产生的ID从更小的值开始，41位的时间戳可以使用69年
+     1. 自增值：支持同一毫秒内同一个节点可以生成4096个ID
+   - 特点
      1. 能满足高并发分布式系统环境下ID不重复
      1. 基于时间戳，可以保证基本有序递增，集群时钟不一致可能不是自增
-     1. 不依赖于第三方的库或者中间件
      1. 依赖机器时钟，倒拨可能重复
+     1. 不依赖于第三方的库或者中间件
    - 组成
      1. 0～11bit	12bits	序列号，用来对同一个毫秒之内产生不同的ID，可记录4095个
      1. 12～21bit	10bits	10bit用来记录机器ID，总共可以记录1024台机器
      1. 22～62bit	41bits	用来记录时间戳，这里可以记录69年
      1. 63bit	1bit	符号位，不做处理
-1. 百度uid-generator：https://github.com/baidu/uid-generator
-1. 美团leaf：https://tech.meituan.com/MT_Leaf.html
-1. 滴滴tinyid：https://github.com/didi/tinyid/wiki
+1. 百度uid-generator
+   - 认识：基于雪花，支持自定义时间戳、工作机器ID和序列号等各部分的位数。https://github.com/baidu/uid-generator
+     1. 需要worker_node表，应用每次启动插入数据的自增id为workId
+1. 美团leaf
+   - 认识：支持号段模式和雪花模式，https://tech.meituan.com/MT_Leaf.html
+     1. 号段：需要leaf_alloc表
+     1. 雪花：依赖zk的顺序id作worker_id，
+1. 滴滴tinyid
+   - 认识：支持号段，https://github.com/didi/tinyid/wiki
+     1. 提供http和tinyid-client两种方式接入
 ### 测试
 1. 分类
    - 业务测试
