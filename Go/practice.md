@@ -177,7 +177,9 @@
           1. spanContext：上下文对象
           1. reference：span间关系
    - 项目应用原理：![avatar](../images/jaeger_in_project.jpg)
-1. 配置中心
+1. 熔断
+   - 成功、失败、超时、拒绝数量
+   - hystrix-dashboard
 ### 技术解决方案
 1. 千万级WebSocket弹幕消息推送服务
    - 难点

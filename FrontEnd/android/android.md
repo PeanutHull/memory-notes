@@ -56,7 +56,7 @@
      1. TaiChi：是一个使用Xposed模块的框架，带或不带Root/Unlock bootloader
      1. 安装：需要解锁 Bootloader 并刷入第三方 Recovery
 1. busybox
-   - 集成了相当完整的linux命令环境和工具的软件，如http服务器、telnet服务器
+   - 集成了相当完整的linux命令环境和工具的软件，即工具箱，如http服务器、telnet服务器
 1. Termux
    - 认识：终端模拟器，甚至可被认为是Linux发行版，仅仅是模拟器有点小器了
      1. 自带包管理器apt

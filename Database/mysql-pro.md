@@ -534,6 +534,23 @@
     slow_query_log_file = /usr/local/mysql/data/slow.log
     long_query_time = 1
     ```
+1. 碎片整理
+   - 认识
+     1. 产生原因：删除数据时会留下数据空洞，便于插入数据时使用，可能会一直存在，如text、varchar类型
+     1. 增加了存储，增加io负担降低扫描效率
+   - 解决方案
+     1. 查看：看data_free
+        ```sql
+        SELECT CONCAT(TRUNCATE(SUM(data_length)/1024/1024,2),'MB') AS data_size,
+        CONCAT(TRUNCATE(SUM(max_data_length)/1024/1024,2),'MB') AS max_data_size,
+        CONCAT(TRUNCATE(SUM(data_free)/1024/1024,2),'MB') AS data_free,
+        CONCAT(TRUNCATE(SUM(index_length)/1024/1024,2),'MB') AS index_size
+        FROM information_schema.tables WHERE TABLE_NAME = 'datainfo';
+        ```
+     1. 整理：会锁表，比较慢一百万需要37秒。每月、每周一次就可以
+        - ALTER TABLE datainfo ENGINE=InnoDB;
+        - ANALYZE TABLE datainfo;
+        - optimize table datainfo;
 1. 实例切换
    - 操作步骤
      1. 停服
@@ -547,7 +564,7 @@
      1. 请求、任务失败，需要有反向check机制
 ### 架构
 1. 主从
-   - 原理：主库将更改记录到二进制日志binlog，从库复制到中继日志，读取中继重新放到库中。异步实时
+   - 原理：主库将更改记录到二进制日志binlog，从库复制到中继日志，读取中继重新放到库中。是异步实时的
      1. 计算主从的LSN，可得出时延
      1. 使用Replication协议
    - 作用
@@ -557,11 +574,18 @@
         - 对从设置read-only，防止误改
         - 主从自动切换
      1. 数据备份：异步实时备份，复制不能代替备份，因为执行删除命令同步的很快，这个时候只能依赖备份了
-   - 步骤
+   - 成本
+     1. 主从延迟
+        - 数据冗余，不要再查，直接传输所有数据
+        - 使用Cache，但是更新怎么办，不行
+        - 查主库
+   - 步骤：![avatar](../images/mysql_slave_process.webp)
      1. master记录到binlog
-     1. slave的io线程连接master，请求指定文件的指定位置之后的内容
-     1. master返回信息
-     1. slave的io线程将接收的日志依次记录到relay log末尾中，将binlog日志名和位置记录到masterinfo中
+     1. slave创建的io线程连接master，请求指定文件的指定位置之后的内容
+     1. master创建独立异步的log dump线程发送binlog
+        - 防止影响主库的更新
+        - 会消耗主库资源，占用带宽等
+     1. slave的io线程将接收的日志依次记录到relay log末尾中，将binlog日志名和位置记录到masterinfo中。防止影响从库的更新
      1. slave的sql线程检测到relaylog新增了内容，解析并执行
    - 查看
      1. `show master status;`
@@ -1063,7 +1087,7 @@
           1. 回滚段
           1. 
         - extent：区，连续页组成，都是1m
-        - page：页/块，默认16k，innodb磁盘管理的最小单位，与数据库相关的所有内容都存储在里边。大小16kb，32位int表示，对应innodb的64TB存储容量(16kb * 2^32)
+        - page：页/块，默认16k，32位int表示，对应innodb的64TB存储容量(16kb * 2^32)。innodb磁盘管理的最小单位。与数据库相关的所有内容都存储在里边，表中的记录都是存储在页中(叶子节点)，也可以是健值和指针(非叶子节点)
           1. 类型
              - b-tree node：数据页
              - undo log page：undo页
@@ -1205,7 +1229,7 @@
    - Read Uncommited：
    - Read Committed (RC)：读取自身版本和最新版本，以最新为主，不加锁读
    - Repeatable Read (RR)：加锁读和读的范围，新的满足查询条件的记录不能够插入(间隙锁)，防止幻读
-   - 
+   - Serializable
 1. 内部XA事务
    - 认识：最常见的是binlog和redo log之间，二者要求是原子性的，否则导致主从不一致(因为binlog传给从了)，如果redo没做，重启后就再做一次
 ### 索引
