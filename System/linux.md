@@ -10,6 +10,7 @@
    - 文件
      1. stat：查看文件详情信息，修改时间、Inode、Links数等
      1. file：查看文件类型
+     1. hexdump：查看二进制文件
    - 搜索
      1. find：查找具有某些特征的文件或目录，可遍历整个文件系统。`find pathname -options`：路径+命令选项
         - -type：f文件，d目录，p管道文件，i符号链接文件，b块设备文件，e字符设备文件

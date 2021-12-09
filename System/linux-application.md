@@ -148,6 +148,7 @@
    - httpDNS：指通过ip和http协议直接访问dns服务器获取解析，绕过本地运营商。因为智能dns有很多弊端，如nat转换导致解析链路加长、域名劫持等原因，移动端用的多
      1. 用法：将请求url中的host修改为httpdns解析给我们的ip, 并在请求header中将host指定为原始域名
      1. httpdns下的https的curl写法：`curl -v "https://xxx" --resolve xx.xx.com:443:xx.xx.xx.xx`，注意httpdns面对https时需要提供正确的host，否则证书返回的不对
+   - 开源dns服务：Bind、NSD、PowerDNS、Unbound，选用了powerdns
 1. 高可用
    - LVS
      1. 认识：Linux Virtual Server，基于linux操作系统实现的负载均衡器

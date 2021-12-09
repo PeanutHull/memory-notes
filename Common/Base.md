@@ -129,7 +129,9 @@
         - msgpack可以直接序列化类对象，protobuf需要先写描述映射文件(.proto)
 1. 正则
    - 认识：描述文本模式的特殊用法，用于分割、查找、匹配、替换
-     1. pcre：Perl Compatible Regular Expressions，Perl兼容正则表达式，是一个由Philip Hazel开发的、为很多现代工具所使用的库
+     1. POSIX派系 (Portable Operating System Interface) 标准公诸于世，它制定了不同的操作系统都需要遵守的一套规则，其中就包括正则表达式的规则。Perl引入的正则表达式功能是颗耀眼明珠
+        - 如grep ，sed 和 awk
+     1. pcre派系：Perl Compatible Regular Expressions，Perl兼容正则表达式，是一个由Philip Hazel开发的、为了把 Perl 语言中正则的功能移植到其他语言中，全面仿制 Perl 的正则表达式的语法和语义，为很多现代工具所使用的库，如Python ， PHP 和 Java
      1. 正则从数学中来
    - 组成
      1. 通用原子
