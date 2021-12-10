@@ -1935,6 +1935,13 @@
    - 断点调试：dlv
    - 逃逸分析：`go build -gcflags "-m -l" *.go`
    - 汇编代码：`go run -gcflags -S main.go`
+1. GUI
+   - fyne
+   - gio
+     1. 认识：全平台的可移植的即时模式gui程序，对浏览器的实验性支持 (Webassembly/WebGL)
+     1. 组成
+        - 基于Pathfinder的高效矢量渲染器
+        - 基于piet-gpu的实验渲染器，两种渲染器都支持Vulkan、Metal、Direct3D 11和OpenGL ES
 ### 运维
 1. 运行
    - 环境变量
