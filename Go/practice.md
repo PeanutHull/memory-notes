@@ -178,8 +178,19 @@
           1. reference：span间关系
    - 项目应用原理：![avatar](../images/jaeger_in_project.jpg)
 1. 熔断
+   - 认识：hystrix-go
+     1. 熔断器状态
+        - close：允许流量通过
+        - open：不允许
+        - half_open：允许一部分，如果出现异常，进入open，否则一点点放量
+     1. 字段
+        - timeout
+        - 
+        - 
    - 成功、失败、超时、拒绝数量
    - hystrix-dashboard
+1. 限流
+1. 负载均衡
 ### 技术解决方案
 1. 千万级WebSocket弹幕消息推送服务
    - 难点
