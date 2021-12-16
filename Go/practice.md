@@ -178,18 +178,21 @@
           1. reference：span间关系
    - 项目应用原理：![avatar](../images/jaeger_in_project.jpg)
 1. 熔断
-   - 认识：hystrix-go
+   - 认识：hystrix-go，记录成功调用、失败、超时、拒绝数量，在需要的地方加熔断，要根据业务设计一整套的熔断流程和处理逻辑
+     1. 熔断计数器：默认DefaultMetricCollector，保存熔断器的所有状态数量
      1. 熔断器状态
         - close：允许流量通过
         - open：不允许
         - half_open：允许一部分，如果出现异常，进入open，否则一点点放量
      1. 字段
-        - timeout
-        - 
-        - 
-   - 成功、失败、超时、拒绝数量
-   - hystrix-dashboard
+        - timeout：超时时间
+        - maxConCurrentRequest：最大并发量
+        - sleepWindow：熔断后重启时间，默认5秒
+        - requestVolumeThreshold：单位时间请求量
+        - errorPercentThreshold：熔断百分比，超过自动熔断
+     1. hystrix-dashboard：web管理平台
 1. 限流
+   - 认识：uber/limit，保护后端服务
 1. 负载均衡
 ### 技术解决方案
 1. 千万级WebSocket弹幕消息推送服务

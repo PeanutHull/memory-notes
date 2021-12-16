@@ -722,6 +722,7 @@
    - 安全
      1. sql安全：防注入(预处理)、特殊字符转义、错误信息屏蔽。权限分开、定期修改密码
      1. 备份恢复
+   - 参数设置：![avatar](../images/mysql_params.jpg)
 1. 连接方式
    - tcp/ip套接字：`mysql -h127.0.0.1`
    - 域套接字：`mysql -S /tmp/mysql.sock`
@@ -816,11 +817,41 @@
       1. 是否可连接：`mysqladmin -u -p ping`、`telnet ip port`
       1. 是否可读写：`read_only=off`、简单监控表的更新测试、简单查询`select @@version`
     1. 数据库性能
-      1. 服务器资源
-      1. qps/tps：单位时间内查询数、插入/修改/删除数
-      1. 连接数：Threads_connected / max_connections > 0.8
-        - `show variables like max_connections`
-        - `show global status like Threads_connected`
+      1. 服务器资源监控
+        - cpu
+        - 内存
+        - 磁盘空间使用率
+        - iops
+        - 网络流量
+        - 会话连接数：Threads_connected / max_connections > 0.8
+          1. `show variables like max_connections`
+          1. `show global status like Threads_connected`
+      1. 引擎监控
+        - qps/tps：单位时间内查询数、插入/修改/删除数
+        - InnoDB Data读写吞吐量
+        - bp请求次数
+        - bp命中率
+        - redo写次数
+          1. innodb_log_writes
+          1. innodb_os_log_fsyncs
+        - row operations
+          1. innodb_rows_read/inserted/deleted
+          1. innodb_log_writes
+          1. innodb_rows_updated
+        - 内存页
+          1. innodb_buffer_pool_pages_flushed
+          1. innodb_buffer_pool_pages_dirty
+        - 行锁
+          1. innodb_row_lock_time
+          1. innodb_row_lock_time_avg
+          1. innodb_row_lock_waits
+        - 临时表数量
+        - 执行次数
+        - 刷盘次数
+      1. 部署监控
+        - io线程状态
+        - sql线程状态
+        - 主从延迟时间
       1. 并发请求数：`show global status like Threads_running`：越多性能越下降，这个数远小于连接数，否则就产生了大量的阻塞
       1. innodb阻塞
         ```sql
@@ -840,6 +871,8 @@
         WHERE 
             (UNIX_TIMESTAMP()-UNIX_TIMESTAMP(c.trx_started)) > 60
         ```
+    1. 使用监控
+        - 慢查询
 1. 基准测试
    - 认识：进行可复现的某时刻的性能基准测试，以便当系统发生软硬件变化时重新进行测试以评估变化对性能的影响
      1. 要求：要简单、直接、易于比较，用于评估服务器的处理能力。和业务逻辑无关，是一种简化的压力测试
@@ -859,6 +892,13 @@
         - 建表，塞1百万数据：`sysbench --monitis=oltp --oltp-table-size=1000000 --mysql-db=xx --mysql-user=root --mysql-password=xx prepare`
         - 开始测试：`sysbench --monitis=oltp --oltp-table-size=1000000 --mysql-db=xx –mysql-user=root –mysql-password=xx –max-time=60 –oltp-read-only=on –max-requests=0 –num-threads=8 run`
      1. mysql-tpcc
+   - 性能评估
+     1. 1核1G：最大连接数300
+     1. 1核2G：最大连接数600
+     1. 2核4G：最大连接数1200
+     1. 4核16G：最大连接数4000
+     1. 8核32G：最大连接数8000
+     1. 16核64G：最大连接数16000
 1. 慢查询：记录超过一定时间的查询语句
     ```
     slow_query_log = ON
