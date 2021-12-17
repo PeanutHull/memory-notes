@@ -83,6 +83,42 @@
 1. 使用
    - docker run -v /usr/download imageName                                  # 给容器指定本地路径，通过inspect查看mounts的路径
    - docker run -v $PWD/locationPosition:/usr/download imageName            # 指定本地和容器目录的挂接
+### Tools
+1. docker-compose
+   - 认识：用于定义、运行多容器的工具，yml文件配置服务，命令控制
+   - 使用
+     1. dockerfile定义应用环境
+     1. docker-compose.yml定义构成的服务
+     1. docker-compose up启动
+   - 命令
+     1. up -d：后台运行
+     1. ps：列出所有容器
+     1. down：停止、删除容器和网络
+   - 配置
+    ```yml
+    #声明版本
+    version: "3"
+    services:
+        #服务名称，并且这个服务名称能够在同一个网络进行访问
+        consul-imooc:
+            #说明采用的镜像地址
+            image: cap1573/consul
+            ports:
+                - "8501:8500"
+        #链路追踪
+        jaegef-imooc:
+            image: cap1573/jaeger
+            ports:
+                - "6832:6831/udp"
+                - "16683: 16686"
+        #普罗米修斯
+        prometheus:
+            image: cap1573/prometheus
+            volumes:
+                - ./prometheus.yml:/etc/prometheus/prometheus.yml
+            ports:
+                - "19090: 9090"
+    ```
 ### 实例
 1. 根据centos创建带ssh镜像
     ```

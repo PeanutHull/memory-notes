@@ -1061,10 +1061,10 @@
 1. Elastic Stack：新一代ELK
    - elasticsearch：存储、查询、分析
    - logstash
-     1. 认识：数据收集、聚合，开源的服务端的多数据来源的数据转换、发送到另一端的工具
+     1. 认识：数据收集、聚合过滤、分析，开源的服务端的多数据来源的数据转换、发送到另一端的工具
      1. 处理流程
-        - input：file、redis、beats、kafka
-        - filter：远强于beat的地方
+        - input：file、syslog、redis、beats、kafka
+        - filter：对数据中间处理，远强于beat的地方
           1. grok：基于正则提供了丰富可重用的模式/语法，可将非格式数据转为格式化数据
           1. mutate：对字段进行编辑
           1. drop
@@ -1081,13 +1081,35 @@
         - devTools：开发者工具
         - monitoring：
         - management：系统管理
-   - beats：轻量级数据传送者
+   - beats：轻量级数据传送者、日志收集处理工具(agent)
      1. 分类
         - Filebeat：日志文件，输出数据到es、logstash、kafka、redis，go编写
           1. 处理流程：输入、过滤、输出
           1. 组成
-              - prospector n：观察者，监听文件是否有变化
-              - harvester：消费者，每个文件都一个，从每个文件取出数据输出
+              - prospector n：观察者，监听文件是否有变化，管理harvester并找到读取源
+              - harvester：收割机，每个文件都一个，负责从每个文件取出数据输出
+          1. Filebeat如何记录文件状态
+              - 文件状态记录在文件中（默认在/var/lib/filebeat/registry）
+              - Filebeat会记录发送前的最后一行，并再可以连接的时候继续发送
+              - 每个prospector会为每个找到的文件记录一个状态
+              - Filebeat存储唯一标识符以检测文件是否先前被收集
+          1. elasticsearch ingest node：由于beat的转换能力较弱，新增的es的node类型，在数据写入es前对数据进行转换，使用的是pipeline api
+          1. module：对常见需要封装支持易用性，如nginx、mysql、apache，封装内容有filebeat.yml/ingest node pipeline/kibana dashboard
+          1. demo
+            ```yml
+            #Filebect输入
+            Ofilebeat. inputs:
+                #类型
+                - type: log
+                    enabled: true
+                    #要抓取的文件路径
+                    paths:
+                    - ./*.log
+            #输出
+            output.logstash:
+                #logstash地址
+                hosts: ["localhost:5044"]
+            ```
           1. 配置：yaml语法
               - 输入：filebeat.prospectors
                 1. input_type：log/stdin
@@ -1108,8 +1130,6 @@
                   - decode_json_fields:
                     fields: ["xx"]
                 ```
-          1. elasticsearch ingest node：由于beat的转换能力较弱，新增的es的node类型，在数据写入es前对数据进行转换，使用的是pipeline api
-          1. module：对常见需要封装支持易用性，如nginx、mysql、apache，封装内容有filebeat.yml/ingest node pipeline/kibana dashboard
         - Metricbeat：度量数据，cpu、内存、nginx等
         - Packetbeat：网络包数据
           1. 功能
@@ -1117,6 +1137,7 @@
              - 自动解析应用层协议，如icmp、dns、http、mysql、redis
         - Winlogbeat：window日志数据
         - Heartbeat：健康检查
+        - Auditbeat：审计数据
      1. ETL：Extract Transform Load，数据源多样
         - 数据文件：日志、excel
         - 数据库：mysql

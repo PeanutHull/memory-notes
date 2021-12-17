@@ -130,11 +130,21 @@
         - transport：服务间的通信接口
         - broker：异步的消息发布、订阅接口
         - codec：消息的编解码
-     1. clients：多语音客户端
+     1. clients：多语言客户端
    - 使用
      1. 注册服务
      1. micro工具new生成服务
    - 历史：1.0、2.0、3.0的升级都不兼容，3.0改为了云原生的托管平台收费模式(就像阿里云卖硬件，它卖软件)。Licence改为了Polyform Shield，就是还是开源，但是防止AWS这样的云服务部署Micro服务，和Micro公司进行直接竞争
+   - 组件
+     1. 注册配置中心：consul
+     1. 链路追踪：jaeger
+     1. 监控：promethues
+     1. 熔断器：hystrix
+     1. 通信：grpc
+     1. 限流：ratelimit
+     1. 负载均衡：selector
+     1. 日志：zap + ELK
+     1. 协议：protobuf
 1. consul
    - 认识：注册中心，支持多数据中心的分布式高可用的服务发布和注册服务，基于go开发
      1. 可组合构建完整的服务管理系统
@@ -193,7 +203,7 @@
      1. hystrix-dashboard：web管理平台
 1. 限流
    - 认识：uber/limit，保护后端服务
-1. 负载均衡
+1. 负载均衡：selector
 ### 技术解决方案
 1. 千万级WebSocket弹幕消息推送服务
    - 难点
