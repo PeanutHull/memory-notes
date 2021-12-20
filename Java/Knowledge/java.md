@@ -153,6 +153,20 @@
         - 只能出现在参数列表的最后
         - 位于变量类型和变量名之间，前后有无空格都可以
         - 调用可变参数的方法时，编译器为该可变参数隐含创建一个数组，在方法体中以数组的形式访问
+   - 闭包：比其他语言严一点，闭包所引用的值不能被改变，但是值自己的值可以被改变
+     1. 函数不能作为参数和返回值
+     1. 1.8使用Function接口和lambda表达式来创建函数对象，即使用闭包
+     1. 1.8之前，匿名类、lambda表达式支持闭包
+     1. 实例
+        ```java
+        Function<Integer, Integer> adder() {                // function其实是对象，用函数模拟对象
+            final Holder<Integer> sum = new Holder<>(0);
+            return (Integer value) -> {                     // 这是一个lambda表达式
+                sum.value += value;                         // sum不能被改变，sum.value可以
+                return sum.value;
+            }
+        }
+        ```
 1. 代码块
    - 执行顺序：静态代码块>mian方法>构造代码块>构造方法
    - 分类

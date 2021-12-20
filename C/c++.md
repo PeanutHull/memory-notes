@@ -158,6 +158,16 @@
           1. 通用字符：'\u02C0'
      1. 字符串常量：括在双引号中，空格连接符，\ 分行符
 1. 函数：同c
+   - 闭包：c++11支持，只有函数指针，过去stl或boost有类似库
+    ```c++
+    auto adder() {
+        auto sum = 0;
+        return [=] (int value) mutable {
+            sum += value;
+            return sum;
+        };
+    }
+    ```
 1. 数组：同c
 1. 动态内存
    - 认识：内存分为堆和栈

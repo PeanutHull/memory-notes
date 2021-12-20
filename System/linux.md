@@ -929,12 +929,14 @@
      1. `/etc/bashrc或/etc/profile或/etc/environment`：全局
      1. `~/.bashrc或~/.bash_profile或~/.bash_login`：个人
    - 操作
-     1. `set`
-     1. `env`：显示当前用户所有变量
-     1. `export`：显示系统定义的所有环境变量
-     1. `echo $SHELL`：查看
-     1. `export PATH=xx:$PATH`：临时修改PATH，用:连接，用$PATH防止覆盖。仅对当前用户立即生效，关闭窗口后无效，
-     1. `source .bash_profile`：使生效，修改后要么重新登录要么用source
+     1. 查看
+        - `echo $SHELL`：查看单个
+        - `env`：当前用户所有
+        - `export`：系统定义所有
+        - `set`：显示所有本地定义的shell变量，也可以用作修改
+     1. 设置
+        - `export PATH=/php/bin:$PATH`：临时修改PATH，用:连接，用$PATH防止覆盖。仅对当前用户立即生效，关闭窗口后无效，
+        - `source .bash_profile`：使生效，修改后要么重新登录要么用source
 1. ulimit
    - 认识：用户资源限制，生产环境配置：![avatar](../images/ulimit.png)
    - 分类

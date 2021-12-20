@@ -517,7 +517,27 @@
     func (c Circle) getArea() float64 { //method 属于 Circle 类型对象中的方法
     ```
    - 闭包
-     1. 认识：定义在一个函数内部的函数，是将函数内外部连接起来的桥梁
+     1. 认识：定义在一个函数内部的函数，闭包会保留局部变量的引用所以不释放值。闭包是将函数内外部连接起来的桥梁
+     1. 斐波那契数列
+        ```go
+        func fibonacci() func() int {
+            a, b := 0, 1
+            return func() int {
+                a, b = b, a + b
+                return a
+            }
+        }
+
+        func main() {
+            f := fibonacci()
+            fmt.Println(f())    // 1
+            fmt.Println(f())    // 1
+            fmt.Println(f())    // 2
+            fmt.Println(f())    // 3
+            fmt.Println(f())    // 5
+            fmt.Println(f())    // 8
+        }
+        ```
      1. 实例
         ```go
         // 上边的普通型，参数和返回值中间加个func()
@@ -586,6 +606,14 @@
         - `func real(c ComplexType) FloatType`
         - `func imag(c ComplexType) FloatType`
      1. `func close(c chan<- Type)`：关闭，chan
+1. 函数式编程
+   - 认识
+     1. go里函数是一等公民：参数、变量、返回值都可以是函数。c++只有函数指针，java函数只是一个名字无法传给别人
+     1. 高阶函数：函数的参数也是函数
+     1. go对函数式编程的支持体现在闭包上面
+   - 正统函数式编程：数学味道非常浓
+     1. 不可变性：不能有状态，只有常量和函数
+     1. 函数只能有一个参数
 1. * 指针
    - 认识：`var ptr_name *T`，保存变量的内存地址，即间接引用。指针类型*T是指向类型T的值的指针，零值是nil
    - 特点

@@ -135,6 +135,17 @@
    - 参数传递与值改变
      1. 传不可变对象：如String、Tuples、Numbers，函数不会改变函数外其原本的值
      1. 传可变对象：如List、Dict，函数会改变其原本的值
+   - 闭包：原生支持闭包，使用__closure__查看闭包内容
+    ```py
+    def adder():
+        sum = 0
+
+        def f(value):
+            nonlocal sum
+            sum += value
+            return sum
+        return f
+    ```
    - 匿名函数
      1. 定义：使用lambda来创建
      1. 特点
