@@ -113,3 +113,4 @@
 ### 人工智能
 1. pytorch
    - 认识：facebook的研究员在17年开源的，也会用到c++
+1. PaddleSpeech：中英文语音识别与语音合成

@@ -287,6 +287,12 @@
    - 日志内容范围
      1. Mysql请求IP、连接耗时、响应耗时、SQL模板、SQL附加参数*、执行错误、连接错误
      1. Http请求IP、URL、method、参数、httpcode、dns解析时间、连接时间、业务处理时间、执行错误、连接错误
+1. 应用
+   - zipkin
+   - skywalking
+   - opencensus
+   - jeager
+   - 
 ### API网关
 1. 意义：控制访问，让调用方快速接入，让业务方安全对外开放
 1. 功能
