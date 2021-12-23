@@ -518,6 +518,8 @@
     ```
    - 闭包
      1. 认识：定义在一个函数内部的函数，闭包会保留局部变量的引用所以不释放值。闭包是将函数内外部连接起来的桥梁
+        - 更为自然，不需要更多的修饰
+        - 语法层面：没有lambda表达式，但是有匿名函数
      1. 斐波那契数列
         ```go
         func fibonacci() func() int {
@@ -607,13 +609,58 @@
         - `func imag(c ComplexType) FloatType`
      1. `func close(c chan<- Type)`：关闭，chan
 1. 函数式编程
-   - 认识
-     1. go里函数是一等公民：参数、变量、返回值都可以是函数。c++只有函数指针，java函数只是一个名字无法传给别人
+   - 认识：go里函数是一等公民：参数、变量、返回值都可以是函数。c++只有函数指针，java函数只是一个名字无法传给别人
+     1. 灵活性大大加强，原来写死的，都可以注入进去改变功能
+     1. 方法是一种特殊的函数，可以为函数实现一些方法，从而实现一些接口
+   - wiki
+     1. 正统函数式编程：数学味道非常浓
+        - 不可变性：不能有状态，只有常量和函数
+        - 函数只能有一个参数
      1. 高阶函数：函数的参数也是函数
      1. go对函数式编程的支持体现在闭包上面
-   - 正统函数式编程：数学味道非常浓
-     1. 不可变性：不能有状态，只有常量和函数
-     1. 函数只能有一个参数
+   - demo
+     1. 为函数实现接口，将斐波那契函数包装成文件进行读取
+        ```go
+        // 利用闭包实现的斐波那契
+        func fibonacci() intGen {                               // 这里可以将func() int替换为intGen
+            a, b := 0, 1
+            return func() int {
+                a, b = b, a + b
+                return a
+            }
+        }
+
+        // 定义一个函数类型
+        type intGen func() int
+
+        // 函数实现了Reader接口
+        func (g intGen) Read(p []byte) (n int, err error) {
+            // 运行intGen本身获取值
+            next := g()
+            // 限制斐波那契运行上限
+            if next > 10000 {
+                return 0, io.EOF
+            }
+            s := fmt.Sprintf("%d\n", next)
+            // s写进p中，让以下来代理read
+            return strings.NewReader(s).Read(p)
+        }
+
+        // 负责读取操作
+        func printFileContents(reader io.Reader) {
+            scanner := bufio.NewScanner(reader)
+
+            for scanner.Scan() {
+                fmt.Println(scanner.Text())
+            }
+        }
+
+        func main() {
+            f := fibonacci()
+            // fibonacci()函数返回intGen，同时intGen隐式实现Reader接口，所以可作实参
+            printFileContents(f)
+        }
+        ```
 1. * 指针
    - 认识：`var ptr_name *T`，保存变量的内存地址，即间接引用。指针类型*T是指向类型T的值的指针，零值是nil
    - 特点
@@ -669,21 +716,21 @@
     ```
    - 异常
      1. 认识：`panic recover`，抛出、接收异常
-        - panic：可中断原有的控制流程，进入panic流程中
-          1. 已经载入的defer函数会正常执行
+        - panic：中断原有流程，进入panic流程。执行每一层的已经载入的defer函数，如果没有遇到recover进程打印异常信息后程序退出
           1. 可手动触发，可运行时错误产生，如访问越界的数组
-          1. panic无法跨协程, 当前协程产生的异常, 必须由当前协程处理，没有用recover捕获的话，进程打印异常信息后直接退出
+          1. panic无法跨协程, 当前协程产生的异常, 必须由当前协程处理
           1. panic可以嵌套
         - recover：可以捕获到panic的输入值，让进入panic流程中的goroutine恢复正常执行
           1. 只能在defer语句中使用，直接使用返回nil没有任何效果
           1. recover后, 当前函数panic后面没执行的代码也不会再继续执行
+          1. 如果无法处理，可以重新panic
+     1. 定义
+        ```go
+        func panic(interface{})         // 接受任意类型参数 无返回值 
+        func recover() interface{}      // 可以返回任意类型 无参数
+        ```
      1. 实例
         ```go
-        // 定义
-        func panic(interface{})//接受任意类型参数 无返回值 
-        func recover() interface{}//可以返回任意类型 无参数
-
-        // 实例
         defer func() {                  // 直接执行的匿名方法
             msg := recover()            // 捕获，判断类型
             switch msg.(type) {
@@ -699,7 +746,7 @@
         ```
    - 比较
      1. 在错误处理上采用了与c类似的检查返回值方式
-     1. 异常定义为无法预测的，几乎不可能失败但是特殊条件下也没法返回错误，也无法继续执行
+     1. 意料之中用error，如文件打不开；意料之外用panic，如数组越界。异常定义为无法预测的，几乎不可能失败但是特殊条件下也没法返回错误，也无法继续执行
 1. 反射
    - 认识：reflect，反射是在运行时动态的针对对象，获取属性、调用方法，go是静态类型的语言
      1. go的反射是基于interface的
@@ -821,7 +868,8 @@
         - 实现接口的对象实例赋值给接口
         - 另外一个接口赋值给接口
    - 空接口类型：`interface{}`，可用于存储任意数据类型的实例，达到抽象数据类型的目的
-     1. 所有的数据类型都实现了空接口，参数是的话表明以使用任何类型的数据，函数内部该变量仍然为空接口类型，而不是传入的实参类型
+     1. 所有的数据类型都实现了空接口，参数是的话表明可以使用任何类型的数据，函数内部该变量仍然为空接口类型，而不是传入的实参类型
+     1. 函数也是一种类型，也可以实现接口`type funcTypeName func() int`
      1. 类型断言：即接口类型向普通类型的转换，运行期确定
         ```go
         func printArray(arr interface{}){
@@ -1277,7 +1325,7 @@
         - `archive.zip`
    - net
      1. 子包
-        - http：提供http客户端和服务端的实现
+        - http：提供http客户端和服务端的实现，serve方法中对panic作了保护，防止服务停止
           1. cgi：实现RFC3875协议描述的CGI（公共网关接口）
           1. fcgi：实现FastCGI协议
           1. httputil：提供http公用函数，是http的函数补充
@@ -2054,7 +2102,7 @@
         - 至少1.11及以上版本，最好1.13或以上，撑13以下是老版本，哈哈
      1. 组成
         - go.mod文件，可以将工程从GOPATH中移出来
-            ```conf
+            ```go
             module rsc.io/hello                                             // 模块名
 
             go 1.12
@@ -2068,6 +2116,7 @@
             replace (                                                       // 指定替换包
                 golang.org/x/text => github.com/golang/text v0.3.0
             )
+            
             exclude example.com/thismodule v1.3.0                           // 从使用中排除特定模块版本
             ```
         - go.sum文件：用来校验文件，都是命令行自动操作
@@ -2117,7 +2166,40 @@
 1. 部署
    - supervisor来管理go程序，go自己用异常捕捉来处理
    - 打包linux的：`CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build main.go`
+   - 编译脚本
+    ```shell
+    #!/bin/bash
+
+    # 设置环境变量
+    export GOPROXY=https://goproxy.cn,direct
+    export GOPRIVATE=*.100tal.com
+    export GO111MODULE=on
+    export GOSUMDB="off"
+
+    # 配置git，能够拉取gitlab依赖
+    git config --global url."ssh://git@git.100tal.com/".insteadOf https://git.100tal.com/
+
+    # 编译
+    make
+    ```
 ### wiki
+1. 语言编程基础
+   - 关键词和语法（Language Syntax）
+   - 数据类型（Arrays, Slices and Maps）
+   - 流程控制（if/else，for/range）
+   - Go 函数（Function）
+   - 面向对象（Methods, Interfaces and Embedding）
+   - 包处理（Packaging and Exporting）
+   - Go 指针（Using Pointers）
+   - 错误处理（Error Handling）
+   - 反射（Reflection）
+   - 标准库（Standard Library）
+   - 程序测试（Testing and Debugging）
+1. 并发编程
+   - Go 并发基础（Concurrency, Race Conditions and Channels）
+   - 并发模式（Concurrency Patterns）
+   - 读写锁
+   - 协程：协程泄露
 1. 关键字和标识符、符号：程序一般由关键字、常量、变量、运算符、类型和函数组成
    - 关键字：25个
      1. var、const、map、struct、type

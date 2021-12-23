@@ -286,6 +286,7 @@
 ### 最佳实践
 1. 编写思路
    - 编程起势：首先通过划分结构体，定义不同的功能模块，然后分别实现，最终实现功能
+   - 函数式编程：通过参数、返回值、变量都是函数的形式，实现更加灵活的处理
    - 并行思想：之前用的读io然后处理的单线程模式，改为：起多个不同的协程(有的处理读io，有的处理逻辑)，协程之间通过chan传递数据，一边读取一边处理的协程模式了
      1. 耗时的goroutine可以多起几个
 1. 应用场景
@@ -542,6 +543,23 @@
 		// 报错并记录异常日志
 	}
     ```
+1. web错误处理
+   - defer + panic + recover：多加一层panic，优化默认http的的报错展示
+   - Type Assertion：通过类型定义，区分用户展示和服务器展示
+   - 函数式编程：实现错误处理的代理，接收各种逻辑处理函数遇到的错误，形式为
+    ```go
+    func errorWrapper(handler appHandler) func(http.ResponseWriter, *http.Request) {
+        return func(writer http.ResponseWriter, request *http.Request) {
+            // 多加一层panic
+            defer func() {
+                if r := recover(); r != nil {
+
+                }
+            }
+            // 错误逻辑处理
+        }
+    }
+    ```
 1. 引号输出
    - 使用反引号：`a := `"xx"``
    - 使用转义：`a := "\"xx\""`
@@ -731,86 +749,6 @@
         fibonacci(c, quit)
     }
     ```
-### 描述
-1. 语言编程基础
-   - 关键词和语法（Language Syntax）
-   - 数据类型（Arrays, Slices and Maps）
-   - 流程控制（if/else，for/range）
-   - Go 函数（Function）
-   - 面向对象（Methods, Interfaces and Embedding）
-   - 包处理（Packaging and Exporting）
-   - Go 指针（Using Pointers）
-   - 错误处理（Error Handling）
-   - 反射（Reflection）
-   - 标准库（Standard Library）
-   - 程序测试（Testing and Debugging）
-1. 并发编程
-   - Go 并发基础（Concurrency, Race Conditions and Channels）
-   - 并发模式（Concurrency Patterns）
-   - 读写锁
-   - 协程：协程泄露
-1. web编程
-   - Web基础
-     1. Web工作方式
-     1. Go 搭建一个简单的web服务
-     1. Go 的 HTTP 包详解
-   - 表单
-     1. 处理表单的输入
-     1. 验证表单的输入
-     1. 预防跨站脚本
-     1. 防止多次递交表单
-     1. 处理文件上传
-   - 数据库
-     1. database/sql接口
-     1. 使用MySQL数据库
-     1. 使用PostgreSQL数据库
-     1. 使用beedb库进行ORM开发
-     1. NOSQL数据库操作
-   - Session 和数据存储
-     1. Session 和 Cookie
-     1. Go 如何使用 Session
-     1. Session 存储
-     1. 预防 Session 劫持
-   - 文本文件处理
-     1. XML 处理
-     1. JSON 处理
-     1. 正则处理
-     1. 模板处理
-     1. 文件操作
-     1. 字符串处理
-   - Web服务
-     1. Socket 编程
-     1. WebSocket
-     1. REST
-   - 安全与加密
-     1. 预防 CSRF 攻击
-     1. 确保输入过滤
-     1. 避免 XSS 攻击
-     1. 避免 SQL 注入
-     1. 存储密码
-     1. 加密和解密数据
-   - 错误处理，调试和测试
-     1. 错误处理
-     1. 使用GDB调试
-     1. Go怎么写测试用例
-   - 部署与维护
-     1. 应用日志
-     1. 网站错误处理
-     1. 应用部署
-     1. 备份和恢复
-   - 如何设计一个Web框架　
-     1. 项目规划　
-     1. 自定义路由器设计
-     1. Controller 设计
-     1. 日志和配置设计
-     1. 实现博客的增删改
-   - 扩展Web框架
-     1. 静态文件支持
-     1. Session 支持
-     1. 表单支持
-     1. 用户认证
-     1. 多语言支持
-     1. pprof支持
 ### 算法
 1. 外部排序
    - 解析：pipeline思想，将源数据分成一个个的节点，然后归并到最终集
@@ -829,19 +767,3 @@
         }
         ```
 ### 部署
-1. 编译脚本
-    ```shell
-    #!/bin/bash
-
-    # 设置环境变量
-    export GOPROXY=https://goproxy.cn,direct
-    export GOPRIVATE=*.100tal.com
-    export GO111MODULE=on
-    export GOSUMDB="off"
-
-    # 配置git，能够拉取gitlab依赖
-    git config --global url."ssh://git@git.100tal.com/".insteadOf https://git.100tal.com/
-
-    # 编译
-    make
-    ```
