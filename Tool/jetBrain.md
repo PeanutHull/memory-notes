@@ -1,15 +1,16 @@
 #### 概述
 1. 目的：提高用户效率，理解用户代码，快速导航，即时错误检查
 1. 功能
-    1. 编辑器功能
- - 代码补全
- -  快速导航  - 智能重复编码检测器
-    1. 附加功能
- - 可视化phpUnit测试运行
- - 自动生成phpDoc的注释
- - php和js、html设置断点
- - git、svn、数据库的支持
- - 生成类的继承关系图
+   - 编辑器功能
+     1. 代码补全
+     1. 快速导航
+     1. 智能重复编码检测器
+   - 附加功能
+     1. 可视化phpUnit测试运行
+     1. 自动生成phpDoc的注释
+     1. php和js、html设置断点
+     1. git、svn、数据库的支持
+     1. 生成类的继承关系图
 #### 功能
 1. 全局搜索：两次shift
 1. 项目列表：alt+1
@@ -19,41 +20,32 @@
 1. 代码格式化：可以设置代码风格，并且一键格式化
 #### 快捷键
 1. 编辑器操作
-```
-Ctrl+反引号           快速切换皮肤。
-双Alt                      显示其他功能面板
-```
 1. 文件操作
-```
 Ctrl+E               打开最近关闭的文件
 Ctrl+Shift+O     打开文件
 Ctrl+O               打开类
-```
 1. 代码操作
-```
 ----类、整体----
 alt+↑或↓              方法间跳转
 ctrl+b/ctrl+click   追踪类或方法
 ctrl+q                   查看方法、类、变量的类中的信息 ----常用----
-Ctrl+F                  查找
-Ctrl+Shift+F         全文件搜索 Ctrl+R                  替换
-Ctrl+Shift+V         选择需要粘贴的最近内容
-Ctrl+Alt+ ←→      操作动作前进/回退
-Ctrl+W                 依次选择代码
-Ctrl+空格             代码补全/提示
-Ctrl+O                  打开类 ----其他----
+ctrl+F                  查找
+ctrl+Shift+F         全文件搜索 ctrl+R                  替换
+ctrl+Shift+V         选择需要粘贴的最近内容
+ctrl+Alt+ ←→      操作动作前进/回退
+ctrl+W                 依次选择代码
+ctrl+空格             代码补全/提示
+ctrl+O                  打开类 ----其他----
 command + /       行注释
-Ctrl+Shift + /        块注释
-Ctrl+Shift+u         切换大小写
-Ctrl+g                  选取多个
-Ctrl+上/下            方法间切换
-Command+[/]      切换到代码块开头/结尾
-Command+j        查看快捷输入代码
-```
+ctrl+Shift + /        块注释
+ctrl+Shift+u         切换大小写
+ctrl+g                  选取多个
+ctrl+上/下            方法间切换
+command+[/]      切换到代码块开头/结尾
+command+j        查看快捷输入代码
+command + option + l：格式化代码
 1. 前端操作
-```
 HTML标签+右键+Show Applied Styles For Tag  查看标签应用的样式
-```
 1. 未理解
 ```
 1.alt+f7寻找类、方法、变量

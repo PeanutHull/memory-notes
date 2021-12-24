@@ -283,6 +283,24 @@
     val.Method(1).Call(nil)                             //获取到第二个方法，调用它
     val.MethodByName("SumNum").Call(nil)
     ```
+1. 代码简化
+    ```go
+    []T{T{}, T{}}
+    // 切片表达式简化为
+    []T{{}, {}}
+
+    s[a:len(s)]
+    // 切片表达式简化为
+    s[a:]
+
+    for x, _ = range v {...}
+    // 迭代简化为
+    for x = range v {...}
+
+    for _ = range v {...}
+    // 迭代简化为
+    for range v {...}
+    ```
 ### 最佳实践
 1. 编写思路
    - 编程起势：首先通过划分结构体，定义不同的功能模块，然后分别实现，最终实现功能
