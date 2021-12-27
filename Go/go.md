@@ -936,7 +936,14 @@
 1. goroutine
    - 认识：go的协程(coroutine)，协程间需要通信、同步，是并行运行的(多处理器同时)，需要的内存极小，实际可以cpu核数减一来设置，给系统留下
    - 特点
-     1. 采用csp模型
+     1. 并发基于csp模型
+     1. 非抢占式多任务处理
+     1. 调度器会在合适的点进行切换，其他语音需要指定切换的点
+        - io、select
+        - channel
+        - 等待锁
+        - 函数调用(有时)
+        - runtime.Gosched() 
      1. 不需要锁，不需要callback(写程序不用，底层有)
      1. 可以实现并发编程、并行计算
    - 优势
@@ -948,6 +955,10 @@
     ```go
     go say("hello")
     go say("world")
+
+    go func(i int) {
+        i++                     // 没有协程切换的机会，会一直运行
+    }(i)                          // 外部传进i，否则就是闭包
     ```
    - wiki
      1. 并行与并发：并发只是假装同时进行
@@ -966,7 +977,7 @@
         - 读时没有数据会阻塞
         - 没有取数据时goroutine会阻塞
         - 读写不能放一个协程里，写读颠倒会死锁
-     1. 是nil的channel：发送、接收数据，造成永远阻塞 
+     1. nil的channel：发送、接收数据，不会报错，是永远阻塞的，用var声明的就是nil channel 
      1. 已关闭的channel
         - 发送数据，引起panic 
         - 接收数据，返回channel中缓存的值，如果通道中无缓存，返回0
@@ -986,7 +997,7 @@
         var send chan <- int         // 只能发送
         var receive <- chan int      // 只能接收
         ```
-   - 缓冲
+   - 缓冲：可以提高性能
         ```go
         ch := make(chan int, 100)   // 有缓冲通道，只有缓冲区满时才会阻塞，当缓冲区清空的时候接收操作会阻塞
         ch := make(chan int)        // 无缓冲通道/同步通道，即通道大小为0，不会存储数据
@@ -1006,23 +1017,30 @@
             }
         }
 
-        // 简便写法，不断从channel接收值，直到它被关闭
+        // 简便写法，不断从channel接收值，直到它被关闭，可替换以上判断的写法
         for v := range ch{}         
         ```
    - select：同时监听多个管道并收发消息，会阻塞直到条件分支中的某个可以继续执行。多个都准备好的随机选一个。可用于多个写入，一个读取场景
+     1. 谁来的快收谁
+     1. 加了default相当于非阻塞式的获取，之前channel都是阻塞的，套层for就是循环default，去掉default就是deadlock
         ```go
         select {
             case c <- chName1:
             case <- quitChName:                         // 只要有数据，不管值是什么
             case <- time.After(5 * time.Second):        // 设置超时
             default:                                    // 其他分支没准备好的时候default分支会被执行，可用于非阻塞的发送或者接收
+
+            case n := <- c1:                         // 可以实现读一堆，然后返回给一个
+                out <- n                                // 这样会阻塞
+            case n := <- c2:
+            case out <- n:                            // 这样不会阻塞
         }
         ```
-1. sync：提供了并发编程中基本的同步原语，保证执行不会出现混乱，更高级别的同步最好通过通道和通信来完成
+1. sync：提供了并发编程中基本的同步原语，保证执行不会出现混乱。这是传统的同步机制，是通过共享内存来通信的，更高级别的同步最好通过通道和通信来完成
    - 同步器
      1. 认识：`sync.WaitGroup`，是信号量，需要某个条件完成才能继续，用于并发控制
+        - 场景：在一个goroutine等待一组goroutine执行完成的通知时。初级的可以多用一个done的channel阻塞实现等待某个goroutine结束的通知，每次循环进出这个channel，多个可以使用通道切片来分别存储，使用waitGroup更加高效优雅
      1. 原理：拥有一个内部计数器。当计数器等于0时，则Wait()方法会立即返回。否则一直阻塞执行Wait()方法的goroutine
-        - 场景：在一个goroutine等待一组goroutine执行完成
      1. 方法
         - Add(n)：设置计数器数量n，传负数就是减n
         - Done()：计数器数量减一
@@ -1044,8 +1062,13 @@
      1. 互斥锁：sync.Mutex，保证同时只有一个goroutine能访问一个共享的变量从而避免冲突
         ```go
         c.mux.Lock()
-        c.v[key]++          // Lock 之后同一时刻只有一个goroutine能访问 c.v
-        c.mux.Unlock()
+        defer c.mux.Unlock()          // 这才是解锁的正确写法
+        c.v[key]++                          // Lock 之后同一时刻只有一个goroutine能访问 c.v
+
+        func() {                                // 可以用匿名函数实现逻辑体的加解锁
+            c.mux.Lock()
+            defer c.mux.Unlock()     
+        }()
         ```
      1. 读写互斥锁：sync.RWMutex。RWMutex允许至少一个读锁或一个写锁存在，而sync.Mutex允许一个读锁或一个写锁存在
         - RLock、RUnlock：可进行并发读取
@@ -1383,6 +1406,8 @@
    - 常用
      1. time
         - `time.Now()`
+        - `time.Tick()`：每隔一段时间送一个值过来
+        - `time.After(n)`：倒计时，结束后往channel里送一个时间，可利用阻塞实现定时，for里边的select每次循环都重新开启
         - `time.Sleep(time.Second * 5)`
      1. database/sql：数据库驱动的标准接口
    - 系统相关
@@ -1428,7 +1453,7 @@
         - 组成
           1. `runtime.GOMAXPROCS`：使用最大核心数
           1. `runtime.NumCPU`：cpu核心数
-          1. `runtime.Gosched()`：使goroutine让出cpu时间片
+          1. `runtime.Gosched()`：使goroutine让出调度
           1. `runtime.Goexit()`：使goroutine立即终止
           1. NumGoroutine
      1. go：语法包
@@ -2057,6 +2082,7 @@
         - `go tool cgo`
    - 运行和编译
      1. `go run hello.go`：进行高速编译，用作脚本语言
+        - -race：检测数据访问冲突
      1. `go build`
         - 认识：用于测试编译
           1. 会同时编译依赖包，会在GOROOT/src和GOPATH/src搜索包，默认编译当前目录下的所有go文件，可指定要编译的文件名，会忽略_或.开头的go文件，会根据当前系统选择性地编译以系统名结尾的文件(_linux|darwin|windows|freebsd.go)
