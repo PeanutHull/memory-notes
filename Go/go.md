@@ -852,6 +852,12 @@
 
     var p *Dog
     p = &Dog{1, 2}                  // 类型为 *Dog
+
+    // 结构体切片
+    s := []Dog{
+		Dog{1},
+		Dog{2},
+	}
     ```
 1. interface 接口
    - 理解：接口类型是一组具有共性的方法定义在一起的集合。即抽象、封装、多态
@@ -1985,7 +1991,7 @@
             }
             ```
 1. 性能分析
-   - `go tool cover -html=c.out`：覆盖率测试，绿色是覆盖的，红色未覆盖
+   - `go tool cover -html=c.out`：分析由`go test -coverprofile`生成的覆盖率测试的结果，绿色是覆盖的，红色未覆盖
    - `go tool trace`
      1. 认识：调用链路，找出程序在一段时间内正在做什么，诊断性能问题，如延迟，并行化、竞争异常
         - 清晰查看每个逻辑处理器中Goroutine的执行过程，可以很直观看出Goroutine的阻塞消耗，包含网络阻塞、同步阻塞(锁)、系统调用阻塞、调度等待、GC执行耗时、GC STW(Stop The World)耗时
@@ -2077,8 +2083,8 @@
      1. `go bug`：调试
      1. `go tool`
         - `go tool compile -N -l -S main.go`：不优化编译，可用dlv调试
-        - `go tool pprof`：性能检查工具
-        - `go tool cover`：覆盖率检查工具
+        - `go tool pprof`：性能分析工具
+        - `go tool cover`：覆盖率分析工具
         - `go tool cgo`
    - 运行和编译
      1. `go run hello.go`：进行高速编译，用作脚本语言
@@ -2124,18 +2130,43 @@
         - off：使用$GOPATH/src或vendor
         - on：在$GOPATH/src不找也不存放，放在$GOPATH/pkg/mod，多项目可共享
         - auto：检测到go.mod就开启
+     1. 代理相关
+        - 走代理
+          1. `GOPROXY=https://proxy.golang.org,direct|off`
+             - 多个代理逗号分隔
+             - direct：回源到模块版本的源地址去抓取
+          1. `GOSUMDB=sum.golang.org|off`：校验是否被篡改
+        - 不走代理
+          1. `GOPRIVATE=*.100tal.com`：设置不走代理的，GOPRIVATE会作为下边俩的默认值
+          1. `GONOPROXY=*.100tal.com`
+          1. `GONOSUMDB=*.100tal.com`
      1. CGO_ENABLED
-     1. 代理
-        - `GOPROXY=https://proxy.golang.org,direct|off`
-          1. 多个代理逗号分隔
-          1. direct：回源到模块版本的源地址去抓取
-        - `GOSUMDB=sum.golang.org|off`：校验是否被篡改
-
-        - `GOPRIVATE=*.100tal.com`：设置不走代理的，GOPRIVATE会作为另外俩的默认值
-        - `GONOPROXY=*.100tal.com`
-        - `GONOSUMDB=*.100tal.com`
    - 编译
      1. 一个package只能有一个main，否则build不过
+   - 开发
+     1. 配置GOROOT、GOPATH
+     1. 配置代理：`GOPROXY=https://goproxy.cn;GOPRIVATE=*.100tal.com`
+     1. 配置注释空格：设置 Preferences > Editor > Code Style > Go > Other 勾选上 Add leading space to comments
+     1. 配置goimport、go fmt，在Tools > File Watcher
+   - 部署
+     1. supervisor来管理go程序，go自己用异常捕捉来处理
+     1. 打包linux的：`CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build main.go`
+     1. 编译脚本
+        ```shell
+        #!/bin/bash
+
+        # 设置环境变量
+        export GO111MODULE=on
+        export GOPROXY=https://goproxy.cn,direct
+        export GOSUMDB="off"
+        export GOPRIVATE=*.100tal.com
+
+        # 配置git，能够拉取gitlab依赖
+        git config --global url."ssh://git@git.100tal.com/".insteadOf https://git.100tal.com/
+
+        # 编译
+        make
+        ```
 1. 依赖管理
    - Go Module
      1. 认识：官方的包依赖版本管理工具，前身vgo
@@ -2206,25 +2237,6 @@
      1. glide：glide.yaml、glide.lock，官方建议迁移到dep
      1. govendor
      1. gvt
-1. 部署
-   - supervisor来管理go程序，go自己用异常捕捉来处理
-   - 打包linux的：`CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build main.go`
-   - 编译脚本
-    ```shell
-    #!/bin/bash
-
-    # 设置环境变量
-    export GOPROXY=https://goproxy.cn,direct
-    export GOPRIVATE=*.100tal.com
-    export GO111MODULE=on
-    export GOSUMDB="off"
-
-    # 配置git，能够拉取gitlab依赖
-    git config --global url."ssh://git@git.100tal.com/".insteadOf https://git.100tal.com/
-
-    # 编译
-    make
-    ```
 ### wiki
 1. 语言编程基础
    - 关键词和语法（Language Syntax）

@@ -289,10 +289,9 @@
      1. Http请求IP、URL、method、参数、httpcode、dns解析时间、连接时间、业务处理时间、执行错误、连接错误
 1. 应用
    - zipkin
-   - skywalking
-   - opencensus
+   - skywalking：支持多语言，支持Istio + Envoy服务网格，国内开源并提交到Apache孵化器
+   - opencensus：支持多语言，谷歌出品
    - jeager
-   - 
 ### API网关
 1. 意义：控制访问，让调用方快速接入，让业务方安全对外开放
 1. 功能

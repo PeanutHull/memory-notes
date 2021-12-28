@@ -304,6 +304,11 @@
 ### 最佳实践
 1. 编写思路
    - 编程起势：首先通过划分结构体，定义不同的功能模块，然后分别实现，最终实现功能
+     1. 封装模块
+        - 在一个文件中定义一组接口interface
+        - 定义结构体struct
+        - 定义new结构体struct的方法，用sync.Once实现单例返回，返回值为接口interface
+        - 定义属于结构体struct、并且实现了接口interface的所有方法，完成~
    - 函数式编程：通过参数、返回值、变量都是函数的形式，实现更加灵活的处理
      1. 将具体执行的逻辑包装成一个方法，大家执行这个方法，内部自己定义，就可以将实现解耦了，大家不用关心执行的内容了
    - 并行思想：之前用的读io然后处理的单线程模式，改为：起多个不同的协程(有的处理读io，有的处理逻辑)，协程之间通过chan传递数据，一边读取一边处理的协程模式了
@@ -583,10 +588,29 @@
         }
     }
     ```
-1. 引号输出
-   - 使用反引号：`a := `"xx"``
-   - 使用转义：`a := "\"xx\""`
-   - 使用strconv包：`a := strconv.Quote("xx")`
+1. 常用场景
+   - 引号输出
+     1. 使用反引号：`a := `"xx"``
+     1. 使用转义：`a := "\"xx\""`
+     1. 使用strconv包：`a := strconv.Quote("xx")`
+   - 判断接口类型 + 结构体切片用法
+    ```go
+    // 参数支持constant.ServerConfig或者[]constant.ServerConfig
+    func (n *ConfigureCenterNacos) InitServer(opts interface{}) (interface{}, error) {
+        switch v := opts.(type) {                                                           // v获取了opts的值和类型
+        case constant.ServerConfig:
+            n.serverConfig = []constant.ServerConfig{                                       // 结构体切片的赋值方式
+                v,
+            }
+            return n.serverConfig, nil
+        case []constant.ServerConfig:
+            n.serverConfig = v
+            return n.serverConfig, nil
+        default:
+            return nil, errors.New("config opts error")
+        }
+    }
+    ```
 1. 函数可选参数实践
     ```go
     // 使用NewQueue，动态改变可选的新参数的方法
