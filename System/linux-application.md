@@ -898,8 +898,15 @@
      1. 硬件：服务器、路由器、交换机
      1. 安全：攻击、漏洞
    - 监控工具
-     1. 开源：zabbix(最常用)、、Open-falcon、nagios
      1. grafana：非常强大的开源的度量分析和数据可视化工具，导入数据源即可用，数据支持广泛，丰富的dashboard、图表编辑
+     1. 开源：zabbix(最常用)、nagios
+     1. 数据收集、服务器指标收集
+        - Open-falcon
+        - Nightingale
+        - TICK Stack：Telegraf
+        - Thanos
+        - VictoriaMetrics
+        - M3DB
 1. 操作系统性能监控体系
    - 组成：node_exporter+Prometheus+Grafana
      1. node_exporter：机器系统数据收集

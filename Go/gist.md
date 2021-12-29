@@ -314,13 +314,52 @@
    - 并行思想：之前用的读io然后处理的单线程模式，改为：起多个不同的协程(有的处理读io，有的处理逻辑)，协程之间通过chan传递数据，一边读取一边处理的协程模式了
      1. 耗时的goroutine可以多起几个
 1. channel相关
-   - 时间的处理：放在select的case中
-     1. 两个time.After()，长的设置总运行时间，短的设置超时时间
-     1. time.Tick()设置定时任务，如报告与之相关的channel的状态
+   - select的简单调度
+    ```go
+    func createWorker(id int) chan<- int {
+        c := make(chan int)
+        go worker(id, c)
+        return c
+    }
+
+    func main() {
+
+        var c1, c2 = generator(), generator()
+        var worker = createWorker(0)
+
+        var values []int
+        tm := time.After(10 * time.Second)
+        tick := time.Tick(time.Second)
+
+        for {
+            var acticeWorker chan<- int
+            var acticeValue int
+            if len(values) > 0 {                                // 利用切片实现，生产者比消费者快的积压效果，不丢数据
+                acticeWorker = worker                           // 由于chan类型的c是一个指针，返回了一个指针，这样go worker(id, c)这个协程就能跑起来
+                acticeValue = values[0]
+            }
+
+            select {
+            case n := <-c1:
+                values = append(values, n)
+            case n := <-c2:
+                values = append(values, n)
+            case acticeWorker <- acticeValue:                   // 利用var出来的为nil的channel，实现没有值时阻塞
+                values = values[1:]
+            case <-time.After(800 * time.Millisecond):          // 超时时间，和总时长原理相同
+                fmt.Print("timeout")
+            case <-tick:                                        // 定时报告channel的状态
+                fmt.Print("queue len = ", len(values))
+            case <-tm:                                          // 总运行时长，time.After控制
+                fmt.Print("bye")
+                return
+            }
+        }
+    }
+    ```
 1. 应用场景
    - channel
      1. 通过设置为缓存通道，实现抢购场景的解决方案
-     1. 通过通信共享内存，不要通过共享内存来通信
         ```go
         // 响应公共结构体
         type APIBase struct {
@@ -813,4 +852,10 @@
             return Merge(MergeN(inputs[:m]...), MergeN(inputs[m:]...))      // slide和可变参数的转换
         }
         ```
+1. 广度优先算法
+   - 认识：上左下右一点点探索，一层层递进，每到一个点都是最短路径，深度优先走不了最短路径
+     1. 往外走好多路线，往回走只有一条，可确定最短路径
+     1. 三种状态，已探索，未探索，待探索
+     1. 爬虫用到，锻炼语言理解
+     1. 找到确定的地方，用程序表达出来
 ### 部署

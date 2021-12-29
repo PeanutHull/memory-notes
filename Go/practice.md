@@ -34,6 +34,12 @@
 1. Buffalo：快速构建web
 1. Revel：高效、全栈
 1. Martini：轻巧、功能强大、模块化web，不再维护
+1. xes解析
+    ```go
+    // main函数中
+    testing.Init()      // 注册测试标志，用于不使用go test的情况下，进行如基准测试的函数调用
+    err = gracehttp.Serve(&http.Server{Addr: ":" + configs.GetServer().Server.Port, Handler: g})        // grace承接http服务
+    ```
 ### ORM
 1. gorm
 1. xorm
@@ -57,8 +63,29 @@
      1. 设置ConnState，监听各连接的状态变化
      1. 启动新协程，接管各chan信号
      1. 在新协程中正式启动服务
-1. Viper：配置信息处理框架，各种文件格式、环境变量、ETCD等，检测文件变动
+1. viper
+   - 认识：配置信息处理框架，各种文件格式、环境变量、ETCD等，检测文件变动
+     1. 支持 JSON/TOML/YAML/HCL/envfile/Java properties 等多种格式的配置文件
+     1. 可以设置监听配置文件的修改，修改时自动加载新的配置
+     1. 从环境变量、命令行选项和io.Reader中读取配置
+     1. 从远程配置系统中读取和监听修改，如 etcd/Consul
+     1. 代码逻辑中显示设置键值
+   - demo
+    ```go
+    viper.SetConfigName("config")
+    viper.SetConfigType("toml")
+    viper.AddConfigPath(".")
+    viper.SetDefault("redis.port", 6381)
+    err := viper.ReadInConfig()
+    if err != nil {
+        log.Fatal("read config failed: %v", err)
+    }
+    name := viper.Get("app_name")
+    ```
 1. fsnotify：viper的内部就是fsnotify
+1. json-iterator/go：几倍性能于标准库`encoding/json`的100%兼容的json库
+   - 只有使用struct才能获得显著的性能提升，因为struct只需一次反射，map每次都要
+   - 1.10后性能和标准库差不多了，意义不大了
 1. 其他
    - github.com/libi/dcron：基于一致性哈希的分布式定时任务库
    - NSQ
