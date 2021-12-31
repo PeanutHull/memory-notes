@@ -76,20 +76,21 @@
         - rune：类似int32，代表一个Unicode码
         - uintptr：无符号整型，足够大可以容纳任何指针的位模式，跟系统位数有关系，用于存放一个指针
         - 引用：8byte
+   - 复合类型：struct、array
+   - 引用类型：Slice、Map、Channel、Pointer
    - 派生
-     1. array
-     1. slice
-     1. map
-     1. struct
      1. func
      1. interface
-     1. pointer：指针
-     1. chan
    - 特点
      1. 类型零值：变量无初始化时的默认值，可以表现为0，false，""，nil
      1. 类型推导：不指定其类型时，由右值推导得出
      1. 类型转换：T(v)，将值v转换为类型T，不同类型相互转换的时候需要显式转换
      1. 类型别名：type可以定义任何自定义的类型
+     1. 类型比较：可不可以比较需要根据类型的特性去判断取舍
+        - 不同类型不能比较
+        - 不可比较的类型：slice、map
+        - 如果复合类型中有不可比较的类型，那么复合类型就不可比较
+        - 如果接口值的动态值不可比较，直接比较会panic
    - 实例
     ```go
     // 声明自定义类型
@@ -238,7 +239,7 @@
    - 使用
     ```go
     // 构造slice，分配一个零长度的数组并且返回一个slice指向这个数组
-    s := make([]int, 5)                     // 5个0的元素
+    s := make([]int, 5)                     // 5个0的元素，不会限制只有5个
     s := make([]int, 0, 5)                  // 0个元素，但是cap=5，返回的是数组切片分配的空间大小
     // 定义
     s := []int{}                            // 零值是nil，长度和容量是0
@@ -270,8 +271,10 @@
     // s []byte为24byte，s [1024]byte为1024byte
     ```
 1. map
-   - 认识：字典，键值对，`map[keyType]valueType`，key没有顺序，key唯一
-     1. 遍历输出顺序与填充顺序无关，不要期望输出顺序的结果
+   - 认识：字典，键值对，`map[keyType]valueType`
+     1. key唯一
+     1. key没有顺序，遍历输出顺序与填充顺序无关，不要期望输出顺序的结果
+     1. map是引用类型，引用类型的变量未初始化时默认的zero value是nil，此时写入值会导致运行时错误
    - 使用
     ```go
     // 此情况value是一个结构体，可以是其他的基础类型
@@ -279,8 +282,9 @@
         Lat, Long int
     }
 
-    // 定义
     var m map[string]Vertex
+    // 定义
+    m := map[string]Vertex{}{}
     m = make(map[string]Vertex)
     // 定义、赋值
     var m = map[string]Vertex{
@@ -839,8 +843,10 @@
     // 定义+赋值
     dog := struct {
         x int
+        y int
     }{
         1,
+        2,
     }
 
     // 访问
@@ -1525,7 +1531,7 @@
         ```
    - xml：encoding/xml包，读取Unmarshal，生成Marshal/MarshalIndent
    - json：encoding/json包
-     1. Marshal：序列化，用于map和struct
+     1. Marshal：序列化为json，用于map和struct。只有可导出成员(首字母大写)才可转为json，指针变量编码时自动转换为所指向的值，使用空接口可实现任意类型的成员赋值和转换
         ```go
         type Server struct {
             ServerName string `json:"name"`     // 这是tag，生成json时替换key，做个映射，反过来也会用到
@@ -1535,40 +1541,17 @@
         server := new(Server)
         server.ServerName = "1"
 
-        a,err := json.Marshal(server)       // 序列化
-        if err != nil {
-            return err.Error()
-        }
+        a, _ := json.Marshal(server)
 
-        // 另一个例子
-        type User struct {
-            Name        string `json:"name"`
-            Age         int    `json:"age,omitempty"`
-            IgnoreField int    `json:"-"`
-            ID          int64  `json:"id,string"`
-        }
-
-        u := User{
-            Name:        "zhangsan",
-            Age:         10,
-            IgnoreField: 88,
-            ID:          374827929374927394,
-        }
-
-        byts, err := json.Marshal(u)
-        if err != nil {
-            panic(err)
-        }
-
-        fmt.Println(string(byts))
+        fmt.Println(string(a))
         ```
-     1. Unmarshal：反序列化
+     1. Unmarshal：反序列化json
         - struct
             ```go
             // 已知结构的
             type Server struct {
-                ServerName string
-                ServerIP   string
+                ServerName string `json:"name"`
+                ServerIP   string `json:"ip"`
             }
             type Serverslice struct {
                 Servers []Server
@@ -1582,27 +1565,12 @@
         - map
             ```go
             // 未知结构，interface和type assert配合
-            str := `{"servers":[{"name":"1","ip":"127"},{"name":"2","ip":"127"}]}`
+            str := []byte(`{"servers":[{"name":"1","ip":"127"},{"name":"2","ip":"127"}]}`)
             var f interface{}
-            err := json.Unmarshal(str, &f)
+            _ = json.Unmarshal(str, &f)
             m := f.(map[string]interface{})             // 断言形式
+            fmt.Println(m["servers"])
 
-            // 下边这些不知道在干嘛
-            for k, v := range m {
-                switch vv := v.(type) {
-                    case string:
-                    case int:
-                    case float64:
-                        fmt.Println(k,"is float64",vv)
-                    case []interface{}:
-                        fmt.Println(k, "is an array:")
-                        for i, u := range vv {
-                            fmt.Println(i, u)
-                        }
-                    default:
-                        fmt.Println(k, "is of a type I don't know how to handle")
-                }
-            }
             // 第三方simplejson包
             js, err := NewJson([]byte(`{"servers":[{"name":"1","ip":"127"},{"name":"2","ip":"127"}]}`))
             arr, _ := js.Get("servers").Get("name").Array()

@@ -86,12 +86,18 @@
 1. json-iterator/go：几倍性能于标准库`encoding/json`的100%兼容的json库
    - 只有使用struct才能获得显著的性能提升，因为struct只需一次反射，map每次都要
    - 1.10后性能和标准库差不多了，意义不大了
+1. go-resty/resty/v2：http请求库
+   - 简单、功能丰富，链式调用
+   - 自动Unmarshal
+1. go-callvis：函数调用关系图
 1. 其他
    - github.com/libi/dcron：基于一致性哈希的分布式定时任务库
    - NSQ
    - GoDotEnv：Ruby dotenv项目的go版本
      1. 支持yaml语法
      1. 支持不写入环境变量，使用`myEnv, err := godotenv.Read()`读取
+1. 业务相关
+   - casbin/casbin：访问控制库，支持ACL/RBAC/ABAC
 ### 微服务
 1. 微服务
    - 理解：微服务架构是一种更独立的架构模式，能够单独更新和发布。是分布式网状结构，它提倡将单一应用程序划分成一组小的服务，服务之间互相协调、互相配合，为用户提供最终价值。微服务架构 ≈ 模块化开发 + 分布式计算
