@@ -1269,7 +1269,7 @@
           1. scann扫描格式化文本以生成值
         - 方法分类
           1. print：输出到标准输出流，支持多个参数输出
-             - 后边加f：根据format参数，默认采用默认格式
+             - 后边加f：根据format参数，默认采用默认格式，`fmt.Printf("%3d", val)表示3位对齐`
              - 前边加F：写入给定源，默认写入标准输出
              - 后边加Ln：总是用空格分隔，并且加换行符
              - 前边加S：返回该字符串
@@ -1350,7 +1350,7 @@
    - io相关
      1. io：提供i/o原语的基础接口
         - `io.Reader`
-     1. bufio：带缓存增强版，比io写的快多了
+     1. bufio：带缓存增强版，比io写的快多了，一口气flush到硬盘
         - 可读取一行
         - 会缓存下来，遇到flush才输出`bufio.NewWriter.Flush()`
      1. io/ioutil：实现一些io实用功能，v1.16后逐步放到了io、os中
@@ -1379,13 +1379,16 @@
         - Conn：使用goroutines保证请求独立性
         - ServeMux：数据路由
      1. ip：`addr := net.ParseIP()`
+     1. 发起http请求
+        ```go
+        resp, err := http.Get("http://")
+        defer resp.Body.Close()
+
+        s, err := httputil.DumpResponse(resp, true)
+        fmt.Printf("%s\n", s)
+        ```
      1. web服务器
         ```go
-        import (
-            "log"
-            "net/http"
-        )
-
         type Hello struct{}
         var h Hello
         func (h Hello) ServeHTTP(w http.ResponseWriter,r *http.Request) {

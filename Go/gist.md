@@ -745,6 +745,11 @@
         fmt.Println(infoHeader)
     }
     ```
+1. 计算时间差
+    ```go
+    s := time.Now()
+    dur := time.Now().Sub(s)
+    ```
 1. 自定义时间格式
     ```go
     en["date_format"]="%Y-%m-%d %H:%M:%S"
@@ -858,4 +863,9 @@
      1. 三种状态，已探索，未探索，待探索
      1. 爬虫用到，锻炼语言理解
      1. 找到确定的地方，用程序表达出来
+   - 实现方式
+     1. 用循环创建二维slice
+     1. 使用slice实现队列
+     1. 用Fscanf读取文件
+     1. 对Point的抽象，即坐标：`type point struct{i, j int}`
 ### 部署
