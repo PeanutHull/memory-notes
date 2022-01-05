@@ -84,6 +84,9 @@
    - unix/mac的文件windows打开，所有文字变成一行
    - windows的文件在unix/mac打开，每行结尾可能会多出一个^M符号
 1. 数据序列化
+   - xml：是完整的标记语言
+   - json：Javascript Object Notation，轻量级的数据交换语言，具有自我描述性且易于让人阅读，是Javascript的一个子集，但JSON是独立于语言的文本格式
+     1. 比XML更小、更快，更易解析,以及浏览器的内建快速解析支持
    - protocol buffers
      1. 认识：语言无关、平台无关、可扩展的序列化结构数据的方法，二进制格式，用于网络通信、通用数据交换、数据存储等场景，google推出
         - 比xml、json小几倍，快几十倍

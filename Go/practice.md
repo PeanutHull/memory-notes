@@ -86,6 +86,7 @@
 1. json-iterator/go：几倍性能于标准库`encoding/json`的100%兼容的json库
    - 只有使用struct才能获得显著的性能提升，因为struct只需一次反射，map每次都要
    - 1.10后性能和标准库差不多了，意义不大了
+1. Simplejson：json快速处理器，关键部分c实现
 1. go-resty/resty/v2：http请求库
    - 简单、功能丰富，链式调用
    - 自动Unmarshal

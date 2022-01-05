@@ -667,13 +667,15 @@
         ```
 1. * 指针
    - 认识：`var ptr_name *T`，保存变量的内存地址，即间接引用。指针类型*T是指向类型T的值的指针，零值是nil
+     1. &a：取指针，获取指针
+     1. *a：解指针，获取指针对应的值
    - 特点
      1. 二级指针：指向指针的指针变量，第一个指针存放第二个指针的地址，第二个指针存放变量的地址，`var pptr **int`
      1. 值传递和指针传递
    - 分类
      1. *：普通类型，只能传递对象地址
      1. unsafe.Pointer：通用类型，用于转换不同类型的指针，不能进行指针运算，不能读取内存存储的值
-     1. uintptr：运算类型，用于指针运算，GC不把uintptr当指针，无法持有对象，表示的地址的数据可能被GC回收
+     1. uintptr：运算类型，用于指针运算，GC不将其当指针，无法持有对象，表示的地址的数据可能被GC回收
    - 指针数组
      1. 指针数据：是数组，数组中全是指针
         ```go
@@ -783,6 +785,7 @@
 1. 理解：核心是合成复用
 1. struct
    - 理解：结构体，`type struct`，字段的组合
+     1. 不支持多态
      1. 字段标签：tag，不是注释是描述字段的元数据。不属于数据的组成部分是类型的组成部分
         ```go
         type user struct {
@@ -799,24 +802,32 @@
      1. 结构体方法
         - 定义在结构体作用域外，在函数声明中指定接收者，除了基础类型或其他包的，可以在任意类型里定义方法
         - `func (variable_name variable_data_type) function_name() [return_type]{}`
-     1. 匿名组合：类似继承
+     1. 匿名组合：可以直接用父结构体的属性和方法，类似继承
         ```go
         // 结构体组合
         type Animal struct{
             Color string
+            Size int
         }
         type Dog1 struct{
-            Animal                  // 匿名组合：可以直接用父结构体的属性和方法
+            Animal
             name string
+            Color string
         }
-        dog.Color = "1"             // 直接使用
+        dog := Dog1{                // 定义变量
+            Animal{"red", 11},
+            "miao",
+            "blue",
+        }
+        dog.Color = "1"             // 直接使用，优先级高于父级的
 
         type Dog2 struct{
-            someAnimal Animal       // 把父结构体作为一个属性使用
+            someAnimal Animal       // 把父结构体作为一个属性使用，原理类似
             name string
         }
+
+        fmt.Println(dog.someAnimal.Color)
         ```
-     1. 不支持多态
    - 实例
     ```go
     // 定义
@@ -882,10 +893,10 @@
    - 空接口类型：`interface{}`，可用于存储任意数据类型的实例，达到抽象数据类型的目的
      1. 所有的数据类型都实现了空接口，参数是的话表明可以使用任何类型的数据，函数内部该变量仍然为空接口类型，而不是传入的实参类型
      1. 函数也是一种类型，也可以实现接口`type funcTypeName func() int`
-     1. 类型断言：即接口类型向普通类型的转换，运行期确定
+     1. 类型断言：语法`x.(T)`，即接口类型向普通类型的转换，运行期确定，通过断言实现类型转换，同时加上判断，防止断言失败导致运行错误。x是类型为interface{}的变量
         ```go
         func printArray(arr interface{}){
-            a,ok := arr.([]int)                 //通过断言实现类型转换，同时加上判断，房子断言失败导致运行错误
+            a,ok := arr.([]int)                 // 返回转换后的变量、是否成功
             if ok {}
         }
         ```
@@ -1360,68 +1371,39 @@
         - `archive.tar`
         - `archive.zip`
    - net
+     1. 组成
+        - Conn：使用goroutines保证请求独立、非阻塞
+        - ServeMux：多路复用器，用作请求的路由分发
+     1. 方法
+        - ip：`addr := net.ParseIP()`
      1. 子包
-        - http：提供http客户端和服务端的实现，serve方法中对panic作了保护，防止服务停止
-          1. cgi：实现RFC3875协议描述的CGI（公共网关接口）
-          1. fcgi：实现FastCGI协议
-          1. httputil：提供http公用函数，是http的函数补充
-          1. cookiejar：实现保管在内存中的符合RFC 6265标准的httpCookieJar接口
-          1. pprof：返回runtime的统计数据，返回pprof可视化工具规定的格式
-          1. httptest：http测试的单元工具
-          1. httptrace
+        - http：提供http客户端和服务端的实现
+          1. 特点
+             - serve方法中对panic作了保护，防止服务停止
+          1. 组成
+             - Handler
+             - Request
+             - Response
+          1. 子包
+             - cookiejar：实现保管在内存中的符合RFC 6265标准的httpCookieJar接口
+             - httputil：提供http公用函数，是http的函数补充
+               1. ReverseProxy()：设置反向代理
+               1. DumpResponse()：打印响应体
+             - cgi：实现RFC3875协议描述的CGI（公共网关接口）
+             - fcgi：实现FastCGI协议
+             - httptest：http测试的单元工具
+             - pprof：返回runtime的统计数据，返回pprof可视化工具规定的格式
+             - httptrace
         - url
         - rpc
           1. jsonrpc
         - mail：解析邮件消息
         - smtp：简单邮件传输协议
         - textproto：实现对基于文本的请求/回复协议的一般性支持
-     1. 核心功能
-        - Conn：使用goroutines保证请求独立性
-        - ServeMux：数据路由
-     1. ip：`addr := net.ParseIP()`
-     1. 发起http请求
-        ```go
-        resp, err := http.Get("http://")
-        defer resp.Body.Close()
-
-        s, err := httputil.DumpResponse(resp, true)
-        fmt.Printf("%s\n", s)
-        ```
-     1. web服务器
-        ```go
-        type Hello struct{}
-        var h Hello
-        func (h Hello) ServeHTTP(w http.ResponseWriter,r *http.Request) {
-            r.ParseForm()                           // 解析参数
-            // form
-            r.Form
-            r.Form["id"]
-            // url
-            r.URL.Path
-            r.URL.Scheme
-            // cookis
-            cookie := r.Cookie("id")
-            for _, cookie := range r.Cookies() {
-                fmt.Fprint(w, cookie.Name)
-            }
-            // echo
-            fmt.Fprintf(w, "Hello!")
-        }
-
-        // cookis
-        expiration := time.Now()
-        expiration = expiration.AddDate(1, 0, 0)
-        cookie := http.Cookie{Name: "id", Value: "astaxie", Expires: expiration}
-        http.SetCookie(w, &cookie)
-
-        err := http.ListenAndServe("localhost:4000", h)                             // 启动服务器
-        if err != nil {
-            log.Fatal(err)
-        }
-        ```
    - 常用
      1. time
         - `time.Now()`
+        - `time.Now().Format("2006-01-02 15:04:05")`
         - `time.Tick()`：每隔一段时间送一个值过来
         - `time.After(n)`：倒计时，结束后往channel里送一个时间，可利用阻塞实现定时，for里边的select每次循环都重新开启
         - `time.Sleep(time.Second * 5)`
@@ -1534,7 +1516,19 @@
         ```
    - xml：encoding/xml包，读取Unmarshal，生成Marshal/MarshalIndent
    - json：encoding/json包
-     1. Marshal：序列化为json，用于map和struct。只有可导出成员(首字母大写)才可转为json，指针变量编码时自动转换为所指向的值，使用空接口可实现任意类型的成员赋值和转换
+     1. 认识
+        - 共性
+          1. 只有可导出成员(首字母大写)才可和json互转
+          1. 当变量实现了Marshaler或者Unmarshaler，会调用其MarshalJSON或者UnmarshalJSON方法来生成json编码
+        - 编码
+          1. 输出首字母小写的json串只能通过tag实现，tag为_的不输出，tag有"xx,string"的会转换类型，tag有"xx,omitempty"的该字段值为0值或者空值时不会输出到json中
+          1. 指针变量编码时自动转换为所指向的值
+        - 解码
+          1. 字段查找顺序：tag->字段名->首字母之外其他大小写不敏感的导出字段
+          1. 空字段默认给出类型默认值，指定默认值的一个方法是：定义一个带需要的默认值的结构体变量给到Unmarshal
+          1. 使用空接口可实现任意类型的成员赋值和转换
+          1. map结构是采用map[string]interface{}和[]interface{}结构来存储任意的JSON对象和数组
+     1. Marshal：序列化为json，用于map和struct
         ```go
         type Server struct {
             ServerName string `json:"name"`     // 这是tag，生成json时替换key，做个映射，反过来也会用到
@@ -1561,18 +1555,48 @@
             }
 
             var s Serverslice
-            str := `{"servers":[{"name":"1","ip":"127"},{"name":"2","ip":"127"}]}`
+            str := `{"servers":[{"name":"1","ip":"127"},{"name":"2","ip":"127"},{"name":"2"}]}`
             err := json.Unmarshal([]byte(str), &s)     // 强行转为数组
             fmt.Println(s)
             ```
         - map
             ```go
             // 未知结构，interface和type assert配合
-            str := []byte(`{"servers":[{"name":"1","ip":"127"},{"name":"2","ip":"127"}]}`)
+            str := []byte(`{"name":"tom","age":6,"servers":[{"name":"1","ip":"127"},{"name":"2","ip":"127"}]}`)
             var f interface{}
             _ = json.Unmarshal(str, &f)
-            m := f.(map[string]interface{})             // 断言形式
+            m := f.(map[string]interface{})             // 断言形式来访问
+            for k, v := range m {
+                switch vv := v.(type) {
+                case string:
+                    fmt.Println(k, "is string", vv)
+                case int:
+                    fmt.Println(k, "is int", vv)
+                case float64:
+                    fmt.Println(k,"is float64",vv)
+                case []interface{}:
+                    fmt.Println(k, "is an array:")
+                    for i, u := range vv {
+                        fmt.Println(i, u)
+                    }
+                default:
+                    fmt.Println(k, "is of a type I don't know how to handle")
+                }
+            }
             fmt.Println(m["servers"])
+            // f的形式为
+            f = map[string]interface{}{
+                "Name": "tom",
+                "Age":  6,
+                "Parents": []interface{}{
+                    "1",
+                    "127",
+                },{
+                    "2",
+                    "127",
+                },
+            }
+
 
             // 第三方simplejson包
             js, err := NewJson([]byte(`{"servers":[{"name":"1","ip":"127"},{"name":"2","ip":"127"}]}`))
@@ -1603,6 +1627,69 @@
    - MySQL：github的go-sql-driver/mysql，beego的orm
    - NOSQL：github的garyburd/redigo
 1. web服务
+   - 发起http请求
+    ```go
+    resp, err := http.Get("http://")
+    defer resp.Body.Close()
+
+    s, err := httputil.DumpResponse(resp, true)
+    fmt.Printf("%s\n", s)
+    ```
+   - web服务器
+    ```go
+    type Hello struct{}
+    var h Hello
+    func (h Hello) ServeHTTP(w http.ResponseWriter,r *http.Request) {
+        r.ParseForm()                           // 解析参数
+        // form
+        r.Form
+        r.Form["id"]
+        // url
+        r.URL.Path
+        r.URL.Scheme
+        // cookis
+        cookie := r.Cookie("id")
+        for _, cookie := range r.Cookies() {
+            fmt.Fprint(w, cookie.Name)
+        }
+        // echo
+        fmt.Fprintf(w, "Hello!")
+    }
+
+    // cookis
+    expiration := time.Now()
+    expiration = expiration.AddDate(1, 0, 0)
+    cookie := http.Cookie{Name: "id", Value: "astaxie", Expires: expiration}
+    http.SetCookie(w, &cookie)
+
+    err := http.ListenAndServe("localhost:4000", h)                             // 启动服务器
+    if err != nil {
+        log.Fatal(err)
+    }
+    ```
+   - 服务端cookie操作
+     1. 直接操作http头部
+        ```go
+        // 获取cookie，r *http.Request
+        r.Header.Get("Cookie")
+
+        // 设置Set-Cookie字段，w http.ResponseWriter
+        c2 := http.Cookie{
+            Name:     "second_cookie",
+            Value:    "Go Web Programming",
+            HttpOnly: true,
+        }
+        w.Header().Set("Set-Cookie", c2.String())
+        w.Header().Add("Set-Cookie", c2.String())
+        ```
+     1. 使用http方法
+        ```go
+        // 获取
+        http.Request.Cookie(key string)         // 单个
+        http.Request.Cookies()                  // 所有
+        // 设置
+        http.SetCookie(w, &c2)
+        ```
    - socket：Socket数据传输是Unix特殊的I/O，分为流式Socket(SOCK_STREAM，面向连接，TCP)、数据报式Socket(SOCK_DGRAM，无连接，UDP)
      1. tcp
         ```go
@@ -2272,3 +2359,10 @@
    - go先写变量名，再写类型，和c是反的，其实更加符合人写程序的思考方式
    - go没有引用类型，只有指针
    - slice类型是不可比较的
+   - go没有提供session的支持
+     1. session设计要点
+        - 创建
+        - 全局管理器
+        - Session ID的全局唯一性
+        - 存储（可以存储到内存、文件、数据库等）
+        - 过期处理

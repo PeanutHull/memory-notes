@@ -1,4 +1,4 @@
-###ECMAScript
+### ECMAScript
 1. Javascript
    - 特点：脚本语言、基于原型、动态/弱类型，它的解释器被称为JavaScript引擎
    - 组成
@@ -40,6 +40,9 @@
 ### BOM
 1. 调用父级方法：`parent.method()`，parent为window.parent的简写
 1. 打开新窗口：`window.open`
+1. cookie
+   - session cookie：临时cookie，浏览器关闭就删除
+   - persistent cookie：持久化cookie
 ### npm
 1. 认识：nodejs的包管理器，是全球最大的开源库生态系统。给js赋予了更多底层的能力
    - package.json：具有的版本管理的nodejs配置文件，运行`npm install`就会自动安装。安装：`npm init`
@@ -107,4 +110,3 @@
    - 支持情况
      1. 移动端ES5都支持
      1. PC端IE9以上ES5都支持，注意IE9的兼容
-1. json：Javascript Object Notation，具有自我描述性且易于阅读

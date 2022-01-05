@@ -373,7 +373,6 @@
 1. Pillow：处理图，缩略图、文件格式转换、旋转、应用滤镜等
 1. Colorama：允许在终端使用颜色
 1. JmesPath/：json增强处理器
-1. Simplejson：json快速处理器，关键部分c实现
 1. Chardet：字符集检测
 1. Python-dateutil：时间日期处理
 1. BeautifulSoup：从html和xml中提取数据
