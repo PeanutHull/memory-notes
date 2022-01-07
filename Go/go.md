@@ -55,6 +55,8 @@
         var asc byte = 'a'
         fmt.Println(asc)        // 输出a的ASCII码值 97
         ```
+     1. 双引号：表示字符串
+     1. ``：表示多行文本
    - 算术：++、--、+-*/%
    - 关系：==、!=、>、<、>=、<=
    - 逻辑：&&、||、!
@@ -253,6 +255,7 @@
     s = append(s, 2, 3, 4)
     // 删除，没有提供现成的，原理是以被删除元素为分界点，将前后两个部分的内存重新连接起来
     s = s[n:]                               // 删除头部n个
+    s = append(s, a...)                     // 将a全部加入s中
     s = append(s[:i], s[i+n:]...)           // 删除中间n个，...表示多对使用
     s = s[:i+copy(s[i:], s[i+n:])]
     s = s[:len(s)-n]                        // 删除尾部n个
@@ -799,9 +802,24 @@
             createTime,modifyTime       int
         }
         ```
-     1. 结构体方法
-        - 定义在结构体作用域外，在函数声明中指定接收者，除了基础类型或其他包的，可以在任意类型里定义方法
-        - `func (variable_name variable_data_type) function_name() [return_type]{}`
+     1. 方法
+        - 属于结构体的方法
+          1. 定义在结构体作用域外，在函数声明中指定接收者，除了基础类型或其他包的，可以在任意类型里定义方法
+          1. `func (variable_name variable_data_type) function_name() [return_type]{}`
+        - 结构体内部的方法类型
+            ```go
+            // 申明
+            type hasMethod struct {
+                myMethid func() int
+            }
+            // 定义
+            s := hasMethod{myMethid: func() int {
+                fmt.Print(111)
+                return 0
+            }}
+            // 调用
+            s.myMethid()
+            ```
      1. 匿名组合：可以直接用父结构体的属性和方法，类似继承
         ```go
         // 结构体组合
@@ -1205,7 +1223,7 @@
      1. 认识：import，`import path`，顺序导入有依赖的包，两种导入方式，导入未使用的包会报错，包只会被导入一次，import只有这一个功能
         - 先导入最上层依赖的包
         - 然后初始化包中常量和变量
-        - 所有包可包含一个没有任何返回值和参数的不能显式调用的导入时自动执行的init函数
+        - 所有包包含一个没有任何返回值和参数的、不能显式调用的、包完成初始化后自动执行的、执行优先级比main函数高的init函数
         - 所有包导入完成后，对main初始化常量和变量、执行init方法
      1. 导入方式
         ```go
@@ -1223,6 +1241,12 @@
         )
         ```
    - 导出：package，可执行命令必须使用main包
+   - 初始化
+     1. 导入包：依次执行包中的常量申明、变量定义、init方法
+     1. 常量申明
+     1. 变量定义
+     1. init方法
+     1. main函数
 1. 标准库
    - 语法相关
      1. unsafe
@@ -1274,18 +1298,6 @@
             }
             ```
      1. reflect
-     1. fmt
-        - 认识：类似c的printf和scanf的格式化I/O
-          1. 格式化动作('verb')源自c但更简单
-          1. scann扫描格式化文本以生成值
-        - 方法分类
-          1. print：输出到标准输出流，支持多个参数输出
-             - 后边加f：根据format参数，默认采用默认格式，`fmt.Printf("%3d", val)表示3位对齐`
-             - 前边加F：写入给定源，默认写入标准输出
-             - 后边加Ln：总是用空格分隔，并且加换行符
-             - 前边加S：返回该字符串
-          1. scann
-          1. Errorf 
      1. errors
         - `errors.New("xxxx")`
      1. builtin：为go的预声明标识符提供文档
@@ -1295,6 +1307,14 @@
      1. expvar：提供公共变量的标准接口
    - 文本相关
      1. text
+     1. strings：操作字符
+     1. strconv：基本数据类型和其字符串表示的相互转换
+        - `strconv.Quote("xx")`：可以输出双引号
+     1. index
+        - suffixarray：suffixarrayb包通过使用内存中的后缀树实现了对数级时间消耗的子字符串搜索
+     1. regexp：正则
+        - syntax
+
      1. encoding：编码
         - json
         - xml
@@ -1313,15 +1333,11 @@
         - utf8
      1. html：转义和解转义HTML文本的函数
         - template：实现数据驱动模板，用于生成可对抗代码注入的安全html输出
+        - charset
+          1. charset.DetermineEncoding()
      1. mime：实现了MIME的部分规定
         - multipart：实现MIME的multipart解析
         - quotedprintable
-
-     1. regexp：正则
-        - syntax
-     1. strings：操作字符
-     1. strconv：基本数据类型和其字符串表示的相互转换
-        - `strconv.Quote("xx")`：可以输出双引号
    - 编码相关
      1. compress：解压缩
         - zlib
@@ -1370,43 +1386,47 @@
      1. archive：文件解压缩
         - `archive.tar`
         - `archive.zip`
-   - net
-     1. 组成
-        - Conn：使用goroutines保证请求独立、非阻塞
-        - ServeMux：多路复用器，用作请求的路由分发
-     1. 方法
-        - ip：`addr := net.ParseIP()`
-     1. 子包
-        - http：提供http客户端和服务端的实现
-          1. 特点
-             - serve方法中对panic作了保护，防止服务停止
-          1. 组成
-             - Handler
-             - Request
-             - Response
-          1. 子包
-             - cookiejar：实现保管在内存中的符合RFC 6265标准的httpCookieJar接口
-             - httputil：提供http公用函数，是http的函数补充
-               1. ReverseProxy()：设置反向代理
-               1. DumpResponse()：打印响应体
-             - cgi：实现RFC3875协议描述的CGI（公共网关接口）
-             - fcgi：实现FastCGI协议
-             - httptest：http测试的单元工具
-             - pprof：返回runtime的统计数据，返回pprof可视化工具规定的格式
-             - httptrace
-        - url
-        - rpc
-          1. jsonrpc
-        - mail：解析邮件消息
-        - smtp：简单邮件传输协议
-        - textproto：实现对基于文本的请求/回复协议的一般性支持
-   - 常用
+   - 应用
+     1. fmt
+        - 认识：类似c的printf和scanf的格式化I/O
+          1. 格式化动作('verb')源自c但更简单
+          1. scann扫描格式化文本以生成值
+        - 方法分类
+          1. print：输出到标准输出流，支持多个参数输出
+             - 后边加f：根据format参数，默认采用默认格式，`fmt.Printf("%3d", val)表示3位对齐`
+             - 前边加F：写入给定源，默认写入标准输出
+             - 后边加Ln：总是用空格分隔，并且加换行符
+             - 前边加S：返回该字符串
+          1. scann
+          1. Errorf
      1. time
         - `time.Now()`
         - `time.Now().Format("2006-01-02 15:04:05")`
         - `time.Tick()`：每隔一段时间送一个值过来
         - `time.After(n)`：倒计时，结束后往channel里送一个时间，可利用阻塞实现定时，for里边的select每次循环都重新开启
         - `time.Sleep(time.Second * 5)`
+     1. math
+        - 子包
+          1. big：大数的高精度运算
+          1. cmplx：为复数提供基本常量和数学函数
+          1. rand：伪随机数生成器
+        - 组成
+          1. `math.Nextafter(2, 3)`
+          1. `rand.Intn(10)`："math/rand"
+     1. image
+        - 子包
+          1. color：基本的颜色库
+             - palette：标准的调色板
+          1. draw：提供组装图片的方法
+          1. gif
+          1. jpeg
+          1. png
+        - 实例
+        ```go
+        m := image.NewRGBA(image.Rect(0, 0, 100, 100))
+        m.Bounds()
+        m.At(0, 0).RGBA()
+        ```
      1. database/sql：数据库驱动的标准接口
    - 系统相关
      1. os
@@ -1438,8 +1458,67 @@
             ```
      1. syscall
      1. log：简单的日志服务
-        - syslog：简单的系统日志服务的接口
+        - 方法
+          1. Print()：输出日志
+          1. Fatal()：输出日志同时调用os.Exit(1)退出，小提示：如果函数下存在defer不会执行
+          1. Panic()：输出日志同时调用panic，defer会执行
+        - 函数
+          1. log.SetFlags()：定义日志输出格式
+            ```go
+            const (
+                Ldate         = 1 << iota     // 日期示例：2009/01/23
+                Ltime                         // 时间示例: 01:23:23
+                Lmicroseconds                 // 毫秒示例: 01:23:23.123123.
+                Llongfile                     // 绝对路径和行号: /a/b/c/d.go:23
+                Lshortfile                    // 文件和行号: d.go:23.
+                LUTC                          // 日期时间转为0时区的
+                LstdFlags     = Ldate | Ltime // Go提供的标准抬头信息
+            )
+
+            // 示例
+            log.SetFlags(log.Ldate|log.Lshortfile)
+            ```
+          1. log.SetPrefix()：设置前缀
+          1. log.SetOutput()：设置输出方式
+            ```go
+            // 设置文件的输出方式
+            logFileLocation, _ := os.OpenFile("/Users/q1mi/test.log", os.O_CREATE|os.O_APPEND|os.O_RDWR, 0744)
+            log.SetOutput(logFileLocation)
+            ```
+          1. log.New()：返回新的Logger类型，并定义一些特性
+        - 子包
+          1. syslog：使用域套接字、udp、tcp时可向syslog守护进程发送日志，可以Dial远端也可以本地，不再更新，有替代产品
      1. flag：用于命令行的标签解析
+   - net
+     1. 组成
+        - Conn：使用goroutines保证请求独立、非阻塞
+        - ServeMux：多路复用器，用作请求的路由分发
+     1. 方法
+        - ip：`addr := net.ParseIP()`
+     1. 子包
+        - http：提供http客户端和服务端的实现
+          1. 特点
+             - serve方法中对panic作了保护，防止服务停止
+          1. 组成
+             - Handler
+             - Request
+             - Response
+          1. 子包
+             - cookiejar：实现保管在内存中的符合RFC 6265标准的httpCookieJar接口
+             - httputil：提供http公用函数，是http的函数补充
+               1. ReverseProxy()：设置反向代理
+               1. DumpResponse()：打印响应体
+             - cgi：实现RFC3875协议描述的CGI（公共网关接口）
+             - fcgi：实现FastCGI协议
+             - httptest：http测试的单元工具
+             - pprof：返回runtime的统计数据，返回pprof可视化工具规定的格式
+             - httptrace
+        - url
+        - rpc
+          1. jsonrpc
+        - mail：解析邮件消息
+        - smtp：简单邮件传输协议
+        - textproto：实现对基于文本的请求/回复协议的一般性支持
    - 语言相关
      1. runtime
         - 子包
@@ -1455,6 +1534,10 @@
           1. `runtime.Goexit()`：使goroutine立即终止
           1. NumGoroutine
      1. go：语法包
+     1. container：数据结构
+        - heap：任意类型的堆操作
+        - list：双向链表
+        - ring：环形链表
      1. debug：调试包
         - dwarf
         - elf
@@ -1469,36 +1552,6 @@
         - B
           1. 方法
              - RunParallel
-   - 其他
-     1. container：数据结构
-        - heap：任意类型的堆操作
-        - list：双向链表
-        - ring：环形链表
-     1. math
-        - 子包
-          1. big：大数的高精度运算
-          1. cmplx：为复数提供基本常量和数学函数
-          1. rand：伪随机数生成器
-        - 组成
-          1. `math.Nextafter(2, 3)`
-          1. `rand.Intn(10)`："math/rand"
-     1. image
-        - 子包
-          1. color：基本的颜色库
-             - palette：标准的调色板
-          1. draw：提供组装图片的方法
-          1. gif
-          1. jpeg
-          1. png
-        - 实例
-        ```go
-        m := image.NewRGBA(image.Rect(0, 0, 100, 100))
-        m.Bounds()
-        m.At(0, 0).RGBA()
-        ```
-     1. index	    	
-        - suffixarray：suffixarrayb包通过使用内存中的后缀树实现了对数级时间消耗的子字符串搜索
-1. 其他包
 ### 应用
 1. 文本处理
    - string：分割、连接、转换、取索引、前后缀检测等

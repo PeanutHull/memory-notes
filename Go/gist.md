@@ -1,4 +1,4 @@
-### 语法
+### 语法练习
 1. 数据类型转换
     ```go
     var f float64 = float64(i)
@@ -306,136 +306,78 @@
    - 编程起势：首先通过划分结构体，定义不同的功能模块，然后分别实现，最终实现功能
      1. 封装模块
         - 在一个文件中定义一组接口interface
-        - 定义结构体struct
+        - 定义结构体struct，可以在一个文件或文件夹中专门存放需要用到的struct
         - 定义new结构体struct的方法，用sync.Once实现单例返回，返回值为接口interface
         - 定义属于结构体struct、并且实现了接口interface的所有方法，完成~
+     1. 定义对象：针对一类组合，要定义一个结构体作为包装这个对象的载体，而不是孤零零的散着各种数据，面向对象嘛
    - 函数式编程：通过参数、返回值、变量都是函数的形式，实现更加灵活的处理
      1. 将具体执行的逻辑包装成一个方法，大家执行这个方法，内部自己定义，就可以将实现解耦了，大家不用关心执行的内容了
    - 并行思想：之前用的读io然后处理的单线程模式，改为：起多个不同的协程(有的处理读io，有的处理逻辑)，协程之间通过chan传递数据，一边读取一边处理的协程模式了
      1. 耗时的goroutine可以多起几个
-1. channel相关
-   - select的简单调度
-    ```go
-    func createWorker(id int) chan<- int {
-        c := make(chan int)
-        go worker(id, c)
-        return c
-    }
-
-    func main() {
-
-        var c1, c2 = generator(), generator()
-        var worker = createWorker(0)
-
-        var values []int
-        tm := time.After(10 * time.Second)
-        tick := time.Tick(time.Second)
-
-        for {
-            var acticeWorker chan<- int
-            var acticeValue int
-            if len(values) > 0 {                                // 利用切片实现，生产者比消费者快的积压效果，不丢数据
-                acticeWorker = worker                           // 由于chan类型的c是一个指针，返回了一个指针，这样go worker(id, c)这个协程就能跑起来
-                acticeValue = values[0]
-            }
-
-            select {
-            case n := <-c1:
-                values = append(values, n)
-            case n := <-c2:
-                values = append(values, n)
-            case acticeWorker <- acticeValue:                   // 利用var出来的为nil的channel，实现没有值时阻塞
-                values = values[1:]
-            case <-time.After(800 * time.Millisecond):          // 超时时间，和总时长原理相同
-                fmt.Print("timeout")
-            case <-tick:                                        // 定时报告channel的状态
-                fmt.Print("queue len = ", len(values))
-            case <-tm:                                          // 总运行时长，time.After控制
-                fmt.Print("bye")
-                return
-            }
-        }
-    }
-    ```
-1. 应用场景
-   - channel
-     1. 通过设置为缓存通道，实现抢购场景的解决方案
+1. 避坑指南
+   - 谨慎使用全局变量，全局变量不会像PHP一样，在完成一次请求之后被销毁，而是会被改变
+   - 形参是slice、map类型的参数，注意值可被全局修改，array则不会
+     1. 因为：浅复制过程中slice和map底层的类型是个结构体，实际存储值的类型是个指针
+     1. 解决：深拷贝，开辟新内存，指针指向新内存地址，并把原有的值复制过去
         ```go
-        // 响应公共结构体
-        type APIBase struct {
-            Code    int32  `json:"code"`
-            Message string `json:"message"`
-        }
+        package main
 
-        // 模拟接口A的响应结构体
-        type APIDemoA struct {
-            APIBase
-            Data APIDemoAData `json:"data"`
-        }
+        import "fmt"
 
-        type APIDemoAData struct {
-            Title string `json:"title"`
-        }
-
-        // 模拟接口B的响应结构体
-        type APIDemoB struct {
-            APIBase
-            Data APIDemoBData `json:"data"`
-        }
-
-        type APIDemoBData struct {
-            SkuList []int64 `json:"sku_list"`
-        }
-
-        // 模拟接口逻辑
         func main() {
-            // 创建接口A传输结果的通道
-            execAResult := make(chan APIDemoA)
-            // 创建接口B传输结果的通道
-            execBResult := make(chan APIDemoB)
-
-            // 并发调用接口A
-            go func(execAResult chan<- APIDemoA) {
-                // 模拟接口A远程调用过程
-                time.Sleep(2 * time.Second)
-                execAResult <- APIDemoA{}
-            }(execAResult)
-
-            // 并发调用接口B
-            go func(execBResult chan<- APIDemoB) {
-                // 模拟接口B远程调用过程
-                time.Sleep(1 * time.Second)
-                execBResult <- APIDemoB{}
-            }(execBResult)
-
-            var resultA APIDemoA
-            var resultB APIDemoB
-            i := 0
-            for {
-                if i >= 2 {
-                    fmt.Println("退出")
-                    break
-                }
-                select {
-                case resultA = <-execAResult: // 等待接口A的响应结果
-                    i++
-                    fmt.Println("resultA", resultA)
-                case resultB = <-execBResult: // 等待接口B的响应结果
-                    i++
-                    fmt.Println("resultB", resultB)
-                }
-            }
+            paramDemo := []int32{1}
+            fmt.Println("main.paramDemo 1", paramDemo)
+            // 初始化新空间
+            paramDemoCopy := make([]int32, len(paramDemo))
+            // 深拷贝
+            copy(paramDemoCopy, paramDemo)
+            demo(paramDemoCopy)
+            fmt.Println("main.paramDemo 2", paramDemo)
         }
+
+        func demo(paramDemo []int32) ([]int32, error) {
+            paramDemo[0] = 2
+            return paramDemo, nil
+        }
+
+        // [Running] go run ".../demo/main.go"
+        // main.paramDemo 1 [1]
+        // main.paramDemo 2 [1]
         ```
-   - io/ioutil：读取所有字符
+   - 资源使用完毕，记得释放资源或回收资源
+     1. 原因
+        - 资源连接数线性增长
+        - 如果一直持有，资源服务端也有超时时间
+     1. 方法：写成`defer close()`
+   - 不要依赖map遍历的顺序
+     1. 因为：底层实现都是数组+类似拉链法，以下3点都决定了map本来就是无序的，所以Go语言为了避免开发者依赖元素顺序，每次遍历的时候都是随机了一个索引起始值。然后PHP通过额外的内存空间维护了map元素的顺序
+        - hash函数无序写入
+        - 成倍扩容
+        - 等量扩容
+   - 不要并发写map，会触发panic
+   - 注意判断指针类型不为空nil，再操作
     ```go
-    resp, err := http.Get("http://example.com?user_id=121212")
-	if err != nil {
+    resp, err := http.Get("https://www.example.com")
+
+    // 错误示范
+	if resp.StatusCode != http.StatusOK || err != nil {
+		// 当 resp为nil时 会触发panic
+		// 当 resp.StatusCode != http.StatusOK 时err可能为nil 触发panic
+		log.Printf("err: %s", err.Error())
 	}
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
+
+    // 正确示范
+    if err != nil {
+		// 报错并记录异常日志
+		log.Printf("err: %s", err.Error())
+		return
+	}
+	// 模拟业务code不为成功的code
+	if resp != nil && resp.StatusCode != http.StatusOK {
+		// 报错并记录异常日志
 	}
     ```
+   - json解析不存在的默认给类型零值，所以接口请求参数不要使用0作为特殊意义值
 1. 实用技巧
    - 全局变量：可以避免重复申请带来的内存交互
    - sync.Pool：重复申请的对象，可以减少GC的成本
@@ -547,92 +489,62 @@
         wg.Wait()
     }
     ```
-1. 避坑指南
-   - 谨慎使用全局变量，全局变量不会像PHP一样，在完成一次请求之后被销毁，而是会被改变
-   - 形参是slice、map类型的参数，注意值可被全局修改，array则不会
-     1. 因为：浅复制过程中slice和map底层的类型是个结构体，实际存储值的类型是个指针
-     1. 解决：深拷贝，开辟新内存，指针指向新内存地址，并把原有的值复制过去
-        ```go
-        package main
-
-        import "fmt"
-
-        func main() {
-            paramDemo := []int32{1}
-            fmt.Println("main.paramDemo 1", paramDemo)
-            // 初始化新空间
-            paramDemoCopy := make([]int32, len(paramDemo))
-            // 深拷贝
-            copy(paramDemoCopy, paramDemo)
-            demo(paramDemoCopy)
-            fmt.Println("main.paramDemo 2", paramDemo)
-        }
-
-        func demo(paramDemo []int32) ([]int32, error) {
-            paramDemo[0] = 2
-            return paramDemo, nil
-        }
-
-        // [Running] go run ".../demo/main.go"
-        // main.paramDemo 1 [1]
-        // main.paramDemo 2 [1]
-        ```
-   - 资源使用完毕，记得释放资源或回收资源
-     1. 原因
-        - 资源连接数线性增长
-        - 如果一直持有，资源服务端也有超时时间
-     1. 方法：写成`defer close()`
-   - 不要依赖map遍历的顺序
-     1. 因为：底层实现都是数组+类似拉链法，以下3点都决定了map本来就是无序的，所以Go语言为了避免开发者依赖元素顺序，每次遍历的时候都是随机了一个索引起始值。然后PHP通过额外的内存空间维护了map元素的顺序
-        - hash函数无序写入
-        - 成倍扩容
-        - 等量扩容
-   - 不要并发写map，会触发panic
-   - 注意判断指针类型不为空nil，再操作
-    ```go
-    resp, err := http.Get("https://www.example.com")
-
-    // 错误示范
-	if resp.StatusCode != http.StatusOK || err != nil {
-		// 当 resp为nil时 会触发panic
-		// 当 resp.StatusCode != http.StatusOK 时err可能为nil 触发panic
-		log.Printf("err: %s", err.Error())
-	}
-
-    // 正确示范
-    if err != nil {
-		// 报错并记录异常日志
-		log.Printf("err: %s", err.Error())
-		return
-	}
-	// 模拟业务code不为成功的code
-	if resp != nil && resp.StatusCode != http.StatusOK {
-		// 报错并记录异常日志
-	}
-    ```
-   - json解析不存在的默认给类型零值，所以接口请求参数不要使用0作为特殊意义值
-1. web错误处理
-   - defer + panic + recover：多加一层panic，优化默认http的的报错展示
-   - Type Assertion：通过类型定义，区分用户展示和服务器展示
-   - 函数式编程：实现错误处理的代理，接收各种逻辑处理函数遇到的错误，形式为
-    ```go
-    func errorWrapper(handler appHandler) func(http.ResponseWriter, *http.Request) {
-        return func(writer http.ResponseWriter, request *http.Request) {
-            // 多加一层panic
-            defer func() {
-                if r := recover(); r != nil {
-
-                }
-            }
-            // 错误逻辑处理
-        }
-    }
-    ```
-1. 常用场景
+1. 应用场景
    - 引号输出
      1. 使用反引号：`a := `"xx"``
      1. 使用转义：`a := "\"xx\""`
      1. 使用strconv包：`a := strconv.Quote("xx")`
+   - 函数
+     1. 可选参数实践
+        ```go
+        // 使用NewQueue，动态改变可选的新参数的方法
+        // 用新的方法处理不同情况下不同的参数，NewQueue相当于一个代理方法
+
+
+        type Queue struct {
+            Name     string
+            MaxLimit int
+
+            // monitor
+            MonitorInterval int
+        }
+
+        type QueueOption func(*Queue)
+
+        func WithMaxLimit(max int) QueueOption {
+            return func(q *Queue) {
+                q.MaxLimit = max
+            }
+        }
+
+        func WithMonitorInterval(seconds int) QueueOption {
+            return func(q *Queue) {
+                q.MonitorInterval = seconds
+            }
+        }
+
+        func NewQueue(name string, options ...QueueOption) *Queue {
+            queue := &Queue{name, 10, 5}
+
+            for _, o := range options {
+                o(queue)
+            }
+
+            return queue
+        }
+        ```
+     1. 函数式编程和循环
+        ```go
+        for _, m := range mySlice {
+            correctM ：= m
+            a := myStruct{
+                name: "xx"
+                myFunc: func() int {
+                    return m                // 这里只是返回了一个函数，这个函数的执行时机是整个for循环结束后，所以这么写m无法达到目的，应该使用另外定义的变量
+                }
+            }
+        }
+        ```
    - 判断接口类型 + 结构体切片用法
     ```go
     // 参数支持constant.ServerConfig或者[]constant.ServerConfig
@@ -651,44 +563,144 @@
         }
     }
     ```
-1. 函数可选参数实践
+   - io/ioutil：读取所有字符
     ```go
-    // 使用NewQueue，动态改变可选的新参数的方法
-    // 用新的方法处理不同情况下不同的参数，NewQueue相当于一个代理方法
-
-
-    type Queue struct {
-        Name     string
-        MaxLimit int
-
-        // monitor
-        MonitorInterval int
-    }
-
-    type QueueOption func(*Queue)
-
-    func WithMaxLimit(max int) QueueOption {
-        return func(q *Queue) {
-            q.MaxLimit = max
-        }
-    }
-
-    func WithMonitorInterval(seconds int) QueueOption {
-        return func(q *Queue) {
-            q.MonitorInterval = seconds
-        }
-    }
-
-    func NewQueue(name string, options ...QueueOption) *Queue {
-        queue := &Queue{name, 10, 5}
-
-        for _, o := range options {
-            o(queue)
-        }
-
-        return queue
-    }
+    resp, err := http.Get("http://example.com?user_id=121212")
+	if err != nil {
+	}
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+	}
     ```
+   - channel
+     1. 通过设置为缓存通道，实现抢购场景的解决方案
+        ```go
+        // 响应公共结构体
+        type APIBase struct {
+            Code    int32  `json:"code"`
+            Message string `json:"message"`
+        }
+
+        // 模拟接口A的响应结构体
+        type APIDemoA struct {
+            APIBase
+            Data APIDemoAData `json:"data"`
+        }
+
+        type APIDemoAData struct {
+            Title string `json:"title"`
+        }
+
+        // 模拟接口B的响应结构体
+        type APIDemoB struct {
+            APIBase
+            Data APIDemoBData `json:"data"`
+        }
+
+        type APIDemoBData struct {
+            SkuList []int64 `json:"sku_list"`
+        }
+
+        // 模拟接口逻辑
+        func main() {
+            // 创建接口A传输结果的通道
+            execAResult := make(chan APIDemoA)
+            // 创建接口B传输结果的通道
+            execBResult := make(chan APIDemoB)
+
+            // 并发调用接口A
+            go func(execAResult chan<- APIDemoA) {
+                // 模拟接口A远程调用过程
+                time.Sleep(2 * time.Second)
+                execAResult <- APIDemoA{}
+            }(execAResult)
+
+            // 并发调用接口B
+            go func(execBResult chan<- APIDemoB) {
+                // 模拟接口B远程调用过程
+                time.Sleep(1 * time.Second)
+                execBResult <- APIDemoB{}
+            }(execBResult)
+
+            var resultA APIDemoA
+            var resultB APIDemoB
+            i := 0
+            for {
+                if i >= 2 {
+                    fmt.Println("退出")
+                    break
+                }
+                select {
+                case resultA = <-execAResult: // 等待接口A的响应结果
+                    i++
+                    fmt.Println("resultA", resultA)
+                case resultB = <-execBResult: // 等待接口B的响应结果
+                    i++
+                    fmt.Println("resultB", resultB)
+                }
+            }
+        }
+        ```
+     1. select的简单调度
+        ```go
+        func createWorker(id int) chan<- int {
+            c := make(chan int)
+            go worker(id, c)
+            return c
+        }
+
+        func main() {
+
+            var c1, c2 = generator(), generator()
+            var worker = createWorker(0)
+
+            var values []int
+            tm := time.After(10 * time.Second)
+            tick := time.Tick(time.Second)
+
+            for {
+                var acticeWorker chan<- int
+                var acticeValue int
+                if len(values) > 0 {                                // 利用切片实现，生产者比消费者快的积压效果，不丢数据
+                    acticeWorker = worker                           // 由于chan类型的c是一个指针，返回了一个指针，这样go worker(id, c)这个协程就能跑起来
+                    acticeValue = values[0]
+                }
+
+                select {
+                case n := <-c1:
+                    values = append(values, n)
+                case n := <-c2:
+                    values = append(values, n)
+                case acticeWorker <- acticeValue:                   // 利用var出来的为nil的channel，实现没有值时阻塞
+                    values = values[1:]
+                case <-time.After(800 * time.Millisecond):          // 超时时间，和总时长原理相同
+                    fmt.Print("timeout")
+                case <-tick:                                        // 定时报告channel的状态
+                    fmt.Print("queue len = ", len(values))
+                case <-tm:                                          // 总运行时长，time.After控制
+                    fmt.Print("bye")
+                    return
+                }
+            }
+        }
+        ```
+   - web错误处理
+     1. defer + panic + recover：多加一层panic，优化默认http的的报错展示
+     1. Type Assertion：通过类型定义，区分用户展示和服务器展示
+     1. 函数式编程：实现错误处理的代理，接收各种逻辑处理函数遇到的错误，形式为
+        ```go
+        func errorWrapper(handler appHandler) func(http.ResponseWriter, *http.Request) {
+            return func(writer http.ResponseWriter, request *http.Request) {
+                // 多加一层panic
+                defer func() {
+                    if r := recover(); r != nil {
+
+                    }
+                }
+                // 错误逻辑处理
+            }
+        }
+        ```
 ### 应用demo
 1. 读取二进制的bmp文件头
     ```go

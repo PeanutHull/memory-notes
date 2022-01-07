@@ -45,8 +45,35 @@
 1. xorm
 1. ent
 ### 日志
+1. log的缺陷
+   - 不支持日志切割
+     1. 日期方式
+     1. 最大行数方式
+     1. 最大容量方式
+   - 不支持多个日志级别
+   - 不支持日志格式化
+   - 大量使用interface{}和反射，内存分配次数多，性能低
 1. logrus：最活跃的日志库
-1. zap：日志库
+   - 特点
+     1. 完全兼容标准日志库，拥有七种日志级别：Trace, Debug, Info, Warning, Error, Fataland Panic
+     1. 可扩展的Hook机制，允许使用者通过Hook的方式将日志分发到任意地方，如本地文件系统，logstash，elasticsearch或者mq等，或者通过Hook定义日志内容和格式等
+     1. 可选的日志输出格式，内置了两种日志格式JSONFormater和TextFormatter，还可以自定义日志格式
+     1. Field机制，通过Filed机制进行结构化的日志记录
+     1. 线程安全
+1. zap：uber开源的高性能日志库，结构化的多日志级别的日志格式，性能比logrus好，更少的内存分配次数
+   - 组成
+     1. Sugared Logger
+     1. Logger：比SugaredLogger更快，只支持强类型的结构化日志记录
+   - 使用
+     1. 日志切割：搭配lumberjack
+     1. 全局Logger：`zap.S()`，`zap.L()`
+   - demo
+    ```go
+    logger, _ = zap.NewProduction()
+    defer logger.Sync()
+    logger.Error("Error fetching url..", zap.String("url", url), zap.Error(err))
+    logger.Info("Success..", zap.String("statusCode", resp.Status), zap.String("url", url))
+    ```
 ### 库、中间件
 1. Sentinel
    - 认识：面向分布式服务架构的高可用流量防护组件，以流量为切入点，从限流、流量整形、熔断降级、系统负载保护、热点防护等多个维度来帮助开发者保障微服务的稳定性
@@ -239,6 +266,9 @@
         - 问题1：当in chan写满进入读ws协程阻塞时，写协程网络报错关闭ws链接，此时读协程不知道链接已经关闭了
           1. 解决方案：用select同时监听in chan和新加的容量为1的close chan，当进入close chan分支时(关闭ws时同时关闭close chan使其不阻塞)，表示链接被关闭了。同样ws断了链接api也会阻塞，所以都加上
         - 问题2：ws的close是线程安全的，是可重入的，所以可多次关闭，但是close chan不可重入，所以用结构体的标志位指示是否关闭，同时用mutex锁住防止并发关闭
+1. 爬虫
+   - 并发版
+   - 分布式版
 ### wiki
 1. 脚手架
    - 认识：比喻各类语言的前期工作环境，方便直接进行开发

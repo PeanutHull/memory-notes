@@ -106,7 +106,21 @@
     }
     ```
 ### 爬虫
-1. 步骤：抓取、分析、存储
+1. 步骤
+   - 抓取
+     1. 规划爬取路径，明确节点和之间的关系
+     1. 针对不同的节点/网页，编写对应的解析器，`Request(URL string, parser parser) itemData {}`
+        - 正则解析
+        - css选择器解析
+     1. 得到解析器整理的数据
+   - 分析
+   - 存储
+1. 架构：![avatar](../images/spider_struct.png)
+   - seed：种子页面，即起始点，放入engine
+   - engine：驱动核心，放入fetcher提取
+   - fetcher：输入url，输出文本，放入parser
+   - parser：输入文本，输出下一个请求、条目
+   - queue：队列，存放即将要操作的数据
 1. scrapy
 1. wiki：‌组合利用好各种api可以实现数据统计的效果，如和地图结合查看数据分布，定时监控某个想要的数据
 ### 数据清洗
