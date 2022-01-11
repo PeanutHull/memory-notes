@@ -2,7 +2,6 @@
 1. Gin：以更好的性能实现类似Martini框架的API，5万star
    - 简洁
    - 高性能路由
-1. tars：性能强
 1. beego
    - 用于开发api、web的http框架，自带orm，大而全，最后一次更新20年12月
      1. 简单：RESTFul、mvc，支持热编译，自动化打包
@@ -29,12 +28,24 @@
         - 独立部署：`nohup ./beepkg &`
         - supervisor部署
         - nginx反向代理
-1. Echo：简约、高性能，2万star
-1. Iris：最快，完善的mvc
-1. Buffalo：快速构建web
-1. Revel：高效、全栈
-1. Martini：轻巧、功能强大、模块化web，不再维护
-1. xes解析
+1. 分类
+   - rpc
+     1. gRPC：本身不是分布式的，作为框架需要搭配很多东西
+     1. tars：性能强
+     1. rpcx
+        - 认识：RPC服务治理框架
+          1. 高性能：gRPC性能的两倍
+          1. 交叉语言：各种编程语言的调用
+          1. 服务发现：支持直连、Zookeeper、Etcd、Consul、mDNS等注册中心
+          1. 服务治理：支持Failover、Failfast、Failtry、Backup等失败模式，支持随机、轮询、权重、网络质量、一致性哈希、地理位置等路由算法
+   - web
+     1. Echo：简约、高性能，2万star
+     1. Iris：最快，完善的mvc
+     1. Buffalo：快速构建web
+     1. Revel：高效、全栈
+     1. Martini：轻巧、功能强大、模块化web，不再维护
+1. wiki
+   - xes解析
     ```go
     // main函数中
     testing.Init()      // 注册测试标志，用于不使用go test的情况下，进行如基准测试的函数调用

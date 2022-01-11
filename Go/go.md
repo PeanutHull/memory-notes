@@ -2124,7 +2124,7 @@
             }
             ```
 1. 性能分析
-   - `go tool cover -html=c.out`：分析由`go test -coverprofile`生成的覆盖率测试的结果，绿色是覆盖的，红色未覆盖
+   - `go tool cover -html=c.out`：分析由`go test -coverprofile`生成的覆盖率测试的结果，绿色是覆盖的，红色未覆盖，采用插桩源码方式
    - `go tool trace`
      1. 认识：调用链路，找出程序在一段时间内正在做什么，诊断性能问题，如延迟，并行化、竞争异常
         - 清晰查看每个逻辑处理器中Goroutine的执行过程，可以很直观看出Goroutine的阻塞消耗，包含网络阻塞、同步阻塞(锁)、系统调用阻塞、调度等待、GC执行耗时、GC STW(Stop The World)耗时

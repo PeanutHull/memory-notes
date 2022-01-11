@@ -244,7 +244,7 @@
    - 程序内连接，解耦
    - 面向过程，restful面向资源
 1. gRPC
-   - 认识：基于http2.0的cs型的高性能、开源的rpc框架，比webSocket高效，google主导开发
+   - 认识：基于http2.0的基于protoBuf的cs型的高性能、开源的rpc框架，比webSocket高效，google主导开发
      1. 支持多语音，默认采用protocol buffers数据序列化协议
      1. 可实现多路复用，就是并发的请求和接收
    - 模式
