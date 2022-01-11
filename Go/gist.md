@@ -494,6 +494,24 @@
      1. 使用反引号：`a := `"xx"``
      1. 使用转义：`a := "\"xx\""`
      1. 使用strconv包：`a := strconv.Quote("xx")`
+   - 判断接口类型 + 结构体切片用法
+    ```go
+    // 参数支持constant.ServerConfig或者[]constant.ServerConfig
+    func (n *ConfigureCenterNacos) InitServer(opts interface{}) (interface{}, error) {
+        switch v := opts.(type) {                                                           // v获取了opts的值和类型
+        case constant.ServerConfig:
+            n.serverConfig = []constant.ServerConfig{                                       // 结构体切片的赋值方式
+                v,
+            }
+            return n.serverConfig, nil
+        case []constant.ServerConfig:
+            n.serverConfig = v
+            return n.serverConfig, nil
+        default:
+            return nil, errors.New("config opts error")
+        }
+    }
+    ```
    - 函数
      1. 可选参数实践
         ```go
@@ -545,33 +563,6 @@
             }
         }
         ```
-   - 判断接口类型 + 结构体切片用法
-    ```go
-    // 参数支持constant.ServerConfig或者[]constant.ServerConfig
-    func (n *ConfigureCenterNacos) InitServer(opts interface{}) (interface{}, error) {
-        switch v := opts.(type) {                                                           // v获取了opts的值和类型
-        case constant.ServerConfig:
-            n.serverConfig = []constant.ServerConfig{                                       // 结构体切片的赋值方式
-                v,
-            }
-            return n.serverConfig, nil
-        case []constant.ServerConfig:
-            n.serverConfig = v
-            return n.serverConfig, nil
-        default:
-            return nil, errors.New("config opts error")
-        }
-    }
-    ```
-   - io/ioutil：读取所有字符
-    ```go
-    resp, err := http.Get("http://example.com?user_id=121212")
-	if err != nil {
-	}
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-	}
-    ```
    - channel
      1. 通过设置为缓存通道，实现抢购场景的解决方案
         ```go
@@ -684,6 +675,64 @@
             }
         }
         ```
+   - context
+     1. pipeLine的每个工人函数都使用switch处理case <-ctx.Done()。作为生产线上的命令控制
+        ```go
+        func lineParser(ctx context.Context, base int, in <-chan string) (<-chan int64, <-chan error, error) {
+            ...
+            go func() {
+                defer close(out)
+                defer close(errc)
+
+                for line := range in {
+
+                    n, err := strconv.ParseInt(line, base, 64)
+                    if err != nil {
+                        errc <- err
+                        return
+                    }
+
+                    select {
+                    case out <- n:
+                    case <-ctx.Done():
+                        return
+                    }
+                }
+            }()
+            return out, errc, nil
+        }
+        ```
+     1. 超时控制
+        ```go
+        ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+        defer cancel()
+
+        select {
+        case <-time.After(1 * time.Second):
+            fmt.Println("overslept")
+        case <-ctx.Done():
+            fmt.Println(ctx.Err()) // prints "context deadline exceeded"
+        }
+        ```
+     1. 传递数据
+        ```go
+        var UserId = FooKey("user-id")
+
+        ctx := context.Background()
+        // 设置
+        ctx = context.WithValue(ctx, UserId, "1")
+        // 获取
+        fmt.Println(ctx.Value(UserId))
+        ```
+   - io/ioutil：读取所有字符
+    ```go
+    resp, err := http.Get("http://example.com?user_id=121212")
+	if err != nil {
+	}
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+	}
+    ```
    - web错误处理
      1. defer + panic + recover：多加一层panic，优化默认http的的报错展示
      1. Type Assertion：通过类型定义，区分用户展示和服务器展示

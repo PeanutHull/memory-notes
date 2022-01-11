@@ -479,8 +479,9 @@
 1. func 函数
    - 认识：`func xx() [T]{}`，是基本的代码块
      1. 可以返回多个值
-     1. 函数参数：值传递(默认)、引用传递
-     1. 方法：包含了接受者的函数，`func (variable_name variable_data_type) function_name() [return_type]{}`
+     1. 参数传递方式：值传递(默认)、引用传递
+     1. 方法的定义：包含了接受者的函数，`func (variable_name variable_data_type) function_name() [return_type]{}`
+     1. 没有可选参数，也不支持方法重载
    - 实例
     ```go
     // 定义函数
@@ -1143,15 +1144,29 @@
    - 一个函数在所有goroutine仅执行一次：sync.Once
      1. 执行方法：`once.Do()`
 1. context
-   - 认识：追踪协程调用树、声明周期管理，在这些树中传递通知和元数据，v1.7
-     1. 退出通知机制：即中断，传递给所有树节点
-     1. 传递数据：传递给所有树节点
-   - 作用：第一形参通常都为context.Context类型
-     1. 传递上下文
-     1. 控制子Goroutine超时退出
-     1. 控制子Goroutine定时退出    
+   - 认识：控制生命周期、追踪协程之间的调用树，在这些树中传递通知和元数据，是一种协程调度的方式。v1.7
+     1. 用在发生超时、主动取消、产生异常时需要进行的抢占、中断其他等后续操作
+     1. context本身是不可变的，是线程安全的，可以放心地在多个协程中传递使用
+     1. 理解为一颗上下文树，继承衍生
+   - 组成
+     1. 初始化
+        - Background()：返回非nil的、永不取消的、无值、无截止时间的空context，通常主方法、初始化、测试时用
+        - TODO()：返回非nil的context，不确定使用什么context、不可用、没扩展的时候使用
+        - WithValue(parent Context, key, val interface{})：返回父context的复制，用于传递数据
+     1. 操作
+        - WithCancel()：创建一个基于parent的可取消的context(cancelCtx类型)，返回一个context和一个CancelFunc，调用CancelFunc即可触发cancel操作
+        - WithDeadline()：创建一个基于parent的可取消的context，其过期时间deadline不晚于所设置时间d
+        - WithTimeout()：类似WithDeadline，时间是相对当前时间的过期时长
+   - 设计
+     1. cancelCtx取消时，会将后代节点中所有的cancelCtx都取消
+   - 使用规范
+     1. 第一形参通常都为context，并且把变量命名为ctx
+     1. 不要把context存储在结构体中，而是要显式地进行传递
+     1. 就算是程序允许，也不要传入一个nil的context，如果不知道是否要用context的话，用context.TODO()来替代
+     1. context.WithValue()只用于传输流程和API的请求范围数据，不要用它来传递可选参数
    - demo1
     ```go
+    // WithTimeout相关，子线程监听主线程传入的ctx，一旦ctx.Done()返回空channel，子线程即可获知超时
     ctx, cancel := context.WithTimeout(context.TODO(), 5*time.Second)
 	defer cancel()
 	go func(ctx context.Context) {
@@ -1177,6 +1192,8 @@
     ```
    - demo2
     ```go
+    // WithCancel相关，搭配WaitGroup实现主协程等待子协程
+
     // 初始化一个context
 	parent := context.Background()
 	// 生成一个取消的context
@@ -1204,6 +1221,10 @@
 	wg.Wait()
     ```
 1. wiki
+   - 并发控制模式
+     1. chan：原始的同步方式，每多一级就需要多一个chan
+     1. waitGroup：限制多个的同步
+     1. context：多种控制方式，树级多级模型，可传递数据
    - 并发路线
      1. 内存模型
      1. 并发机制原理
