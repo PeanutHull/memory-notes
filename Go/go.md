@@ -795,7 +795,7 @@
         type user struct {
             name string `昵称`
             age  int    `年龄`
-        }
+        } `我也是标签`
 
         // 最佳实践写法
         type user struct {
