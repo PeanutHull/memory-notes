@@ -1,60 +1,3 @@
-### 框架
-1. Gin：以更好的性能实现类似Martini框架的API，5万star
-   - 简洁
-   - 高性能路由
-1. beego
-   - 用于开发api、web的http框架，自带orm，大而全，最后一次更新20年12月
-     1. 简单：RESTFul、mvc，支持热编译，自动化打包
-     1. 智能：路由、监控
-     1. 模块：Session、缓存、日志、配置解析、性能监控、上下文操作、ORM 模块、请求模拟
-     1. 性能：原生http包、goroutine
-   - 架构
-     1. cache
-     1. config
-     1. context
-     1. httplibs
-     1. logs
-     1. orm
-     1. session
-     1. toolbox
-   - 组成
-     1. mvc
-     1. 路由
-     1. orm
-     1. 配置
-     1. 模块
-     1. 进程内监控
-     1. 部署
-        - 独立部署：`nohup ./beepkg &`
-        - supervisor部署
-        - nginx反向代理
-1. 分类
-   - rpc
-     1. gRPC：本身不是分布式的，作为框架需要搭配很多东西
-     1. tars：性能强
-     1. rpcx
-        - 认识：RPC服务治理框架
-          1. 高性能：gRPC性能的两倍
-          1. 交叉语言：各种编程语言的调用
-          1. 服务发现：支持直连、Zookeeper、Etcd、Consul、mDNS等注册中心
-          1. 服务治理：支持Failover、Failfast、Failtry、Backup等失败模式，支持随机、轮询、权重、网络质量、一致性哈希、地理位置等路由算法
-   - web
-     1. Echo：简约、高性能，2万star
-     1. Iris：最快，完善的mvc
-     1. Buffalo：快速构建web
-     1. Revel：高效、全栈
-     1. Martini：轻巧、功能强大、模块化web，不再维护
-1. wiki
-   - xes解析
-    ```go
-    // main函数中
-    testing.Init()      // 注册测试标志，用于不使用go test的情况下，进行如基准测试的函数调用
-    err = gracehttp.Serve(&http.Server{Addr: ":" + configs.GetServer().Server.Port, Handler: g})        // grace承接http服务
-    ```
-### ORM
-1. gorm
-1. xorm
-1. ent
 ### 日志
 1. log的缺陷
    - 不支持日志切割
@@ -85,58 +28,140 @@
     logger.Error("Error fetching url..", zap.String("url", url), zap.Error(err))
     logger.Info("Success..", zap.String("statusCode", resp.Status), zap.String("url", url))
     ```
-### 库、中间件
-1. Sentinel
-   - 认识：面向分布式服务架构的高可用流量防护组件，以流量为切入点，从限流、流量整形、熔断降级、系统负载保护、热点防护等多个维度来帮助开发者保障微服务的稳定性
-     1. 承接ali的双11流量
-   - 生态：![avatar](../images/about_sentinel.png)
-1. Loaclcache：bigcache、fastcache、freecache、Caffeine
-   - Caffeine：基础存储没有采用复杂数据结构采用的是ConcurrentHashMap，所有的管理操作异步化、数据驱逐（淘汰）算法采用 W-TinyLFU，以及部分情况 LRF+LFU结合的方式，各种优秀的队列设计，冲突严重hash情况下链表降级采用红黑树来处理 等等优化处理
-1. grace
-   - 认识：零停机部署的开源库，facebook开发
-     1. 优雅重启：SIGUSR2
-     1. 优雅结束：SIGTERM
-   - 过程
-     1. 构造server
-     1. 设置ConnState，监听各连接的状态变化
-     1. 启动新协程，接管各chan信号
-     1. 在新协程中正式启动服务
-1. viper
-   - 认识：配置信息处理框架，各种文件格式、环境变量、ETCD等，检测文件变动
-     1. 支持 JSON/TOML/YAML/HCL/envfile/Java properties 等多种格式的配置文件
-     1. 可以设置监听配置文件的修改，修改时自动加载新的配置
-     1. 从环境变量、命令行选项和io.Reader中读取配置
-     1. 从远程配置系统中读取和监听修改，如 etcd/Consul
-     1. 代码逻辑中显示设置键值
-   - demo
+### 框架
+1. Gin：以更好的性能实现类似Martini框架的API，5万star
+   - 特点
+     1. 简洁
+     1. 高性能路由
+   - validator
+     1. 功能
+        - 自定义约束
+        - 错误处理
+     1. 范围约束
+        - len：等于
+        - max：小于等于
+        - min：大于等于
+        - eq：等于，注意与len不同。对于字符串，eq约束字符串本身的值，而len约束字符串长度
+        - ne：不等于
+        - gt：大于
+        - gte：大于等于
+        - lt：小于
+        - lte：小于等于
+        - oneof：只能是列举出的值其中一个，这些值必须是数值或字符串，以空格分隔，如果字符串中有空格，将字符串用单引号包围，如`oneof=red green`
+     1. 跨字段约束：形式为约束组合
+        - 组成
+          1. 约束：如eq
+          1. 更深层次的字段：cs，cross-struct
+          1. field
+        - 举例
+          1. `eqfield=Xx`
+          1. `eqcsfield=Xx.Xx`
+     1. 字符串
+        - contains=：包含参数子串
+        - containsany：包含参数中任意的 UNICODE 字符
+        - containsrune：包含参数表示的 rune 字符
+        - excludes：不包含参数子串
+        - excludesall：不包含参数中任意的 UNICODE 字符
+        - excludesrune：不包含参数表示的 rune 字符，excludesrune=☻
+        - startswith：以参数子串为前缀
+        - endswith：以参数子串为后缀
+     1. 特殊
+        - -：跳过该字段不检验
+        - |：多个约束只需要满足其中一个
+        - required：字段必须设置，不能为默认值
+        - omitempty：如果字段未设置，则忽略它
+        - 唯一性：`unqiue|unqiue=field`，可约束数组/切片的元素、map的值、struct的字段
+        - 邮件：`email`
+     1. 其他：ASCII/UNICODE字母、数字、十六进制、十六进制颜色值、大小写、RBG颜色值，HSL颜色值、HSLA颜色值、JSON 格式、文件路径、URL、base64编码串、ip地址、ipv4、ipv6、UUID、经纬度等
+1. beego
+   - 用于开发api、web的http框架，自带orm，大而全，最后一次更新20年12月
+     1. 简单：RESTFul、mvc，支持热编译，自动化打包
+     1. 智能：路由、监控
+     1. 模块：Session、缓存、日志、配置解析、性能监控、上下文操作、ORM 模块、请求模拟
+     1. 性能：原生http包、goroutine
+   - 架构
+     1. cache
+     1. config
+     1. context
+     1. httplibs
+     1. logs
+     1. orm
+     1. session
+     1. toolbox
+   - 组成
+     1. mvc
+     1. 路由
+     1. orm
+     1. 配置
+     1. 模块
+     1. 进程内监控
+     1. 部署
+        - 独立部署：`nohup ./beepkg &`
+        - supervisor部署
+        - nginx反向代理
+1. 分类
+   - 大型：功能大而全
+     1. tars
+   - rpc
+     1. gRPC：本身不是分布式的，作为框架需要搭配很多东西
+     1. tars：性能强
+     1. rpcx
+        - 认识：RPC服务治理框架
+          1. 高性能：gRPC性能的两倍
+          1. 交叉语言：各种编程语言的调用
+          1. 服务发现：支持直连、Zookeeper、Etcd、Consul、mDNS等注册中心
+          1. 服务治理：支持Failover、Failfast、Failtry、Backup等失败模式，支持随机、轮询、权重、网络质量、一致性哈希、地理位置等路由算法
+   - web
+     1. Echo：简约、高性能，2万star
+     1. Iris：最快，完善的mvc
+     1. Buffalo：快速构建web
+     1. Revel：高效、全栈
+     1. Martini：轻巧、功能强大、模块化web，不再维护
+1. ORM
+   - gorm
+   - xorm
+   - ent
+1. wiki
+   - xes解析
     ```go
-    viper.SetConfigName("config")
-    viper.SetConfigType("toml")
-    viper.AddConfigPath(".")
-    viper.SetDefault("redis.port", 6381)
-    err := viper.ReadInConfig()
-    if err != nil {
-        log.Fatal("read config failed: %v", err)
-    }
-    name := viper.Get("app_name")
+    // main函数中
+    testing.Init()      // 注册测试标志，用于不使用go test的情况下，进行如基准测试的函数调用
+    err = gracehttp.Serve(&http.Server{Addr: ":" + configs.GetServer().Server.Port, Handler: g})        // grace承接http服务
     ```
-1. fsnotify：viper的内部就是fsnotify
-1. json-iterator/go：几倍性能于标准库`encoding/json`的100%兼容的json库
-   - 只有使用struct才能获得显著的性能提升，因为struct只需一次反射，map每次都要
-   - 1.10后性能和标准库差不多了，意义不大了
-1. Simplejson：json快速处理器，关键部分c实现
-1. go-resty/resty/v2：http请求库
-   - 简单、功能丰富，链式调用
-   - 自动Unmarshal
-1. go-callvis：函数调用关系图
-1. 其他
-   - github.com/libi/dcron：基于一致性哈希的分布式定时任务库
-   - NSQ
-   - GoDotEnv：Ruby dotenv项目的go版本
-     1. 支持yaml语法
-     1. 支持不写入环境变量，使用`myEnv, err := godotenv.Read()`读取
-1. 业务相关
-   - casbin/casbin：访问控制库，支持ACL/RBAC/ABAC
+   - rpc
+     1. 认识：Remote Procedure Call Protocol，远程过程调用协议，打通了应用层和传输层，不需要关注通信细节直接调用远程方法，实现函数调用模式的网络化
+        - 包含了传输协议、编码协议
+        - 内含多种实现方案(socket/管道)，linux的固定端口111
+     1. 意义
+        - 不用关心连接的网络细节
+        - 分布式部署
+        - 程序内连接，解耦
+        - 面向过程，restful面向资源
+     1. 分类
+        - java：古老的RMI、dobbu、motan、spring cloud
+          1. 如dobbu是产品级的rpc框架
+        - go：rpcx
+        - 跨语言：grpc、thrift
+          1. 没有服务发现、负载均衡等相关机制
+        - 其他：phprpc、yar、swoole、hprose
+     1. thrift：接口描述语言和二进制通讯协议，跨语言，Apache的
+     1. 跨语言rpc
+        - 实现基础
+          1. 通用数据结构
+          1. 网络编程
+        - 实现方式
+          1. 文件
+             - web service
+               1. 实现原理：将被调用的方法名、参数封装到WSDL的xml文件中，然后解析xml进行调用
+               1. 弊端：xml的数据传输低效性，网络传输的路径长(基于http协议)
+          1. 二进制
+             - 新一代rpc实现原理
+               1. 编写描述文件
+               1. 转换描述文件为相应语言的数据结构(结构体、类等)，使用Protobuf
+               1. 翻译：将数据结构转为二进制数据、字节数组
+               1. 传输：通过socket传给另一个编程语言
+               1. 再次翻译：翻译为本语言的数据结构
+               1. 调用执行
 ### 微服务
 1. 微服务
    - 理解：微服务架构是一种更独立的架构模式，能够单独更新和发布。是分布式网状结构，它提倡将单一应用程序划分成一组小的服务，服务之间互相协调、互相配合，为用户提供最终价值。微服务架构 ≈ 模块化开发 + 分布式计算
@@ -252,6 +277,63 @@
      1. 网校探针：发生故障的时候，能够快速定位和解决问题
      1. skywalking：是观察性分析平台和应用性能管理系统。提供分布式追踪、服务网格遥测分析、度量聚合和可视化一体化解决方案，可用于php
      1. 元老：openTracing、opencensus
+### 库、中间件
+1. Sentinel
+   - 认识：面向分布式服务架构的高可用流量防护组件，以流量为切入点，从限流、流量整形、熔断降级、系统负载保护、热点防护等多个维度来帮助开发者保障微服务的稳定性
+     1. 承接ali的双11流量
+   - 生态：![avatar](../images/about_sentinel.png)
+1. Loaclcache：bigcache、fastcache、freecache、Caffeine
+   - Caffeine：基础存储没有采用复杂数据结构采用的是ConcurrentHashMap，所有的管理操作异步化、数据驱逐（淘汰）算法采用 W-TinyLFU，以及部分情况 LRF+LFU结合的方式，各种优秀的队列设计，冲突严重hash情况下链表降级采用红黑树来处理 等等优化处理
+1. grace
+   - 认识：零停机部署的开源库，facebook开发
+     1. 优雅重启：SIGUSR2
+     1. 优雅结束：SIGTERM
+   - 过程
+     1. 构造server
+     1. 设置ConnState，监听各连接的状态变化
+     1. 启动新协程，接管各chan信号
+     1. 在新协程中正式启动服务
+1. viper
+   - 认识：配置信息处理框架，各种文件格式、环境变量、ETCD等，检测文件变动
+     1. 支持 JSON/TOML/YAML/HCL/envfile/Java properties 等多种格式的配置文件
+     1. 可以设置监听配置文件的修改，修改时自动加载新的配置
+     1. 从环境变量、命令行选项和io.Reader中读取配置
+     1. 从远程配置系统中读取和监听修改，如 etcd/Consul
+     1. 代码逻辑中显示设置键值
+   - demo
+    ```go
+    viper.SetConfigName("config")
+    viper.SetConfigType("toml")
+    viper.AddConfigPath(".")
+    viper.SetDefault("redis.port", 6381)
+    err := viper.ReadInConfig()
+    if err != nil {
+        log.Fatal("read config failed: %v", err)
+    }
+    name := viper.Get("app_name")
+    ```
+1. fsnotify：监听文件变化，viper的内部就是fsnotify
+1. json-iterator/go：几倍性能于标准库`encoding/json`的100%兼容的json库
+   - 只有使用struct才能获得显著的性能提升，因为struct只需一次反射，map每次都要
+   - 1.10后性能和标准库差不多了，意义不大了
+1. Simplejson：json快速处理器，关键部分c实现
+1. go-resty/resty/v2：http请求库
+   - 简单、功能丰富，链式调用
+   - 自动Unmarshal
+1. go-callvis：函数调用关系图
+1. 其他
+   - github.com/libi/dcron：基于一致性哈希的分布式定时任务库
+   - NSQ
+   - GoDotEnv：Ruby dotenv项目的go版本
+     1. 支持yaml语法
+     1. 支持不写入环境变量，使用`myEnv, err := godotenv.Read()`读取
+   - go-app：是一个使用 Go + WebAssembly技术编写渐进式Web应用的库，可以输出布局
+1. 业务相关
+   - casbin/casbin：访问控制库，支持ACL/RBAC/ABAC
+1. 图像
+   - plot：绘图库，内置很多组件，可以生成静态图片
+     1. 支持折线图、直方图、函数图像、气泡图
+     1. 搭配web服务可以直接返回一张图片给前端
 ### 技术解决方案
 1. 千万级WebSocket弹幕消息推送服务
    - 难点

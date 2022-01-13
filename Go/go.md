@@ -1510,36 +1510,6 @@
         - 子包
           1. syslog：使用域套接字、udp、tcp时可向syslog守护进程发送日志，可以Dial远端也可以本地，不再更新，有替代产品
      1. flag：用于命令行的标签解析
-   - net
-     1. 组成
-        - Conn：使用goroutines保证请求独立、非阻塞
-        - ServeMux：多路复用器，用作请求的路由分发
-     1. 方法
-        - ip：`addr := net.ParseIP()`
-     1. 子包
-        - http：提供http客户端和服务端的实现
-          1. 特点
-             - serve方法中对panic作了保护，防止服务停止
-          1. 组成
-             - Handler
-             - Request
-             - Response
-          1. 子包
-             - cookiejar：实现保管在内存中的符合RFC 6265标准的httpCookieJar接口
-             - httputil：提供http公用函数，是http的函数补充
-               1. ReverseProxy()：设置反向代理
-               1. DumpResponse()：打印响应体
-             - cgi：实现RFC3875协议描述的CGI（公共网关接口）
-             - fcgi：实现FastCGI协议
-             - httptest：http测试的单元工具
-             - pprof：返回runtime的统计数据，返回pprof可视化工具规定的格式
-             - httptrace
-        - url
-        - rpc
-          1. jsonrpc
-        - mail：解析邮件消息
-        - smtp：简单邮件传输协议
-        - textproto：实现对基于文本的请求/回复协议的一般性支持
    - 语言相关
      1. runtime
         - 子包
@@ -1573,6 +1543,93 @@
         - B
           1. 方法
              - RunParallel
+1. net
+   - 组成
+     1. Conn：使用goroutines保证请求独立、非阻塞
+     1. ServeMux：多路复用器，用作请求的路由分发
+   - 方法
+     1. ip：`addr := net.ParseIP()`
+   - 子包
+     1. http：提供http客户端和服务端的实现
+        - 特点
+          1. serve方法中对panic作了保护，防止服务停止
+        - 组成
+          1. Handler
+          1. Request
+          1. Response
+        - 子包
+          1. cookiejar：实现保管在内存中的符合RFC 6265标准的httpCookieJar接口
+          1. httputil：提供http公用函数，是http的函数补充
+             - ReverseProxy()：设置反向代理
+             - DumpResponse()：打印响应体
+          1. cgi：实现RFC3875协议描述的CGI（公共网关接口）
+          1. fcgi：实现FastCGI协议
+          1. httptest：http测试的单元工具
+          1. pprof：返回runtime的统计数据，返回pprof可视化工具规定的格式
+          1. httptrace
+     1. url
+     1. rpc
+        - 认识：支持三个级别：TCP、HTTP、JSONRPC，使用Gob编码的只能go内部
+          1. SOAP RPC：不支持
+        - 访问条件：`func (t *T) MethodName(argType T1, replyType *T2) error`，T/T1/T2必须能被encoding/gob包编解码
+          1. 函数必须是导出的
+          1. 必须有两个导出类型的参数，第一个参数是接收的参数，第二个参数是返回给客户端的参数，第二个参数必须是指针类型的
+          1. 函数要有一个返回值error
+        - tcp协议
+            ```go
+            // client
+            client, err := rpc.Dial("tcp", "127.0.0.1")
+            // Synchronous call
+            var reply int
+            err = client.Call("Xxx.Multiply", args, &reply)
+
+            // server
+            xxx := new(Xxx)
+            rpc.Register(xxx)
+            tcpAddr := net.ResolveTCPAddr("tcp", ":1234")
+            listener := net.ListenTCP("tcp", tcpAddr)
+            for {
+                conn := listener.Accept()                       // 需要自己控制连接
+                rpc.ServeConn(conn)                             // 有连接后，把连接交给rpc来处理
+            }
+            ```
+        - json rpc：使用json编码，不是gob，支持跨语言调用
+            ```go
+            // client
+            client, err := jsonrpc.Dial("tcp", service)
+            // synchronous call
+            args := Args{17, 8}
+            var reply int
+            err = client.Call("Xxx.Multiply", args, &reply)
+
+            // server
+            xxx := new(Xxx)
+            rpc.Register(xxx)
+            tcpAddr := net.ResolveTCPAddr("tcp", ":1234")
+            listener := net.ListenTCP("tcp", tcpAddr)
+            for {
+                conn := listener.Accept()
+                jsonrpc.ServeConn(conn)
+            }
+            ```
+        - http协议
+            ```go
+            // client
+            client := rpc.DialHTTP("tcp", "127.0.0.1:1234")
+            // synchronous call
+            var reply int
+            err = client.Call("Xxx.func", args, &reply)
+
+            // server
+            type Xxx int
+            xxx := new(Xxx)
+            rpc.Register(xxx)
+            rpc.HandleHTTP()                                    // 注册到HTTP协议上
+            err := http.ListenAndServe(":1234", nil)
+            ```
+     1. mail：解析邮件消息
+     1. smtp：简单邮件传输协议
+     1. textproto：实现对基于文本的请求/回复协议的一般性支持
 ### 应用
 1. 文本处理
    - string：分割、连接、转换、取索引、前后缀检测等
@@ -1813,63 +1870,14 @@
         ```
      1. 连接控制：DialTimeout、SetReadDeadline、SetWriteDeadline、SetKeepAlive
    - webSocket：go.net子包有，`golang.org/x/net/websocket`
-   - rpc：`net/rpc`提供，支持三个级别：TCP、HTTP、JSONRPC，只支持go内部，使用Gob编码
-     1. 访问条件：`func (t *T) MethodName(argType T1, replyType *T2) error`，T/T1/T2必须能被encoding/gob包编解码
-        - 函数必须是导出的
-        - 必须有两个导出类型的参数，第一个参数是接收的参数，第二个参数是返回给客户端的参数，第二个参数必须是指针类型的
-        - 函数要有一个返回值error
-     1. http协议
-        ```go
-        // client
-        client := rpc.DialHTTP("tcp", "127.0.0.1:1234")
-        // Synchronous call
-        var reply int
-        err = client.Call("Xxx.func", args, &reply)
-
-        // server
-        type Xxx int
-        xxx := new(Xxx)
-        rpc.Register(xxx)
-        rpc.HandleHTTP()                            // 注册到了HTTP协议上
-        err := http.ListenAndServe(":1234", nil)
-        ```
-     1. tcp协议
-        ```go
-        // client
-        client, err := rpc.Dial("tcp", "127.0.0.1")
-        // Synchronous call
-        var reply int
-        err = client.Call("Xxx.Multiply", args, &reply)
-
-        // server
-        xxx := new(Xxx)
-        rpc.Register(xxx)
-        tcpAddr := net.ResolveTCPAddr("tcp", ":1234")
-        listener := net.ListenTCP("tcp", tcpAddr)
-        for {
-            conn := listener.Accept()                       // 需要自己控制连接
-            rpc.ServeConn(conn)                             // 有连接后，把连接交给rpc来处理
-	    }
-        ```
-     1. json rpc：使用json编码，不是gob，支持跨语言调用
-        ```go
-        // client
-        client, err := jsonrpc.Dial("tcp", service)
-        // Synchronous call
-        args := Args{17, 8}
-        var reply int
-        err = client.Call("Xxx.Multiply", args, &reply)
-
-        // server
-        xxx := new(Xxx)
-        rpc.Register(xxx)
-        tcpAddr := net.ResolveTCPAddr("tcp", ":1234")
-        listener := net.ListenTCP("tcp", tcpAddr)
-        for {
-            conn := listener.Accept()
-            jsonrpc.ServeConn(conn)
-        }
-        ```
+1. gRPC
+   - 认识：基于http2.0的基于protoBuf的cs型的高性能、开源的rpc框架，比webSocket高效，google主导开发，包 `google.golang.org/grpc`
+     1. 支持多语音，默认采用protocol buffers数据序列化协议
+     1. 可实现多路复用，就是并发的请求和接收
+   - 模式
+     1. 简单模式：单调的顺序请求、响应
+     1. 双向数据流模式：请求、响应并行起来
+   - 实例
      1. proto rpc
         - 编写proto文件，生成.pb.go代码：`protoc --go_out= plugin= protorpc=. arith.proto`，包含了rpc方法定义和服务注册的代码
         - 使用
@@ -1890,7 +1898,6 @@
             }
             ```
      1. grpc
-        - 包：`google.golang.org/grpc`
         - 使用
           1. 编写proto或protoc(有service)文件，
           1. 实现pb.go的RegisterXXServiceServer接口
@@ -1932,7 +1939,6 @@
 
             fmt.Println("调用gRPC方法成功，ProdStock = ", resp.ProdStock)
             ```
-   - SOAP RPC：不支持
 1. 国际化
    - 地区：`i18n.SetLocale("zh-CN")`
    - 资源：展示
