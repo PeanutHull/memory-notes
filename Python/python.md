@@ -364,6 +364,10 @@
      1. anaconda：开源的python发行版版
    - 相关
      1. pandas：数据分析
+        - PandasGUI：提供数据预览、筛选、统计、多种图表展示以及数据转换
+        - Pandas Profiling：提供了整体数据概况、每列的详情、列之间的关图、列之间的相关系数
+        - Sweetviz：Pandas Profiling类似，提供每列详细的统计指标、取值分布、缺失值统计以及列之间的相关系数
+        - dtale：提供丰富图表展示数据，还提供很多交互式的接口，对数据进行操作、转换
      1. scipy：科学计算
      1. matplotlib：绘图库，给命令，生成图
 1. PyAudio/wave
