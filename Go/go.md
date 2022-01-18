@@ -8,7 +8,6 @@
    - 丰富的标准库支持、强大的工具类库
    - 强大的运行时反射机制，便于在线的性能分析，以及堆栈分析
    - 能与c语言交互
-   - 缺少框架、软件包管理不完善
 1. 特点
    - 性能、简单
    - 每个Go程序都是由包组成的
@@ -83,6 +82,9 @@
    - 派生
      1. func
      1. interface
+   - 扩展类型
+     1. 组合扩展：struct组合之前的类型
+     1. 别名扩展：type定义别名再扩展
    - 特点
      1. 类型零值：变量无初始化时的默认值，可以表现为0，false，""，nil
      1. 类型推导：不指定其类型时，由右值推导得出
@@ -259,7 +261,7 @@
     s = append(s[:i], s[i+n:]...)           // 删除中间n个，...表示多对使用
     s = s[:i+copy(s[i:], s[i+n:])]
     s = s[:len(s)-n]                        // 删除尾部n个
-    // 取子切片
+    // 取子切片，s[start : end : max]
     s[1:4]
     s[0:1:4]
     s[:3]
@@ -761,16 +763,7 @@
    - 认识：reflect，反射是在运行时动态的针对对象，获取属性、调用方法，go是静态类型的语言
      1. go的反射是基于interface的
      1. go会记录变量的类型等信息
-     1. 应用在必须传参类型不固定的场景下（业务开发一般用不到）
-   - 最佳实践
-     1. 尽量避免使用，涉及内存copy、内存逃逸，性能相对差，导致代码可读性变差
-     1. 优先使用TypeOf，不会产生内存逃逸，性能更高，ValueOf包含了TypeOf
-     1. 一定注意不同的数据类型使用对应的函数，否则会导致panic
-     1. 官方反射三定律
-        - Reflection goes from interface value to reflection object.
-        - Reflection goes from reflection object to interface value.
-        - To modify a reflection object, the value must be settable.
-   - 应用
+   - 应用场景：在必须传参类型不固定的场景下（业务开发一般用不到）
      1. orm库、json序列化库、运行时
    - 组成
      1. 类型
@@ -778,13 +771,19 @@
         - `reflect.Type`：接口
         - `reflect.Value`：结构体类型
      1. 基础反射方法
-        - reflect.TypeOf()：，`func TypeOf(v interface{}) Type`，返回type对象
-        - reflect.ValueOf()：`func ValueOf(v interface{}) Value`，返回value结构体
+        - reflect.TypeOf()：，`func TypeOf(v interface{}) Type`，获取type对象，具体类型
+        - reflect.ValueOf()：`func ValueOf(v interface{}) Value`，获取value结构体，具体值
           1. CanSet()
           1. Elem()：指针指向的元素类型
-1. 扩展类型
-   - 组合扩展：struct组合之前的类型
-   - 别名扩展：type定义别名再扩展
+   - 最佳实践
+     1. 尽量避免使用，涉及内存copy、内存逃逸，性能相对差
+     1. 很难实现清晰并可维护的代码，导致代码可读性变差
+     1. 优先使用TypeOf，不会产生内存逃逸，性能更高，ValueOf包含了TypeOf
+     1. 一定注意不同的数据类型使用对应的函数，否则会导致panic
+     1. 官方反射三定律
+        - Reflection goes from interface value to reflection object
+        - Reflection goes from reflection object to interface value
+        - To modify a reflection object, the value must be settable
 ### 面向对象
 1. 理解：核心是合成复用
 1. struct
@@ -822,31 +821,33 @@
             s.myMethid()
             ```
      1. 匿名组合：可以直接用父结构体的属性和方法，类似继承
-        ```go
-        // 结构体组合
-        type Animal struct{
-            Color string
-            Size int
-        }
-        type Dog1 struct{
-            Animal
-            name string
-            Color string
-        }
-        dog := Dog1{                // 定义变量
-            Animal{"red", 11},
-            "miao",
-            "blue",
-        }
-        dog.Color = "1"             // 直接使用，优先级高于父级的
+        - 方法的继承和重写：都支持
+        - 实例
+            ```go
+            // 结构体组合
+            type Animal struct{
+                Color string
+                Size int
+            }
+            type Dog1 struct{
+                Animal
+                name string
+                Color string
+            }
+            dog := Dog1{                // 定义变量
+                Animal{"red", 11},
+                "miao",
+                "blue",
+            }
+            dog.Color = "1"             // 直接使用，优先级高于父级的
 
-        type Dog2 struct{
-            someAnimal Animal       // 把父结构体作为一个属性使用，原理类似
-            name string
-        }
+            type Dog2 struct{
+                someAnimal Animal       // 把父结构体作为一个属性使用，原理类似
+                name string
+            }
 
-        fmt.Println(dog.someAnimal.Color)
-        ```
+            fmt.Println(dog.someAnimal.Color)
+            ```
    - 实例
     ```go
     // 定义
@@ -2232,6 +2233,17 @@
         - 认识：用于测试编译
           1. 会同时编译依赖包，会在GOROOT/src和GOPATH/src搜索包，默认编译当前目录下的所有go文件，可指定要编译的文件名，会忽略_或.开头的go文件，会根据当前系统选择性地编译以系统名结尾的文件(_linux|darwin|windows|freebsd.go)
           1. 普通包不产生任何文件只做检查性编译，main包生成可执行文件
+        - 条件编译
+          1. 认识：`// +build condition`，构建约束，和编译条件`-tags`相同字符的才编译在包中
+             - 约束可以出现在任何文件中
+             - +build必须出现在package之前，之后应要有一个空行
+             -  *_GOOS、*_GOARCH、*_GOOS_GOARCH结尾的隐式包含构建约束
+          1. 语法
+             - 只允许是字母数字或_
+             - 多个条件之间，空格表示OR；逗号表示AND；叹号(!)表示NOT
+             - 一个文件可以有多个+build，关系是AND
+          1. 应用
+             - `// +build ignore`：用于不想编译某文件
         - 参数
           1. -v：打印包名
           1. -o：指定输出的可执行文件
@@ -2257,7 +2269,8 @@
           1. `-t ./...`：包括单元测试中用到的
           1. `-d`：不构建或安装，只下载
           1. `-v`：显示执行的命令
-     1. `go list`：查看安装的packag
+     1. `go list`：查看安装的package
+        - -f '{<!-- -->{.GoFiles}}'：查看将被编译的文件名
 1. 运行
    - 环境变量
      1. GOROOT：go的安装路径，可以不设置，默认在/usr/local/go，编译的时候从GOROOT找system libariry

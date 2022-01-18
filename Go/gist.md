@@ -143,6 +143,12 @@
             Struct                      // 结构体类型
             UnsafePointer               // unsafe.Pointer 类型
         )
+
+        // demo
+        v := reflect.ValueOf(v)
+        v.Kind()                        // 获取其类型
+        fmt.Println(v.String())         // 返回其值
+        fmt.Println(v.Int())            // 返回其值
         ```
      1. `reflect.Type`：接口
         ```go
