@@ -1001,7 +1001,7 @@
 
     go func(i int) {
         i++                     // 没有协程切换的机会，会一直运行
-    }(i)                          // 外部传进i，否则就是闭包
+    }(i)                        // 外部传进i，否则就是闭包
     ```
    - wiki
      1. 并行与并发：并发只是假装同时进行
@@ -1017,56 +1017,57 @@
      1. 没有锁，可以用-race检测数据访问冲突
      1. 默认另一端准备好之前发送和接收都会阻塞
    - 特性
-     1. 无缓冲channel
-        - 读时没有数据会阻塞
-        - 没有取数据时goroutine会阻塞
-        - 读写不能放一个协程里，写读颠倒会死锁
-     1. nil的channel：发送、接收数据，不会报错，是永远阻塞的，用var声明的就是nil channel 
+     1. nil的channel
+        - 用var声明的就是nil channel 
+        - 读写数据不会报错，是永远阻塞的
      1. 已关闭的channel
+        - 只有发送者才能关闭channel，表示再没有值会被发送
         - 发送数据，引起panic 
         - 接收数据，返回channel中缓存的值，如果通道中无缓存，返回0
+     1. 无缓冲channel/同步channel
+        - 不会存储数据
+        - 读时没有数据会阻塞
+        - 读写不能放一个协程里，写读颠倒会死锁
+     1. 有缓冲channel
+        - 可以提高性能
+        - 只有缓冲区满时才会阻塞，当缓冲区清空的时候接收操作会阻塞
    - 阻塞
      1. 原因：供需失衡
         - 有缓存的，生产多了生产者阻塞
         - 消费没了消费者阻塞
      1. 后果：非主流程拿不到数据，主流程进入阻塞无法响应请求
      1. 骚操作：利用阻塞实现多协程锁
-   - 定义
-        ```go
-        ch := make(chan int)        // 这个ch是一个指针类型
-        ch <- v                     // 写
-        v := <- ch                  // 读
+   - 实例
+    ```go
+    ch := make(chan int)        // 这个ch是一个指针类型
+    ch <- v                     // 写
+    v := <- ch                  // 读
+    close(ch)                   // 关闭
 
-        // 单向通道
-        var send chan <- int         // 只能发送
-        var receive <- chan int      // 只能接收
-        ```
-   - 缓冲：可以提高性能
-        ```go
-        ch := make(chan int, 100)   // 有缓冲通道，只有缓冲区满时才会阻塞，当缓冲区清空的时候接收操作会阻塞
-        ch := make(chan int)        // 无缓冲通道/同步通道，即通道大小为0，不会存储数据
-        ```
-   - 关闭
-        ```go
-        // 发送者close channel，表示再没有值会被发送，只有发送者才能关闭channel
-        c := make(chan int, 10)
-        close(c)                        
+    // 单向channel
+    var send chan <- int         // 只能发送
+    var receive <- chan int      // 只能接收
 
-        // 接收者通过赋值语句的第二参数来测试channel是否被关闭，ok为false表示已经关闭
-        v,ok := <-ch                    
-        for{
-            v,ok := <- ch
-            if ok == false {        // 通道已经关闭
-                break
-            }
+    // 缓冲channel
+    ch := make(chan int, 100)
+    ch := make(chan int)
+
+    // 检测channel是否关闭
+    v,ok := <-ch                    
+    for{
+        v,ok := <- ch
+        if ok == false {        // 通道已关闭
+            break
         }
-
-        // 简便写法，不断从channel接收值，直到它被关闭，可替换以上判断的写法
-        for v := range ch{}         
-        ```
-   - select：同时监听多个管道并收发消息，会阻塞直到条件分支中的某个可以继续执行。多个都准备好的随机选一个。可用于多个写入，一个读取场景
-     1. 谁来的快收谁
-     1. 加了default相当于非阻塞式的获取，之前channel都是阻塞的，套层for就是循环default，去掉default就是deadlock
+    }
+    // 简便写法，不断从channel接收值，直到它被关闭，可替换以上判断的写法
+    for v := range ch{}         
+    ```
+   - select
+     1. 认识：同时监听多个管道并收发消息，会阻塞直到条件分支中的某个可以继续执行。多个都准备好的随机选一个。可用于多个写入，一个读取场景
+        - 谁来的快收谁
+        - 加了default相当于非阻塞式的获取，之前channel都是阻塞的，套层for就是循环default，去掉default就是deadlock
+     1. 实例
         ```go
         select {
             case c <- chName1:
@@ -1074,10 +1075,10 @@
             case <- time.After(5 * time.Second):        // 设置超时
             default:                                    // 其他分支没准备好的时候default分支会被执行，可用于非阻塞的发送或者接收
 
-            case n := <- c1:                         // 可以实现读一堆，然后返回给一个
+            case n := <- c1:                            // 可以实现读一堆，然后返回给一个
                 out <- n                                // 这样会阻塞
             case n := <- c2:
-            case out <- n:                            // 这样不会阻塞
+            case out <- n:                              // 这样不会阻塞
         }
         ```
 1. sync：提供了并发编程中基本的同步原语，保证执行不会出现混乱。这是传统的同步机制，是通过共享内存来通信的，更高级别的同步最好通过通道和通信来完成
@@ -1116,7 +1117,7 @@
         ```
      1. 读写互斥锁：sync.RWMutex。RWMutex允许至少一个读锁或一个写锁存在，而sync.Mutex允许一个读锁或一个写锁存在
         - RLock、RUnlock：可进行并发读取
-   - 发送信号：sync.Cond
+   - 发送信号：`sync.Cond`
      1. 认识：用于发出信号（一对一）或广播信号（一对多）到goroutine
         - 创建sync.Cond需要sync.Locker对象（sync.Mutex或sync.RWMutex）
         - 破坏了go的基本原则：不要通过共享进行通信；而是通过通信共享，但是通过channel模拟广播的唯一方法是关闭channel，只能广播一次，cond可以多次
@@ -1124,14 +1125,14 @@
         - `sync.NewCond(&sync.Mutex{})`：创建
         - `Signal`：发送单个信号
         - `Broadcast`：发送广播信号
-   - 并发池：sync.Pool
+   - 并发池：`sync.Pool`
      1. 认识：安全地保存一组对象
      1. 方法
         - Get()：随机取，无法保证以固定的顺序
         - Put()
-   - sync/singleflight
+   - `sync/singleflight`
      1. 认识：重复函数调用抑制
-   - sync.Map
+   - `sync.Map`
      1. 认识：并发安全版map
      1. 方法
         - Load()：检索
@@ -1142,7 +1143,7 @@
    - atomic：底层的原子性内存原语
      1. 方法
         - AddInt32()
-   - 一个函数在所有goroutine仅执行一次：sync.Once
+   - 一个函数在所有goroutine仅执行一次：`sync.Once`
      1. 执行方法：`once.Do()`
 1. context
    - 认识：控制生命周期、追踪协程之间的调用树，在这些树中传递通知和元数据，是一种协程调度的方式。v1.7
@@ -1269,45 +1270,45 @@
      1. 变量定义
      1. init方法
      1. main函数
-1. 标准库
-   - 语法相关
-     1. unsafe
-        - 认识：不安全的直接操作内存，避免使用，只有两个类型，三个函数
-          1. 内存对齐：每种类型占用内存不同，结构体8byte对齐，占不满8byte的不连续的独占，连续的n个类型共同8byte
-        - 组成
-          1. 类型
-             - `type ArbitraryType int`：int别名，代表一个任意go表达式类型
-             - `type Pointer *ArbitraryType`：int指针类型别名，可理解成任何指针的父类型
-          1. 函数
-             - `unsafe.Sizeof()`：接受任意类型的值或表达式，返回其占用的字节数
-             - `func Offsetof(x ArbitraryType) uintptr`：返回结构体中元素所在内存的偏移量
-             - `func Alignof(x ArbitraryType) uintptr`：返回变量对齐字节数量，对齐因子
-        - 用法
-            ```go
-            // 修改、读取不可访问的私有变量
-            func GetDemoStruct() DemoStruct {                                                   // 获取一个DemoStruct对象
-                return DemoStruct{age: 21, Name: "hong", Id: 2, Man: false, china: true}
-            }
-            func changeUnreadField()  {                                                         // 修改不可读取的变量
-                demo := common.GetDemoStruct()
-                fmt.Println("demo is ",demo)
-                *(*uint8)(unsafe.Pointer(uintptr(unsafe.Pointer(&demo)) + 32) ) = 100           // 32是结构体的内存偏移量
-                fmt.Println("demo now is ",demo)
-            }
+### 标准库
+1. 语法相关
+   - unsafe
+     1. 认识：不安全的直接操作内存，避免使用，只有两个类型，三个函数
+        - 内存对齐：每种类型占用内存不同，结构体8byte对齐，占不满8byte的不连续的独占，连续的n个类型共同8byte
+     1. 组成
+        - 类型
+          1. `type ArbitraryType int`：int别名，代表一个任意go表达式类型
+          1. `type Pointer *ArbitraryType`：int指针类型别名，可理解成任何指针的父类型
+        - 函数
+          1. `unsafe.Sizeof()`：接受任意类型的值或表达式，返回其占用的字节数
+          1. `func Offsetof(x ArbitraryType) uintptr`：返回结构体中元素所在内存的偏移量
+          1. `func Alignof(x ArbitraryType) uintptr`：返回变量对齐字节数量，对齐因子
+     1. 用法
+        ```go
+        // 修改、读取不可访问的私有变量
+        func GetDemoStruct() DemoStruct {                                                   // 获取一个DemoStruct对象
+            return DemoStruct{age: 21, Name: "hong", Id: 2, Man: false, china: true}
+        }
+        func changeUnreadField()  {                                                         // 修改不可读取的变量
+            demo := common.GetDemoStruct()
+            fmt.Println("demo is ",demo)
+            *(*uint8)(unsafe.Pointer(uintptr(unsafe.Pointer(&demo)) + 32) ) = 100           // 32是结构体的内存偏移量
+            fmt.Println("demo now is ",demo)
+        }
 
-            // 绕开编译器的对类型做强制转换
-            func Float64ToUint64(f float64) uint64 {
-                p := unsafe.Pointer(&f)                     // 拿到指向f的指针(通过f的地址拿到可操作的指针Pointer)
-                p2 := (*uint64) (p)                         // 将指针(*float)转换为uint64指针(*uint64)类型。因为uint64为无符号位，所有能够拿出当前64位bit内容
-                return * p2
-            }
-            
-            // 保存任意类型，用于系统函数交互、cgo等
-            syscall.Syscall(SYS_READ, uintptr(fd), uintptr(unsafe.Pointer(p)), uintptr(n))
-            ```
-        - 最佳实践
-          1. 类型转换必须是可相互转的类型，否则panic
-          1. uintptr指针失效
+        // 绕开编译器的对类型做强制转换
+        func Float64ToUint64(f float64) uint64 {
+            p := unsafe.Pointer(&f)                     // 拿到指向f的指针(通过f的地址拿到可操作的指针Pointer)
+            p2 := (*uint64) (p)                         // 将指针(*float)转换为uint64指针(*uint64)类型。因为uint64为无符号位，所有能够拿出当前64位bit内容
+            return * p2
+        }
+        
+        // 保存任意类型，用于系统函数交互、cgo等
+        syscall.Syscall(SYS_READ, uintptr(fd), uintptr(unsafe.Pointer(p)), uintptr(n))
+        ```
+     1. 最佳实践
+        - 类型转换必须是可相互转的类型，否则panic
+        - uintptr指针失效
             ```go
             func UitptrDisable() {
                 demo := common.GetDemoStruct()
@@ -1319,152 +1320,110 @@
                 fmt.Println("demo now is ",demo)
             }
             ```
-     1. reflect
-     1. errors
-        - `errors.New("xxxx")`
-     1. builtin：为go的预声明标识符提供文档
-   - 基础类型和变量
-     1. bytes：实现操作[]byte的常用函数
-     1. sort：切片、集合的排序操作
-     1. expvar：提供公共变量的标准接口
-   - 文本相关
-     1. text
-     1. strings：操作字符
-     1. strconv：基本数据类型和其字符串表示的相互转换
-        - `strconv.Quote("xx")`：可以输出双引号
-     1. index
-        - suffixarray：suffixarrayb包通过使用内存中的后缀树实现了对数级时间消耗的子字符串搜索
-     1. regexp：正则
-        - syntax
+   - reflect
+   - errors
+     1. `errors.New("xxxx")`
+   - builtin：为go的预声明标识符提供文档
+1. 基础类型和变量
+   - bytes：实现操作[]byte的常用函数
+   - sort：切片、集合的排序操作
+   - expvar：提供公共变量的标准接口
+1. 文本相关
+   - text
+   - strings：操作字符
+   - strconv：基本数据类型和其字符串表示的相互转换
+     1. `strconv.Quote("xx")`：可以输出双引号
+   - index
+     1. suffixarray：suffixarrayb包通过使用内存中的后缀树实现了对数级时间消耗的子字符串搜索
+   - regexp：正则
+     1. syntax
 
-     1. encoding：编码
-        - json
-        - xml
-        - base64
-        - base32
-        - csv：csv读写逗号分隔值（csv）的文件.
-        - hex：hex包实现了16进制字符表示的编解码.
-        - binary：实现数字与字节序列的转换、变长值的编解码
+   - encoding：编码
+     1. json
+     1. xml
+     1. base64
+     1. base32
+     1. csv：csv读写逗号分隔值（csv）的文件.
+     1. hex：hex包实现了16进制字符表示的编解码.
+     1. binary：实现数字与字节序列的转换、变长值的编解码
 
-        - ascii85：ascii85数据编码
-        - asn1：DER编码的ASN.1数据结构
-        - gob：gob流——在编码器（发送器）和解码器（接受器）之间交换的binary值.
-        - pem：PEM数据编码
-     1. unicode：提供测试Unicode码点属性的数据和函数
-        - utf16
-        - utf8
-     1. html：转义和解转义HTML文本的函数
-        - template：实现数据驱动模板，用于生成可对抗代码注入的安全html输出
-        - charset
-          1. charset.DetermineEncoding()
-     1. mime：实现了MIME的部分规定
-        - multipart：实现MIME的multipart解析
-        - quotedprintable
-   - 编码相关
-     1. compress：解压缩
-        - zlib
-        - gzip
-        - bzip2
-        - flate：deflate压缩数据格式
-        - lzw：Lempel-Ziv-Welch数据压缩格式
-     1. crypto：加解密
-        - rand：实现用于加解密的更安全的随机数生成器
+     1. ascii85：ascii85数据编码
+     1. asn1：DER编码的ASN.1数据结构
+     1. gob：gob流——在编码器（发送器）和解码器（接受器）之间交换的binary值.
+     1. pem：PEM数据编码
+   - unicode：提供测试Unicode码点属性的数据和函数
+     1. utf16
+     1. utf8
+   - html：转义和解转义HTML文本的函数
+     1. template：实现数据驱动模板，用于生成可对抗代码注入的安全html输出
+     1. charset
+        - charset.DetermineEncoding()
+   - mime：实现了MIME的部分规定
+     1. multipart：实现MIME的multipart解析
+     1. quotedprintable
+1. 编码相关
+   - compress：解压缩
+     1. zlib
+     1. gzip
+     1. bzip2
+     1. flate：deflate压缩数据格式
+     1. lzw：Lempel-Ziv-Welch数据压缩格式
+   - crypto：加解密
+     1. rand：实现用于加解密的更安全的随机数生成器
 
-        - md5
-        - sha1
-        - sha256：实现SHA224和SHA256哈希算法
-        - sha512：实现SHA384和SHA512哈希算法
+     1. md5
+     1. sha1
+     1. sha256：实现SHA224和SHA256哈希算法
+     1. sha512：实现SHA384和SHA512哈希算法
 
-        - des：实现DES标准和TDEA算法
-        - aes
+     1. des：实现DES标准和TDEA算法
+     1. aes
 
-        - rsa：RSA加密算法
-        - dsa：DSA算法
-        - ecdsa：实现椭圆曲线数字签名算法
+     1. rsa：RSA加密算法
+     1. dsa：DSA算法
+     1. ecdsa：实现椭圆曲线数字签名算法
 
-        - hmac
-        - tls
+     1. hmac
+     1. tls
 
-        - cipher：实现多个标准的用于包装底层块加密算法的加密算法实现
-        - elliptic：实现几条覆盖素数有限域的标准椭圆曲线
-        - rc4：RC4加密算法
-        - subtle
-        - x509：x509包解析X.509编码的证书和密钥.
-        - pkix：pkix包提供了共享的、低层次的结构体，用于ASN.1解析和X.509证书、CRL、OCSP的序列化.
-     1. hash：哈希函数
-        - adler32
-        - crc32
-        - crc64
-        - fnv：实现了FNV-1和FNV-1a（非加密hash函数）
-   - io相关
-     1. io：提供i/o原语的基础接口
-        - `io.Reader`
-     1. bufio：带缓存增强版，比io写的快多了，一口气flush到硬盘
-        - 可读取一行
-        - 会缓存下来，遇到flush才输出`bufio.NewWriter.Flush()`
-     1. io/ioutil：实现一些io实用功能，v1.16后逐步放到了io、os中
-     1. path：路径
-        - filepath：兼容各操作系统文件路径的实用操作函数
-     1. archive：文件解压缩
-        - `archive.tar`
-        - `archive.zip`
-   - 应用
-     1. fmt
-        - 认识：类似c的printf和scanf的格式化I/O
-          1. 格式化动作('verb')源自c但更简单
-          1. scann扫描格式化文本以生成值
-        - 方法分类
-          1. print：输出到标准输出流，支持多个参数输出
-             - 后边加f：根据format参数，默认采用默认格式，`fmt.Printf("%3d", val)表示3位对齐`
-             - 前边加F：写入给定源，默认写入标准输出
-             - 后边加Ln：总是用空格分隔，并且加换行符
-             - 前边加S：返回该字符串
-          1. scann
-          1. Errorf
-     1. time
-        - `time.Now()`
-        - `time.Now().Format("2006-01-02 15:04:05")`
-        - `time.Tick()`：每隔一段时间送一个值过来
-        - `time.After(n)`：倒计时，结束后往channel里送一个时间，可利用阻塞实现定时，for里边的select每次循环都重新开启
-        - `time.Sleep(time.Second * 5)`
-     1. math
-        - 子包
-          1. big：大数的高精度运算
-          1. cmplx：为复数提供基本常量和数学函数
-          1. rand：伪随机数生成器
-        - 组成
-          1. `math.Nextafter(2, 3)`
-          1. `rand.Intn(10)`："math/rand"
-     1. image
-        - 子包
-          1. color：基本的颜色库
-             - palette：标准的调色板
-          1. draw：提供组装图片的方法
-          1. gif
-          1. jpeg
-          1. png
-        - 实例
-        ```go
-        m := image.NewRGBA(image.Rect(0, 0, 100, 100))
-        m.Bounds()
-        m.At(0, 0).RGBA()
-        ```
-     1. database/sql：数据库驱动的标准接口
-   - 系统相关
-     1. os
-        - 子包
-          1. exec：执行外部命令
-          1. signal：对输入信号的访问
-          1. user：查询用户帐户
-        - 目录：Mkdir/MkdirAll/Remove/RemoveAll：`os.Mkdir("a", 0777)`
-        - 文件
-          1. Create/NewFile
-          1. Open/OpenFile
-             - seek()：设置文件相对于当前/首/尾的偏移量
-          1. Read/ReadAt
-          1. Write/WriteString
-          1. Remove
-        - Reader接口：`func (T) Read(b []byte) (n int, err error)`，数据填充指定字节的slice，数据流结尾返回io.EOF错误
+     1. cipher：实现多个标准的用于包装底层块加密算法的加密算法实现
+     1. elliptic：实现几条覆盖素数有限域的标准椭圆曲线
+     1. rc4：RC4加密算法
+     1. subtle
+     1. x509：x509包解析X.509编码的证书和密钥.
+     1. pkix：pkix包提供了共享的、低层次的结构体，用于ASN.1解析和X.509证书、CRL、OCSP的序列化.
+   - hash：哈希函数
+     1. adler32
+     1. crc32
+     1. crc64
+     1. fnv：实现了FNV-1和FNV-1a（非加密hash函数）
+1. io相关
+   - io：提供i/o原语的基础接口
+     1. `io.Reader`
+   - bufio：带缓存增强版，比io写的快多了，一口气flush到硬盘
+     1. 可读取一行
+     1. 会缓存下来，遇到flush才输出`bufio.NewWriter.Flush()`
+   - io/ioutil：实现一些io实用功能，v1.16后逐步放到了io、os中
+   - path：路径
+     1. filepath：兼容各操作系统文件路径的实用操作函数
+   - archive：文件解压缩
+     1. `archive.tar`
+     1. `archive.zip`
+1. 系统相关
+   - os
+     1. 子包
+        - exec：执行外部命令
+        - signal：对输入信号的访问
+        - user：查询用户帐户
+     1. 目录：Mkdir/MkdirAll/Remove/RemoveAll：`os.Mkdir("a", 0777)`
+     1. 文件
+        - Create/NewFile
+        - Open/OpenFile
+          1. seek()：设置文件相对于当前/首/尾的偏移量
+        - Read/ReadAt
+        - Write/WriteString
+        - Remove
+     1. Reader接口：`func (T) Read(b []byte) (n int, err error)`，数据填充指定字节的slice，数据流结尾返回io.EOF错误
             ```go
             // 以每次8字节的速度读取
             r := strings.NewReader("Hello, Reader!")
@@ -1478,72 +1437,125 @@
                 }
             }
             ```
-     1. syscall
-     1. log：简单的日志服务
-        - 方法
-          1. Print()：输出日志
-          1. Fatal()：输出日志同时调用os.Exit(1)退出，小提示：如果函数下存在defer不会执行
-          1. Panic()：输出日志同时调用panic，defer会执行
-        - 函数
-          1. log.SetFlags()：定义日志输出格式
-            ```go
-            const (
-                Ldate         = 1 << iota     // 日期示例：2009/01/23
-                Ltime                         // 时间示例: 01:23:23
-                Lmicroseconds                 // 毫秒示例: 01:23:23.123123.
-                Llongfile                     // 绝对路径和行号: /a/b/c/d.go:23
-                Lshortfile                    // 文件和行号: d.go:23.
-                LUTC                          // 日期时间转为0时区的
-                LstdFlags     = Ldate | Ltime // Go提供的标准抬头信息
-            )
+   - syscall
+   - log：简单的日志服务
+     1. 方法
+        - Print()：输出日志
+        - Fatal()：输出日志同时调用os.Exit(1)退出，小提示：如果函数下存在defer不会执行
+        - Panic()：输出日志同时调用panic，defer会执行
+     1. 函数
+        - log.SetFlags()：定义日志输出格式
+        ```go
+        const (
+            Ldate         = 1 << iota     // 日期示例：2009/01/23
+            Ltime                         // 时间示例: 01:23:23
+            Lmicroseconds                 // 毫秒示例: 01:23:23.123123.
+            Llongfile                     // 绝对路径和行号: /a/b/c/d.go:23
+            Lshortfile                    // 文件和行号: d.go:23.
+            LUTC                          // 日期时间转为0时区的
+            LstdFlags     = Ldate | Ltime // Go提供的标准抬头信息
+        )
 
-            // 示例
-            log.SetFlags(log.Ldate|log.Lshortfile)
-            ```
-          1. log.SetPrefix()：设置前缀
-          1. log.SetOutput()：设置输出方式
+        // 示例
+        log.SetFlags(log.Ldate|log.Lshortfile)
+        ```
+        - log.SetPrefix()：设置前缀
+        - log.SetOutput()：设置输出方式
             ```go
             // 设置文件的输出方式
             logFileLocation, _ := os.OpenFile("/Users/q1mi/test.log", os.O_CREATE|os.O_APPEND|os.O_RDWR, 0744)
             log.SetOutput(logFileLocation)
             ```
-          1. log.New()：返回新的Logger类型，并定义一些特性
-        - 子包
-          1. syslog：使用域套接字、udp、tcp时可向syslog守护进程发送日志，可以Dial远端也可以本地，不再更新，有替代产品
-     1. flag：用于命令行的标签解析
-   - 语言相关
-     1. runtime
-        - 子包
-          1. cgo：含有cgo工具生成的代码的运行时支持
-          1. debug：debug包含有程序在运行时调试其自身的功能
-          1. pprof：按照可视化工具pprof所要求的格式写出运行时分析数据
-          1. race：实现数据竞争检测逻辑
-          1. trace：Go execution tracer
-        - 组成
-          1. `runtime.GOMAXPROCS`：使用最大核心数
-          1. `runtime.NumCPU`：cpu核心数
-          1. `runtime.Gosched()`：使goroutine让出调度
-          1. `runtime.Goexit()`：使goroutine立即终止
-          1. NumGoroutine
-     1. go：语法包
-     1. container：数据结构
-        - heap：任意类型的堆操作
-        - list：双向链表
-        - ring：环形链表
-     1. debug：调试包
-        - dwarf
-        - elf
-        - gosym
-        - macho
-        - pe
-        - plan9obj
-     1. plugin：go的组件包
-     1. testing：go包的自动测试支持
-        - iotest
-        - quick
-        - B
-          1. 方法
-             - RunParallel
+        - log.New()：返回新的Logger类型，并定义一些特性
+     1. 子包
+        - syslog：使用域套接字、udp、tcp时可向syslog守护进程发送日志，可以Dial远端也可以本地，不再更新，有替代产品
+   - flag：用于命令行的标签解析
+1. 语言相关
+   - runtime
+     1. 子包
+        - cgo：含有cgo工具生成的代码的运行时支持
+        - debug：debug包含有程序在运行时调试其自身的功能
+        - pprof：按照可视化工具pprof所要求的格式写出运行时分析数据
+        - race：实现数据竞争检测逻辑
+        - trace：Go execution tracer
+     1. 组成
+        - `runtime.GOMAXPROCS`：使用最大核心数
+        - `runtime.NumCPU`：cpu核心数
+        - `runtime.Gosched()`：使goroutine让出调度
+        - `runtime.Goexit()`：使goroutine立即终止
+        - NumGoroutine
+   - go：语法包
+   - container：数据结构
+     1. heap：任意类型的堆操作
+     1. list：双向链表
+     1. ring：环形链表
+   - debug：调试包
+     1. dwarf
+     1. elf
+     1. gosym
+     1. macho
+     1. pe
+     1. plan9obj
+   - plugin：go的组件包
+   - testing：go包的自动测试支持
+     1. iotest
+     1. quick
+     1. B
+        - 方法
+          1. RunParallel
+1. 应用级
+   - fmt
+     1. 认识：类似c的printf和scanf的格式化I/O
+        - 格式化动作('verb')源自c但更简单
+        - scann扫描格式化文本以生成值
+     1. 方法分类
+        - print：输出到标准输出流，支持多个参数输出
+          1. 后边加f：根据format参数，默认采用默认格式，`fmt.Printf("%3d", val)表示3位对齐`
+          1. 前边加F：写入给定源，默认写入标准输出
+          1. 后边加Ln：总是用空格分隔，并且加换行符
+          1. 前边加S：返回该字符串
+             - scann
+             - Errorf
+   - time
+     1. 获取时间(time类型的格式)：`time.Now()`
+     1. 获取格式化时间，并转为字符串：`time.Now().Format("2006-01-02 15:04:05")`
+
+     1. 获取时间戳/时间转时间戳：`time.Now().Unix()`
+     1. 时间戳转时间，并且格式化：`time.Unix(sr, 0).Format("2006-01-02 15:04:05")`
+
+     1. 字符串转时间
+        ```go
+        timeStr := "2015-01-01 00:00:00"
+        loc, _ := time.LoadLocation("Local")
+        timeObj, _ := time.ParseInLocation("2006-01-02 15:04:05", timeStr, loc)
+        ```
+            
+     1. `time.Tick()`：每隔一段时间送一个值过来
+     1. `time.After(n)`：倒计时，结束后往channel里送一个时间，可利用阻塞实现定时，for里边的select每次循环都重新开启
+     1. `time.Sleep(time.Second * 5)`
+   - math
+     1. 子包
+        - big：大数的高精度运算
+        - cmplx：为复数提供基本常量和数学函数
+        - rand：伪随机数生成器
+     1. 组成
+        - `math.Nextafter(2, 3)`
+        - `rand.Intn(10)`："math/rand"
+   - image
+     1. 子包
+        - color：基本的颜色库
+          1. palette：标准的调色板
+        - draw：提供组装图片的方法
+        - gif
+        - jpeg
+        - png
+     1. 实例
+        ```go
+        m := image.NewRGBA(image.Rect(0, 0, 100, 100))
+        m.Bounds()
+        m.At(0, 0).RGBA()
+        ```
+   - database/sql：数据库驱动的标准接口
 1. net
    - 组成
      1. Conn：使用goroutines保证请求独立、非阻塞
@@ -2130,6 +2142,11 @@
                 })
             }
             ```
+   - 测试框架
+     1. GoConvey
+     1. GoStub
+     1. GoMock
+     1. Monkey
 1. 性能分析
    - `go tool cover -html=c.out`：分析由`go test -coverprofile`生成的覆盖率测试的结果，绿色是覆盖的，红色未覆盖，采用插桩源码方式
    - `go tool trace`

@@ -71,6 +71,11 @@
     hypot := func compute(fn func(float64, float64) float64) float64 {
         return fn(3, 4)
     }
+    // 可选参数传递
+    func Del(key ...string) {
+        err = vr.Del(key...)                            // 使用...传递可选参数
+        return
+    }
     ```
 1. 在结构体上定义方法
     ```go
@@ -384,6 +389,43 @@
 	}
     ```
    - json解析不存在的默认给类型零值，所以接口请求参数不要使用0作为特殊意义值
+1. 代码规范
+   - 若变量类型为 bool 类型，则名称应以 Has, Is, Can 或 Allow 开头
+    ```go
+    var isExist bool
+    var hasConflict bool
+    var canManage bool
+    var allowGitHook bool
+    ```
+   - 带 mutex 的 struct 的接收者 receivers 必须是带指针
+   ```go
+   type foo struct {
+        mutex sync.Mutex
+        ...
+    }
+
+    // 这里的接收者必须是指针，保证只对同一个锁操作，达到对同一个资源操作的互斥效果。
+    func (f *foo) Write (content []byte) error {
+        f.mutex.Lock()
+        defer f.mutex.Unlock()
+        
+        ...
+    }
+   ```
+   - 函数
+     1. 见名知义，使用动词命名
+     1. 长命名并不会使其更具可读性，一份有用的说明文档通常比额外的长名更有价值
+     1. 若函数或方法为判断类型（返回值主要为 bool 类型），则名称应以 Has、Is、Can 或 Allow 等判断性动词开头
+   - go 协程启动时，一定要 recover，防止因单一协程引起主程序 panic
+   - 空 map 请使用 make(..) 初始化
+    ```go
+    var (
+        // m1 读写安全
+        // m2 在写入时会 panic
+        m1 = make(map[T1]T2)
+        m2 map[T1]T2
+    )
+    ```
 1. 实用技巧
    - 全局变量：可以避免重复申请带来的内存交互
    - sync.Pool：重复申请的对象，可以减少GC的成本
@@ -757,6 +799,55 @@
         }
         ```
 ### 应用demo
+1. 计算时间差
+    ```go
+    s := time.Now()
+    dur := time.Now().Sub(s)
+    ```
+1. 自定义时间格式
+    ```go
+    en["date_format"]="%Y-%m-%d %H:%M:%S"
+    cn["date_format"]="%Y年%m月%d日 %H时%M分%S秒"
+
+    fmt.Println(date(msg(lang,"date_format"),t))
+
+    func date(fomate string,t time.Time) string{
+        year, month, day = t.Date()
+        hour, min, sec = t.Clock()
+        //解析相应的%Y %m %d %H %M %S然后返回信息
+        //%Y 替换成2012
+        //%m 替换成10
+        //%d 替换成24
+    }
+    ```
+1. url编解码
+   - get参数
+    ```go
+    // url encode
+	v := url.Values{}
+	v.Add("a", "aa")
+	v.Add("b", "bb")
+	v.Add("c", "有没有人")
+	body := v.Encode()
+	fmt.Println(v)
+	fmt.Println(body)
+	// url decode
+	m, _ := url.ParseQuery(body)
+	fmt.Println(m)
+    ```
+   - 内容
+    ```go
+    urltest := "http://www.baidu.com/s?wd=自由度"
+    // 编码
+	encodeurl:= url.QueryEscape(urltest)
+	fmt.Println(encodeurl)
+    // 解码
+	decodeurl,err := url.QueryUnescape(encodeurl)
+	if err != nil {
+		fmt.Println(err)
+	}
+    fmt.Println(decodeurl)
+    ```
 1. 读取二进制的bmp文件头
     ```go
     import (
@@ -811,27 +902,6 @@
             return
         }
         fmt.Println(infoHeader)
-    }
-    ```
-1. 计算时间差
-    ```go
-    s := time.Now()
-    dur := time.Now().Sub(s)
-    ```
-1. 自定义时间格式
-    ```go
-    en["date_format"]="%Y-%m-%d %H:%M:%S"
-    cn["date_format"]="%Y年%m月%d日 %H时%M分%S秒"
-
-    fmt.Println(date(msg(lang,"date_format"),t))
-
-    func date(fomate string,t time.Time) string{
-        year, month, day = t.Date()
-        hour, min, sec = t.Clock()
-        //解析相应的%Y %m %d %H %M %S然后返回信息
-        //%Y 替换成2012
-        //%m 替换成10
-        //%d 替换成24
     }
     ```
 1. aes加解密

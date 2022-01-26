@@ -541,15 +541,18 @@
         listen.mode = 0666
         listen.allowed_clients = 127.0.0.1                      // 设置允许连接fpm的地址，逗号分隔
 
-        pm = dynamic
+        pm = static
+        pm.max_children = 10                                    // 始终保持10个worker子进程
+
+        pm = dynamic                                            // 动态
         pm.max_children = 144
-        pm.start_servers = 96                                   // 启动时创建数
+        pm.start_servers = 96                                   // 启动时创建数/最小子进程数量
         pm.min_spare_servers = 72                               // 闲置时最少数
         pm.max_spare_servers = 144                              // 闲置时最大数
         pm.max_requests = 102400                                // 每个子进程最大处理请求数就被回收，可防止内存泄露
         pm.status_path = /php7fpmstatus
 
-        pm = ondemand
+        pm = ondemand                                           // 按需，连接过来时才启动，可能会关闭所有的worker
         pm.max_children = 144
         pm.process_idle_timeout = 10s                           // 闲置10s后杀掉
 
