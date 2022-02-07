@@ -1126,7 +1126,9 @@
         - `Signal`：发送单个信号
         - `Broadcast`：发送广播信号
    - 并发池：`sync.Pool`
-     1. 认识：安全地保存一组对象
+     1. 认识：多协程安全地保存临时对象，保存的对象可能随时自动删除而不通知
+        - pool的目的是缓存已分配但未使用的多协程静默共享的临时项目项目以供以后重用，减轻垃圾收集器的压力
+        - pool的适当用途是管理一组
      1. 方法
         - Get()：随机取，无法保证以固定的顺序
         - Put()
@@ -1517,22 +1519,33 @@
              - scann
              - Errorf
    - time
-     1. 获取时间(time类型的格式)：`time.Now()`
-     1. 获取格式化时间，并转为字符串：`time.Now().Format("2006-01-02 15:04:05")`
-
-     1. 获取时间戳/时间转时间戳：`time.Now().Unix()`
-     1. 时间戳转时间，并且格式化：`time.Unix(sr, 0).Format("2006-01-02 15:04:05")`
-
-     1. 字符串转时间
-        ```go
-        timeStr := "2015-01-01 00:00:00"
-        loc, _ := time.LoadLocation("Local")
-        timeObj, _ := time.ParseInLocation("2006-01-02 15:04:05", timeStr, loc)
-        ```
-            
-     1. `time.Tick()`：每隔一段时间送一个值过来
-     1. `time.After(n)`：倒计时，结束后往channel里送一个时间，可利用阻塞实现定时，for里边的select每次循环都重新开启
-     1. `time.Sleep(time.Second * 5)`
+     1. 类型
+        - Time：时间
+        - Location：时区
+        - Duration：int64纳秒计数的单调时钟
+          1. ParseDuration()：解析持续时间字符串，`time.ParseDuration("1h10m10s")`
+          1. Since()：缩写，`time.Now().Sub(t)`
+          1. Until()：缩写，`t.Sub(time.Now())`
+          1. Nanoseconds()：返回纳秒数
+        - Timer：用来代表一个单独的事件，当设置的时间过期后，发送当前的时间到channel
+     1. 方法
+        - `time.Tick(d)`：每隔一段时间送一个值过来
+        - `time.After(d)`：倒计时，结束后往channel里送一个时间，可利用阻塞实现定时，for里边的select每次循环都重新开启
+        - `time.Sleep(time.Second * 5)`
+     1. 应用
+        - 时间
+          1. 获取时间(time类型的格式)：`time.Now()`
+        - 字符串和时间
+          1. 获取格式化时间，并转为字符串：`time.Now().Format("2006-01-02 15:04:05")`
+          1. 字符串转时间
+            ```go
+            timeStr := "2015-01-01 00:00:00"
+            loc, _ := time.LoadLocation("Local")
+            timeObj, _ := time.ParseInLocation("2006-01-02 15:04:05", timeStr, loc)
+            ```  
+        - 时间戳和时间
+          1. 获取时间戳/时间转时间戳：`time.Now().Unix()`
+          1. 时间戳转时间，并且格式化：`time.Unix(sr, 0).Format("2006-01-02 15:04:05")`
    - math
      1. 子包
         - big：大数的高精度运算
