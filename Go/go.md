@@ -1224,6 +1224,16 @@
 	}(ctx)
 	wg.Wait()
     ```
+1. 实践
+   - 协程任务的接收/传递
+    ```go
+    go func() {                         // 新协程处理
+        for {                           // 一直处理
+            request := <- in
+            out <- request
+        }
+    }
+    ```
 1. wiki
    - 并发控制模式
      1. chan：原始的同步方式，每多一级就需要多一个chan
@@ -1526,7 +1536,7 @@
           1. ParseDuration()：解析持续时间字符串，`time.ParseDuration("1h10m10s")`
           1. Since()：缩写，`time.Now().Sub(t)`
           1. Until()：缩写，`t.Sub(time.Now())`
-          1. Nanoseconds()：返回纳秒数
+          1. Nanoseconds()：返回纳秒数 
         - Timer：用来代表一个单独的事件，当设置的时间过期后，发送当前的时间到channel
      1. 方法
         - `time.Tick(d)`：每隔一段时间送一个值过来
@@ -1551,9 +1561,9 @@
         - big：大数的高精度运算
         - cmplx：为复数提供基本常量和数学函数
         - rand：伪随机数生成器
+          1. `rand.Intn(10)`："math/rand"
      1. 组成
         - `math.Nextafter(2, 3)`
-        - `rand.Intn(10)`："math/rand"
    - image
      1. 子包
         - color：基本的颜色库

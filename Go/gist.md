@@ -77,7 +77,9 @@
         return
     }
     ```
-1. 在结构体上定义方法
+1. 结构体
+   - 指向结构体的方法要不要给结构体加*，取决于方法会不会改变结构体的内容，如`func (m Mystruct) myMethod() {}`
+   - 在结构体上定义方法
     ```go
     func (v *vertex) Add() float64 {
 	    return v.X + v.Y
@@ -85,7 +87,7 @@
     v := &vertex{3, 4}
     v.Abs()                 // 使用
     ```
-1. 指针访问结构体
+   - 指针访问结构体
     ```go
     v := vertex{1, 2}
 	p := &v
@@ -798,13 +800,20 @@
             }
         }
         ```
-### 应用demo
-1. 计算时间差
+### 常见场景
+1. 数学相关
+   - 生成随机数
+    ```go
+    rand.Seed(time.Now().Unix())        // 需要改变随机数种子，否则每次程序启动生成的随机数相同，因为种子默认为1
+    rand.Int()
+    ```
+1. 时间相关
+   - 计算时间差
     ```go
     s := time.Now()
     dur := time.Now().Sub(s)
     ```
-1. 自定义时间格式
+   - 自定义时间格式
     ```go
     en["date_format"]="%Y-%m-%d %H:%M:%S"
     cn["date_format"]="%Y年%m月%d日 %H时%M分%S秒"
@@ -977,6 +986,14 @@
         }()
         fibonacci(c, quit)
     }
+    ```
+### 应用demo
+1. 简单的ratelimit
+    ```go
+    ratelimiter := time.Tick(100 * time.Millisecond)
+
+    // 调用处
+    <-ratelimiter
     ```
 ### 算法
 1. 外部排序
