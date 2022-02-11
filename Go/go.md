@@ -913,7 +913,7 @@
    - 空接口类型：`interface{}`，可用于存储任意数据类型的实例，达到抽象数据类型的目的
      1. 所有的数据类型都实现了空接口，参数是的话表明可以使用任何类型的数据，函数内部该变量仍然为空接口类型，而不是传入的实参类型
      1. 函数也是一种类型，也可以实现接口`type funcTypeName func() int`
-     1. 类型断言：语法`x.(T)`，即接口类型向普通类型的转换，运行期确定，通过断言实现类型转换，同时加上判断，防止断言失败导致运行错误。x是类型为interface{}的变量
+     1. 类型断言：语法`x.(T)`，形式点+括号+类型，即接口类型向普通类型的转换，运行期确定，通过断言实现类型转换，同时加上判断，防止断言失败导致运行错误。x是类型为interface{}的变量。如：`item.(model.id)`
         ```go
         func printArray(arr interface{}){
             a,ok := arr.([]int)                 // 返回转换后的变量、是否成功
@@ -1012,7 +1012,7 @@
         - 其他操作耗时的时候让出cpu，不用等待
         - 给了我们自己调度的自由
 1. channel
-   - 认识：有类型的管道，用于协程间通信。使得goroutine可以在没有明确的锁或竞态变量的情况下同步，即飞行中加油
+   - 认识：有类型的管道，用于协程间通信。使得goroutine可以在没有明确的锁或竞态变量的情况下同步，即飞行中加油，操作符<-
      1. 和正在跑的协程进行通信
      1. 没有锁，可以用-race检测数据访问冲突
      1. 默认另一端准备好之前发送和接收都会阻塞
@@ -1025,12 +1025,12 @@
         - 发送数据，引起panic 
         - 接收数据，返回channel中缓存的值，如果通道中无缓存，返回0
      1. 无缓冲channel/同步channel
-        - 不会存储数据
+        - 不会存储数据，发送方会阻塞直到接收方从通道中接收了值
         - 读时没有数据会阻塞
         - 读写不能放一个协程里，写读颠倒会死锁
      1. 有缓冲channel
         - 可以提高性能
-        - 只有缓冲区满时才会阻塞，当缓冲区清空的时候接收操作会阻塞
+        - 缓冲区满时才会阻塞，缓冲区空时接收操作会阻塞
    - 阻塞
      1. 原因：供需失衡
         - 有缓存的，生产多了生产者阻塞
@@ -1065,8 +1065,12 @@
     ```
    - select
      1. 认识：同时监听多个管道并收发消息，会阻塞直到条件分支中的某个可以继续执行。多个都准备好的随机选一个。可用于多个写入，一个读取场景
+        - 每次 select 都会对所有通信表达式求值
+          1. `case <- timer.After(time.Second)`：不应该解释为每一秒执行一次，而是其它case如果有一秒都没有执行，那么就执行这个case
         - 谁来的快收谁
+        - case中chan为nil的读写操作，该分支将被忽略，即var的，不是make的
         - 加了default相当于非阻塞式的获取，之前channel都是阻塞的，套层for就是循环default，去掉default就是deadlock
+        - 使用select语句，for和default基本不会同时出现
      1. 实例
         ```go
         select {
@@ -1128,6 +1132,7 @@
    - 并发池：`sync.Pool`
      1. 认识：多协程安全地保存临时对象，保存的对象可能随时自动删除而不通知
         - pool的目的是缓存已分配但未使用的多协程静默共享的临时项目项目以供以后重用，减轻垃圾收集器的压力
+        - 重复申请的对象，可以减少GC的成本
         - pool的适当用途是管理一组
      1. 方法
         - Get()：随机取，无法保证以固定的顺序
@@ -1676,7 +1681,10 @@
         - 转换为字符串：`strconv.FormatBool/FormatInt/FormatUint/FormatFloat/Itoa()`：Itoa/Atoi针对int，FormatInt/ParseInt针对int64，可支持进制
         - 字符串转换为其他类型：`strconv.ParseBool/ParseInt/ParseUint/ParseFloat/Atoi()`
         - 转换为字符串后添加到字节数组中：`strconv.AppendInt/AppendBool/AppendQuote/AppendQuoteRune()`
-   - reg：regexp包，实现RE2标准，实现搜索、替换、解析，strings包优先
+   - reg
+     1. 认识：regexp包，实现RE2标准，实现搜索、替换、解析，strings包优先
+        - 正则预编译，可以加快速度：`regexp.MustCompile()`
+     1. 实例
         ```go
         regexp.MatchString("^[0-9]+$", os.Args[1])
         regexp.Compile("\\<script[\\S\\s]+?\\</script\\>")

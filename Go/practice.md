@@ -413,10 +413,28 @@
         - 问题1：当in chan写满进入读ws协程阻塞时，写协程网络报错关闭ws链接，此时读协程不知道链接已经关闭了
           1. 解决方案：用select同时监听in chan和新加的容量为1的close chan，当进入close chan分支时(关闭ws时同时关闭close chan使其不阻塞)，表示链接被关闭了。同样ws断了链接api也会阻塞，所以都加上
         - 问题2：ws的close是线程安全的，是可重入的，所以可多次关闭，但是close chan不可重入，所以用结构体的标志位指示是否关闭，同时用mutex锁住防止并发关闭
+1. 连接池
+   - 实现：![avatar](../images/conn_pool.png)
+     1. 使用chan作为存储池
+     1. 使用mutex作为增减chan与其配套数据的互斥保证
+     1. 队列、池子就是slice和chan的配合使用
+     1. 利用连接池最大数量作为一个chan(随便struct{}类型就可以)的缓冲大小，存储工作的连接
+        - 在从连接池拿连接时写入chan，不停拿不停写，当写满时阻塞，这时候计时器介入，实现获取连接的超时逻辑
+        - 往连接池放连接时，不停放，不停取出chan的值，作减法
 1. 爬虫
-   - 并发版
-     1. 并发爬虫的添加了调度器scheduler，只是简单的往worker公用的chan里投递数据，但是由于和engine他们三者互通chan，导致worker数量占满后，没有可用的worker去接收调度器的任务，即循环等待
-        - 解决方案：调度器投递worder的chan时，每次新建协程处理，就不会卡主了
+   - 设计思想
+     1. engine：总协调作用，需要轻量，耗时操作要交出去
+   - 实现方案
+     1. 用http获取原始页面html字符串
+     1. 用同一类的parser解析同一类的页面，用正则获取目标下一个页面，将下一个页面的url和对应使用的解析器放入engine中等待scheduler获取
+     1. 用正则在页面中获取需要的信息
+   - 并发版：使用调度器scheduler
+     1. 第一版：简易
+        - 只是简单的新起多个协程的scheduler去投递给所有worker公用的一个worker chan，让多个worker抢这个chan，但是由于和engine他们三者互通chan，导致worker数量占满后，没有可用的worker去接收调度器的任务，即循环等待
+          1. 解决方案：调度器投递worder的chan时，每次新建协程处理，就不会卡主了
+     1. 第二版：队列版
+        - scheduler自己维护request chan和worker chan
+        - 同时用两个分别的slice缓存接收到的request和worker，当二者都有时，将request送到worker chan，这就是一种任务分发
    - 分布式版
 ### wiki
 1. 脚手架
