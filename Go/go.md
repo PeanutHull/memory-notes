@@ -978,6 +978,7 @@
 ### 协程
 1. goroutine
    - 认识：go的协程(coroutine)，协程间需要通信、同步，是并行运行的(多处理器同时)，需要的内存极小，实际可以cpu核数减一来设置，给系统留下
+     1. 成本：增加额外的耗时、内存消耗
    - 特点
      1. 并发基于csp模型
      1. 非抢占式多任务处理
@@ -993,7 +994,9 @@
      1. 去掉了冗余的协程生命周期管理
      1. 降低额外延迟和开销：来源是协程间的频繁交互
      1. 降低加解锁的频率
-   - 成本：增加额外的耗时、内存消耗
+   - 实践
+     1. go的func的参数，如果不使用闭包参数，则go在运行到时才去拿for中的那个参数，可能导致不准，go闭包不会暂存状态
+     1. 没有必要阻塞主流程的，并且有完整日志、报警可用的情况下，可以用go去完成
    - demo
     ```go
     go say("hello")
@@ -1070,7 +1073,10 @@
         - 谁来的快收谁
         - case中chan为nil的读写操作，该分支将被忽略，即var的，不是make的
         - 加了default相当于非阻塞式的获取，之前channel都是阻塞的，套层for就是循环default，去掉default就是deadlock
+     1. 实践
+        - case中使用go可能导致go中还没处理完，select又接到了下一步的任务，导致go之后的流程在go没完成的情况下执行了，如果二者有依赖的话
         - 使用select语句，for和default基本不会同时出现
+        - 为了让select每个case都能执行，使用加for搭配default的方式
      1. 实例
         ```go
         select {
@@ -1085,7 +1091,7 @@
             case out <- n:                              // 这样不会阻塞
         }
         ```
-1. sync：提供了并发编程中基本的同步原语，保证执行不会出现混乱。这是传统的同步机制，是通过共享内存来通信的，更高级别的同步最好通过通道和通信来完成
+1. sync：提供了并发编程中基本的同步原语，保证执行不会出现混乱。这是传统的同步机制，是通过共享内存来通信的，更高级别的同步最好通过通道和通信来完成，多协程就要用到sync了
    - 同步器
      1. 认识：`sync.WaitGroup`，是信号量，需要某个条件完成才能继续，用于并发控制
         - 场景：在一个goroutine等待一组goroutine执行完成的通知时。初级的可以多用一个done的channel阻塞实现等待某个goroutine结束的通知，每次循环进出这个channel，多个可以使用通道切片来分别存储，使用waitGroup更加高效优雅
@@ -1144,6 +1150,15 @@
      1. 方法
         - Load()：检索
         - Range()：遍历
+            ```go
+            x.Range(func(k, v interface{}) bool {
+                err := v.(error)
+                if err != nil {
+                    return false
+                }
+                return true
+            })
+            ```
         - Store()：添加
         - Delete()：删除
         - LoadOrStore()：检索或新增
@@ -1230,6 +1245,19 @@
 	wg.Wait()
     ```
 1. 实践
+   - select无任务退出
+    ```go
+    forloop:
+    for {
+        select {
+        case d :=<- dc:
+            log.Printf("Executor received: %v", d)
+        default:
+            break forloop                               // 只执行一次
+            goto forloop                                // 会在for和forloop循环运行
+        }
+    }
+    ```
    - 协程任务的接收/传递
     ```go
     go func() {                         // 新协程处理
@@ -1239,7 +1267,49 @@
         }
     }
     ```
+   - 限流
+     1. 简单的多协程的时间频率limiter：常见于限制自己的程序
+        ```go
+        ratelimiter := time.Tick(100 * time.Millisecond)
+
+        // 调用处
+        <-ratelimiter
+        ```
+     1. 简单的多协程的并存数limiter：常见于限制外部
+        ```go
+        type ConnLimiter struct {
+            concurrentConn int
+            bucket         chan int
+        }
+
+        func NewConnLimiter(cc int) *ConnLimiter {
+            return &ConnLimiter{
+                concurrentConn: cc,
+                bucket:         make(chan int, cc),
+            }
+        }
+
+        func (cl *ConnLimiter) GetConn() bool {
+            if len(cl.bucket) >= cl.concurrentConn {
+                log.Printf("Reached the rate limitation.")
+                return false
+            }
+
+            cl.bucket <- 1
+            return true
+        }
+
+        func (cl *ConnLimiter) ReleaseConn() {
+            C := <-cl.bucket
+            log.Printf("New connction coming: %d", C)
+        }
+
+        // 使用
+        用的时候先GetConn，然后defer ReleaseConn
+        ```
 1. wiki
+   - 传统并发编程问题
+     1. 共享数据如何加锁、同步
    - 并发控制模式
      1. chan：原始的同步方式，每多一级就需要多一个chan
      1. waitGroup：限制多个的同步
@@ -1455,14 +1525,18 @@
             }
             ```
    - syscall
-   - log：简单的日志服务
+   - log
+     1. 认识：写入stderr并打印每条记录消息的日期和时间，每条都在单独的行上输出
+        - fmt属于stdout输出
      1. 方法
         - Print()：输出日志
         - Fatal()：输出日志同时调用os.Exit(1)退出，小提示：如果函数下存在defer不会执行
         - Panic()：输出日志同时调用panic，defer会执行
+        - New()：可指定写入日志的目的地、前缀、属性
      1. 函数
         - log.SetFlags()：定义日志输出格式
         ```go
+        // 系统常量
         const (
             Ldate         = 1 << iota     // 日期示例：2009/01/23
             Ltime                         // 时间示例: 01:23:23
@@ -1474,7 +1548,7 @@
         )
 
         // 示例
-        log.SetFlags(log.Ldate|log.Lshortfile)
+        log.SetFlags(log.Ldate | log.Ltime | log.LUTC | log.Lshortfile)
         ```
         - log.SetPrefix()：设置前缀
         - log.SetOutput()：设置输出方式
@@ -1649,8 +1723,8 @@
             tcpAddr := net.ResolveTCPAddr("tcp", ":1234")
             listener := net.ListenTCP("tcp", tcpAddr)
             for {
-                conn := listener.Accept()
-                jsonrpc.ServeConn(conn)
+                conn, _ := listener.Accept()
+                go jsonrpc.ServeConn(conn)                      // 要异步，只能接收一个就阻塞了
             }
             ```
         - http协议
@@ -2038,6 +2112,37 @@
    - 方式
      1. testing包：使用包中方法
      1. go test：自动读取源码目录下*_test.go文件，生成并运行测试用的可执行文件
+   - go test使用
+     1. 写法
+        - 必须import一个testing，以_test.go结束
+        - 每个test case必须以Test开头，否则不执行
+        - test case的入参为t *testing.T或者b *testing.B
+     1. 实践
+        - 使用t.Run()来执行子test，用于控制测试的依赖
+        - 使用testMain作为入口，做一些初始化的工作
+     1. 实例
+        ```go
+        func TestDemo(t *testing.T) {
+            t.SkipNow()                            // 跳过写到第一行才管用
+            t.Errorf("aaaaaa")                  // 触发会跳过当前case
+        }
+
+        func TestMain(m *testing.M) {
+            m.Run()                                 // 有了TestMain没有Run其他test不执行，包括benchmark
+        }
+        ```
+   - benchmark使用
+     1. 认识
+        - 函数一般以Benchmark开头
+        - case一般会跑N次，case无法达到一个稳态时无法完成测试
+     1. 使用
+        ```go
+        // 调用：go test -bench=.
+        func BenchmarkAll(b *testing.B) {               // 会自动跑到稳态时，才停止
+            for n:=0; n <b.N; n++ {
+            }
+        }
+        ```
    - 分类
      1. 单元测试：`go test -timeout 30s -run ^TestDemo$ demo -v -count=1`
         ```go
@@ -2297,6 +2402,9 @@
           1. -o：指定输出的可执行文件
           1. -ldflags "-s -w"：-s 去掉符号信息。-w 去掉DWARF调试信息
           1. -gcflags "-N -l"：关闭内联优化
+          1. 跨平台
+             - GOOS=linux
+             - GOARCH=amd64 
      1. `go install`：编译和安装，将编译好的结果移到$GOPATH/pkg或$GOPATH/bin。.a移到$GOPATH/pkg，可执行文件移到$GOPATH/bin
         - `go install example.com/pkg@v1.2.3`：忽略mod文件指定依赖版本
      1. `go clean`：移除当前源码包里面编译生成的文件，如_obj/、_test/、test.out
@@ -2498,6 +2606,7 @@
      1. ...：可变参数
      1. :=：声明、赋值、类型推断
    - go先写变量名，再写类型，和c是反的，其实更加符合人写程序的思考方式
+   - go都是值传递
    - go没有引用类型，只有指针
    - slice类型是不可比较的
    - go没有提供session的支持
@@ -2507,3 +2616,22 @@
         - Session ID的全局唯一性
         - 存储（可以存储到内存、文件、数据库等）
         - 过期处理
+   - go没有的元素：不要想着去模拟这些元素，要用新的思想去思考
+     1. 类、继承、多态、重载：go有不同的世界观，面向对象也流行变继承为组合的思维。面向对象的元素太容易被滥用，go为组合提供了直接的支持
+     1. try/catch/finally：常态化的err处理，高效不出错
+        - 太多的错误被当作异常
+        - 很多c++项目组禁用try/catch
+        - 正确使用try/catch处理错误，导致代码混乱
+        - try/catch在产品代码中并不能减少开发人员负担
+     1. 泛型
+        - 泛型作为模板类型，实际想实现duck typing，go支持了
+        - 泛型来约束参数类型，本身复杂：类型通配符、covariance等问题。go支持强类型的slice、map、channel，这个解决了大部分约束参数类型的场景
+     1. 操作符重载
+     1. 构造函数/析构函数/RAII
+        - 大型项目很少使用构造函数，多使用工厂函数
+        - 析构函数和垃圾回收不匹配
+        - RAII技巧性太强，隐藏了意图
+          1. Resource Acquisition Is Initialization：资源获取就是初始化，是c++一种管理资源、避免泄漏的惯用法。构造时获取资源，对象生命期内控制对资源的访问，对象析构时释放资源
+   - 开发工具链
+     1. tool：build、install、fmt
+     1. test、benchmark、builtin

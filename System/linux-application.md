@@ -758,18 +758,18 @@
      1. Block：支持精简配置、快照、克隆
      1. File：Posix接口，支持快照
      1. Object：有原生的API，而且也兼容Swift和S3的API
-   - 组件
+   - 组件：：![avatar](../images/ceph_struct.png)
      1. RADOS：ceph集群精华，用户实现数据分配、Failover等集群操作
+     1. Libradio：因为RADOS是协议很难直接访问，因此上层的RBD、RGW和CephFS通过librados访问，提供PHP、Java、Python、C和C++支持
      1. Object：最底层的存储单元，每个Object包含元数据和原始数据
      1. MDS：Ceph Metadata Server，是CephFS服务依赖的元数据服务
+     1. OSD：Object Storage Device，负责响应客户端请求返回具体数据的进程
      1. CRUSH：数据分布算法，类似一致性哈希，让数据分配到预期的地方
      1. PG：Placement Grouops，逻辑概念，一个PG包含多个OSD。引入PG这一层其实是为了更好的分配数据和定位数据
      1. Monitor：需要多个Monitor组成的小集群，通过Paxos同步数据，用来保存OSD的元数据
      1. RBD：对外提供的块设备服务
      1. CephFS：对外提供的文件系统服务
      1. RGW：对外提供的对象存储服务，接口与S3和Swift兼容
-     1. OSD：Object Storage Device，负责响应客户端请求返回具体数据的进程
-     1. Libradio：因为RADOS是协议很难直接访问，因此上层的RBD、RGW和CephFS通过librados访问，提供PHP、Java、Python、C和C++支持
 1. FastDFS：开源国产的分布式文件存储系统，实现了冗余备份、负载均衡、线性扩容等机制，注重高可用、高性能，提供上传、下载功能。Tracker集群提供负载均衡等调度，Storage集群提供存储
 1. deep
    - 文件/目录存储原理
