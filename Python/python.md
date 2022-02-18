@@ -382,6 +382,7 @@
 1. BeautifulSoup：从html和xml中提取数据
 1. NetworkX：绘制网络图，图论与复杂网络建模工具
 1. prettytable：命令行下把数据用表格输出，美观
+1. turtle：简单、易上手的绘图软件
 ### 协程
 1. 协程学习目录
    - 基础知识

@@ -1080,10 +1080,10 @@
      1. 实例
         ```go
         select {
-            case c <- chName1:
-            case <- quitChName:                         // 只要有数据，不管值是什么
+            case c <- c1:                               // 如果成功向c信道成功发送数据，则执行该分支代码
+            case <- c:                                  // 如果从c信道成功接收数据，则执行该分支代码（只要有数据，不管值是什么）
             case <- time.After(5 * time.Second):        // 设置超时
-            default:                                    // 其他分支没准备好的时候default分支会被执行，可用于非阻塞的发送或者接收
+            default:                                    // 如果上面都没有成功，则进入default分支，可用于非阻塞的发送或者接收
 
             case n := <- c1:                            // 可以实现读一堆，然后返回给一个
                 out <- n                                // 这样会阻塞
@@ -1267,6 +1267,18 @@
         }
     }
     ```
+   - 超时控制：使用channel的阻塞特性
+     1. 简单啰嗦版
+        ```go
+        timeoutCh := make(chan struct{}, 1)
+        go func() {
+            time.Sleep(100 * time.Millisecond)
+            timeoutCh <- struct{}{}
+        }()
+        ```
+     1. `case <-time.After(100 * time.Millisecond)`
+     1. `context.WithCancel(context.Background())`
+     1. `context.WithTimeout(context.Background(), time.Millisecond)`
    - 限流
      1. 简单的多协程的时间频率limiter：常见于限制自己的程序
         ```go
