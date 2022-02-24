@@ -217,6 +217,9 @@
      1. 字符串不可改变
         - 内部用指针指向UTF-8字节数组
         - 想要改变：先将字符串转为字节数组`[]byte`或字符数组`[]rune`，有中文使用字符数组
+   - 使用
+     1. string转byte数组：`[]byte(str)`
+     1. byte数组转string：`string(data[:])`
 1. array
    - 认识：数组，`[n]T`，相同类型T的值的定长数组
      1. […]：语法糖，让编译器自动推导数组长度
@@ -1371,54 +1374,6 @@
      1. main函数
 ### 标准库
 1. 语法相关
-   - unsafe
-     1. 认识：不安全的直接操作内存，避免使用，只有两个类型，三个函数
-        - 内存对齐：每种类型占用内存不同，结构体8byte对齐，占不满8byte的不连续的独占，连续的n个类型共同8byte
-     1. 组成
-        - 类型
-          1. `type ArbitraryType int`：int别名，代表一个任意go表达式类型
-          1. `type Pointer *ArbitraryType`：int指针类型别名，可理解成任何指针的父类型
-        - 函数
-          1. `unsafe.Sizeof()`：接受任意类型的值或表达式，返回其占用的字节数
-          1. `func Offsetof(x ArbitraryType) uintptr`：返回结构体中元素所在内存的偏移量
-          1. `func Alignof(x ArbitraryType) uintptr`：返回变量对齐字节数量，对齐因子
-     1. 用法
-        ```go
-        // 修改、读取不可访问的私有变量
-        func GetDemoStruct() DemoStruct {                                                   // 获取一个DemoStruct对象
-            return DemoStruct{age: 21, Name: "hong", Id: 2, Man: false, china: true}
-        }
-        func changeUnreadField()  {                                                         // 修改不可读取的变量
-            demo := common.GetDemoStruct()
-            fmt.Println("demo is ",demo)
-            *(*uint8)(unsafe.Pointer(uintptr(unsafe.Pointer(&demo)) + 32) ) = 100           // 32是结构体的内存偏移量
-            fmt.Println("demo now is ",demo)
-        }
-
-        // 绕开编译器的对类型做强制转换
-        func Float64ToUint64(f float64) uint64 {
-            p := unsafe.Pointer(&f)                     // 拿到指向f的指针(通过f的地址拿到可操作的指针Pointer)
-            p2 := (*uint64) (p)                         // 将指针(*float)转换为uint64指针(*uint64)类型。因为uint64为无符号位，所有能够拿出当前64位bit内容
-            return * p2
-        }
-        
-        // 保存任意类型，用于系统函数交互、cgo等
-        syscall.Syscall(SYS_READ, uintptr(fd), uintptr(unsafe.Pointer(p)), uintptr(n))
-        ```
-     1. 最佳实践
-        - 类型转换必须是可相互转的类型，否则panic
-        - uintptr指针失效
-            ```go
-            func UitptrDisable() {
-                demo := common.GetDemoStruct()
-                //引入临时变量
-                tmp := uintptr(unsafe.Pointer(&demo)) + 32
-                demoAge := (*uint8)(unsafe.Pointer(tmp))
-                demoAge = nil                                   //临时变量可能会被gc回收
-                *demoAge  = 98
-                fmt.Println("demo now is ",demo)
-            }
-            ```
    - reflect
    - errors
      1. `errors.New("xxxx")`
@@ -1587,11 +1542,66 @@
         - `runtime.Gosched()`：使goroutine让出调度
         - `runtime.Goexit()`：使goroutine立即终止
         - NumGoroutine
-   - go：语法包
    - container：数据结构
      1. heap：任意类型的堆操作
      1. list：双向链表
      1. ring：环形链表
+   - internal
+     1. cpu
+     1. poll
+     1. syscall
+     1. race
+   - unsafe
+     1. 认识：不安全的直接操作内存，避免使用，只有两个类型，三个函数
+        - 内存对齐：每种类型占用内存不同，结构体8byte对齐，占不满8byte的不连续的独占，连续的n个类型共同8byte
+     1. 组成
+        - 类型
+          1. `type ArbitraryType int`：int别名，代表一个任意go表达式类型
+          1. `type Pointer *ArbitraryType`：int指针类型别名，可理解成任何指针的父类型
+        - 函数
+          1. `unsafe.Sizeof()`：接受任意类型的值或表达式，返回其占用的字节数
+          1. `func Offsetof(x ArbitraryType) uintptr`：返回结构体中元素所在内存的偏移量
+          1. `func Alignof(x ArbitraryType) uintptr`：返回变量对齐字节数量，对齐因子
+     1. 用法
+        ```go
+        // 修改、读取不可访问的私有变量
+        func GetDemoStruct() DemoStruct {                                                   // 获取一个DemoStruct对象
+            return DemoStruct{age: 21, Name: "hong", Id: 2, Man: false, china: true}
+        }
+        func changeUnreadField()  {                                                         // 修改不可读取的变量
+            demo := common.GetDemoStruct()
+            fmt.Println("demo is ",demo)
+            *(*uint8)(unsafe.Pointer(uintptr(unsafe.Pointer(&demo)) + 32) ) = 100           // 32是结构体的内存偏移量
+            fmt.Println("demo now is ",demo)
+        }
+
+        // 绕开编译器的对类型做强制转换
+        func Float64ToUint64(f float64) uint64 {
+            p := unsafe.Pointer(&f)                     // 拿到指向f的指针(通过f的地址拿到可操作的指针Pointer)
+            p2 := (*uint64) (p)                         // 将指针(*float)转换为uint64指针(*uint64)类型。因为uint64为无符号位，所有能够拿出当前64位bit内容
+            return * p2
+        }
+        
+        // 保存任意类型，用于系统函数交互、cgo等
+        syscall.Syscall(SYS_READ, uintptr(fd), uintptr(unsafe.Pointer(p)), uintptr(n))
+        ```
+     1. 最佳实践
+        - 类型转换必须是可相互转的类型，否则panic
+        - uintptr指针失效
+            ```go
+            func UitptrDisable() {
+                demo := common.GetDemoStruct()
+                //引入临时变量
+                tmp := uintptr(unsafe.Pointer(&demo)) + 32
+                demoAge := (*uint8)(unsafe.Pointer(tmp))
+                demoAge = nil                                   //临时变量可能会被gc回收
+                *demoAge  = 98
+                fmt.Println("demo now is ",demo)
+            }
+            ```
+1. 工具链
+   - go：语法包
+   - plugin：组件包，实现了go插件的加载和符号解析
    - debug：调试包
      1. dwarf
      1. elf
@@ -1599,7 +1609,6 @@
      1. macho
      1. pe
      1. plan9obj
-   - plugin：go的组件包
    - testing：go包的自动测试支持
      1. iotest
      1. quick

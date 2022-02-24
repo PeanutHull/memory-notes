@@ -245,6 +245,7 @@
      1. 由于运行在由Cypress全权控制的浏览器中，Cypress的测试代码可以直接操作DOM、Window Objects甚至Local Storages而无须通过网络访问，也因此它更快
 1. selenium
    - 理解：支持用脚本控制浏览器的工具，核心基于jsUnit，完全由js编写，运行在浏览器中，04年诞生
+     1. 在爬虫行不通下，可以上这个
    - 成员
      1. IDE：脚本录制工具
      1. WebDriver：编写和运行

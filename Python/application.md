@@ -1,607 +1,115 @@
-### 代码段
-1. 打印
+### Web
+1. Django
+   - 认识：全能型Web框架
+     1. 效率高：使用ORM
+     1. 大量内置应用，后台管理admin，用户认证auth，会话系统sessions，最流行
+     1. 安全性好：表单验证、SQL注入、跨站点攻击
+     1. 易于扩展
+   - 安装
+     1. 安装django：`pip install Django==1.10`或者`python setup.py install`
+     1. 新建项目：`django-admin startproject siteName`，`django-admin`为框架管理命令
+     1. 启动项目：`python manage.py runserver 0.0.0.0:5000`，`vim demosite/settings.py--ALLOWED_HOSTS = ['*',]`
+     1. 创建应用：`python manage.py startapp blog`，之后将应用名添加到settings.py的NSTALLED_APPS
+     1. 查看命令行：`python manage.py`
+   - 项目结构
+     1. manage.py：项目管理文件
+     1. siteName目录
+     1. setting.py：配置文件
+     1. urls.py：路由
+     1. wsgi.py：和web服务器的接口
+   - Django Shell：可以输入命令，做一些调试工作
     ```python
-    str = 'abcde'
-    print (str[0])       # 输出字符串第一个字符
-    print (str[2:])      # 输出从第三个开始的后的所有字符
-    print (str[0:-1])    # 输出第一个到倒数第二个的所有字符
-    print (str * 2)      # 输出字符串两次
-    print (str + "TEST") # 连接字符串
+    python manage.py shell      # 进入shell
+    Article.objects.all()       # 查询数据
     ```
-1. list
-   - 使用
-        ```python
-        list = ['abcd', 786, 70.2]                          # 定义
-        list[1:3]                                               # 第二个到第三个元素，第二位置进一
-        list[0] = 9                                         # 改变
-        del list[2]                                         # 删除
-        ['a'] * 4                                           # 重复
-        3 in [1, 2, 3]                                      # 检查是否存在，返回Bool
-                                                            # 遍历
-        for x in [1, 2, 3]:
-            print(x, end=" ")
-                                                            # 同时遍历更多序列
-        num = ['1', '2', '3']
-        word = ['a', 'b', 'c']
-        for n, w in zip(num, word):
-                                                            # 多维
-        list = [[0 for i in range(5)] for i in range(5)]
-        list[0][0]
+1. flask：流行的微框架
+1. bottle：类似flask
+1. web.py：小巧
+1. falcon，高性能api
+1. Tornado：Facebook的开源异步web框架
+1. 模板
+   - jinja2：flask默认模板
+   - Mako
+   - Cheetah
+   - Django：是一站式框架，内置一个用{% ... %}和{{ xxx }}的模板
+### 服务器
+1. wsgi：Python Web Server GateWay Interface，web服务器和只应用于python服务器通信的协议
+   - 响应：要求实现application函数，就可以响应http
+    ```python
+    def application(environ, start_response):
+        start_response('200 OK', [('Content-Type', 'text/html')])
+        return [b'<h1>Hello, web!</h1>']
+    ```
+   - 创建服务器：server.py
+    ```python
+    from wsgiref.simple_server import make_server
+    from hello import application                       # 导入我们自己编写的application函数:
+    
+    httpd = make_server('', 8000, application)          # 创建一个服务器，ip地址为空，端口是8000，处理函数是application:
+    print('Serving HTTP on port 8000...')
+    httpd.serve_forever()                               # 开始监听http
+    ```
+1. uwsgi
+   - 理解：是web服务器，c编写，实现了WSGI、uwsgi、http等协议。可以将http协议转换为wsgi协议让python使用，uwsgi似乎不能充分利用cpu和内存达到无上限并发。到达瓶颈后cpu和内存还剩下很多
+     1. Django自带服务器不稳定只能用于测试，搭配uwsgi和nginx实现服务器
+     1. uwsgi：uWSGI服务器实现的独有协议
+   - 配置
+     1. 使用配置文件：uwsgi --ini uwsgi.ini
+        ```conf
+        [uwsgi]
+        socket = 127.0.0.1:9090
+        master = true         # 启动主进程，方便管理所有进程
+        vhost = true          # 多站模式
+        chdir = /etc
+        no-site = true        # 多站模式时不设置入口模块和文件
+        workers = 2           # 子进程数
+        reload-mercy = 10     
+        vacuum = true         # 退出、重启时清理文件
+        max-requests = 1000   
+        limit-as = 512
+        buffer-size = 30000
+        pidfile = /var/run/uwsgi9090.pid    # pid文件，用于下面的脚本启动、停止该进程
+        daemonize = /website/uwsgi9090.log
         ```
-   - 列表推导式：提供了从序列创建列表的简单途径，通过计算、判断得出新的列表
+     1. 指定参数
         ```python
-        vec = [2, 4, 6]
-        [3*x for x in vec]          # 将元素都乘以3，[6, 12, 18]
-        [[x, x**2] for x in vec]    # 得出二维列表，[[2, 4], [4, 16], [6, 36]]
-        [3*x for x in vec if x > 3] # 判断，[12, 18]
-
-        word = ['  a', '  b ', 'c  ']
-        x.strip() for x in freshfruit   # 调用方法处理
+        uwsgi
+        --http :9090                                    # 使用http协议，不限定来源？
+        --socket :5000                                  # 和nginx配合
+        --http-socket 127.0.0.1:3031                    # 使用http协议
+        --wsgi-file foobar.py                           # 指定运行文件
+        --chdir /etc                                    # 指定项目路径
+        --master --processes 4 --threads 2              # 启动多进程、多线程，并发访问
+        --daemonize                                     # 增加守护进程，稳定性
+        --stats 127.0.0.1:9191                          # 监控子系统，pip install uwsgitop
         ```
-   - 列表嵌套
-        ```python
-        matrix = [                                          # 3x4矩阵
-            [1, 2, 3, 4],
-            [5, 6, 7, 8],
-            [9, 10, 11, 12],
-        ]
-        [[row[i] for row in matrix] for i in range(4)]      # 转换为4x3矩阵
-        ```
-1. Tuple
+   - 入口文件：搜索默认函数application，使用Django就指向Django的目录
     ```python
-    # 定义
-    tuple = ('abcd', 786, 70.2)
-    # 定义
-    t = 12345, 54321, 'hello!'
-    u = t, (1, 2, 3, 4, 5)
+    def application(env, start_response):
+        start_response('200 OK', [('Content-Type','text/html')])
+        return [b"Hello World"]
     ```
-1. Sets
-    ```python
-    student = {'Tom', 'Jim', 'Mary', 'Tom', 'Jack', 'Rose'}
-    # 输出集合，重复的元素被自动去掉
-    print(student)
-    # 成员测试
-    if('Rose' in student) :
-        print('Rose 在集合中')
-    else :
-        print('Rose 不在集合中')
-    # set进行集合运算
-    a = set('abracadabra')
-    b = set('alacazam')
-    # 显示结果
-    print(a - b)     # a和b的差集
-    print(a | b)     # a和b的并集
-    print(a & b)     # a和b的交集
-    print(a ^ b)     # a和b中不同时存在的元素
-    ```
-1. Dictionary
-    ```python
-    # 定义
-    dict = {}
-    dict['one'] = "1"
-    dict[2]     = "2"
-    # 定义
-    dict = {'name': 'runoob','code': 1}
-    dict = dict([('name', 'runoob'), ('code', 1)])
-    dict = dict(sape=4139, guido=4127, jack=4098)
-    # 输出
-    dict['one']
-    # 遍历
-    for k, v in knights.items():
-    ```
-1. 变量
-    ```python
-    counter = 1000         # 整型变量
-    name    = "runoob"     # 字符串
-    a = b = c = 1          # 多个变量赋值，三个变量被分配到相同的内存空间上
-    a, b, c = 1, 2, "abc"  # 多个变量赋多个值
-    ```
-1. 作用域
-    ```python
-    b = int(2.9)            # 内建作用域
-    g_count = 0             # 全局作用域
-    def outer():
-        e_count = 1         # 闭包函数外的函数中
-        def inner():
-            l_count = 2     # 局部作用域
-    ```
-1. 迭代器
-    ```python
-    list=[1,2,3,4]
-    it = iter(list)    # 创建迭代器对象
-    next(it)           # 输出迭代器的下一个元素
-    for x in it: 语句   # 可以迭代迭代器
-    ```
-1. 生成器
-    ```python
-    def fibonacci(n):                   # 生成器函数 - 斐波那契
-        a, b, counter = 0, 1, 0
-        while True:
-            if (counter > n):
-                return
-            yield a
-            a, b = b, a + b
-            counter += 1
-    f = fibonacci(10)                   # f 是一个迭代器，由生成器返回生成，已经执行了一次，停在了yield处
-    # 执行具体代码
-    while True:
-        try:
-            print (next(f), end=" ")    # 调用next函数，开始执行第二以及更多次
-        except StopIteration:
-            sys.exit()
-    ```
-1. 遍历
-    ```python
-    # 遍历数字
-    for i in range(5):
-    ```
-1. 类
-    ```python
-    class MyClass(BaseClass1, BaseClass2):      # 继承，子类没有方法，从左至右的父级中查找
-        def __init__(self, realpart):
-            self.r = realpart
-        i = 12345
-        def f(self):                            # 类的方法与普通的函数只有一个区别就是有一个额外的第一参数，惯例为self
-            this = self.class                   # 指向类
-            j = self.i                          # 访问类变量
-            return 'hello world'
-    x = MyClass(3306)                           # 实例化类
-    x.i                                         # 访问类属性
-    x.f()                                       # 访问类方法
-    ```
-1. 类的关系判断
-    ```python
-    class A:
-        pass
-    class B(A):
-        pass
-
-    isinstance(A(), A)    # returns True
-    type(A()) == A        # returns True
-    isinstance(B(), A)    # returns True
-    type(B()) == A        # returns False
-    ```
-1. 文件
-    ```python
-    f = open("/tmp/foo.txt", "wb+")           # 二进制方式读写，默认r
-    f.write( "你好! \n" )
-    value = ('a', 1)                          # 先转换
-    s = str(value)
-    f.write(s)
-    f.close()
-    ```
-1. 正则
-   - match
-    ```python
-    matchObj = re.match('www', 'www.a.com').span()      # 在起始位置匹配
-    matchObj.group(num=0)                               # 包含对应组的值
-    matchObj.groups()                                   # 包含所有小组字符串的元组
-    ```
-   - sub
-    ```python
-    # 被替换者可以是个函数
-    def double(matched):
-        value = int(matched.group('value'))
-        return str(value * 2)
-
-    s = 'A23G4HFD567'
-    print(re.sub('(?P<value>\d+)', double, s))          # 输出A46G8HFD1134
-    ```
-1. 输入
-    ```python
-    str = input("请输入：");
-    print("你输入的内容是: ", str)
-    ```
-1. 序列化
-    ```python
-    output = open('data.pkl', 'wb')
-    pickle.dump(data1, output)
-    pickle.dump(data2, output, -1)          # 结尾添加
-    output.close()
-    ```
-1. 反序列化
-    ```python
-    pkl_file = open('data.pkl', 'rb')
-    data1 = pickle.load(pkl_file)
-    pprint.pprint(data1)
-    pkl_file.close()
-    ```
-1. 多线程
-   - _thread
-    ```python
-    # 为线程定义一个函数
-    def print_time( threadName, delay):
-        count = 0
-        while count < 5:
-            time.sleep(delay)
-            count += 1
-            print ("%s: %s" % ( threadName, time.ctime(time.time())))
-    # 创建线程
-    _thread.start_new_thread(print_time, ("Thread-1", 2,))
-    ```
-   - threading
-    ```python
-    class myThread (threading.Thread):
-        def __init__(self):
-            threading.Thread.__init__(self)
-        def run(self):
-            print ("开始线程：" + self.name)
-            print ("退出线程：" + self.name)
-    # 创建新线程
-    thread1 = myThread()
-    # 开始运行
-    thread1.start()
-    thread1.join()
-    ```
-1. 线程同步
-    ```python
-    class myThread (threading.Thread):
-        def __init__(self):
-            threading.Thread.__init__(self)
-        def run(self):
-            threadLock.acquire()        # 获取锁，用于线程同步
-            threadLock.release()        # 释放锁，开启下一个线程
-
-    threadLock = threading.Lock()
-    threads = []
-
-    # 创建新线程
-    thread1 = myThread()
-    # 开启新线程
-    thread1.start()
-    # 等待所有线程完成
-    threads.join()
-    ```
-1. 优先级队列
-    ```python
-    import queue
-    import threading
-    import time
-
-    exitFlag = 0
-
-    class myThread (threading.Thread):
-        def __init__(self, threadID, name, q):
-            threading.Thread.__init__(self)
-            self.threadID = threadID
-            self.name = name
-            self.q = q
-        def run(self):
-            print ("开启线程：" + self.name)
-            process_data(self.name, self.q)
-            print ("退出线程：" + self.name)
-
-    def process_data(threadName, q):
-        while not exitFlag:
-            queueLock.acquire()
-            if not workQueue.empty():
-                data = q.get()
-                queueLock.release()
-                print ("%s processing %s" % (threadName, data))
-            else:
-                queueLock.release()
-            time.sleep(1)
-
-    threadList = ["Thread-1", "Thread-2", "Thread-3"]
-    nameList = ["One", "Two", "Three", "Four", "Five"]
-    queueLock = threading.Lock()
-    workQueue = queue.Queue(10)
-    threads = []
-    threadID = 1
-
-    # 创建新线程
-    for tName in threadList:
-        thread = myThread(threadID, tName, workQueue)
-        thread.start()
-        threads.append(thread)
-        threadID += 1
-
-    # 填充队列
-    queueLock.acquire()
-    for word in nameList:
-        workQueue.put(word)
-    queueLock.release()
-
-    # 等待队列清空
-    while not workQueue.empty():
-        pass
-
-    # 通知线程是时候退出
-    exitFlag = 1
-
-    # 等待所有线程完成
-    for t in threads:
-        t.join()
-    print ("退出主线程")
-    ```
-1. 网络编程服务端实例
-    ```python
-    serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    serversocket.bind((socket.gethostname(), 9999))
-    serversocket.listen(5)                              # 最大连接数，超过后排队
-    # 阻塞监听
-    while True:
-        clientsocket,addr = serversocket.accept()       # 建立客户端连接
-        msg='你好'+ "\r\n"
-        clientsocket.send(msg.encode('utf-8'))
-        clientsocket.close()
-    ```
-   - 客户端实例
-    ```python
-    s = socket.socket(socket.AF\_INET, socket.SOCK_STREAM)
-    s.connect((socket.gethostname(), 9999))
-    msg = s.recv(1024)                  # 接收小于1024字节的数据
-    s.close()
-    ```
-### 线程池
-1. 简单的线程池
-    ```python
-    import time
-    import threading
-
-    class SimpleThreadPool:
-        def process(self):
-            while True:
-                if len(self.queue) == 0:
-                    time.sleep(1)
-                    continue
-                task = self.queue.pop()
-                task()
-
-        def __init__(self, size):
-            self.pool = []
-            self.queue = []
-            for i in range(size):
-                self.pool.append(threading.Thread(target=self.process))
-
-        def submit(self, task):
-            self.queue.append(task)
-
-        def start(self):
-            for thread in self.pool:
-                thread.start()
-
-    def _task():
-        for i in range(2):
-            print('this is a _task. i = {}. thread id = {}'.format(i, threading.get_native_id()))
-            time.sleep(1)
-
-
-    if __name__ == '__main__':
-        pool = SimpleThreadPool(10)
-        pool.start()
-        for i in range(10):
-            pool.submit(_task)
-    ```
-1. 官方线程池示例
-    ```python
-    import time
-    import threading
-    from concurrent.futures import ThreadPoolExecutor
-
-
-    def _task():
-        for i in range(2):
-            print('this is a _task. i = {}. thread id = {}'.format(i, threading.get_native_id()))
-            time.sleep(1)
-        return time.time()
-
-
-    tp = ThreadPoolExecutor(10)                     # 初始化
-
-    futures = []
-    for i in range(10):
-        # future对象
-        future = tp.submit(_task)                   # 提交任务
-        futures.append(future)                          # feture对象可能是还未执行完的
+   - 配合nginx
+    ```conf
+    server {
+        listen       80;
+        server_name  localhost;
         
-    for future in futures:
-        print(future.result())                      # 获取结果，是阻塞的，所以要所有任务提交后再拿结果
+        location / {            
+            include  uwsgi_params;
+            uwsgi_pass  127.0.0.1:9090;                  //必须和uwsgi中的设置一致
+            uwsgi_param UWSGI_SCRIPT index.wsgi;         //入口文件，即wsgi.py相对于项目根目录的位置，“.”相当于一层目录
+            uwsgi_param UWSGI_CHDIR /home/python;        //项目根目录
+            index  index.html index.htm;
+            client_max_body_size 35m;
+        }
+    }
     ```
-### 应用
-1. CGI编程
-   - 示例
-    ```python
-    import cgi, cgitb
-    # 实例化cgi
-    form = cgi.FieldStorage()
-    # 获取数据
-    form.getvalue('name')
-    # 获取环境变量
-    for key in os.environ.keys():
-        pass
-    os.environ.get('HTTP_COOKIE')
-    # 上传文件
-    fileitem = form['filename']
-    fn = os.path.basename(fileitem.filename)                # 设置文件路径
-    open('/tmp/' + fn, 'wb').write(fileitem.file.read())
-    # 返回数据
-    print ("Content-type:text/html")
-    print ()                                                # 空行，告诉服务器结束头部
-    print ('<html></html>')
-    ```
-1. 连接MySQL
-   - 理解：p3使用PyMySQL，p2使用mysqldb
-   - 方法
-     1. 查询：fetchall()全部结果/fetchone下一条结果
-   - 示例
-    ```python
-    import pymysql
-    db = pymysql.connect("localhost","user","test","test" )             # 打开数据库连接
-    cursor = db.cursor()                                                # 创建光标对象
-    try:
-        cursor.execute("DROP TABLE IF EXISTS table")                     # 执行sql语句
-        db.commit()
-    except:
-        db.rollback()
-    db.close()
-    ```
-1. json解析：json.dumps()，编码。json.loads()，解码
-    ```python
-    import json
-    data = {'no':1,'name':'Runoob'}
-    json_str = json.dumps(data)
-    print ("Python 原始数据：", repr(data))
-    print ("JSON 对象：", json_str)
-    ```
-1. XML解析
-   - XML理解：可扩展标记语言，通用标记语言的子集
-   - 方案
-     1. SAX：Simple API for XML，采用事件驱动模型，包含解析器和事件处理器，python标准库包含SAX解析器
-        ```python
-        # 创建一个 XMLReader
-        parser = xml.sax.make_parser()
-        parser.setFeature(xml.sax.handler.feature_namespaces, 0)        # turn off namepsaces
-        Handler = MovieHandler()                                        # 重写 ContextHandler
-        parser.setContentHandler(Handler)
-        parser.parse("movies.xml")
-
-        class MovieHandler( xml.sax.ContentHandler ):
-            def \_\_init__(self):
-            # 元素开始调用
-            def startElement(self, tag, attributes):
-            # 元素结束调用
-            def endElement(self, tag):
-            # 读取字符时调用
-            def characters(self, content):
-        ```
-     1. DOM：Document Object Model，将xml数据在内存中解析为一个树
-        ```python
-        from xml.dom.minidom import parse
-        import xml.dom.minidom
-        
-        # 使用minidom解析器打开 XML 文档
-        DOMTree = xml.dom.minidom.parse("movies.xml")
-        collection = DOMTree.documentElement
-        collection.hasAttribute("shelf")
-        collection.getAttribute("shelf")
-        collection.getElementsByTagName("movie")
-        ```
-### socket通信
-1. client
-    ```python
-    import socket
-
-
-    client = socket.socket()
-    print('client.fileno:', client.fileno())
-
-    client.connect(('127.0.0.1', 8999))
-
-    while True:
-        content = input('>>>')
-        client.send(bytes(content, 'utf-8'))
-        content = client.recv(1024)
-        print('client recv content:', content)
-    ```
-1. server单连接
-    ```python
-    import socket
-
-
-    # 1. 创建套接字
-    server = socket.socket()
-    print('server.fileno:', server.fileno())
-    # 2. 绑定套接字
-    server.bind(('127.0.0.1', 8999))
-    # 3. 监听套接字
-    server.listen(1)
-    # 4. 接受连接
-    s, addr = server.accept()
-    print('s.fileno:', s.fileno())
-    print('connect addr:', addr)
-
-    while True:
-        # 接受信息
-        content = s.recv(1024)
-        if not content:
-            break
-        # 发送信息
-        s.send(content.upper())
-        print('server recv content:', content)
-    ```
-1. server多线程：一个连接一个线程，占用资源大
-    ```python
-    import socket
-    import threading
-
-
-    def thread_process(s):
-        while True:
-            content = s.recv(1024)
-            if len(content) == 0:
-                break
-            s.send(content.upper())
-            print(str(content, encoding='utf-8')) # 接受来自客户端的消息，并打印出来
-            # s.close()
-
-    server = socket.socket() # 1. 新建socket
-    server.bind(('127.0.0.1', 8999)) # 2. 绑定IP和端口（其中127.0.0.1为本机回环IP）
-    server.listen(5) # 3. 监听连接
-
-    while True:
-        s, addr = server.accept() # 4. 接受连接
-
-        new_thread = threading.Thread(target=thread_process, args=(s, ))
-        print('new thread process connect addr：{}'.format(addr))
-        new_thread.start()
-    ```
-1. server：io多路复用epoll实现
-    ```python
-    import socket
-    import select
-
-    def serve():
-        server = socket.socket()
-        server.bind(('127.0.0.1', 8999))
-        server.listen(1)
-
-        # 申请epoll对象
-        epoll = select.epoll()
-        # 对server的这个套接字文件，注册可读事件
-        epoll.register(server.fileno(), select.EPOLLIN)
-
-        connections = {}
-        contents = {}
-        while True:
-            # 通过epoll系统调用，监听可读fds
-            events = epoll.poll(10)
-            for fileno, event in events:
-                # 新连接
-                if fileno == server.fileno():
-                    s, addr = server.accept()
-                    print('new connection from addr:', addr)
-                    epoll.register(s.fileno(), select.EPOLLIN)
-                    connections[s.fileno()] = s
-                # 读事件就绪，有新数据可读
-                elif event == select.EPOLLIN:
-                    s = connections[fileno]
-                    content = s.recv(1024)
-                    # 关闭连接
-                    if not content:
-                        epoll.unregister(fileno)
-                        s.close()
-                        connections.pop(fileno)
-                    else:
-                        content = content.upper()
-                        # 改为关注写事件
-                        epoll.modify(fileno, select.EPOLLOUT)
-                        contents[fileno] = content
-                # 写事件就绪
-                elif event == select.EPOLLOUT:
-                    try:
-                        content = contents[fileno]
-                        s = connections[fileno]
-                        s.send(content)
-                        # 改为关注读事件
-                        epoll.modify(fileno, select.EPOLLIN)
-                    except:
-                        epoll.unregister(fileno)
-                        s.close()
-                        connections.pop(fileno)
-                        contents.pop(fileno)
-
-
-    if __name__ == '__main__':
-        serve()
-    ```
+### 爬虫
+1. scrapy
+1. wiki：‌组合利用好各种api可以实现数据统计的效果，如和地图结合查看数据分布，定时监控某个想要的数据
+### 数据清洗
+### 人工智能
+1. pytorch
+   - 认识：facebook的研究员在17年开源的，也会用到c++
+1. PaddleSpeech：中英文语音识别与语音合成

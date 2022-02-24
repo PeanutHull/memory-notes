@@ -238,7 +238,6 @@
      1. timeit：性能度量工具，如`Timer('a,b = b,a', 'a=1; b=2').timeit()`
      1. doctest/unittest、
    - 第三方模块
-     1. Pillow：图像处理
      1. requests：基于urllib的http库，更加方便
         - 发送
             ```py
@@ -323,7 +322,9 @@
      1. close()：关闭文件释放资源
      1. flush()：刷新缓冲，缓冲区数据立即写入
      1. fileno()：返回文件描述符，用在os模块等底层操作上
+   - difflib：文本差异化比较的标准库
 1. 目录
+   - pathlib：跨平台的、面向对象的路径操作库
    - `os.system('')`：执行系统命令
    - `os.chroot/getcwd()`：改变当前进程根目录
    - `os.chdir/mkdir/rmdir()`
@@ -352,37 +353,6 @@
      1. re.S 匹配所有字符
      1. re.U 根据Unicode字符集解析字符，影响\w/W/b/B
      1. re.X 给允更灵活的方式
-### 包
-1. pyotp：用于二次登录验证(密码+验证码)的验证码生成，如`pyotp.TOTP('YOUR SECRET').now()`
-1. NumPy
-   - 认识：Numerical python，开源的c语言写的python数据分析和科学计算库，可以替代matlab
-     1. c写的，速度快
-     1. 本身的数据结构比python的访问效率更高
-     1. 支持大量高维度数据和矩阵运算
-     1. 提供大量的数学函数库
-   - 安装
-     1. anaconda：开源的python发行版版
-   - 相关
-     1. pandas：数据分析
-        - PandasGUI：提供数据预览、筛选、统计、多种图表展示以及数据转换
-        - Pandas Profiling：提供了整体数据概况、每列的详情、列之间的关图、列之间的相关系数
-        - Sweetviz：Pandas Profiling类似，提供每列详细的统计指标、取值分布、缺失值统计以及列之间的相关系数
-        - dtale：提供丰富图表展示数据，还提供很多交互式的接口，对数据进行操作、转换
-     1. scipy：科学计算
-     1. matplotlib：绘图库，给命令，生成图
-1. PyAudio/wave
-1. scapy：数据包构造工具
-1. Dash：数据可视化，Flask，Plotly.js，React.js的混合体
-1. Pygame：是SDL多媒体库的Python装饰器
-1. Pillow：处理图，缩略图、文件格式转换、旋转、应用滤镜等
-1. Colorama：允许在终端使用颜色
-1. JmesPath/：json增强处理器
-1. Chardet：字符集检测
-1. Python-dateutil：时间日期处理
-1. BeautifulSoup：从html和xml中提取数据
-1. NetworkX：绘制网络图，图论与复杂网络建模工具
-1. prettytable：命令行下把数据用表格输出，美观
-1. turtle：简单、易上手的绘图软件
 ### 协程
 1. 协程学习目录
    - 基础知识
@@ -674,6 +644,110 @@
         - 最新版本：`pip install/uninstall package`
         - 指定版本：`pip install package ==/>= 1.0.4`
      1. 查看：`pip list/show/search package`
+### 库
+1. 数据
+   - scapy：数据包构造工具
+   - JmesPath/：json增强处理器
+   - Chardet：字符集检测
+   - Python-dateutil：时间日期处理
+1. 文件
+   - watchdog：管理文件系统事件的 API 和 shell 工具
+   - path.py：对 os.path 进行封装的模块
+   - Unipath：用面向对象的方式操作文件和目录
+1. 文本
+   - Levenshtein：快速计算编辑距离以及字符串的相似度
+   - pypinyin/xpinyin：汉字拼音转换工具
+   - prettytable：命令行下把数据用表格输出，美观
+   - 
+   - 文本格式
+     1. PDFMiner/PyPDF2/ReportLab：pdf
+     1. Mistune/Python-Markdown2/markdown
+     1. PyYAML
+     1. csvkit：csv
+   - Jinja：基于python的模板引擎，功能类似于PHP的smarty
+     1. 使用
+        - 创建模板
+        - 将变量添加到模板上下文中
+        - 将模板渲染成 HTML
+   - weasyprint/xhtml2pdf：开源的html转为pdf的工具，如用于报告、发票、门票、图书、信件等
+     1. 实例
+        ```py
+        from weasyprint import HTML
+        HTML(string=html_out).write_pdf(args.outfile.name, stylesheets=["style.css"])           // 使用css
+        ```
+1. 图片
+   - imghdr：检测图片类型的标准库
+   - Pillow：处理图，缩略图、文件格式转换、旋转、应用滤镜等
+   - wand：MagickWand的 Python 绑定。MagickWand 是 ImageMagick 的 C API 
+   - NetworkX：绘制网络图，图论与复杂网络建模工具
+   - turtle：简单、易上手的绘图软件
+1. 图像处理
+   - nude.py：裸体检测
+   - face_recognition：简单易用的 python 人脸识别库
+   - imgSeek：一个使用视觉相似性搜索一组图片集合的项目
+   - pyBarcode：不借助 PIL 库在 Python 程序中生成条形码
+   - hmap：图像直方图映射
+   - pygram：类似 Instagram 的图像滤镜
+   - python-qrcode：一个纯 Python 实现的二维码生成器
+   - Quads：基于四叉树的计算机艺术
+   - scikit-image：一个用于（科学）图像处理的 Python 库
+   - thumbor：一个小型图像服务，具有剪裁，尺寸重设和翻转功能
+   - OCR
+     1. pyocr：Tesseract 和 Cuneiform 的一个封装(wrapper)
+     1. pytesseract：Google Tesseract OCR 的另一个封装(wrapper)
+     1. python-tesseract：Google Tesseract OCR 的一个包装类。
+1. 多媒体
+   - PyAudio/wave
+   - Pygame：是SDL多媒体库的Python装饰器
+   - 音频
+     1. audiolazy：Python 的数字信号处理包
+     1. audioread：交叉库 (GStreamer + Core Audio + MAD + FFmpeg) 音频解码
+     1. beets：一个音乐库管理工具及 MusicBrainz 标签添加工具
+     1. dejavu：音频指纹提取和识别
+     1. django-elastic-transcoder：Django + Amazon Elastic Transcoder
+     1. eyeD3：一个用来操作音频文件的工具，具体来讲就是包含 ID3 元信息的 MP3 文件
+     1. id3reader：一个用来读取 MP3 元数据的 Python 模块
+     1. m3u8：一个用来解析 m3u8 文件的模块
+     1. mutagen：一个用来处理音频元数据的 Python 模块
+     1. pydub：通过简单、简洁的高层接口来操作音频文件
+     1. pyechonest：Echo Nest API 的 Python 客户端
+     1. talkbox：一个用来处理演讲/信号的 Python 库
+     1. TimeSide：开源 web 音频处理框架
+     1. tinytag：一个用来读取 MP3, OGG, FLAC 以及 Wave 文件音乐元数据的库
+     1. mingus：一个高级音乐理论和曲谱包，支持 MIDI 文件和回放功能
+   - 视频
+     1. moviepy
+     1. scikit-video
+1. 可视化
+   - Dash：数据可视化，Flask，Plotly.js，React.js的混合体
+1. 数据提取
+   - BeautifulSoup：从html和xml中提取数据
+1. 分析与计算
+   - NumPy
+     1. 认识：Numerical python，开源的c语言写的python数据分析和科学计算库，可以替代matlab
+        - c写的，速度快
+        - 本身的数据结构比python的访问效率更高
+        - 支持大量高维度数据和矩阵运算
+        - 提供大量的数学函数库
+     1. 安装
+        - anaconda：开源的python发行版版
+   - SciPy：科学计算
+1. 绘图库
+   - pandas：数据分析
+     1. PandasGUI：提供数据预览、筛选、统计、多种图表展示以及数据转换
+     1. Pandas Profiling：提供了整体数据概况、每列的详情、列之间的关图、列之间的相关系数
+     1. Sweetviz：Pandas Profiling类似，提供每列详细的统计指标、取值分布、缺失值统计以及列之间的相关系数
+     1. dtale：提供丰富图表展示数据，还提供很多交互式的接口，对数据进行操作、转换
+   - matplotlib：绘图库，给命令，生成图
+   - Seaborn
+   - Bokeh
+1. 安全
+   - pyotp：用于二次登录验证(密码+验证码)的验证码生成，如`pyotp.TOTP('YOUR SECRET').now()`
+1. 其他
+   - Colorama：允许在终端使用颜色
+   - 分发
+     1. py2app：将python脚本变为独立mac包
+     1. py2exe：将python脚本变为独立windows包
 ### wiki
 1. 保留字
    - class，from，import，return，
