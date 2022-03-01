@@ -980,19 +980,13 @@
      1. error
 ### 协程
 1. goroutine
-   - 认识：go的协程(coroutine)，协程间需要通信、同步，是并行运行的(多处理器同时)，需要的内存极小，实际可以cpu核数减一来设置，给系统留下
-     1. 成本：增加额外的耗时、内存消耗
+   - 认识：协程(coroutine)，是go中最小的执行单位，可实现并发编程、并行计算(多处理器同时运行)。实际可以cpu核数减一来设置，给系统留下
+     1. 轻量级，需要的内存极小
    - 特点
-     1. 并发基于csp模型
-     1. 非抢占式多任务处理
-     1. 调度器会在合适的点进行切换，其他语音需要指定切换的点
-        - io、select
-        - channel
-        - 等待锁
-        - 函数调用(有时)
-        - runtime.Gosched() 
-     1. 不需要锁，不需要callback(写程序不用，底层有)
-     1. 可以实现并发编程、并行计算
+     1. 非抢占式，调度器在合适点自动切换
+     1. 无锁，无callback(写程序不用，底层有)
+     1. 协程间的通信和同步基于csp模型
+        - csp：描述两个独立的并发实体通过共享的通讯 channel(管道)进行通信的并发模型
    - 优势
      1. 去掉了冗余的协程生命周期管理
      1. 降低额外延迟和开销：来源是协程间的频繁交互
@@ -1165,9 +1159,17 @@
         - Store()：添加
         - Delete()：删除
         - LoadOrStore()：检索或新增
-   - atomic：底层的原子性内存原语
+   - atomic
+     1. 认识：底层的原子性内存操作， 除了某些特殊的底层应用，使用channel或sync实现同步更好，他们是保护一段逻辑，这个是保护一个值，逻辑需要自己处理
+        - 操作对象：6个，int32/int64/uint32/uint64/uintptr/unsafe.Pointer
+        - 原子操作：增减、载入、比较并交换、存储和交换
      1. 方法
-        - AddInt32()
+        - `AddInt32(&addr,n)`：增减，n负数为减，只能操作数值类
+        - `StoreInt32(&addr,newaddr)`：存储
+        - `LoadInt32(&addr)`：读取
+
+        - `CompareAndSwapInt32(&addr,old,new)`：比较并交换 Compare And Swap，即CAS，如果旧值没变就替换
+        - `SwapInt32(&addr,newaddr)`：交换，不管旧值
    - 一个函数在所有goroutine仅执行一次：`sync.Once`
      1. 执行方法：`once.Do()`
 1. context
@@ -1546,11 +1548,6 @@
      1. heap：任意类型的堆操作
      1. list：双向链表
      1. ring：环形链表
-   - internal
-     1. cpu
-     1. poll
-     1. syscall
-     1. race
    - unsafe
      1. 认识：不安全的直接操作内存，避免使用，只有两个类型，三个函数
         - 内存对齐：每种类型占用内存不同，结构体8byte对齐，占不满8byte的不连续的独占，连续的n个类型共同8byte
@@ -1599,6 +1596,11 @@
                 fmt.Println("demo now is ",demo)
             }
             ```
+   - internal：内部包，不在internal根目录的不让引用
+     1. cpu
+     1. poll
+     1. syscall
+     1. race
 1. 工具链
    - go：语法包
    - plugin：组件包，实现了go插件的加载和符号解析
