@@ -806,9 +806,9 @@
         }
         ```
      1. 方法
-        - 属于结构体的方法
+        - 属于结构体的方法：`func (variable_name variable_data_type) function_name() [return_type]{}`
           1. 定义在结构体作用域外，在函数声明中指定接收者，除了基础类型或其他包的，可以在任意类型里定义方法
-          1. `func (variable_name variable_data_type) function_name() [return_type]{}`
+          1. 非引用形式是深拷贝，会复制一个结构体出来，表现为多个方法间对结构体数据的作用相互无影响，结构体内部数据不会被修改
         - 结构体内部的方法类型
             ```go
             // 申明
@@ -1004,9 +1004,10 @@
     }(i)                        // 外部传进i，否则就是闭包
     ```
    - wiki
-     1. 并行与并发：并发只是假装同时进行
+     1. 并行不是并发：并发只是假装同时进行
      1. 协程调度模仿的就是linux的进程调度，在其之上自己实现了一套。m是machine相当于cpu，g相当于进程，g在m上运行，p按照规则自己给自己做调度，调度室代码+数据
      1. io密集的可以使用协程如读数据库，cpu密集的就不要了比如网站的逻辑层
+     1. 管道用于协调，锁用于同步
      1. 价值
         - 不必陷入内核态，而且占用资源少、切换快，堆当栈用
         - 其他操作耗时的时候让出cpu，不用等待
@@ -2368,6 +2369,7 @@
             }
             ```
    - 断点调试：dlv
+   - go-torch：开源工具，将profile信息转换成火焰图
    - 逃逸分析：`go build -gcflags "-m -l" *.go`
    - 汇编代码：`go run -gcflags -S main.go`
 1. GUI
@@ -2395,7 +2397,7 @@
      1. `go generate`：用于在编译前自动化生成某类代码
         - 写法举例：`//go:generate go tool yacc -o gopher.go -p parser gopher.y`
    - 调试
-     1. `go vet`：静态错误检查
+     1. `go vet`：代码格式错误检查
      1. `go bug`：调试
      1. `go tool`
         - `go tool compile -N -l -S main.go`：不优化编译，可用dlv调试
@@ -2423,7 +2425,9 @@
         - 参数
           1. -v：打印包名
           1. -o：指定输出的可执行文件
-          1. -ldflags "-s -w"：-s 去掉符号信息。-w 去掉DWARF调试信息
+          1. -ldflags "-s -w"
+             - -s：去掉符号信息，panic时候的stack trace就没有任何文件名/行号信息了，等价于c/c++的strip
+             - -w：去掉DWARF调试信息，不能用gdb调试了
           1. -gcflags "-N -l"：关闭内联优化
           1. 跨平台
              - GOOS=linux
@@ -2450,6 +2454,12 @@
           1. `-v`：显示执行的命令
      1. `go list`：查看安装的package
         - -f '{<!-- -->{.GoFiles}}'：查看将被编译的文件名
+   - 工具
+     1. golint：代码规范的错误
+     1. gofmt：格式化
+     1. govet：代码格式错误检查
+     1. gometalinter：代码静态分析并规范化其输出的linter工具集
+     1. godegragh：
 1. 运行
    - 环境变量
      1. GOROOT：go的安装路径，可以不设置，默认在/usr/local/go，编译的时候从GOROOT找system libariry
@@ -2478,7 +2488,7 @@
      1. 配置GOROOT、GOPATH
      1. 配置代理：`GOPROXY=https://goproxy.cn;GOPRIVATE=*.100tal.com`
      1. 配置注释空格：设置 Preferences > Editor > Code Style > Go > Other 勾选上 Add leading space to comments
-     1. 配置goimport、go fmt，在Tools > File Watcher
+     1. 配置goimport、gofmt，在Tools > File Watcher
    - 部署
      1. supervisor来管理go程序，go自己用异常捕捉来处理
      1. 打包linux的：`CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build main.go`
@@ -2569,18 +2579,6 @@
      1. govendor
      1. gvt
 ### wiki
-1. 语言编程基础
-   - 关键词和语法（Language Syntax）
-   - 数据类型（Arrays, Slices and Maps）
-   - 流程控制（if/else，for/range）
-   - Go 函数（Function）
-   - 面向对象（Methods, Interfaces and Embedding）
-   - 包处理（Packaging and Exporting）
-   - Go 指针（Using Pointers）
-   - 错误处理（Error Handling）
-   - 反射（Reflection）
-   - 标准库（Standard Library）
-   - 程序测试（Testing and Debugging）
 1. 并发编程
    - Go 并发基础（Concurrency, Race Conditions and Channels）
    - 并发模式（Concurrency Patterns）
@@ -2658,3 +2656,24 @@
    - 开发工具链
      1. tool：build、install、fmt
      1. test、benchmark、builtin
+   - 箴言
+     1. 不要通过共享内存进行通信，通过通信共享内存
+     1. 并发不是并行
+     1. 管道用于协调；互斥量（锁）用于同步
+     1. 接口越大，抽象就越弱
+     1. 利用好零值
+     1. 空接口 interface{} 没有任何类型约束
+     1. Gofmt 的风格不是人们最喜欢的，但 gofmt 是每个人的最爱
+     1. 允许一点点重复比引入一点点依赖更好
+     1. 系统调用必须始终使用构建标记进行保护
+     1. 必须始终使用构建标记保护 Cgo
+     1. Cgo 不是 Go
+     1. 使用标准库的 unsafe 包，不能保证能如期运行
+     1. 清晰比聪明更好
+     1. 反射永远不清晰
+     1. 错误是值
+     1. 不要只检查错误，还要优雅地处理它们
+     1. 设计架构，命名组件，（文档）记录细节
+     1. 文档是供用户使用的
+     1. 不要（在生产环境）使用 panic()
+

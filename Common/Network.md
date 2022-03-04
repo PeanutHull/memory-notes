@@ -606,8 +606,9 @@
           1. frame：帧，通信最小单位，会标识所属的流，可以乱序发送，然后再根据帧头部的流标识符重新组装
         - 头部压缩：1.x头部元数据以纯文本形式发送，给请求增加几百字节的负荷，如cookie。使用encoder，通讯双方各自cache一份header fields表，避免header重复传输，减小传输大小
         - 服务器推送：服务器可主动推送
-     1. http 3：quic，Quick UDP Internet Connection，谷歌制定的基于UDP的低时延传输层协议。融合了包括TCP，TLS，HTTP/2等协议的特性
-        - 2016年，第一次QUIC工作组会议，受到关注
+     1. http 3：基于quic协议，Quick UDP Internet Connection，谷歌制定的基于UDP的低时延传输层协议。融合了包括TCP，TLS，HTTP/2等协议的特性
+        - 新的HTTP头压缩机制：QPACK，是对HTTP/2中使用的HPACK的增强。在QPACK下，HTTP头可以在不同的QUIC流中不按顺序到达
+        - 2016年，第一次QUIC工作组会议，受到关注，目前仍是草案状态
 1. wiki
    - web使用http协议作应用层协议，然后使用tcp/ip做传输层协议将它发到网络上
    - ajax的['HTTP_X_REQUESTED_WITH']为'xmlhttprequest'
