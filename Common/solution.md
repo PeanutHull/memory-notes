@@ -852,3 +852,28 @@
      1. gocrawl
      1. colly
      1. hu17889/go_spider
+### 服务梳理
+1. php+nginx
+   - php扩展、ini参数
+   - nginx的vhost，即server
+1. 配套服务
+   - rsync
+   - confd、confd-tw
+   - filebeat
+   - flcon-agent
+   - supervisor
+1. 网关upstream
+1. 发布系统
+1. 日志收集：php、nginx
+   - basiclog.xesv5.com
+   - logcenter.xesv5.com
+1. 机器监控
+   - mao.xesv5.com
+   - xesfalcon.xesv5.com
+   - datamap.xesv5.com
+     1. 网关监控：xesmap.xesv5.com/d/api-gw/api-gw?orgId=1
+     1. k8s物理机：app.xesv5.com/k8s-core.grafana/d/fa49a4706d07a042595b664c87fb33ea/nodes?orgId=1
+   - fengniao.xesv5.com/admin/#/loadshow
+1. 架构
+   - 配置：etcd+confd
+   - supervisor

@@ -575,9 +575,9 @@
         - `proxy_buffers number size;`：
         - `proxy_buffering on | off;`：
         - `proxy_max_temp_file_size size;`：
+        - `proxy_temp_path path [level1 [level2 [level3]]];`：缓存临时文件
         - `proxy_temp_file_write_size size;`：
-        - `proxy_temp_path path [level1 [level2 [level3]]];`：
-        - `proxy_busy_buffers_size size;`：
+        - `proxy_busy_buffers_size size;`：高负荷下缓存大小
         - `proxy_read_timeout time;`：
         - `proxy_limit_rate rate;`：
         - `proxy_store_access users:permissions ...;`：
