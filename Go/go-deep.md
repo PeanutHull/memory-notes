@@ -20,7 +20,7 @@
      1. 析构方法：`runtime.SetFinalizer()`
         - 被GC时触发，由于可能任意时间被触发，因此一般只用于长期运行的程序中释放非内存资源
         - 会按依赖顺序执行
-1. 协程goroutine
+1. goroutine
    - 调度器：基于gmp模型，遇到阻塞就换出，由于当前栈可能还有很多其他操作，栈会继续增长，切换的时候会切到systemstack，g0是特殊的协程，负责创建
      1. g：goroutine，执行的go代码片段/用户态协程
      1. m：machine，内核线程
@@ -43,8 +43,32 @@
         - 向长时间运行的G任务发出抢占调度
         - 收回因syscall长时间阻塞的P
 1. http
-   - server处理流程中，使用了一条context链贯穿Server、Connection、Request，不仅将上游的信息共享给下游任务，同时实现了上游可发送取消信号取消所有下游任务
-     1. 会创建valueCtx、cancelCtx，断开连接就会取消下游任务
+   - 核心组成
+     1. 创建一个路由表，http.NewServeMux()
+     1. 向路由表注册路由，并绑定处理器Handler{}
+     1. 调用 http.ListenAndServe(":9090", mutex)提供服务
+   - 路由表结构体解析
+    ```go
+    type ServeMux struct {
+        mu sync.RWMutex             // 锁，由于请求涉及到并发处理，因此这里需要一个锁机制
+        m map[string]muxEntry       // 路由规则，一个 string 对应一个 mux 实体，这里的 string 就是注册的路由表达式
+        es []muxEntry               // 路由表达式切片，按路由从最⻓到最短排序，用来实现最⻓前缀匹配
+        hosts bool                  // 是否在任意的规则中带有 host 信息
+    }
+    ```
+   - 流程
+     1. 
+     1. 实例化 Server
+     1. 调用 Server 的 ListenAndServe ()
+     1. 调用 net.Listen ("tcp", addr) 监听端口
+     1. 启动一个 for 循环，在循环体中 Accept 请求
+     1. 对每个请求实例化一个 Conn，并且开启一个 goroutine 为这个请求进行服务 go c.serve () 6 读取每个请求的内容，把请求分配到路由表处理
+     1. 判断 handler 是否为空，如果没有设置 handler，handler 就设置为 DefaultServeMux 8 调用 handler 的 ServeHttp
+     1. 根据 request 选择 handler，并且进入到这个 handler 的 ServeHTTP
+     1. 选择 handler:
+        - map精确匹配
+        - 切片最⻓前缀匹配，`strings.HasPrefix`
+        - 如果没有路由满足，调用 NotFoundHandler 的 ServeHTTP
 1. 死锁、活锁、饥饿
    - 死锁：两个或两个以上争夺资源而相互等待，若无外力将无法推进，导致异常
    - 活锁：不会阻塞执行，但也不能继续执行，需要一直重复，可能会成功，会降低执行效率，引入随机性解决

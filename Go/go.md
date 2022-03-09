@@ -489,15 +489,17 @@
      1. 没有可选参数，也不支持方法重载
    - 实例
     ```go
-    // 定义函数
+    // 定义
     func add(x int, y int) int {            // 参数类型，返回值类型
         return x + y
     }
     // 调用
     aFunc()
-    // 直接执行函数
+
+    // 直接执行
     func() {
     }()
+
 
     // 返回多个值
     func aFunc() {
@@ -521,14 +523,71 @@
         }
     }
     pos := adder()
-    pos(i)                              // 使用匿名函数
+    pos(i)                               // 使用匿名函数
 
-    // 方法
-    type Circle struct {                // 定义结构体
-        radius float64
+
+    // 结构体内部的方法类型
+    // 声明
+    type hasMethod struct {
+        myMethid func() int
     }
-    func (c Circle) getArea() float64 { //method 属于 Circle 类型对象中的方法
+    // 定义
+    s := hasMethod{myMethid: func() int {
+        fmt.Print(111)
+        return 0
+    }}
+    // 调用
+    s.myMethid()
     ```
+   - 内嵌函数
+     1. `len(v T)`：长度，string、array、slice、map、chan、pointer(指向元素的数量)
+     1. `cap(v T)`：容量，array、slice(返回cap)、chan、pointer(指向元素的数量)
+     1. `append(slice []T, elems ...T)`、copy(Dst, Src)：slice，容量够重新分配地址以容纳新元素，不够分配新底层数组，变长参数
+        ```go
+        append(x,4,5,6)                     // 支持多个参数
+	    append(x,y...)                      // 只支持两个参数，表示把y作为x的类型进行添加
+        ```
+     1. `delete(m map[T]T1, key T)`：map
+     1. make
+        - 认识：只用于slice、map、chan三种类型的内存分配，帮忙将数据初始化好，返回有初始值非零的T类型
+        - 使用
+            ```go
+            // slice
+            mSlice := make([]string, 3)
+            // map
+            mMap := make(map[int]string)
+            // chan
+            mChan := make(chan int, 3)
+            ```
+     1. new
+        - 认识：用于各种类型的内存分配，传入的内存置零，返回传入类型的零值的指针
+        - 使用
+            ```go
+            // slice
+            mSlice := make([]string, 3)
+            // map
+            mMap := new(map[int]string)
+            // chan
+            mChan := make(chan int, 3)
+            ```
+     1. 异常
+        - `func panic(v interface{})`
+        - `func recover() interface{}`
+     1. 复数相关
+        - `func complex(r, i FloatType) ComplexType`
+        - `func real(c ComplexType) FloatType`
+        - `func imag(c ComplexType) FloatType`
+     1. `func close(c chan<- Type)`：关闭，chan
+1. 函数式编程
+   - 认识：go里函数是一等公民：参数、变量、返回值都可以是函数。c++只有函数指针，java函数只是一个名字无法传给别人
+     1. 灵活性大大加强，原来写死的，都可以注入进去改变功能
+     1. 方法是一种特殊的函数，可以为函数实现一些方法，从而实现一些接口
+   - wiki
+     1. 正统函数式编程：数学味道非常浓
+        - 不可变性：不能有状态，只有常量和函数
+        - 函数只能有一个参数
+     1. 高阶函数：函数的参数也是函数
+     1. go对函数式编程的支持体现在闭包上面
    - 闭包
      1. 认识：定义在一个函数内部的函数，闭包会保留局部变量的引用所以不释放值。闭包是将函数内外部连接起来的桥梁
         - 更为自然，不需要更多的修饰
@@ -582,55 +641,6 @@
 
         // goroutine模拟：闭包 + goroutine的死锁，goroutine未启动前，变量已经改变
         ```
-   - 内嵌函数
-     1. `len(v T)`：长度，string、array、slice、map、chan、pointer(指向元素的数量)
-     1. `cap(v T)`：容量，array、slice(返回cap)、chan、pointer(指向元素的数量)
-     1. `append(slice []T, elems ...T)`、copy(Dst, Src)：slice，容量够重新分配地址以容纳新元素，不够分配新底层数组，变长参数
-        ```go
-        append(x,4,5,6)                     // 支持多个参数
-	    append(x,y...)                      // 只支持两个参数，表示把y作为x的类型进行添加
-        ```
-     1. `delete(m map[T]T1, key T)`：map
-     1. make
-        - 认识：只用于slice、map、chan三种类型的内存分配，帮忙将数据初始化好，返回有初始值非零的T类型
-        - 使用
-            ```go
-            // slice
-            mSlice := make([]string, 3)
-            // map
-            mMap := make(map[int]string)
-            // chan
-            mChan := make(chan int, 3)
-            ```
-     1. new
-        - 认识：用于各种类型的内存分配，传入的内存置零，返回传入类型的零值的指针
-        - 使用
-            ```go
-            // slice
-            mSlice := make([]string, 3)
-            // map
-            mMap := new(map[int]string)
-            // chan
-            mChan := make(chan int, 3)
-            ```
-     1. 异常
-        - `func panic(v interface{})`
-        - `func recover() interface{}`
-     1. 复数相关
-        - `func complex(r, i FloatType) ComplexType`
-        - `func real(c ComplexType) FloatType`
-        - `func imag(c ComplexType) FloatType`
-     1. `func close(c chan<- Type)`：关闭，chan
-1. 函数式编程
-   - 认识：go里函数是一等公民：参数、变量、返回值都可以是函数。c++只有函数指针，java函数只是一个名字无法传给别人
-     1. 灵活性大大加强，原来写死的，都可以注入进去改变功能
-     1. 方法是一种特殊的函数，可以为函数实现一些方法，从而实现一些接口
-   - wiki
-     1. 正统函数式编程：数学味道非常浓
-        - 不可变性：不能有状态，只有常量和函数
-        - 函数只能有一个参数
-     1. 高阶函数：函数的参数也是函数
-     1. go对函数式编程的支持体现在闭包上面
    - demo
      1. 为函数实现接口，将斐波那契函数包装成文件进行读取
         ```go
@@ -805,52 +815,59 @@
             createTime,modifyTime       int
         }
         ```
-     1. 方法
-        - 属于结构体的方法：`func (variable_name variable_data_type) function_name() [return_type]{}`
-          1. 定义在结构体作用域外，在函数声明中指定接收者，除了基础类型或其他包的，可以在任意类型里定义方法
-          1. 非引用形式是深拷贝，会复制一个结构体出来，表现为多个方法间对结构体数据的作用相互无影响，结构体内部数据不会被修改
-        - 结构体内部的方法类型
-            ```go
-            // 申明
-            type hasMethod struct {
-                myMethid func() int
-            }
-            // 定义
-            s := hasMethod{myMethid: func() int {
-                fmt.Print(111)
-                return 0
-            }}
-            // 调用
-            s.myMethid()
-            ```
-     1. 匿名组合：可以直接用父结构体的属性和方法，类似继承
-        - 方法的继承和重写：都支持
-        - 实例
-            ```go
-            // 结构体组合
-            type Animal struct{
-                Color string
-                Size int
-            }
-            type Dog1 struct{
-                Animal
-                name string
-                Color string
-            }
-            dog := Dog1{                // 定义变量
-                Animal{"red", 11},
-                "miao",
-                "blue",
-            }
-            dog.Color = "1"             // 直接使用，优先级高于父级的
+   - 方法
+     1. 认识：属于结构体的函数，`func (variable_name variable_data_type) function_name() [return_type]{}`
+        - 定义在结构体作用域外，在函数声明中指定接收者，除了基础类型或其他包的，可以在任意类型里定义方法
+        - 非引用形式是深拷贝，每次调用方法时会复制一个结构体出来，表现为多个方法间对结构体数据的作用相互无影响，结构体内部数据不会被修改
+     1. demo
+        ```go
+        type person struct {
+            age int
+        }
 
-            type Dog2 struct{
-                someAnimal Animal       // 把父结构体作为一个属性使用，原理类似
-                name string
-            }
+        func (p person) getAge() int {      // 值接收类型
+            return p.age
+        }
 
-            fmt.Println(dog.someAnimal.Color)
-            ```
+        func (p *person) growUp() {         // 指针接收类型
+            p.age += 1
+        }
+
+        u1 := person(age:1)                 // 接收者是值类型的方法，自动实现了接收者是指针类型的方法，编译器实现
+        u1.growUp()
+        u1.getAge()
+        u2 := &person(age:1)                // 反过来不会
+        u2.growUp()
+        u2.getAge()
+        ```
+   - 匿名组合：可以直接用父结构体的属性和方法，类似继承
+     1. 方法的继承和重写：都支持
+     1. 实例
+        ```go
+        // 结构体组合
+        type Animal struct{
+            Color string
+            Size int
+        }
+        type Dog1 struct{
+            Animal
+            name string
+            Color string
+        }
+        dog := Dog1{                // 定义变量
+            Animal{"red", 11},
+            "miao",
+            "blue",
+        }
+        dog.Color = "1"             // 直接使用，优先级高于父级的
+
+        type Dog2 struct{
+            someAnimal Animal       // 把父结构体作为一个属性使用，原理类似
+            name string
+        }
+
+        fmt.Println(dog.someAnimal.Color)
+        ```
    - 实例
     ```go
     // 定义
@@ -938,6 +955,47 @@
         IWriter
     }
     ```
+   - 接口和方法
+    ```go
+    type animal interface {
+        code()
+        debug()
+    }
+
+    type dog struct {
+        age int
+    }
+
+    func (p dog) getAge() int {
+        return p.age
+    }
+
+    func (p *dog) growUp() {
+        p.age += 1
+    }
+
+    var a animal = &dog{age:1}              // 正常，
+    var b animal = dog{age:1}               // 报错，dog类型没有实现animal接口，以为growUp指向了dog本身
+    ```
+   - 内置接口
+     1. Stringer
+        ```go    
+        type Person struct {
+	        name string
+	        age int
+        }
+
+        func (p Person) String() string {                                   // 改变了结构体输出时的样式，Stringer是一个用字符串描述自己的类型
+	        return fmt.Sprintf("(name is %v) (%v years)", p.name, p.age)
+        }
+
+        func main() {
+            a := Person{"Arthur Dent", 42}
+            z := Person{"Zaphod Beeblebrox", 9001}
+            fmt.Println(a, z)
+        }
+        ```
+     1. error
    - 实例
     ```go
     // 定义
@@ -959,25 +1017,6 @@
     i = ameriacal                               // 2. 赋值给变量，即ameriacal实现了ISayHello
     i.sayHello()                   
     ```
-   - 内置接口
-     1. Stringer
-        ```go    
-        type Person struct {
-	        name string
-	        age int
-        }
-
-        func (p Person) String() string {                                   // 改变了结构体输出时的样式，Stringer是一个用字符串描述自己的类型
-	        return fmt.Sprintf("(name is %v) (%v years)", p.name, p.age)
-        }
-
-        func main() {
-            a := Person{"Arthur Dent", 42}
-            z := Person{"Zaphod Beeblebrox", 9001}
-            fmt.Println(a, z)
-        }
-        ```
-     1. error
 ### 协程
 1. goroutine
    - 认识：协程(coroutine)，是go中最小的执行单位，可实现并发编程、并行计算(多处理器同时运行)。实际可以cpu核数减一来设置，给系统留下
@@ -1185,12 +1224,12 @@
         - WithValue(parent Context, key, val interface{})：返回父context的复制，用于传递数据
      1. 操作
         - WithCancel()：创建一个基于parent的可取消的context(cancelCtx类型)，返回一个context和一个CancelFunc，调用CancelFunc即可触发cancel操作
+          1. cancelCtx取消时，会将后代节点中所有的cancelCtx都取消
         - WithDeadline()：创建一个基于parent的可取消的context，其过期时间deadline不晚于所设置时间d
         - WithTimeout()：类似WithDeadline，时间是相对当前时间的过期时长
-   - 设计
-     1. cancelCtx取消时，会将后代节点中所有的cancelCtx都取消
    - 使用规范
-     1. 第一形参通常都为context，并且把变量命名为ctx
+     1. 第一形参通常都为context，并且把变量命名为ctx。使用了一条context链贯穿Server、Connection、Request，不仅将上游的信息共享给下游任务，同时实现了上游可发送取消信号取消所有下游任务
+        - 会创建valueCtx、cancelCtx，断开连接就会取消下游任务
      1. 不要把context存储在结构体中，而是要显式地进行传递
      1. 就算是程序允许，也不要传入一个nil的context，如果不知道是否要用context的话，用context.TODO()来替代
      1. context.WithValue()只用于传输流程和API的请求范围数据，不要用它来传递可选参数
