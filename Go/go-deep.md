@@ -3,9 +3,59 @@
 1. 并发模型GPM
 1. goroutine、channel调度
 ### 实现
+1. array
+   - 认识
+     1. 是一个在栈上分配的连续内存
+     1. 编译期间的类型检查时会检测下标是否越界，因此使用起来比C语言的数组安全
+   - 组成
+     1. 编译期间
+        ```go
+        // src/go/types/type.go
+        type Array struct {
+            len  int64
+            elem Type
+        }
+        ```
+     1. 运行时：进行内存的分配
+        ```go
+        // runtime/malloc.go
+        func newarray(typ *_type, n int) unsafe.Pointer {
+            if n == 1 {
+                return mallocgc(typ.size, typ, true)
+            }
+            mem, overflow := math.MulUintptr(typ.size, uintptr(n))
+            if overflow || mem > maxAlloc || n < 0 {
+                panic(plainError("runtime: allocation size out of range"))
+            }
+            //申请一块内存空间
+            return mallocgc(mem, typ, true)
+        }
+        ```
 1. slice
-   - 认识：底层引用数组对象，组成有指针、长度、容量
+   - 认识：内部通过指针引用底层数组，设定相关属性将数据读写操作限定在指定的区域内。组成有
+     1. 会判断越界
      1. 旧底层数组仍然会被旧slice引用，新slice和旧slice不再共享同一个底层数组
+     1. 
+        - 
+        - 
+   - 组成
+     1. 
+        ```go
+        // runtime/slice.go
+        type slice struct {
+            array unsafe.Pointer        // 指针，可指向数组的首地址、中间位置，数组可以被多个slice同时指向
+            len   int                   // 长度
+            cap   int                   // 容量，容量 >= 长度
+        }
+        ```
+   - slice自动扩容的策略
+     1. len小于1024，cap翻倍
+     1. 大于1024每次四分之一翻倍，直至大于要求容量
+     1. 每次扩容最后都要进行内存(向上)对齐，`roundupsize(size uintptr) uintptr`
+   - 浅拷贝和深拷贝
+     1. slice之间赋值是浅拷贝，包括子slice
+     1. append是深拷贝
+     1. copy是深拷贝
 1. 数据构造
    - new：分配置零的内存的内建函数，并返回指针(地址)
         ```go

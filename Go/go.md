@@ -41,11 +41,86 @@
    - 注释：多行/* */、单行//
    - 标识符：用来命名变量、类型等程序实体
 1. 标识符
-   - 认识
-     1. 可以直接使用，而不用声明
+   - 认识：可以直接使用，而不用声明
    - 组成
-     1. nil：表示指针/map/slice/function/interface/channel的零值，表示声明了没有赋值，不是关键词只是变量名
-        - nil和空不同，nil不会指向底层地址，空会
+     1. nil
+        - 认识：是一个预先声明的标识符，表示声明了没有赋值，只表示slice/map/channel/point/func/interface六种类型的零值，和null有很多不同点
+          1. nil和空不同，nil不会指向底层地址，空会
+          1. 设计思想：能不分配的内存就先不分配，nil pointer其实是一切nil值的根本形态，制定很多固定的特殊用法，目的使得nil的使用是非常自然的，这样是好是坏？
+        - 特点
+          1. nil是不能比较的`nil==nil`
+          1. 不同类型nil的指针是一样的，地址都是0x0。不同类型的nil值占用的内存大小可能是不一样的
+          1. 不是关键字只是变量名(在buildin/buildin.go中)，如可以定义一个名为nil的变量`var nil = errors.New("11")`不推荐
+          1. nil也是有类型的，(*int)(nil)和(interface{})(nil)就是两个不同的变量，即不相等
+          1. untyped nil：没有类型的nil，直接写一个nil就是untyped nil
+             - 不能直接赋值给变量
+             - 可以与一些特定类型的变量进行比较，会根据不同的变量，就会有不同的逻辑
+             - 实例
+                ```go
+                var a = nil                     // 报错
+                var a = (*int)(nil)             // 可以
+                var _ Conn = (*DBConn)(nil)
+                
+                var a *B
+                print(a == nil)                 // true
+                ```
+          1. 当一个interface的value和type都unset的时候，它才等于nil
+        - 实例
+            ```go
+            type A interface{}
+            type B struct{}
+            var a *B
+
+            print(a == nil)                 // true
+            print(a == (*B)(nil))           // true
+            print((A)(a) == (*B)(nil))      // true，类型都是*B，值都是nil
+
+            print((A)(a) == nil)            // false，结构体的type不是nil
+            ```
+   - 方法
+     1. 数据操作
+        - `len(v T)`：长度，string、array、slice、map、chan、pointer(指向元素的数量)
+        - `cap(v T)`：容量，array、slice(返回cap)、chan、pointer(指向元素的数量)
+        - `append(slice []T, elems ...T)`、copy(Dst, Src)：slice，容量够重新分配地址以容纳新元素，不够分配新底层数组，变长参数
+            ```go
+            append(x,4,5,6)                     // 支持多个参数
+            append(x,y...)                      // 只支持两个参数，表示把y作为x的类型进行添加
+            ```
+        - `delete(m map[T]T1, key T)`：map
+     1. 资源操作
+        - make
+          1. 认识：只用于slice、map、chan三种类型的内存分配，返回有初始值非零的T类型，帮忙将数据初始化好
+             - 因为这三种类型就是引用类型，就没有必要返回他们的指针
+          1. 使用
+            ```go
+            // slice
+            mSlice := make([]string, 3)
+            // map
+            mMap := make(map[int]string)
+            // chan
+            mChan := make(chan int, 3)
+            ```
+        - new
+          1. 认识：用于任意类型的内存分配，返回传入类型的零值的指针，会将分配出来的内存置零
+          1. 使用
+            ```go
+            // slice
+            mSlice := make([]string, 3)
+            // map
+            mMap := new(map[int]string)
+            // chan
+            mChan := make(chan int, 3)
+            ```
+        - close
+          1. 认识：`func close(c chan<- Type)`，关闭
+     1. 其他
+        - 异常
+          1. `func panic(v interface{})`
+          1. `func recover() interface{}`
+        - 复数相关
+          1. `func complex(r, i FloatType) ComplexType`
+          1. `func real(c ComplexType) FloatType`
+          1. `func imag(c ComplexType) FloatType`
 1. 运算符
    - + 字符串连接符
    - 引号
@@ -222,7 +297,14 @@
      1. byte数组转string：`string(data[:])`
 1. array
    - 认识：数组，`[n]T`，相同类型T的值的定长数组
-     1. […]：语法糖，让编译器自动推导数组长度
+     1. […]：语法糖，让编译器根据后边元素数量自动推导数组长度
+     1. 数组的长度是数组类型的一部分，`[2]int`和`[3]int`是不同的数组类型
+        ```go
+        arr1 := [2]int{}
+        arr2 := [3]int{}
+        fmt.Println(arr1 == arr2)           // invalid operation: arr1 == arr2 (mismatched types [2]int and [3]int)
+        ```
+     1. 赋值和参数传递都是值传递
    - 代码
     ```go
     // 定义
@@ -232,6 +314,9 @@
     ```
 1. slice
    - 认识：切片，`[]T`，相同类型的值的变长序列
+     1. 空切片与nil切片
+        - 空切片底层数组指向地址是一个内存地址，不是nil，没有分配任何内存空间，元素0个
+        - 二者append操作对len和cap的效果一样
    - 二维slice
     ```go
     // 定义
@@ -243,15 +328,30 @@
     // 赋值
     s[0][0] = 3                        
     ```
+   - 初始化
+    ```go
+    // 声明
+    var s []int                             // 等于nil
+
+    // 定义
+    s := []int{}                            // 不等于nil，长度和容量是0
+
+    // 
+    s := *new([]int)                        // 等于nil
+
+    // 构造slice，分配一个零长度的数组并且返回一个slice指向这个数组
+    s := make([]int, 5)                     // 不等于nil，5个0的元素，不会限制只有5个
+    s := make([]int, 0, 5)                  // 0个元素，但是cap=5，返回的是数组切片分配的空间大小
+
+    // 取子切片，s[start(闭区间) : end(开区间) : max(开区间)]，s[start : end]；默认从头、尾开始；和父切片共用底层数组
+    s[0:1:4]
+    s[1:4]
+    s[:3]
+    s[4:]
+    s[:]                                    // 全部
+    ```
    - 使用
     ```go
-    // 构造slice，分配一个零长度的数组并且返回一个slice指向这个数组
-    s := make([]int, 5)                     // 5个0的元素，不会限制只有5个
-    s := make([]int, 0, 5)                  // 0个元素，但是cap=5，返回的是数组切片分配的空间大小
-    // 定义
-    s := []int{}                            // 零值是nil，长度和容量是0
-    // 赋值
-    s := []int{2, 3, 5}
     // 访问
     a := s[i]
     // 修改
@@ -264,13 +364,7 @@
     s = append(s[:i], s[i+n:]...)           // 删除中间n个，...表示多对使用
     s = s[:i+copy(s[i:], s[i+n:])]
     s = s[:len(s)-n]                        // 删除尾部n个
-    // 取子切片，s[start : end : max]
-    s[1:4]
-    s[0:1:4]
-    s[:3]
-    s[4:]
-    s = s[:cap(s)]
-    s = s[1:]
+
     // 遍历，也适用于map
     for i, v := range pow {}
     for i := range pow {}
@@ -314,6 +408,13 @@
    - 认识：var或者:=
      1. 类型在变量名后边，避免了类c的含糊不清的定义
      1. 默认类型推导
+   - 零值：不指定变量的默认值时，即是零值
+     1. 一般：bool false、数值类 0、字符串 ""
+     1. nil：slice/map/channel/point/func/interface，只有这6个
+   - 分类
+     1. 值类型：声明默认分配内存
+     1. 引用类型
+        - 认识：声明 + 分配内存用于存放值
    - 举例
     ```go
     // 声明变量
@@ -539,45 +640,6 @@
     // 调用
     s.myMethid()
     ```
-   - 内嵌函数
-     1. `len(v T)`：长度，string、array、slice、map、chan、pointer(指向元素的数量)
-     1. `cap(v T)`：容量，array、slice(返回cap)、chan、pointer(指向元素的数量)
-     1. `append(slice []T, elems ...T)`、copy(Dst, Src)：slice，容量够重新分配地址以容纳新元素，不够分配新底层数组，变长参数
-        ```go
-        append(x,4,5,6)                     // 支持多个参数
-	    append(x,y...)                      // 只支持两个参数，表示把y作为x的类型进行添加
-        ```
-     1. `delete(m map[T]T1, key T)`：map
-     1. make
-        - 认识：只用于slice、map、chan三种类型的内存分配，帮忙将数据初始化好，返回有初始值非零的T类型
-        - 使用
-            ```go
-            // slice
-            mSlice := make([]string, 3)
-            // map
-            mMap := make(map[int]string)
-            // chan
-            mChan := make(chan int, 3)
-            ```
-     1. new
-        - 认识：用于各种类型的内存分配，传入的内存置零，返回传入类型的零值的指针
-        - 使用
-            ```go
-            // slice
-            mSlice := make([]string, 3)
-            // map
-            mMap := new(map[int]string)
-            // chan
-            mChan := make(chan int, 3)
-            ```
-     1. 异常
-        - `func panic(v interface{})`
-        - `func recover() interface{}`
-     1. 复数相关
-        - `func complex(r, i FloatType) ComplexType`
-        - `func real(c ComplexType) FloatType`
-        - `func imag(c ComplexType) FloatType`
-     1. `func close(c chan<- Type)`：关闭，chan
 1. 函数式编程
    - 认识：go里函数是一等公民：参数、变量、返回值都可以是函数。c++只有函数指针，java函数只是一个名字无法传给别人
      1. 灵活性大大加强，原来写死的，都可以注入进去改变功能
@@ -685,12 +747,15 @@
         }
         ```
 1. * 指针
-   - 认识：`var ptr_name *T`，保存变量的内存地址，即间接引用。指针类型*T是指向类型T的值的指针，零值是nil
+   - 认识：`var ptr_name *T`，保存变量的内存地址，即间接引用。别人的地址存的是确切的数，指针的地址存的是别的变量的地址，指针类型*T是指向类型T的值的指针，零值是nil
      1. &a：取指针，获取指针
      1. *a：解指针，获取指针对应的值
    - 特点
      1. 二级指针：指向指针的指针变量，第一个指针存放第二个指针的地址，第二个指针存放变量的地址，`var pptr **int`
      1. 值传递和指针传递
+        - 值传递：赋值和参数传递时会创建副本赋给对应的变量
+          1. 即修改只会影响副本
+          1. 复制次数多、复制的值大，造成较大gc压力，使用指针
    - 分类
      1. *：普通类型，只能传递对象地址
      1. unsafe.Pointer：通用类型，用于转换不同类型的指针，不能进行指针运算，不能读取内存存储的值
