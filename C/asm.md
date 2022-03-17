@@ -99,7 +99,7 @@
      1. 没有r或e的前缀
    - 伪寄存器
      1. pc：即意义和作用都是指令寄存器
-     1. sb：全局静态基指针，一般用来声明函数或全局变量
+     1. sb：全局静态基指针，用以指示所有内存的基地址，一般用来声明函数或全局变量
      1. fp：使用symbol+offset的方式，引用函数的输入参数，如`arg1+8(FP)`
         - 不加symbol时，无法通过编译，只是是为了提升代码可读性
      1. sp：指向当前栈帧的局部变量的开始位置，使用symbol+offset的方式引用函数的局部变量
@@ -140,4 +140,38 @@
      1. 取地址
         - LEA
      1. SIMD
+   - 全局变量
+     1. 声明：`GLOBL symbol(SB), width`，变量符号 + 内存宽度。没有类型，内存宽度必须是2的指数倍，编译器最终会保证变量的真实地址对齐到机器字倍数
+        - 如int32的变量`GLOBL ·count(SB),$4`：点开头表示是当前包的变量
+     1. 赋值：`DATA symbol+offset(SB)/width,value`：width必须是1、2、4、8几个宽度之一，因为再大的内存无法一次性用一个uint64大小的值表示
+     1. 整型
+        ```s
+        # 可以逐个字节初始化，也可以一次性初始化：
+
+        GLOBL ·count(SB),$4
+        DATA ·count+0(SB)/1,$1
+        DATA ·count+1(SB)/1,$2
+        DATA ·count+2(SB)/1,$3
+        DATA ·count+3(SB)/1,$4
+        // or
+        DATA ·count+0(SB)/4,$0x04030201
+        ```
+     1. 布尔
+        ```s
+        GLOBL ·trueValue(SB),$1             # var trueValue = true
+        DATA ·trueValue(SB)/1,$1            # 非 0 均为 true
+        
+        GLOBL ·falseValue(SB),$1            # var falseValue = true
+        DATA ·falseValue(SB)/1,$0
+        ```
+   - 函数声明
+     1. 认识：`TEXT symbol(SB), [flags,] $framesize[-argsize]`，表示该行开始的指令定义在TEXT内存段
+        - TEXT指令、函数名、可选的flags标志、函数帧大小、可选的函数参数大小
+     1. 实例
+        ```s
+        // func add(a,b int) int
+        TEXT main.add(SB), NOSPLIT,$0-24
+        ```
+   - 
+   - 
 ### gist
