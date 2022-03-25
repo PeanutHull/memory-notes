@@ -12,8 +12,8 @@
           1. tinyint：-128~127
           1. smallint：前后3万2
           1. mediumint：前后8.3千万
-          1. int：前后21亿
-          1. bigint：前后9亿亿亿，19位，2E64
+          1. int：前后21亿，10位
+          1. bigint：前后9亿亿亿，无符号20位，有符号19位，2E64
         - 属性
           1. unsigned
      1. 实数

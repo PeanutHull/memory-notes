@@ -35,9 +35,6 @@
    - 认识：内部通过指针引用底层数组，设定相关属性将数据读写操作限定在指定的区域内。组成有
      1. 会判断越界
      1. 旧底层数组仍然会被旧slice引用，新slice和旧slice不再共享同一个底层数组
-     1. 
-        - 
-        - 
    - 组成
      1. 
         ```go
@@ -56,6 +53,79 @@
      1. slice之间赋值是浅拷贝，包括子slice
      1. append是深拷贝
      1. copy是深拷贝
+1. map
+   - 认识
+     1. 解决hash冲突：主要用两个数组分别存储键和值(数组是内存上的连续空间)，同时正常桶的bmap关联溢出桶的bmap实际构成了链表关系
+     1. 写数据时并没有单独维护键值对的顺序，php5通过一个全局链表维护了map里元素的顺序
+   - 组成
+     1. 结构
+        - hmap：包含多个bmap数组
+          1. buckets：指向类型为[]bmap的数组，正常桶
+          1. oldbuckets：扩容时，存放之前的buckets
+
+          1. extra：溢出桶结构体
+             - overflow：溢出桶。类型是[]bmap
+             - oldoverflow：扩容时存放之前的overflow(Map扩容相关字段)
+             - nextoverflow：指向溢出桶里下一个可以使用的bmap
+          1. noverflow：溢出桶里bmap大致的数量
+          1. nevacuate：分流次数，成倍扩容分流操作计数的字段(Map扩容相关字段)
+
+          1. flags：状态标识，比如正在被写、buckets和oldbuckets在被遍历、等量扩容(Map扩容相关字段)
+        - bmap：包含两个数组分别存放key和value
+          1. topbits：长度为8的数组，[]uint8，元素为：key获取的hash的高8位，遍历时对比使用，提高性能
+          1. keys：长度为8的数组，[]keytype，元素为：具体的key值
+          1. elems：长度为8的数组，[]elemtype，元素为：键值对的key对应的值
+          1. overflow：指向的hmap.extra.overflow溢出桶里的bmap
+          1. pad：对齐内存使用的，不是每个bmap都有会这个字段，需要满足一定条件
+     1. 特性
+        - hmap
+          1. 没有溢出桶或者溢出桶用完了，内存空间重新分配一个bmap
+          1. 溢出桶可以继续关联溢出桶
+        - bmap
+          1. topbits、keys、elems长度为8，每个bmap结构最多存放8组键值对，
+          1. bmap.overflow是个存放了对应使用的溢出桶hmap.extra.overflow里的bmap的地址的指针类型，某个bmap存满了就往指向的这个bmap里存
+     1. 流程
+        - 读
+          1. 获取bmap数组的索引位置：key进行hash和位操作
+          1. 通过高8位topbits加速查找
+          1. 遍历bmap里的键，和目标key对比获取key的索引
+          1. 根据key的索引通过计算偏移量，获取到对应value
+          1. 查找溢出桶获取值，即如果当前“正常桶的bmap”中的overflow值不为nil(说明“正常桶的bmap”关联了“溢出桶的bmap”)，则遍历当前指向的“溢出桶的bmap”继续上边的bmap遍历
+        - 遍历：因为遍历map的索引的起点是随机的
+        - 写：为什么遍历索引起点是随机的，因为map本质上是“无序的”
+          1. 正常写入：写入无法确认hash到具体哪个bucket上，不是按buckets顺序写入
+          1. 哈希冲突写入：会写到同一个bucket上，但是bucket上的位置不确定，甚至也许写到溢出桶上
+        - 扩容
+          1. 成倍扩容：迫使元素顺序变化
+             - 条件
+               1. map写操作
+               1. (元素数量/bucket数量) > 6.5
+             - 过程
+               1. 原buckets指向oldbuckets
+               1. 初始化成倍新的buckets指向buckets
+               1. 每次只扩容当前的键对应的bucket(bmap)
+               1. 原bucket(bmap)被分流到两个新的bucket(bmap)中
+          1. 等量扩容：4没有改变元素顺序
+             - 目的：整理溢出桶，GC回收冗余的溢出桶
+             - 条件：溢出桶的数量大于等于2*B时，函数 `tooManyOverflowBuckets`，公式 `noverflow >= uint16(1)<<(B&15)`
+   - wiki
+     1. 要点
+        - map实现的了解
+        - map如何读取数据
+        - 溢出桶
+        - 遍历是无序的
+     1. 一般map
+        - 结构
+          1. 数组：数组里的值指向一个链表
+          1. 链表：目的解决hash冲突的问题，并存放键值
+        - 流程
+          1. key通过hash函数得到key的hash
+          1. key的hash通过取模或者位操作得到key在数组上的索引，位操作的性能好些
+          1. 通过索引找到对应的链表
+          1. 遍历链表对比key和目标key
+          1. 相等则返回value
+1. 结构体
+   - 内存对齐
 1. 数据构造
    - new：分配置零的内存的内建函数，并返回指针(地址)
         ```go
