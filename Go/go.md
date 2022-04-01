@@ -315,7 +315,7 @@
 1. slice
    - 认识：切片，`[]T`，相同类型的值的变长序列
      1. 空切片与nil切片
-        - 空切片底层数组指向地址是一个内存地址，不是nil，没有分配任何内存空间，元素0个
+        - 所有空切片的底层引用数组指向的地址都是同一个内存地址，不是nil，没有分配任何内存空间，元素0个
         - 二者append操作对len和cap的效果一样
    - 二维slice
     ```go
@@ -535,7 +535,7 @@
         for {}
         for true{}
         ```
-     1. range：后边跟一个可循环的，自动类型推断，可针对string、array、slice、map
+     1. range：后边跟一个可循环的，自动类型推断，可针对string、array、slice、map。`for range`其实是golang的语法糖，在循环开始前会获取其长度，然后再执行固定次数的循环
         ```go
         a := []string{"a","b"};
         for i,v := range a{}                // 下标i，值v
@@ -1123,18 +1123,20 @@
      1. 没有锁，可以用-race检测数据访问冲突
      1. 默认另一端准备好之前发送和接收都会阻塞
    - 特性
-     1. nil的channel
-        - 用var声明的就是nil channel 
-        - 读写数据不会报错，是永远阻塞的
-     1. 已关闭的channel
-        - 只有发送者才能关闭channel，表示再没有值会被发送
-        - 发送数据，引起panic 
-        - 接收数据，返回channel中缓存的值，如果通道中无缓存，返回0
-     1. 无缓冲channel/同步channel
+     1. nil的chan
+        - 只声明不分配资源，var声明的就是，make不是
+        - 读写不会报错，永远阻塞
+     1. 已关闭的chan
+        - 读，可以一直读取非阻塞，chan中是否有有剩余缓存
+          1. 有：返回缓存，第二个bool值（是否读成功）为true
+          1. 无：返回chan的零值，第二个bool为false
+        - 写，会panic
+        - 只有发送者才能关闭chan，表示再没有值会被发送
+     1. 无缓冲chan/同步chan
         - 不会存储数据，发送方会阻塞直到接收方从通道中接收了值
         - 读时没有数据会阻塞
         - 读写不能放一个协程里，写读颠倒会死锁
-     1. 有缓冲channel
+     1. 有缓冲chan
         - 可以提高性能
         - 缓冲区满时才会阻塞，缓冲区空时接收操作会阻塞
    - 阻塞
@@ -1170,16 +1172,19 @@
     for v := range ch{}         
     ```
    - select
-     1. 认识：同时监听多个管道并收发消息，会阻塞直到条件分支中的某个可以继续执行。多个都准备好的随机选一个。可用于多个写入，一个读取场景
-        - 每次 select 都会对所有通信表达式求值
-          1. `case <- timer.After(time.Second)`：不应该解释为每一秒执行一次，而是其它case如果有一秒都没有执行，那么就执行这个case
+     1. 认识：同时监听多个chan并收发消息，会根据chan的是否阻塞而阻塞直到条件分支中的某个可以继续执行。多个都准备好的随机选一个
+        - 可用于多个写，一个读场景
         - 谁来的快收谁
-        - case中chan为nil的读写操作，该分支将被忽略，即var的，不是make的
-        - 加了default相当于非阻塞式的获取，之前channel都是阻塞的，套层for就是循环default，去掉default就是deadlock
      1. 实践
         - case中使用go可能导致go中还没处理完，select又接到了下一步的任务，导致go之后的流程在go没完成的情况下执行了，如果二者有依赖的话
         - 使用select语句，for和default基本不会同时出现
-        - 为了让select每个case都能执行，使用加for搭配default的方式
+          1. 例外如为了让select每个case都能执行，使用加for搭配default的方式
+     1. 特性
+        - 读写case中为nil的chan，该分支将被忽略？还是会一直阻塞？
+        - default变为非阻塞，套层for就是循环default，去掉default就是deadlock
+        - 每次 select 都会对所有通信表达式求值
+          1. `case <- timer.After(time.Second)`：不应该解释为每一秒执行一次，而是其它case如果有一秒都没有执行，那么就执行这个case
+        - main协程没有其他协程并且阻塞时，会fatal error deadlock(源码逻辑)
      1. 实例
         ```go
         select {
