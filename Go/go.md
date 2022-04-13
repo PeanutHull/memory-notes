@@ -439,6 +439,9 @@
      1. 只能是string、bool、数字类型(整数、浮点、复数)
      1. 常量表达式中只能是内置函数，自定义的会报错
      1. 会自动类型推导，分显式类型和隐式类型定义
+     1. 作用域
+        - 首字母大写可包外
+        - 函数体内声明的只在函数体内生效
    - 定义：`const identifier [type] = value`
     ```go
     const PI = 3.14
@@ -1900,8 +1903,9 @@
         - 正则预编译，可以加快速度：`regexp.MustCompile()`
      1. 实例
         ```go
-        regexp.MatchString("^[0-9]+$", os.Args[1])
-        regexp.Compile("\\<script[\\S\\s]+?\\</script\\>")
+        regexp.Compile("\\<script[\\S\\s]+?\\</script\\>")                          // 判断是否能解析，并返回用于匹配的对象
+        regexp.MustCompile("\\<script[\\S\\s]+?\\</script\\>")                      // 不能解析就panic
+        regexp.MatchString("^[0-9]+$", os.Args[1])：是否包含，用于快速判断
         ```
    - xml：encoding/xml包，读取Unmarshal，生成Marshal/MarshalIndent
    - json：encoding/json包
