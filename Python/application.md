@@ -105,6 +105,10 @@
         }
     }
     ```
+1. gunicorn
+   - 认识：轻量级、高性能WSGI HTTP Server，兼容多数python web框架，只在linux运行
+     1. 反向代理、负载均衡、web应用
+     1. pre-fork worker model：就php那种形式，请求来之前就fork好了
 ### 爬虫
 1. scrapy
 1. wiki：‌组合利用好各种api可以实现数据统计的效果，如和地图结合查看数据分布，定时监控某个想要的数据

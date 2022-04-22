@@ -11,11 +11,15 @@
    - 金山格式转换客户端
    - Aspose：收费
    - Office Web Apps：自行搭建服务
+   - ispring：世界上最好的ppt转html，收费
+     1. ispring-sdk：支持主流语言调用转换引擎
+     1. ispring-suite：套件，可作为ppt插件
+   - www.ppt-to-html5.cn
 1. 操作
    - JavaCOMBridge：java的jacob包，调用COM对象
    - JCom：类似jacob
    - POI：apache旗下，Java API for Microsoft Documents
-   - openoffice：apache旗下，
+   - openoffice：apache旗下
    - libreoffice：自由免费
 ### PDF
 1. 理解：Portable Document Format，便携式文档格式，Adobe公司开发的可移植文档格式，以PostScript语言图象模型为基础，保证打印机无关的精确打印效果

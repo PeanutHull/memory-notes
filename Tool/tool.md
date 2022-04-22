@@ -59,6 +59,9 @@
    - 诊断技巧
      1. `(tcp.flags.reset == 1) && (tcp.seq == 1)`：通常表示握手请求被对方拒绝()连接被拒绝
      1. `(tcp.flags.syn == 1) && (tcp.analysis.retransmission)`：对方没收到，或者对方回复的确认包丢失了的重传握手请求
+### Chrome
+1. 功能
+   - 网络：chrome://net-internals/#events，包括dns
 ### DevTool
 1. 简介
  - 官方文档：https://developers.google.com/web/tools/
@@ -180,16 +183,19 @@
 1. GraphQL：用于api接口的查询语言，client可自由获取、组合server提前定义好的数据，提高了接口的灵活性。可替代rest，玩不转，后端太重
 1. APIJSON：
 ### brew
-1. brew update：自身更新
+1. 命令
+   - brew update：自身更新
 
-1. brew info/search：查看包
-1. brew list：查看已安装
+   - brew info/search：查看包
+   - brew list：查看已安装
 
-1. brew install/uninstall go@1.16.8：安装指定版本
-1. brew upgrade go：安装最新版
+   - brew install/uninstall go@1.16.8：安装指定版本
+   - brew upgrade go：安装最新版
 
-1. brew switch go 1.17.1：切换版本
-1. brew unlink go：将当前软链移除
-1. brew link go@1.12：指定新的软链
+   - brew switch go 1.17.1：切换版本
+   - brew unlink go：将当前软链移除
+   - brew link go@1.12：指定新的软链
 
-1. brew cleanup go：清理旧的升级包
+   - brew cleanup go：清理旧的升级包
+1. 信息
+   - 位置：/usr/local/Cellar

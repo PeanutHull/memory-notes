@@ -117,6 +117,64 @@
         - _uid：组合id，由_type和_id组成(6.x，那俩都不起作用)
         - _source：原始的json数据
         - _all：将所有字段值连接起来，一起搜索关键字，占空间，查询慢，新版本默认禁用
+1. 插件
+   - 操作
+     1. 查看：`get _cat/plugins`
+   - 列表
+     1. 中文
+        - analysis-pinyin：拼音
+        - analysis-icu：中文排序
+        - elasticsearch-analysis-ansj：中文分词
+        - elasticsearch-ik：中文分词
+     1. 
+     1. analysis-stconvert
+     1. opack
+     1. sql：org.elasticsearch.plugin.nlpcn.SqlPlug
+     1. 
+     1. elasticsearch-head：web管理工具。粗线框为主分片，细的为备份分片
+     1. elasticsearch-jdbc：mysql数据导入和计划任务，编写脚本即可实现
+     1. logstash-input-jdbc：mysql数据同步更新，可做全量同步和增量同步，数据表中定义订阅的update_time字段即可，其他的可以订阅binlog
+     1. esrally：es压测工具
+     1. cerebro：比head好用多的界面，可以管理
+     1. x-pack monitor：官方推出的免费集群监控功能，可以看读写的性能/jvm/luceue等指标。`bin/elasticsearch/kibana-plugin install x-pack`
+1. 集群
+   - 特点
+     1. 通过集群名称区分，`cluster.name`
+     1. 每个es实例本质是个jvm进程，`node.name`
+   - 表现
+     1. cluster state：集群状态
+        - 存储了节点信息、索引信息
+        - 存储在每个节点上，master维护并同步给其他节点
+     1. cluster health：`GET cluster/health`，绿黄红，绿主副分片分配正常，黄副分片未正常分配，红主分片未，不代表不能访问
+     1. 节点
+        - `master node`：可以修改cluster state
+        - `master-eligible node`：可以被选举为master，`node.master: true`
+        - `data node`：存储数据的，`node.data: true`
+        - `coordination node`：处理请求的节点，也称客户端节点
+        - `ingest`：用于预处理数据（索引和搜索阶段都可以用到），一般用不到
+     1. 文档分布式存储：会均匀存储在分片上
+        - 节点n接到请求，routing计算得出分片位置，即先hash后取余
+        - 查询cluster state确认主分片在哪个节点，读取文档是随机选择处理节点，批量创建和读取会并发转发请求
+        - 转发创建请求给主分片所在节点
+        - 主分片转发请求到副本分片
+        - 副本分片执行完成后通知主分片
+        - 主分片所在节点通知原接收请求节点创建成功
+        - 返回给用户
+     1. 可用性
+        - 服务：多节点
+        - 数据
+          1. shards：分片，索引被分为多个分片，es汇总每个分片的查询结果，可水平拆分，默认5个。需要提前规划数量，少了无法水平扩容，多了资源浪费影响查询性能
+          1. replication：副本：是某个分片的复制，数据由主分片同步，可以有多个
+              - 索引创建后不能数量改
+              - 存储部分数据，可分布于任意节点
+              - 分为主分片、副本分片，用于实现高可用
+     1. 故障转移
+        - 发现节点无响应，发起master选举
+        - master为损坏的主分配提升某个副分片为新主
+        - master生成新的副本
+     1. 脑裂问题：集群断开后会形成两个独立集群，之后无法恢复正常状态
+        - 解决：多半数人参与才能选举。参与选举节点数大于等于quorum才能进行选举，quorum=eligible/2+1
+     1. 惊群问题
 ### Restful Api
 1. 认识
    - 使用方式
@@ -841,54 +899,6 @@
 1. cat
 1. x-pack：官方提供的sql形式查询的方式
 1. Modules
-1. 插件
-   - 操作
-     1. 查看：`get _cat/plugins`
-   - 列表
-     1. elasticsearch-head：web管理工具。粗线框为主分片，细的为备份分片
-     1. elasticsearch-ik：中文分词插件
-     1. elasticsearch-jdbc：mysql数据导入和计划任务，编写脚本即可实现
-     1. logstash-input-jdbc：mysql数据同步更新，可做全量同步和增量同步，数据表中定义订阅的update_time字段即可，其他的可以订阅binlog
-     1. esrally：es压测工具
-     1. cerebro：比head好用多的界面，可以管理
-     1. x-pack monitor：官方推出的免费集群监控功能，可以看读写的性能/jvm/luceue等指标。`bin/elasticsearch/kibana-plugin install x-pack`
-1. 集群
-   - 特点
-     1. 通过集群名称区分，`cluster.name`
-     1. 每个es实例本质是个jvm进程，`node.name`
-   - 表现
-     1. cluster state：集群状态
-        - 存储了节点信息、索引信息
-        - 存储在每个节点上，master维护并同步给其他节点
-     1. cluster health：`GET cluster/health`，绿黄红，绿主副分片分配正常，黄副分片未正常分配，红主分片未，不代表不能访问
-     1. 节点
-        - `master node`：可以修改cluster state
-        - `master-eligible node`：可以被选举为master，`node.master: true`
-        - `coordination node`：处理请求的节点
-        - `data node`：存储数据的，`node.data: true`
-     1. 文档分布式存储：会均匀存储在分片上
-        - 节点n接到请求，routing计算得出分片位置，即先hash后取余
-        - 查询cluster state确认主分片在哪个节点，读取文档是随机选择处理节点，批量创建和读取会并发转发请求
-        - 转发创建请求给主分片所在节点
-        - 主分片转发请求到副本分片
-        - 副本分片执行完成后通知主分片
-        - 主分片所在节点通知原接收请求节点创建成功
-        - 返回给用户
-     1. 可用性
-        - 服务：多节点
-        - 数据
-          1. shards：分片，索引被分为多个分片，es汇总每个分片的查询结果，可水平拆分，默认5个。需要提前规划数量，少了无法水平扩容，多了资源浪费影响查询性能
-          1. replication：副本：是某个分片的复制，数据由主分片同步，可以有多个
-              - 索引创建后不能数量改
-              - 存储部分数据，可分布于任意节点
-              - 分为主分片、副本分片，用于实现高可用
-     1. 故障转移
-        - 发现节点无响应，发起master选举
-        - master为损坏的主分配提升某个副分片为新主
-        - master生成新的副本
-     1. 脑裂问题：集群断开后会形成两个独立集群，之后无法恢复正常状态
-        - 解决：多半数人参与才能选举。参与选举节点数大于等于quorum才能进行选举，quorum=eligible/2+1
-     1. 惊群问题
 ### 运维
 1. 安装/运行
    - `wget es.tar && tar -vxf es.tar && cd es`
@@ -1146,7 +1156,7 @@
    - Graylog：开源的日志聚合、分析、审计、展现和预警工具。功能和ELK类似，但又比ELK要简单，依靠着更加简洁，高效，部署使用简单的优势很快受到许多人的青睐
 1. 问题
    - conflicts=proceed？
-### deep
+### deep wiki
 1. 搜索引擎
    - 认识：先分词，通过倒排索引获取文档id，再用正排索引获取完整内容
    - 索引类型
@@ -1247,6 +1257,28 @@
         - segment merge：由于segment增多会导致查询变慢，es会定时在后台进行merge操作，有force_merge api
    - 删除文档：segment生成后不能修改，所以维护.del文件记录已删除的文档，记录的是lucene内部的id，查询返回前过滤掉.del的文档
    - 更新文档：先删除，再新增
+### deep
+1. 查询
+   - 认识：类似mapreduce，分开聚合
+   - 搜索方式
+     1. query and fetch：一次查询
+     1. query then fetch：两次查询，默认，排名不准
+     1. DFS query and fetch：将所有分片的打分数据全部汇总，排名准确
+     1. DFS query then fetch
+1. 查询问题
+   - 数量：要n条数据，总的查询是分片数*n
+   - 排名：每个节点是按照自身局部数据排序，聚合后排名不准，除非先抽取出所有数据
+1. 查询过程
+   - 单id
+     1. 每个document分配/指定唯一doc id，作为hash路由到某个shard的依据
+     1. client发送请求到任意一个node，这个node成为coordinate node
+     1. coordinate node进行hash路由后请求转发到对应node，使用round-robin随机轮询算法决定主副分片中的某一个，让读请求负载均衡
+     1. 接收请求的node返回document给coordinate node
+     1. coordinate node返回document给client
+   - 搜索
+     1. 还是coordinate node转发请求
+     1. query phase：每个shard将自己结果(doc id/算分等)，返回给协调节点，由协调节点进行合并、排序、分页等操作，产出最终结果
+     1. fetch phase：接着由协调节点，根据doc id去各个节点上拉取实际的document数据，最终返回给客户端0
 1. ElasticSearch
    - 分片：相当于lucene的index
    - 搜索机制
