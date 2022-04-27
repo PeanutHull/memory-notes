@@ -380,7 +380,7 @@
 1. go-callvis：函数调用关系图
 1. 其他
    - github.com/libi/dcron：基于一致性哈希的分布式定时任务库
-   - NSQ
+   - NSQ：实时分布式mq
    - GoDotEnv：Ruby dotenv项目的go版本
      1. 支持yaml语法
      1. 支持不写入环境变量，使用`myEnv, err := godotenv.Read()`读取

@@ -1579,6 +1579,118 @@
         }
     }
     ```
+1. 网关/反向代理
+   - 认识：利用官方httputil包的NewSingleHostReverseProxy方法
+   - demo
+    ```go
+    type ServerHandle struct {
+    }
+
+    func (this *ServerHandle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+        remote, err := url.Parse("http://127.0.0.1:8090")                               // 把请求代理到了8090
+        if err != nil {
+            panic(err)
+        }
+        proxy := httputil.NewSingleHostReverseProxy(remote)                             // 设定代理
+        proxy.ServeHTTP(w, r)                                                           // 开始提供代理服务
+    }
+
+    func main() {
+        err := http.ListenAndServe(":8086", &ServerHandle{})                            // 使用代理
+        if err != nil {
+            log.Fatalln("ListenAndServe: ", err)
+        }
+    }
+    ```
+1. 流量转发
+   - 使用io.Copy(dst Writer, src Reader)，可实现流量转发
+     1. 长连接可以加入心跳机制，保证一直连接，成本低的方式是每次收到信息就重置心跳时间
+   - demo1
+    ```go
+    // shadowsockets中流量转发的实例
+    func relay(left, right net.Conn) error {
+        var err, err1 error
+        var wg sync.WaitGroup                                                   // 转发前后各留了5秒的超时限制，超时自动断开连接
+        var wait = 5 * time.Second
+        wg.Add(1)
+        go func() {
+            defer wg.Done()
+            _, err1 = io.Copy(right, left)
+            right.SetReadDeadline(time.Now().Add(wait))                         // unblock read on right，
+        }()
+        _, err = io.Copy(left, right)
+        left.SetReadDeadline(time.Now().Add(wait))                              // unblock read on left
+        wg.Wait()
+        if err1 != nil && !errors.Is(err1, os.ErrDeadlineExceeded) {            // requires Go 1.15+
+            return err1
+        }
+        if err != nil && !errors.Is(err, os.ErrDeadlineExceeded) {
+            return err
+        }
+        return nil
+    }
+    ```
+   - demo2
+    ```go
+    //长连接入口 
+    func handleConnection(conn net.Conn,timeout int) { 
+        buffer := make([]byte, 2048) 
+        for { 
+            n, err := conn.Read(buffer) 
+    
+            if err != nil { 
+                LogErr(conn.RemoteAddr().String(), " connection error: ", err) 
+                return 
+            } 
+            Data :=(buffer[:n]) 
+            messnager := make(chan byte) 
+            postda :=make(chan byte) 
+            //心跳计时 
+            go HeartBeating(conn,messnager,timeout) 
+            //检测每次Client是否有数据传来 
+            go GravelChannel(Data,messnager) 
+            Log( "receive data length:",n) 
+            Log(conn.RemoteAddr().String(), "receive data string:", string(Data 
+    
+        } 
+    } 
+    
+    //心跳计时，根据GravelChannel判断Client是否在设定时间内发来信息 
+    func HeartBeating(conn net.Conn, readerChannel chan byte,timeout int) { 
+        select { 
+        case fk := <-readerChannel: 
+            Log(conn.RemoteAddr().String(), "receive data string:", string(fk)) 
+            conn.SetDeadline(time.Now().Add(time.Duration(timeout) * time.Second)) 
+            //conn.SetReadDeadline(time.Now().Add(time.Duration(5) * time.Second)) 
+            break 
+        case <-time.After(time.Second*5): 
+            Log("It's really weird to get Nothing!!!") 
+            conn.Close() 
+        }
+    } 
+    
+    func GravelChannel(n []byte,mess chan byte){ 
+        for _ , v := range n{ 
+            mess <- v 
+        } 
+        close(mess) 
+    } 
+    
+    func Log(v ...interface{}) { 
+        log.Println(v...) 
+    } 
+
+    // 这样，就可以成功实现对于长连接的处理了~~，我们可以这么进行测试：
+    func sender(conn net.Conn) { 
+        for i := 0; i <5; i++ { 
+            words:= strconv.Itoa(i)+"This is a test for long conn"  
+            conn.Write([]byte(words)) 
+            time.Sleep(2*time.Second) 
+    
+        } 
+        fmt.Println("send over") 
+    } 
+    ```
 ### wiki
 1. 问题
    - 拷贝大切片一定比小切片代价大吗？

@@ -8,6 +8,7 @@
    - 丰富的标准库支持、强大的工具类库
    - 强大的运行时反射机制，便于在线的性能分析，以及堆栈分析
    - 能与c语言交互
+   - 类似于C+Python：高效+简单的代码实现复杂逻辑
 1. 特点
    - 性能、简单
    - 每个Go程序都是由包组成的
@@ -1804,6 +1805,14 @@
 1. net
    - 组成
      1. Conn：使用goroutines保证请求独立、非阻塞
+        - 连接控制
+          1. 方法
+             - DialTimeout
+             - SetDeadline/SetReadDeadline/SetWriteDeadline：超时失败，只是一个超时抛异常机制，不会断开连接。可以重新调用SetDeadline，实现不断的刷新状态，否则状态不变
+          1. 最佳实践
+             - 所有timeout操作都是通过设置Deadline实现的
+             - 明确设置ReadTimeout和WriteTimeout，并使用相应的方法来使server更完善
+             - Contexts一个优点是树形的一个取消，关闭所有子context
      1. ServeMux：多路复用器，用作请求的路由分发
    - 方法
      1. ip：`addr := net.ParseIP()`
@@ -2111,8 +2120,7 @@
 
         func handleClient(conn net.Conn) {
             defer conn.Close()
-            // 超时断开
-            conn.SetReadDeadline(time.Now().Add(2 * time.Minute)) // set 2 minutes timeout
+            conn.SetReadDeadline(time.Now().Add(2 * time.Minute))
             conn.Write()
         }
         ```
@@ -2133,7 +2141,6 @@
             conn.WriteToUDP([]byte(), addr)
         }
         ```
-     1. 连接控制：DialTimeout、SetReadDeadline、SetWriteDeadline、SetKeepAlive
    - webSocket：go.net子包有，`golang.org/x/net/websocket`
 1. gRPC
    - 认识：基于http2.0的基于protoBuf的cs型的高性能、开源的rpc框架，比webSocket高效，google主导开发，包 `google.golang.org/grpc`

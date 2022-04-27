@@ -97,6 +97,7 @@
         ```
 1. 函数
    - 数学：format/round/pow/abs/sin/cos/tan/bit_and
+     1. truncate(xx, 2)：保留n位小数
    - 字符串：char/concat/length  
    - cast：类型转换，如`cast(1 as signed)`
    - Find_IN_SET：查找通过,分隔的某一个数据
@@ -256,7 +257,7 @@
    - DML
     ```sql
     ## 查询
-    select */,/count()/min()/max()/sum()/avg()/median()/rank()/first()/last()/distinct()/concat(,)
+    select */,/count()/min()/max()/sum()/avg()/median()/rank()/first()/last()/distinct()/concat(,)/truncate(cc,2)
     from table、from table1 as x,table2 as x、from (select * from table2) derivedName        # 选择表
     inner/left/right join table2 as x2 on x1.x=x2.x                                         # 连表查询
     union select * from table2                                                              # 组合查询
