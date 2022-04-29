@@ -89,31 +89,10 @@
             ```
         - `delete(m map[T]T1, key T)`：map
      1. 资源操作
-        - make
-          1. 认识：只用于slice、map、chan三种类型的内存分配，返回有初始值非零的T类型，帮忙将数据初始化好
-             - 因为这三种类型就是引用类型，就没有必要返回他们的指针
-          1. 使用
-            ```go
-            // slice
-            mSlice := make([]string, 3)
-            // map
-            mMap := make(map[int]string)
-            // chan
-            mChan := make(chan int, 3)
-            ```
-        - new
-          1. 认识：用于任意类型的内存分配，返回传入类型的零值的指针，会将分配出来的内存置零
-          1. 使用
-            ```go
-            // slice
-            mSlice := make([]string, 3)
-            // map
-            mMap := new(map[int]string)
-            // chan
-            mChan := make(chan int, 3)
-            ```
-        - close
-          1. 认识：`func close(c chan<- Type)`，关闭
+        - make：只用于slice、map、chan的内存分配，返回有初始值非零的T类型，帮忙将数据初始化好
+          1. 因为这三种类型就是引用类型，就没有必要返回他们的指针
+        - new：用于任意类型的内存分配，返回传入类型的零值的指针，会将分配出来的内存置零
+        - close：`func close(c chan<- Type)`，关闭
      1. 其他
         - 异常
           1. `func panic(v interface{})`

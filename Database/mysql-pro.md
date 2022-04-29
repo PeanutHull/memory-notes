@@ -372,6 +372,35 @@
      1. 足够的内存可以将随机io变为顺序io，把多次写变为一次写
    - 系统参数、数据库参数、存储引擎
    - 表结构、sql
+1. 调优
+   - 硬件
+     1. cpu：区分oltp和olap
+     1. 内存：大内存性能线性提高
+     1. ssd
+     1. RAID
+   - 参数
+     1. Innodb_buffer_pool
+     1. Innodb_buffer_pool_instances
+     1. innodb_flush_log_at_trx_commit
+     1. binlog-format
+     1. transaction-isolation
+     1. sync_binlog
+   - 单表不能超过20G
+   - 慢查询：记录超过一定时间的查询语句
+    ```
+    slow_query_log = ON
+    slow_query_log_file = /usr/local/mysql/data/slow.log
+    long_query_time = 1
+    ```
+   - 表优化
+     1. analyze table：分析表
+        - 对表的cardinality（散列程度）进行统计更新。因为它决定是否走索引，如果cardinality和实际数据严重不符，会导致索引失效
+        - 会添加只读锁，不能新增和修改数据
+     1. check table：检查表
+        - 检查表的错误和索引
+     1. optimize table：优化表
+        - 只能优化varchar、blob、text
+        - 会添加只读锁，不能新增和修改数据
 1. 参数
    - mysql
      1. 命令行、配置文件
@@ -546,20 +575,6 @@
         - innodb_log_writes：redo log的物理写次数
         - innodb_os_log_written：写入redo log的bytes
      1. cardinality是索引中不重复记录的预估值，会有更新机制，不准，很小需要评估索引是否有意义
-1. 调优
-   - 硬件
-     1. cpu：区分oltp和olap
-     1. 内存：大内存性能线性提高
-     1. ssd
-     1. RAID
-   - 参数
-     1. Innodb_buffer_pool
-     1. Innodb_buffer_pool_instances
-     1. innodb_flush_log_at_trx_commit
-     1. binlog-format
-     1. transaction-isolation
-     1. sync_binlog
-   - 单表不能超过20G
 1. wiki
    - 大表
      1. 定义：一般是超一千万行，大小超10G
@@ -580,7 +595,11 @@
 1. explain
    - 理解：sql语句分析，将过程和索引等信息列出来
    - 使用解析
-     1. select_type：查询类型，simple、primary、union、subquery
+     1. select_type：查询类型
+        - simple
+        - primary
+        - union
+        - subquery
      1. type：访问类型，在表中找到所需行的方式，效率由高到低
         - system/const：最多一个匹配行，主键或者唯一索引，性能最优
         - eq_ref：多表连接中使用唯一索引
@@ -700,42 +719,6 @@
    - 原所有id增加5万，必须倒叙操作：`update user SET uid=uid+50000 order by uid desc;`
    - 插入不重复数据行，mysql特有不是标准sql语法：`INSERT token(udid) values ('{$udid}') ON DUPLICATE KEY UPDATE activetime ='{$time}'`
 ### 运维
-1. 安装
-   - 安装：`yum -y install mysql-server`
-   - 设置字符集：`vim /etc/my.cnf` ([mysqld]下添加)
-     1. `character-set-server=utf8`
-     1. `default-character-set=utf8`
-1. 使用
-   - 启动：`mysqld_safe &`
-   - 关闭：`mysqladmin -u -p shutdown`
-   - 重启：`service mysqld restart`
-   - 查看：`ps -ef | grep mysqld`
-     1. mysqld_safe：是mysqld的守护进程，在启动服务后继续监控，并在死机时重新启动
-1. 配置
-   - 配置文件
-     1. `mysql --help | grep my.cnf`
-   - 查看
-     1. `show variables;`
-     1. `show variables like 'slow_query%';`
-   - 修改
-     1. 变量方式：`set global slow_query_log='ON';`
-     1. 配置文件方式：my.cnf，`slow_query_log = ON`
-   - 安全
-     1. sql安全：防注入(预处理)、特殊字符转义、错误信息屏蔽。权限分开、定期修改密码
-     1. 备份恢复
-   - 参数设置：![avatar](../images/mysql_params.jpg)
-1. 连接方式
-   - tcp/ip套接字：`mysql -h127.0.0.1`
-   - 域套接字：`mysql -S /tmp/mysql.sock`
-   - 命名管道、共享内存：通过配置开启
-1. 实例迁移步骤
-   - 搭建新实例实时和旧的同步
-   - 业务方修改配置
-   - 业务方停止增删改操作（停服）
-   - 删除写用户，保留只读用户 （防止丢数据）
-   - 断开新实例到老实例同步，开启新主库可写入
-   - 发布，验证业务
-   - 删除旧实例
 1. 备份
    - 认识
      1. 备份文件：逻辑文件，文件可读如mysqldump，恢复时间长，用于升级、迁移等工作；裸文件
@@ -795,17 +778,6 @@
      1. 基于时间点恢复：`mysqlbinlog --start-position=1 --stop-position=2 --database xx.000011 < xx.sql`
         - 具有时间点之前的mysqldump全备：通过时间点确认LSN
         - 具有全备到指定时间点的mysql二进制日志：用LSN恢复
-1. 问题排查思路
-   - 查看现场：`show full processlist`
-   - 分析情况：`explain xx`
-   - 查看信息
-     1. 正在执行的事务：`select * from information_schema.innodb_trx`
-     1. 锁等待：`select * from information_schema.innodb_lock_waits w inner join information_schema.innodb_trx b on b.trx_id=w.blocking_trx_id inner join information_schema.innodb_trx r on r.trx_id=w.requesting_trx_id`
-     1. 锁表情况：`show open tables where In_use > 0`
-     1. 锁定的事务：`select * from information_schema.innodb_locks`
-     1. 锁等待的事务：`select * from information_schema.innodb_lock_waits`
-     1. 死锁：``
-   - 日志分析：general.log
 1. 监控
    - 方面
     1. 数据库服务可用性
@@ -900,18 +872,13 @@
      1. 4核16G：最大连接数4000
      1. 8核32G：最大连接数8000
      1. 16核64G：最大连接数16000
-1. 慢查询：记录超过一定时间的查询语句
-    ```
-    slow_query_log = ON
-    slow_query_log_file = /usr/local/mysql/data/slow.log
-    long_query_time = 1
-    ```
 1. 碎片整理
    - 认识
      1. 产生原因：删除数据时会留下数据空洞，便于插入数据时使用，可能会一直存在，如text、varchar类型
      1. 增加了存储，增加io负担降低扫描效率
    - 解决方案
-     1. 查看：看data_free
+     1. 查看
+        - 看data_free
         ```sql
         SELECT CONCAT(TRUNCATE(SUM(data_length)/1024/1024,2),'MB') AS data_size,
         CONCAT(TRUNCATE(SUM(max_data_length)/1024/1024,2),'MB') AS max_data_size,
@@ -919,6 +886,8 @@
         CONCAT(TRUNCATE(SUM(index_length)/1024/1024,2),'MB') AS index_size
         FROM information_schema.tables WHERE TABLE_NAME = 'datainfo';
         ```
+        - 是否开启独享表空间：`show variables like 'innodb_file_per_table'`
+          1. 独享表空间的无法进行optimize操作，因为会重组索引并释放对应空间
      1. 整理：会锁表，比较慢一百万需要37秒。每月、每周一次就可以
         - ALTER TABLE datainfo ENGINE=InnoDB;
         - ANALYZE TABLE datainfo;
@@ -934,6 +903,116 @@
      1. 依赖方
         - 直接使用旧从库的，注意切换，如其他业务方、数仓、es
      1. 请求、任务失败，需要有反向check机制
+### 实操
+1. 实例迁移步骤
+   - 搭建新实例实时和旧的同步
+   - 业务方修改配置
+   - 业务方停止增删改操作（停服）
+   - 删除写用户，保留只读用户 （防止丢数据）
+   - 断开新实例到老实例同步，开启新主库可写入
+   - 发布，验证业务
+   - 删除旧实例
+1. 问题排查思路
+   - 查看现场：`show full processlist`
+   - 分析情况：`explain xx`
+   - 查看信息
+     1. 正在执行的事务：`select * from information_schema.innodb_trx`
+     1. 锁等待：`select * from information_schema.innodb_lock_waits w inner join information_schema.innodb_trx b on b.trx_id=w.blocking_trx_id inner join information_schema.innodb_trx r on r.trx_id=w.requesting_trx_id`
+     1. 锁表情况：`show open tables where In_use > 0`
+     1. 锁定的事务：`select * from information_schema.innodb_locks`
+     1. 锁等待的事务：`select * from information_schema.innodb_lock_waits`
+     1. 死锁：``
+   - 日志分析：general.log
+1. 配置从
+   - 主配置
+    ```conf
+    # vi my.cnf
+    server-id = 3             #这个设置3
+    log-bin = mysql-bin         #开启binlog日志
+    max_binlog_size = 500M #每个bin-log最大大小，当此大小等于500M时会自动生成一个新的日志文件。一条记录不会写在2个日志文件中，所以有时日志文件会超过此大小。
+    binlog_cache_size = 128K  #日志缓存大小
+    slave-skip-errors = all      #跳过主从复制出现的错误
+    # 不同步哪些数据库 
+    binlog-ignore-db = mysql  
+    binlog-ignore-db = test  
+    binlog-ignore-db = information_schema  
+    
+    # 只同步哪些数据库，除此之外，其他不同步 
+    binlog-do-db = game  
+    
+    # 日志保留时间 
+    expire_logs_days = 10   #设置bin-log日志文件保存的天数，此参数mysql5.0以下版本不支持。
+
+    # 日志格式，建议mixed 
+    # statement 保存SQL语句 
+    # row 保存影响记录数据 
+    # mixed 前面两种的结合 
+    binlog_format = mixed  #设置bin-log日志文件格式为：MIXED，可以防止主键重复。
+    ```
+   - 主库创建同步账号：只有同步权限，`mysql > grant replication slave on *.* to ‘rep’@‘192.168.18.214’ identified by ‘123456’;`
+   - 从配置
+    ```conf
+    # vi my.cnf
+    [mysqld]
+
+    server-id=2
+    master-host=192.168.1.2
+    master-user=repl
+    master-password=123456
+    master-port=3306
+    master-connect-retry=30  #这个选项控制重试间隔，默认为60秒。
+
+    #开启日志
+    #log-bin=mysql-bin
+    #read_only=on
+
+    # 设置忽略数据库
+    replicate_do_db=test
+    replicate_wild_do_table=test.% #可以使用通配符
+    replicate_wild_ignore_table=mysql.%
+
+    slave-skip-errors=1062 # 忽略相关信息
+    ```
+   - 备份主库：`# mysqldump -uroot -p123 --routines --single_transaction --master-data=2 --databases weibo > weibo.sql`
+     1. --single_transaction：导出开始时设置事务隔离状态，并使用一致性快照开始事务，然后unlock tables;而lock-tables是锁住一张表不能写操作，直到dump完毕。
+     1. --master-data：默认等于1，将dump起始（change master to）binlog点和pos值写到结果中，等于2是将change master to写到结果中并注释。
+   - 把备份库拷贝到从库：`# scp weibo.sql root@192.168.18.214:/home/root`
+   - 在主库创建test_tb表，模拟数据库新增数据，weibo.sql是没有的：`# mysql> create table test_tb(id int,name varchar(30));`
+   - 从库导入备份库：`# mysql -uroot -p123 weibo < weibo.sql`
+   - 在备份文件weibo.sql查看binlog和pos值
+    ```
+    # head -25 weibo.sql
+    -- CHANGE MASTER TO MASTER_LOG_FILE='mysql-bin.000001', MASTER_LOG_POS=107;   #大概22行
+    ```
+   - 从库设置从这个日志点同步，并启动。可以看到IO和SQL线程均为YES，说明主从配置成功
+    ```
+    mysql> change master to master_host='192.168.18.212',
+        -> master_user='sync',
+        -> master_password='sync',
+        -> master_log_file='mysql-bin.000001',
+        -> master_log_pos=107;
+    mysql> start slave;
+
+
+    mysql> show slave status\G;
+    ERROR 2006 (HY000): MySQL server has gone away
+    No connection. Trying to reconnect...
+    Connection id:    90
+    Current database: *** NONE ***
+    *************************** 1. row ***************************
+                Slave_IO_State: Waiting for master to send event
+                    Master_Host: 192.168.18.212
+                    Master_User: sync
+                    Master_Port: 3306
+                    Connect_Retry: 60
+                Master_Log_File: mysql-bin.000001
+            Read_Master_Log_Pos: 358
+                Relay_Log_File: mysqld-relay-bin.000003
+                    Relay_Log_Pos: 504
+            Relay_Master_Log_File: mysql-bin.000001
+                Slave_IO_Running: Yes
+                Slave_SQL_Running: Yes
+    ```
 ## 原理
 ### mysql
 1. 认识：单进程多线程，插件式的表存储引擎

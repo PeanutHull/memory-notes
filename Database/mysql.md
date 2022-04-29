@@ -28,16 +28,35 @@
      1. text：大字符串，0~65535字节，2E16，mediumtext：1600万，2E24，longtext：42亿长度或4GB字符，tinytext
      1. blob：二进制形式的长文本数据，0~65535字节，tiny/medium/longblob，可变长度，避免使用，会用到临时表，性能开销
      1. binary：二进制形式的字符串，即包含字节字符串，不包含字符字符串，没有字符集，避免使用，会用到临时表，性能开销
-   - 日期时间
-     1. DATETIME：YYYY-MM-DD HH:MM:SS (1000-01-01 00:00:00/9999-12-31 23:59:59)，日期和时间
-        - 时区无关，8byte，v5.7可以通过指定宽度存储微秒
+   - 日期和时间
+     1. datetime
         - 最通用
-     1. TIMESTAMP：YYYY-MM-DD HH:MM:SS (1970-01-01 00:00:00/2038 格林尼治时间/北京时间)，日期和时间/时间戳，只是时间戳表示的范围
-        - 依赖时区，不同时区不同值，4byte，可自动更新(本行任意字段更新即更新)
-     1. DATE：YYYY-MM-DD (1000-01-01/9999-12-31)，日期
-        - 3byte，支持日期计算
-     1. TIME：HH:MM:SS ('-838:59:59'/'838:59:59')，时间或持续时间
-     1. YEAR：YYYY (1901/2155)，年份
+        - 时区无关
+        - 形式：`YYYY-MM-DD HH:MM:SS`
+        - 范围：`1000-01-01 00:00:00 ~ 9999-12-31 23:59:59`
+        - 大小：v5.6.4之前固定8byte，之后支持微秒，根据毫秒位数确定
+        - 最佳实践
+          1. 默认可以设置为`1970-01-01 00:00:00`，全是0可能有问题，还会破坏索引
+     1. timestamp
+        - 表示时间戳的范围
+        - 自带时区属性，处理不同时区方便，值会随着服务器时区的变化而变化
+        - 形式：`YYYY-MM-DD HH:MM:SS`
+        - 范围：`1970-01-01 00:00:01 UTC ~ 2038-01-19 03:14:07 UTC`
+        - 大小：v5.6.4之前固定4byte，之后支持微秒，根据毫秒位数确定
+        - 最佳实践
+          1. 调用底层系统函数有锁，不应依赖数据库
+     1. DATE
+        - 形式：`YYYY-MM-DD`
+        - 范围：`1000-01-01 ~ 9999-12-31`
+        - 大小：3byte，支持日期计算
+     1. TIME
+        - 形式：`HH:MM:SS`
+        - 范围：`-838:59:59 ~ 838:59:59`
+     1. YEAR
+        - 形式：`YYYY`
+        - 范围：`1901/2155`
+     1. int
+     1. string：不推荐，无法使用时间函数
    - 其他
      1. enum：枚举，0~65535，如`enum('','')`
      1. set：集合，0~64，可以存一个集合，如`set('','')`
@@ -98,7 +117,12 @@
 1. 函数
    - 数学：format/round/pow/abs/sin/cos/tan/bit_and
      1. truncate(xx, 2)：保留n位小数
-   - 字符串：char/concat/length  
+   - 字符串
+     1. char/concat/length
+     1. instr('x,x,x', xx)：搜索字符串，逗号分隔
+     1. locate(xx, 'x,x,x')：搜索字符串，逗号分隔
+   - time
+     1. year()
    - cast：类型转换，如`cast(1 as signed)`
    - Find_IN_SET：查找通过,分隔的某一个数据
    - password
@@ -187,10 +211,13 @@
    - sys
      1. 认识：数据来自performance，降低复杂度便于查看，5.7默认安装。字母开头给人看的，x$开头用于工具采集。可以统计哪个表/文件/账号/连接的次数最多/延迟多/内存占用多/线程多少/sql最多
 1. 表
-   - 结构
+   - 列属性
      1. primary key：主键列，作为一行的唯一标识符用来定位，不能重复不能为空，特殊的唯一索引，可有复合主键 `primary key(id,name)`
      1. auto_increment：自增，必须是索引列(index/primary key)，只能有一个自增列，可以设置起始值和步长
      1. unique/not null/default
+     1. 时间
+        - DEFAULT CURRENT_TIMESTAMP
+        - ON UPDATE CURRENT_TIMESTAMP
      1. foreign key：外键列，保证表之间数据完整性和准确性，体现表之间关系，可进行级联操作，由于对业务的强一致性要求，现在由程序控制，不使用外键关联
         - 基本形式：`constraint foreignKeyName foreign key(selfId) references foreignTable(foreignTableId)`
         - 级联限制：`constraint foreignKeyName foreign key(selfId) references foreignTable(foreignTableId) on delete/update cascade;`，删除被连接数据自己也被删除，连带删除
@@ -247,13 +274,21 @@
     alter table tableName drop primary key;                                                 # drop，删除主键，先删除自增，再删字段
     alter table tableName drop index indexName;                                             # drop，删除索引
     alter table tableName engine=mysiam                                                     # 修改引擎
-    ## drop
-    drop database/table if exists baseName/tableName;                                       # 删除库/表
-    drop index indexName on table                                                           # 删除索引，各种类型的索引都用这个删除
     ## lock
     lock tables tableName write/read local;                                                 # 表级锁，锁表的读/写，local允许其他用户表尾添加行
     unlock tables;
     ```
+     1. 删除
+        - 认识
+          1. 不可回滚
+          1. 可以减少表空间
+        - 组成
+          1. drop
+             - drop database/table if exists baseName/tableName;                            # 删除库/表，会删除被依赖的约束(constrain)、触发器(trigger)、索引(index)，存储过程/函数保留变为invalid状态
+             - drop index indexName on table                                                # 删除索引
+          1. truncate table;                                                                # 数据清空，主键归0，其他不变
+             - 只能用于表，不会触发触发器
+             - 直接删除表再新建，不支持where，比delete快
    - DML
     ```sql
     ## 查询
@@ -275,47 +310,103 @@
     update table set XX1=xx1, XX2=xx;                                                       # 更新所有数据
     update t1,t2 set t1.xx=xx,t2.xx=xx                                                      # 多表更新
     update t1 join t2 on t1.xx=t2.xx set t1.xx=xx
-    ## 删除数据
-    delete from table where XX=xx;                                                    # 删除
-    delete from table;                                                                # 删除所有数据
-    truncate table;                                                                   # 数据清空，主键归0
-    delete t1,t2 from t1 join t2 on t1.xx=t2.xx;                                      # 多表数据删除
     ```
-1. sql介绍
+     1. 删除数据
+        - 认识
+          1. 会走事务，可回滚，可返回删除的条数，会触发触发器
+          1. 是一条一条删除，会记录redo和undo日志，不会减少表或索引所占用的空间，下次插入会覆盖，使用optimize会立刻释放磁盘空间
+          1. 
+        - delete
+          1. delete from table where XX=xx;                                                    # 删除
+          1. delete from table;                                                                # 删除所有数据
+          1. delete t1,t2 from t1 join t2 on t1.xx=t2.xx;                                      # 多表数据删除
+### 基本操作
+1. 查询方式
    - 关联查询
-     1. inner join：无关系不显示，同join
-     1. left join：获取左表所有记录，即使右表没有
-     1. right join：反过来
-     1. cross join：在mysql中和inner join相同，标准sql中不同，产生笛卡尔集，即M*N
-   - 内连接关系形式
-     1. 等值连接：on a.id = b.id
-     1. 不等值连接：on a.id > b.id
-     1. 自连接：on a1.id = a2.id
+     1. 形式
+        - inner join：无关系不显示，同join
+        - left join：获取左表所有记录，即使右表没有
+        - right join：反过来
+        - cross join：在mysql中和inner join相同，标准sql中不同，产生笛卡尔集，即M*N
+     1. 内连接关系形式
+        - 等值连接：on a.id = b.id
+        - 不等值连接：on a.id > b.id
+        - 自连接：on a1.id = a2.id
    - 组合查询
      1. union：自动处理重合，即去掉重复的数据，以第一个取出的为准
      1. union all：不处理重合，相反，更快
    - 嵌套查询：select * from (select ...);
+1. 查询调整
    - 分页：limit 100 offset 517325，这个会查询51万的数据，只保留了你需要的100条，用id>n去实现索引
    - 分组
      1. group by：用列的值进行分组/计算，必须在where之后order by之前，select的字段除了被group的其他要么被统计，要么没有
      1. having：筛选成组后的数据，作用于组，如`having sum(age) > 10`
-   - replace：是标准sql的mysql扩展，使用primary key/unique key确定是否插入新行
-     1. 注意：会抹掉其他未指定数据，应作为插入使用，而不是更新
-     1. 原理：将数据插入，成功则结束；否则引发重复键错误，先删除原有记录，然后更新
+   - 排序
+     1. 常用：`order by xx1 asc/desc xx2 asc/desc/rand()`
+     1. 指定顺序：`order by field(xx, '','','')`
+     1. 指定条件
+        - 如：`order by xx <> 1`，id为1排第一
+        - 如：`order by xx not in(x)`
+        - 如：
+        ```sql
+        order by case field
+            when '' then 1
+            when '' then 2
+        end
+        ```
+     1. 指定其他表的字段：`join xx as x on xx=xx order by x.xx`
    - 数据转换
      1. 时间
         - 格式化时间查询：TIMESTAMP格式的，`DATE_FORMAT(xx,'%m-%d') >= '06-03'`
         - 时间戳
           1. 转为时间戳：`unix_timestamp('2018-01-15 09:45:16');`
           1. 转为时间：` from_unixtime(date, '%Y-%c-%d %h:%i:%s')`
+1. 其他
    - checksum：在逻辑备份时候前后可以用于验证数据一致性，`checksum table xxx`
      1. 无关：是否有索引、字符集、引擎类型
      1. 有关：字段顺序
+1. 更新
+   - replace：是标准sql的mysql扩展，使用primary key/unique key确定是否插入新行
+     1. 注意：会抹掉其他未指定数据，应作为插入使用，而不是更新
+     1. 原理：将数据插入，成功则结束；否则引发重复键错误，先删除原有记录，然后更新
    - DELAY_KEY_WRITE
-     1. 认识在表关闭之前，将对表的update操作只更新数据到磁盘，而不更新索引到磁盘，把对索引的更改记录在内存，在关闭表的时候一起更新索引到磁盘
+     1. 认识：在表关闭之前，将对表的update操作只更新数据到磁盘，而不更新索引到磁盘，把对索引的更改记录在内存，在关闭表的时候一起更新索引到磁盘
         - 使索引更新更快
         - 重启或掉电会导致索引没更新，启动参数加上--myisam-recover
      1. 操作：`ALTER TABLE xxx DELAY_KEY_WRITE=1`
+1. 用户和权限管理
+   - user
+    ```sql
+    select * from mysql.user\G;                                             # 查看用户
+    create user userName@'::1' identified by 'password';                    # 创建用户 
+    drop user username;                                                     # 删除用户
+    rename user oldName to newName;                                         # 重命名
+    update mysql.user set password=password('') where user='';              # 修改用户密码
+    set password for userName@'%' = password('');                           # 修改用户密码
+    ```
+   - 权限
+     1. 指令
+        ```sql
+        show grants (for userName);                                         # 查看用户权限
+        grant select,update on *.* to userName@'%';                         # 赋予查询更新权限
+        grant all privileges on *.* to userName@"";                         # 所有权限，不包括管理权限
+        grant all privileges on *.* to userName@'' WITH GRANT OPTION;       # 管理权限，也就是管理员
+        revoke select on *.* from userName;                                 # 回收权限
+        revoke grant option on *.* from userName;                           # 回收管理权限，需要显示指定
+        FLUSH PRIVILEGES;                                                   # 刷新权限，更改了都要刷新
+        ```
+     1. user表中host列的值的意义
+        - %：匹配所有主机
+        - localhost：localhost不会被解析成IP地址，直接通过UNIXsocket连接
+        - 127.0.0.1：会通过TCP/IP协议连接，并且只能在本机访问；
+        - ::1：兼容支持ipv6的，表示同ipv4的127.0.0.1
+     1. 权限意义
+        - usage：无权限
+        - ALL：所有，同ALL PRIVILEGES，除grant外
+        - INDEX：创建/删除索引
+        - PROCESS：查看/杀死线程
+        - RELOAD：重载授权表、清空日志/主机缓存/表缓存
+        - SHUTDOWN：关闭服务器
 ### 功能
 1. 索引
    - 认识：为加快查询速度，对数据列进行排序的一种结构，包含所有记录的引用指针，查询时先查索引，引擎实现
@@ -475,6 +566,11 @@
         - 批量处理数据时事先对数据排序，保证每个线程按固定顺序处理记录，也可以大大降低出现死锁的可能
         - 在同一个事务中，尽可能做到一次锁定获取所需要的资源，不要先共享锁，再排它锁
         - 小事务发生锁冲突的几率也更小
+   - 锁类型
+     1. 死锁：两个或两个以上争夺资源而相互等待，若无外力将无法推进，导致异常
+     1. 活锁：不会阻塞执行，但也不能继续执行，需要一直重复，可能会成功，会降低执行效率，引入随机性解决
+        - 像两个过于礼貌的人在路上相遇，彼此让路，然后在另一条路上相遇，然后一直循环
+     1. 饥饿：可运行进程能继续执行，但被调度器无限期忽视，而不能被执行，通过计数取样解决
 1. 预解析
    - 理解：使用占位符预先准备查询语句，不用解析语句，查询速度更快，防止注入。步骤有：prepare、execute、deallocate prepare(发布)
    - 实例
@@ -533,41 +629,36 @@
         - 没有冗余、表更新快体积小、操作更快
         - 查询需要多表关联，导致性能降低，更难进行索引优化
    - 反范式化：没有冗余的数据库未必是最好的数据库，有时为了提高运行效率，就必须降低范式标准，适当保留冗余数据，达到以空间换时间的目的
-### 维护
-1. 用户和权限管理
-   - user
-    ```sql
-    select * from mysql.user\G;                                             # 查看用户
-    create user userName@'::1' identified by 'password';                    # 创建用户 
-    drop user username;                                                     # 删除用户
-    rename user oldName to newName;                                         # 重命名
-    update mysql.user set password=password('') where user='';              # 修改用户密码
-    set password for userName@'%' = password('');                           # 修改用户密码
-    ```
-   - 权限
-     1. 指令
-        ```sql
-        show grants (for userName);                                         # 查看用户权限
-        grant select,update on *.* to userName@'%';                         # 赋予查询更新权限
-        grant all privileges on *.* to userName@"";                         # 所有权限，不包括管理权限
-        grant all privileges on *.* to userName@'' WITH GRANT OPTION;       # 管理权限，也就是管理员
-        revoke select on *.* from userName;                                 # 回收权限
-        revoke grant option on *.* from userName;                           # 回收管理权限，需要显示指定
-        FLUSH PRIVILEGES;                                                   # 刷新权限，更改了都要刷新
-        ```
-     1. user表中host列的值的意义
-        - %：匹配所有主机
-        - localhost：localhost不会被解析成IP地址，直接通过UNIXsocket连接
-        - 127.0.0.1：会通过TCP/IP协议连接，并且只能在本机访问；
-        - ::1：兼容支持ipv6的，表示同ipv4的127.0.0.1
-     1. 权限意义
-        - usage：无权限
-        - ALL：所有，同ALL PRIVILEGES，除grant外
-        - INDEX：创建/删除索引
-        - PROCESS：查看/杀死线程
-        - RELOAD：重载授权表、清空日志/主机缓存/表缓存
-        - SHUTDOWN：关闭服务器
-### WIKI
+### 运维
+1. 安装
+   - 安装：`yum -y install mysql-server`
+   - 设置字符集：`vim /etc/my.cnf` ([mysqld]下添加)
+     1. `character-set-server=utf8`
+     1. `default-character-set=utf8`
+1. 使用
+   - 启动：`mysqld_safe &`
+   - 关闭：`mysqladmin -u -p shutdown`
+   - 重启：`service mysqld restart`
+   - 查看：`ps -ef | grep mysqld`
+     1. mysqld_safe：是mysqld的守护进程，在启动服务后继续监控，并在死机时重新启动
+1. 配置
+   - 配置文件
+     1. `mysql --help | grep my.cnf`
+   - 查看
+     1. `show variables;`
+     1. `show variables like 'slow_query%';`
+   - 修改
+     1. 变量方式：`set global slow_query_log='ON';`
+     1. 配置文件方式：my.cnf，`slow_query_log = ON`
+   - 安全
+     1. sql安全：防注入(预处理)、特殊字符转义、错误信息屏蔽。权限分开、定期修改密码
+     1. 备份恢复
+   - 参数设置：![avatar](../images/mysql_params.jpg)
+1. 连接方式
+   - tcp/ip套接字：`mysql -h127.0.0.1`
+   - 域套接字：`mysql -S /tmp/mysql.sock`
+   - 命名管道、共享内存：通过配置开启
+### wiki
 1. 相关
    - 数据库：文件中读写数据不方便、速度慢，按照数据结构来组织、存储和管理数据的仓库，提供API进行数据操作
    - 关系型数据库：建立在关系模型基础上，由行、表、库等组成
@@ -657,95 +748,3 @@
         - 实用函数
         - 合并函数
         - 表函数
-### 实操
-1. 配置从
-   - 主配置
-    ```conf
-    # vi my.cnf
-    server-id = 3             #这个设置3
-    log-bin = mysql-bin         #开启binlog日志
-    max_binlog_size = 500M #每个bin-log最大大小，当此大小等于500M时会自动生成一个新的日志文件。一条记录不会写在2个日志文件中，所以有时日志文件会超过此大小。
-    binlog_cache_size = 128K  #日志缓存大小
-    slave-skip-errors = all      #跳过主从复制出现的错误
-    # 不同步哪些数据库 
-    binlog-ignore-db = mysql  
-    binlog-ignore-db = test  
-    binlog-ignore-db = information_schema  
-    
-    # 只同步哪些数据库，除此之外，其他不同步 
-    binlog-do-db = game  
-    
-    # 日志保留时间 
-    expire_logs_days = 10   #设置bin-log日志文件保存的天数，此参数mysql5.0以下版本不支持。
-
-    # 日志格式，建议mixed 
-    # statement 保存SQL语句 
-    # row 保存影响记录数据 
-    # mixed 前面两种的结合 
-    binlog_format = mixed  #设置bin-log日志文件格式为：MIXED，可以防止主键重复。
-    ```
-   - 主库创建同步账号：只有同步权限，`mysql > grant replication slave on *.* to ‘rep’@‘192.168.18.214’ identified by ‘123456’;`
-   - 从配置
-    ```conf
-    # vi my.cnf
-    [mysqld]
-
-    server-id=2
-    master-host=192.168.1.2
-    master-user=repl
-    master-password=123456
-    master-port=3306
-    master-connect-retry=30  #这个选项控制重试间隔，默认为60秒。
-
-    #开启日志
-    #log-bin=mysql-bin
-    #read_only=on
-
-    # 设置忽略数据库
-    replicate_do_db=test
-    replicate_wild_do_table=test.% #可以使用通配符
-    replicate_wild_ignore_table=mysql.%
-
-    slave-skip-errors=1062 # 忽略相关信息
-    ```
-   - 备份主库：`# mysqldump -uroot -p123 --routines --single_transaction --master-data=2 --databases weibo > weibo.sql`
-     1. --single_transaction：导出开始时设置事务隔离状态，并使用一致性快照开始事务，然后unlock tables;而lock-tables是锁住一张表不能写操作，直到dump完毕。
-     1. --master-data：默认等于1，将dump起始（change master to）binlog点和pos值写到结果中，等于2是将change master to写到结果中并注释。
-   - 把备份库拷贝到从库：`# scp weibo.sql root@192.168.18.214:/home/root`
-   - 在主库创建test_tb表，模拟数据库新增数据，weibo.sql是没有的：`# mysql> create table test_tb(id int,name varchar(30));`
-   - 从库导入备份库：`# mysql -uroot -p123 weibo < weibo.sql`
-   - 在备份文件weibo.sql查看binlog和pos值
-    ```
-    # head -25 weibo.sql
-    -- CHANGE MASTER TO MASTER_LOG_FILE='mysql-bin.000001', MASTER_LOG_POS=107;   #大概22行
-    ```
-   - 从库设置从这个日志点同步，并启动。可以看到IO和SQL线程均为YES，说明主从配置成功
-    ```
-    mysql> change master to master_host='192.168.18.212',
-        -> master_user='sync',
-        -> master_password='sync',
-        -> master_log_file='mysql-bin.000001',
-        -> master_log_pos=107;
-    mysql> start slave;
-
-
-    mysql> show slave status\G;
-    ERROR 2006 (HY000): MySQL server has gone away
-    No connection. Trying to reconnect...
-    Connection id:    90
-    Current database: *** NONE ***
-    *************************** 1. row ***************************
-                Slave_IO_State: Waiting for master to send event
-                    Master_Host: 192.168.18.212
-                    Master_User: sync
-                    Master_Port: 3306
-                    Connect_Retry: 60
-                Master_Log_File: mysql-bin.000001
-            Read_Master_Log_Pos: 358
-                Relay_Log_File: mysqld-relay-bin.000003
-                    Relay_Log_Pos: 504
-            Relay_Master_Log_File: mysql-bin.000001
-                Slave_IO_Running: Yes
-                Slave_SQL_Running: Yes
-    ```
-
