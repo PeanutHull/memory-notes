@@ -525,6 +525,24 @@
      1. 激活虚拟环境：source venv/bin/activate
      1. 停用：deactivate
      1. 删除：rm -rf venv
+1. 包
+   - setuptools
+     1. 认识：python自带的构建包的工具，可以直接安装，也可以构建成wheel(.whl)，可供其他人pip install和import
+     1. 特性文件
+        - setup.py
+        - MANIFEST.in：记录路径，用于引入静态文件，如css、图片
+        - setup.cfg：而不是setup.py的理由是，前者是声明式的配置文件，后者是实际的python代码，可能不安全
+     1. 打包
+        - 创建setup.py文件用于打包
+            ```py
+            import setuptools
+
+            setuptools.setup(
+                name='hellopkg',        # 包的名字，可随意取
+                py_modules=['hello']    # 对应hello.py，也是安装了包之后实际import的名字
+            )
+            ```
+        - `pip install .`：进行注册，接下来任何地方可以import了
 1. 交互
    - 输入输出
      1. 标准输入：input()，默认标准输入为键盘
