@@ -776,35 +776,69 @@
     var canManage bool
     var allowGitHook bool
     ```
-   - 带 mutex 的 struct 的接收者 receivers 必须是带指针
-   ```go
-   type foo struct {
-        mutex sync.Mutex
-        ...
-    }
-
-    // 这里的接收者必须是指针，保证只对同一个锁操作，达到对同一个资源操作的互斥效果。
-    func (f *foo) Write (content []byte) error {
-        f.mutex.Lock()
-        defer f.mutex.Unlock()
+   - nil
+     1. 检查slice是否为空，请始终使用len(s)==0，而非nil
+     1. 作为函数返回值时，不应该明确返回长度为0的slice，应该返回nil代替
+   - slice
+     1. 创建slice时，尽可能为make()函数提供一个容量值，如果不能确定，也要预估一个，性能相差4倍
+   - map
+     1. 尽量少的使用Map，多使用结构体，Map会占用更多的内存且包含指针会增加垃圾回收压力
+     1. 空 map 请使用 make(..) 初始化
+        ```go
+        var (
+            // m1 读写安全
+            // m2 在写入时会 panic
+            m1 = make(map[T1]T2)
+            m2 map[T1]T2
+        )
+        ```
+   - 结构体
+     1. 构造结构体时注意字段顺序，进行内存对齐
+     1. 当对象内部私有变量类型为map时，千万不要将其作为函数的返回值；这样会对外暴露对象内部状态，而且可能会导致其他意外情况
+        ```go
+        type Stats struct {
+            mu sync.Mutex
+            counters map[string]int
+        }
         
-        ...
-    }
-   ```
+        // Snapshot 返回当前状态。
+        func (s *Stats) Snapshot() map[string]int {
+            s.mu.Lock()
+            defer s.mu.Unlock()
+        
+            return s.counters
+
+            // 正确做法：创建map类型的副本并返回
+            result := make(map[string]int,len(s.counters))
+            for k, v := range s.counters {
+                result[k] = v
+            }
+            return result
+        }
+        
+        // 生成的对象内部counters不再受互斥锁保护，修改snapshot将直接影响stats.counters
+        snapshot := stats.Snapshot()
+        ```
+     1. 带 mutex 的 struct 的接收者 receivers 必须是带指针
+        ```go
+        type foo struct {
+                mutex sync.Mutex
+                ...
+            }
+
+            // 这里的接收者必须是指针，保证只对同一个锁操作，达到对同一个资源操作的互斥效果。
+            func (f *foo) Write (content []byte) error {
+                f.mutex.Lock()
+                defer f.mutex.Unlock()
+                
+                ...
+            }
+        ```
    - 函数
      1. 见名知义，使用动词命名
      1. 长命名并不会使其更具可读性，一份有用的说明文档通常比额外的长名更有价值
      1. 若函数或方法为判断类型（返回值主要为 bool 类型），则名称应以 Has、Is、Can 或 Allow 等判断性动词开头
    - go 协程启动时，一定要 recover，防止因单一协程引起主程序 panic
-   - 空 map 请使用 make(..) 初始化
-    ```go
-    var (
-        // m1 读写安全
-        // m2 在写入时会 panic
-        m1 = make(map[T1]T2)
-        m2 map[T1]T2
-    )
-    ```
 1. 实用技巧
    - 全局变量：可以避免重复申请带来的内存交互
    - sync.Pool

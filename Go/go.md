@@ -1555,7 +1555,8 @@
      1. fnv：实现了FNV-1和FNV-1a（非加密hash函数）
 1. io相关
    - io：提供i/o原语的基础接口
-     1. `io.Reader`
+     1. `io.Reader`：作为流存在，不支持多次读取
+     1. `io.TeeReader`：支持多次读取
    - bufio：带缓存增强版，比io写的快多了，一口气flush到硬盘
      1. 可读取一行
      1. 会缓存下来，遇到flush才输出`bufio.NewWriter.Flush()`
