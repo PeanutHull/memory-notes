@@ -134,12 +134,16 @@
      1. g：goroutine，执行的go代码片段/用户态协程
      1. m：machine，内核线程
      1. p：processor，可运行的队列，分自己/全局，还可以去其他p上去偷，数量和核数相同
-   - 调度算法：优先级、时间片
+   - 调度算法：优先级、时间片相关，![avatar](../images/goroutine_base_schedule.png)
+     1. 创建新协程
      1. io、select
+     1. timer：定时器
      1. channel
-     1. 等待锁
-     1. 函数调用(有时)
+     1. netPoll：网络轮询器
+     1. syscall：函数调用(有时)
+     1. 等待锁：G和M锁定
      1. runtime.Gosched()
+     1. 抢占
    - 特性
      1. 逃逸分析
    - 特点
