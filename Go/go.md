@@ -1569,6 +1569,8 @@
    - os
      1. 子包
         - exec：执行外部命令
+          1. exec.Command()
+          1. exec.ExitError
         - signal：对输入信号的访问
         - user：查询用户帐户
      1. 目录：Mkdir/MkdirAll/Remove/RemoveAll：`os.Mkdir("a", 0777)`
@@ -1730,6 +1732,15 @@
           1. 前边加S：返回该字符串
              - scann
              - Errorf
+     1. 格式化参数
+        - %t   布尔
+        - %d   十进制表示
+        - %g   根据情况选择 %e 或 %f 以产生更紧凑的（无末尾的0）输出 
+        - %s   字符串或切片的无解译字节
+
+        - %+v  添加字段名(如结构体)
+        - %#v　相应值的Go语法表示
+        - %p   十六进制表示，前缀 0x (用于指针和chan)
    - time
      1. 类型
         - Time：时间
@@ -2482,6 +2493,9 @@
    - 逃逸分析：`go build -gcflags "-m -l" *.go`
    - 汇编代码：`go run -gcflags -S main.go`
 1. GUI
+   - govcl
+     1. 认识：跨平台的开源的gui库，核心绑定于liblcl
+        - 原生的，不是基于html的，更别说DirectUI
    - fyne
    - gio
      1. 认识：全平台的可移植的即时模式gui程序，对浏览器的实验性支持 (Webassembly/WebGL)

@@ -538,6 +538,27 @@
         fibonacci(c, quit)
     }
     ```
+1. 命令行执行
+    ```go
+    // 转换pdf为图片，依赖imageMagick
+    cmd := exec.Command("convert",
+        "-density", "108", // 200时间超长？
+        "-units", "PixelsPerInch",
+        "-resize", "1040x1471^>",
+        "-background", "white",
+        "-flatten",
+        fmt.Sprintf("%s[%d]", i.OutPut.FilePath, j),
+        filepath.Join(i.OutPut.ImageDir, "%d.jpeg"))
+    
+    // 获取执行结果
+    result, err := cmd.CombinedOutput()
+
+    // 错误判断
+    code := 0
+    if ee, ok := err.(*exec.ExitError); ok {
+        code = ee.ProcessState.ExitCode()
+    }
+    ```
 ### 算法
 1. 外部排序
    - 解析：pipeline思想，将源数据分成一个个的节点，然后归并到最终集

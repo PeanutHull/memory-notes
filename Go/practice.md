@@ -378,6 +378,7 @@
    - 简单、功能丰富，链式调用
    - 自动Unmarshal
 1. go-callvis：函数调用关系图
+1. go-cmp：Google开源的比较库，递归、切片、浮点数、自定义比较，差异查找
 1. 其他
    - github.com/libi/dcron：基于一致性哈希的分布式定时任务库
    - NSQ：实时分布式mq
@@ -391,6 +392,11 @@
    - plot：绘图库，内置很多组件，可以生成静态图片
      1. 支持折线图、直方图、函数图像、气泡图
      1. 搭配web服务可以直接返回一张图片给前端
+1. windows
+   - go-ole：通过使用动态库绑定Windows COM来代替cgo
+1. html
+   - PuerkitoBio/goquery：go版本的jQuery，用于读取html文档，基于net/html包和css包cascadia
+     1. 不是功能齐全的DOM树，jQuery的有状态操作函数被忽略
 ### wiki
 1. 脚手架
    - 认识：比喻各类语言的前期工作环境，方便直接进行开发
