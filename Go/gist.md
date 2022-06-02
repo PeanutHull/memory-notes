@@ -40,6 +40,31 @@
 	fmt.Println(s2)
 	fmt.Println(slice)
     ```
+1. 变量
+   - 迭代器变量
+    ```go
+    func main() {
+        var out []*int
+        for i := 0; i < 3; i++ {
+            out = append(out, &i)
+        }
+        
+        fmt.Println("值:", *out[0], *out[1], *out[2])
+        fmt.Println("地址:", out[0], out[1], out[2])
+    }
+
+    // 期望
+    // 值: 0 1 2
+    // 地址: 0x01 0x02 0x03  // 不同的地址
+
+    // 实际
+    // 值: 3 3 3
+    // 地址: 0xc0000a6010 0xc0000a6010 0xc0000a6010
+
+    // 解决方案
+    // j:=i ------ 使用新变量
+    // 也可以将迭代部分使用匿名函数包起来，将迭代变量通过参数的方式传递过去。基本解决思路一致，都是生成一个新的数据副本，将其和迭代变量脱离关联
+    ```
 1. 常量
     ```go
     // 数值常量，表示高精度的值
@@ -559,7 +584,99 @@
         code = ee.ProcessState.ExitCode()
     }
     ```
+1. 插件
+   - 一种优雅的Golang的库插件注册加载机制
+     1. 说明：注册方面，巧妙使用隐式import来做插件的注册。而加载方面，巧妙使用有buffer的channel作为加载队列
+     1. 实现
+        - 框架定义插件的格式
+            ```go
+            type Plugin interface{
+                Name() string
+                Setup(config map[string]string) error
+            }
+            ```
+        - 框架定义包含所有插件的全局变量
+            ```go
+            var plugins map[string]Plugin
+            ```
+        - 框架提供注册插件的方法
+            ```go
+            Register(plugin Plugin)
+            ```
+        - 框架加载插件
+            ```go
+            // 加载，直接引入即可实现
+            _ import "github.com/foo/myplugin"
+
+            // 配置，定义文件如config/plugins/myplugin.yaml
+
+            // 依赖方案：将所有插件放在chan中，然后一个个调用Setup，遇到Depend其他插件的且依赖还未被加载，则将当前插件放在队列最后（重新塞入channel）
+            // 最精妙的就是使用了一个有buffer的channel作为一个队列，消费队列一方SetupPlugins，除了消费队列，也有可能生产数据到队列，这样就保证了队列中所有plugin都是被按照标记的依赖被顺序加载的
+            var setupStatus map[string]bool
+
+            func loadPlugins() (plugin chan Plugin, setupStatus map[string]bool) {          // 获取所有注册插件
+                // 这里定义一个长度为10的队列
+                var sortPlugin = make(chan Plugin, 10)
+                var setupStatus = make[string]bool
+                
+                // 所有的插件
+                for name, plugin := range plugins {
+                    sortPlugin <- plugin
+                    setupStatus[name] = false
+                }
+                
+                return sortPlugin, setupStatus
+            }
+
+            // 加载所有插件
+            func SetupPlugins(pluginChan chan Plugin, setupStatus map[string]bool) error {
+                num := len(pluginChan)
+                for num > 0 {
+                    plugin <- pluginChan
+                    
+                    canSetup := true
+                    if deps, ok := p.(Depend); ok {
+                        depends := deps.DependOn()
+                        for _, dependName := range depends{
+                            if _, setuped := setupStatus[dependName]; !setup {
+                            // 有未加载的插件
+                            canSetup = false
+                            break
+                            }
+                        }
+                    }
+                
+                    // 如果这个插件能被setup
+                    if canSetup {
+                        plugin.Setup(xxx)
+                        setupStatus[p.Name()] = true
+                    } else {
+                        // 如果插件不能被setup, 这个plugin就塞入到最后一个队列
+                        pluginChan <- plugin
+                    }
+                }
+                return nil
+            }
+            ```
+        - 插件的基本样子
+            ```go
+            package MyPlugin
+
+            type MyPlugin struct{}
+
+            func (m *MyPlugin) Setup(config map[string]string) error {}
+
+            func (m *MyPlugin) Name() string {
+                return "myPlugin"
+            }
+
+            func init() {
+                plugin.Register(&MyPlugin)
+            }
+            ```
 ### 算法
+1. Rabin-Karp字符串匹配
+   - 认识：用在了字符子串在另一个字符串的匹配，利用滚动hash计算出母串的hasharray，然后进行比较，再用字符对比解决hash冲突问题
 1. 外部排序
    - 解析：pipeline思想，将源数据分成一个个的节点，然后归并到最终集
      1. 每个节点内部使用sort包的内部排序

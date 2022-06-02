@@ -461,7 +461,7 @@
             $ disown -h %1
             ```
         - `screen -dmS|-r xx`
-        - subshell：实质为子进程执行方式，通常为fork
+        - `subshell`：实质为子进程执行方式，通常为fork
         - `trap "" SIGHUP SIGINT | trap SIGHUP SIGINT | trap "" 1 2 | trap : 1 2`
 1. 查看
    - ps：显示进程状态
