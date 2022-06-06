@@ -453,7 +453,7 @@
    - 场景：点播(vod)、直播(live)、实时通信(rtc)
    - 功能：音视频采集、上传、存储、自定义转码、水印、截图、截动图、视频裁剪、视频剪辑、直播回放、媒体资源管理、视频AI审核分析、封禁解禁、CDN分发加速、CDN缓存刷新预热、防盗链、播放调度、播放SDK等于一体的一站式音视频点播解决方案
      1. CDN的直播延迟在3~6秒之间，解决跨网、跨省的传输
-   - 信令服务器就是业务服务器，用于控制播放内容、形式、播放地址等
+   - 信令服务器：也称房间服务器、业务服务器，传递元数据如媒体信息、网络信息等，用于发现通信对方，控制播放内容、形式、输出播放地址等
    - 技术点
      1. 摄像头采集
         - iOS是比较简单的，Android则要做些机型适配工作（声网Agora.io目前适配了4000+Android机型）。PC最麻烦各种奇葩摄像头驱动，出了问题特别不好处理，建议放弃PC只支持手机主播，目前几个新进的直播平台都是这样的
@@ -484,32 +484,95 @@
    - Mixer：所有客户端和服务端直连，服务端压力大
    - Router：所有客户端和服务端连接，服务端只负责包转发，不负责转码
 ### webRTC
-1. 认识：谷歌开发的支持网页浏览器进行实时语音/视频对话的开源项目。提供音视频采集、编解码、网络传输、显示等功能，缺少服务端设计和部署方案，谷歌买了GIPS后改的名字，GIPS最先进的音频编解码
+1. 认识：谷歌开发的支持网页浏览器进行实时语音/视频对话的开源项目。提供音视频采集、编解码、网络传输、显示等功能
    - 主流浏览器都支持，是原生js的浏览器API，省去客户端工作
-   - 媒体服务器：客户端只和服务器建立媒体传输通道
+   - 缺少服务端设计和部署方案，需要自己配套
+   - 流程：采集、处理、传输，传输难以把控
+   - 对应的IETF工作组(RTCWEB)
+   - 底层也用ffmpeg
+1. 内部组成
+   - 认识：提供给开发者的web api，提供给浏览器的c/c++ api。![avatar](../images/webrtc_struct.png)
+   - 组成
+     1. 视频引擎：VP8 codec
+     1. 音频引擎
+     1. 传输引擎：SRTP、P2P
+1. 外部组成
+   - 信令：WebRTC标准并没有规定信令方法和协议，如可用Koa和Socket.io实现一个
+   - ICE：WebRTC中用于建立网络连接
+     1. 三种ICE候选者：主机(局域网的)、反射(NAT的)、中继(TURN的)，优先级依次降低
+1. 连接原理：![avatar](../images/webrtc_link.png)
+   - 通过信令服务器获取需要通信的网络：通过WebRTC提供的API获取各端的媒体信息SDP以及网络信息candidate ，并通过信令服务器交换
+   - webRTC内部处理一番
+   - 使用ICE建立连接
+1. 开发
+   - client
+     1. 音视频采集
+        ```js
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        document.querySelector('video').srcObject = stream;
+        ```
+     1. 建立连接
+        ```js
+        // 创建本地视频流信息
+        const localStream = await this.createLocalVideoStream();
+        this.localStream = localStream;
+        document.querySelector('#echat-local').srcObject = this.localStream;
+
+        this.peer = new RTCPeerConnection();
+        this.initPeerListen();
+        this.peer.addStream(this.localStream);
+
+        if (user.sockId === this.sockId) {
+            // 接收方
+        } else {
+            // 发送方 创建 offer
+            const offer = await this.peer.createOffer(this.offerOption);
+            await this.peer.setLocalDescription(offer);
+            socket.emit('receiveOffer', { user: this.user, offer });
+        }
+
+        // ...中间一大堆步骤
+
+        // SDP 信息交换完成
+        socket.on('addIceCandidate', async (candidate) => {
+            await this.peer.addIceCandidate(candidate);
+        });
+        this.peer.onaddstream = (event) => {
+            // 拿到对方的视频流
+            document.querySelector('#remote-video').srcObject = event.stream;
+        };
+        ```
+1. 协议
+   - ICE：Interactive Connecctivity Establishment, 交互式连接建立，不是协议是整合了STUN和TURN两种协议的框架
+     1. STUN：Sesssion Traversal Utilities for NAT, NAT会话穿越应用程序，允许位于NAT（或多重NAT）后的客户端找出自己对应的公网IP地址和端口，即P2P“打洞”
+     1. TURN：Traversal USing Replays around NAT，是STUN的拓展协议，添加了中继replay功能
+        - 解决对称NAT STUN无法穿越的问题，通过TURN服务器请求公网IP地址作为中继地址
+   - irc：古老简单的网络聊天协议，小圈子，因为古老而有门槛和纯粹
+     1. linux的server：ircd-hybrid
+     1. client：irssi/weechat
+   - p2p：peer to peer 点对点技术，P2P网络中所有计算机记载着除自己所有计算机的信息，无需经过服务器转发(relay)，遵循ICE协议能打洞成功的网络都能p2p
+     1. 创世节点
+     1. 节点通信建立
+        - NAT穿透：Network Address Translation，网络地址转换，将内部的私有IP转换成公网IP，一个解决地址不够，二是安全(不在转换列表的全都拒绝)
+1. 媒体服务器
+   - 认识客户端只和服务器建立媒体传输通道
      1. SFU：Selected Forward Unit，并发转发多路信号，带宽占用高，灵活分发
         - 媒体流：RTP数据包
         - 媒体控制流：RTCP包，包含NACK, PLI, REMB, Receiver Report
      1. MCU：Multipoint Control Unit，转码/混流后传输，带宽占用少，对服务器性能要求高，实时性稍差
-     1. 开源媒体服务器：janus、licode、Medooze、mediasoup
-   - 对应的IETF工作组(RTCWEB)
-   - 底层也用ffmpeg
-1. 高级
-   - 流程：采集、处理、传输，传输难以把控，时延、抖动、丢包
+   - 开源媒体服务器
+     1. coturn
+     1. Kurento https://github.com/Kurento/kurento-media-server
+     1. licode https://github.com/lynckia/licode
+     1. janus https://github.com/meetecho/janus-gateway
+     1. Medooze、mediasoup
+1. wiki
    - Qos：Quality of Service，服务质量
      1. ARQ：自动重传请求，是数据链路层的错误纠正协议之一，使用NACK机制
      1. FEC：前向纠错，是增加数据通讯可靠度的方法
      1. Jitter Buffer：抖动缓冲，通过在接收端维护一个数据缓冲区，可以对抗一定程度的网络抖动
      1. Congestion Control：拥塞控制， WebRTC利用GCC算法来控制传输
-   - Qoe：Quality of Experience，质量体验
-1. p2p：peer to peer，点对点技术，P2P网络中的所有计算机上记载着除该台计算机外所有计算机的信息，无需经过服务器转发(relay)，如果遵循ICE协议能打洞成功的网络都能p2p
-   - 创世节点
-   - 节点通信建立，NAT穿透：Network Address Translation，网络地址转换，网络地址翻译技术，将内部的私有IP转换成公网IP，一个解决地址不够，二是安全(不在转换列表的全都拒绝)
-1. irc：古老简单的网络聊天协议，linux的server：ircd-hybrid，客户端：irssi/weechat，小圈子，因为古老而有门槛和纯粹
-1. webrtc媒体服务器
-   - Kurento https://github.com/Kurento/kurento-media-server
-   - licode https://github.com/lynckia/licode
-   - janus https://github.com/meetecho/janus-gateway
+   - Qoe：Quality of Experience，质量体验。时延、抖动、丢包
 ### 图形视觉库
 1. 图像处理
    - OpenGL
@@ -677,6 +740,172 @@
         - 分割
         - 匹配
         - 跟踪
+### 图像处理
+1. 底层概念
+   - 亮度、对比度、饱和度：亮度/对比度可从RGB进行增强，饱和度可从HSV/HSI/HSL进行增强
+     1. 亮度：图像的明亮程度，在单色图像中，最高的值是白色，最低的是黑色，处理是数据的加减
+     1. 对比度：图像暗和亮的落差值，最大/最小灰度级的差值，处理是数据的乘以值v，加大/减少区别，v大于1变大，v小于1变小
+     1. 饱和度：颜色种类的多少，看起来更鲜艳
+   - 平滑和锐化
+     1. 平滑
+        - 认识：用于突出图像的宽大区域、低频部分、主干部分，或者抑制图像噪声、干扰高频成分的图像处理方法
+          1. 使图像亮度平缓渐变、减小突变梯度、改善图像质量，会使图像模糊，因为邻域的界限变模糊了
+        - 方法
+          1. 归一化块滤波器
+          1. 高斯滤波器
+          1. 中值滤波器
+          1. 双边滤波器
+     1. 锐化
+        - 认识：和平滑相反，通过增强高频分量来减少图像中的模糊，增强图像细节边缘、轮廓，增强灰度反差，便于后期对目标的识别和处理，会增加图像的噪声
+        - 方法
+          1. 微分法
+          1. 高通滤波法：低通滤波
+   - 图像轮廓
+     1. 认识：完成对图像纹理信息的抓取，通过微分的方式计算图像边缘，色差、灰度值相差大的都是边缘，邻域作差即可
+     1. 算子：roberts、prewitt等
+   - 直方图均衡化
+     1. 认识：将原图通过某种变换得到灰度直方图为均匀分布的新图像，即对像素个数多的灰度级展宽，少的缩减，拉大了对比度，可以清晰图像
+   - 图像滤波
+     1. 认识：更新、增强图像，是邻域操作算子，利用给定像素周围的像素的值决定此的输出值。可以强调一些特征、去除不需要的等
+     1. 分类：均值、中值、高斯、双边扥
+   - 形态学运算
+     1. 腐蚀、膨胀
+        - 腐蚀：把图片变瘦，小区域内取局部最小值
+        - 膨胀：把图片变胖，小区域内取局部最大值
+     1. 开运算、闭运算
+        - 开运算：先腐蚀后膨胀，可分离物体、清除小区域
+        - 闭运算：先膨胀后腐蚀，消除闭合里的小黑洞
+     1. 形态学梯度：膨胀图减去腐蚀图，得到轮廓图
+     1. 顶帽、黑帽
+        - 顶帽：原减开运算
+        - 黑帽：闭运算减原图
+   - 术语
+     1. 高低频：低频就是连续的色块
+     1. 灰度级：就是某一个灰度值
+1. 目标识别
+   - 图像轮廓
+     1. 认识具有相同颜色或强度(二值化(只有黑白两色)、canny)的连续点曲线
+     1. 作用
+        - 用于图形分析
+        - 物体识别和检测
+     1. 使用
+        ```opencv
+        // 返回轮廓和层级
+        findContours(img, mode, approximationMode)      // 近似模式：只检测外轮廓、轮廓间不建立等级关系、最多2层、树轮廓等
+        ```
+   - 多边形逼近与凸包
+     1. 认识：一个接近，一个跨缝模糊是凸出的。类似手是全描绘，还是画个圈。凸包可以减少特征点将物体描述出来
+     1. 使用
+        ```opencv
+        approxPolyDP()      // 逼近，参数：曲线，精度，是否闭合
+        convexHull()        // 凸包
+        ```
+   - 外接矩形
+     1. 认识：就是给物体按照其轮廓画个矩形。最小/最大外接矩形
+     1. 使用
+        ```opencv
+        minAreaRect()
+        boundingRect()
+        ```
+   - 示例
+    ```py
+    import cv2
+    import numpy as np
+
+    def drawShape(src, points):
+        i = 0
+        while i < len(points):
+            if(i == len(points) - 1):
+                x,y = points[i][0]
+                x1,y1 = points[0][0]
+                cv2.line(src, (x, y), (x1, y1), (0, 0, 255), 3)
+            else:
+                x,y = points[i][0]
+                x1,y1 = points[i+1][0]
+                cv2.line(src, (x, y), (x1, y1), (0, 0, 255), 3)
+            i = i + 1
+
+    #读文件
+    #img = cv2.imread('./contours1.jpeg')
+    #img = cv2.imread('./hand.jpeg')
+    img = cv2.imread('./hello.jpeg')
+    print(img.shape)
+
+    # 单通道先转换为二值化
+    #转变成单通道
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    #二值化
+    ret, binary = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY)
+
+    #轮廓查找
+    contours, hierarchy = cv2.findContours(binary, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+    #绘制轮廓
+    # cv2.drawContours(img, contours, 1, (0, 255, 0), 1)
+
+    #计算面积
+    # area = cv2.contourArea(contours[0])
+    # print("area=%d"%(area))
+
+    # #计算周长
+    # len = cv2.arcLength(contours[0], False)
+    # print("len=%d"%(len))
+
+    #多边形逼近
+    # e = 5
+    # approx = cv2.approxPolyDP(contours[1], e, True)
+
+    # drawShape(img, approx)
+
+    #凸包
+    # hull = cv2.convexHull(contours[1])
+
+    # drawShape(img, hull)
+
+    #外接矩形
+    r = cv2.minAreaRect(contours[1])
+    box = cv2.boxPoints(r)
+    box = np.int0(box)
+    cv2.drawContours(img, [box], 0, (0,0, 255), 2)
+
+    x,y,w,h = cv2.boundingRect(contours[1])
+    cv2.rectangle(img, (x, y), (x+w,y+h), (255,0,0), 2)
+
+
+    cv2.imshow('img', img)
+    cv2.waitKey(0)
+    ```
+   - demo原理：车辆识别
+     1. 通过形态学识别车辆
+        - 通过腐蚀、膨胀、开闭处理成纯粹，然后查轮廓
+        - 动的为前景色，不动的为背景色，去掉背景就得出了车：涉及多帧比较，有很多论文讨论去背景
+     1. 车辆统计等
+1. 特征点检测与匹配
+   - 认识：就是两个图比较
+     1. 角点：灰度梯度的最大值对应的像素，两条线的交点，极值点(一阶导数最大，二阶导数为0)，最重要
+        - harris角点：垂直不变，左右变。cornerHarris()
+        - Shi-Tomasi：改进版，goodFeaturesToTrack()，指定角点数，系数
+     1. 特征点检测和描述子计算方法
+        - SIFT：无缩放无关的特征转换，如一个曲线放大后就不是角点了，最准确
+          1. harris具有旋转不变的特征
+        - SURF：快速，准确性低一些，`surf = cv2.xfeatures2d.SURF_create()`
+          1. SIFT非常慢
+        - ORB：可以实时检测，是抛弃大量数据才能快，准确率低，足够了，这个没版权
+   - opencv提供的方法
+     1. BF：brute-force，暴力特征匹配
+        - 认识：将第一组中每个特征的描述子和第二组的所有描述子匹配，    
+     1. FLANN：最快邻近区特征匹配，精度差，批量时最快
+   - 单应性矩阵
+     1. 认识：一个点在不同角度看时的转换方法
+     1. 应用场景
+        - 歪斜图片转正：如身份证照片
+        - 建筑歪斜的广告牌区域抠图
+   - 应用场景
+     1. 以图搜图：提前将图的特征点记录下来
+        - 原理：特征匹配 + 单应性矩阵
+     1. 完成图像拼接、拼图游戏：寻找特征、特征是唯一的、可追踪的、可比较的
+   - demo：两个各自一半山的图片拼接
 ### wiki
 1. base
    - 实时音视频技术 = 音视频处理技术 + 网络传输技术，是技术集合体
@@ -715,50 +944,6 @@
    - 工具库
      1. ffmpeg、ffplay、ffprobe 
      1. openalpr：开源的车牌识别
-1. 图像处理概念
-   - 亮度、对比度、饱和度：亮度/对比度可从RGB进行增强，饱和度可从HSV/HSI/HSL进行增强
-     1. 亮度：图像的明亮程度，在单色图像中，最高的值是白色，最低的是黑色，处理是数据的加减
-     1. 对比度：图像暗和亮的落差值，最大/最小灰度级的差值，处理是数据的乘以值v，加大/减少区别，v大于1变大，v小于1变小
-     1. 饱和度：颜色种类的多少，看起来更鲜艳
-   - 平滑和锐化
-     1. 平滑
-        - 认识：用于突出图像的宽大区域、低频部分、主干部分，或者抑制图像噪声、干扰高频成分的图像处理方法
-          1. 使图像亮度平缓渐变、减小突变梯度、改善图像质量，会使图像模糊，因为邻域的界限变模糊了
-        - 方法
-          1. 归一化块滤波器
-          1. 高斯滤波器
-          1. 中值滤波器
-          1. 双边滤波器
-     1. 锐化
-        - 认识：和平滑相反，通过增强高频分量来减少图像中的模糊，增强图像细节边缘、轮廓，增强灰度反差，便于后期对目标的识别和处理，会增加图像的噪声
-        - 方法
-          1. 微分法
-          1. 高通滤波法：低通滤波
-   - 图像边缘提取
-     1. 认识：完成对图像纹理信息的抓取，通过微分的方式计算图像边缘，色差、灰度值相差大的都是边缘，邻域作差即可
-     1. 算子：roberts、prewitt等
-   - 直方图均衡化
-     1. 认识：将原图通过某种变换得到灰度直方图为均匀分布的新图像，即对像素个数多的灰度级展宽，少的缩减，拉大了对比度，可以清晰图像
-   - 图像滤波
-     1. 认识：更新、增强图像，是邻域操作算子，利用给定像素周围的像素的值决定此的输出值。可以强调一些特征、去除不需要的等
-     1. 分类：均值、中值、高斯、双边扥
-   - 形态学运算
-     1. 腐蚀、膨胀
-        - 腐蚀：把图片变瘦，小区域内取局部最小值
-        - 膨胀：把图片变胖，小区域内取局部最大值
-     1. 开运算、闭运算
-        - 开运算：先腐蚀后膨胀，可分离物体、清除小区域
-        - 闭运算：先膨胀后腐蚀，消除闭合里的小黑洞
-     1. 形态学梯度：膨胀图减去腐蚀图，得到轮廓图
-     1. 顶帽、黑帽
-        - 顶帽：原减开运算
-        - 黑帽：闭运算减原图
-   - 术语
-     1. 高低频：低频就是连续的色块
-     1. 灰度级：就是某一个灰度值
-1. 计算机图形学
-   - 用户界面设计、精灵图（sprite graphics）、矢量图形、3D 建模、着色器光线追踪和计算机视觉
-   - 依赖于基础几何、光学和物理学
 1. deep
    - H.264优势
      1. 将每个视频帧分离成由像素组成的块，因此视频帧的编码处理的过程可以达到块的级别
@@ -785,3 +970,6 @@
      1. 如果声道数目>2，则转为2
      1. 如果声音的采样率>44100，则转为44100
    - 转换命令样例：`./ffmpeg.exe -i 01.mp4 -vcodec libx264 -s 1920x1080 -r 25 -acodec aac -ac 2 -ar 44100 -b:a 96k -b:v 1000k -y 01.out_1280_720_20.mp4`
+1. 计算机图形学
+   - 用户界面设计、精灵图（sprite graphics）、矢量图形、3D 建模、着色器光线追踪和计算机视觉
+   - 依赖于基础几何、光学和物理学
