@@ -2714,6 +2714,7 @@
    - 并发模式（Concurrency Patterns）
    - 读写锁
    - 协程：协程泄露
+1. Goscript：通过 WASM 实现，Go语言规范的非官方实现，用于Rust项目的内嵌或封装。像 Lua 之于 Redis/WoW，或者 Python 之于 NumPy
 1. 关键字和标识符、符号：程序一般由关键字、常量、变量、运算符、类型和函数组成
    - 关键字：25个
      1. var、const、map、struct、type
