@@ -926,3 +926,5 @@
 1. 架构
    - 配置：etcd+confd
    - supervisor
+### rpc
+1. SPRC：搜狗基于Sogou C++ Workflow的企业级RPC系统，qps几十万，支持Protobuf、Thrift

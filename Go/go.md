@@ -2619,6 +2619,9 @@
      1. 配置代理：`GOPROXY=https://goproxy.cn;GOPRIVATE=*.100tal.com`
      1. 配置注释空格：设置 Preferences > Editor > Code Style > Go > Other 勾选上 Add leading space to comments
      1. 配置goimport、gofmt，在Tools > File Watcher
+     1. 运行
+        - go工具实参：`-gcflags="all=-N -l"`
+        - 程序实参：`-conf=$ProjectFileDir$/configs/dev`
    - 部署
      1. supervisor来管理go程序，go自己用异常捕捉来处理
      1. 打包linux的：`CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build main.go`

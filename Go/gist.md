@@ -4,6 +4,16 @@
     var f float64 = float64(i)
     // 或者
     f := float64(i)
+
+    // string转为int、int64
+    aa := "111"
+	// 这样是转成 int
+	b, err := strconv.Atoi(aa)
+	fmt.Printf("b: %d, err: %v   \n", b, err)
+
+	// 这样是转成 int64
+	c, err := strconv.ParseInt(aa, 10, 64)
+	fmt.Printf("c: %d, err: %v   \n", c, err)
     ```
 1. slice
    - 当作函数参数传递时修改slice
