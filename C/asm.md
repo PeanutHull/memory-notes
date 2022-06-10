@@ -1,9 +1,9 @@
-### 认识
+### base
 1. asm
    - 认识：assembly language，汇编语言，是机器指令的助记符表示。汇编文件.s和.S结尾
      1. 不同平台的指令集和寄存器不一样，因为cpu设计不同
      1. 寄存器是离cpu最近的，因为cpu比内存快太多了，而且内存地址太长不利于计算
-     1. 函数的调用只使用寄存器是搞不定了，需要内存的配合，在内存中建立一个叫做栈的数据结构
+     1. 函数的调用只使用寄存器是搞不定了，需要内存的配合，在内存中建立一个叫做栈的数据结构，相当于寄存器当作笔在内存(纸)上操作
    - 格式分类
      1. intel x86：把右边的值复制到左边
      1. AT&T：把左边值复制放到右边
@@ -23,6 +23,7 @@
      1. 栈地址寄存器
         - 认识：专门做函数调用，做栈操作
           1. 函数跳转时需要将上一个函数的bp记录到当前函数的栈帧；函数执行完，把内存中保存的值恢复到EBP中，并且移动ESP到上个栈帧的顶部就可以了。仅使用两个寄存器，就能记录无穷无尽的函数调用了
+             - 因为栈是从高到低的，所以只记录bp就是上个栈帧的头(顶部)，自己的bp就是上个栈帧的sp
         - 分类
           1. sp/esp/rsp：栈顶寄存器
           1. bp/ebp/rbp：基址寄存器
@@ -94,84 +95,81 @@
         - 认识：常量字符串存储区
      1. 代码区
         - 认识：text，程序被操作系统加载到内存的时候，所有的可执行代码都加载到代码区，这块内存在程序运行期间不变，放在低位不会被堆栈溢出覆盖
-1. plan9
-   - 规则
-     1. 没有r或e的前缀
-   - 伪寄存器
-     1. pc：即意义和作用都是指令寄存器
-     1. sb：全局静态基指针，用以指示所有内存的基地址，一般用来声明函数或全局变量
-     1. fp：使用symbol+offset的方式，引用函数的输入参数，如`arg1+8(FP)`
-        - 不加symbol时，无法通过编译，只是是为了提升代码可读性
-     1. sp：指向当前栈帧的局部变量的开始位置，使用symbol+offset的方式引用函数的局部变量
-        - offset的合法取值是-framesize到0，注意是个左闭右开的区间。假如局部变量都是8字节，第一个局部变量就可用localvar0-8(SP)来表示
-        - symbol+offset(SP)形式表示伪寄存器SP。offset(SP)则表示硬件寄存器SP
-   - 指令
-     1. 常数：$num表示，默认十进制，用$0x123表示十六进制
-     1. 栈调整：没有pop、push，通过SP进行运算实现
-     1. 数据传输
-        - 认识：可实现数据、寄存器、内存三者间的数据搬运
-          1. 长度由mov的后缀确定
-          1. 方向和intel相反，左到右
-        - 方法
-          1. MOVB：1 byte，byte
-          1. MOVW：2 bytes，word
-          1. MOVL：4 bytes，long
-          1. MOVQ：8 bytes，quadword
-     1. 计算指令，也是后缀对应不同长度
-        - ADD
-        - SUB：减
-        - MUL：乘
-        - DIV：除
-        - AND：逻辑与
-        - OR
-        - NOT
-     1. 跳转
-        - JMP：无条件跳转
-        - JL：Jump if less
-        - JLZ：Jump if less or equal
-        - JE：Jump if equal
-        - JNE：Jump if not equal
-        - JG：Jump if greater
-        - JGE：Jump if greater or equal
-        - JZ：Jump if equal zero
-        - JNZ：Jump if not equal zero
-     1. 方法调用
-        - CALL
-     1. 取地址
-        - LEA
-     1. SIMD
-   - 全局变量
-     1. 声明：`GLOBL symbol(SB), width`，变量符号 + 内存宽度。没有类型，内存宽度必须是2的指数倍，编译器最终会保证变量的真实地址对齐到机器字倍数
-        - 如int32的变量`GLOBL ·count(SB),$4`：点开头表示是当前包的变量
-     1. 赋值：`DATA symbol+offset(SB)/width,value`：width必须是1、2、4、8几个宽度之一，因为再大的内存无法一次性用一个uint64大小的值表示
-     1. 整型
-        ```s
-        # 可以逐个字节初始化，也可以一次性初始化：
+### plan9
+1. 规则
+   - 没有r或e的前缀
+1. 伪寄存器
+   - pc：即意义和作用都是指令寄存器
+   - sb：全局静态基指针，用以指示所有内存的基地址，一般用来声明函数或全局变量
+   - fp：使用symbol+offset的方式，引用函数的输入参数，如`arg1+8(FP)`
+     1. 不加symbol时，无法通过编译，只是是为了提升代码可读性
+   - sp：指向当前栈帧的局部变量的开始位置，使用symbol+offset的方式引用函数的局部变量
+     1. offset的合法取值是-framesize到0，注意是个左闭右开的区间。假如局部变量都是8字节，第一个局部变量就可用localvar0-8(SP)来表示
+     1. symbol+offset(SP)形式表示伪寄存器SP。offset(SP)则表示硬件寄存器SP
+1. 指令
+   - 常数：$num表示，默认十进制，用$0x123表示十六进制
+   - 栈调整：没有pop、push，通过SP进行运算实现
+   - 数据传输
+     1. 认识：可实现数据、寄存器、内存三者间的数据搬运
+        - 长度由mov的后缀确定
+        - 方向和intel相反，左到右
+     1. 方法
+        - MOVB：1 byte，byte
+        - MOVW：2 bytes，word
+        - MOVL：4 bytes，long
+        - MOVQ：8 bytes，quadword
+   - 计算指令，也是后缀对应不同长度
+     1. ADD
+     1. SUB：减
+     1. MUL：乘
+     1. DIV：除
+     1. AND：逻辑与
+     1. OR
+     1. NOT
+   - 跳转
+     1. JMP：无条件跳转
+     1. JL：Jump if less
+     1. JLZ：Jump if less or equal
+     1. JE：Jump if equal
+     1. JNE：Jump if not equal
+     1. JG：Jump if greater
+     1. JGE：Jump if greater or equal
+     1. JZ：Jump if equal zero
+     1. JNZ：Jump if not equal zero
+   - 方法调用
+     1. CALL
+   - 取地址
+     1. LEA
+   - SIMD
+1. 全局变量
+   - 声明：`GLOBL symbol(SB), width`，变量符号 + 内存宽度。没有类型，内存宽度必须是2的指数倍，编译器最终会保证变量的真实地址对齐到机器字倍数
+     1. 如int32的变量`GLOBL ·count(SB),$4`：点开头表示是当前包的变量
+   - 赋值：`DATA symbol+offset(SB)/width,value`：width必须是1、2、4、8几个宽度之一，因为再大的内存无法一次性用一个uint64大小的值表示
+   - 整型
+    ```s
+    # 可以逐个字节初始化，也可以一次性初始化：
 
-        GLOBL ·count(SB),$4
-        DATA ·count+0(SB)/1,$1
-        DATA ·count+1(SB)/1,$2
-        DATA ·count+2(SB)/1,$3
-        DATA ·count+3(SB)/1,$4
-        // or
-        DATA ·count+0(SB)/4,$0x04030201
-        ```
-     1. 布尔
-        ```s
-        GLOBL ·trueValue(SB),$1             # var trueValue = true
-        DATA ·trueValue(SB)/1,$1            # 非 0 均为 true
-        
-        GLOBL ·falseValue(SB),$1            # var falseValue = true
-        DATA ·falseValue(SB)/1,$0
-        ```
-   - 函数声明
-     1. 认识：`TEXT symbol(SB), [flags,] $framesize[-argsize]`，表示该行开始的指令定义在TEXT内存段
-        - TEXT指令、函数名、可选的flags标志、函数帧大小、可选的函数参数大小
-     1. 实例
-        ```s
-        // func add(a,b int) int
-        TEXT main.add(SB), NOSPLIT,$0-24
-        ```
-   - 
-   - 
-### gist
+    GLOBL ·count(SB),$4
+    DATA ·count+0(SB)/1,$1
+    DATA ·count+1(SB)/1,$2
+    DATA ·count+2(SB)/1,$3
+    DATA ·count+3(SB)/1,$4
+    // or
+    DATA ·count+0(SB)/4,$0x04030201
+    ```
+   - 布尔
+    ```s
+    GLOBL ·trueValue(SB),$1             # var trueValue = true
+    DATA ·trueValue(SB)/1,$1            # 非 0 均为 true
+    
+    GLOBL ·falseValue(SB),$1            # var falseValue = true
+    DATA ·falseValue(SB)/1,$0
+    ```
+1. 函数声明
+   - 认识：`TEXT symbol(SB), [flags,] $framesize[-argsize]`，表示该行开始的指令定义在TEXT内存段
+     1. TEXT指令、函数名、可选的flags标志、函数帧大小、可选的函数参数大小
+   - 实例
+    ```s
+    // func add(a,b int) int
+    TEXT main.add(SB), NOSPLIT,$0-24
+    ```

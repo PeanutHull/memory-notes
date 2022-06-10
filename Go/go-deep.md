@@ -1,7 +1,3 @@
-### 重难点
-1. 并发模型GPM
-1. goroutine、channel调度
-1. 内存管理、GC
 ### 数据结构
 1. string
    - 认识：[]rune，字符数组实现
@@ -128,6 +124,38 @@
           1. 相等则返回value
 1. 结构体
    - 内存对齐
+### 语法
+1. defer
+   - 数据结构：defer有栈地址
+    ```go
+    type _defer struct {
+        sp      uintptr   // 函数栈指针
+        pc      uintptr   // 程序计数器
+        fn      *funcval  // 要执行的函数地址
+        link    *_defer   // 指向自身结构的指针，用于链接多个defer
+    }
+    ```
+   - 认识
+     1. 有全局和p本地的defer池，新声明的defer复用拿到的defer对象
+        - defer池：减少反复资源申请、GC，预备了不同大小的defer池，反复使用，并且申请了也不会释放
+        - 会切换到系统栈再去拿，从全局拿到p本地，只有系统栈才会处理扩栈
+     1. 内存结构上，defer函数的参数不在_defer结构体中，而是紧跟着
+     1. deferreturn通过递归来回切换需要执行的defer函数和主流程函数
+        - 两种递归结束方式
+          1. d为nil，链表为空，说明没执行的了
+          1. d.sp != sp，如果_defer对象的sp和调用deferreturn的sp不一样，说明不是本层函数要执行的defer，这是为什么不同层函数defer不会执行的原因
+        - 每次递归都不会增加栈空间，为啥，来回倒腾bp、sp
+   - 流程
+     1. 编译期
+        - defer翻译成对deferproc函数的调用：将 defer 关键字转换成 runtime.deferproc
+        - 并在调用 defer 关键字的函数返回之前插入 runtime.deferreturn
+     1. 运行时
+        - 调用 runtime.deferproc 会将一个新的 runtime._defer 结构体追加到当前 Goroutine 的链表头
+        - 对_defer对象进行赋值
+        - 返回到调用 deferproc 的函数继续执行后面的代码
+        - 调用 runtime.deferreturn 会从 Goroutine 的链表中取出 runtime._defer 结构并依次执行
+1. panic
+   - 遍历当前 goroutine 所注册的 defered 函数并通过 reflectcall 调用遍历到的函数，如果某个 defered 函数调用了recover（对应到runtime的gorecover函数）则使用 mcall(recovery)  恢复程序的正常流程，否则执行完所有的 defered 函数之后打印出 panic 的栈信息然后退出程序
 ### 协程
 1. goroutine
    - 特点、设计目标
@@ -257,6 +285,9 @@
    - go的内存对齐和unsafe包的关系和特点
      1. go可以设置内存对齐的字节数，默认为8字节
      1. 内存对齐为什么可以做到原子性？
+   - 模糊堆栈，编译器自动优化放堆还是放栈
+   - 贪婪占用不返还，是带GC程序的通病。程序不断执行，idle memory（即HeapIdle）会被重用，但很少归还到操作系统。
+   - GC成本很高25%
 ### 应用
 1. http
    - 核心组成
@@ -343,6 +374,10 @@
      1. ‌runtime.iface 表示第一种
      1. runtime.eface 表示第二种不包含任何方法的接口
 ### wiki
+1. 重难点
+   - 并发模型GPM
+   - goroutine、channel调度
+   - 内存管理、GC
 1. goyacc：和yacc的功能一样，根据输入的语法规则文件，生成该语法规则的golang版的yacc
    - Lex & Yacc：用来生成词法分析器和语法分析器的工具，yacc用c写的
      1. Flex&Bison：Flex是由Vern Paxon实现的一个Lex，Bison则是GNU版本的YACC
