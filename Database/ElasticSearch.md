@@ -1148,7 +1148,7 @@
         - Winlogbeat：window日志数据
         - Heartbeat：健康检查
         - Auditbeat：审计数据
-     1. ETL：Extract Transform Load，数据源多样
+     1. ETL：Extract Transform Load，数据源多样，用来描述将数据从来源端经过抽取、转换、加载至目的端的过程，常见于数据仓库
         - 数据文件：日志、excel
         - 数据库：mysql
         - http服务

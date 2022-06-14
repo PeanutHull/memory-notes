@@ -182,6 +182,7 @@
      1. Go runtime还会用Background thread来运行一些相对特别的G（如 Network Poller、Timer）
    - scheduler
      1. 认识：调度器，基于M:N的G-P-M线程调度模型，![avatar](../images/goroutine_base_schedule.png)
+        - 协程调度：模仿linux的进程调度，在其之上自己实现一套。m是machine相当于cpu，g相当于进程，g在m上运行，p按照规则自己给自己做调度，调度室代码+数据
      1. GMP
         - g：goroutine，执行的go代码片段/用户态协程
         - m：machine，内核线程

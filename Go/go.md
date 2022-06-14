@@ -1070,20 +1070,29 @@
     i.sayHello()                   
     ```
 ### 协程
+#### 基本
+1. 协程
+   - 场景
+     1. 不适用：cpu密集、阻塞io，如计算
+     1. 适用：异步io密集，如读数据库
+   - 价值
+     1. 轻量级
+        - 需要的内存极小，栈空间默认2k
+        - 切换成本低：无需内核态、需要的上下文更少，堆当栈用
+     1. 易调度：调度更积极主动，给了我们自己调度的自由
+     1. 其他操作耗时的时候让出cpu，不用等待
 1. goroutine
-   - 认识：协程(coroutine)，是go中最小的执行单位，可实现并发编程、并行计算(多处理器同时运行)。实际可以cpu核数减一来设置，给系统留下
-   - 特点
-     1. 非抢占式，调度器在合适点自动切换
+   - 认识：协程(coroutine)，是go中最小的执行单位，可实现并发编程、并行计算(多处理器同时运行)
+     1. 内部调度器在合适点自动切换
      1. 无锁，无callback(写程序不用，底层有)
      1. 协程间的通信和同步基于csp模型
-        - csp：描述两个独立的并发实体通过共享的通讯 channel(管道)进行通信的并发模型
    - 优势
      1. 去掉了冗余的协程生命周期管理
      1. 降低额外延迟和开销：来源是协程间的频繁交互
      1. 降低加解锁的频率
    - 实践
-     1. go的func的参数，如果不使用闭包参数，则go在运行到时才去拿for中的那个参数，可能导致不准，go闭包不会暂存状态
-     1. 没有必要阻塞主流程的，并且有完整日志、报警可用的情况下，可以用go去完成
+     1. go的func的参数，如果不使用闭包参数，则go在运行到时才去拿for中的那个参数，可能导致不准，go闭包会暂存状态
+     1. 没有必要阻塞主流程的，并且有完整日志、报警可用的情况下，可以用协程完成
    - demo
     ```go
     go say("hello")
@@ -1093,23 +1102,26 @@
         i++                     // 没有协程切换的机会，会一直运行
     }(i)                        // 外部传进i，否则就是闭包
     ```
-   - wiki
-     1. 并行不是并发：并发只是假装同时进行
-     1. 协程
-        - 场景
-          1. 不适用：cpu密集、阻塞io
-          1. 适用：异步io密集
-        - 协程调度：模仿linux的进程调度，在其之上自己实现一套。m是machine相当于cpu，g相当于进程，g在m上运行，p按照规则自己给自己做调度，调度室代码+数据
-        - 价值
-          1. 轻量级
-             - 需要的内存极小，栈空间默认2k
-             - 切换成本低：无需内核态、需要的上下文更少，堆当栈用
-          1. 易调度：调度更积极主动，给了我们自己调度的自由
-          1. 其他操作耗时的时候让出cpu，不用等待
-     1. io密集的可以使用协程如读数据库，cpu密集的就不要了比如网站的逻辑层
-     1. 管道用于协调，锁用于同步
+1. wiki
+   - 管道用于协调，锁用于同步
+   - csp：描述两个独立的并发实体通过共享的通讯channel(管道)进行通信的并发模型，go没有全部都实现
+     1. 概念：实体 process，通道 channel
+   - 传统并发编程问题
+     1. 共享数据如何加锁、同步
+   - 并发控制模式
+     1. chan：原始的同步方式，每多一级就需要多一个chan
+     1. waitGroup：限制多个的同步
+     1. context：多种控制方式，树级多级模型，可传递数据
+   - 并发路线
+     1. 内存模型
+     1. 并发机制原理
+     1. 锁
+     1. 并发数据结构
+     1. 并发工具
+     1. 协程池
+#### channel
 1. channel
-   - 认识：有类型的管道，用于协程间通信。使得goroutine可以在没有明确的锁或竞态变量的情况下同步，即飞行中加油，操作符<-
+   - 认识：有类型的管道，用于协程间通信。使得goroutine可以在没有明确的锁或竞态变量(共享内存)的情况下同步，更高级，操作符<-
      1. 和正在跑的协程进行通信
      1. 没有锁，可以用-race检测数据访问冲突
      1. 默认另一端准备好之前发送和接收都会阻塞
@@ -1136,32 +1148,6 @@
         - 消费没了消费者阻塞
      1. 后果：非主流程拿不到数据，主流程进入阻塞无法响应请求
      1. 骚操作：利用阻塞实现多协程锁
-   - 实例
-    ```go
-    ch := make(chan int)        // 这个ch是一个指针类型
-    ch <- v                     // 写
-    v := <- ch                  // 读
-    close(ch)                   // 关闭
-
-    // 单向channel
-    var send chan <- int         // 只能发送
-    var receive <- chan int      // 只能接收
-
-    // 缓冲channel
-    ch := make(chan int, 100)
-    ch := make(chan int)
-
-    // 检测channel是否关闭
-    v,ok := <-ch                    
-    for{
-        v,ok := <- ch
-        if ok == false {        // 通道已关闭
-            break
-        }
-    }
-    // 简便写法，不断从channel接收值，直到它被关闭，可替换以上判断的写法
-    for v := range ch{}         
-    ```
    - select
      1. 认识：同时监听多个chan并收发消息，会根据chan的是否阻塞而阻塞直到条件分支中的某个可以继续执行。多个都准备好的随机选一个
         - 可用于多个写，一个读场景
@@ -1190,90 +1176,221 @@
             case out <- n:                              // 这样不会阻塞
         }
         ```
-1. sync：提供了并发编程中基本的同步原语，保证执行不会出现混乱。这是传统的同步机制，是通过共享内存来通信的，更高级别的同步最好通过通道和通信来完成，多协程就要用到sync了
-   - 同步器
-     1. 认识：`sync.WaitGroup`，是信号量，需要某个条件完成才能继续，用于并发控制
-        - 场景：在一个goroutine等待一组goroutine执行完成的通知时。初级的可以多用一个done的channel阻塞实现等待某个goroutine结束的通知，每次循环进出这个channel，多个可以使用通道切片来分别存储，使用waitGroup更加高效优雅
-     1. 原理：拥有一个内部计数器。当计数器等于0时，则Wait()方法会立即返回。否则一直阻塞执行Wait()方法的goroutine
+   - 实例
+    ```go
+    ch := make(chan int)        // 这个ch是一个指针类型
+    ch <- v                     // 写
+    v := <- ch                  // 读
+    close(ch)                   // 关闭
+
+    // 单向channel
+    var send chan <- int         // 只能发送
+    var receive <- chan int      // 只能接收
+
+    // 缓冲channel
+    ch := make(chan int, 100)
+    ch := make(chan int)
+
+    // 检测channel是否关闭
+    v,ok := <-ch                    
+    for{
+        v,ok := <- ch
+        if ok == false {        // 通道已关闭
+            break
+        }
+    }
+    // 简便写法，不断从channel接收值，直到它被关闭，可替换以上判断的写法
+    for v := range ch{}         
+    ```
+   - 应用场景
+     1. 消息交流：内部实现看是以一个循环队列的方式存放数据，所以有时会当成线程安全的队列和buffer使用，多个goroutine在一个chan上可以安全的读写数据
+     1. 数据传递
+     1. 信号通知：利用空chan的receiver一直阻塞，实现wait/notify模式
+        - 如实现程序优雅退出，退出前给shutdownChan发个信号，如退出程序非常耗时
+            ```go
+            func main() {
+                var closing = make(chan struct{})
+                var closed = make(chan struct{})
+
+                go func() {
+                    // 模拟业务处理
+                    for {
+                        select {
+                        case <-closing:
+                            return
+                        default:
+                            // ....... 业务计算
+                            time.Sleep(100 * time.Millisecond)
+                        }
+                    }
+                }()
+
+                // 处理CTRL+C等中断信号
+                termChan := make(chan os.Signal)
+                signal.Notify(termChan, syscall.SIGINT, syscall.SIGTERM)
+                <-termChan
+
+                close(closing)                                                  // 告诉业务逻辑协程进行退出，因为业务也用了协程
+                // 执行退出之前的清理动作
+                go doCleanup(closed)
+
+                select {
+                case <-closed:
+                case <-time.After(time.Second):
+                    fmt.Println("清理超时，不等了")                               // 清理时间兜底
+                }
+                fmt.Println("优雅退出")
+            }
+
+            func doCleanup(closed chan struct{}) {
+                time.Sleep((time.Minute))
+                close(closed)
+            }
+            ```
+     1. 锁
+        - 方式
+          1. 容量为1的chan，谁接收到谁有锁，放回去就是释放锁
+          1. 容量为1的chan，谁发送到谁有锁，反之亦然
+        - 搭配功能：TryLock、Timeout
+          1. select中的default实现TryLock
+          1. Timer实现Timeout
+     1. 任务编排：击鼓传花，控制goroutine的执行
+        - 等待模式：模拟WaitGroup功能
+        - Or-Done模式：只有一个就通知，是一种更宽泛的信号通知
+          1. 实现
+             - 当 chan 的数量大于 2 时，使用递归的方式等待信号
+             - 数据量多递归用反射代替
+          1. demo
+            ```go
+            func or(channels ...<-chan interface{}) <-chan interface{} {
+                // 特殊情况，只有零个或者1个chan
+                switch len(channels) {
+                case 0:
+                    return nil
+                case 1:
+                    return channels[0]
+                }
+
+                orDone := make(chan interface{})
+                go func() {
+                    defer close(orDone)
+
+                    switch len(channels) {
+                    case 2: // 2个也是一种特殊情况
+                        select {
+                        case <-channels[0]:
+                        case <-channels[1]:
+                        }
+                    default: //超过两个，二分法递归处理
+                        m := len(channels) / 2
+                        select {
+                        case <-or(channels[:m]...):
+                        case <-or(channels[m:]...):
+                        }
+                    }
+                }()
+
+                return orDone
+            }
+            ```
+        - 扇入模式：多个源channel输入、一个目的channel输出
+        - 扇出模式：和上者相反
+        - Stream模式：把channel当作流式管道使用
+        - map-reduce模式
+#### sync
+1. 认识：提供了并发编程中基本的同步原语，保证执行不会出现混乱。这是传统的同步机制，是通过共享内存来通信的，更高级别的同步最好通过通道和通信来完成，多协程就要用到sync了
+1. 锁
+   - 互斥锁
+     1. 认识：`sync.Mutex`，保证同时只有一个goroutine能访问一个共享的变量从而避免冲突
      1. 方法
-        - Add(n)：设置计数器数量n，传负数就是减n
-        - Done()：计数器数量减一
-        - Wait()：等待，同步等待所有的记录的协程全部结束
-     1. 示例
-        ```go
-        var wg sync.WaitGroup
-        
-        wg.Add(2)
-        go func() {
-            defer wg.Done()
-        }()
-        go func() {
-            defer wg.Done()
-        }()
-        wg.Wait()                       // 阻塞，使其等待
-        ```
-   - 锁
-     1. 互斥锁：sync.Mutex，保证同时只有一个goroutine能访问一个共享的变量从而避免冲突
+        - `Lock()`
+        - `Unlock()`
+        - `TryLock()`
+     1. 实例
         ```go
         c.mux.Lock()
-        defer c.mux.Unlock()          // 这才是解锁的正确写法
-        c.v[key]++                          // Lock 之后同一时刻只有一个goroutine能访问 c.v
+        defer c.mux.Unlock()                    // 这才是解锁的正确写法
+        c.v[key]++                              // Lock 之后同一时刻只有一个goroutine能访问 c.v
 
         func() {                                // 可以用匿名函数实现逻辑体的加解锁
             c.mux.Lock()
             defer c.mux.Unlock()     
         }()
         ```
-     1. 读写互斥锁：sync.RWMutex。RWMutex允许至少一个读锁或一个写锁存在，而sync.Mutex允许一个读锁或一个写锁存在
+   - 读写互斥锁
+     1. 认识：`sync.RWMutex`。允许至少一个读/写锁存在
+     1. 方法
         - RLock、RUnlock：可进行并发读取
-   - 发送信号：`sync.Cond`
-     1. 认识：用于发出信号（一对一）或广播信号（一对多）到goroutine
-        - 创建sync.Cond需要sync.Locker对象（sync.Mutex或sync.RWMutex）
-        - 破坏了go的基本原则：不要通过共享进行通信；而是通过通信共享，但是通过channel模拟广播的唯一方法是关闭channel，只能广播一次，cond可以多次
-     1. 方法
-        - `sync.NewCond(&sync.Mutex{})`：创建
-        - `Signal`：发送单个信号
-        - `Broadcast`：发送广播信号
-   - 并发池：`sync.Pool`
-     1. 认识：多协程安全地保存临时对象，保存的对象可能随时自动删除而不通知
-        - pool的目的是缓存已分配但未使用的多协程静默共享的临时项目项目以供以后重用，减轻垃圾收集器的压力
-        - 重复申请的对象，可以减少GC的成本
-        - pool的适当用途是管理一组
-     1. 方法
-        - Get()：随机取，无法保证以固定的顺序
-        - Put()
-   - `sync/singleflight`
-     1. 认识：重复函数调用抑制
-   - `sync.Map`
-     1. 认识：并发安全版map
-     1. 方法
-        - Load()：检索
-        - Range()：遍历
-            ```go
-            x.Range(func(k, v interface{}) bool {
-                err := v.(error)
-                if err != nil {
-                    return false
-                }
-                return true
-            })
-            ```
-        - Store()：添加
-        - Delete()：删除
-        - LoadOrStore()：检索或新增
-   - atomic
-     1. 认识：底层的原子性内存操作， 除了某些特殊的底层应用，使用channel或sync实现同步更好，他们是保护一段逻辑，这个是保护一个值，逻辑需要自己处理
-        - 操作对象：6个，int32/int64/uint32/uint64/uintptr/unsafe.Pointer
-        - 原子操作：增减、载入、比较并交换、存储和交换
-     1. 方法
-        - `AddInt32(&addr,n)`：增减，n负数为减，只能操作数值类
-        - `StoreInt32(&addr,newaddr)`：存储
-        - `LoadInt32(&addr)`：读取
+1. 同步器
+   - 认识：`sync.WaitGroup`，是信号量，需要某个条件完成才能继续，用于并发控制
+     1. 场景：在一个goroutine等待一组goroutine执行完成的通知时。初级的可以多用一个done的channel阻塞实现等待某个goroutine结束的通知，每次循环进出这个channel，多个可以使用通道切片来分别存储，使用waitGroup更加高效优雅
+   - 原理：拥有一个内部计数器。当计数器等于0时，则Wait()方法会立即返回。否则一直阻塞执行Wait()方法的goroutine
+   - 方法
+     1. `Add(n)`：设置计数器数量n，传负数就是减n
+     1. `Done()`：计数器数量减一
+     1. `Wait()`：等待，同步等待所有的记录的协程全部结束
+   - demo
+    ```go
+    var wg sync.WaitGroup
+    
+    wg.Add(2)
+    go func() {
+        defer wg.Done()
+    }()
+    go func() {
+        defer wg.Done()
+    }()
+    wg.Wait()                           // 阻塞，使其等待
+    ```
+1. 发送信号：`sync.Cond`
+   - 认识：用于发出信号（一对一）或广播信号（一对多）到goroutine
+     1. 创建sync.Cond需要sync.Locker对象（sync.Mutex或sync.RWMutex）
+     1. 破坏了go的基本原则：不要通过共享进行通信；而是通过通信共享，但是通过channel模拟广播的唯一方法是关闭channel，只能广播一次，cond可以多次
+   - 方法
+     1. `sync.NewCond(&sync.Mutex{})`：创建
+     1. `Signal`：发送单个信号
+     1. `Broadcast`：发送广播信号
+1. 并发池：`sync.Pool`
+   - 认识：多协程安全地保存临时对象，保存的对象可能随时自动删除而不通知
+     1. pool的目的是缓存已分配但未使用的多协程静默共享的临时项目项目以供以后重用，减轻垃圾收集器的压力
+     1. 重复申请的对象，可以减少GC的成本
+     1. pool的适当用途是管理一组
+   - 方法
+     1. Get()：随机取，无法保证以固定的顺序
+     1. Put()
+1. `sync/singleflight`
+   - 认识：重复函数调用抑制
+1. `sync.Map`
+   - 认识：并发安全版map
+   - 方法
+     1. Load()：检索
+     1. Range()：遍历
+        ```go
+        x.Range(func(k, v interface{}) bool {
+            err := v.(error)
+            if err != nil {
+                return false
+            }
+            return true
+        })
+        ```
+     1. Store()：添加
+     1. Delete()：删除
+     1. LoadOrStore()：检索或新增
+1. atomic
+   - 认识：底层的原子性内存操作， 除了某些特殊的底层应用，使用channel或sync实现同步更好，他们是保护一段逻辑，这个是保护一个值，逻辑需要自己处理
+     1. 操作对象：6个，int32/int64/uint32/uint64/uintptr/unsafe.Pointer
+     1. 原子操作：增减、载入、比较并交换、存储和交换
+   - 方法
+     1. `AddInt32(&addr,n)`：增减，n负数为减，只能操作数值类
+     1. `StoreInt32(&addr,newaddr)`：存储
+     1. `LoadInt32(&addr)`：读取
 
-        - `CompareAndSwapInt32(&addr,old,new)`：比较并交换 Compare And Swap，即CAS，如果旧值没变就替换
-        - `SwapInt32(&addr,newaddr)`：交换，不管旧值
-   - 一个函数在所有goroutine仅执行一次：`sync.Once`
-     1. 执行方法：`once.Do()`
+     1. `CompareAndSwapInt32(&addr,old,new)`：比较并交换 Compare And Swap，即CAS，如果旧值没变就替换
+     1. `SwapInt32(&addr,newaddr)`：交换，不管旧值
+1. 一个函数在所有goroutine仅执行一次：`sync.Once`
+   - 执行方法：`once.Do()`
+#### context
 1. context
    - 认识：控制生命周期、追踪协程之间的调用树，在这些树中传递通知和元数据，是一种协程调度的方式。v1.7
      1. 用在发生超时、主动取消、产生异常时需要进行的抢占、中断其他等后续操作
@@ -1353,8 +1470,120 @@
 	}(ctx)
 	wg.Wait()
     ```
-1. 实践
-   - select无任务退出
+#### 实践
+1. 通过设置为缓存通道，实现抢购场景的解决方案
+    ```go
+    // 响应公共结构体
+    type APIBase struct {
+        Code    int32  `json:"code"`
+        Message string `json:"message"`
+    }
+
+    // 模拟接口A的响应结构体
+    type APIDemoA struct {
+        APIBase
+        Data APIDemoAData `json:"data"`
+    }
+
+    type APIDemoAData struct {
+        Title string `json:"title"`
+    }
+
+    // 模拟接口B的响应结构体
+    type APIDemoB struct {
+        APIBase
+        Data APIDemoBData `json:"data"`
+    }
+
+    type APIDemoBData struct {
+        SkuList []int64 `json:"sku_list"`
+    }
+
+    // 模拟接口逻辑
+    func main() {
+        // 创建接口A传输结果的通道
+        execAResult := make(chan APIDemoA)
+        // 创建接口B传输结果的通道
+        execBResult := make(chan APIDemoB)
+
+        // 并发调用接口A
+        go func(execAResult chan<- APIDemoA) {
+            // 模拟接口A远程调用过程
+            time.Sleep(2 * time.Second)
+            execAResult <- APIDemoA{}
+        }(execAResult)
+
+        // 并发调用接口B
+        go func(execBResult chan<- APIDemoB) {
+            // 模拟接口B远程调用过程
+            time.Sleep(1 * time.Second)
+            execBResult <- APIDemoB{}
+        }(execBResult)
+
+        var resultA APIDemoA
+        var resultB APIDemoB
+        i := 0
+        for {
+            if i >= 2 {
+                fmt.Println("退出")
+                break
+            }
+            select {
+            case resultA = <-execAResult: // 等待接口A的响应结果
+                i++
+                fmt.Println("resultA", resultA)
+            case resultB = <-execBResult: // 等待接口B的响应结果
+                i++
+                fmt.Println("resultB", resultB)
+            }
+        }
+    }
+    ```
+1. select的简单调度
+    ```go
+    func createWorker(id int) chan<- int {
+        c := make(chan int)
+        go worker(id, c)
+        return c
+    }
+
+    func main() {
+
+        var c1, c2 = generator(), generator()
+        var worker = createWorker(0)
+
+        var values []int
+        tm := time.After(10 * time.Second)
+        tick := time.Tick(time.Second)
+
+        for {
+            var acticeWorker chan<- int
+            var acticeValue int
+            if len(values) > 0 {                                // 利用切片实现，生产者比消费者快的积压效果，不丢数据
+                acticeWorker = worker                           // 由于chan类型的c是一个指针，返回了一个指针，这样go worker(id, c)这个协程就能跑起来
+                acticeValue = values[0]
+            }
+
+            select {
+            case n := <-c1:
+                values = append(values, n)
+            case n := <-c2:
+                values = append(values, n)
+            case acticeWorker <- acticeValue:                   // 利用var出来的为nil的channel，实现没有值时阻塞
+                values = values[1:]
+            case <-time.After(800 * time.Millisecond):          // 超时时间，和总时长原理相同
+                fmt.Print("timeout")
+            case <-tick:                                        // 定时报告channel的状态
+                fmt.Print("queue len = ", len(values))
+            case <-tm:                                          // 总运行时长，time.After控制
+                fmt.Print("bye")
+                return
+            }
+        }
+    }
+    ```
+1. 动态数量的chan：利用反射`reflect.Select`
+1. select无任务退出
     ```go
     forloop:
     for {
@@ -1367,7 +1596,7 @@
         }
     }
     ```
-   - 协程任务的接收/传递
+1. 协程任务的接收/传递
     ```go
     go func() {                         // 新协程处理
         for {                           // 一直处理
@@ -1376,72 +1605,58 @@
         }
     }
     ```
-   - 超时控制：使用channel的阻塞特性
-     1. 简单啰嗦版
-        ```go
-        timeoutCh := make(chan struct{}, 1)
-        go func() {
-            time.Sleep(100 * time.Millisecond)
-            timeoutCh <- struct{}{}
-        }()
-        ```
-     1. `case <-time.After(100 * time.Millisecond)`
-     1. `context.WithCancel(context.Background())`
-     1. `context.WithTimeout(context.Background(), time.Millisecond)`
-   - 限流
-     1. 简单的多协程的时间频率limiter：常见于限制自己的程序
-        ```go
-        ratelimiter := time.Tick(100 * time.Millisecond)
+1. 超时控制：使用channel的阻塞特性
+   - 简单啰嗦版
+    ```go
+    timeoutCh := make(chan struct{}, 1)
+    go func() {
+        time.Sleep(100 * time.Millisecond)
+        timeoutCh <- struct{}{}
+    }()
+    ```
+   - `case <-time.After(100 * time.Millisecond)`
+   - `context.WithCancel(context.Background())`
+   - `context.WithTimeout(context.Background(), time.Millisecond)`
+1. 限流
+   - 简单的多协程的时间频率limiter：常见于限制自己的程序
+    ```go
+    ratelimiter := time.Tick(100 * time.Millisecond)
 
-        // 调用处
-        <-ratelimiter
-        ```
-     1. 简单的多协程的并存数limiter：常见于限制外部
-        ```go
-        type ConnLimiter struct {
-            concurrentConn int
-            bucket         chan int
+    // 调用处
+    <-ratelimiter
+    ```
+   - 简单的多协程的并存数limiter：常见于限制外部
+    ```go
+    type ConnLimiter struct {
+        concurrentConn int
+        bucket         chan int
+    }
+
+    func NewConnLimiter(cc int) *ConnLimiter {
+        return &ConnLimiter{
+            concurrentConn: cc,
+            bucket:         make(chan int, cc),
+        }
+    }
+
+    func (cl *ConnLimiter) GetConn() bool {
+        if len(cl.bucket) >= cl.concurrentConn {
+            log.Printf("Reached the rate limitation.")
+            return false
         }
 
-        func NewConnLimiter(cc int) *ConnLimiter {
-            return &ConnLimiter{
-                concurrentConn: cc,
-                bucket:         make(chan int, cc),
-            }
-        }
+        cl.bucket <- 1
+        return true
+    }
 
-        func (cl *ConnLimiter) GetConn() bool {
-            if len(cl.bucket) >= cl.concurrentConn {
-                log.Printf("Reached the rate limitation.")
-                return false
-            }
+    func (cl *ConnLimiter) ReleaseConn() {
+        C := <-cl.bucket
+        log.Printf("New connction coming: %d", C)
+    }
 
-            cl.bucket <- 1
-            return true
-        }
-
-        func (cl *ConnLimiter) ReleaseConn() {
-            C := <-cl.bucket
-            log.Printf("New connction coming: %d", C)
-        }
-
-        // 使用
-        用的时候先GetConn，然后defer ReleaseConn
-        ```
-1. wiki
-   - 传统并发编程问题
-     1. 共享数据如何加锁、同步
-   - 并发控制模式
-     1. chan：原始的同步方式，每多一级就需要多一个chan
-     1. waitGroup：限制多个的同步
-     1. context：多种控制方式，树级多级模型，可传递数据
-   - 并发路线
-     1. 内存模型
-     1. 并发机制原理
-     1. 锁
-     1. 并发数据结构
-     1. 并发工具
-     1. 协程池
+    // 使用
+    用的时候先GetConn，然后defer ReleaseConn
+    ```
 ### 包
 1. package
    - 认识：包，封装，是最基本的分发单位和工程管理中依赖的体现，提供更好的可重用性与封装性

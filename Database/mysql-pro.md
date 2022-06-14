@@ -248,8 +248,11 @@
    - atlas：360开源
    - kingshard：个人的go开发，读写分离、分库分表、sql黑名单
 1. maxwell
-   - 认识：同步binlog以json写入到kafka、redis、等流平台，用于ETL、缓存刷新、指标收集、增量到搜索引擎、数据分区迁移、切库binlog回滚等场景，java写的
+   - 认识：同步binlog以json写入到kafka、redis、es等流平台，用于ETL、缓存刷新、指标收集、增量到搜索引擎、数据分区迁移、切库binlog回滚等场景，java写的
      1. 有过滤器功能
+     1. 优缺点
+        - 优点：业务解耦，准实时
+        - 缺点：只能单表操作，不适用于涉及到数据聚合的地方或者有父子关系的
    - 原理：伪装为slave，接收binlog events，然后根据schemas信息拼装，可接受ddl、xid、row等各种event
    - 使用
      1. 流程
