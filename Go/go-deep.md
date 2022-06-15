@@ -215,6 +215,13 @@
    - 思想
      1. 资源池、资源池分离：对有一定规模约束的资源进行池化管理，如内存池、机器池、协程池、线程池等
      1. 计算存储分离，分别从逻辑、数据结构两个角度进行设计，规划二者的耦合关系
+#### channel
+1. 数据类型：runtime.hchan
+1. 方法
+   - makechan：目标生成hchan对象，makechan64只做了size检查，底层都是makechan
+   - chansend：chansend1调用chansend
+   - chanrecv1、chanrecv2：一个参数、两个参数，会调用chanrecv
+   - closechan
 ### 内存管理
 1. 背景
    - 多线程的今天之前共享内存，线程之前在申请内存(虚拟内存)时，由于并行问题会产生竞争不安全，加锁又会影响性能

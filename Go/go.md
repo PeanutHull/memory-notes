@@ -1086,6 +1086,7 @@
      1. 内部调度器在合适点自动切换
      1. 无锁，无callback(写程序不用，底层有)
      1. 协程间的通信和同步基于csp模型
+     1. golang中主goroutine退出程序即结束，系统自动回收运行时资源，所以子goroutine也会释放。应该尽量避免泄露，在常驻服务中执行会越来越不稳，和java不一样
    - 优势
      1. 去掉了冗余的协程生命周期管理
      1. 降低额外延迟和开销：来源是协程间的频繁交互
@@ -1103,94 +1104,66 @@
     }(i)                        // 外部传进i，否则就是闭包
     ```
 1. wiki
-   - 管道用于协调，锁用于同步
+   - 管道和协程为并发编程提供了优雅的、便利的、与传统并发控制不同的方案，并演化出很多并发模式
+     1. 传统并发编程问题是共享数据(内存)如何加锁、同步
    - csp：描述两个独立的并发实体通过共享的通讯channel(管道)进行通信的并发模型，go没有全部都实现
      1. 概念：实体 process，通道 channel
-   - 传统并发编程问题
-     1. 共享数据如何加锁、同步
+     1. 允许使用进程组件来描述系统，它们独立运行，并且只通过消息传递的方式通信
    - 并发控制模式
      1. chan：原始的同步方式，每多一级就需要多一个chan
      1. waitGroup：限制多个的同步
      1. context：多种控制方式，树级多级模型，可传递数据
-   - 并发路线
-     1. 内存模型
-     1. 并发机制原理
-     1. 锁
-     1. 并发数据结构
-     1. 并发工具
-     1. 协程池
 #### channel
 1. channel
-   - 认识：有类型的管道，用于协程间通信。使得goroutine可以在没有明确的锁或竞态变量(共享内存)的情况下同步，更高级，操作符<-
-     1. 和正在跑的协程进行通信
-     1. 没有锁，可以用-race检测数据访问冲突
-     1. 默认另一端准备好之前发送和接收都会阻塞
+   - 认识：有类型的管道，用于协程间通信，操作符<-
+     1. 使得goroutine可以在没有明确的锁或竞态变量(共享内存)的情况下同步，更高级，可以用-race检测数据访问冲突，内部还是有锁的
    - 特性
      1. nil的chan
-        - 只声明不分配资源，var声明的就是，make不是
+        - 只声明不分配资源，var声明的是，make不是
         - 读写不会报错，永远阻塞
-     1. 已关闭的chan
-        - 读，可以一直读取非阻塞，chan中是否有有剩余缓存
-          1. 有：返回缓存，第二个bool值（是否读成功）为true
-          1. 无：返回chan的零值，第二个bool为false
-        - 写，会panic
-        - 只有发送者才能关闭chan，表示再没有值会被发送
-     1. 无缓冲chan/同步chan
-        - 不会存储数据，发送方会阻塞直到接收方从通道中接收了值
-        - 读时没有数据会阻塞
+     1. 无缓冲chan
+        - 即同步chan，不会存储数据，双方都没准备好，双方都会阻塞
         - 读写不能放一个协程里，写读颠倒会死锁
      1. 有缓冲chan
         - 可以提高性能
-        - 缓冲区满时才会阻塞，缓冲区空时接收操作会阻塞
-   - 阻塞
-     1. 原因：供需失衡
-        - 有缓存的，生产多了生产者阻塞
-        - 消费没了消费者阻塞
-     1. 后果：非主流程拿不到数据，主流程进入阻塞无法响应请求
-     1. 骚操作：利用阻塞实现多协程锁
-   - select
-     1. 认识：同时监听多个chan并收发消息，会根据chan的是否阻塞而阻塞直到条件分支中的某个可以继续执行。多个都准备好的随机选一个
-        - 可用于多个写，一个读场景
-        - 谁来的快收谁
-     1. 实践
-        - case中使用go可能导致go中还没处理完，select又接到了下一步的任务，导致go之后的流程在go没完成的情况下执行了，如果二者有依赖的话
-        - 使用select语句，for和default基本不会同时出现
-          1. 例外如为了让select每个case都能执行，使用加for搭配default的方式
-     1. 特性
-        - 读写case中为nil的chan，该分支将被忽略？还是会一直阻塞？
-        - default变为非阻塞，套层for就是循环default，去掉default就是deadlock
-        - 每次 select 都会对所有通信表达式求值
-          1. `case <- timer.After(time.Second)`：不应该解释为每一秒执行一次，而是其它case如果有一秒都没有执行，那么就执行这个case
-        - main协程没有其他协程并且阻塞时，会fatal error deadlock(源码逻辑)
-     1. 实例
-        ```go
-        select {
-            case c <- c1:                               // 如果成功向c信道成功发送数据，则执行该分支代码
-            case <- c:                                  // 如果从c信道成功接收数据，则执行该分支代码（只要有数据，不管值是什么）
-            case <- time.After(5 * time.Second):        // 设置超时
-            default:                                    // 如果上面都没有成功，则进入default分支，可用于非阻塞的发送或者接收
-
-            case n := <- c1:                            // 可以实现读一堆，然后返回给一个
-                out <- n                                // 这样会阻塞
-            case n := <- c2:
-            case out <- n:                              // 这样不会阻塞
-        }
-        ```
+        - 缓冲区满时写阻塞，缓冲区空时读会阻塞
+     1. 已关闭的chan
+        - 只有发送者才能关闭chan，表示再没有值会被发送
+        - 通过二参判断是否关闭
+        - 读，可以一直读取非阻塞
+          1. 有剩余缓存：返回缓存，第二个bool值（是否读成功）为true
+          1. 无剩余缓存：返回chan的零值，第二个bool为false
+        - 写，会panic
+     1. chan中的元素是任意的类型，所以也可能是chan类型
+        - <-有个规则，总是尽量和左边的 chan 结合，可以区分属于哪个chan
+     1. 操作
+        - cap：返回chan的容量
+        - len：返回chan中缓存的还未被取走的元素数量
+        - for、range：遍历
+            ```go
+            // 清空ch
+            for range ch {}
+            ```
+        - 双向通道可以赋值给单向,反过来不可以
+     1. main协程没有其他协程并且阻塞时，会fatal error deadlock(源码逻辑)
    - 实例
     ```go
-    ch := make(chan int)        // 这个ch是一个指针类型
-    ch <- v                     // 写
+    ch := make(chan int)        // ch是一个指针类型
     v := <- ch                  // 读
+    ch <- v                     // 写
+    foo(<-ch)                   // 作为参数传给函数
     close(ch)                   // 关闭
 
-    // 单向channel
-    var send chan <- int         // 只能发送
-    var receive <- chan int      // 只能接收
-
-    // 缓冲channel
+    // 缓冲chan
     ch := make(chan int, 100)
     ch := make(chan int)
 
+    // 单向chan
+    var send chan <- int         // 只能发送
+    var receive <- chan int      // 只能接收
+
+    // 简便写法，不断从channel接收值，直到它被关闭，可替换下边判断的写法
+    for v := range ch{}         
     // 检测channel是否关闭
     v,ok := <-ch                    
     for{
@@ -1199,13 +1172,69 @@
             break
         }
     }
-    // 简便写法，不断从channel接收值，直到它被关闭，可替换以上判断的写法
-    for v := range ch{}         
     ```
-   - 应用场景
-     1. 消息交流：内部实现看是以一个循环队列的方式存放数据，所以有时会当成线程安全的队列和buffer使用，多个goroutine在一个chan上可以安全的读写数据
-     1. 数据传递
-     1. 信号通知：利用空chan的receiver一直阻塞，实现wait/notify模式
+1. select
+   - 认识：同时监听多个chan并收发消息，会阻塞直到条件分支中的某个可以继续执行
+     1. 可用于多个写，一个读场景
+     1. 谁来的快收谁
+   - 特性
+     1. 每次select都会对所有通信表达式求值
+        - `case <- timer.After(time.Second)`：不应该解释为每一秒执行一次，而是其它case如果有一秒都没有执行，那么就执行这个case
+     1. 多个都准备好的伪随机选一个
+     1. 其他的case不满足则执行default，有default就变为非阻塞，套层for就是循环default，去掉default就是deadlock
+        - 一般for和default基本不会同时出现
+     1. 读写case中为nil的chan，会直接忽略，永远走不到
+   - 实践
+     1. case中使用go可能导致go中还没处理完，select又接到了下一步的任务，如果二者有依赖的话导致go之后的流程在go没完成的情况下执行了
+     1. 为了让select多次执行套上for
+   - 实例
+    ```go
+    select {
+        case ch <- ch1:                               // 如果成功向c信道成功发送数据，则执行该分支
+        case <- ch:                                   // 如果从c信道成功接收数据，则执行该分支
+        case <- time.After(5 * time.Second):          // 设置超时
+        default:
+
+        // 读多个chan，都返回给一个chan
+        case n := <- ch1:
+        case n := <- ch2:
+            out <- n                                // 这样会阻塞
+        case out <- n:                              // 这样不会阻塞
+    }
+
+    // 将当前goroutine阻塞住
+    select {}
+    ```
+1. channel和基本并发原语
+   - 认识
+     1. 管道是内置类型，sync、atomic需要引入包才能使用
+     1. 管道和基本并发原语是有竞争关系的
+     1. 管道用于协调，锁用于同步、并发保护
+   - 选择使用准则
+     1. 共享资源的并发访问使用传统并发原语
+     1. 消息通知机制使用 chan，除非只想signal一个goroutine，才使用 sync.cond
+
+     1. 需要和select结合，使用 chan
+     1. 简单等待所有任务的完成用 waitGroup，也有 chan 的推崇者用 chan，都可以
+     1. 需要和超时配合时，使用 chan 和 context
+     1. 复杂的任务编排和消息传递使用 chan
+1. 应用场景
+   - 数据传递：将数据从一个goroutine转移到另一个goroutine中，即数据的拥有权 (引用) 托付出去
+   - 队列、缓存：内部实现看是以一个循环队列的方式存放数据，所以可以当成线程安全的queue和buffer使用，解决生产者和消费者的问题
+     1. 多个goroutine可以并发当作生产者和消费者
+     1. 多个goroutine可以安全的读写数据
+
+   - 锁：模拟为锁
+     1. 方式
+        - 容量为1的chan，谁接收到谁有锁，放回去就是释放锁
+        - 容量为1的chan，谁发送到谁有锁，反之亦然
+     1. 搭配功能：TryLock、Timeout
+        - select中的default实现TryLock
+        - Timer实现Timeout
+   - 信号通知：将信号从一个goroutine传递给另一个或者另一组goroutine
+     1. 场景
+        - 利用空chan的receiver一直阻塞，实现wait/notify模式
+     1. demo
         - 如实现程序优雅退出，退出前给shutdownChan发个信号，如退出程序非常耗时
             ```go
             func main() {
@@ -1247,20 +1276,13 @@
                 close(closed)
             }
             ```
-     1. 锁
-        - 方式
-          1. 容量为1的chan，谁接收到谁有锁，放回去就是释放锁
-          1. 容量为1的chan，谁发送到谁有锁，反之亦然
-        - 搭配功能：TryLock、Timeout
-          1. select中的default实现TryLock
-          1. Timer实现Timeout
-     1. 任务编排：击鼓传花，控制goroutine的执行
-        - 等待模式：模拟WaitGroup功能
-        - Or-Done模式：只有一个就通知，是一种更宽泛的信号通知
-          1. 实现
-             - 当 chan 的数量大于 2 时，使用递归的方式等待信号
-             - 数据量多递归用反射代替
-          1. demo
+   - 任务编排：击鼓传花，控制goroutine按照一定顺序并发或串行的执行
+     1. 等待模式：模拟WaitGroup功能
+     1. Or-Done模式：只有一个就通知，是一种更宽泛的信号通知
+        - 实现
+          1. 当 chan 的数量大于 2 时，使用递归的方式等待信号
+          1. 数据量多递归用反射代替
+        - demo
             ```go
             func or(channels ...<-chan interface{}) <-chan interface{} {
                 // 特殊情况，只有零个或者1个chan
@@ -1293,10 +1315,10 @@
                 return orDone
             }
             ```
-        - 扇入模式：多个源channel输入、一个目的channel输出
-        - 扇出模式：和上者相反
-        - Stream模式：把channel当作流式管道使用
-        - map-reduce模式
+     1. 扇入模式：多个源channel输入、一个目的channel输出
+     1. 扇出模式：和上者相反
+     1. Stream模式：把channel当作流式管道使用
+     1. map-reduce模式
 #### sync
 1. 认识：提供了并发编程中基本的同步原语，保证执行不会出现混乱。这是传统的同步机制，是通过共享内存来通信的，更高级别的同步最好通过通道和通信来完成，多协程就要用到sync了
 1. 锁
@@ -1344,12 +1366,12 @@
     ```
 1. 发送信号：`sync.Cond`
    - 认识：用于发出信号（一对一）或广播信号（一对多）到goroutine
-     1. 创建sync.Cond需要sync.Locker对象（sync.Mutex或sync.RWMutex）
-     1. 破坏了go的基本原则：不要通过共享进行通信；而是通过通信共享，但是通过channel模拟广播的唯一方法是关闭channel，只能广播一次，cond可以多次
+     1. 违反go的基本原则：不要通过共享进行通信；而是通过通信共享，但是通过channel模拟广播的唯一方法是关闭channel，只能广播一次，cond可以多次
    - 方法
-     1. `sync.NewCond(&sync.Mutex{})`：创建
+     1. `NewCond()`：创建
      1. `Signal`：发送单个信号
      1. `Broadcast`：发送广播信号
+     1. `Wait`
 1. 并发池：`sync.Pool`
    - 认识：多协程安全地保存临时对象，保存的对象可能随时自动删除而不通知
      1. pool的目的是缓存已分配但未使用的多协程静默共享的临时项目项目以供以后重用，减轻垃圾收集器的压力
@@ -1539,72 +1561,6 @@
         }
     }
     ```
-1. select的简单调度
-    ```go
-    func createWorker(id int) chan<- int {
-        c := make(chan int)
-        go worker(id, c)
-        return c
-    }
-
-    func main() {
-
-        var c1, c2 = generator(), generator()
-        var worker = createWorker(0)
-
-        var values []int
-        tm := time.After(10 * time.Second)
-        tick := time.Tick(time.Second)
-
-        for {
-            var acticeWorker chan<- int
-            var acticeValue int
-            if len(values) > 0 {                                // 利用切片实现，生产者比消费者快的积压效果，不丢数据
-                acticeWorker = worker                           // 由于chan类型的c是一个指针，返回了一个指针，这样go worker(id, c)这个协程就能跑起来
-                acticeValue = values[0]
-            }
-
-            select {
-            case n := <-c1:
-                values = append(values, n)
-            case n := <-c2:
-                values = append(values, n)
-            case acticeWorker <- acticeValue:                   // 利用var出来的为nil的channel，实现没有值时阻塞
-                values = values[1:]
-            case <-time.After(800 * time.Millisecond):          // 超时时间，和总时长原理相同
-                fmt.Print("timeout")
-            case <-tick:                                        // 定时报告channel的状态
-                fmt.Print("queue len = ", len(values))
-            case <-tm:                                          // 总运行时长，time.After控制
-                fmt.Print("bye")
-                return
-            }
-        }
-    }
-    ```
-1. 动态数量的chan：利用反射`reflect.Select`
-1. select无任务退出
-    ```go
-    forloop:
-    for {
-        select {
-        case d :=<- dc:
-            log.Printf("Executor received: %v", d)
-        default:
-            break forloop                               // 只执行一次
-            goto forloop                                // 会在for和forloop循环运行
-        }
-    }
-    ```
-1. 协程任务的接收/传递
-    ```go
-    go func() {                         // 新协程处理
-        for {                           // 一直处理
-            request := <- in
-            out <- request
-        }
-    }
-    ```
 1. 超时控制：使用channel的阻塞特性
    - 简单啰嗦版
     ```go
@@ -1656,6 +1612,107 @@
 
     // 使用
     用的时候先GetConn，然后defer ReleaseConn
+    ```
+1. select的简单调度
+    ```go
+    func createWorker(id int) chan<- int {
+        c := make(chan int)
+        go worker(id, c)
+        return c
+    }
+
+    func main() {
+
+        var c1, c2 = generator(), generator()
+        var worker = createWorker(0)
+
+        var values []int
+        tm := time.After(10 * time.Second)
+        tick := time.Tick(time.Second)
+
+        for {
+            var acticeWorker chan<- int
+            var acticeValue int
+            if len(values) > 0 {                                // 利用切片实现，生产者比消费者快的积压效果，不丢数据
+                acticeWorker = worker                           // 由于chan类型的c是一个指针，返回了一个指针，这样go worker(id, c)这个协程就能跑起来
+                acticeValue = values[0]
+            }
+
+            select {
+            case n := <-c1:
+                values = append(values, n)
+            case n := <-c2:
+                values = append(values, n)
+            case acticeWorker <- acticeValue:                   // 利用var出来的为nil的channel，实现没有值时阻塞
+                values = values[1:]
+            case <-time.After(800 * time.Millisecond):          // 超时时间，和总时长原理相同
+                fmt.Print("timeout")
+            case <-tick:                                        // 定时报告channel的状态
+                fmt.Print("queue len = ", len(values))
+            case <-tm:                                          // 总运行时长，time.After控制
+                fmt.Print("bye")
+                return
+            }
+        }
+    }
+    ```
+1. 动态数量的case处理：利用反射`reflect.Select`
+    ```go
+    func main() {
+        var ch1 = make(chan int, 10)
+        var ch2 = make(chan int, 10)
+
+        // 创建SelectCase
+        var cases = createCases(ch1, ch2)
+
+        // 执行10次select
+        for i := 0; i < 10; i++ {                                           // 不用在意这个for，因为select中本来就不是顺序循环
+            chosen, recv, ok := reflect.Select(cases)                       // 从cases中选择一个case执行，相当于普通的select
+            if recv.IsValid() { // recv case
+                fmt.Println("recv:", cases[chosen].Dir, recv, ok)
+            } else { // send case
+                fmt.Println("send:", cases[chosen].Dir, ok)
+            }
+        }
+    }
+
+    func createCases(chs ...chan int) []reflect.SelectCase {                // 业务可以改造这个方法，创造自己要的case
+        var cases []reflect.SelectCase
+
+
+        // 创建recv case
+        for _, ch := range chs {
+            cases = append(cases, reflect.SelectCase{
+                Dir:  reflect.SelectRecv,
+                Chan: reflect.ValueOf(ch),
+            })
+        }
+
+        // 创建send case
+        for i, ch := range chs {
+            v := reflect.ValueOf(i)
+            cases = append(cases, reflect.SelectCase{
+                Dir:  reflect.SelectSend,
+                Chan: reflect.ValueOf(ch),
+                Send: v,
+            })
+        }
+
+        return cases
+    }
+    ```
+1. select无任务退出
+    ```go
+    forloop:
+    for {
+        select {
+        case d :=<- dc:
+            log.Printf("Executor received: %v", d)
+        default:
+            break forloop                               // 只执行一次
+            goto forloop                                // 会在for和forloop循环运行
+        }
+    }
     ```
 ### 包
 1. package
