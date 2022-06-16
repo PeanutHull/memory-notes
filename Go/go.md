@@ -1220,10 +1220,131 @@
      1. 复杂的任务编排和消息传递使用 chan
 1. 应用场景
    - 数据传递：将数据从一个goroutine转移到另一个goroutine中，即数据的拥有权 (引用) 托付出去
-   - 队列、缓存：内部实现看是以一个循环队列的方式存放数据，所以可以当成线程安全的queue和buffer使用，解决生产者和消费者的问题
-     1. 多个goroutine可以并发当作生产者和消费者
-     1. 多个goroutine可以安全的读写数据
+   - 队列、缓存
+     1. 认识：内部实现看是以一个循环队列的方式存放数据，所以可以当成线程安全的queue和buffer使用，解决生产者和消费者的问题
+        - 多个goroutine可以并发当作生产者和消费者
+        - 多个goroutine可以安全的读写数据
+     1. demo：解耦生产者、消费者，可以分别设置最大值，提高系统处理能力
+        ```go
+        // goroutine数量会爆掉型
+        for _, payload := range content.Payloads {
+            go payload.UploadToS3()
+        }
 
+        // 没解决根本问题型。关键点没有增加处理器的数量，会导致任务堆积，生产、消费还是没有解耦
+        for _, payload := range content.Payloads {          // 添加任务
+            Queue <- payload
+        }
+
+        func StartProcessor() {                             // 处理任务
+            for {
+                select {
+                case job := <-Queue:
+                    job.payload.UploadToS3()
+                }
+            }
+        }
+
+        // 正解。创建2个chan，一个用于作业排队，另一个用于控制同时消费的消费者数量
+        // 1. 隔离了生产者、消费者
+        //    生产者：有JobQueue实现排队，队列满了阻塞
+        //           方式：无脑将需要处理的job扔到JobQueue
+        //    消费者：共用调度器的消费者池，调度器启动一下子塞满可用的消费者池，有空闲消费者立马取出JobQueue进行处理
+        // 2. 实现了生产者、消费者最大数量的控制
+        var (                                                       // 控制处理器、排队队列的最大数量
+            MaxWorker = os.Getenv("MAX_WORKERS")
+            MaxQueue  = os.Getenv("MAX_QUEUE")
+        )
+
+        type Job struct {                                           // 任务本身
+            Payload Payload
+        }
+
+        var JobQueue chan Job                                       // 排队队列
+
+        type Worker struct {                                        // 消费者
+            WorkerPool  chan chan Job                                   // 共用的任务池
+            JobChannel  chan Job                                        // 任务排队队列
+            quit    	chan bool
+        }
+        func NewWorker(workerPool chan chan Job) Worker {
+            return Worker{
+                WorkerPool: workerPool,
+                JobChannel: make(chan Job),
+                quit:       make(chan bool)}
+        }
+
+        // Start method starts the run loop for the worker, listening for a quit channel in
+        // case we need to stop it
+        func (w Worker) Start() {                                   // 开动消费者
+            go func() {
+                for {
+                    
+                    w.WorkerPool <- w.JobChannel                    // 将自己注册到共用消费者池，如果共用消费者池满了就阻塞在这里，富余一个消费者等待递补干活
+
+                    select {
+                    case job := <-w.JobChannel:                     // 获得一个可处理的请求，并进行处理
+                        if err := job.Payload.UploadToS3(); err != nil {
+                            log.Errorf("Error uploading to S3: %s", err.Error())
+                        }
+
+                    case <-w.quit:                                  // 监听退出信号
+                        return
+                    }
+                }
+            }()
+        }
+        func (w Worker) Stop() {                                    // 退出方法
+            go func() {
+                w.quit <- true
+            }()
+        }
+
+        // 调度器，用于管理消费者
+        type Dispatcher struct {
+            WorkerPool chan chan Job                                // 调度器的消费者池
+        }
+
+        func NewDispatcher(maxWorkers int) *Dispatcher {
+            pool := make(chan chan Job, maxWorkers)
+            return &Dispatcher{WorkerPool: pool}
+        }
+
+        func (d *Dispatcher) Run() {
+            for i := 0; i < d.maxWorkers; i++ {
+                worker := NewWorker(d.pool)
+                worker.Start()
+            }
+
+            go d.dispatch()                                         // 开始调度
+        }
+
+        func (d *Dispatcher) dispatch() {
+            for {
+                select {
+                case job := <-JobQueue:                             // 收到任务
+                    go func(job Job) {
+                        jobChannel := <-d.WorkerPool                // 尝试获取可用的消费者，会阻塞直到一个消费者空闲
+                                                                    // 如果所有消费者都在忙，那么d.WorkerPool是空的，因为被自己拿光了
+
+                        jobChannel <- job                           // 将任务加到任务池
+                    }(job)
+                }
+            }
+        }
+
+        // 最终使用，启动调度器 + 添加任务
+        dispatcher := NewDispatcher(MaxWorker)
+        dispatcher.Run()
+
+        // 添加任务的入口
+        func payloadHandler(w http.ResponseWriter, r *http.Request) {
+            for _, payload := range content.Payloads {
+                work := Job{Payload: payload}
+                JobQueue <- work
+            }
+        }
+        ```
    - 锁：模拟为锁
      1. 方式
         - 容量为1的chan，谁接收到谁有锁，放回去就是释放锁
