@@ -1139,7 +1139,7 @@
      1. 操作
         - cap：返回chan的容量
         - len：返回chan中缓存的还未被取走的元素数量
-        - for、range：遍历
+        - for、range：遍历，会等待channel一直到channel被关闭
             ```go
             // 清空ch
             for range ch {}
@@ -1224,27 +1224,30 @@
      1. 认识：内部实现看是以一个循环队列的方式存放数据，所以可以当成线程安全的queue和buffer使用，解决生产者和消费者的问题
         - 多个goroutine可以并发当作生产者和消费者
         - 多个goroutine可以安全的读写数据
-     1. demo：解耦生产者、消费者，可以分别设置最大值，提高系统处理能力
-        ```go
-        // goroutine数量会爆掉型
-        for _, payload := range content.Payloads {
-            go payload.UploadToS3()
-        }
+     1. bad demo：解耦生产者、消费者，可以分别设置最大值，提高系统处理能力
+        - goroutine数量会爆掉型
+            ```go
+            for _, payload := range content.Payloads {
+                go payload.UploadToS3()
+            }
+            ```
+        - 没解决根本问题型。关键点没有增加处理器的数量，会导致任务堆积，生产、消费还是没有解耦
+            ```go
+            for _, payload := range content.Payloads {          // 添加任务
+                Queue <- payload
+            }
 
-        // 没解决根本问题型。关键点没有增加处理器的数量，会导致任务堆积，生产、消费还是没有解耦
-        for _, payload := range content.Payloads {          // 添加任务
-            Queue <- payload
-        }
-
-        func StartProcessor() {                             // 处理任务
-            for {
-                select {
-                case job := <-Queue:
-                    job.payload.UploadToS3()
+            func StartProcessor() {                             // 处理任务
+                for {
+                    select {
+                    case job := <-Queue:
+                        job.payload.UploadToS3()
+                    }
                 }
             }
-        }
-
+            ```
+     1. good demo
+        ```go
         // 正解。创建2个chan，一个用于作业排队，另一个用于控制同时消费的消费者数量
         // 1. 隔离了生产者、消费者
         //    生产者：有JobQueue实现排队，队列满了阻塞
@@ -1274,8 +1277,6 @@
                 quit:       make(chan bool)}
         }
 
-        // Start method starts the run loop for the worker, listening for a quit channel in
-        // case we need to stop it
         func (w Worker) Start() {                                   // 开动消费者
             go func() {
                 for {
@@ -1352,11 +1353,78 @@
      1. 搭配功能：TryLock、Timeout
         - select中的default实现TryLock
         - Timer实现Timeout
+     1. demo
+        ```go
+        // 使用chan实现互斥锁
+        type Mutex struct {
+            ch chan struct{}
+        }
+
+        // 使用锁需要初始化
+        func NewMutex() *Mutex {
+            mu := &Mutex{make(chan struct{}, 1)}
+            mu.ch <- struct{}{}
+            return mu
+        }
+
+        // 请求锁，直到获取到
+        func (m *Mutex) Lock() {
+            <-m.ch
+        }
+
+        // 解锁
+        func (m *Mutex) Unlock() {
+            select {
+            case m.ch <- struct{}{}:
+            default:
+                panic("unlock of unlocked mutex")
+            }
+        }
+
+        // 尝试获取锁
+        func (m *Mutex) TryLock() bool {
+            select {
+            case <-m.ch:
+                return true
+            default:
+            }
+            return false
+        }
+
+        // 加入一个超时的设置
+        func (m *Mutex) LockTimeout(timeout time.Duration) bool {
+            timer := time.NewTimer(timeout)
+            select {
+            case <-m.ch:
+                timer.Stop()
+                return true
+            case <-timer.C:
+            }
+            return false
+        }
+
+        // 锁是否已被持有
+        func (m *Mutex) IsLocked() bool {
+            return len(m.ch) == 0
+        }
+
+
+        func main() {
+            m := NewMutex()
+            ok := m.TryLock()
+            fmt.Printf("locked v %v\n", ok)
+            ok = m.TryLock()
+            fmt.Printf("locked %v\n", ok)
+        }
+        ```
    - 信号通知：将信号从一个goroutine传递给另一个或者另一组goroutine
      1. 场景
         - 利用空chan的receiver一直阻塞，实现wait/notify模式
      1. demo
         - 如实现程序优雅退出，退出前给shutdownChan发个信号，如退出程序非常耗时
+          1. 给业务也发一个退出信号
+          1. 有退出超时逻辑
+          1. 代码
             ```go
             func main() {
                 var closing = make(chan struct{})
@@ -1398,11 +1466,150 @@
             }
             ```
    - 任务编排：击鼓传花，控制goroutine按照一定顺序并发或串行的执行
-     1. 等待模式：模拟WaitGroup功能
-     1. Or-Done模式：只有一个就通知，是一种更宽泛的信号通知
+     1. 流水线模式：一个个轮着来
+     1. 扇入模式：多个源channel输入、一个目的channel输出
+        ```go
+        // 递归模式
+        func fanInRec(chans ...<-chan interface{}) <-chan interface{} {
+            switch len(chans) {
+            case 0:
+                c := make(chan interface{})
+                close(c)
+                return c
+            case 1:
+                return chans[0]
+            case 2:
+                return mergeTwo(chans[0], chans[1])
+            default:
+                m := len(chans) / 2
+                return mergeTwo(
+                    fanInRec(chans[:m]...),
+                    fanInRec(chans[m:]...))
+            }
+        }
+
+        func mergeTwo(a, b <-chan interface{}) <-chan interface{} {
+            c := make(chan interface{})
+            go func() {
+                defer close(c)
+                for a != nil || b != nil { //只要还有可读的chan
+                    select {
+                    case v, ok := <-a:
+                        if !ok { // a 已关闭，设置为nil
+                            a = nil
+                            continue
+                        }
+                        c <- v
+                    case v, ok := <-b:
+                        if !ok { // b 已关闭，设置为nil
+                            b = nil
+                            continue
+                        }
+                        c <- v
+                    }
+                }
+            }()
+            return c
+        }
+
+        // 反射模式
+        func fanInReflect(chans ...<-chan interface{}) <-chan interface{} {
+            out := make(chan interface{})
+            go func() {
+                defer close(out)
+                // 构造SelectCase slice
+                var cases []reflect.SelectCase
+                for _, c := range chans {
+                    cases = append(cases, reflect.SelectCase{
+                        Dir:  reflect.SelectRecv,
+                        Chan: reflect.ValueOf(c),
+                    })
+                }
+                
+                // 循环，从cases中选择一个可用的
+                for len(cases) > 0 {
+                    i, v, ok := reflect.Select(cases)
+                    if !ok { // 此channel已经close
+                        cases = append(cases[:i], cases[i+1:]...)
+                        continue
+                    }
+                    out <- v.Interface()
+                }
+            }()
+            return out
+        }
+        ```
+     1. 扇出模式：和上者相反
+        ```go
+        func fanOut(ch <-chan interface{}, out []chan interface{}, async bool) {
+            go func() {
+                defer func() { //退出时关闭所有的输出chan
+                    for i := 0; i < len(out); i++ {
+                        close(out[i])
+                    }
+                }()
+
+                for v := range ch { // 从输入chan中读取数据
+                    v := v
+                    for i := 0; i < len(out); i++ {
+                        i := i
+                        if async { //异步
+                            go func() {
+                                out[i] <- v // 放入到输出chan中,异步方式
+                            }()
+                        } else {
+                            out[i] <- v // 放入到输出chan中，同步方式
+                        }
+                    }
+                }
+            }()
+        }
+        ```
+     1. Stream模式：把channel当作流式管道使用
+        ```go
+        // 创建流
+        func asStream(done <-chan struct{}, values ...interface{}) <-chan interface{} {
+            s := make(chan interface{}) //创建一个unbuffered的channel
+            go func() { // 启动一个goroutine，往s中塞数据
+                defer close(s) // 退出时关闭chan
+                for _, v := range values { // 遍历数组
+                    select {
+                    case <-done:
+                        return
+                    case s <- v: // 将数组元素塞入到chan中
+                    }
+                }
+            }()
+            return s
+        }
+        // 方法
+        // takeN：只取流中的前n个数据
+        func takeN(done <-chan struct{}, valueStream <-chan interface{}, num int) <-chan interface{} {
+            takeStream := make(chan interface{}) // 创建输出流
+            go func() {
+                defer close(takeStream)
+                for i := 0; i < num; i++ { // 只读取前num个元素
+                    select {
+                    case <-done:
+                        return
+                    case takeStream <- <-valueStream: //从输入流中读取元素
+                    }
+                }
+            }()
+            return takeStream
+        }
+        // takeFn：筛选流中的数据，只保留满足条件的数据
+        // takeWhile：只取前面满足条件的数据，一旦不满足条件，就不再取
+        // skipN：跳过流中前几个数据
+        // skipFn：跳过满足条件的数据
+        // skipWhile：跳过前面满足条件的数据，一旦不满足条件，当前这个元素和以后的元素都会输出给 Channel 的 receiver。
+        ```
+
+     1. 等待模式：模拟WaitGroup功能，即启动一组goroutine执行任务，然后等待这些任务都完成
+     1. Or-Done模式：只要有一个就通知
         - 实现
-          1. 当 chan 的数量大于 2 时，使用递归的方式等待信号
-          1. 数据量多递归用反射代替
+          1. 当 chan 的数量大于 2 时，使用二分法递归的方式等待信号，case值是个函数，一级级case回来
+          1. 数据量多递归用反射代替，最笨的是为每一个channel启动一个goroutine
         - demo
             ```go
             func or(channels ...<-chan interface{}) <-chan interface{} {
@@ -1435,11 +1642,104 @@
 
                 return orDone
             }
+
+            func sig(after time.Duration) <-chan interface{} {
+                c := make(chan interface{})
+                go func() {
+                    defer close(c)
+                    time.Sleep(after)
+                }()
+                return c
+            }
+
+            // 测试程序
+            func main() {
+                start := time.Now()
+
+                <-or(                                               // 在这里只要一个返回就可以
+                    sig(10*time.Second),
+                    sig(20*time.Second),
+                    sig(30*time.Second),
+                    sig(40*time.Second),
+                    sig(50*time.Second),
+                    sig(01*time.Minute),
+                )
+
+                fmt.Printf("done after %v", time.Since(start))
+            }
             ```
-     1. 扇入模式：多个源channel输入、一个目的channel输出
-     1. 扇出模式：和上者相反
-     1. Stream模式：把channel当作流式管道使用
      1. map-reduce模式
+        - 认识
+          1. map是协程异步处理，reduce是不断从map生成的结果chan中取数据处理
+          1. reduce利用for range实现不close这个chan，就一直取数据处理
+        - 代码
+            ```go
+            // map
+            func mapChan(in <-chan interface{}, fn func(interface{}) interface{}) <-chan interface{} {
+                out := make(chan interface{}) //创建一个输出chan
+                if in == nil { // 异常检查
+                    close(out)
+                    return out
+                }
+
+                go func() { // 启动一个goroutine,实现map的主要逻辑
+                    defer close(out)
+                    for v := range in { // 从输入chan读取数据，执行业务操作，也就是map操作
+                        out <- fn(v)
+                    }
+                }()
+
+                return out
+            }
+
+            // reduce
+            func reduce(in <-chan interface{}, fn func(r, v interface{}) interface{}) interface{} {
+                if in == nil { // 异常检查
+                    return nil
+                }
+
+                out := <-in // 先读取第一个元素
+                for v := range in { // 实现reduce的主要逻辑
+                    out = fn(out, v)
+                }
+
+                return out
+            }
+
+            // 处理一组整数，map 函数就是为每个整数乘以 10，reduce 函数就是把 map 处理的结果累加起来
+            func asStream(done <-chan struct{}) <-chan interface{} {                                    // 生成一个数据流
+                s := make(chan interface{})
+                values := []int{1, 2, 3, 4, 5}
+                go func() {
+                    defer close(s)
+                    for _, v := range values { // 从数组生成
+                        select {
+                        case <-done:
+                            return
+                        case s <- v:
+                        }
+                    }
+                }()
+                return s
+            }
+
+            func main() {
+                in := asStream(nil)
+
+                // map操作: 乘以10
+                mapFn := func(v interface{}) interface{} {
+                    return v.(int) * 10
+                }
+
+                // reduce操作: 对map的结果进行累加
+                reduceFn := func(r, v interface{}) interface{} {
+                    return r.(int) + v.(int)
+                }
+
+                sum := reduce(mapChan(in, mapFn), reduceFn) //返回累加结果
+                fmt.Println(sum)
+            }
+            ```
 #### sync
 1. 认识：提供了并发编程中基本的同步原语，保证执行不会出现混乱。这是传统的同步机制，是通过共享内存来通信的，更高级别的同步最好通过通道和通信来完成，多协程就要用到sync了
 1. 锁
