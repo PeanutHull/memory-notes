@@ -300,26 +300,6 @@
      1. Gossip Protocol：八卦，一个事件发生时，其他节点需要知道这个事件
         - lan pool：局域网池
         - wan pool
-1. jaeger
-   - 认识：链路追踪，![avatar](../images/jaeger_struct.jpg)
-     1. 高扩展
-     1. 可观察
-     1. 原生支持openTracing
-   - 设计
-     1. jaeger-client：使用thrift通过udp发送给agent
-     1. jaeger-agent：go，使用thrift通过Tchannel发送给collector
-     1. jaeger-collector：go，队列入存储
-     1. jaeger-query：go
-     1. jaeger-ui：react
-     1. 存储：cassandra
-   - 组成
-     1. span：逻辑工作单元，有操作名称、开始时间、持续时间，跨度可以嵌套并排序，建立因果关系模型
-        - 对象
-          1. tag：标签集合
-          1. log：一组span日志集合
-          1. spanContext：上下文对象
-          1. reference：span间关系
-   - 项目应用原理：![avatar](../images/jaeger_in_project.jpg)
 1. 熔断
    - 认识：hystrix-go，记录成功调用、失败、超时、拒绝数量，在需要的地方加熔断，要根据业务设计一整套的熔断流程和处理逻辑
      1. 熔断计数器：默认DefaultMetricCollector，保存熔断器的所有状态数量
@@ -335,16 +315,6 @@
         - errorPercentThreshold：熔断百分比，超过自动熔断
      1. hystrix-dashboard：web管理平台
 1. 负载均衡：selector
-1. apm
-   - 认识：应用性能产品，保障健康可监测性
-     1. 分布式链路追踪
-     1. 性能指标分析
-     1. 应用和服务依赖
-   - demo
-     1. 听云
-     1. 网校探针：发生故障的时候，能够快速定位和解决问题
-     1. skywalking：是观察性分析平台和应用性能管理系统。提供分布式追踪、服务网格遥测分析、度量聚合和可视化一体化解决方案，可用于php
-     1. 元老：openTracing、opencensus
 ### 库、中间件
 1. Sentinel
    - 认识：面向分布式服务架构的高可用流量防护组件，以流量为切入点，从限流、流量整形、熔断降级、系统负载保护、热点防护等多个维度来帮助开发者保障微服务的稳定性

@@ -86,6 +86,89 @@
    - 负载度、最少连接：记录正在处理的连接数
    - 响应
    - 源地址散列：同样ip对应相同后端服务
+### APM
+1. 认识
+   - 认识：生成、收集、导出监测数据(Metrics、Logs、Traces)，应用性能产品，保障健康可监测性
+     1. 分布式链路追踪
+     1. 性能指标分析
+     1. 应用和服务依赖
+   - demo
+     1. opentelemetry
+     1. 听云
+     1. 网校探针：发生故障的时候，能够快速定位和解决问题
+     1. skywalking：是观察性分析平台和应用性能管理系统。提供分布式追踪、服务网格遥测分析、度量聚合和可视化一体化解决方案，可用于php
+     1. 元老：openTracing、opencensus
+     1. zipkin：Spring Cloud全家桶自带
+     1. skywalking：支持多语言，支持Istio + Envoy服务网格，国内开源并提交到Apache孵化器，华为
+     1. opencensus：支持多语言，谷歌出品
+     1. jeager：Uber
+     1. CAT：点评的
+1. prometheus
+   - 认识：SoundCloud的开源的Google BorgMon的监控、告警、时序数据数据库组合的解决方案，适用于容器环境。![avatar](../images/prometheus_struct.webp)
+     1. 多维度数据模型
+     1. 灵活的查询语言
+     1. 不依赖分布式存储，单个服务器节点是自主的
+     1. 通过基于HTTP的pull方式采集时序数据
+     1. 可以通过中间网关进行时序列数据推送
+     1. 通过服务发现或者静态配置来发现目标服务对象
+     1. 支持多种多样的图表和界面展示，比如Grafana等
+   - 组件
+     1. Client Library：客户端组合metrics并暴露给Push Gateway
+     1. Push Gateway：支持临时性Job主动推送指标的中间网关
+     1. Server：主要负责数据采集和存储，提供PromQL查询语言的支持
+     1. Alertmanager：警告管理器，从server接收到alert后，进行去重、分组，并路由对应的接受方式，发出报警
+     1. Exporter：暴露已有的第三方服务给server
+     1. instance：一个单独监控的目标，一般是一个进程
+     1. jobs：一组同类型的instances
+   - metric类型
+     1. counter：累加，如请求的个数、出现的错误数
+     1. gauge：任意加减
+     1. histogram：可对观察结果采样、分组、统计，如柱状图
+     1. summary：提供观测值的count、sum功能，如请求持续时间
+   - 原理：Prometheus的基本原理是通过HTTP协议周期性抓取被监控组件的状态，任意组件只要提供对应的HTTP接口就可以接入监控。不需要任何SDK或者其他的集成过程。这样做非常适合做虚拟化环境监控系统，比如VM、Docker、Kubernetes等。输出被监控组件信息的HTTP接口被叫做exporter 。目前互联网公司常用的组件大部分都有exporter可以直接使用，比如Varnish、Haproxy、Nginx、MySQL、Linux系统信息(包括磁盘、内存、CPU、网络等等)
+   - 服务过程
+     1. Prometheus Daemon负责定时去配置好的jobs/exporter/pushgateway抓取metrics(指标)数据，每个抓取目标需要暴露一个http服务的接口给它定时抓取。Prometheus支持通过配置文件、文本文件、Zookeeper、Consul、DNS SRV Lookup等方式指定抓取目标。Prometheus采用PULL的方式进行监控，即服务器可以直接通过目标PULL数据或者间接地通过中间网关来Push数据
+     1. Prometheus在本地存储抓取的所有数据，并通过一定规则进行清理和整理数据，并把得到的结果存储到新的时间序列中
+     1. Prometheus通过PromQL和其他API可视化地展示收集的数据。Prometheus支持很多方式的图表可视化，例如Grafana、自带的Promdash以及自身提供的模版引擎等等。Prometheus还提供HTTP API的查询方式，自定义所需要的输出
+     1. PushGateway支持Client主动推送metrics到PushGateway，而Prometheus只是定时去Gateway上抓取数据
+     1. Alertmanager是独立于Prometheus的一个组件，可以支持Prometheus的查询语句，提供十分灵活的报警方式
+### 链路追踪
+1. 实现原理
+   - 链路是
+   - 根据时间线去看，一个个请求有开始时间、持续时间，上下层级关系，![avatar](../images/trace_timeline.jpg)
+1. 网校trace
+   - 组成
+     1. 关键三要素：接口url(名称)、开始时间、持续时间
+     1. 表示整体范围：traceid不变，贯穿所有请求的始终，可用uuid。但是日志里收集的是乱序的
+     1. 表示请求层级和顺序：rpcid形式x.x.x，每一个层级多一个点，相同出发点，x值递增表示每一个请求(可以是http、mysql查询等)。即只有最后一位+1，前几层不变，子调用的时候会增加层级计数 一个点代表一个调用深度层级的执行顺序
+     1. 将格式化好的数据灌入数据库中
+   - 应用场景
+     1. 可通过TraceId能够将某次请求所有日志汇集，方便查询分析，回放
+     1. 可通过对标准格式的日志内容进行统计分析，可以分析出所有时间段内接口、资源的响应情况
+     1. 可通过对错误日志进行汇总去重，实现运行异常发现、排查、现场回放、警报
+   - 日志内容范围
+     1. Mysql请求IP、连接耗时、响应耗时、SQL模板、SQL附加参数*、执行错误、连接错误
+     1. Http请求IP、URL、method、参数、httpcode、dns解析时间、连接时间、业务处理时间、执行错误、连接错误
+1. jaeger
+   - 认识：链路追踪，![avatar](../images/jaeger_struct.jpg)
+     1. 高扩展
+     1. 可观察
+     1. 原生支持openTracing
+   - 设计
+     1. jaeger-client：使用thrift通过udp发送给agent
+     1. jaeger-agent：go，使用thrift通过Tchannel发送给collector
+     1. jaeger-collector：go，队列入存储
+     1. jaeger-query：go
+     1. jaeger-ui：react
+     1. 存储：cassandra
+   - 组成
+     1. span：逻辑工作单元，有操作名称、开始时间、持续时间，跨度可以嵌套并排序，建立因果关系模型
+        - 对象
+          1. tag：标签集合
+          1. log：一组span日志集合
+          1. spanContext：上下文对象
+          1. reference：span间关系
+   - 项目应用原理：![avatar](../images/jaeger_in_project.jpg)
 ### 高负载
 1. 服务器方面
    - CPU负载
@@ -221,28 +304,6 @@
 1. 作业调度平台：集群下的高可用多维度的定时任务
 1. 服务治理框架
 1. 数据一致性
-### 链路追踪
-1. 实现原理
-   - 链路是
-   - 根据时间线去看，一个个请求有开始时间、持续时间，上下层级关系，![avatar](../images/trace_timeline.jpg)
-1. 网校trace
-   - 组成
-     1. 关键三要素：接口url(名称)、开始时间、持续时间
-     1. 表示整体范围：traceid不变，贯穿所有请求的始终，可用uuid。但是日志里收集的是乱序的
-     1. 表示请求层级和顺序：rpcid形式x.x.x，每一个层级多一个点，相同出发点，x值递增表示每一个请求(可以是http、mysql查询等)。即只有最后一位+1，前几层不变，子调用的时候会增加层级计数 一个点代表一个调用深度层级的执行顺序
-     1. 将格式化好的数据灌入数据库中
-   - 应用场景
-     1. 可通过TraceId能够将某次请求所有日志汇集，方便查询分析，回放
-     1. 可通过对标准格式的日志内容进行统计分析，可以分析出所有时间段内接口、资源的响应情况
-     1. 可通过对错误日志进行汇总去重，实现运行异常发现、排查、现场回放、警报
-   - 日志内容范围
-     1. Mysql请求IP、连接耗时、响应耗时、SQL模板、SQL附加参数*、执行错误、连接错误
-     1. Http请求IP、URL、method、参数、httpcode、dns解析时间、连接时间、业务处理时间、执行错误、连接错误
-1. 应用
-   - zipkin
-   - skywalking：支持多语言，支持Istio + Envoy服务网格，国内开源并提交到Apache孵化器
-   - opencensus：支持多语言，谷歌出品
-   - jeager
 ### API网关
 1. 意义：控制访问，让调用方快速接入，让业务方安全对外开放
 1. 功能
