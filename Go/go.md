@@ -1742,29 +1742,47 @@
             ```
 #### sync
 1. 认识：提供了并发编程中基本的同步原语，保证执行不会出现混乱。这是传统的同步机制，是通过共享内存来通信的，更高级别的同步最好通过通道和通信来完成，多协程就要用到sync了
-1. 锁
-   - 互斥锁
-     1. 认识：`sync.Mutex`，保证同时只有一个goroutine能访问一个共享的变量从而避免冲突
-     1. 方法
-        - `Lock()`
-        - `Unlock()`
-        - `TryLock()`
-     1. 实例
-        ```go
-        c.mux.Lock()
-        defer c.mux.Unlock()                    // 这才是解锁的正确写法
-        c.v[key]++                              // Lock 之后同一时刻只有一个goroutine能访问 c.v
+   - sync 的同步原语在使用后是不能复制的，因为原变量状态不确定
+1. 互斥锁
+   - 
+   - 认识：`sync.Mutex`，保证同时只有一个goroutine能访问一个共享的变量从而避免冲突
+     1. cas和非公平锁的目的都是为了减少线程的上下文的切换，因为如果我们能够把锁交给正在占用 CPU 时间片的 goroutine 的话，那就不需要做上下文的切换，在高并发的情况下，可能会有更好的性能
+     1. 使用不恰当有死锁问题
+   - 特点
+     1. 因为Mutex的实现中没有记录哪个 goroutine 拥有这把锁，所以mutex不是可重入的锁，Unlock方法也可以被任意的 goroutine 调用释放锁，所以一定要遵循谁申请、谁释放的原则，尤其注意加解锁不在一个方法里
+   - 方法
+     1. `Lock()`
+     1. `Unlock()`：作用于未加锁的会panic
+     1. `TryLock()`
+   - 实例
+    ```go
+    var mu sync.Mutex                       // Mutex的零值是还没有 goroutine 等待的未加锁的状态，所以不需要额外的初始化，直接声明变量即可
+    mu.Lock()
+    mu.Unlock()
 
-        func() {                                // 可以用匿名函数实现逻辑体的加解锁
-            c.mux.Lock()
-            defer c.mux.Unlock()     
-        }()
-        ```
-   - 读写互斥锁
-     1. 认识：`sync.RWMutex`。允许至少一个读/写锁存在
-     1. 方法
-        - RLock、RUnlock：可进行并发读取
-1. 同步器
+    c.mux.Lock()
+    defer c.mux.Unlock()                    // 非临界区使用的解锁的正确写法
+
+    // 可以用匿名函数实现逻辑体的加解锁
+    func() {     
+        c.mux.Lock()
+        defer c.mux.Unlock()     
+    }()
+    ```
+1. 读写互斥锁
+   - 认识：`sync.RWMutex`。允许至少一个读/写锁存在
+   - 方法
+     1. RLock、RUnlock：可进行并发读取
+1. 锁
+   - 易错场景
+     1. Lock/Unlock 不是成对出现
+        - 代码中有太多的 if-else 分支，可能在某个分支中漏写了 Unlock
+        - 在重构的时候把 Unlock 给删除了
+        - Unlock 误写成了 Lock
+     1. Copy已使用的Mutex
+     1. 重入
+     1. 死锁
+1. 并发编排/同步器
    - 认识：`sync.WaitGroup`，是信号量，需要某个条件完成才能继续，用于并发控制
      1. 场景：在一个goroutine等待一组goroutine执行完成的通知时。初级的可以多用一个done的channel阻塞实现等待某个goroutine结束的通知，每次循环进出这个channel，多个可以使用通道切片来分别存储，使用waitGroup更加高效优雅
    - 原理：拥有一个内部计数器。当计数器等于0时，则Wait()方法会立即返回。否则一直阻塞执行Wait()方法的goroutine
@@ -1785,8 +1803,8 @@
     }()
     wg.Wait()                           // 阻塞，使其等待
     ```
-1. 发送信号：`sync.Cond`
-   - 认识：用于发出信号（一对一）或广播信号（一对多）到goroutine
+1. 条件变量/发送信号
+   - 认识：`sync.Cond`，用于发出信号（一对一）或广播信号（一对多）到goroutine
      1. 违反go的基本原则：不要通过共享进行通信；而是通过通信共享，但是通过channel模拟广播的唯一方法是关闭channel，只能广播一次，cond可以多次
    - 方法
      1. `NewCond()`：创建
@@ -1833,6 +1851,12 @@
      1. `SwapInt32(&addr,newaddr)`：交换，不管旧值
 1. 一个函数在所有goroutine仅执行一次：`sync.Once`
    - 执行方法：`once.Do()`
+1. wiki
+   - 临界区：受影响的最小范围，要最小化锁粒度，提高性能
+   - race detector：检测并发访问共享资源是否有问题的工具，基于Google的C/C++ sanitizers。编译器通过探测所有的内存访问(加入代码能监视对这些内存地址的访问（读还是写）)。在代码运行的时候，race detector 就能监控到对共享变量的非同步访问
+     1. 只能通过真正对实际地址进行读写访问的时候才能探测，所以它并不能在编译的时候发现
+     1. 而且，在运行的时候，只有在触发了 data race 之后，才能检测到，如果碰巧没有触发也是检测不到
+   - vet：可以发现死锁问题，go有运行时死锁的检查机制
 #### context
 1. context
    - 认识：控制生命周期、追踪协程之间的调用树，在这些树中传递通知和元数据，是一种协程调度的方式。v1.7
@@ -3231,7 +3255,7 @@
         - `go tool cgo`
    - 运行和编译
      1. `go run hello.go`：进行高速编译，用作脚本语言
-        - -race：检测数据访问冲突
+        - -race：race detector
      1. `go build`
         - 认识：用于测试编译
           1. 会同时编译依赖包，会在GOROOT/src和GOPATH/src搜索包，默认编译当前目录下的所有go文件，可指定要编译的文件名，会忽略_或.开头的go文件，会根据当前系统选择性地编译以系统名结尾的文件(_linux|darwin|windows|freebsd.go)
@@ -3407,11 +3431,6 @@
      1. govendor
      1. gvt
 ### wiki
-1. 并发编程
-   - Go 并发基础（Concurrency, Race Conditions and Channels）
-   - 并发模式（Concurrency Patterns）
-   - 读写锁
-   - 协程：协程泄露
 1. Goscript：通过 WASM 实现，Go语言规范的非官方实现，用于Rust项目的内嵌或封装。像 Lua 之于 Redis/WoW，或者 Python 之于 NumPy
 1. 关键字和标识符、符号：程序一般由关键字、常量、变量、运算符、类型和函数组成
    - 关键字：25个
@@ -3505,4 +3524,3 @@
      1. 设计架构，命名组件，（文档）记录细节
      1. 文档是供用户使用的
      1. 不要（在生产环境）使用 panic()
-
