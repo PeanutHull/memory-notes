@@ -240,13 +240,61 @@
    - chanrecv1、chanrecv2：一个参数、两个参数，会调用chanrecv
    - closechan
 #### mutex
+1. 组成
+    ```go
+    type Mutex struct {
+        state   int32           // 通过state字段，可以知道锁是否已经被某个 goroutine 持有、当前是否处于饥饿状态、是否有等待的 goroutine 被唤醒、等待者的数量等信息
+        sema    uint32
+    }
+    ```
 1. 设计历程
    - 第一版：会排队等待获取互斥锁
    - 第二版：排队的唤醒之后要和正在请求锁的 goroutine 进行竞争。这会让 CPU 中正在执行的 goroutine 有更多的机会获取到锁，在一定程度上提高了程序的性能，还能优化
    - 第三版：获取不到锁会通过自旋一定次数后，再执行原来的逻辑，更加公平
      1. 因为一般抢锁临界区都很小，节约了休眠唤醒的成本
-   - 1.9：增加饥饿模式，进入饥饿模式，优先让等待者先获取到锁。不公平的等待时间限制在1ms，新来的同学主动谦让一下，给老同志一些机会
+   - 1.9：增加饥饿模式，进入饥饿状态，优先让等待者先获取到锁。不公平的等待时间限制在1ms，新来的同学主动谦让一下，给老同志一些机会
    - 2019：对于 Mutex 唤醒后持有锁的那个 waiter，调度器可以有更高的优先级去执行，这已经是很细致的性能优化了
+1. 使用
+    ```go
+    const (
+        mutexLocked      = 1 << iota // 加锁标识位置
+        mutexWoken                   // 唤醒标识位置
+        mutexStarving                // 锁饥饿标识位置
+        mutexWaiterShift = iota      // 标识 waiter的起始bit位置
+    )
+
+    // 扩展一个 Mutex 结构
+    type Mutex struct {
+        sync.Mutex
+    }
+
+    // 没有加锁，这个看的都是调用的那一时刻的锁的状态
+    // 获取等待者的数量
+    func (m *Mutex) Count() int {
+        // 获取 state 字段的值
+        v := atomic.LoadInt32((*int32)(unsafe.Pointer(&m.Mutex)))
+        v = v >> mutexWaiterShift
+        // 得到等待者的数值
+        v = v + (v & mutexLocked)
+        // 再加上锁持有者的数量， 0 或者 1
+        return int(v)
+    }
+    // 锁是否被持有
+    func (m *Mutex) IsLocked() bool {
+        state := atomic.LoadInt32((*int32)(unsafe.Pointer(&m.Mutex)))
+        return state&mutexLocked == mutexLocked
+    }
+    // 是否有等待者被唤醒
+    func (m *Mutex) IsWoken() bool {
+        state := atomic.LoadInt32((*int32)(unsafe.Pointer(&m.Mutex)))
+        return state&mutexWoken == mutexWoken
+    }
+    // 锁是否处于饥饿状态
+    func (m *Mutex) IsStarving() bool {
+        state := atomic.LoadInt32((*int32)(unsafe.Pointer(&m.Mutex)))
+        return state&mutexStarving == mutexStarving
+    }
+    ```
 ### 内存管理
 1. 背景
    - 多线程的今天之前共享内存，线程之前在申请内存(虚拟内存)时，由于并行问题会产生竞争不安全，加锁又会影响性能

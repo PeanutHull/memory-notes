@@ -968,19 +968,24 @@
      1. 利用Go 1.5+的特性：当map中的key和value都是基础类型时，GC就不会扫到map里的key和value
 1. 运行时
    - 获取goroutine id
-    ```go
-    func GoID() int {
-        var buf [64]byte
-        n := runtime.Stack(buf[:], false)
-        // 得到 id 字符串
-        idField := strings.Fields(strings.TrimPrefix(string(buf[:n]), "goroutine "))[0]
-        id, err := strconv.Atoi(idField)
-        if err != nil {
-            panic(fmt.Sprintf("cannot get goroutine id:, %v", err))
+     1. 简单方式
+        ```go
+        func GoID() int {
+            var buf [64]byte
+            n := runtime.Stack(buf[:], false)
+            // 得到 id 字符串
+            idField := strings.Fields(strings.TrimPrefix(string(buf[:n]), "goroutine "))[0]
+            id, err := strconv.Atoi(idField)
+            if err != nil {
+                panic(fmt.Sprintf("cannot get goroutine id:, %v", err))
+            }
+            return id
         }
-        return id
-    }
-    ```
+        ```
+     1. hacker方式：每个运行的goroutine结构的g指针保存在当前goroutine的TLS对象中，不同Go版本的goroutine的结构可能不同，常用库`petermattis/goid`
+        ```go
+
+        ```
 ### 面向对象
 1. 理解：核心是合成复用
 1. struct
@@ -1895,14 +1900,16 @@
    - sync 的同步原语在使用后是不能复制的，因为原变量状态不确定
 1. 互斥锁
    - 认识：`sync.Mutex`，保证同时只有一个goroutine能访问一个共享的变量从而避免冲突
-     1. cas和非公平锁的目的都是为了减少线程的上下文的切换，因为如果我们能够把锁交给正在占用 CPU 时间片的 goroutine 的话，那就不需要做上下文的切换，在高并发的情况下，可能会有更好的性能
      1. 使用不恰当有死锁问题
    - 特点
      1. 因为Mutex的实现中没有记录哪个 goroutine 拥有这把锁，所以mutex不是可重入的锁，Unlock方法也可以被任意的 goroutine 调用释放锁，所以一定要遵循谁申请、谁释放的原则，尤其注意加解锁不在一个方法里
+     1. cas和非公平锁的目的都是为了减少线程的上下文的切换，因为如果我们能够把锁交给正在占用 CPU 时间片的 goroutine 的话，那就不需要做上下文的切换，在高并发的情况下，可能会有更好的性能
    - 方法
      1. `Lock()`
      1. `Unlock()`：作用于未加锁的会panic
-     1. `TryLock()`
+     1. `TryLock()`：TryLock的使用通常表明在特定的互斥锁使用中存在更深层次的问题，go一开始说不加的，v1.18
+        - 意义在于不会阻塞，要么就加上了锁，要么返回false，lock方法没超时嘛
+        - 可用于并发修改，只要有一个成功了就行，其他人撤就可以
    - 实例
     ```go
     var mu sync.Mutex                       // Mutex的零值是还没有 goroutine 等待的未加锁的状态，所以不需要额外的初始化，直接声明变量即可
@@ -1918,23 +1925,167 @@
         defer c.mux.Unlock()     
     }()
     ```
+   - 易错场景
+     1. Lock/Unlock 不是成对出现：保证Lock/Unlock成对出现，尽可能采用 defer mutex.Unlock 的方式，把它们成对、紧凑地写在一起
+        - 代码中有太多的 if-else 分支，可能在某个分支中漏写了 Unlock
+        - 在重构的时候把 Unlock 给删除了
+        - Unlock 误写成了 Lock
+     1. Copy已使用的Mutex
+     1. 重入：不是可重入的，同一个goroutine重复加锁了
+     1. 死锁
    - 可重入锁的实现
-    ```go
+     1. 记录goroutine id：解决了重入问题，recursion是辅助字段记录次数
+        ```go
+        // RecursiveMutex 包装一个 Mutex, 实现可重入
+        type RecursiveMutex struct {
+            sync.Mutex
+            owner     int64                                 // 当前持有锁的 goroutine id
+            recursion int32                                 // 这个 goroutine 重入的次数
+        }
 
+        func (m *RecursiveMutex) Lock() {
+            gid := goid.Get()
+            // 如果当前持有锁的 goroutine 就是这次调用的 goroutine, 说明是重入
+            if atomic.LoadInt64(&m.owner) == gid {
+                m.recursion++
+                return
+            }
+            m.Mutex.Lock()
+            // 获得锁的 goroutine 第一次调用， 记录下它的 goroutine id, 调用次数加 1
+            atomic.StoreInt64(&m.owner, gid)
+            m.recursion = 1
+        }
+        func (m *RecursiveMutex) Unlock() {
+            gid := goid.Get()
+            // 非持有锁的 goroutine 尝试释放锁， 错误的使用
+            if atomic.LoadInt64(&m.owner) != gid {
+                panic(fmt.Sprintf("wrongtheowner( % d):%d!", m.owner, gid))
+            }
+            // 调用次数减 1
+            m.recursion--
+            if m.recursion != 0 {
+                // 如果这个 goroutine 还没有完全释放， 则直接返回
+                return
+            }
+            // 此 goroutine 最后一次调用， 需要释放锁
+            atomic.StoreInt64(&m.owner, -1)
+            m.Mutex.Unlock()
+        }
+        ```
+     1. 使用token：就是不用goroutine id，需要使用token作为凭证
+        ```go
+        // Token方式的递归锁
+        type TokenRecursiveMutex struct {
+            sync.Mutex
+            token     int64
+            recursion int32
+        }
+
+        // 请求锁，需要传入token
+        func (m *TokenRecursiveMutex) Lock(token int64) {
+            if atomic.LoadInt64(&m.token) == token {
+                // 如果传入的 token 和持有锁的 token 一致，
+                m.recursion++
+                return
+            }
+            m.Mutex.Lock()
+            // 传入的 token 不一致， 说明不是递归调用
+            // 抢到锁之后记录这个 token
+            atomic.StoreInt64(&m.token, token)
+            m.recursion = 1
+        }
+
+        // 释放锁
+        func (m *TokenRecursiveMutex) Unlock(token int64) {
+            if atomic.LoadInt64(&m.token) != token {
+                // 释放其它 token 持有的锁
+                panic(fmt.Sprintf("wrongtheowner(%d):%d!", m.token, token))
+            }
+            m.recursion--
+            // 当前持有这个锁的 token 释放锁
+            if m.recursion != 0 {
+                // 还没有回退到最初的递归调用
+                return
+            }
+            atomic.StoreInt64(&m.token, 0)
+
+            // 没有递归调用了，释放锁
+            m.Mutex.Unlock()
+        }
+        ```
+   - 死锁
+     1. 避免方法，破坏以下4个条件的一个或几个即可
+        - 互斥：至少一个资源是被排他性独享的，其他线程必须处于等待状态，直到资源被释放
+        - 持有和等待：goroutine 持有一个资源，并且还在请求其它 goroutine 持有的资源
+        - 不可剥夺：资源只能由持有它的 goroutine 来释放
+        - 环路等待
+   - 基本同步原语模拟TryLock
+    ```go
+    const (
+        mutexLocked      = 1 << iota // 加锁标识位置
+        mutexWoken                   // 唤醒标识位置
+        mutexStarving                // 锁饥饿标识位置
+        mutexWaiterShift = iota      // 标识 waiter的起始bit位置
+    )
+
+    // 扩展一个 Mutex 结构
+    type Mutex struct {
+        sync.Mutex
+    }
+
+    // 尝试获取锁
+    func (m *Mutex) TryLock() bool {
+        // 如果能成功抢到锁
+        if atomic.CompareAndSwapInt32((*int32)(unsafe.Pointer(&m.Mutex)), 0, mutexLocked) {
+            return true
+        }
+
+        // 如果处于唤醒、 加锁或者饥饿状态， 这次请求就不参与竞争了， 返回 false
+        old := atomic.LoadInt32((*int32)(unsafe.Pointer(&m.Mutex)))
+        if old&(mutexLocked|mutexStarving|mutexWoken) != 0 {
+            return false
+        }
+        // 尝试在竞争的状态下请求锁
+        newed := old | mutexLocked
+        return atomic.CompareAndSwapInt32((*int32)(unsafe.Pointer(&m.Mutex)), old, newed)
+    }
+    ```
+   - 模拟协程安全的队列：结合slice
+    ```go
+    type SliceQueue struct {
+        data []interface{}
+        mu   sync.Mutex
+    }
+
+    func NewSliceQueue(n int) (q *SliceQueue) {
+        return &SliceQueue{data: make([]interface{}, 0, n)}
+    }
+
+    // Enqueue 把值放在队尾
+    func (q *SliceQueue) Enqueue(v interface{}) {
+        q.mu.Lock()
+        q.data = append(q.data, v)
+        q.mu.Unlock()
+    }
+
+    // Dequeue 移去队头并返回
+    func (q *SliceQueue) Dequeue() interface{} {
+        q.mu.Lock()
+        if len(q.data) == 0 {
+            q.mu.Unlock()
+            return nil
+        }
+        v := q.data[0]
+        q.data = q.data[1:]
+        q.mu.Unlock()
+        return v
+    }
     ```
 1. 读写互斥锁
    - 认识：`sync.RWMutex`。允许至少一个读/写锁存在
    - 方法
      1. RLock、RUnlock：可进行并发读取
 1. 锁
-   - 易错场景
-     1. Lock/Unlock 不是成对出现
-        - 代码中有太多的 if-else 分支，可能在某个分支中漏写了 Unlock
-        - 在重构的时候把 Unlock 给删除了
-        - Unlock 误写成了 Lock
-     1. Copy已使用的Mutex
-     1. 重入
-     1. 死锁
 1. 并发编排/同步器
    - 认识：`sync.WaitGroup`，是信号量，需要某个条件完成才能继续，用于并发控制
      1. 场景：在一个goroutine等待一组goroutine执行完成的通知时。初级的可以多用一个done的channel阻塞实现等待某个goroutine结束的通知，每次循环进出这个channel，多个可以使用通道切片来分别存储，使用waitGroup更加高效优雅
