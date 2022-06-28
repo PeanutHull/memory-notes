@@ -1,5 +1,6 @@
 ### 语法练习
 1. 数据类型转换
+   - 实例
     ```go
     var f float64 = float64(i)
     // 或者
@@ -15,6 +16,44 @@
 	c, err := strconv.ParseInt(aa, 10, 64)
 	fmt.Printf("c: %d, err: %v   \n", c, err)
     ```
+   - 实现类型检查的方法
+     1. 需要无数的`if v,ok=value.(xxType);!ok{}`
+     1. 或者用`v.(xxType)`直到panic
+     1. 或者封装snyc.Map并且对外提供指定类型的Load，Delete等方法实现类型限定
+        - 如果改变类型，就需要重新创建一个结构体和方法，这也是go没有泛型所带来的烦恼之一
+     1. 用反射帮助做类型检查
+        ```go
+        // 使用反射帮助做sync.Map的类型检查
+        type ConcurrentMap struct {
+            m         sync.Map
+            keyType   reflect.Type
+            valueType reflect.Type
+        }
+
+        func NewConcurrentMap(keyType, valueType reflect.Type) (*ConcurrentMap, error) {
+            if keyType == nil {
+                return nil, errors.New("nil key type")
+            }
+            if !keyType.Comparable() {
+                return nil, fmt.Errorf("incomparable key type: %s", keyType)
+            }
+            if valueType == nil {
+                return nil, errors.New("nil value type")
+            }
+            cMap := &ConcurrentMap{
+                keyType:   keyType,
+                valueType: valueType,
+            }
+            return cMap, nil
+        }
+
+        func (cMap *ConcurrentMap) Delete(key interface{}) {
+            if reflect.TypeOf(key) != cMap.keyType {                                            // 检查是否和map本身的一致
+                return
+            }
+            cMap.m.Delete(key)
+        }
+        ```
 1. slice
    - 当作函数参数传递时修改slice
     ```go
@@ -1269,31 +1308,7 @@
           1. `go vet $(go list ./... | grep -v /vendor/)`：忽略vender
         - build/test 时使用 -race 参数以便运行时检测数据竞争问题
         - go-deadlock 检测死锁或锁等待问题
-### 技术解决方案
-1. 千万级WebSocket弹幕消息推送服务
-   - 难点
-     1. 推送频率：在线人数 * 每秒弹幕数 = 10亿条每秒
-     1. 有多个房间
-   - 方案
-     1. 推拉模式的选择：拉请求量不可控，并且大多数请求无效，消息不及时；推需要维持多个长链接
-     1. 瓶颈破除
-        - 内核：linux内核发送tcp极限包频100万/秒
-          1. 方案：消息合并，将同一秒内n条消息合并成1条，这样每秒推送次数只等于在线连接数
-        - 锁：需要维护在线用户集合(百万在线)，1. 发送消息需要遍历，耗时长，2. 推送期间客户端正常上下线，集合需要上锁
-          1. 方案：大拆小
-             - 连接打散到多个集合中，每个集合有自己的锁
-             - 多线程并发推送多个集合，避免锁竞争
-             - 读写锁替代互斥锁
-        - cpu：百万级消息百万次json编码非常耗费cpu
-          1. 方案：减少重复计算，编码前置，n条消息只编码1次
-     1. 分布式架构：上下三层，通过网关集群对外用http1.1打散管理一部分连接，网关对内用http2对接业务服务器
-        - http2支持连接复用，可以在单个连接上可以实现高吞吐的通讯，作为内部通讯rpc很适合
-   - demo实现
-     1. api设计：拿一个结构体，读消息用in chan，发消息用out chan
-     1. websocket设计：go起一个协程，for死循环读websocket消息扔到in chan；go再起一个协程，死循环读out chan，将消息写到websocket
-        - 问题1：当in chan写满进入读ws协程阻塞时，写协程网络报错关闭ws链接，此时读协程不知道链接已经关闭了
-          1. 解决方案：用select同时监听in chan和新加的容量为1的close chan，当进入close chan分支时(关闭ws时同时关闭close chan使其不阻塞)，表示链接被关闭了。同样ws断了链接api也会阻塞，所以都加上
-        - 问题2：ws的close是线程安全的，是可重入的，所以可多次关闭，但是close chan不可重入，所以用结构体的标志位指示是否关闭，同时用mutex锁住防止并发关闭
+### 技术方案
 1. 连接池
    - 原理：![avatar](../images/conn_pool.png)
    - go-redis
@@ -1307,6 +1322,8 @@
           1. 在从连接池拿连接时写入chan，不停拿不停写，写满阻塞实现了池的最大忙碌数量，这时候计时器介入，实现获取连接的超时逻辑
           1. 往连接池放连接时，不停放，不停取出chan的值，作减法
 1. 锁
+   - 优化方式：尽量减少锁的粒度、锁的持有时间
+     1. 锁的粒度：分片 shard
    - 超时锁：time.Sleep和sync.Mutex搭配
     ```go
     // 遍历指定的次数（即指定的超时时间）
@@ -1545,7 +1562,6 @@
         }
     }
     ```
-1. go自己的数据缓存管理：依赖sync.Map，根据map元素的最后更新时间+最大缓存时间判断数据是否过期
 1. 爬虫
    - 步骤
      1. 抓取
@@ -1761,6 +1777,37 @@
         fmt.Println("send over") 
     } 
     ```
+### 应用案例
+1. 千万级WebSocket弹幕消息推送服务
+   - 难点
+     1. 推送频率：在线人数 * 每秒弹幕数 = 10亿条每秒
+     1. 有多个房间
+   - 方案
+     1. 推拉模式的选择：拉请求量不可控，并且大多数请求无效，消息不及时；推需要维持多个长链接
+     1. 瓶颈破除
+        - 内核：linux内核发送tcp极限包频100万/秒
+          1. 方案：消息合并，将同一秒内n条消息合并成1条，这样每秒推送次数只等于在线连接数
+        - 锁：需要维护在线用户集合(百万在线)，1. 发送消息需要遍历，耗时长，2. 推送期间客户端正常上下线，集合需要上锁
+          1. 方案：大拆小
+             - 连接打散到多个集合中，每个集合有自己的锁
+             - 多线程并发推送多个集合，避免锁竞争
+             - 读写锁替代互斥锁
+        - cpu：百万级消息百万次json编码非常耗费cpu
+          1. 方案：减少重复计算，编码前置，n条消息只编码1次
+     1. 分布式架构：上下三层，通过网关集群对外用http1.1打散管理一部分连接，网关对内用http2对接业务服务器
+        - http2支持连接复用，可以在单个连接上可以实现高吞吐的通讯，作为内部通讯rpc很适合
+   - demo实现
+     1. api设计：拿一个结构体，读消息用in chan，发消息用out chan
+     1. websocket设计：go起一个协程，for死循环读websocket消息扔到in chan；go再起一个协程，死循环读out chan，将消息写到websocket
+        - 问题1：当in chan写满进入读ws协程阻塞时，写协程网络报错关闭ws链接，此时读协程不知道链接已经关闭了
+          1. 解决方案：用select同时监听in chan和新加的容量为1的close chan，当进入close chan分支时(关闭ws时同时关闭close chan使其不阻塞)，表示链接被关闭了。同样ws断了链接api也会阻塞，所以都加上
+        - 问题2：ws的close是线程安全的，是可重入的，所以可多次关闭，但是close chan不可重入，所以用结构体的标志位指示是否关闭，同时用mutex锁住防止并发关闭
+1. 石墨的长链接网关设计
+   - 设计
+     1. 两级缓存刷新机制，先到内存，再统一到redis
+     1. 动态心跳上报频率，降低心跳上报产生的服务端性能压力
+     1. 每 x 次正常心跳上报，心跳间隔增加 a，增加上限为 y，动态 QPS 最小值为：QPS2=500000/y
+     1. 极限情况下，心跳产生的 QPS 降低 y 倍。在单次心跳超时后服务端立刻将 a 值变为 1s 进行重试。采用以上策略，在保证连接质量的同时，降低心跳对服务端产生的性能损耗
 ### wiki
 1. 问题
    - 拷贝大切片一定比小切片代价大吗？

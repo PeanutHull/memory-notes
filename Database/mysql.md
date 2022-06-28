@@ -115,21 +115,27 @@
         set @@global.sql_warnings = OFF;                    
         ```
 1. 函数
+   - cast：类型转换，如`cast(1 as signed)`
    - 数学：format/round/pow/abs/sin/cos/tan/bit_and
      1. truncate(xx, 2)：保留n位小数
    - 字符串
      1. char/concat/length
      1. instr('x,x,x', xx)：搜索字符串，逗号分隔
      1. locate(xx, 'x,x,x')：搜索字符串，逗号分隔
-   - time
-     1. year()
-   - cast：类型转换，如`cast(1 as signed)`
    - Find_IN_SET：查找通过,分隔的某一个数据
+   - 时间
+     1. year()
+   - 数据处理
+     1. distinct去重可能要全表扫描
+     1. concat字符串连接
+   - 控制流
+     1. IFNULL(expr1, expr2)：接受两个参数，如果不是NULL返回第一个参数。 否则返回第二个参数
+     1. ISNULL(expr)：如expr 为null，那么返回1，否则返回0
+     1. NULLIF(expr1,expr2)：如果expr1=expr2返回NULL，否则返回expr1
    - password
    - UNIX_TIMESTAMP：时间转换为时间戳
    - match：全文搜索
    - uuid()：aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
-   - distinct去重可能要全表扫描，concat字符串连接
    - 修饰符
      1. unsigned
      1. zerofill
@@ -345,7 +351,7 @@
      1. having：筛选成组后的数据，作用于组，如`having sum(age) > 10`
    - 排序
      1. 常用：`order by xx1 asc/desc xx2 asc/desc/rand()`
-     1. 指定顺序：`order by field(xx, '','','')`
+     1. 指定顺序：`order by xx asc/desc/rand(), field(xx, '','','') asc/desc/rand()`
      1. 指定条件
         - 如：`order by xx <> 1`，id为1排第一
         - 如：`order by xx not in(x)`

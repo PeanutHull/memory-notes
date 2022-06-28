@@ -147,6 +147,7 @@
      1. 类型别名：type可以定义任何自定义的类型
      1. 类型比较：可不可以比较需要根据类型的特性去判断取舍
         - 不同类型不能比较
+        - 可比较的类型：bool、整数、浮点数、复数、字符串、指针、Channel、复合类型
         - 不可比较的类型：slice、map、func
         - 如果复合类型中有不可比较的类型，那么复合类型就不可比较
         - 接口值的动态值不可比较，直接比较会panic
@@ -355,10 +356,15 @@
     ```
 1. map
    - 认识：字典，键值对，`map[keyType]valueType`
-     1. key唯一
-     1. key没有顺序，遍历输出顺序与填充顺序无关，不要期望输出顺序的结果
-     1. map是引用类型，引用类型的变量未初始化时默认的zero value是nil，此时写入值会导致运行时错误
-     1. float可以作为map的key，由于精度问题，不要使用
+     1. key
+        - key唯一，必须是可比较的
+        - key没有顺序，遍历输出顺序与填充顺序无关，不要期望输出顺序的结果
+        - float可以作为map的key，由于精度问题，不要使用
+        - struct作为key，如果struct的某个字段值修改了，查询map时无法获取
+     1. 返回值可以是一个，可以是两个，第二个用于判断是否存在
+     1. 删除并不能释放内存，只会增长，不会减少
+     1. map是引用类型，引用类型的变量在使用前必须初始化，未初始化时默认的zero value是nil，此时写入会panic
+     1. 运行时检测到同时对map对象有并发访问，就会panic
    - 使用
     ```go
     // 此情况value是一个结构体，可以是其他的基础类型
@@ -386,6 +392,106 @@
     v, ok := m["key"]
     if ok {}
     ```
+   - 常见错误
+     1. 未初始化：尤其是在struct中更加容易忘记
+        ```go
+        var m map[int]int
+        fmt.Println(m[100])             // 获取不会panic，会返回零值
+        m[100] = 10                     // 会panic
+        m := make(map[int]int)          // 先初始化
+        ```
+     1. 并发读写
+        ```go
+        var m = make(map[int]int, 10)
+        // 初始化一个map
+        go func() {
+            for {
+                m[1] = 1                        // 设置key
+            }
+        }()
+        go func() {
+            for {
+                _ = m[2]                        // 访问这个map
+            }
+        }()
+        select {}
+        ```
+   - 并发安全的map
+     1. 加读写锁：由于go不支持泛型，实现略显繁琐
+        ```go
+        type RWMap struct {
+            // 一个读写锁保护的线程安全的map
+            sync.RWMutex
+            // 读写锁保护下面的map字段
+            m map[int]int
+        }
+
+        func NewRWMap(n int) *RWMap {
+            return &RWMap{
+                m: make(map[int]int, n),
+            }
+        }
+
+        func (m *RWMap) Get(k int) (int, bool) {
+            m.RLock()
+            defer m.RUnlock()
+            // 在锁的保护下从map中读取
+            v, existed := m.m[k]
+            return v, existed
+        }
+        func (m *RWMap) Set(k int, v int) {
+            m.Lock()
+            defer m.Unlock()
+            m.m[k] = v
+        }
+        func (m *RWMap) Delete(k int) {
+            m.Lock()
+            defer m.Unlock()
+            delete(m.m, k)
+        }
+        func (m *RWMap) Len() int {
+            m.Lock()
+            defer m.RUnlock()
+            return len(m.m)
+        }
+        func (m *RWMap) Each(f func(k, v int) bool) {
+            m.Lock()
+            defer m.RUnlock()
+            for k, v := range m.m {
+                if !f(k, v) {
+                    return
+                }
+            }
+        }
+        ```
+     1. 分片
+        ```go
+        var SHARD_COUNT = 32
+
+        // 分成SHARD_COUNT个分片的map
+        type ConcurrentMap []*ConcurrentMapShared
+
+        // 通过RWMutex保护的线程安全的分片，包含一个map
+        type ConcurrentMapShared struct {
+            items        map[string]interface{}
+            sync.RWMutex // Read Write mutex, guards access to internal map.
+        }
+
+        // 创建并发map
+        func New() ConcurrentMap {
+            m := make(ConcurrentMap, SHARD_COUNT)
+            for i := 0; i < SHARD_COUNT; i++ {
+                m[i] = &ConcurrentMapShared{items: make(map[string]interface{})}
+            }
+            return m
+        }
+
+        // 根据key计算分片索引
+        func (m ConcurrentMap) GetShard(key string) *ConcurrentMapShared {
+            return m[uint(fnv32(key))%uint(SHARD_COUNT)]
+        }
+        ```
+     1. 分片加锁：性能比以上都好
 1. 变量
    - 认识：var或者:=
      1. 类型在变量名后边，避免了类c的含糊不清的定义
@@ -414,7 +520,10 @@
    - 特点
      1. _：匿名变量，类似黑洞，可像其他标识符那样用于变量的声明或任何类型都可以给它赋值，但任何赋给这个标识符的值都将被抛弃，可极大增强代码灵活性
      1. 变量类型转换：必须是显式的，只能发生在两种兼容的类型之间，如int和bool不可以。`a := int32(b)`
-     1. 作用域：局部(函数内)、全局(函数外)、形式参数(函数定义中)
+     1. 作用域
+        - 分类：局部(花括号内)、全局(函数外)、形式参数(函数定义中)
+        - 特点
+          1. 局部和全部可以重名，局部变量的改变不会改变全局变量
 1. 常量
    - 认识：const，是程序运行时不会被修改的简单值的标识符
      1. 只能是string、bool、数字类型(整数、浮点、复数)
@@ -849,6 +958,29 @@
         - Reflection goes from interface value to reflection object
         - Reflection goes from reflection object to interface value
         - To modify a reflection object, the value must be settable
+1. GC
+   - 认识
+     1. GC STW(Stop the World) 的存在大的哈希表是非常要命的
+        - 堆上有4千万个对象，GC的扫描过程就超过了4秒钟
+   - local cache的优化思路
+     1. offheap（堆外内存），GC 只会扫描堆上的对象，那就把对象都搞到栈上去，但是这样这个缓存库就高度依赖 offheap 的 malloc 和 free 操作了
+     1. 参考 freecache 的思路，用 ringbuffer 存 entry，绕过了 map 里存指针
+     1. 利用Go 1.5+的特性：当map中的key和value都是基础类型时，GC就不会扫到map里的key和value
+1. 运行时
+   - 获取goroutine id
+    ```go
+    func GoID() int {
+        var buf [64]byte
+        n := runtime.Stack(buf[:], false)
+        // 得到 id 字符串
+        idField := strings.Fields(strings.TrimPrefix(string(buf[:n]), "goroutine "))[0]
+        id, err := strconv.Atoi(idField)
+        if err != nil {
+            panic(fmt.Sprintf("cannot get goroutine id:, %v", err))
+        }
+        return id
+    }
+    ```
 ### 面向对象
 1. 理解：核心是合成复用
 1. struct
@@ -1092,6 +1224,7 @@
      1. 降低额外延迟和开销：来源是协程间的频繁交互
      1. 降低加解锁的频率
    - 实践
+     1. 多协程对于全部变量的操作不是可预估的，需要有锁或者once保证只运行一次
      1. go的func的参数，如果不使用闭包参数，则go在运行到时才去拿for中的那个参数，可能导致不准，go闭包会暂存状态
      1. 没有必要阻塞主流程的，并且有完整日志、报警可用的情况下，可以用协程完成
    - demo
@@ -1101,7 +1234,24 @@
 
     go func(i int) {
         i++                     // 没有协程切换的机会，会一直运行
-    }(i)                        // 外部传进i，否则就是闭包
+    }(i)                        // 传参的形式保存下来
+
+    // 协程和参数
+    sli := []int{1, 2, 3, 4, 5, 6, 7, 8, 9}
+	wg := sync.WaitGroup{}
+	for k, v := range sli {
+		wg.Add(1)
+		go func() {                             // 会输出一大堆8或者9什么的，因为for的速度太快了，等for到8、9时，协程才起来，于是多个协程同时调用了当时的k, v
+			time.Sleep(time.Second)
+			fmt.Println(k, v)
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+    // 解决方案1：协程使用局部变量，因为局部变量是不共享的
+    k1 := k
+    v1 := v
+    // 解决方案2：将k、v以协程参数的形式传过去
     ```
 1. wiki
    - 管道和协程为并发编程提供了优雅的、便利的、与传统并发控制不同的方案，并演化出很多并发模式
@@ -1744,7 +1894,6 @@
 1. 认识：提供了并发编程中基本的同步原语，保证执行不会出现混乱。这是传统的同步机制，是通过共享内存来通信的，更高级别的同步最好通过通道和通信来完成，多协程就要用到sync了
    - sync 的同步原语在使用后是不能复制的，因为原变量状态不确定
 1. 互斥锁
-   - 
    - 认识：`sync.Mutex`，保证同时只有一个goroutine能访问一个共享的变量从而避免冲突
      1. cas和非公平锁的目的都是为了减少线程的上下文的切换，因为如果我们能够把锁交给正在占用 CPU 时间片的 goroutine 的话，那就不需要做上下文的切换，在高并发的情况下，可能会有更好的性能
      1. 使用不恰当有死锁问题
@@ -1768,6 +1917,10 @@
         c.mux.Lock()
         defer c.mux.Unlock()     
     }()
+    ```
+   - 可重入锁的实现
+    ```go
+
     ```
 1. 读写互斥锁
    - 认识：`sync.RWMutex`。允许至少一个读/写锁存在
@@ -1822,10 +1975,19 @@
 1. `sync/singleflight`
    - 认识：重复函数调用抑制
 1. `sync.Map`
-   - 认识：并发安全版map
+   - 认识：并发安全版的基于特定场景的map
+     1. RWLock配合map方案在高读取+多核cpu上表现不佳，为了改善多核读多写少的性能而引入
+     1. 普通map并发操作下会panic，对sync.Map的读写，不需要加锁
+   - 使用场景
+     1. 只会增长的缓存系统中，读多写少
+     1. 多个goroutine为不相交的键集读、写、重写键值对
+   - 特性
+     1. 和普通map相比，仅遍历的方式略有区别
+     1. 所有的key和value都是interface{}，换言之失去了类型检查
+     1. 一旦使用不能复制
    - 方法
      1. Load()：检索
-     1. Range()：遍历
+     1. Range()：遍历，支持在多goroutine下运作，能确保每个key最多被处理一次，但是无法保证遍历过程中实时同步其他goroutine的增删操作
         ```go
         x.Range(func(k, v interface{}) bool {
             err := v.(error)

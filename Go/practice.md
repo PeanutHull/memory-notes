@@ -116,6 +116,48 @@
      1. Buffalo：快速构建web
      1. Revel：高效、全栈
      1. Martini：轻巧、功能强大、模块化web，不再维护
+1. wiki
+   - xes解析
+    ```go
+    // main函数中
+    testing.Init()      // 注册测试标志，用于不使用go test的情况下，进行如基准测试的函数调用
+    err = gracehttp.Serve(&http.Server{Addr: ":" + configs.GetServer().Server.Port, Handler: g})        // grace承接http服务
+    ```
+   - rpc
+     1. 认识：Remote Procedure Call Protocol，远程过程调用协议，打通了应用层和传输层，不需要关注通信细节直接调用远程方法，实现函数调用模式的网络化
+        - 包含了传输协议、编码协议
+        - 内含多种实现方案(socket/管道)，linux的固定端口111
+     1. 意义
+        - 不用关心连接的网络细节
+        - 分布式部署
+        - 程序内连接，解耦
+        - 面向过程，restful面向资源
+     1. 分类
+        - java：古老的RMI、dobbu、motan、spring cloud
+          1. 如dobbu是产品级的rpc框架
+        - go：rpcx
+        - 跨语言：grpc、thrift
+          1. 没有服务发现、负载均衡等相关机制
+        - 其他：phprpc、yar、swoole、hprose
+     1. thrift：接口描述语言和二进制通讯协议，跨语言，Apache的
+     1. 跨语言rpc
+        - 实现基础
+          1. 通用数据结构
+          1. 网络编程
+        - 实现方式
+          1. 文件
+             - web service
+               1. 实现原理：将被调用的方法名、参数封装到WSDL的xml文件中，然后解析xml进行调用
+               1. 弊端：xml的数据传输低效性，网络传输的路径长(基于http协议)
+          1. 二进制
+             - 新一代rpc实现原理
+               1. 编写描述文件
+               1. 转换描述文件为相应语言的数据结构(结构体、类等)，使用Protobuf
+               1. 翻译：将数据结构转为二进制数据、字节数组
+               1. 传输：通过socket传给另一个编程语言
+               1. 再次翻译：翻译为本语言的数据结构
+               1. 调用执行
+### 库
 1. ORM
    - gorm
    - xorm
@@ -174,47 +216,98 @@
 
         defer gClient.Close()
         ```
-1. wiki
-   - xes解析
+### 中间件
+1. Sentinel
+   - 认识：面向分布式服务架构的高可用流量防护组件，以流量为切入点，从限流、流量整形、熔断降级、系统负载保护、热点防护等多个维度来帮助开发者保障微服务的稳定性
+     1. 承接ali的双11流量
+   - 生态：![avatar](../images/about_sentinel.png)
+1. 限流
+   - 认识：保护后端服务
+   - 举例
+     1. uber/limit
+     1. didip/tollbooth
+1. grace
+   - 认识：零停机部署的开源库，facebook开发
+     1. 优雅重启：SIGUSR2
+     1. 优雅结束：SIGTERM
+   - 过程
+     1. 构造server
+     1. 设置ConnState，监听各连接的状态变化
+     1. 启动新协程，接管各chan信号
+     1. 在新协程中正式启动服务
+1. viper
+   - 认识：配置信息处理框架，各种文件格式、环境变量、ETCD等，检测文件变动
+     1. 支持 JSON/TOML/YAML/HCL/envfile/Java properties 等多种格式的配置文件
+     1. 可以设置监听配置文件的修改，修改时自动加载新的配置
+     1. 从环境变量、命令行选项和io.Reader中读取配置
+     1. 从远程配置系统中读取和监听修改，如 etcd/Consul
+     1. 代码逻辑中显示设置键值
+   - demo
     ```go
-    // main函数中
-    testing.Init()      // 注册测试标志，用于不使用go test的情况下，进行如基准测试的函数调用
-    err = gracehttp.Serve(&http.Server{Addr: ":" + configs.GetServer().Server.Port, Handler: g})        // grace承接http服务
+    viper.SetConfigName("config")
+    viper.SetConfigType("toml")
+    viper.AddConfigPath(".")
+    viper.SetDefault("redis.port", 6381)
+    err := viper.ReadInConfig()
+    if err != nil {
+        log.Fatal("read config failed: %v", err)
+    }
+    name := viper.Get("app_name")
     ```
-   - rpc
-     1. 认识：Remote Procedure Call Protocol，远程过程调用协议，打通了应用层和传输层，不需要关注通信细节直接调用远程方法，实现函数调用模式的网络化
-        - 包含了传输协议、编码协议
-        - 内含多种实现方案(socket/管道)，linux的固定端口111
-     1. 意义
-        - 不用关心连接的网络细节
-        - 分布式部署
-        - 程序内连接，解耦
-        - 面向过程，restful面向资源
-     1. 分类
-        - java：古老的RMI、dobbu、motan、spring cloud
-          1. 如dobbu是产品级的rpc框架
-        - go：rpcx
-        - 跨语言：grpc、thrift
-          1. 没有服务发现、负载均衡等相关机制
-        - 其他：phprpc、yar、swoole、hprose
-     1. thrift：接口描述语言和二进制通讯协议，跨语言，Apache的
-     1. 跨语言rpc
-        - 实现基础
-          1. 通用数据结构
-          1. 网络编程
-        - 实现方式
-          1. 文件
-             - web service
-               1. 实现原理：将被调用的方法名、参数封装到WSDL的xml文件中，然后解析xml进行调用
-               1. 弊端：xml的数据传输低效性，网络传输的路径长(基于http协议)
-          1. 二进制
-             - 新一代rpc实现原理
-               1. 编写描述文件
-               1. 转换描述文件为相应语言的数据结构(结构体、类等)，使用Protobuf
-               1. 翻译：将数据结构转为二进制数据、字节数组
-               1. 传输：通过socket传给另一个编程语言
-               1. 再次翻译：翻译为本语言的数据结构
-               1. 调用执行
+1. fsnotify：监听文件变化，viper的内部就是fsnotify
+1. json-iterator/go：几倍性能于标准库`encoding/json`的100%兼容的json库
+   - 只有使用struct才能获得显著的性能提升，因为struct只需一次反射，map每次都要
+   - 1.10后性能和标准库差不多了，意义不大了
+1. Simplejson：json快速处理器，关键部分c实现
+1. go-resty/resty/v2：http请求库
+   - 简单、功能丰富，链式调用
+   - 自动Unmarshal
+1. go-callvis：函数调用关系图
+1. go-cmp：Google开源的比较库，递归、切片、浮点数、自定义比较，差异查找
+1. 其他
+   - github.com/libi/dcron：基于一致性哈希的分布式定时任务库
+   - NSQ：实时分布式mq
+   - GoDotEnv：Ruby dotenv项目的go版本
+     1. 支持yaml语法
+     1. 支持不写入环境变量，使用`myEnv, err := godotenv.Read()`读取
+   - go-app：是一个使用 Go + WebAssembly技术编写渐进式Web应用的库，可以输出布局
+1. 业务相关
+   - casbin/casbin：访问控制库，支持ACL/RBAC/ABAC
+1. 图像
+   - plot：绘图库，内置很多组件，可以生成静态图片
+     1. 支持折线图、直方图、函数图像、气泡图
+     1. 搭配web服务可以直接返回一张图片给前端
+1. windows
+   - go-ole：通过使用动态库绑定Windows COM来代替cgo
+1. html
+   - PuerkitoBio/goquery：go版本的jQuery，用于读取html文档，基于net/html包和css包cascadia
+     1. 不是功能齐全的DOM树，jQuery的有状态操作函数被忽略
+#### 本地缓存
+1. 基本款：依赖sync.Map，根据map元素的最后更新时间+最大缓存时间判断数据是否过期
+1. localcache
+1. bigcache
+   - 认识
+     1. 快速读写、支持过期淘汰、支持大数据量、无锁push
+     1. 柔性删除机制会导致byteQueue出现很多内存空洞，而bigCache并没有有效重用起来，当我们对同个key频繁更新的时候，此时造成的空洞只有等待清理最老的元素的时候清理到空洞位置才能把这些空洞"删除掉"
+     1. 不能作复杂删除操作，所有的缓存对象的lifewindow都是一样的，比如30分钟、两小时，依赖过期删除，无法set的时候指定expireTime过期时间
+   - 设计
+     1. 通过分片降低资源竞争
+     1. 按位取余做分片（需要是 2 的整数幂 - 1）比取余效率高
+     1. 避免map中出现指针、使用go基础类型可以显著降低 GC 压力、提升性能
+        - 数据存在堆上，因为场景中多条数的map的k、v都使用了基础类型，可以避免gc
+        - 目前是2000w条22ms的gc时延，高性能场景不允许
+     1. bigcache底层存储是bytes queue，初始化时设置合理的配置项可以减少queue扩容的次数，提升性能
+   - 特性
+     1. 出现hash冲突时直接返回结果不存在
+   - 结构：![avatar](../images/go/bigcache.jpg)
+     1. 内部对key进行分片，拆成一个个的cacheShard
+     1. cacheShard由hashmap和entries组成
+          1. `hashmap map[uint64]uint32`：key为hash值，value为BytesQueue中的偏移量
+          1. `entries queue.BytesQueue`：类似ringbuffer的FIFO的BytesQueue结构即[]byte，如果空间不足则进行内存分配，符合按照时序淘汰的需求
+1. fastcache
+1. freecache
+1. caffeine
+   - 认识：基础存储没有采用复杂数据结构采用的是ConcurrentHashMap，所有的管理操作异步化、数据驱逐（淘汰）算法采用 W-TinyLFU，以及部分情况 LRF+LFU结合的方式，各种优秀的队列设计，冲突严重hash情况下链表降级采用红黑树来处理 等等优化处理
 ### 微服务
 1. 微服务
    - 理解：微服务架构是一种更独立的架构模式，能够单独更新和发布。是分布式网状结构，它提倡将单一应用程序划分成一组小的服务，服务之间互相协调、互相配合，为用户提供最终价值。微服务架构 ≈ 模块化开发 + 分布式计算
@@ -315,74 +408,6 @@
         - errorPercentThreshold：熔断百分比，超过自动熔断
      1. hystrix-dashboard：web管理平台
 1. 负载均衡：selector
-### 库、中间件
-1. Sentinel
-   - 认识：面向分布式服务架构的高可用流量防护组件，以流量为切入点，从限流、流量整形、熔断降级、系统负载保护、热点防护等多个维度来帮助开发者保障微服务的稳定性
-     1. 承接ali的双11流量
-   - 生态：![avatar](../images/about_sentinel.png)
-1. 限流
-   - 认识：保护后端服务
-   - 举例
-     1. uber/limit
-     1. didip/tollbooth
-1. Loaclcache：bigcache、fastcache、freecache、Caffeine
-   - Caffeine：基础存储没有采用复杂数据结构采用的是ConcurrentHashMap，所有的管理操作异步化、数据驱逐（淘汰）算法采用 W-TinyLFU，以及部分情况 LRF+LFU结合的方式，各种优秀的队列设计，冲突严重hash情况下链表降级采用红黑树来处理 等等优化处理
-1. grace
-   - 认识：零停机部署的开源库，facebook开发
-     1. 优雅重启：SIGUSR2
-     1. 优雅结束：SIGTERM
-   - 过程
-     1. 构造server
-     1. 设置ConnState，监听各连接的状态变化
-     1. 启动新协程，接管各chan信号
-     1. 在新协程中正式启动服务
-1. viper
-   - 认识：配置信息处理框架，各种文件格式、环境变量、ETCD等，检测文件变动
-     1. 支持 JSON/TOML/YAML/HCL/envfile/Java properties 等多种格式的配置文件
-     1. 可以设置监听配置文件的修改，修改时自动加载新的配置
-     1. 从环境变量、命令行选项和io.Reader中读取配置
-     1. 从远程配置系统中读取和监听修改，如 etcd/Consul
-     1. 代码逻辑中显示设置键值
-   - demo
-    ```go
-    viper.SetConfigName("config")
-    viper.SetConfigType("toml")
-    viper.AddConfigPath(".")
-    viper.SetDefault("redis.port", 6381)
-    err := viper.ReadInConfig()
-    if err != nil {
-        log.Fatal("read config failed: %v", err)
-    }
-    name := viper.Get("app_name")
-    ```
-1. fsnotify：监听文件变化，viper的内部就是fsnotify
-1. json-iterator/go：几倍性能于标准库`encoding/json`的100%兼容的json库
-   - 只有使用struct才能获得显著的性能提升，因为struct只需一次反射，map每次都要
-   - 1.10后性能和标准库差不多了，意义不大了
-1. Simplejson：json快速处理器，关键部分c实现
-1. go-resty/resty/v2：http请求库
-   - 简单、功能丰富，链式调用
-   - 自动Unmarshal
-1. go-callvis：函数调用关系图
-1. go-cmp：Google开源的比较库，递归、切片、浮点数、自定义比较，差异查找
-1. 其他
-   - github.com/libi/dcron：基于一致性哈希的分布式定时任务库
-   - NSQ：实时分布式mq
-   - GoDotEnv：Ruby dotenv项目的go版本
-     1. 支持yaml语法
-     1. 支持不写入环境变量，使用`myEnv, err := godotenv.Read()`读取
-   - go-app：是一个使用 Go + WebAssembly技术编写渐进式Web应用的库，可以输出布局
-1. 业务相关
-   - casbin/casbin：访问控制库，支持ACL/RBAC/ABAC
-1. 图像
-   - plot：绘图库，内置很多组件，可以生成静态图片
-     1. 支持折线图、直方图、函数图像、气泡图
-     1. 搭配web服务可以直接返回一张图片给前端
-1. windows
-   - go-ole：通过使用动态库绑定Windows COM来代替cgo
-1. html
-   - PuerkitoBio/goquery：go版本的jQuery，用于读取html文档，基于net/html包和css包cascadia
-     1. 不是功能齐全的DOM树，jQuery的有状态操作函数被忽略
 ### wiki
 1. 脚手架
    - 认识：比喻各类语言的前期工作环境，方便直接进行开发
