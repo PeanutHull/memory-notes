@@ -9,11 +9,11 @@
    - 数字
      1. 整数
         - 分类：m仅用于显示不影响存储范围，如int(3)、tinyint(4)，显示为001，和INTEGER相同
-          1. tinyint：-128~127
-          1. smallint：前后3万2
-          1. mediumint：前后8.3千万
-          1. int：前后21亿，10位
-          1. bigint：前后9亿亿亿，无符号20位，有符号19位，2E64
+          1. tinyint：-128~127，1byte
+          1. smallint：前后3万2，2byte
+          1. mediumint：前后8.3千万，3byte
+          1. int：前后21亿，10位，4byte
+          1. bigint：前后9亿亿亿，无符号20位，有符号19位，2E64，8byte
         - 属性
           1. unsigned
      1. 实数
