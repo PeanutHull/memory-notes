@@ -295,6 +295,155 @@
         return state&mutexStarving == mutexStarving
     }
     ```
+#### RWMutex
+1. 实现：一般都是基于互斥锁、条件变量或信号量等并发原语来实现，go基于Mutex实现
+1. 设计方式：readers-writers问题一般有三类，基于对读和写操作的优先级区分
+   - Read-preferring：读优先，提供很高并发性，竞争激烈写饥饿(因为读完了才能写)
+   - Write-preferring：写优先，有写会阻止新来的读，避免了写饥饿，可能读饥饿
+   - 不指定优先级：解决了两种饥饿问题
+1. go的实现
+   - Write-preferring方式
+   - 既有的锁和后续来的锁有关系
+   - 组成
+    ```go
+    type RWMutex struct {
+        // 互斥锁解决多个writer的竞争
+        w Mutex
+        // writer信号量
+        writerSem uint32
+        // reader信号量
+        readerSem uint32
+        // reader的数量，以及是否有 writer 竞争锁，通过正负反转实现表示
+        readerCount int32
+        // writer等待完成的 reader的数量
+        readerWait int32
+    }
+    ```
+#### WaitGroup
+1. 结构
+    ```go
+    type WaitGroup struct {
+        // 避免复制使用的一个技巧，可以告诉vet工具违反了复制使用的规则
+        noCopy noCopy
+        // 64bit(8bytes)的值分成两段，高32bit是计数值，低32bit是waiter的计数
+        // 另外32bit是用作信号量的
+        // 因为64bit值的原子操作需要64bit对齐，但是32bit编译器不支持，所以数组中的元素在不同的架构中不一样，具体处理看下面的方法
+        // 总之，会找到对齐的那64bit作为state，其余的32bit做信号量
+        state1 [3]uint32
+    }
+
+    // 得到state的地址和信号量的地址
+    func (wg *WaitGroup) state() (statep *uint64, semap *uint32) {
+        if uintptr(unsafe.Pointer(&wg.state1))%8 == 0 {
+            // 如果地址是64bit对齐的，数组前两个元素做state，后一个元素做信号量
+            return (*uint64)(unsafe.Pointer(&wg.state1)), &wg.state1[2]
+        } else {
+            // 如果地址是32bit对齐的，数组后两个元素用来做state，它可以用来做64bit的原子操作，第一个元素32bit用来做信号量
+            return (*uint64)(unsafe.Pointer(&wg.state1[1])), &wg.state1[0]
+        }
+    }
+    ```
+1. 组成
+   - noCopy：如果你想要自己定义的数据结构不被复制使用，或者说不能通过vet工具检查出复制使用的报警，就可以通过嵌入noCopy这个数据类型来实现
+   - state1
+     1. 64位环境
+        - 第一个元素是waiter数
+        - 第二个元素是WaitGroup的计数值
+        - 第三个元素是信号量
+     1. 32位环境：如果 state1 不是 64 位对齐的地址，那么 state1 的第一个元素是信号量，后两个元素分别是 waiter 数和计数值。
+   - add()
+    ```go
+    func (wg *WaitGroup) Add(deltaint) {
+        statep, semap := wg.state()
+        // 高32bit是计数值v，所以把delta左移32，增加到计数上
+        state := atomic.AddUint64(statep, uint64(delta)<<32)
+        // 当前计数值
+        v := int32(state >> 32)
+        // waiter count
+        w := uint32(state)
+        if v > 0 || w == 0 {
+            return
+        }
+        // 如果计数值v为0并且waiter的数量w不为0，那么state的值就是waiter的数量
+        // 将waiter的数量设置为0，因为计数值v也是0,所以它们俩的组合*statep直接设置为0即可。此时需要并唤醒所有的waiter
+        *statep = 0
+        for ; w != 0; w-- {
+            runtime_Semrelease(semap, false, 0)
+        }
+    }
+    ```
+   - wait()
+    ```go
+    func (wg *WaitGroup) Wait() {
+        statep, semap: = wg.state()
+
+        for {
+            state := atomic.LoadUint64(statep)
+            v := int32(state >> 32)
+            // 当前计数值
+            w := uint32(state)
+            // waiter的数量
+            if v == 0 {
+                // 如果计数值为0, 调用这个方法的goroutine不必再等待，继续执行它后面的逻辑即可
+                return
+            }
+            // 否则把waiter数量加1。期间可能有并发调用Wait的情况，所以最外层使用了一个for 循环
+            if atomic.CompareAndSwapUint64(statep, state, state+1) {
+                // 阻塞休眠等待
+                runtime_Semacquire(semap)
+                // 被唤醒，不再阻塞，返回
+                return
+            }
+        }
+    }
+    ```
+#### cond
+1. 认识：Cond 的实现非常简单，或者说复杂的逻辑已经被 Locker 或者 runtime 的等待队列实现了
+1. 结构
+    ```go
+    type Cond struct {
+        noCopy noCopy
+
+        // 当观察或者修改等待条件的时候需要加锁
+        L Locker
+
+        // 等待队列
+        notify  notifyList
+        checker copyChecker                                                 // nocpoy是静态检查，copyChecker是运行时检查
+    }
+
+    func NewCond(l Locker) *Cond {
+        return &Cond{L: l}
+    }
+
+    func (c *Cond) Wait() {
+        c.checker.check()
+        // 增加到等待队列中
+        t := runtime_notifyListAdd(&c.notify)                               // 运行时实现的方法
+        c.L.Unlock()
+        // 阻塞休眠直到被唤醒
+        runtime_notifyListWait(&c.notify, t)
+        c.L.Lock()
+    }
+
+    // Signal wakes one goroutine waiting on c, if there is any.
+    //
+    // It is allowed but not required for the caller to hold c.L
+    // during the call.
+    func (c *Cond) Signal() {
+        c.checker.check()
+        runtime_notifyListNotifyOne(&c.notify)
+    }
+
+    // Broadcast wakes all goroutines waiting on c.
+    //
+    // It is allowed but not required for the caller to hold c.L
+    // during the call.
+    func (c *Cond) Broadcast() {
+        c.checker.check()
+        runtime_notifyListNotifyAll(&c.notify)
+    }
+    ```
 ### 内存管理
 1. 背景
    - 多线程的今天之前共享内存，线程之前在申请内存(虚拟内存)时，由于并行问题会产生竞争不安全，加锁又会影响性能

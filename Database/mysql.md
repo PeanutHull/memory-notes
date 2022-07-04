@@ -323,7 +323,6 @@
         - 认识
           1. 会走事务，可回滚，可返回删除的条数，会触发触发器
           1. 是一条一条删除，会记录redo和undo日志，不会减少表或索引所占用的空间，下次插入会覆盖，使用optimize会立刻释放磁盘空间
-          1. 
         - delete
           1. delete from table where XX=xx;                                                    # 删除
           1. delete from table;                                                                # 删除所有数据

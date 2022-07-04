@@ -1897,10 +1897,11 @@
             ```
 #### sync
 1. 认识：提供了并发编程中基本的同步原语，保证执行不会出现混乱。这是传统的同步机制，是通过共享内存来通信的，更高级别的同步最好通过通道和通信来完成，多协程就要用到sync了
-   - sync 的同步原语在使用后是不能复制的，因为原变量状态不确定
+   - sync的同步原语在使用后是不能复制的，因为原变量状态不确定
 1. 互斥锁
    - 认识：`sync.Mutex`，保证同时只有一个goroutine能访问一个共享的变量从而避免冲突
      1. 使用不恰当有死锁问题
+     1. Mutex的零值是还没有 goroutine 等待的未加锁的状态，所以不需要额外的初始化，直接声明变量即可
    - 特点
      1. 因为Mutex的实现中没有记录哪个 goroutine 拥有这把锁，所以mutex不是可重入的锁，Unlock方法也可以被任意的 goroutine 调用释放锁，所以一定要遵循谁申请、谁释放的原则，尤其注意加解锁不在一个方法里
      1. cas和非公平锁的目的都是为了减少线程的上下文的切换，因为如果我们能够把锁交给正在占用 CPU 时间片的 goroutine 的话，那就不需要做上下文的切换，在高并发的情况下，可能会有更好的性能
@@ -1910,14 +1911,22 @@
      1. `TryLock()`：TryLock的使用通常表明在特定的互斥锁使用中存在更深层次的问题，go一开始说不加的，v1.18
         - 意义在于不会阻塞，要么就加上了锁，要么返回false，lock方法没超时嘛
         - 可用于并发修改，只要有一个成功了就行，其他人撤就可以
-   - 实例
+   - 使用方法
     ```go
-    var mu sync.Mutex                       // Mutex的零值是还没有 goroutine 等待的未加锁的状态，所以不需要额外的初始化，直接声明变量即可
+    // 基本语法
+    var mu sync.Mutex
     mu.Lock()
     mu.Unlock()
 
-    c.mux.Lock()
-    defer c.mux.Unlock()                    // 非临界区使用的解锁的正确写法
+    // 临界区使用：在临界区前面获取锁，在离开临界区的时候释放锁
+    c.mux.Lock()                            
+    defer c.mux.Unlock()                                    // 非临界区使用的解锁的正确写法
+
+    // 嵌入字段：在struct上直接调用锁方法
+    type Counter struct {
+        sync.Mutex    
+        Count uint64
+    }
 
     // 可以用匿名函数实现逻辑体的加解锁
     func() {     
@@ -1933,6 +1942,7 @@
      1. Copy已使用的Mutex
      1. 重入：不是可重入的，同一个goroutine重复加锁了
      1. 死锁
+        - 如RWMutex：有活跃 reader 的时候，writer 会等待，如果我们在 reader 的读操作时调用 writer 的写操作（它会调用 Lock 方法），那么，这个 reader和 writer 就会形成互相依赖的死锁状态
    - 可重入锁的实现
      1. 记录goroutine id：解决了重入问题，recursion是辅助字段记录次数
         ```go
@@ -2013,12 +2023,6 @@
             m.Mutex.Unlock()
         }
         ```
-   - 死锁
-     1. 避免方法，破坏以下4个条件的一个或几个即可
-        - 互斥：至少一个资源是被排他性独享的，其他线程必须处于等待状态，直到资源被释放
-        - 持有和等待：goroutine 持有一个资源，并且还在请求其它 goroutine 持有的资源
-        - 不可剥夺：资源只能由持有它的 goroutine 来释放
-        - 环路等待
    - 基本同步原语模拟TryLock
     ```go
     const (
@@ -2082,18 +2086,29 @@
     }
     ```
 1. 读写互斥锁
-   - 认识：`sync.RWMutex`。允许至少一个读/写锁存在
+   - 认识：`sync.RWMutex`，变为并行读，在某一时刻只能由任意数量的reader持有，或者是只被单个的writer持有
+     1. 零值是未加锁的状态，声明或嵌入struct都不必显式初始化
+     1. 应用场景：可以明确区分reader和writer goroutine的场景，且有大量的并发读、少量的并发写，并且有强烈的性能需求
    - 方法
-     1. RLock、RUnlock：可进行并发读取
-1. 锁
-1. 并发编排/同步器
-   - 认识：`sync.WaitGroup`，是信号量，需要某个条件完成才能继续，用于并发控制
-     1. 场景：在一个goroutine等待一组goroutine执行完成的通知时。初级的可以多用一个done的channel阻塞实现等待某个goroutine结束的通知，每次循环进出这个channel，多个可以使用通道切片来分别存储，使用waitGroup更加高效优雅
-   - 原理：拥有一个内部计数器。当计数器等于0时，则Wait()方法会立即返回。否则一直阻塞执行Wait()方法的goroutine
+     1. RLock()/RUnlock()：读时用，如果锁已经被writer持有会一直阻塞
+     1. Lock()/Unlock()：写时用，如果锁已经被reader或writer持有会一直阻塞
+     1. RLocker()：返回读对象
+   - 使用方法：同Mutex
+1. 同步器
+   - 认识：`sync.WaitGroup`，是信号量，需要某个条件完成才能继续，解决的是并发 - 等待的问题，用于并发控制/并发编排/任务编排
+     1. 场景：在一个goroutine等待一组goroutine执行完成的通知时
+     1. 原理：拥有一个内部计数器。当计数器等于0时，则Wait()方法会立即返回。否则一直阻塞执行Wait()方法的goroutine
+     1. 特点：WaitGroup 是可以重用的
+     1. 替代实现：低级的用轮询实现，初级的可以多用一个done的channel阻塞实现等待某个goroutine结束的通知，每次循环进出这个channel；多个可以使用通道切片来分别存储，使用waitGroup更加高效优雅
+     1. 类似
+        - linux中的barrier
+        - pthread(POSIX 线程)中的barrier
+        - c++中的std::barrier
+        - java中的CyclicBarrier、CountDownLatch
    - 方法
      1. `Add(n)`：设置计数器数量n，传负数就是减n
      1. `Done()`：计数器数量减一
-     1. `Wait()`：等待，同步等待所有的记录的协程全部结束
+     1. `Wait()`：等待，调用这个方法的goroutine会同步等待所有记录的协程全部结束
    - demo
     ```go
     var wg sync.WaitGroup
@@ -2105,28 +2120,100 @@
     go func() {
         defer wg.Done()
     }()
+
     wg.Wait()                           // 阻塞，使其等待
     ```
+   - 常见问题
+     1. 进行了复制
+        ```go
+        type TestStruct struct {
+            Wait sync.WaitGroup
+        }
+
+        func main() {
+            w := sync.WaitGroup{}
+            w.Add(1)
+            t := &TestStruct{
+                Wait: w,
+            }
+            t.Wait.Done()
+            fmt.Println("Finished")
+        }
+        ```
+     1. 计数器设置为负
+     1. 不期望的Add时机：add和done写在了一起，wait不起作用，可以提前add好
+     1. 前一个Wait还没结束就重用WaitGroup：因为可重用，如果没有恢复到零值就重用会panic
 1. 条件变量/发送信号
-   - 认识：`sync.Cond`，用于发出信号（一对一）或广播信号（一对多）到goroutine
-     1. 违反go的基本原则：不要通过共享进行通信；而是通过通信共享，但是通过channel模拟广播的唯一方法是关闭channel，只能广播一次，cond可以多次
-   - 方法
-     1. `NewCond()`：创建
-     1. `Signal`：发送单个信号
-     1. `Broadcast`：发送广播信号
-     1. `Wait`
-1. 并发池：`sync.Pool`
-   - 认识：多协程安全地保存临时对象，保存的对象可能随时自动删除而不通知
+   - 认识：`sync.Cond`，为等待/通知场景下的并发问题提供支持，通常应用于等待某个条件的一组goroutine，等条件变为true时其中一个或所有的goroutine都会被唤醒执行。用于发出信号（一对一）或广播信号（一对多）到goroutine，特定场景
+     1. caller和waiter的数量对应是不确定的，如N:M
+     1. 原理：关联的Locker实例可以通过c.L访问，它内部维护着一个先入先出的等待队列，操作是移除并唤醒
+     1. 违反go的基本原则：不要通过共享进行通信；而是通过通信共享
+     1. 有人认为Cond是唯一难以掌握的Go并发原语
+   - 比较
+     1. 可以通过channel、waitGroup代替通知，实现更简洁，不容易出错，好多都被替换了
+        - Channel 被 close 掉了之后不支持再open，可以加for一直监听嘛
+        - waitGroup只支持确定的数量，cond支持任意多
+     1. Cond三点特性是channel无法替代的
+        - 和一个Locker关联，可以利用这个 Locker 对相关的依赖条件更改提供保护
+        - 可以同时支持signal和broadcast方法，channel只能同时支持一种
+        - Broadcast 方法可以被重复调用。等待条件再次变成不满足的状态后，我们又可以调用 Broadcast 再次唤醒等待的 goroutine。这也是 Channel 不能支持的，适用于每次改变了就通知
+   - 方法：是计算机科学中条件变量的通用方法名
+     1. `NewCond()`：创建，需要关联一个Locker接口的实例
+     1. `Signal`：唤醒一个，从等待队列中移除第一个goroutine并唤醒
+     1. `Broadcast`：唤醒所有
+     1. `Wait`：将调用者放入Cond的等待队列中并阻塞，直到被唤醒
+        - 要求持有c.L的锁，即加锁，上边俩不要求
+        - waiter goroutine 被唤醒不等于等待条件被满足，需要进一步检查，因为不知道前N-1个被唤醒的waiter所作的修改是否使等待条件再次成立
+   - demo
+    ```go
+    // 复杂在于：一，这段代码有时候需要加锁，有时候可以不加；二，Wait 唤醒后需要检查条件；三，条件变量的更改，其实是需要原子操作或者互斥锁保护的
+    c := sync.NewCond(&sync.Mutex{})
+	var ready int
+	for i := 0; i < 10; i++ {
+		go func(i int) {
+			time.Sleep(time.Duration(rand.Int63n(10)) * time.Second)
+			// 加锁更改等待条件
+			c.L.Lock()
+			ready++
+			c.L.Unlock()
+			log.Printf("运动员#%d已准备就绪\n", i)
+			// 广播唤醒所有的等待者
+			c.Broadcast()
+		}(i)
+	}
+	c.L.Lock()
+	for ready != 10 {
+		c.Wait()
+		log.Println("裁判员被唤醒一次")
+	}
+	c.L.Unlock()
+	// 所有的运动员是否就绪
+	log.Println("所有运动员都准备就绪。比赛开始，3，2，1,.....")
+    ```
+   - 常见错误
+     1. 调用 Wait 的时候没有加锁
+     1. 只调用了一次 Wait，没有检查等待条件是否满足，结果条件没满足，程序就继续执行了：因为每次都会唤醒等待着
+1. 并发池
+   - 认识：`sync.Pool`，多协程安全地保存临时对象，保存的对象可能随时自动删除而不通知
      1. pool的目的是缓存已分配但未使用的多协程静默共享的临时项目项目以供以后重用，减轻垃圾收集器的压力
      1. 重复申请的对象，可以减少GC的成本
      1. pool的适当用途是管理一组
    - 方法
      1. Get()：随机取，无法保证以固定的顺序
      1. Put()
+1. 只执行一次
+   - 认识：`sync.Once`，一个函数在所有goroutine执行且仅执行一次，常用于单例对象的初始化或只需初始化一次的共享资源的场景
+   - 方法
+     1. `once.Do(f func())`：只有这一个，可以多次调用但只有第一次才执行，f是无参数无返回值的函数
+        - 在一个文件中多次调用，只有第一次执行，即使f不同
+   - 初始化方式
+     1. package级别的变量
+     1. 在init函数中
+     1. 执行自定义初始化函数
 1. `sync/singleflight`
    - 认识：重复函数调用抑制
-1. `sync.Map`
-   - 认识：并发安全版的基于特定场景的map
+1. 并发版map
+   - 认识：`sync.Map`，并发安全版的基于特定场景的map
      1. RWLock配合map方案在高读取+多核cpu上表现不佳，为了改善多核读多写少的性能而引入
      1. 普通map并发操作下会panic，对sync.Map的读写，不需要加锁
    - 使用场景
@@ -2151,8 +2238,8 @@
      1. Store()：添加
      1. Delete()：删除
      1. LoadOrStore()：检索或新增
-1. atomic
-   - 认识：底层的原子性内存操作， 除了某些特殊的底层应用，使用channel或sync实现同步更好，他们是保护一段逻辑，这个是保护一个值，逻辑需要自己处理
+1. 并发原语
+   - 认识：`sync.atomic`，底层的原子性内存操作， 除了某些特殊的底层应用，使用channel或sync实现同步更好，他们是保护一段逻辑，这个是保护一个值，逻辑需要自己处理
      1. 操作对象：6个，int32/int64/uint32/uint64/uintptr/unsafe.Pointer
      1. 原子操作：增减、载入、比较并交换、存储和交换
    - 方法
@@ -2162,14 +2249,13 @@
 
      1. `CompareAndSwapInt32(&addr,old,new)`：比较并交换 Compare And Swap，即CAS，如果旧值没变就替换
      1. `SwapInt32(&addr,newaddr)`：交换，不管旧值
-1. 一个函数在所有goroutine仅执行一次：`sync.Once`
-   - 执行方法：`once.Do()`
 1. wiki
    - 临界区：受影响的最小范围，要最小化锁粒度，提高性能
    - race detector：检测并发访问共享资源是否有问题的工具，基于Google的C/C++ sanitizers。编译器通过探测所有的内存访问(加入代码能监视对这些内存地址的访问（读还是写）)。在代码运行的时候，race detector 就能监控到对共享变量的非同步访问
      1. 只能通过真正对实际地址进行读写访问的时候才能探测，所以它并不能在编译的时候发现
      1. 而且，在运行的时候，只有在触发了 data race 之后，才能检测到，如果碰巧没有触发也是检测不到
-   - vet：可以发现死锁问题，go有运行时死锁的检查机制
+   - vet：可以发现死锁和一些并发问题，go有在运行时检查死锁的机制
+     1. 如对Mutex进行复制的问题
 #### context
 1. context
    - 认识：控制生命周期、追踪协程之间的调用树，在这些树中传递通知和元数据，是一种协程调度的方式。v1.7
