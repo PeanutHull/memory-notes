@@ -2358,29 +2358,29 @@
    - vet：可以发现死锁和一些并发问题，go有在运行时检查死锁的机制
      1. 如对Mutex进行复制的问题
 #### context
-1. context
-   - 认识：控制生命周期、追踪协程之间的调用树，在这些树中传递通知和元数据，是一种协程调度的方式。v1.7
-     1. 用在发生超时、主动取消、产生异常时需要进行的抢占、中断其他等后续操作
-     1. context本身是不可变的，是线程安全的，可以放心地在多个协程中传递使用
-     1. 理解为一颗上下文树，继承衍生
-     1. 底层依赖channel实现
-   - 组成
-     1. 初始化
-        - Background()：返回非nil的、永不取消的、无值、无截止时间的空context
-          1. 作为初始节点，方便以后初始化cancelCtx, timerCtx。通常在主方法、初始化、测试时用
-        - TODO()：返回非nil的context，不确定使用什么context、不可用、没扩展的时候使用
-        - WithValue(parent Context, key, val interface{})：返回父context的复制，用于传递数据
-     1. 操作
-        - WithCancel()：创建一个基于parent的可取消的context(cancelCtx类型)，返回一个context和一个CancelFunc，调用CancelFunc即可触发cancel操作
-          1. cancelCtx取消时，会将后代节点中所有的cancelCtx都取消
-        - WithDeadline()：创建一个基于parent的可取消的context，其过期时间deadline不晚于所设置时间d
-        - WithTimeout()：类似WithDeadline，时间是相对当前时间的过期时长
-   - 使用规范
-     1. 第一形参通常都为context，并且把变量命名为ctx。使用了一条context链贯穿Server、Connection、Request，不仅将上游的信息共享给下游任务，同时实现了上游可发送取消信号取消所有下游任务
-        - 会创建valueCtx、cancelCtx，断开连接就会取消下游任务
-     1. 不要把context存储在结构体中，而是要显式地进行传递
-     1. 就算是程序允许，也不要传入一个nil的context，如果不知道是否要用context的话，用context.TODO()来替代
-     1. context.WithValue()只用于传输流程和API的请求范围数据，不要用它来传递可选参数
+1. 认识：控制生命周期、追踪协程之间的调用树，在这些树中传递通知和元数据，是一种协程调度的方式。v1.7
+   - 用在发生超时、主动取消、产生异常时需要进行的抢占、中断其他等后续操作
+   - context本身是不可变的，是线程安全的，可以放心地在多个协程中传递使用
+   - 理解为一颗上下文树，继承衍生
+   - 底层依赖channel实现
+1. 组成
+   - 初始化方法
+     1. Background()：返回非nil的、永不取消的、无值、无截止时间的空context
+        - 作为初始节点，方便以后初始化cancelCtx, timerCtx。通常在主方法、初始化、测试时用
+     1. WithValue(parent Context, key, val interface{})：返回父context的复制，用于传递数据
+     1. TODO()：返回非nil的context，不确定使用什么context、不可用、没扩展的时候使用
+   - 操作方法
+     1. WithCancel()：创建一个基于parent的可取消的context(cancelCtx类型)，返回一个context和一个CancelFunc，调用CancelFunc即可触发cancel操作
+        - cancelCtx取消时，会将后代节点中所有的cancelCtx都取消
+     1. WithDeadline()：创建一个基于parent的可取消的context，其过期时间deadline不晚于所设置时间d
+     1. WithTimeout()：类似WithDeadline，时间是相对当前时间的过期时长
+1. 最佳实践
+   - 第一形参通常都为context，并且把变量命名为ctx。使用了一条context链贯穿Server、Connection、Request，不仅将上游的信息共享给下游任务，同时实现了上游可发送取消信号取消所有下游任务
+     1. 会创建valueCtx、cancelCtx，断开连接就会取消下游任务
+   - 不要把context存储在结构体中，而是要显式地进行传递
+   - 就算是程序允许，也不要传入一个nil的context，如果不知道是否要用context的话，用context.TODO()来替代
+   - context.WithValue()只用于传输流程和API的请求范围数据，不要用它来传递可选参数
+1. demo
    - demo1
     ```go
     // WithTimeout相关，子线程监听主线程传入的ctx，一旦ctx.Done()返回空channel，子线程即可获知超时
