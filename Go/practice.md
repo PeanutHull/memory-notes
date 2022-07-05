@@ -271,6 +271,8 @@
      1. 支持yaml语法
      1. 支持不写入环境变量，使用`myEnv, err := godotenv.Read()`读取
    - go-app：是一个使用 Go + WebAssembly技术编写渐进式Web应用的库，可以输出布局
+1. db
+   - vitessio/vitess：youtube通过通用分片对mysql进行水平扩展
 1. 业务相关
    - casbin/casbin：访问控制库，支持ACL/RBAC/ABAC
 1. 图像

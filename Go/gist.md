@@ -1309,18 +1309,127 @@
         - build/test 时使用 -race 参数以便运行时检测数据竞争问题
         - go-deadlock 检测死锁或锁等待问题
 ### 技术方案
-1. 连接池
+#### 池化：连接池、工作者池
+1. 认识
    - 原理：![avatar](../images/conn_pool.png)
-   - go-redis
-     1. 特点
-        - 只实现了简单的轮询形式，没有加权等筛选
-     1. 实现
-        - 使用chan作为存储池
-        - 使用mutex作为增减chan与其配套数据的互斥保证
-        - 队列、池子就是slice和chan的配合使用
-        - 利用连接池最大数量作为一个chan(随便struct{}类型就可以)的缓冲大小，存储工作的连接
-          1. 在从连接池拿连接时写入chan，不停拿不停写，写满阻塞实现了池的最大忙碌数量，这时候计时器介入，实现获取连接的超时逻辑
-          1. 往连接池放连接时，不停放，不停取出chan的值，作减法
+   - 感觉大多数都用chan实现了，也就很简单了
+1. go-redis的连接池实现
+   - 特点
+     1. 只实现了简单的轮询形式，没有加权等筛选
+   - 实现
+     1. 使用chan作为存储池
+     1. 使用mutex作为增减chan与其配套数据的互斥保证
+     1. 队列、池子就是slice和chan的配合使用
+     1. 利用连接池最大数量作为一个chan(随便struct{}类型就可以)的缓冲大小，存储工作的连接
+        - 在从连接池拿连接时写入chan，不停拿不停写，写满阻塞实现了池的最大忙碌数量，这时候计时器介入，实现获取连接的超时逻辑
+        - 往连接池放连接时，不停放，不停取出chan的值，作减法
+1. sql.DB的连接池实现
+   - 认识
+     1. 通过MaxOpenConns和MaxIdleConns控制最大的连接数和最大的idle的连接数
+     1. freeConn保存了idle的连接，优先尝试从freeConn获取已有的连接
+1. gomemcache
+   - 采用Mutex+Slice实现Pool
+   - 实现
+    ```go
+    // 放回一个待重用的连接
+    func (c *Client) putFreeConn(addr net.Addr, cn *conn) {
+        c.lk.Lock()
+        defer c.lk.Unlock()
+        // 如果对象为空，创建一个map对象
+        if c.freeconn == nil {
+            c.freeconn = make(map[string][]*conn)
+        }
+        // 得到此地址的连接列表
+        freelist := c.freeconn[addr.String()]
+        // 如果连接已满, 关闭，不再放入
+        if len(freelist) >= c.maxIdleConns() {
+            cn.nc.Close()
+            return
+        }
+        // 加入到空闲列表中
+        c.freeconn[addr.String()] = append(freelist, cn)
+    }
+
+    // 得到一个空闲连接
+    func (c *Client) getFreeConn(addr net.Addr) (cn *conn, ok bool) {
+        c.lk.Lock()
+        defer c.lk.Unlock()
+        if c.freeconn == nil {
+            return nil, false
+        }
+        freelist, ok := c.freeconn[addr.String()]
+        // 没有此地址的空闲列表，或者列表为空
+        if !ok || len(freelist) == 0 {
+            return nil, false
+        }
+        // 取出尾部的空闲连接
+        cn = freelist[len(freelist)-1]
+        c.freeconn[addr.String()] = freelist[:len(freelist)-1]
+        return cn, true
+    }
+    ```
+1. fatih/pool的连接池实现
+   - 认识：最常用的tcp连接池，非常稳定，已经归档了
+     1. Pool 是通过 Channel 实现的，空闲的连接放入到 Channel 中
+   - 使用套路如下
+    ```go
+    // 工厂模式，提供创建连接的工厂方法
+	factory := func() (net.Conn, error) { return net.Dial("tcp", "127.0.0.1:400") }
+
+	// 创建一个tcp池，提供初始容量和最大容量以及工厂方法
+	p, err := pool.NewChannelPool(5, 30, factory)
+
+	// 获取一个连接
+	conn, err := p.Get()
+	// 当前池子中的连接的数
+	current := p.Len()
+
+	// Close并不会真正关闭这个连接，而是把它放回池子，所以你不必显式地Put这个对象到池子中
+	conn.Close()
+	// 通过调用MarkUnusable, Close的时候就会真正关闭底层的tcp的连接了
+	if pc, ok := conn.(*pool.PoolConn); ok {
+		pc.MarkUnusable()
+		pc.Close()
+	}
+	// 关闭池子就会关闭池子中的所有的tcp连接
+	p.Close()
+    ```
+   - 实现
+    ```go
+    type PoolConn struct {
+        net.Conn
+        mu       sync.RWMutex
+        c        *channelPool
+        unusable bool
+    }
+
+    // 通过把 net.Conn 包装成 PoolConn，实现了拦截 net.Conn 的 Close 方法，避免了真正地关闭底层连接
+    func (p *PoolConn) Close() error {
+        p.mu.RLock()
+        defer p.mu.RUnlock()
+        
+        if p.unusable {
+            if p.Conn != nil {
+                return p.Conn.Close()
+            }
+            return nil
+        }
+        return p.c.put(p.Conn)
+    }
+    ```
+1. Worker Pool
+   - 认识
+     1. 创建一个固定数量的goroutine（Worker），由这一组Worker去处理连接，防止大量的goroutine使用
+   - 要求
+     1. 有些是在后台默默执行的，
+     1. 不需要等待返回结果
+     1. 有些需要等待一批任务执行完
+     1. 有些Worker Pool的生命周期和程序一样长
+     1. 有些只是临时使用，执行完毕后，pool就销毁了
+   - 推荐库
+     1. gammazero/workerpool：提供了更便利的 Submit 和 SubmitWait 方法提交任务，还可以提供当前的 worker 数和任务数以及关闭 Pool 的功能
+     1. ivpusic/grpool
+     1. dpaks/goworkers
 1. 锁
    - 优化方式：尽量减少锁的粒度、锁的持有时间
      1. 锁的粒度：分片 shard

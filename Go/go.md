@@ -960,8 +960,10 @@
         - To modify a reflection object, the value must be settable
 1. GC
    - 认识
-     1. GC STW(Stop the World) 的存在大的哈希表是非常要命的
-        - 堆上有4千万个对象，GC的扫描过程就超过了4秒钟
+     1. 自动垃圾回收：使用 Go 语言创建对象的时候，我们没有回收 / 释放的心理负担，想用就用，想创建就创建
+     1. 如果你想使用 Go 开发一个高性能的应用程序的话，就必须考虑垃圾回收给性能带来的影响
+        - GC STW(Stop the World) 的存在大的哈希表是非常要命的
+          1. 堆上有4千万个对象，GC的扫描过程就超过了4秒钟
    - local cache的优化思路
      1. offheap（堆外内存），GC 只会扫描堆上的对象，那就把对象都搞到栈上去，但是这样这个缓存库就高度依赖 offheap 的 malloc 和 free 操作了
      1. 参考 freecache 的思路，用 ringbuffer 存 entry，绕过了 map 里存指针
@@ -1214,8 +1216,9 @@
      1. 适用：异步io密集，如读数据库
    - 价值
      1. 轻量级
-        - 需要的内存极小，栈空间默认2k
+        - 需要的内存极小，栈空间默认2k，会自动扩容到1GB(不同架构最大数不同)
         - 切换成本低：无需内核态、需要的上下文更少，堆当栈用
+        - 大量的 goroutine 对于调度和垃圾回收的耗时还是会有影响的
      1. 易调度：调度更积极主动，给了我们自己调度的自由
      1. 其他操作耗时的时候让出cpu，不用等待
 1. goroutine
@@ -2194,22 +2197,120 @@
      1. 调用 Wait 的时候没有加锁
      1. 只调用了一次 Wait，没有检查等待条件是否满足，结果条件没满足，程序就继续执行了：因为每次都会唤醒等待着
 1. 并发池
-   - 认识：`sync.Pool`，多协程安全地保存临时对象，保存的对象可能随时自动删除而不通知
-     1. pool的目的是缓存已分配但未使用的多协程静默共享的临时项目项目以供以后重用，减轻垃圾收集器的压力
-     1. 重复申请的对象，可以减少GC的成本
-     1. pool的适当用途是管理一组
+   - 认识：`sync.Pool`，可以保存池化的、临时的、多协程安全的对象
+     1. 可以有效地减少新对象的申请
+     1. 池化的对象可能会被垃圾回收掉，对于长连接等场景不合适
+   - 背景
+     1. 性能优化之对象池：把重复使用的对象回收起来避免被垃圾回收掉，这样使用的时候就不必在堆上重新创建了，减轻重新创建的成本，减轻垃圾收集器的压力
+     1. gc耗时特别高，有大量的相同类型的临时对象不断地被创建销毁时
    - 方法
-     1. Get()：随机取，无法保证以固定的顺序
-     1. Put()
+     1. `New()`：没有元素可返回时，会调用New方法创建
+     1. `Get()`：随机移除返回，没有元素并且不设置New方法返回nil，无法保证以固定的顺序
+     1. `Put()`：放到池中，给nil会忽略
+   - 常见问题
+     1. 内存泄漏：在使用 sync.Pool 回收 buffer 的时候，一定要检查回收的对象的大小。如果 buffer 太大，就不要回收了，否则就太浪费了
+        - 因为 Pool 回收的机制，重新放回的大的Buffer(slice类型)可能不被回收，而是会一直占用很大的空间，这属于内存泄漏的问题
+          1. 改成放回的超过一定大小的 buffer，就直接丢弃掉，不再放到池子中
+     1. 内存浪费：大buffer中只用到很少一部分
+        - 将buffer按照大小分层，分层依据：512 bytes、1k、4k
+   - 常用三方库
+     1. bytebufferpool：提供了校准（calibrate，用来动态调整创建元素的权重）的机制，可以“智能”地调整 Pool 的 defaultSize 和 maxSize。一般来说，我们使用 buffer size 的场景比较固定，所用 buffer 的大小会集中在某个范围里。有了校准的特性，bytebufferpool 就能够偏重于创建这个范围大小的 buffer，从而节省空间
+     1. oxtoacart/bpool：保持持池子中固定的元素数量，多了丢弃，sync.Pool是没有限制的；bpool基于channel实现，性能不如原生
+        - BufferPool：元素类型bytes.Buffer
+        - BytesPool：元素类型byte slice
+        - SizedBufferPool：限制最大大小
+   - 场景引申
+     1. 有大量的相同类型的临时对象，不断地被创建销毁：sync.Pool
+     1. 大量的并发Client请求：池化Client
+     1. goroutine数量非常多：通过Worker Pool降低数量
 1. 只执行一次
    - 认识：`sync.Once`，一个函数在所有goroutine执行且仅执行一次，常用于单例对象的初始化或只需初始化一次的共享资源的场景
    - 方法
-     1. `once.Do(f func())`：只有这一个，可以多次调用但只有第一次才执行，f是无参数无返回值的函数
+     1. `Once.Do(f func())`：只有这一个，可以多次调用但只有第一次才执行，f是无参数无返回值的函数
         - 在一个文件中多次调用，只有第一次执行，即使f不同
-   - 初始化方式
+   - go的初始化方式
      1. package级别的变量
      1. 在init函数中
      1. 执行自定义初始化函数
+   - 常见错误
+     1. 死锁：f中再次执行Once.Do()
+     1. 未初始化：f 方法执行的时候 panic，或者f方法失败
+     1. 内部实现不熟悉：内部用了锁
+        ```go
+        type Once struct {
+            m sync.Mutex
+        }
+
+        func (o *Once) doSlow() {
+            o.m.Lock()
+            defer o.m.Unlock()
+            // 这里更新的o指针的值!!!!!!!, 会导致上一行Unlock出错。因为修改Once的指针后，上边Lock的指针变为了一个未加锁的Locker，Unlock就报错了
+            *o = Once{}
+        }
+        func main() {
+            var once Once
+            once.doSlow()
+        }
+        ```
+   - 应用案例
+     1. 支持查询是否初始化过版
+        ```go
+        // Once是一个扩展的sync.Once类型，提供了一个Done方法
+        type Once struct {
+            sync.Once
+        }
+
+        // Done返回此Once是否执行过
+        // 如果执行过则返回true
+        // 如果没有执行过或者正在执行，返回false
+        func (o *Once) Done() bool {
+            return atomic.LoadUint32((*uint32)(unsafe.Pointer(&o.Once))) == 1
+        }
+        func main() {
+            var flag Once
+            // false
+            fmt.Println(flag.Done())
+            flag.Do(func() {
+                time.Sleep(time.Second)
+            })
+            // true
+            fmt.Println(flag.Done())
+        }
+        ```
+     1. 返回当前调用 Do 方法是否正确完成、初始化失败后如果再调用 Do 方法会再次尝试初始化
+        ```go
+        // 一个功能更加强大的Once
+        type Once struct {
+            m    sync.Mutex
+            done uint32
+        }
+
+        // 传入的函数f有返回值error如果初始化失败，需要返回失败的error
+        // Do方法会把这个error返回给调用者
+        func (o *Once) Do(f func() error) error {
+            if atomic.LoadUint32(&o.done) == 1 {
+                // fast path
+                return nil
+            }
+            return o.slowDo(f)
+        }
+
+        // 如果还没有初始化
+        func (o *Once) slowDo(f func() error) error {
+            o.m.Lock()
+            defer o.m.Unlock()
+            var err error
+            // 双检查，还没有初始化
+            if o.done == 0 {
+                err = f()
+                // 初始化成功才将标记置为已初始化
+                if err == nil {
+                    atomic.StoreUint32(&o.done, 1)
+                }
+            }
+            return err
+        }
+        ```
 1. `sync/singleflight`
    - 认识：重复函数调用抑制
 1. 并发版map
@@ -2917,8 +3018,9 @@
         m.At(0, 0).RGBA()
         ```
    - database/sql：数据库驱动的标准接口
+#### net
 1. net
-   - 组成
+   - 类型
      1. Conn：使用goroutines保证请求独立、非阻塞
         - 连接控制
           1. 方法
@@ -2929,26 +3031,10 @@
              - 明确设置ReadTimeout和WriteTimeout，并使用相应的方法来使server更完善
              - Contexts一个优点是树形的一个取消，关闭所有子context
      1. ServeMux：多路复用器，用作请求的路由分发
-   - 方法
-     1. ip：`addr := net.ParseIP()`
+     1. ip
+        - `addr := net.ParseIP()`
    - 子包
-     1. http：提供http客户端和服务端的实现
-        - 特点
-          1. serve方法中对panic作了保护，防止服务停止
-        - 组成
-          1. Handler
-          1. Request
-          1. Response
-        - 子包
-          1. cookiejar：实现保管在内存中的符合RFC 6265标准的httpCookieJar接口
-          1. httputil：提供http公用函数，是http的函数补充
-             - ReverseProxy()：设置反向代理
-             - DumpResponse()：打印响应体
-          1. cgi：实现RFC3875协议描述的CGI（公共网关接口）
-          1. fcgi：实现FastCGI协议
-          1. httptest：http测试的单元工具
-          1. pprof：返回runtime的统计数据，返回pprof可视化工具规定的格式
-          1. httptrace
+     1. http
      1. url
      1. rpc
         - 认识：支持三个级别：TCP、HTTP、JSONRPC，使用Gob编码的只能go内部
@@ -3012,6 +3098,26 @@
      1. mail：解析邮件消息
      1. smtp：简单邮件传输协议
      1. textproto：实现对基于文本的请求/回复协议的一般性支持
+1. http
+   - 认识：提供http客户端和服务端的实现
+   - 特点
+     1. serve方法中对panic作了保护，防止服务停止
+   - 类型
+     1. http.Client
+        - 实现连接池的代码在Transport类型中，使用idleConn保存持久化的可重用的长连接
+     1. http.Handler
+     1. http.Request
+     1. http.Response
+   - 子包
+     1. cookiejar：实现保管在内存中的符合RFC 6265标准的httpCookieJar接口
+     1. httputil：提供http公用函数，是http的函数补充
+        - ReverseProxy()：设置反向代理
+        - DumpResponse()：打印响应体
+     1. cgi：实现RFC3875协议描述的CGI（公共网关接口）
+     1. fcgi：实现FastCGI协议
+     1. httptest：http测试的单元工具
+     1. pprof：返回runtime的统计数据，返回pprof可视化工具规定的格式
+     1. httptrace
 ### 应用
 1. 文本处理
    - string：分割、连接、转换、取索引、前后缀检测等

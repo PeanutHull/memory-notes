@@ -397,7 +397,7 @@
         }
     }
     ```
-#### cond
+#### Cond
 1. 认识：Cond 的实现非常简单，或者说复杂的逻辑已经被 Locker 或者 runtime 的等待队列实现了
 1. 结构
     ```go
@@ -444,6 +444,158 @@
         runtime_notifyListNotifyAll(&c.notify)
     }
     ```
+#### Once
+1. 要求
+   - 保证并发的goroutine会等待 f 完成，而且还不会多次执行f
+1. 原理
+   - 使用atomic原子操作flag标记是否初始化过
+   - 一个正确的 Once 实现要使用一个互斥锁，这样初始化的时候如果有并发的goroutine，就会进入doSlow 方法
+   - 双检查的机制：再次判断 o.done 是否为 0，如果为0，则是第一次执行，执行完毕后，就将 o.done 设置为 1，然后释放锁
+     1. 即使此时有多个 goroutine 同时进入了 doSlow 方法，因为双检查的机制，后续的goroutine 会看到 o.done 的值为 1，也不会再次执行 f
+1. 实现
+    ```go
+    type Once struct {
+        done uint32
+        m    Mutex
+    }
+
+    func (o *Once) Do(f func()) {
+        if atomic.LoadUint32(&o.done) == 0 {
+            o.doSlow(f)
+        }
+    }
+
+    func (o *Once) doSlow(f func()) {
+        o.m.Lock()
+        defer o.m.Unlock()
+        // 双检查
+        if o.done == 0 {
+            defer atomic.StoreUint32(&o.done, 1)
+            f()
+        }
+    }
+    ```
+#### Pool
+1. 组成：![avatar](../images/go/pool_struct.png)
+   - local：存放所有当前主要的空闲可用的元素，优先从这里查找
+     1. poolLocalInternal：提供cpu缓存对齐，避免false sharing
+        - private：代表一个缓存的元素，而且只能由相应的一个p存取。因为一个p同时只能执行一个 goroutine，所以不会有并发的问题
+        - shared：可以由任意的p访问，但只有本地的p才能pushHead/popHead，其它p可以popTail，相当于只有一个本地的p作为生产者多个p作为消费者，是使用一个local-free的queue列表实现的
+   - victim
+1. 实现
+   - 每次垃圾回收的时候，Pool 会把 victim 中的对象移除，然后把 local 的数据给 victim，这样的话，local 就会被清空，而 victim 就像一个垃圾分拣站，里面的东西可能会被当做垃圾丢弃了，但是里面有用的东西也可能被捡回来重新使用
+1. 方法
+   - Get
+     1. 从private和vintim查找元素
+        - 首先，从本地的private字段中获取可用元素，因为没有锁，获取元素的过程会非常快
+        - 然后，从本地的 shared 获取一个，如果还没有，会使用 getSlow 方法去其它的 shared 中“偷”一个。最后，如果没有获取到，就尝试使用 New 函数创建一个新的
+   - 优先设置本地 private，如果 private 字段已经有值了，就把此元素 push 到本地队列中
+1. 代码
+   - Get
+    ```go
+    func (p *Pool) Get() interface{} {
+        if race.Enabled {
+            race.Disable()
+        }
+        // 把当前goroutine固定在当前的P上
+        l, pid := p.pin()
+        x := l.private
+        l.private = nil
+        if x == nil {
+            // Try to pop the head of the local shard. We prefer
+            // the head over the tail for temporal locality of
+            // reuse.
+            x, _ = l.shared.popHead()
+            if x == nil {
+                // 重点是 getSlow 方法，它的耗时可能比较长。它首先要遍历所有的 local，尝试从它们的 shared 弹出一个元素。如果还没找到一个，那么，就开始对 victim 下手了
+                // 去偷一个
+                x = p.getSlow(pid)
+            }
+        }
+        runtime_procUnpin()
+        if race.Enabled {
+            race.Enable()
+            if x != nil {
+                race.Acquire(poolRaceAddr(x))
+            }
+        }
+        if x == nil && p.New != nil {
+            x = p.New()
+        }
+        return x
+    }
+
+    func (p *Pool) getSlow(pid int) interface{} {
+        // See the comment in pin regarding ordering of the loads.
+        size := runtime_LoadAcquintptr(&p.localSize) // load-acquire
+        locals := p.local                            // load-consume
+        // Try to steal one element from other procs.
+        // 从其它proc中尝试偷取一个元素
+        for i := 0; i < int(size); i++ {
+            l := indexLocal(locals, (pid+i+1)%int(size))
+            if x, _ := l.shared.popTail(); x != nil {
+                return x
+            }
+        }
+
+        // Try the victim cache. We do this after attempting to steal
+        // from all primary caches because we want objects in the
+        // victim cache to age out if at all possible.
+        // 如果其它proc也没有可用元素，那么尝试从vintim中获取
+        size = atomic.LoadUintptr(&p.victimSize)
+        if uintptr(pid) >= size {
+            return nil
+        }
+        locals = p.victim
+        l := indexLocal(locals, pid)
+        if x := l.private; x != nil {                           // 同样的逻辑先从vintim中的local private获取
+            l.private = nil
+            return x
+        }
+        for i := 0; i < int(size); i++ {                        // 从vintim其它proc尝试偷取
+            l := indexLocal(locals, (pid+i)%int(size))
+            if x, _ := l.shared.popTail(); x != nil {
+                return x
+            }
+        }
+
+        // Mark the victim cache as empty for future gets don't bother
+        // with it.
+        // 如果victim中都没有，则把这个victim标记为空，以后的查找可以快速跳过了
+        atomic.StoreUintptr(&p.victimSize, 0)
+
+        return nil
+    }
+    ```
+   - Put
+    ```go
+    func (p *Pool) Put(x interface{}) {
+        // nil直接丢弃
+        if x == nil {
+            return
+        }
+        if race.Enabled {
+            if fastrand()%4 == 0 {
+                // Randomly drop x on floor.
+                return
+            }
+            race.ReleaseMerge(poolRaceAddr(x))
+            race.Disable()
+        }
+        l, _ := p.pin()
+        if l.private == nil {                       // 如果本地private没有值，直接设置这个
+            l.private = x
+            x = nil
+        }
+        if x != nil {                               // 否则加入到本地队列中
+            l.shared.pushHead(x)
+        }
+        runtime_procUnpin()
+        if race.Enabled {
+            race.Enable()
+        }
+    }
+    ```
 ### 内存管理
 1. 背景
    - 多线程的今天之前共享内存，线程之前在申请内存(虚拟内存)时，由于并行问题会产生竞争不安全，加锁又会影响性能
@@ -468,7 +620,7 @@
      1. 在 interface 类型上调用方法
 1. GC
    - 认识：独立进程运行
-     1. 三色标记清扫算法
+     1. 三色并发标记清扫算法
         - 无分代：对象没有代际之分
         - 不整理：回收过程中不对对象进行移动与整理
         - 并发：与用户代码并发执行
