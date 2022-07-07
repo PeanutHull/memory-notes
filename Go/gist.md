@@ -840,6 +840,58 @@
         }
     }
     ```
+1. Nagle算法
+   - 认识：借用tcp协议里的概念，数据包会在以下两个情况被发送
+     1. 缓冲区的数据包长度达到某个长度（MSS）时
+     1. 或者等待超时（一般为200ms）。在超时之前，来的那么多个数据包，就是凑不齐MSS长度，现在超时了，不等了，立即发送
+   - 特点
+     1. 动态积攒一批处理，提高了吞吐量
+   - 实现：定义一个带锁的全局队列（链表）
+    ```go
+    func CallAPI() error {
+        size := 100
+        batch := 20
+        // 接收任务
+        videoInfos := make([]IVideoInfo, 0, size)
+
+        // 设置一个200ms定时器
+        tick := time.NewTicker(200 * time.Microsecond)
+        defer tick.Stop()
+
+        // 死循环
+        for {
+            select {
+            // 由于定时器，每200ms，都会执行到这一行
+            case <-tick.C:
+                if len(videoInfos) > 0 {
+                    // 200ms超时，发车！去请求下游
+                    limitStartFunc(videoInfos, true)
+                    // 请求结束后把之前收集的数据清空，重新开始收集
+                    // TODO 这里不行吧，上下两行会弄丢数据吧？另外如果limitStartFunc时间太长就排队了
+                    videoInfos = make([]IVideoInfo, 0, size)
+                }
+            // AddChan就是所谓的全局队列
+            case videoInfo, ok := <-AddChan:
+                if !ok {
+                    // 通道关闭时，处理剩余数据
+                    limitStartFunc(videoInfos, false)
+                    videoInfos = make([]IVideoInfo, 0, size)
+                    return nil
+                } else {
+                    videoInfos = append(videoInfos, videoInfo)
+                    // 攒够了一批，发车！
+                    if len(videoInfos) > batch {
+                        limitStartFunc(videoInfos, false)
+                        videoInfos = make([]IVideoInfo, 0, size)
+                        // 重置定时器
+                        tick.Reset(200 * time.Microsecond)
+                    }
+                }
+            }
+        }
+        return nil
+    }
+    ```
 ### 最佳实践
 1. 编写思路
    - 编程起势：首先通过划分结构体，定义不同的功能模块，然后分别实现，最终实现功能
@@ -934,77 +986,6 @@
 	}
     ```
    - json解析不存在的默认给类型零值，所以接口请求参数不要使用0作为特殊意义值
-1. 代码规范
-   - 若变量类型为 bool 类型，则名称应以 Has, Is, Can 或 Allow 开头
-    ```go
-    var isExist bool
-    var hasConflict bool
-    var canManage bool
-    var allowGitHook bool
-    ```
-   - nil
-     1. 检查slice是否为空，请始终使用len(s)==0，而非nil
-     1. 作为函数返回值时，不应该明确返回长度为0的slice，应该返回nil代替
-   - slice
-     1. 创建slice时，尽可能为make()函数提供一个容量值，如果不能确定，也要预估一个，性能相差4倍
-   - map
-     1. 尽量少的使用Map，多使用结构体，Map会占用更多的内存且包含指针会增加垃圾回收压力
-     1. 空 map 请使用 make(..) 初始化
-        ```go
-        var (
-            // m1 读写安全
-            // m2 在写入时会 panic
-            m1 = make(map[T1]T2)
-            m2 map[T1]T2
-        )
-        ```
-   - 结构体
-     1. 构造结构体时注意字段顺序，进行内存对齐
-     1. 当对象内部私有变量类型为map时，千万不要将其作为函数的返回值；这样会对外暴露对象内部状态，而且可能会导致其他意外情况
-        ```go
-        type Stats struct {
-            mu sync.Mutex
-            counters map[string]int
-        }
-        
-        // Snapshot 返回当前状态。
-        func (s *Stats) Snapshot() map[string]int {
-            s.mu.Lock()
-            defer s.mu.Unlock()
-        
-            return s.counters
-
-            // 正确做法：创建map类型的副本并返回
-            result := make(map[string]int,len(s.counters))
-            for k, v := range s.counters {
-                result[k] = v
-            }
-            return result
-        }
-        
-        // 生成的对象内部counters不再受互斥锁保护，修改snapshot将直接影响stats.counters
-        snapshot := stats.Snapshot()
-        ```
-     1. 带 mutex 的 struct 的接收者 receivers 必须是带指针
-        ```go
-        type foo struct {
-                mutex sync.Mutex
-                ...
-            }
-
-            // 这里的接收者必须是指针，保证只对同一个锁操作，达到对同一个资源操作的互斥效果。
-            func (f *foo) Write (content []byte) error {
-                f.mutex.Lock()
-                defer f.mutex.Unlock()
-                
-                ...
-            }
-        ```
-   - 函数
-     1. 见名知义，使用动词命名
-     1. 长命名并不会使其更具可读性，一份有用的说明文档通常比额外的长名更有价值
-     1. 若函数或方法为判断类型（返回值主要为 bool 类型），则名称应以 Has、Is、Can 或 Allow 等判断性动词开头
-   - 每个协程一定要有defer里的recover保护，防止因单一协程引起所有程序全部停止
 1. 实用技巧
    - 全局变量：可以避免重复申请带来的内存交互
    - sync.Pool
@@ -1267,47 +1248,6 @@
         ```
 1. 性能优化
    - 当一个结构体很大、并且在函数中传递时，可以将结构体拆分成小的，将小的单独传递，将小的组合成原来的大的吗，可以提升性能
-1. 锁
-   - 实践
-     1. 尽量减少锁的持有时间
-        - 细化锁的粒度
-        - 不要在持有锁的时候做io操作：尽量只通过持有锁来保护io操作需要的资源而不是io操作本身
-     1. 在适当时候使用 RWMutex
-     1. 改为使用channel
-     1. 实现tryLock功能：https://colobu.com/2017/03/09/implement-TryLock-in-Go/
-        - 可以用channel
-            ```go
-            type ChanMutex chan struct{}
-            func (m *ChanMutex) Lock() {
-                ch := (chan struct{})(*m)
-                ch <- struct{}{}
-            }
-            func (m *ChanMutex) Unlock() {
-                ch := (chan struct{})(*m)
-                select {
-                case <-ch:
-                default:
-                    panic("unlock of unlocked mutex")
-                }
-            }
-            func (m *ChanMutex) TryLock() bool {
-                ch := (chan struct{})(*m)
-                select {
-                case ch <- struct{}{}:
-                    return true
-                default:
-                }
-                return false
-            }
-            ```
-     1. copy结构体操作可能导致非预期的死锁：如果结构体中有锁的话，记得重新初始化一个锁对象，否则会出现非预期的死锁
-     1. 善用 defer 来确保在函数内正确释放了锁
-        - 注意不要导致无意中在持有锁的时候做了io操作，出现了非预期的持有锁时间太长的问题
-     1. 工具
-        - go vet 工具检查代码中锁
-          1. `go vet $(go list ./... | grep -v /vendor/)`：忽略vender
-        - build/test 时使用 -race 参数以便运行时检测数据竞争问题
-        - go-deadlock 检测死锁或锁等待问题
 ### 技术方案
 #### 池化：连接池、工作者池
 1. 认识
@@ -1430,6 +1370,48 @@
      1. gammazero/workerpool：提供了更便利的 Submit 和 SubmitWait 方法提交任务，还可以提供当前的 worker 数和任务数以及关闭 Pool 的功能
      1. ivpusic/grpool
      1. dpaks/goworkers
+#### 锁
+1. 锁
+   - 实践
+     1. 尽量减少锁的持有时间
+        - 细化锁的粒度
+        - 不要在持有锁的时候做io操作：尽量只通过持有锁来保护io操作需要的资源而不是io操作本身
+     1. 在适当时候使用 RWMutex
+     1. 改为使用channel
+     1. 实现tryLock功能：https://colobu.com/2017/03/09/implement-TryLock-in-Go/
+        - 可以用channel
+            ```go
+            type ChanMutex chan struct{}
+            func (m *ChanMutex) Lock() {
+                ch := (chan struct{})(*m)
+                ch <- struct{}{}
+            }
+            func (m *ChanMutex) Unlock() {
+                ch := (chan struct{})(*m)
+                select {
+                case <-ch:
+                default:
+                    panic("unlock of unlocked mutex")
+                }
+            }
+            func (m *ChanMutex) TryLock() bool {
+                ch := (chan struct{})(*m)
+                select {
+                case ch <- struct{}{}:
+                    return true
+                default:
+                }
+                return false
+            }
+            ```
+     1. copy结构体操作可能导致非预期的死锁：如果结构体中有锁的话，记得重新初始化一个锁对象，否则会出现非预期的死锁
+     1. 善用 defer 来确保在函数内正确释放了锁
+        - 注意不要导致无意中在持有锁的时候做了io操作，出现了非预期的持有锁时间太长的问题
+     1. 工具
+        - go vet 工具检查代码中锁
+          1. `go vet $(go list ./... | grep -v /vendor/)`：忽略vender
+        - build/test 时使用 -race 参数以便运行时检测数据竞争问题
+        - go-deadlock 检测死锁或锁等待问题
 1. 锁
    - 优化方式：尽量减少锁的粒度、锁的持有时间
      1. 锁的粒度：分片 shard

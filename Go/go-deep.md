@@ -686,7 +686,6 @@
     }
     ```
    - 流程
-     1. 
      1. 实例化 Server
      1. 调用 Server 的 ListenAndServe ()
      1. 调用 net.Listen ("tcp", addr) 监听端口
@@ -698,6 +697,48 @@
         - map精确匹配
         - 切片最⻓前缀匹配，`strings.HasPrefix`
         - 如果没有路由满足，调用 NotFoundHandler 的 ServeHTTP
+   - 连接管理
+    ```go
+    res, err := client.Do(req)
+    func (c *Client) Do(req *Request) (*Response, error) {
+        return c.do(req)
+    }
+
+    func (c *Client) do(req *Request) {
+        // ...
+        if resp, didTimeout, err = c.send(req, deadline); err != nil {
+            // ...
+        }
+        // ...
+    }
+    func send(ireq *Request, rt RoundTripper, deadline time.Time) {
+        // ...
+        resp, err = rt.RoundTrip(req)
+        // ...
+    }
+
+    // 从这里进入 RoundTrip 逻辑   /src/net/http/roundtrip.go: 16
+    func (t *Transport) RoundTrip(req *Request) (*Response, error) {
+        return t.roundTrip(req)
+    }
+
+    func (t *Transport) roundTrip(req *Request) (*Response, error) {
+        // 尝试去获取一个空闲连接，用于发起 http 连接
+        pconn, err := t.getConn(treq, cm)
+        // ...
+    }
+
+    // 重点关注这个函数，返回是一个长连接
+    func (t *Transport) getConn(treq *transportRequest, cm connectMethod) (*persistConn, error) {
+        // 省略了大量逻辑，只关注下面两点
+        // 有空闲连接就返回
+        pc := <-t.getIdleConnCh(cm)
+
+        // 没有创建连接
+        pc, err := t.dialConn(ctx, cm)
+
+    }
+    ```
 ### 源码阅读
 1. 方法
    - 如果你阅读的是syscall包，恭喜你，感觉正常：再简洁的语言，遇到环境相关，仍然会有很多 tricks，甚至用到 Cgo
