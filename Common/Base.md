@@ -376,19 +376,74 @@
      1. 双指针：Two Pointers
      1. 扫描线：Scan-line algorithm
      1. 斐波纳契
-1. 一致性算法
-   - es的hash路由算法
-   - haproxy的hash算法
-   - cassandra、consul的gossip闲话算法
-   - redis、etcd的raft算法
-   - Paxos
-   - zab
+#### 一致性算法
+1. raft
+   - 背景：选主、保持一致
+   - 认识
+     1. paxos是出名的晦涩难懂，raft的设计初衷就是容易理解和简单，redis、etcd的使用 
+   - 组成
+     1. 角色：只在这三种不断转换
+        - follower
+          1. 刚开始加入到集群中的默认角色
+        - candidate：选举候选人
+        - leader：主节点
+          1. 接收client的请求，接收请求后会将日志分发到所有follower(单向)
+     1. 任期：Term，是连续的整数，可以任意时长
+        - 每个节点都维护着当前的任期值，在检测到自己的任期值低于其他节点会将自己的设置为检测到的较高值
+        - leader和candidate发现自己的任期低于别的节点，则会立即把自己转换为follower
+     1. 日志：保证所有follower节点日志副本最终一致
+   - 选主
+     1. 时机
+        - 集群初始化
+        - 主机宕机
+     1. 步骤
+        - 所有节点初始状态都是Follower，设置任期(term为0)
+        - 随机时间后(150~300ms)，先到期的向其他节点发起投票并等待回复，并投自己一票，完成选主，先到期的大概率成为主节点
+          1. 随机时间相同则继续下一轮随机，直到不一样
+        - 选主后，term+1，leader定期向所有follower发送心跳信息(Append Entries RPC协议)保持连接
+        - follower启动随机超时时间，收到心跳就重置，否则发起幂等的投票
+   - 宕机
+     1. leader宕机
+        - 第一个心跳超时的follower发起投票
+          1. 注意这个时候它依然会向宕机的原leader发出Reuest Vote,但原leader不会回复
+        - 当收到集群超过一半的节点的RequestVote reply后,此时的follower会成为leader
+          1. leader恢复也会变为follower
+     1. follower宕机
+        - 影响不大，leader会幂等的一直发心跳
+   - 日志复制
+     1. 认识：leader将请求包装成log entry分发，数据状态为
+     1. 步骤
+        - Uncommitted：未提交，leader接收到的数据，1
+          1. leader进行分发，2
+          1. 集群至少一半的节点已接收到数据返回给leader后，3
+          1. leader向client确认数据已接收，4
+        - Committed：已提交
+          1. client返回leader ack，leader修改数据为已提交，5
+          1. leader向follower告知该数据状态已提交，6
+          1. follower开始commit自己的数据,此时raft集群达到主节点和从节点的一致，7
+     1. 异常处理
+        - 1 数据未到达leader节点前：leader挂掉不影响一致性
+        - 2 数据到达leader节点，未复制到follower：client不会收到ack会认为超时失败可安全发起重试
+        - 3.1 成功复制到follower所有节点，但follower未向leader响应接收，leader挂掉：数据在follower节点处于未提交状态，但数据保持一致，重新选出leader后可完成数据提交
+        - 3.2 数据到达leader节点，成功复制到follower的部分节点，但这部分follower还未向leader响应接收，leader挂掉：数据在follower节点处于未提交状态不一致：Raft协议要求投票只能投给拥有最新数据的节点。所以拥有最新数据的节点会被选为leader，然后再强制同步数据到其他follower，保证数据不会丢失并最终一致
+        - 7 数据到达leader节点，成功复制到follower所有或多数节点，数据在leader处于已提交状态，但在follower处于未提交状态，leader挂掉：重新选出新的leader后的处理流程和阶段3.1一样
+        - 7 数据到达leader节点，成功复制到follower所有或多数节点，数据在所有节点都处于已提交状态，但还未响应client。这个阶段leader挂掉，集群内部数据其实已经是一致的，client重复重试基于幂等策略对一致性无影响
+   - 脑裂
+     1. 形成原因：遇见网络分区一段时间后，超时各选各的主，造成多leader，网络恢复后无法处理
+     1. 解决方案
+        - 网络分区恢复后：leader间比较term值，小的降为follower
+        - 分区中的所有节点会回滚roll back自己的数据日志，并匹配新leader的log日志，然后实现同步提交更新自身的值
+        - 最终集群达到整体一致，集群存在唯一leader
+1. Paxos
+1. zab
+   - 认识：zookeeper基于paxos提出了zab协议, 
+1. es的hash路由算法
+1. haproxy的hash算法
+1. cassandra、consul的gossip闲话算法
 1. 问题
    - 八皇后问题方案：递归回溯，本质上是一种枚举法，不满足就调整上一级数据
    - 平滑线绘制：道格拉斯—普克算法
-   - Paxos一致性算法
    - 二、三阶段提交协议：分布式数据库
-   - 快速选举算法：ZooKeeper
    - 雪花算法
 1. 分类
    - 图像算法
