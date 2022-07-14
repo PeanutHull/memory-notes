@@ -2447,17 +2447,6 @@
      1. Store()：添加
      1. Delete()：删除
      1. LoadOrStore()：检索或新增
-1. 并发原语
-   - 认识：`sync.atomic`，底层的原子性内存操作， 除了某些特殊的底层应用，使用channel或sync实现同步更好，他们是保护一段逻辑，这个是保护一个值，逻辑需要自己处理
-     1. 操作对象：6个，int32/int64/uint32/uint64/uintptr/unsafe.Pointer
-     1. 原子操作：增减、载入、比较并交换、存储和交换
-   - 方法
-     1. `AddInt32(&addr,n)`：增减，n负数为减，只能操作数值类
-     1. `StoreInt32(&addr,newaddr)`：存储
-     1. `LoadInt32(&addr)`：读取
-
-     1. `CompareAndSwapInt32(&addr,old,new)`：比较并交换 Compare And Swap，即CAS，如果旧值没变就替换
-     1. `SwapInt32(&addr,newaddr)`：交换，不管旧值
 1. wiki
    - 临界区：受影响的最小范围，要最小化锁粒度，提高性能
    - race detector：检测并发访问共享资源是否有问题的工具，基于Google的C/C++ sanitizers。编译器通过探测所有的内存访问(加入代码能监视对这些内存地址的访问（读还是写）)。在代码运行的时候，race detector 就能监控到对共享变量的非同步访问
@@ -2465,33 +2454,73 @@
      1. 而且，在运行的时候，只有在触发了 data race 之后，才能检测到，如果碰巧没有触发也是检测不到
    - vet：可以发现死锁和一些并发问题，go有在运行时检查死锁的机制
      1. 如对Mutex进行复制的问题
-#### context
-1. 认识：控制生命周期、追踪协程之间的调用树，在这些树中传递通知和元数据，是一种协程调度的方式。v1.7
-   - 用在发生超时、主动取消、产生异常时需要进行的抢占、中断其他等后续操作
-   - context本身是不可变的，是线程安全的，可以放心地在多个协程中传递使用
-   - 理解为一颗上下文树，继承衍生
-   - 底层依赖channel实现
+##### atomic
+1. 认识：`sync.atomic`，实现了同步算法底层的原子的内存操作原语，提供实现原子操作的方法
+   - 使用channel或sync实现同步保护一段逻辑，这个是保护一个值，逻辑需要自己处理
+   - 很多场景中，使用并发原语实现起来比较复杂，而原子操作可以帮助我们更轻松地实现底层的优化，不需要复杂的逻辑
+     1. 比如特简单的flag场景
+     1. 比如简单的实现配置对象的更新和加载
+     1. 在实现 lock-free 的数据结构时，我们可以不使用互斥锁这样就不会让线程因为等待互斥锁而阻塞休眠，而是让线程保持继续处理的状态。另外，不使用互斥锁的话，lock-free的数据结构还可以提供并发的性能
 1. 组成
-   - 初始化方法
-     1. Background()：返回非nil的、永不取消的、无值、无截止时间的空context
-        - 作为初始节点，方便以后初始化cancelCtx, timerCtx。通常在主方法、初始化、测试时用
-     1. WithValue(parent Context, key, val interface{})：返回父context的复制，用于传递数据
-     1. TODO()：返回非nil的context，不确定使用什么context、不可用、没扩展的时候使用
-   - 操作方法
-     1. WithCancel()：创建一个基于parent的可取消的context(cancelCtx类型)，返回一个context和一个CancelFunc，调用CancelFunc即可触发cancel操作
-        - cancelCtx取消时，会将后代节点中所有的cancelCtx都取消
-     1. WithDeadline()：创建一个基于parent的可取消的context，其过期时间deadline不晚于所设置时间d
-     1. WithTimeout()：类似WithDeadline，时间是相对当前时间的过期时长
+   - 操作对象：6个，int32/int64/uint32/uint64/uintptr/unsafe.Pointer
+   - 原子操作：增减、载入、比较并交换、存储和交换
+1. 方法
+     1. `AddInt32(&addr,n)`：增减，n负数为减，只能操作数值类
+     1. `StoreInt32(&addr,newaddr)`：存储
+     1. `LoadInt32(&addr)`：读取
+
+     1. `CompareAndSwapInt32(&addr,old,new)`：比较并交换 Compare And Swap，即CAS，如果旧值没变就替换
+     1. `SwapInt32(&addr,newaddr)`：交换，不管旧值
+1. wiki
+   - cpu的单条指令是原子的，多核处理器的实现比较复杂，不同架构cpu提供了不同的原子操作指令
+   - 泛型支持后atomic的API会清爽很多
+#### context
+1. 认识：控制生命周期、追踪协程之间的调用树(上下文树，继承衍生)，在这些树中传递通知和元数据，用在发生超时、主动取消、产生异常时需要进行的抢占、中断其他等后续操作，是一种协程调度的方式。v1.7
+   - 使用一条context链贯穿Server、Connection、Request等，可以将上游的信息共享给下游任务、可发送取消所有下游任务的信号
+   - context本身是不可变的，是线程安全的，可以放心地在多个协程中传递使用
+   - 底层依赖channel实现
+   - v1.7加入标准库
+   - 问题：Context在函数里满天飞，还支持了超时、截止时间方法等“额外”方法
+1. 应用场景
+   - 上下文信息传递：如http的链路信息传递
+   - 控制子goroutine的运行、取消、超时
+1. 组成
+   - `type CancelFunc`：取消方法
+   - `type Context`：初始化
+     1. 默认：`Context.Background()`，返回非nil的、空的、不会被取消的、无截止时间、无超时的context。作为初始节点，方便以后初始化cancelCtx, timerCtx。通常在主方法、初始化、测试时用
+     1. 未定：`Context.TODO()`，返回非nil的、空的、不会被取消的、无截止时间、无超时的context。不清楚是否使用或目前还不知道要传递什么上下文信息的时候使用。这俩底层实现一样，仅仅是约定俗成
+     1. 传值：`Context.WithValue()`，复制类型为valueCtx的父Context，保存一个kv对，用于传递数据
+        - 优先从自己存储中检查key，不存在会一级级从parent中继续检查直到顶
+   - 方法
+     1. 取消方法：`WithCancel()`，创建基于parent的可取消的cancelCtx类型的副本，返回一个context和一个CancelFunc，调用CancelFunc即可触发cancel操作
+        - 会向下传递不会向上传递，cancelCtx取消时会将后代节点中所有cancelCtx类型的Context都取消
+        - 处理完后需要调用CancelFunc否则资源占用不释放，可以使用defer确保
+     1. 截止时间：`WithDeadline()`，创建一个基于parent的可取消的context，其过期时间deadline不晚于所设置时间
+        - 如果它的截止时间晚于parent的截止时间就以parent的为准，因为parent的截止时间到了就会取消这个cancelCtx
+        - 如果当前时间已经超过了截止时间，就直接返回一个已经被cancel的timerCtx
+     1. 超时时间：`WithTimeout()`，类似WithDeadline，时间是相对当前时间的过期时长
 1. 最佳实践
-   - 第一形参通常都为context，并且把变量命名为ctx。使用了一条context链贯穿Server、Connection、Request，不仅将上游的信息共享给下游任务，同时实现了上游可发送取消信号取消所有下游任务
-     1. 会创建valueCtx、cancelCtx，断开连接就会取消下游任务
-   - 不要把context存储在结构体中，而是要显式地进行传递
-   - 就算是程序允许，也不要传入一个nil的context，如果不知道是否要用context的话，用context.TODO()来替代
-   - context.WithValue()只用于传输流程和API的请求范围数据，不要用它来传递可选参数
+   - 使用
+     1. 一般函数第一个形参通常都为变量命名为ctx的context
+     1. 不将nil作为Context类型的参数值，用Background或TODO创建一个空的
+     1. 只用来临时做函数之间的上下文透传，不持久化 
+     1. key的类型不应该是字符串类型或者其它内建类型，否则容易在包之间使用Context时产生冲突。使用WithValue时，key应是自定义类型
+     1. 常常使用struct{}作为定义key的底层类型。对于exported key的静态类型，常常是接口或指针。这样可以尽量减少内存分配
+     1. context.WithValue()只用于传输流程和API的请求范围数据，不要用它来传递可选参数
+     1. 不要把context存储在结构体中，而是要显式地进行传递
+   - 要尽早地调用才能尽早释放资源，不要单纯地依赖截止时间被动取消
+1. 实例
+    ```go
+    ctx= context.TODO()
+    ctx = context.WithValue(ctx, "key1", "0001")
+    ctx = context.WithValue(ctx, "key2", "0001")
+    ctx = context.WithValue(ctx, "key3", "0001")
+    ```
 1. demo
    - demo1
     ```go
-    // WithTimeout相关，子线程监听主线程传入的ctx，一旦ctx.Done()返回空channel，子线程即可获知超时
+    // WithTimeout相关，子线程监听主线程传入的ctx实现监听主线程状态，一旦ctx.Done()返回子线程即可获知主线程超时
+
     ctx, cancel := context.WithTimeout(context.TODO(), 5*time.Second)
 	defer cancel()
 	go func(ctx context.Context) {
@@ -2504,7 +2533,7 @@
 		}(execResult)
 		// 等待结果
 		select {
-		case <-ctx.Done():
+		case <-ctx.Done():                                              // goroutine需要尝试检查Context的Done是否关闭
 			fmt.Println("超时退出")
 			return
 		case <-execResult:
@@ -2545,7 +2574,7 @@
 	}(ctx)
 	wg.Wait()
     ```
-#### 实践
+#### 特定场景的应用
 1. 通过设置为缓存通道，实现抢购场景的解决方案
     ```go
     // 响应公共结构体
