@@ -2456,24 +2456,172 @@
      1. 如对Mutex进行复制的问题
 ##### atomic
 1. 认识：`sync.atomic`，实现了同步算法底层的原子的内存操作原语，提供实现原子操作的方法
-   - 使用channel或sync实现同步保护一段逻辑，这个是保护一个值，逻辑需要自己处理
+   - 这个是保护一个值，逻辑需要自己处理，channel/sync可以同步保护一段逻辑
    - 很多场景中，使用并发原语实现起来比较复杂，而原子操作可以帮助我们更轻松地实现底层的优化，不需要复杂的逻辑
      1. 比如特简单的flag场景
      1. 比如简单的实现配置对象的更新和加载
-     1. 在实现 lock-free 的数据结构时，我们可以不使用互斥锁这样就不会让线程因为等待互斥锁而阻塞休眠，而是让线程保持继续处理的状态。另外，不使用互斥锁的话，lock-free的数据结构还可以提供并发的性能
+     1. 在实现lock-free的数据结构时，我们可以不使用互斥锁这样就不会让线程因为等待互斥锁而阻塞休眠，而是让线程保持继续处理的状态。另外，不使用互斥锁的话，lock-free的数据结构还可以提供并发的性能
+   - 提供了非常好的支持各种平台的一致性的API
+1. 特点
+   - atomic操作的对象是一个地址，要把可寻址的变量的地址作为参数传递给方法，而不是变量值
 1. 组成
-   - 操作对象：6个，int32/int64/uint32/uint64/uintptr/unsafe.Pointer
-   - 原子操作：增减、载入、比较并交换、存储和交换
-1. 方法
-     1. `AddInt32(&addr,n)`：增减，n负数为减，只能操作数值类
-     1. `StoreInt32(&addr,newaddr)`：存储
+   - 操作的对象：6个，int32/int64/uint32/uint64/uintptr/unsafe.Pointer(Add方法不支持)
+   - 类型
+     1. Value：可以原子地存取对象类型，只能存取，不能CAS和Swap，常用在配置变更等场景
+   - 方法：即使在多处理器、多核、有CPU cache的情况下也是一个原子操作
      1. `LoadInt32(&addr)`：读取
+     1. `StoreInt32(&addr,newaddr)`：存储，别的协程不会看到存了一半的值
+     1. `AddInt32(&addr,n)`：增减，n负数为减，只能操作数值类
+     1. `SwapInt32(&addr,newaddr)`：直接交换，不管旧值，可以返回旧值
+     1. `CompareAndSwapInt32(&addr,old,new)`：比较并交换，Compare And Swap 即CAS，判断相等才替换，比较当前addr地址的值是不是old，如果不等于old，就返回false；如果等于old，就把此地址的值为new
+1. 实践
+   - 无符号整数和uinptr类型实现减去一个值：利用计算机补码的规则
+    ```go
+    AddUint32(&x, ^uint32(c-1))
+    // 减1简化为
+    AddUint32(&x, ^uint32(0))
+    ```
+   - 第三方库
+     1. uber-go/atomic：封装了几种与常见类型相对应的原子操作，类型如Bool、Duration、Error、Float64、String，操作如CAS、Store、Swap、Toggle、MarshalJSON等
+1. demo
+   - 多协程等待通知，就加载最新的配置
+    ```go
+    type Config struct {
+        NodeName string
+        Addr     string
+        Count    int32
+    }
 
-     1. `CompareAndSwapInt32(&addr,old,new)`：比较并交换 Compare And Swap，即CAS，如果旧值没变就替换
-     1. `SwapInt32(&addr,newaddr)`：交换，不管旧值
+    func loadNewConfig() Config {
+        return Config{
+            NodeName: "北京",
+            Addr:     "10.77.95.27",
+            Count:    rand.Int31(),
+        }
+    }
+    func main() {
+        var config atomic.Value                                                 // 使用具备原子操作的结构体
+        config.Store(loadNewConfig())
+        var cond = sync.NewCond(&sync.Mutex{})
+        // 设置新的config
+        go func() {
+            for {
+                time.Sleep(time.Duration(5+rand.Int63n(5)) * time.Second)
+                config.Store(loadNewConfig())
+                // 通知等待着配置已变更
+                cond.Broadcast()
+            }
+        }()
+        go func() {
+            for {
+                cond.L.Lock()
+                cond.Wait()
+                // 等待变更信号
+                c := config.Load().(Config)
+                // 读取新的配置
+                fmt.Printf("newconfig:%+v\n", c)
+                cond.L.Unlock()
+            }
+        }()
+        select {}
+    }
+    ```
+   - 使用atomic实现Lock-Free queue：先入先出
+    ```go
+    主要逻辑
+    // 使用一个辅助头指针（head），头指针不包含有意义的数据，只是一个辅助的节点，这样的话，出队入队中的节点会更简单
+    // 入队的时候，通过CAS操作将一个元素添加到队尾，并且移动尾指针
+    // 一个是queue自身的头、尾指针，一个是节点里的移动下一跳指针
+    // 出队的时候移除一个节点，并通过CAS操作移动head指针，同时在必要的时候移动尾指针
+
+
+    // lock-free的queue
+    type LKQueue struct {
+        head unsafe.Pointer
+        tail unsafe.Pointer
+    }
+
+    // 通过链表实现，这个数据结构代表链表中的节点
+    type node struct {
+        value interface{}
+        next  unsafe.Pointer
+    }
+
+    func NewLKQueue() *LKQueue {
+        n := unsafe.Pointer(&node{})
+        return &LKQueue{head: n, tail: n}
+    }
+
+    // 入队
+	func (q *LKQueue) Enqueue(v interface{}) {
+		n := &node{value: v}
+		for {
+			tail := load(&q.tail)
+			next := load(&tail.next)
+			// 下边开始每一步都是原子操作
+			// 尾还是尾 ———— 因为并发的存在，需要看下上边拿到的尾巴是否还处于尾部，不是的话，需要利用for循环重来，粗粒度的更早放弃争抢节约性能
+			if tail == load(&q.tail) {
+				// 还没有新数据入队 ———— 因为并发的存在，需要判断是否修改当前拿到tail，因为tail可能继续改变
+				if next == nil {
+					// 增加到队尾
+					// 证明确实拿到了队尾
+					if cas(&tail.next, next, n) {
+						// 入队成功，移动尾巴指针 ———— 再修改尾巴指针为新加入的
+						cas(&q.tail, tail, n)
+						return
+					}
+				} else {
+					// 已有新数据加到队列后面，需要移动尾指针 ———— 弥补没来得及改的next值？
+					cas(&q.tail, tail, next)
+				}
+			}
+		}
+	}
+
+    // 出队，没有元素则返回nil
+	func (q *LKQueue) Dequeue() interface{} {
+		for {
+			head := load(&q.head)
+			tail := load(&q.tail)
+			next := load(&head.next)
+			// head还是那个head
+			if head == load(&q.head) {
+				// head和tail一样
+				if head == tail {
+					// 是空队列
+					if next == nil {
+						return nil
+					}
+					// 只是尾指针还没有调整，弥补尝试调整它指向下一个
+					cas(&q.tail, tail, next)
+				} else {
+					// 读取出队的数据
+					v := next.value
+					// 既然要出队了，头指针移动到下一个
+					if cas(&q.head, head, next) {
+						// Dequeue is done，return
+						return v
+					}
+				}
+			}
+		}
+	}
+
+    // 将unsafe.Pointer原子加载转换成node
+    func load(p *unsafe.Pointer) (n *node) {
+        return (*node)(atomic.LoadPointer(p))
+    }
+
+    // 封装CAS, 避免直接将*node转换成unsafe.Pointer
+    func cas(p *unsafe.Pointer, old, new *node) (ok bool) {
+        return atomic.CompareAndSwapPointer(p, unsafe.Pointer(old), unsafe.Pointer(new))
+    }
+    ```
 1. wiki
-   - cpu的单条指令是原子的，多核处理器的实现比较复杂，不同架构cpu提供了不同的原子操作指令
    - 泛型支持后atomic的API会清爽很多
+   - cpu的单条指令是原子的，多核处理器的实现比较复杂，不同架构cpu提供了不同的原子操作指令
+   - 由于cpu的cache、指令重排，可见性的存在，cpu采用内存屏障(memory fence，管道中所有写都刷新到内存中)保证数据正确性
+   - 内存对齐用一条指令写内存可防止多条指令对于内存的撕裂写(torn write)
 #### context
 1. 认识：控制生命周期、追踪协程之间的调用树(上下文树，继承衍生)，在这些树中传递通知和元数据，用在发生超时、主动取消、产生异常时需要进行的抢占、中断其他等后续操作，是一种协程调度的方式。v1.7
    - 使用一条context链贯穿Server、Connection、Request等，可以将上游的信息共享给下游任务、可发送取消所有下游任务的信号
@@ -2574,6 +2722,9 @@
 	}(ctx)
 	wg.Wait()
     ```
+#### 扩展并发原语
+1. 信号量
+   - 认识：Semaphore，是用来控制多个 goroutine 同时访问多个资源的并发原语
 #### 特定场景的应用
 1. 通过设置为缓存通道，实现抢购场景的解决方案
     ```go
