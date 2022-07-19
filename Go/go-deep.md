@@ -718,6 +718,21 @@
         - init函数：main函数一定在导入的包的init函数之后执行
         - goroutine：启动goroutine的go语句的执行，一定happens-before此goroutine内的代码执行，如go语句传入的参数是一个函数执行的结果，那么这个函数一定先于goroutine内部的代码被执行
           1. goroutine退出的时候没有保证
+        - channel
+          1. 给chan发送happens-before从该chann接收相应数据的动作完成之前：发送早于接收
+          1. close操作happens-before从关闭的chan中读取出一个零值
+          1. unbuffered的即容量为0的chan，读取happens-before发送，因为读取会阻塞
+          1. 容量为m的chan，第n个receive一定happens-before第n+m个send的完成
+        - Mutex/RWMutex
+          1. 第n次的m.Unlock一定happens before第n+1的m.Lock方法的返回
+          1. 读写锁RWMutex如果它的第n个m.Lock方法的调用已返回，那么它的第n个m.Unlock的方法调用一定happens before任何一个m.RLock方法调用的返回，只要这些m.RLock方法调用happens after第n次m.Lock的调用的返回。这就可以保证只有释放了持有的写锁，那些等待的读请求才能请求到读锁
+          1. 读写锁RWMutex如果它的第n个m.RLock方法的调用已返回，那么它的第k（k<=n）个成功的m.RUnlock方法的返回一定happens before任意的m.RUnlockLock方法调用，只要这些m.Lock方法调用happens after第n次m.RLock
+        - WaitGroup
+          1. Wait 方法等到计数值归零之后才返回
+        - Once
+          1. 对于once.Do(f)调用，f函数的那个单次调用一定happens before任何once.Do(f)调用的返回
+        - atomic
+          1. Go 内存模型的官方文档并没有明确给出atomic的保证，相关研究太复杂，现阶段还是不要使用atomic来保证顺序性，
 1. wiki
    - 指针大小：8字节，64位系统的寻址范围
    - TCMalloc

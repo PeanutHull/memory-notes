@@ -2724,7 +2724,144 @@
     ```
 #### 扩展并发原语
 1. 信号量
-   - 认识：Semaphore，是用来控制多个 goroutine 同时访问多个资源的并发原语
+   - 认识：Semaphore，是用来控制(保护)多个goroutine同时访问多个资源的并发原语，比如数据库连接池、一组客户端的连接
+     1. 优势：在批量获取资源的场景中，我建议你尝试使用官方扩展的信号量
+   - 操作
+     1. P：减少
+     1. V：增加
+   - 分类
+     1. 计数信号量：计数使用数字可以是任意值，到达某个特殊值时有固定操作
+     1. 二进位信号量：计数值只能是0或者1，就是互斥锁了
+   - go使用
+     1. go的扩展包：Weighted，使用互斥锁+List实现
+     1. go内部：信号量的P/V操作通过函数实现
+        ```go
+        type Mutex struct {
+            state int32
+            sema  uint32                // 这个就是信号量
+        }
+
+        func runtime_Semacquire(s *uint32)
+        func runtime_SemacquireMutex(s *uint32, lifo bool, skipframes int)
+        func runtime_Semrelease(s *uint32, handoff bool, skipframes int)
+        ```
+1. SingleFlight
+   - 认识：请求合并，多个goroutine同时调用同一个函数，只让一个goroutine去执行，且返回时给到所有goroutine，减少并发调用的数量，go开发组提供
+     1. 和sync.Once的区别是只有一次，而SingleFlight主要用在合并并发请求的场景中
+     1. 使用互斥锁Mutex和Map实现
+     1. 特别适合缓存击穿场景
+   - 组成
+     1. 类型：Group
+     1. 方法
+        - Do()：通过传入一个key识别在同一时间只有一个在执行，其他并发的请求会等待。第一个执行的请求返回的结果，就是它的返回结果。shared表示是否返回给多个请求
+        - DoChan()：类似Do，只不过返回一个chan，有了结果能从这个chan接收
+        - Forget()：忘记，对这个key不进行合并
+1. CyclicBarrier
+   - 认识：循环栅栏，可重用，用来控制一组请求同时执行的数据结构，用于重复进行一组goroutine同时执行的场景中。大家都到后放开栅栏通过，类似java的CountDownLatch/CyclicBarrier，C#的Barrier
+     1. 允许一组 goroutine 彼此等待，到达一个共同的执行点
+     1. 和WaitGroup，
+        - WaitGroup：适用“一个goroutine等待一组goroutine到达同一个执行点”或者不需要重用的场景，重用需要小心翼翼，需要保证将WaitGroup的计数值重置到n的时候不会出现并发问题
+        - CyclicBarrier：适合在“固定数量的 goroutine 等待同一个执行点”场景中
+   - 方法
+     1. New()：指定循环栅栏参与者的数量
+     1. NewWithAction()：额外提供一个函数可以在每一次到达执行点的时候执行一次。具体的时间点是在最后一个参与者到达之后、其它参与者还未被放行之前。可以利用它做放行之前一些共享状态的更新等操作
+   - demo
+    ```go
+    // 三条产线，生产氢原子，氧原子，最后等待一起输出水
+    // 定义水分子合成的辅助数据结构
+    type H2O struct {
+        // 氢原子的信号量
+        semaH *semaphore.Weighted
+        // 氧原子的信号量
+        semaO *semaphore.Weighted
+        // 循环栅栏， 用来控制合成
+        b cyclicbarrier.CyclicBarrier
+    }
+
+    func New() *H2O {
+        return &H2O{
+            // 氢原子需要两个
+            semaH: semaphore.NewWeighted(2),
+            // 氧原子需要一个
+            semaO: semaphore.NewWeighted(1),
+            // 需要三个原子才能合成1
+            b: cyclicbarrier.New(3),
+        }
+    }
+
+    func (h2o *H2O) hydrogen(releaseHydrogen func()) {
+        h2o.semaH.Acquire(context.Background(), 1)
+        // 输出H
+        releaseHydrogen()
+        // 等待栅栏放行
+        h2o.b.Await(context.Background())
+        // 释放氢原子空槽
+        h2o.semaH.Release(1)
+    }
+
+    func (h2o *H2O) oxygen(releaseOxygen func()) {
+        h2o.semaO.Acquire(context.Background(), 1)
+        releaseOxygen()
+        // 输出O
+        h2o.b.Await(context.Background())
+        // 等待栅栏放行
+        h2o.semaO.Release(1)
+        // 释放氢原子空槽
+    }
+
+    func TestWaterFactory(t *testing.T) {
+        // 用来存放水分子结果的channel
+        var ch chan string
+        releaseHydrogen := func() {
+            ch <- "H"
+        }
+        releaseOxygen := func() {
+            ch <- "O"
+        }
+        // 300个原子，300个goroutine, 每个goroutine并发的产生一个原子
+        var N = 100
+        ch = make(chan string, N*3)
+        h2o := New()
+        // 用来等待所有的goroutine完成
+        var wg sync.WaitGroup
+        wg.Add(N * 3)
+        // 200个氢原子goroutine
+        for i := 0; i < 2*N; i++ {
+            go func() {
+                time.Sleep(time.Duration(rand.Intn(100)) * time.Millisecond)
+                h2o.hydrogen(releaseHydrogen)
+                wg.Done()
+            }()
+        }
+        // 100个氧原子goroutine
+        for i := 0; i < N; i++ {
+            go func() {
+                time.Sleep(time.Duration(rand.Intn(100)) * time.Millisecond)
+                h2o.oxygen(releaseOxygen)
+                wg.Done()
+            }()
+        }
+        // 等待所有的goroutine执行完
+        wg.Wait()
+        // 结果中肯定是300个原子
+        if len(ch) != N*3 {
+
+            t.Fatalf("expect %d atom but got %d", N*3, len(ch))
+        }
+        // 每三个原子一组，分别进行检查。要求这一组原子中必须包含两个氢原子和一个氧原子，这样才能
+        var s = make([]string, 3)
+        for i := 0; i < N; i++ {
+            s[0] = <-ch
+            s[1] = <-ch
+            s[2] = <-ch
+            sort.Strings(s)
+            water := s[0] + s[1] + s[2]
+            if water != "HHO" {
+                t.Fatalf("expect a water molecule but got %s", water)
+            }
+        }
+    }
+    ```
 #### 特定场景的应用
 1. 通过设置为缓存通道，实现抢购场景的解决方案
     ```go
