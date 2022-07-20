@@ -2628,107 +2628,7 @@
    - cpu的单条指令是原子的，多核处理器的实现比较复杂，不同架构cpu提供了不同的原子操作指令
    - 由于cpu的cache、指令重排，可见性的存在，cpu采用内存屏障(memory fence，管道中所有写都刷新到内存中)保证数据正确性
    - 内存对齐用一条指令写内存可防止多条指令对于内存的撕裂写(torn write)
-#### context
-1. 认识：控制生命周期、追踪协程之间的调用树(上下文树，继承衍生)，在这些树中传递通知和元数据，用在发生超时、主动取消、产生异常时需要进行的抢占、中断其他等后续操作，是一种协程调度的方式。v1.7
-   - 使用一条context链贯穿Server、Connection、Request等，可以将上游的信息共享给下游任务、可发送取消所有下游任务的信号
-   - context本身是不可变的，是线程安全的，可以放心地在多个协程中传递使用
-   - 底层依赖channel实现
-   - v1.7加入标准库
-   - 问题：Context在函数里满天飞，还支持了超时、截止时间方法等“额外”方法
-1. 应用场景
-   - 上下文信息传递：如http的链路信息传递
-   - 控制子goroutine的运行、取消、超时
-1. 组成
-   - `type CancelFunc`：取消方法
-   - `type Context`：初始化
-     1. 默认：`Context.Background()`，返回非nil的、空的、不会被取消的、无截止时间、无超时的context。作为初始节点，方便以后初始化cancelCtx, timerCtx。通常在主方法、初始化、测试时用
-     1. 未定：`Context.TODO()`，返回非nil的、空的、不会被取消的、无截止时间、无超时的context。不清楚是否使用或目前还不知道要传递什么上下文信息的时候使用。这俩底层实现一样，仅仅是约定俗成
-     1. 传值：`Context.WithValue()`，复制类型为valueCtx的父Context，保存一个kv对，用于传递数据
-        - 优先从自己存储中检查key，不存在会一级级从parent中继续检查直到顶
-   - 方法
-     1. 取消方法：`WithCancel()`，创建基于parent的可取消的cancelCtx类型的副本，返回一个context和一个CancelFunc，调用CancelFunc即可触发cancel操作
-        - 会向下传递不会向上传递，cancelCtx取消时会将后代节点中所有cancelCtx类型的Context都取消
-        - 处理完后需要调用CancelFunc否则资源占用不释放，可以使用defer确保
-     1. 截止时间：`WithDeadline()`，创建一个基于parent的可取消的context，其过期时间deadline不晚于所设置时间
-        - 如果它的截止时间晚于parent的截止时间就以parent的为准，因为parent的截止时间到了就会取消这个cancelCtx
-        - 如果当前时间已经超过了截止时间，就直接返回一个已经被cancel的timerCtx
-     1. 超时时间：`WithTimeout()`，类似WithDeadline，时间是相对当前时间的过期时长
-1. 最佳实践
-   - 使用
-     1. 一般函数第一个形参通常都为变量命名为ctx的context
-     1. 不将nil作为Context类型的参数值，用Background或TODO创建一个空的
-     1. 只用来临时做函数之间的上下文透传，不持久化 
-     1. key的类型不应该是字符串类型或者其它内建类型，否则容易在包之间使用Context时产生冲突。使用WithValue时，key应是自定义类型
-     1. 常常使用struct{}作为定义key的底层类型。对于exported key的静态类型，常常是接口或指针。这样可以尽量减少内存分配
-     1. context.WithValue()只用于传输流程和API的请求范围数据，不要用它来传递可选参数
-     1. 不要把context存储在结构体中，而是要显式地进行传递
-   - 要尽早地调用才能尽早释放资源，不要单纯地依赖截止时间被动取消
-1. 实例
-    ```go
-    ctx= context.TODO()
-    ctx = context.WithValue(ctx, "key1", "0001")
-    ctx = context.WithValue(ctx, "key2", "0001")
-    ctx = context.WithValue(ctx, "key3", "0001")
-    ```
-1. demo
-   - demo1
-    ```go
-    // WithTimeout相关，子线程监听主线程传入的ctx实现监听主线程状态，一旦ctx.Done()返回子线程即可获知主线程超时
-
-    ctx, cancel := context.WithTimeout(context.TODO(), 5*time.Second)
-	defer cancel()
-	go func(ctx context.Context) {
-		execResult := make(chan bool)
-		// 模拟业务逻辑
-		go func(execResult chan<- bool) {
-			// 模拟处理超时
-			time.Sleep(6 * time.Second)
-			execResult <- true
-		}(execResult)
-		// 等待结果
-		select {
-		case <-ctx.Done():                                              // goroutine需要尝试检查Context的Done是否关闭
-			fmt.Println("超时退出")
-			return
-		case <-execResult:
-			fmt.Println("处理完成")
-			return
-		}
-	}(ctx)
-
-	time.Sleep(10 * time.Second)
-    ```
-   - demo2
-    ```go
-    // WithCancel相关，搭配WaitGroup实现主协程等待子协程
-
-    // 初始化一个context
-	parent := context.Background()
-	// 生成一个取消的context
-	ctx, cancel := context.WithCancel(parent)
-	runTimes := 0
-
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func(ctx context.Context) {
-		for {
-			select {
-			case <-ctx.Done():
-				fmt.Println("Goroutine Done")
-				return
-			default:
-				fmt.Printf("Goroutine Running Times : %d\n", runTimes)
-				runTimes = runTimes + 1
-			}
-			if runTimes > 5 {
-				cancel()
-				wg.Done()
-			}
-		}
-	}(ctx)
-	wg.Wait()
-    ```
-#### 扩展并发原语
+##### 扩展并发原语
 1. 信号量
    - 认识：Semaphore，是用来控制(保护)多个goroutine同时访问多个资源的并发原语，比如数据库连接池、一组客户端的连接
      1. 优势：在批量获取资源的场景中，我建议你尝试使用官方扩展的信号量
@@ -2765,6 +2665,7 @@
 1. 循环栅栏
    - 认识：CyclicBarrier，可重用，用来控制一组请求同时执行的数据结构，用于重复进行一组goroutine同时执行的场景中。大家都到后放开栅栏通过，类似java的CountDownLatch/CyclicBarrier，C#的Barrier
      1. 允许一组 goroutine 彼此等待，到达一个共同的执行点
+     1. 编排一组节点，让这些节点在同一个时刻开始执行任务
      1. 和WaitGroup，
         - WaitGroup：适用“一个goroutine等待一组goroutine到达同一个执行点”或者不需要重用的场景，重用需要小心翼翼，需要保证将WaitGroup的计数值重置到n的时候不会出现并发问题
         - CyclicBarrier：适合在“固定数量的 goroutine 等待同一个执行点”场景中
@@ -2957,7 +2858,7 @@
    - go-pkgz/syncs
      1. SizedGroup：使用信号量和WaitGroup实现，通过信号量控制并发的goroutine数量，或者只控制子任务并发执行时的数量
      1. ErrSizedGroup：比上边提供了error处理的功能
-#### 分布式并发原语
+##### 分布式并发原语
 1. 认识：借助etcd，etcd提供了非常好的分布式并发原语，如分布式互斥锁、分布式读写锁、leader选举、分布式队列、栅栏、STM
 1. leader选举
    - 认识：leader选举可以交给etcd
@@ -3090,8 +2991,153 @@
      1. NewPriorityQueue()：优先级队列
      1. Enqueue()：入队
      1. Dequeue()：出队
+1. 分布式栅栏
+   - 分类
+     1. Barrier：分布式栅栏，如果持有Barrier的节点释放了它，所有等待这个Barrier的节点就不会被阻塞而继续执行
+     1. DoubleBarrier：计数型栅栏，初始化时提供参与节点的数量，当节点都Enter或Leave后，栅栏放开
+   - 方法
+     1. NewBarrier()
+        - Hold()
+        - Release()
+        - Wait()
+     1. NewDoubleBarrier
+        - Enter()：持有，调用会阻塞，直到Enter调用数量满足了count才能继续。让这些节点在同一个时刻开始执行任务
+        - Leave()：释放，和Enter一样，如果你想让一组节点在同一个时刻完成任务
 1. STM
    - 认识：软件事务内存，简化多个key的操作并且提供事务功能
+     1. etcd的有更新多个key的事务，基于CAS实现
+   - demo
+    ```go
+    func doTxnXfer(etcd *v3.Client, from, to string, amount uint) (bool, error) {
+		// 一个查询事务
+		getresp, err := etcd.Txn(ctx.TODO()).Then(OpGet(from), OpGet(to)).Commit()
+		if err != nil {
+			return false, err
+		}
+	
+		// 获取转账账户的值
+		fromKV := getresp.Responses[0].GetRangeResponse().Kvs[0]
+		toKV := getresp.Responses[1].GetRangeResponse().Kvs[1]
+		fromV, toV := toUInt64(fromKV.Value), toUint64(toKV.Value)
+		if fromV < amount {
+			return false, fmt.Errorf("insufficientvalue")
+		}
+	
+		// 转账事务
+	
+		// 条件块
+		txn := etcd.Txn(ctx.TODO()).If(v3.Compare(v3.ModRevision(from), "=", fromKV.ModRevision), v3.Compare(v3.ModRevision(to), "=", toKV.ModRevision))
+		// 成功块
+		txn = txn.Then(OpPut(from, fromUint64(fromV-amount)), OpPut(to, fromUint64(toV+amount))
+		// 提交事务
+		putresp, err := txn.Commit()
+		// 检查事务的执行结果
+		if err != nil {
+			return false, err
+		}
+		return putresp.Succeeded, nil
+	}
+    ```
+#### context
+1. 认识：控制生命周期、追踪协程之间的调用树(上下文树，继承衍生)，在这些树中传递通知和元数据，用在发生超时、主动取消、产生异常时需要进行的抢占、中断其他等后续操作，是一种协程调度的方式。v1.7
+   - 使用一条context链贯穿Server、Connection、Request等，可以将上游的信息共享给下游任务、可发送取消所有下游任务的信号
+   - context本身是不可变的，是线程安全的，可以放心地在多个协程中传递使用
+   - 底层依赖channel实现
+   - v1.7加入标准库
+   - 问题：Context在函数里满天飞，还支持了超时、截止时间方法等“额外”方法
+1. 应用场景
+   - 上下文信息传递：如http的链路信息传递
+   - 控制子goroutine的运行、取消、超时
+1. 组成
+   - `type CancelFunc`：取消方法
+   - `type Context`：初始化
+     1. 默认：`Context.Background()`，返回非nil的、空的、不会被取消的、无截止时间、无超时的context。作为初始节点，方便以后初始化cancelCtx, timerCtx。通常在主方法、初始化、测试时用
+     1. 未定：`Context.TODO()`，返回非nil的、空的、不会被取消的、无截止时间、无超时的context。不清楚是否使用或目前还不知道要传递什么上下文信息的时候使用。这俩底层实现一样，仅仅是约定俗成
+     1. 传值：`Context.WithValue()`，复制类型为valueCtx的父Context，保存一个kv对，用于传递数据
+        - 优先从自己存储中检查key，不存在会一级级从parent中继续检查直到顶
+   - 方法
+     1. 取消方法：`WithCancel()`，创建基于parent的可取消的cancelCtx类型的副本，返回一个context和一个CancelFunc，调用CancelFunc即可触发cancel操作
+        - 会向下传递不会向上传递，cancelCtx取消时会将后代节点中所有cancelCtx类型的Context都取消
+        - 处理完后需要调用CancelFunc否则资源占用不释放，可以使用defer确保
+     1. 截止时间：`WithDeadline()`，创建一个基于parent的可取消的context，其过期时间deadline不晚于所设置时间
+        - 如果它的截止时间晚于parent的截止时间就以parent的为准，因为parent的截止时间到了就会取消这个cancelCtx
+        - 如果当前时间已经超过了截止时间，就直接返回一个已经被cancel的timerCtx
+     1. 超时时间：`WithTimeout()`，类似WithDeadline，时间是相对当前时间的过期时长
+1. 最佳实践
+   - 使用
+     1. 一般函数第一个形参通常都为变量命名为ctx的context
+     1. 不将nil作为Context类型的参数值，用Background或TODO创建一个空的
+     1. 只用来临时做函数之间的上下文透传，不持久化 
+     1. key的类型不应该是字符串类型或者其它内建类型，否则容易在包之间使用Context时产生冲突。使用WithValue时，key应是自定义类型
+     1. 常常使用struct{}作为定义key的底层类型。对于exported key的静态类型，常常是接口或指针。这样可以尽量减少内存分配
+     1. context.WithValue()只用于传输流程和API的请求范围数据，不要用它来传递可选参数
+     1. 不要把context存储在结构体中，而是要显式地进行传递
+   - 要尽早地调用才能尽早释放资源，不要单纯地依赖截止时间被动取消
+1. 实例
+    ```go
+    ctx= context.TODO()
+    ctx = context.WithValue(ctx, "key1", "0001")
+    ctx = context.WithValue(ctx, "key2", "0001")
+    ctx = context.WithValue(ctx, "key3", "0001")
+    ```
+1. demo
+   - demo1
+    ```go
+    // WithTimeout相关，子线程监听主线程传入的ctx实现监听主线程状态，一旦ctx.Done()返回子线程即可获知主线程超时
+
+    ctx, cancel := context.WithTimeout(context.TODO(), 5*time.Second)
+	defer cancel()
+	go func(ctx context.Context) {
+		execResult := make(chan bool)
+		// 模拟业务逻辑
+		go func(execResult chan<- bool) {
+			// 模拟处理超时
+			time.Sleep(6 * time.Second)
+			execResult <- true
+		}(execResult)
+		// 等待结果
+		select {
+		case <-ctx.Done():                                              // goroutine需要尝试检查Context的Done是否关闭
+			fmt.Println("超时退出")
+			return
+		case <-execResult:
+			fmt.Println("处理完成")
+			return
+		}
+	}(ctx)
+
+	time.Sleep(10 * time.Second)
+    ```
+   - demo2
+    ```go
+    // WithCancel相关，搭配WaitGroup实现主协程等待子协程
+
+    // 初始化一个context
+	parent := context.Background()
+	// 生成一个取消的context
+	ctx, cancel := context.WithCancel(parent)
+	runTimes := 0
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func(ctx context.Context) {
+		for {
+			select {
+			case <-ctx.Done():
+				fmt.Println("Goroutine Done")
+				return
+			default:
+				fmt.Printf("Goroutine Running Times : %d\n", runTimes)
+				runTimes = runTimes + 1
+			}
+			if runTimes > 5 {
+				cancel()
+				wg.Done()
+			}
+		}
+	}(ctx)
+	wg.Wait()
+    ```
 #### 特定场景的应用
 1. 通过设置为缓存通道，实现抢购场景的解决方案
     ```go
