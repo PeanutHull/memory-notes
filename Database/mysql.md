@@ -590,6 +590,36 @@
 
     DEALLOCATE PREPARE stmt1;
     ```
+1. 分区
+   - 认识：将一个表或索引分解为多个更小的部分，v5.1新增，v5.6支持分区交换
+     1. 每个分区都是可以独立处理的对象，也可作为更大对象的一部分进行处理
+     1. 只支持水平分区
+     1. 是局部分区，既存放数据又存放索引，不支持全局分区(索引独立)
+   - 分区交换
+     1. 认识：将某个分区的数据交换、移动到其他列属性都一样的表中
+        - InnoDB、MyISAM、NDB支持
+     1. 要求
+        - 要有相同结构
+        - 未分区表中的记录必须要在另一表的分区或子分区范围内
+        - 交换表中不允许有外键
+     1. 分类
+        - Range：根据范围
+        - List：匹配集合中的
+        - Hash：根据给定表达式的计算结果
+        - Key：类似hash
+     1. 操作
+        - 创建
+            ```sql
+            create table xx (
+                id int
+            ) engine=innodb
+            partition by range (id) (
+                partition p0 values less than (10),
+                partition p1 values less than (20)
+            );
+            ```
+        - 删除：`alter table xxx remove partition`
+        - 交换：`alter table xxx1 exchange partition xx with table xxx2`
 1. 视图
    - 理解：即虚拟表，可以对视图进行操作，作用有简化查询，限制用户访问和权限。不支持物理视图，可以进行查询和更改，表改变不会联动视图改变    
    - 创建：`create view viewName as select * from table`，分辨视图 `show full tables;`

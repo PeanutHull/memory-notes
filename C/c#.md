@@ -33,28 +33,24 @@
      1. 防止软件被破解
      1. 运行效率更高
      1. 更容易实现绚丽效果和换肤功能
-### .net
-1. .net
-   - 认识：一个跨平台的开源的开发平台
-     1. c#是旗舰语言
-   - 组成
-     1. .net Framework：最早，仅支持基于windows的设备
-        - WPF：ui框架
-        - windows forms：gui类库
-        - asp.net：用于开发动态网站和wed应用程序
-     1. .net Core：目标运行机不需要.net framework了
-     1. Xamarin：没落的跨平台
-     1. ml.net
+### .NET
+1. 认识：跨平台的开源的开发平台
+   - c#是旗舰语言
+1. 组成
+   - cli：公共语言基础框架，编程语言如c#先转为这个，再通过clr跨平台运行
+   - clr：公共语言运行时
+1. 历史
+   - .NET Framework：1.0~4.6，2002~2015，仅支持基于windows的设备，在Core推出后到4.8版本停止更新了
+   - .NET Core：1.0~3.0，2016~2019，全新的跨平台的开源的产品线，重新设计，不向后兼容
+   - .NET 5：合并了Framework和Core，就是Core的延续
+   - Xamarin：没落的跨平台
+   - ml.net
 1. NuGet：.net的软件包管理器
 1. wiki
-   - c#是一门语言，用于生成面向.net环境的代码，但并不是.net的一部分。c#是.net全能的亲儿子，ASP/VB/F#是能力较弱的亲儿子，其他语言那是干儿子或者过继的
-   - .net是按java的概念迁移对比的，jvm对应clr，java se runtime对应.net framework，jdk对应.net framework sdk，java对应c#
+   - c#用于生成面向.net环境的代码，但并不是.net的一部分。c#是.net全能的亲儿子，ASP/VB/F#是能力较弱的亲儿子，其他语言那是干儿子或者过继的
+   - .net按java的概念迁移的
+     1. jvm对应clr
+     1. java se runtime对应.net framework
+     1. jdk对应.net framework sdk
+     1. java对应c#
    - .net可以看作是对win32 api的封装，win32 api是以dll的方式存在的，是c写的，直接使用win32 api更轻量、更底层
-   - 开发工具用vs
-   - 开发分类
-     1. native apps：xamarin、winForms、wpf
-     1. web：asp.net、asp.net core、js
-     1. game：unity、unreal engine
-     1. .net core
-     1. cloud：aws、azure
-

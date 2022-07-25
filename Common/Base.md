@@ -597,6 +597,7 @@
           1. WinForms：2002，使用GDI+，GDI+是GDI的“面向对象包装”，使用c++实现
         - WPF+C#：2006，window presentation Foundation，微软推出的打破GUI编程旧模式的创新技术，现代，可实现复杂效果，整体渲染框架基于D3D，取代以上三个，使用xaml
           1. DirectX：Direct eXtension，使用c++实现
+          1. 跟html一样，就是界面加元素，c#加事件、动作
         - UWP：2012，只win10，Direct UI、硬件加速、双向绑定、模板、资源字典、高DPI支持
         - WinUI3：支持win32和uwp
      1. linux

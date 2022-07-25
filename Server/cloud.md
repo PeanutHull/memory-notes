@@ -192,8 +192,6 @@
      1. 滚动升级
    - Storage：存储
 1. 容器网络模式
-   - 认识
-     1.  
    - 分类
      1. 隧道封包模式: VxLan/IPIP/GRE,通过tunnel隧道封包建立overlay 网络，实现Pod到Pod的通信
      1. 路由模式：通过映射目标容器网段和主机IP的关系，Pod 之间的通信数据包通过路由表转发到相应节点上
@@ -204,117 +202,18 @@
    - 大型容器网络
      1. 最经典的方式是用 VxLAN 方式构建大型 overlay 网络，从 Google 到阿里云底层皆使用 VxLAN 方式构建数据中心网络，使用MAC in UDP的方法进行封装，对端进行解封
      1. BGP Router 模式
+1. 应用部署方式
+   - 认识：使用manifests文件，即yaml配置形式，其他工具都是这个的封装
+   - 工具
+     1. helm：类似apt get
+     1. kustomize：回归manifests
+     1. operator: Controller + CRD
 1. wiki
    - 用8代替8个字符“ubernete”而成的缩写
    - 前端发布：k8s + skaffold + kaniko + gitops
    - 使用etcd作为数据库
    - ingress相当于7层负载均衡器，工作原理类似nginx
    - service为了访问pod方便，kube-proxy是service的一部分，有四种类型，可以实现接受外边的访问
-### 云计算
-1. 认识
-   - 云部署形式
-     1. 公有云
-     1. 私有云：企业内部
-     1. 混合云：如存储内部、计算外部
-   - 云服务模式
-     1. IaaS：基础设施即服务
-     1. PaaS：平台即服务
-     1. SaaS：软件即服务，面向用户
-1. 虚拟机
-   - 认识：VM，Virtual Machine
-   - 虚拟技术
-     1. 全虚拟化：软件模拟硬件接口，性能低
-     1. 半虚拟化：修改客户操作系统配合
-     1. 硬件辅助虚拟化：硬件支持虚拟硬件接口
-     1. 主机虚拟化
-        - 虚拟硬件接口
-        - 虚拟操作系统接口：更轻量，无法更深层次虚拟，不安全
-     1. 操作系统虚拟化
-1. Hypervisor
-   - 认识：VMM，即Virtual Machine Monitor，虚拟机监视器，一种运行在物理服务器和操作系统之间的中间软件层,可允许多个操作系统共享硬件
-     1. 是一种在虚拟环境中的“元”操作系统。他们可以访问服务器上磁盘和内存在内的所有物理设备
-     1. 不但协调着这些硬件资源的访问，而且在各个虚拟机之间施加防护
-   - 分类
-     1. I型：虚拟机直接运行在系统硬件上，创建硬件全仿真实例，被称为“裸机”型。直接管理调用硬件资源，不需要底层操作系统，也可以将Hypervisor看作一个很薄的操作系统
-        - 方案的性能处于主机虚拟化与操作系统虚拟化之间
-     1. II型：虚拟机运行在传统操作系统上，同样创建的是硬件全仿真实例，被称为“托管（宿主）”型，性能是三种虚拟化技术中最差的
-     1. III型：虚拟机运行在传统操作系统上，创建一个独立的虚拟化实例（容器），指向底层托管操作系统，被称为“操作系统虚拟化”。
-        - 在操作系统中模拟出运行应用程序的容器，所有虚拟机共享内核空间，性能最好，耗费资源最少。缺点是底层和上层必须使用同一种操作系统
-   - 厂商和产品
-     1. VMware vSphere
-     1. 微软Hyper-V
-     1. Citrix XenServer 
-     1. IBM PowerVM
-     1. Red Hat Enterprise Virtulization
-     1. Huawei FusionSphere
-     1. 开源的：KVM、Xen、VirtualBSD等
-1. kvm
-   - 认识：Kernel-Based Virtual Machine，是集成到linux内核的Hypervisor，完全内置于Linux，只需加载即可
-     1. 开源的，需要硬件支持(如Intel-VT，AMD-V)的完全虚拟化
-     1. kvm本身只关注虚拟机调度和内存管理、硬件交互。IO外设的任务交给linux内核和qemu
-   - qemu：虚拟化软件，可以虚拟不同的cpu，支持异构（x86架构可虚拟化出不是x86的架构）
-     1. qemu-kvm：kvm借鉴qemu进行一定修改而形成，用户态管理kvm，网卡，声卡，PCI设备等都是qemu来管理
-   - 安装
-     1. 确认cpu支持虚拟化，intel的VMX，amd的SVM。`grep -E "svm|vmx" /proc/cpuinfo`
-     1. 安装
-        - `yum install -y qemu-kvm libvirt`
-        - `yum install -y virt-install`
-     1. 创建虚拟磁盘：`qemu-img create`
-     1. 启动服务：`systemctl enable libvirtd`
-     1. 上传镜像
-     1. 挂载目录
-     1. 创建虚拟机：`virt-install`
-     1. 启动、查看：`virsh list/start xx`
-     1. 热添加cpu：`virsh edit xx.xml`
-   - 优化
-     1. cpu：物理机到虚拟机多次的上下文切换有性能问题，intel实现了技术VT-x在cpu硬件实现加速转换
-     1. cpu缓存绑定：提高ln缓存亲和力从而提升性能
-     1. 内存：以前VMM通过影子页表决解内存转换，coreI7系列处理器上集成了EPT技术，以硬件辅助的方式完成客户物理内存到机器物理内存的转换，完成内存虚拟化
-1. 云管理平台
-   - 认识：部署，配置管理
-     1. openstack本身不提供虚拟化功能只是管理平台，虚拟化能力由底层的hypervisor（如KVM、Qemu、Xen等）提供，为了方便使用。如果没有openstack，一样可以通过virsh、virt-manager的命令行来实现创建虚拟机的操作
-   - openstack：用于管理基础设施的一系列开源项目组成的平台，是拥有众多支持者的大项目，白金会员等等一堆
-     1. 基础设施层
-        - Nova：计算服务
-        - Glance：镜像服务
-        - Keystone：认证、身份服务
-     1. 扩展基础设施层
-        - Neutron：flat\flatdhcp\vlan，网络服务
-        - Cinder/Swift：存储服务
-        - Designate：dns
-        - ironic：裸机服务
-     1. 增强特性
-        - Horizon：可视化、ui服务
-        - Ceilometer：监控计量服务
-     1. 消费型服务
-        - Heat：编排组织服务
-   - cloudstack
-   - virsh/virt-manager
-   - saltstack
-     1. 认识：服务器管理平台，具备配置管理、远程执行、监控等功能，用salt命令控制多台机器，基于python实现，用python函数执行。可以批量执行命令
-        - 自动化运维利器，提高工作效率、规范业务配置与操作，替换了早期运维人员写特定脚本完成大量重复性工作
-        - 使用yaml脚本编写部署规范
-        - 适合大规模集群部署
-     1. 结构：cs架构，master中心控制，minion被管理客户端
-   - ansible
-     1. 认识：python开发的开源远程部署工具
-        - 轻量级无客户端，使用ssh连接管理系统，不占用机器资源
-        - 敏捷容易上手，适合中小型
-        - 模块化配置
-     1. 使用：playbooks，配置部署编排的规范，语法简单，yml格式
-     1. 模块
-        - file文件和目录以及权限的操作
-        - copy文件传送模块
-        - stat远程文件状态信息
-        - debug打印语句
-        - command/shell执行目标主机命令行
-        - template模板传送
-        - packaging调用目标主机系统包管理工具yum/apt
-        - service系统服务
-     1. 实践
-        - 确保ansible隔离的独立环境运行，使用virtualenv启动隔离环境实例，实现第三方的包的隔离使用
-   - chef
-     1. 认识：ruby编写，cs架构，使用recipe脚本编写部署规范
 ### 微服务
 1. 认识
    - 要有服务发现、流量路由调度、负载均衡、请求降级、熔断、mock支持、请求跟踪、监控统计等特性
@@ -384,13 +283,183 @@
         - 负载均衡：实现服务注册和转发功能
         - 服务网关：反向代理、权限认证、数据剪裁、数据聚合
         - 管理端框架
-### 云原生
+### 云计算
+1. 认识：是互联网按需的访问资源的形式，是一种服务
+   - 组成三要素：计算、存储、网络
+   - 现状
+     1. 都可以用OpenStack的开源Iaas自己搭一套出来了
+     1. 业务上云
+1. 特点
+   - 按需使用，按使用量付费：像水和电
+   - 弹性资源，无限容量
+   - 自助服务，无人值守
+1. 优势
+   - 省时：基础设施投资为0、缩短产品时间
+   - 省钱：按需付费
+   - 省力：业务高可用，运维自动化
+1. 云服务
+   - 资源编排：利用脚本自己手动控制自己对云上资源的需要
+   - 服务托管：以应用为中心，只要求提供某某服务，屏蔽底层基础设施无需关心，但是自身管理应用的编写、发布和运维
+1. wiki
+   - 云服务模式
+     1. IaaS：基础设施即服务
+     1. PaaS：平台即服务
+     1. SaaS：软件即服务，面向用户
+   - 云服务平台
+     1. azure、google cloud
+     1. OpenStack
+     1. aliyun
+   - 著名基金会
+     1. OpenStack
+     1. CNCF
+   - 发展史
+     1. 2006：amazon推出s3、ec2
+     1. 2008：google发布google app engine
+     1. 2011：openstack推出开源Iaas
+     1. 2014：amazon推出lambda
+   - 云部署形式
+     1. 公有云
+     1. 私有云：企业内部
+     1. 混合云：如存储内部、计算外部
+   - 其他
+     1. eBPF 是一种无需更改 Linux 内核代码，便能让程序在内核中运行的技术
+1. 自动化部署工具
+   - 认识：用于几百上千台服务的管理
+   - 分类
+     1. 当下正流行：ansible、terraform，跟云计算走得近、轻量级
+     1. 之前：saltstack、chef、puppet
+   - chef
+     1. 认识：ruby编写，cs架构，使用recipe脚本编写部署规范
+   - ansible
+     1. 认识：python开发的开源远程部署工具
+        - 轻量级无客户端，使用ssh连接管理系统，不占用机器资源
+        - 敏捷容易上手，适合中小型
+        - 模块化配置
+     1. 使用：playbooks，配置部署编排的规范，语法简单，yml格式
+     1. 模块
+        - file文件和目录以及权限的操作
+        - copy文件传送模块
+        - stat远程文件状态信息
+        - debug打印语句
+        - command/shell执行目标主机命令行
+        - template模板传送
+        - packaging调用目标主机系统包管理工具yum/apt
+        - service系统服务
+     1. 实践
+        - 确保ansible隔离的独立环境运行，使用virtualenv启动隔离环境实例，实现第三方的包的隔离使用
+1. 云管理平台
+   - 认识：部署，配置管理
+   - virsh/virt-manager
+   - openstack：用于管理基础设施的一系列开源项目组成的平台，是拥有众多支持者的大项目，白金会员等等一堆
+     1. openstack本身不提供虚拟化功能只是管理平台，虚拟化能力由底层的hypervisor（如KVM、Qemu、Xen等）提供，为了方便使用。如果没有openstack，一样可以通过virsh、virt-manager的命令行来实现创建虚拟机的操作
+     1. 基础设施层
+        - Nova：计算服务
+        - Glance：镜像服务
+        - Keystone：认证、身份服务
+     1. 扩展基础设施层
+        - Neutron：flat\flatdhcp\vlan，网络服务
+        - Cinder/Swift：存储服务
+        - Designate：dns
+        - ironic：裸机服务
+     1. 增强特性
+        - Horizon：可视化、ui服务
+        - Ceilometer：监控计量服务
+     1. 消费型服务
+        - Heat：编排组织服务
+   - saltstack
+     1. 认识：服务器管理平台，具备配置管理、远程执行、监控等功能，用salt命令控制多台机器，基于python实现，用python函数执行。可以批量执行命令
+        - 自动化运维利器，提高工作效率、规范业务配置与操作，替换了早期运维人员写特定脚本完成大量重复性工作
+        - 使用yaml脚本编写部署规范
+        - 适合大规模集群部署
+     1. 结构：cs架构，master中心控制，minion被管理客户端
+   - cloudstack
+#### 虚拟技术
+1. 虚拟机
+   - 认识：VM，Virtual Machine
+   - 虚拟技术
+     1. 全虚拟化：软件模拟硬件接口，性能低
+     1. 半虚拟化：修改客户操作系统配合
+     1. 硬件辅助虚拟化：硬件支持虚拟硬件接口
+     1. 主机虚拟化
+        - 虚拟硬件接口
+        - 虚拟操作系统接口：更轻量，无法更深层次虚拟，不安全
+     1. 操作系统虚拟化
+1. Hypervisor
+   - 认识：VMM，即Virtual Machine Monitor，虚拟机监视器，一种运行在物理服务器和操作系统之间的中间软件层,可允许多个操作系统共享硬件
+     1. 是一种在虚拟环境中的“元”操作系统。他们可以访问服务器上磁盘和内存在内的所有物理设备
+     1. 不但协调着这些硬件资源的访问，而且在各个虚拟机之间施加防护
+   - 分类
+     1. I型：虚拟机直接运行在系统硬件上，创建硬件全仿真实例，被称为“裸机”型。直接管理调用硬件资源，不需要底层操作系统，也可以将Hypervisor看作一个很薄的操作系统
+        - 方案的性能处于主机虚拟化与操作系统虚拟化之间
+     1. II型：虚拟机运行在传统操作系统上，同样创建的是硬件全仿真实例，被称为“托管（宿主）”型，性能是三种虚拟化技术中最差的
+     1. III型：虚拟机运行在传统操作系统上，创建一个独立的虚拟化实例（容器），指向底层托管操作系统，被称为“操作系统虚拟化”。
+        - 在操作系统中模拟出运行应用程序的容器，所有虚拟机共享内核空间，性能最好，耗费资源最少。缺点是底层和上层必须使用同一种操作系统
+   - 厂商和产品
+     1. VMware vSphere
+     1. 微软Hyper-V
+     1. Citrix XenServer 
+     1. IBM PowerVM
+     1. Red Hat Enterprise Virtulization
+     1. Huawei FusionSphere
+     1. 开源的：KVM、Xen、VirtualBSD等
+1. kvm
+   - 认识：Kernel-Based Virtual Machine，是集成到linux内核的Hypervisor，完全内置于Linux，只需加载即可
+     1. 开源的，需要硬件支持(如Intel-VT，AMD-V)的完全虚拟化
+     1. kvm本身只关注虚拟机调度和内存管理、硬件交互。IO外设的任务交给linux内核和qemu
+   - qemu：虚拟化软件，可以虚拟不同的cpu，支持异构（x86架构可虚拟化出不是x86的架构）
+     1. qemu-kvm：kvm借鉴qemu进行一定修改而形成，用户态管理kvm，网卡，声卡，PCI设备等都是qemu来管理
+   - 安装
+     1. 确认cpu支持虚拟化，intel的VMX，amd的SVM。`grep -E "svm|vmx" /proc/cpuinfo`
+     1. 安装
+        - `yum install -y qemu-kvm libvirt`
+        - `yum install -y virt-install`
+     1. 创建虚拟磁盘：`qemu-img create`
+     1. 启动服务：`systemctl enable libvirtd`
+     1. 上传镜像
+     1. 挂载目录
+     1. 创建虚拟机：`virt-install`
+     1. 启动、查看：`virsh list/start xx`
+     1. 热添加cpu：`virsh edit xx.xml`
+   - 优化
+     1. cpu：物理机到虚拟机多次的上下文切换有性能问题，intel实现了技术VT-x在cpu硬件实现加速转换
+     1. cpu缓存绑定：提高ln缓存亲和力从而提升性能
+     1. 内存：以前VMM通过影子页表决解内存转换，coreI7系列处理器上集成了EPT技术，以硬件辅助的方式完成客户物理内存到机器物理内存的转换，完成内存虚拟化
+#### 云原生
 1. 认识：云原生技术有利于各组织在公有云、私有云和混合云等新型动态环境中构建和运行可弹性扩展的应用。云原生的代表技术包括容器、服务网格、微服务、不可变基础设施和声明式API。这些技术能够构建容错性好、易于管理和便于观察的松耦合系统。结合可靠的自动化手段，云原生技术使工程师能够轻松地对系统做出频繁和可预测的重大变更
    - 就是之前是服务器改为云部署，本质没变，“原生”的意义在于享受云带来的一系列便利性，改革技术栈、工具链、交付体系，如service mesh
 1. 容器：云原生的代表技术，是被隔离和限制资源的进程
    - 镜像
    - 命名空间
    - cgroup：限制资源的使用，硬件资源切割为多份
+#### 无服务
+1. 认识：函数即服务
+   - 都是建立在k8s基础之上
+   - 主要适用场景，混合云
+   - 目前缺乏标准
+   - 有事件才有服务，更加节省
+1. 项目
+   - knative
+     1. 特点
+        - 支持配置事件源，事件源和服务隔离
+        - 支持应用弹性扩缩
+        - 应用多版本发布
+        - 流量分发策略：依赖gateway
+     1. 组成
+        - products：google cloud run、redhat openshift
+        - components：serving、eventing
+        - gateway：istio、gloo、contour、kourier
+        - platform：kubernetes
+   - keda：cncf官方项目，基于事件的服务伸缩，专注事件驱动，支持不同事件源
+   - fission
+     1. 先运行运行时，再执行函数
+     1. 面向代码，接近aws lambda
+     1. 支持php、go、python等
+     1. 支持容器
+     1. 可以与keda集成
+1. 生态
+   - Github + ArgoCD实现应用自动部署
+     1. 为Kubernetes而生，遵循声明式GitOps理念的持续部署(CD)工具，负责CD，CI(持续集成)主要是交给jenkins，Gitlab CI等工具
+   - Prometheus监控
 ### wiki
 1. wiki
    - 应用部署形式：物理单机->虚拟机(openstack)->容器->云原生，更敏捷、自动化、效率、低成本
