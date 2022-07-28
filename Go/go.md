@@ -661,14 +661,16 @@
         for {}
         for true{}
         ```
-     1. range：后边跟一个可循环的，自动类型推断，可针对string、array、slice、map。`for range`其实是golang的语法糖，在循环开始前会获取其长度，然后再执行固定次数的循环
-        ```go
-        a := []string{"a","b"};
-        for i,v := range a{}                // 下标i，值v
-        for i,v := range a{}                // 只需要下标
-        for _,v := range a{}                // 只需要值，忽略下标
-
-        ```
+     1. range：后边跟一个可循环的，自动类型推断，可针对string、array、slice、map
+        - 特点
+          1. `for range`其实是golang的语法糖，在循环开始前会获取其长度，然后再执行固定次数的循环
+        - demo
+            ```go
+            a := []string{"a","b"};
+            for i,v := range a{}                // 下标i，值v
+            for i,v := range a{}                // 只需要下标
+            for _,v := range a{}                // 只需要值，忽略下标
+            ```
      1. while：for代替，没有分号
         ```go
         for sum < 1000 {
@@ -1001,6 +1003,38 @@
         - Reflection goes from interface value to reflection object
         - Reflection goes from reflection object to interface value
         - To modify a reflection object, the value must be settable
+1. 内存逃逸
+   - 认识：变量通过能证明整个生命周期运行时完全可知的校验，就可以在栈上分配，否则就是逃逸了，要在堆上分配
+     1. 能在编译期确定作用域的，就会到堆上
+     1. 堆上分配开销大很多
+     1. 如何进行逃逸分析普通使用者不用关心，这是语言编译该考虑的，但是使用上可避免
+   - 引发逃逸的情况
+     1. 在方法内把局部变量指针返回：局部变量逃逸。局部变量原本应在栈中分配、栈中回收。但由于返回时被外部引用，因此其生命周期大于栈，则溢出
+     1. 发送指针或带有指针的值到channel中：指针的值逃逸。编译时没有办法知道哪个goroutine会在channel上接收数据，所以编译器无法知道变量什么时候被释放
+     1. 在一个切片上存储指针或带指针的值：切片的值逃逸。其底层数组可能在栈上分配，但其引用的值一定在堆上，如`[]*string`
+     1. slice的底层数组重新分配：slice逃逸，slice编译时在栈上，基于运行时扩充则会在堆上
+     1. 在interface类型上调用方法：方法都是动态调度的因为方法的真正实现只能在运行时知道， 如io.Reader类型的变量r, 调用r.Read(b)会使r的值和切片b的背后存储都逃逸
+   - 最佳实践
+     1. 不要盲目使用指针作为函数参数，虽然会减少复制操作。当参数为变量自身时，复制是在栈上完成，开销远比变量逃逸到堆上开销小
+     1. 尽量少写逃逸代码，提高运行效率
+   - 操作
+     1. 观察逃逸情况：`go build -gcflags=-m main.go`，提示`xx escapes to heap`
+     1. 避免逃逸检测
+        ```go
+        // 作用是遮蔽输入和输出的依赖关系。使编译器不认为p会通过x逃逸， 因为uintptr()产生的引用是编译器无法理解的
+        // 用于清楚被unsafe.Pointer引用的数据肯定不会被逃逸但编译器却不知道的情况，要小心使用
+        func noescape(p unsafe.Pointer) unsafe.Pointer {
+            x := uintptr(p)
+            return unsafe.Pointer(x ^ 0)
+        }
+        // 使用示例
+        func NewA(s string) A {                                 // NewA会逃逸
+           return A{S: &s}
+        }
+        func NewATrick(s string) ATrick {
+            return ATrick{S: noescape(unsafe.Pointer(&s))}
+        }
+        ```
 1. GC
    - 认识
      1. 自动垃圾回收：使用 Go 语言创建对象的时候，我们没有回收 / 释放的心理负担，想用就用，想创建就创建

@@ -1893,12 +1893,140 @@
         - 问题1：当in chan写满进入读ws协程阻塞时，写协程网络报错关闭ws链接，此时读协程不知道链接已经关闭了
           1. 解决方案：用select同时监听in chan和新加的容量为1的close chan，当进入close chan分支时(关闭ws时同时关闭close chan使其不阻塞)，表示链接被关闭了。同样ws断了链接api也会阻塞，所以都加上
         - 问题2：ws的close是线程安全的，是可重入的，所以可多次关闭，但是close chan不可重入，所以用结构体的标志位指示是否关闭，同时用mutex锁住防止并发关闭
-1. 石墨的长链接网关设计
+1. 石墨的WebSocket长链接网关设计
+   - 简介
+     1. 场景：多客户端数据互相实时同步，服务端批量数据在线推送
+     1. 性能：16核32G单机50万WebSocket长连接，包括用户上下线、消息、回执等四个场景
+        - cpu也就30~40%，内存70~90%
+        - 连接数建立峰值：1~1.5w/s，用户上下线：4w/s，每个用户占用内存47K
+        - 接收数据峰值：10~40w条/s，发送数据峰值：10~40w条/s
    - 设计
-     1. 两级缓存刷新机制，先到内存，再统一到redis
-     1. 动态心跳上报频率，降低心跳上报产生的服务端性能压力
-     1. 每 x 次正常心跳上报，心跳间隔增加 a，增加上限为 y，动态 QPS 最小值为：QPS2=500000/y
-     1. 极限情况下，心跳产生的 QPS 降低 y 倍。在单次心跳超时后服务端立刻将 a 值变为 1s 进行重试。采用以上策略，在保证连接质量的同时，降低心跳对服务端产生的性能损耗
+     1. 连接：可降级的握手流程，网络差客户端webSocket退化成http方式，post方式推送数据，get长轮询读取
+        - 过程
+          1. client发送get获取唯一webSocket ID
+          1. client发起post确认后期降级通路情况，返回ok，第一阶段握手完成
+          1. 通过唯一webSocket ID发起webSocket请求，首先进行2probe和3probe的请求响应确认通信是否畅通
+     1. 心跳设计
+        - 心跳上报时间戳过期两级缓存刷新机制，先在内存进行更新，然后再通过另外的周期进行redis同步
+            ```go
+            for {
+            select {
+            case <-t.C:
+                var now = time.Now().Unix()
+                var clients = make([]*Connection, 0)
+                dispatcher.clients.Range(func(_, v interface{}) bool {
+                    client := v.(*Connection)
+                    lastTs := atomic.LoadInt64(&client.LastMessageTS)
+                    if now-lastTs > int64(expireTime) {
+                        clients = append(clients, client)
+                    } else {
+                        dispatcher.clearRedisMapping(client.Id, client.Uid, lastTs, clearTimeout)
+                    }
+                    return true
+                })
+                for _, cli := range clients {
+                    cli.WsClose()
+                }
+            }
+            }
+            ```
+        - 动态心跳上报频率，降低心跳上报产生的服务端性能压力
+        - 每x次正常心跳上报，心跳间隔增加a，增加上限为y，动态QPS最小值为：QPS2=500000/y
+        - 极限情况下，心跳产生的QPS降低y倍。在单次心跳超时后服务端立刻将a值变为1s进行重试。采用以上策略，在保证连接质量的同时，降低心跳对服务端产生的性能损耗
+     1. 自定义Headers：使用kafka自定义headers避免网关层对消息体解码带来的性能损耗，headers中写入了trace id和时间戳追踪消息的完整消费链路及各阶段时间消耗
+     1. 消息接收与发送
+        - 认识：将每个连接都需要读写的3个goroutine减少为2个，避免内存大量占用
+          1. c.reader的goroutine改为轮询会延迟和锁，c.writer是低频的调整为主动调用，不采用启动goroutine持续监听降低内存消耗
+          1. gev和gnet等基于事件驱动的轻量级高性能网络库，实测发现在大量连接场景下可能产生的消息延迟的问题没有采用
+        ```go
+        // 旧结构
+        type Packet struct {
+            ...
+        }
+        
+        type Connect struct {
+            *websocket.Con
+            send chan Packet
+        }
+        
+        func NewConnect(conn net.Conn) *Connect {
+            c := &Connect{
+                send: make(chan Packet, N),
+            }
+            go c.reader()
+            go c.writer()
+            return c
+        }
+
+        // 新结构
+        type Packet struct {
+        ...
+        }
+        
+        type Connect struct {
+            *websocket.Conn
+            mux sync.RWMutex
+        }
+        
+        func NewConnect(conn net.Conn) *Connect {
+            c := &Connect{
+                send: make(chan Packet, N),
+            }
+            go c.reader()
+            return c
+        }
+        
+        func (c *Connect) Write(data []byte) (err error) {
+            c.mux.Lock()
+            defer c.mux.Unlock()
+            ...
+            return nil
+        }
+
+        ```
+     1. 网关核心对象缓存：采用sync.pool缓存降低GC频率，Connection核心对象重置后put回
+        ```go
+        var ConnectionPool = sync.Pool{
+            New: func() interface{} {
+                return &Connection{}
+            },
+        }
+        
+        func GetConn() *Connection {
+           cli := ConnectionPool.Get().(*Connection)
+            return cli
+        }
+        
+        func PutConn(cli *Connection) {
+            cli.Reset()
+            ConnectionPool.Put(cli)
+        }
+        ```
+     1. 数据传输过程优化：采用MessagePack对消息体进行序列化压缩消息体大小，调整MTU值避免出现分包情况
+        - 对目标服务ip进行MTU极限值探测：a为探测包大小，`ping -s {a} {ip}`
+   - 演进
+     1. 1.0
+        - 架构
+          1. nginx连接到基于Socket.IO的Node.js的网关，被业务逻辑感知
+          1. 业务逻辑将数据pub到redis
+          1. 网关服务通过redis Sub收到消息
+          1. 查询网关集群中的用户会话数据，向客户端进行消息推送
+        - 问题
+          1. nginx仅做TLS解密，请求就透传了
+          1. node性能不好，消耗大量cpu、内存
+          1. 维护与观测：现有监控告警不好接入
+          1. 业务耦合：业务服务与网关功能在同一个服务中，业务对性能的损耗无法针对性水平扩容
+     1. 2.0
+        - 组件：go开发
+          1. WS-Gateway：网关部分，负责TLS证书验证、webSocket连接管理、用户鉴权
+             - ca证书挂载到了服务上：通过火焰图分析TLS握手的内存消耗占总30%，解决要么挂七层负载均衡转移，要么优化Go对TLS握手过程性能
+             - 唯一Socket ID的生成采用雪花算法，容器pod写数据库获取唯一机器码
+             - redis存储uid和Socket ID的关系，kafka只传递uid，WS-API用Socket ID通过事件广播方式查找WS-Gateway节点，评估使用redis，较于kafka性能优异，功能简单，适用于简单业务场景
+          1. WS-API：业务部分，后续组件服务与该服务进行gRPC通信
+        - 流程
+          1. 用户建立连接后，WS-Gateway将连接信息映射关系缓存到redis进行会话节点存储，并通过kafkaWS-API推送消息
+          1. WS-API通过kafka接收客户端上线、上行消息，处理后通过kafka返回消息
+          1. WS-Gateway通过kafka接收，返回给客户端
 ### wiki
 1. 问题
    - 拷贝大切片一定比小切片代价大吗？
