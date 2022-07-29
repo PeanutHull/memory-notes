@@ -2,6 +2,7 @@
 1. 认识：go开发的开源应用容器引擎，可打包应用用于创建可移植的、轻量级的容器，然后批量在生产环境部署
    - 内核容器技术，将(LXC、cgroups、Union FS)整合和包装，形成了标准镜像格式
    - 所有的文件隔离都是进程级别的，隔离效果相比VM要差很多
+   - 是分层存储的，是通过checksum增量存储的
 1. 特点
    - 轻量，内存占用小，高密度(每个虚拟机需要一套os)
    - 快速，毫秒启动
@@ -18,6 +19,21 @@
    - 仓库
    - 命名空间
    - cgroup：限制资源的使用，硬件资源切割为多份
+1. 组成
+   - docker engine
+     1. docker server
+        - persistent storage
+          1. volumes、bind mounts、txxpfs mounts
+        - containerd
+          1. runC：namespace、cgroups、filesystem、linux security
+          1. snapshotter：storage driver
+        - networking
+          1. sandbox
+          1. endpoint
+          1. network driver：host、bridge、overlay、none、macvlan
+          1. IPAM driver
+     1. docker rest api
+     1. docker CLI
 1. wiki
    - 前端发布：k8s + skaffold + kaniko + gitops
 #### 虚拟技术
@@ -302,11 +318,13 @@
    - 容器是云原生的代表技术
 1. 特性
    - 容器
-   - 不可变基础设施：基础设施就是应用运行的环境，不需要进行基础设施的升级，直接替换，如pod相互替换的概念
+   - 不可变基础设施：基础设施就是应用运行的环境，和升级有关。将基础设施作为升级的一部分，直接替换，如pod相互替换的概念，更加稳健
    - 声明式API：通过一行命令执行多个命令的集合，就是写配置然后执行，如用docker-compose，kubectl
    - 微服务：和spring cloud的对比，spring配套非常的全；但是服务网格也可以很全，配套的东西都有，限流什么的
    - 服务网格：建立在微服务之上
    - 持续集成
+1. wiki
+   - 云原生的微服务通过serviceName和kube-dns联通到下边的pod实现，优势是不受语言限制，但是组件不全，可以用服务网格补全
 ##### Kubernetes
 1. 认识：k8s，google开源的一个容器管理、编排、调度的引擎和平台。用于管理云平台中多个主机上的容器化的应用，让部署容器化的应用简单并且高效
    - 提供资源分配管理、健康检查、自愈、伸缩、滚动升级
@@ -323,7 +341,7 @@
      1. Scheduler：调度，关注待调度的Pod、可用的Node，调度算法和策略
         - 将待调度的Pod按照算法和策略绑定到Node上，同时将信息保存在etcd中
         - kubelet通过APIServer监听到Scheduler产生的Pod绑定事件，然后通过Pod的描述装载镜像文件，并且启动容器
-   - NodeL：子节点
+   - Node：子节点
      1. kube-proxy：即Service
         - 定义服务访问入口地址：IP+Port
         - Service与后端Pod副本集群通过组(Label Selector)实现连接
@@ -335,7 +353,9 @@
    - 实体
      1. ConfigMap：配置映射，实际是环境变量键值列表
      1. Secret：机密配置，类似ConfigMap，只是会进行加密
-     1. Pods：容器组，一个pod具有一个ip，该ip在其容器间共享
+     1. Pods：是共享命名空间和文件系统的容器组，一个pod具有一个ip，该ip在其容器间共享
+        - sidecar就是利用pod多个容器实现的
+        - pod在node上，有生命周期，会销毁
      1. Job：任务
      1. Ingress：路由
      1. Storage：存储
@@ -356,6 +376,16 @@
      1. Deployment：部署
         - 替换
         - 滚动升级
+1. 架构
+   - 操作入口：kubectl、restful api、dashboard
+   - master
+     1. api server：负责鉴权等处理总处
+     1. etcd：提供一致性存储能力
+     1. controller：api server调用其完成不同功能
+     1. scheduler：根据调度算法负责选择节点执行
+   - node
+     1. kubelet：负责执行
+     1. pod：被操作的对象
 1. 网络
    - service实现：Service clutserIP就是node side Loadbalancer
      1. Iptables
@@ -369,6 +399,8 @@
      1. BGP Router模式
 1. 生态
    - etcd作为数据库，存master节点信息，多master作高可用
+   - k8s支持其他容器运行时
+     1. k8s移除dockershim进而移除docker运行时，因为除了docker的containerd，其他功能二者有重叠
 1. 运维
    - 操作命令行：kibeadm，kubelet，kubectl
    - 安装：单机安装、集群安装
@@ -380,6 +412,13 @@
         - operator: Controller + CRD
 1. wiki
    - 用8代替8个字符“ubernete”而成的缩写
+   - CRI：k8s的容器运行时，定义了k8s和容器运行时的接口规范，只要实现了该规范的容器运行时都能被k8s所采用，以下是流行的CRI
+     1. containerd：docker自带，通过cri plugin适配CRI
+     1. CRI-O：为CRI量身订造，来自redhat
+   - OCI：容器运行规范，定义了镜像和容器的运行规范并定义了接口
+     1. runC：OCI的一种方式
+   - 和docker：![avatar](../images/server/k8s_docker.jpg)
+     1. kubelet通过gRPC控制dockershim，进而控制docker
 #### 微服务
 1. 认识
    - 要有服务发现、流量路由调度、负载均衡、请求降级、熔断、mock支持、请求跟踪、监控统计等特性
@@ -391,8 +430,10 @@
    - 规模大、复杂、大型
    - 业务复杂度高（子模块多）
    - 需要长期演进
+#### 服务网格
 1. Service Mesh
    - 认识：服务网格，云原生时代下的微服务架构，解决微服务的通信治理问题，屏蔽了复杂的微服务通信，接入对业务无侵入，直接接管tcp和rpc
+     1. 用路由规则定义服务间流量的流向，用enery proxy处理流量
 1. 容器管理平台对微服务的支撑
    - 服务注册发现、服务编排、内部路由
    - 快速部署、负载均衡
@@ -433,6 +474,7 @@
      1. 性能好、语言栈无关，引入门槛高、运维部署复杂
 1. 应用
    - Istio：就是gateway，istio像nginx作外部网关，envoy作为服务层的sidecar，可以识别内部调用走内部mesh集群调用
+     1. 架构：control plane对envoy proxy提供发现、配置、证书管理，反之envoy proxy向其提供心跳，envoy proxy之前互通
    - Envoy
      1. 认识：C++编写的云原生高性能边缘代理、中间代理和服务代理，在服务层上边，作为专门为微服务架构设计的通信总线，定位是作为Service Mesh的数据平面，接管微服务通信的全部流量，对应用程序屏蔽网络和通信的复杂性
         - 内置一个HTTP Server，作为Envoy的管理平面，会注册一系列Handler，对外暴露管理平面的API，用于外界查询当前Envoy各个维度的状态，比如外界可以通过管理平面API查询Envoy当前的集群和路由配置、当前的统计信息等
@@ -490,6 +532,7 @@
    - 用于：不稳定连接、数据移动性等，并且需要实时决策、本地化算力
    - 边缘计算AI用的多
    - 涉及方面：背景、应用案例、VS物联网、VS云原生，开源社区，大厂
+   - 云端、边缘端
 1. 生态
    - 应用：智慧社区、医疗、农业、物流等
    - 网络：5G、NB-loT、zigbee、工业网关
@@ -497,7 +540,7 @@
    - 感知层：监控、PDA、车联网
 1. 分类
    - 传统：远程进入边缘节点，进行运维部署
-   - 云原生：云端统一编排部署
+   - 云原生：云原生边缘计算，云端统一编排部署
      1. 特点：云端管理、边缘计算、云边协同：采用websocket协议
      1. 优势
         - 标准环境：标准api开发和移植应用
@@ -505,11 +548,21 @@
         - 可伸缩性
         - 去中心化：模糊边缘和中心边界
 1. 框架
-   - kubeEdge
-     1. 认识：kubeedge可以搭建边缘计算管理平台，引用云原生对边缘节点进行管理
-     1. 组成
-        - cloud hub：控制面
-        - edge hub：可接受不可靠连接，底层依赖docker部署、mqtt和设备进行通信
+   - kubeEdge：![avatar](../images/server/kubeedge_struct.jpg)
+     1. 认识：华为开源的捐赠给CNCF的首个边缘计算的项目，可以搭建边缘计算管理平台，引用云原生对边缘节点进行管理
+     1. 架构设计
+        - cloud端
+          1. edgeController：控制pod资源
+          1. deviceController：控制设备资源
+          1. cloud hub：控制面，云到边，下发镜像、配置
+        - edge端
+          1. Edged：负责pod的管理，操作，监控，卷等
+          1. MetaManger：负责断网存储edged的数据，解决云边断网pod运行的正常工作的问题
+          1. DeviceTwin：数据复制，解决云边断网设备运行的问题
+          1. EventBus/ServiceBus：事件、消息总线
+          1. edge hub：可接受不可靠连接，上报pod状态，mqtt和设备进行通信
+        - 特点
+          1. 云边通讯方式：都会发生云到边，边到云的数据交互
    - openyurt
    - baetyl
 ### wiki

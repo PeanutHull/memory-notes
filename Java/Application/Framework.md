@@ -603,7 +603,7 @@
      1. greenhouse：也有很多配置和项目
      1. spring-petclinic：用spring boot启动，有很多官方的小例子
 ### Spring Boot
-1. 理解：旨在简化创建产品级的 Spring 应用和服务，提供了命令行工具，是封装了spring再面向用户的
+1. 理解：旨在简化创建产品级的 Spring 应用和服务，提供了命令行工具，是封装了spring再面向用户的 ![avatar](../../images/spring_boot_struct.jpg)
 ### Netty
 1. 理解：Netty是由JBOSS提供的一个java开源框架。Netty提供异步的、事件驱动的网络应用程序框架和工具
 ### 业务网关
