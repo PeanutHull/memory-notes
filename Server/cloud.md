@@ -382,9 +382,9 @@
      1. api server：负责鉴权等处理总处
      1. etcd：提供一致性存储能力
      1. controller：api server调用其完成不同功能
-     1. scheduler：根据调度算法负责选择节点执行
+     1. scheduler：根据调度算法负责选择节点执行pod
    - node
-     1. kubelet：负责执行
+     1. kubelet：负责执行 
      1. pod：被操作的对象
 1. 网络
    - service实现：Service clutserIP就是node side Loadbalancer
@@ -550,6 +550,8 @@
 1. 框架
    - kubeEdge：![avatar](../images/server/kubeedge_struct.jpg)
      1. 认识：华为开源的捐赠给CNCF的首个边缘计算的项目，可以搭建边缘计算管理平台，引用云原生对边缘节点进行管理
+        - 植入k8s，运行部分和k8s类似
+        - 只要接入云端，都可以作为边缘端
      1. 架构设计
         - cloud端
           1. edgeController：控制pod资源
