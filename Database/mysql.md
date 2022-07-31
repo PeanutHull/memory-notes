@@ -176,7 +176,7 @@
         - xtradb
         - 字符集相关
    - performance_schema
-     1. 认识：提供服务器性能表现，可以监视server的执行
+     1. 认识：性能分析的存储引擎，提供服务器性能表现，可以监视server的执行，v5.5引入，v5.6性能影响很小
      1. 分类
         - 全局状态
           1. global_status 
@@ -236,6 +236,19 @@
      1. 派生表：是select返回的虚拟表，即from使用的独立子查询，可以和子查询互换使用。如`from(select * from table2)derivedTableName`
      1. 公共表表达式：CTE，是一个命名的临时结果集，仅在单个SQL语句的执行范围内存在，比派生表更易读，性能更高
    - 表间关系：一对一、一对多、多对多
+   - 改变结构
+     1. 特性
+        - 支持在线DDL
+        - 字段类型、字段宽度都会锁表
+     1. 大表结构修改
+        - 步骤
+          1. 建立新表：修改后的结构
+          1. 老表数据导入新表，建立触发器同步修改到新表
+          1. 数据同步完成后，老表添加排它锁
+          1. 重命名老表和新表的名字：重命名之前不需要有锁，很短暂
+          1. 删除老表
+        - 工具
+          1. pt-online-schema-change：`pt-online-schema-change --alter="" --execute`
 #### sql
 1. sql
    - 分类
@@ -474,11 +487,20 @@
     ```
 #### 事务
 1. 事务
-   - 理解：是区别文件系统的重要特征，是具有原子性的sql语句，所有操作全部执行
-     1. 服务层不管理，由引擎实现
+   - 认识：是区别文件系统的重要特征，是一组sql语句，用于保证一致性
+     1. 由引擎层实现
      1. 不支持嵌套事务：再开启一个事务会隐式提交上一个事务
      1. 一个事务中使用多引擎不靠谱
-   - 特性：ACID
+     1. 主要是mvcc+一些读写锁实现，纯读写锁是上世纪780年代的事情
+   - 常见问题
+     1. 读顺序：Trx_id解决
+     1. 故障恢复：未完全恢复的时候，依然不能被外部看到
+     1. 死锁：使用轻量级锁、碰撞检测、等锁超时
+   - 常见事务单元
+     1. 添加一个索引
+     1. 读取一行记录
+     1. 写入一行记录，同时更新索引
+     1. 删除整张表
    - 使用
     ```sql
     set autocommit=0/1;                 # 禁止/开启自动提交
@@ -496,28 +518,47 @@
     # 分布式事务
     XA {START|BEGIN} xid [JOIN|RESUME]
     ```
-   - 并发事务
-     1. 问题
-        - 更新覆盖丢失
-        - 脏读：A看到了B没commit的数据，A读取的数据是错误的
-        - 不可重复读：本事务中可以看到其他事务提交的数据
-        - 幻读：A没commit查范围数据时，会受到B新插入数据的影响，前后不一样
-     1. 事务隔离：并发本身和数据冲突的"串行化"是矛盾的，用隔离级别平衡隔离和并发的矛盾
-        - 方法
-          1. 读取数据前加锁
-          1. 使用一致性数据快照：MVCC
-        - 隔离级别：由低到高
-          1. Read Uncommitted：未提交读，会导致数据完整性的严重问题，3种问题都存在
-          1. Read Committed：已提交读，避免脏读，本事务中可以看到其他事务提交的数据，导致不可重复读、幻读
-          1. Repeatable Read：可重复读，默认，一个事务开始后其他session对数据库的修改在本事务中不可见，只针对修改不针对插入，避免脏读/不可重复读/幻读
-          1. Serializable：可序列化，事务串行化顺序执行，从mvcc并发控制退化为基于锁的并发控制，读写冲突，并发度急剧下降并增加死锁的机率，避免脏读/不可重复读/幻读
-     1. 在读取数据的时候,innodb几乎不用获得任何锁, 每个查询都通过版本检查,只获得自己需要的数据版本,从而大大提高了系统的并发度
+1. 事务的特性：ACID
+   - 原子性：Atomicity，一个事务是一个整体，所有操作要么全部成功，要么全部失败。只保证回滚到之前就行，和一致性没有关系，原子性不关心并发事务时回滚导致的其他数据误覆盖
+   - 一致性：Consistency，所有操作在任何时候都保证一致，成功后所有操作才可见，如唯一索引回滚后不能有重复键
+   - 隔离性：Isolation，一个事务的修改最终提交前对其他事务不可见，也不会互相影响
+   - 持久性：Durability，一旦事务提交，则其所做的修改就会永久保存到数据库中。此时即使系统崩溃，修改的数据也不会丢失
+1. 隔离性的隔离级别
+   - 认识：用于解决并发事务的问题，并发本身和保证数据正确的"串行化"是矛盾的，用隔离级别平衡隔离和并发的矛盾，是对读写锁的使用
+     1. 是sql 92的标准，隔离性的扩展有了快照级(mvcc)
+   - 隔离级别：由低到高
+     1. Read Uncommitted：未提交读，会导致数据完整性的严重问题
+        - 3种问题都存在，可能读到写过程中的数据
+        - 只加写锁，读不加锁
+        - 读读并行、读写并行、写读并行，写写串行
+     1. Read Committed(RC)：读已提交，读取自身版本和最新版本，以最新为主，不加锁读，本事务中可以看到其他事务提交的数据
+        - 避免脏读，导致不可重复读、幻读
+        - 读锁能被写锁升级，读写并行(写读不行)
+     1. Repeatable Read(RR)：可重复读，默认，事务开始后其他session对数据库的修改在本事务中不可见，只针对修改不针对插入，对读和读的范围加锁，新的满足查询条件的记录不能够插入(间隙锁)
+        - 避免脏读/不可重复读/幻读
+        - 读锁不能被写锁升级，读读并行
+     1. Serializable：序列化，事务串行化顺序执行，从mvcc并发控制退化为基于锁的并发控制，读写会冲突，并发度急剧下降并增加死锁机率
+        - 避免脏读/不可重复读/幻读
+     1. Snapshot isolation：快照
+   - 对应的问题
+     1. 更新会相互覆盖从而丢失数据
+     1. 脏读：A看到了B没commit的数据
+     1. 不可重复读：本事务中可以看到其他事务提交的数据，或者读到自己事务内写前后不一的数据
+     1. 幻读：A没commit查范围数据时，会受到B新插入数据的影响，前后不一样
+   - 实现原理
+     1. 读数据前加锁
+     1. 一致性数据快照：MVCC
+1. 持久性的保证
+   - 丢失的原因
+     1. 磁盘损坏
+     1. 内存易失：刷盘
 #### 锁
 1. 锁
    - 特点
      1. 行锁基于索引项加锁实现，只有通过索引条件检索数据，InnoDB才使用行级锁，否则，InnoDB将使用表锁
      1. 目前处理死锁的方法是：将持有最少行级排它锁的事务回滚
    - 概念
+     1. 悲观乐观的选择：数据争抢更严重的用悲观
      1. 加锁方式
         - 悲观锁
           1. 理解：Pessimistic Locking，读取的时候为后面的更新加锁，之后再来的读写都会等待，属于数据库的锁
@@ -527,6 +568,7 @@
           1. 理解：Optimistic Locking，乐观并发控制。基于数据版本记录机制或CAS操作实现
             - 每次去取数据的时候总认为不会有其他线程对数据进行修改
           1. 优缺点：程序实现，不会存在死锁。但是阻止不了程序之外的数据库操作
+          1. 乐观锁的并发方案：让版本低的并发更新回滚，并发低时性能好，并发高时失败率高
           1. 流程：如updatetime/version等版本标识字段，根据version更新数据，一旦发现其他并发操作更新，会回退，并从新执行自己
              - 读数据时，将version/时间戳一同读出
              - 更新数据时，对比数据局版本
@@ -594,12 +636,17 @@
         - 间隙锁（LOCK_GAP）: lock_mode X locks gap before rec
         - 插入意向锁（LOCK_INSERT_INTENTION）: lock_mode X locks gap before rec insert intention
         - Next-key锁（LOCK_ORNIDARY）: lock_mode X
-     1. 解决方案
+     1. U锁：查看一个事务中是否有写，有写就将操作同一数据的读锁直接提升为写锁，防止读写读写交叉的死锁，属于细微的极致优化
+     1. 最佳实践
         - 通常来说，死锁都是应用设计的问题。死锁的关键在于两个(或以上)的Session加锁的顺序不一致
         - 如果并发查询多个表，约定访问顺序
         - 批量处理数据时事先对数据排序，保证每个线程按固定顺序处理记录，也可以大大降低出现死锁的可能
         - 在同一个事务中，尽可能做到一次锁定获取所需要的资源，不要先共享锁，再排它锁
         - 小事务发生锁冲突的几率也更小
+     1. 处理方案
+        - 尽可能不死锁：使用轻量级锁
+        - 碰撞检测：性能高成本低
+        - 等锁超时
    - 锁类型
      1. 死锁：两个或两个以上争夺资源而相互等待，若无外力将无法推进，导致异常
      1. 活锁：不会阻塞执行，但也不能继续执行，需要一直重复，可能会成功，会降低执行效率，引入随机性解决
@@ -697,6 +744,8 @@
    - 反范式化：没有冗余的数据库未必是最好的数据库，有时为了提高运行效率，就必须降低范式标准，适当保留冗余数据，达到以空间换时间的目的
 1. 结构优化策略
    - 要考虑使用时的场景进行设计
+1. 查询优化策略
+   - 优化包含not in和<>的子查询：将`select xx NOT IN (select xx)`优化为`LEFT JOIN xx WHERE b.xx IS NULL`
 1. 索引优化策略
    - 查询
      1. 索引列上不能使用表达式或函数：无法使用索引了
@@ -722,6 +771,10 @@
         ORDER BY object_schema, object_name;
         ```
      1. 更新索引统计信息、减少索引碎片
+1. 事务优化策略
+   - 减少锁的范围
+   - 允许更多的并行
+   - 选择正确的锁类型
 1. 设计和使用
    - 数据类型
      1. 尽量使用更简单的类型，数据长度越短越好(更少存储内存空间)
@@ -858,6 +911,43 @@
      1. row：预计读出的数据行数，里面所有数字乘积代表需要处理的组合数
      1. extra：问题解决提示信息
 1. 实时获取性能问题sql：`select id,user,host,db,command,time,status,info from information_schema.PROCESSLIST where time >= 60`
+1. sql度量
+   - 获取查询各个阶段的时间花销：推荐用performance_schema代替
+     1. 包含的指标
+        - starting
+        - checking permissions
+        - Opening tables
+        - init
+        - System lock
+        - optimizing
+        - statistics
+        - preparing
+        - executing
+        - Sending data
+        - end
+        - Hesinendables
+        - freeing items
+        - logging slow query
+        - cleaning up
+     1. performance_schema实操
+        ```sql
+        SELECT a.THREAD_ID, SQL_TEXT,c.EVENT_NAME,(c.TIMER_END - c.TIMER_START)/1000000000 AS 'DURATION (ms)'
+        FROM events_statements_history_long a
+        JOIN threads b ON a.'THREAD_ID'=b.'THREAD_ID'
+        JOIN events_stages_history_long c ON c.'THREAD_ID'=b.`THREAD_ID`
+        AND c.'EVENT_ID' BETWEEN a.EVENT_ID AND a.END_EVENT_ID
+        WHERE b.'PROCESSLIST_ID'=CONNECTION_ID()
+        AND a.EVENT_NAME= 'statement/sql/select'
+        ORDER BY a.THREAD_ID,c.EVENT_ID
+        ```
+     1. profiling实操
+        ```sql
+        set profiling = 1;                      # 开启记录，是一个session级的配置
+        ...                                     # 执行查询
+        show profiles;                          # 总时间
+        show profiles for query N;              # 查询详细时间
+        show profiles cpu for query N;
+        ```
 #### 使用实践
 1. 一些场景
    - 查询这个数据是否存在，存在则存到另一张表里：`create table temp as select * from admin a where exists (select uid from user u where a.userName = u.account);`
