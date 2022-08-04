@@ -217,6 +217,7 @@
         defer gClient.Close()
         ```
 ### 中间件
+#### 架构组件
 1. Sentinel
    - 认识：面向分布式服务架构的高可用流量防护组件，以流量为切入点，从限流、流量整形、熔断降级、系统负载保护、热点防护等多个维度来帮助开发者保障微服务的稳定性
      1. 承接ali的双11流量
@@ -235,6 +236,7 @@
      1. 设置ConnState，监听各连接的状态变化
      1. 启动新协程，接管各chan信号
      1. 在新协程中正式启动服务
+#### 文件和配置
 1. viper
    - 认识：配置信息处理框架，各种文件格式、环境变量、ETCD等，检测文件变动
      1. 支持 JSON/TOML/YAML/HCL/envfile/Java properties 等多种格式的配置文件
@@ -255,17 +257,22 @@
     name := viper.Get("app_name")
     ```
 1. fsnotify：监听文件变化，viper的内部就是fsnotify
+#### 数据格式
 1. json-iterator/go：几倍性能于标准库`encoding/json`的100%兼容的json库
    - 只有使用struct才能获得显著的性能提升，因为struct只需一次反射，map每次都要
    - 1.10后性能和标准库差不多了，意义不大了
 1. Simplejson：json快速处理器，关键部分c实现
+#### 网络
 1. go-resty/resty/v2：http请求库
    - 简单、功能丰富，链式调用
    - 自动Unmarshal
+#### 时间
+1. libi/dcron：基于一致性哈希的分布式定时任务库
+1. gorhill/cronexpr：cron表达式解析库，支持到秒，年配置，计算下次调度时间
+#### 程序
 1. go-callvis：函数调用关系图
 1. go-cmp：Google开源的比较库，递归、切片、浮点数、自定义比较，差异查找
 1. 其他
-   - github.com/libi/dcron：基于一致性哈希的分布式定时任务库
    - NSQ：实时分布式mq
    - GoDotEnv：Ruby dotenv项目的go版本
      1. 支持yaml语法
@@ -310,6 +317,55 @@
 1. freecache
 1. caffeine
    - 认识：基础存储没有采用复杂数据结构采用的是ConcurrentHashMap，所有的管理操作异步化、数据驱逐（淘汰）算法采用 W-TinyLFU，以及部分情况 LRF+LFU结合的方式，各种优秀的队列设计，冲突严重hash情况下链表降级采用红黑树来处理 等等优化处理
+#### 分布式协调
+1. etcd
+   - 认识：分布式高可用强一致性的键值对的开源的数据存储系统，被用来作共享配置、服务注册和发现，依赖其作为分布式协调服务。web程序、kubernetes、openstack都在用，go编写
+     1. 可靠：利用raft算法在集群中同步kv，数据持久化
+     1. 快速：单实例支持每秒2k+读操作、1k写操作
+     1. 简单、安全：部署简单、支持ssl验证
+   - 应用场景
+     1. 服务发现
+        - 高可用强一致性的服务存储目录
+        - 心跳：注册服务的健康状况机制，如设置key ttl，保持服务心跳
+        - 查找和连接服务：集群中互相连接，如集群中每个机器部署proxy模式的etcd
+     1. 分布式锁：etcd提供的API
+     1. 分布式队列：在保证队列达到某个条件时再统一按顺序执行，监听不同的目录节点，协调运行
+     1. 集群监控与Leader竞选：本质还是抢锁
+   - 特性
+     1. 能容忍单点故障，能应对网络分区
+   - 功能
+     1. 存储在集群的高可用kv
+     1. 提交版本revision单调递增
+     1. key的底层存储是有序排列的，可以顺序遍历，天然支持用seek和scan实现类似目录的高效遍历
+     1. 同一个key维护多个历史版本，用于实现watch机制，可以用compact删除
+     1. 支持watch机制监听key变化，或某个目录(key前缀)的连续变化，可用于分布式系统的配置分发，状态同步
+     1. 支持复杂事务，如if...then...else...的能力
+     1. 支持lease租约机制实现key的自动过期，会返回租约id，etcd帮忙挂上关系，到期了去删除，可以续租。使用：grant创建租约，put a=1 with lease=5
+   - 使用
+     1. 连接
+        - http+json
+        - grpc：更高效
+   - 最佳实践
+     1. 使用心跳检测：保证服务稳定，通过etcd的目录关联，而不是直接关联，极大减少耦合性
+     1. 可代替zookeeper，可做配置存储
+   - 使用
+     1. 基本
+        - etcd 服务端，etcdctl 客户端
+        - 端口
+          1. 2379：http api
+          1. 2380：peer通信
+     1. 数据库操作：`etcdctl set/get/update/rm/mk/ [/xx/xx] xx`，`etcdctl mkdir/setdir/updatedir/rmdir/ls`
+     1. 备份数据：`etcdctl backup`
+     1. watch：`etcdctl watch/exec-watch`，值一旦变化则输出/执行命令
+     1. 集群操作：`etcdctl member list/remove/add`，节点管理
+   - 运维
+     1. 安装最少3个节点
+   - 比较：![avatar](../images/serviceSupport.png)
+     1. Consul：内置服务注册与发现框架、分布一致性协议实现、健康检查、KV存储、多数据中心方案，go编写
+     1. Zookeeper：ZooKeeper是一个分布式的，开放源码的分布式应用程序协调服务，是Google的Chubby一个开源的实现，是Hadoop和Hbase的重要组件。它是一个为分布式应用提供一致性服务的软件，提供的功能包括：配置维护、域名服务、分布式同步、组服务等。现在都用下边俩了，zk out了
+     1. Nacos ：是构建以“服务”为中心的现代应用架构 (例如微服务范式、云原生范式) 的服务基础设施致力于发现、配置和管理微服务。并且提供了一组简单易用的特性集，能够快速实现动态服务发现、服务配置、服务元数据及流量管理。帮助开发人员更敏捷和容易地构建、交付和管理微服务平台。
+     1. Apollo
+     1. Eureka：netflix的服务发现框架，基于REST服务，定位运行在AWS域中的中间层服务，负载均衡和中间层服务故障转移目的。SpringCloud将它集成在其子项目spring-cloud-netflix中，以实现服务发现功能。主要是包含两个组件，Eureka Server和Eureka Client
 ### 微服务
 1. 微服务
    - 理解：微服务架构是一种更独立的架构模式，能够单独更新和发布。是分布式网状结构，它提倡将单一应用程序划分成一组小的服务，服务之间互相协调、互相配合，为用户提供最终价值。微服务架构 ≈ 模块化开发 + 分布式计算

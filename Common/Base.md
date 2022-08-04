@@ -379,8 +379,14 @@
 #### 一致性算法
 1. raft
    - 背景：选主、保持一致
+     1. 抽屉理论：可以确保日志不会丢失，复制给了大多数。60个抽屉31个放了东西，随意拉开30个抽屉都会拿到东西
    - 认识
      1. paxos是出名的晦涩难懂，raft的设计初衷就是容易理解和简单，redis、etcd的使用 
+     1. 是二阶段提交协议，第二阶段时master周期性通知slave提交数据的commit，所有节点的提交都是异步的
+     1. 由于一半多节点通知才能写入成功，势必导致写入性能差
+     1. 保证
+        - 提交成功的请求，一定不会丢
+        - 各个节点的数据将最终一致
    - 组成
      1. 角色：只在这三种不断转换
         - follower
@@ -388,10 +394,11 @@
         - candidate：选举候选人
         - leader：主节点
           1. 接收client的请求，接收请求后会将日志分发到所有follower(单向)
-     1. 任期：Term，是连续的整数，可以任意时长
+     1. 任期：Term，是连续的整数，单调递增，可以任意时长
         - 每个节点都维护着当前的任期值，在检测到自己的任期值低于其他节点会将自己的设置为检测到的较高值
         - leader和candidate发现自己的任期低于别的节点，则会立即把自己转换为follower
      1. 日志：保证所有follower节点日志副本最终一致
+        - log index：日志行在日志序列的下标
    - 选主
      1. 时机
         - 集群初始化
@@ -402,24 +409,24 @@
           1. 随机时间相同则继续下一轮随机，直到不一样
         - 选主后，term+1，leader定期向所有follower发送心跳信息(Append Entries RPC协议)保持连接
         - follower启动随机超时时间，收到心跳就重置，否则发起幂等的投票
-   - 宕机
-     1. leader宕机
-        - 第一个心跳超时的follower发起投票
-          1. 注意这个时候它依然会向宕机的原leader发出Reuest Vote,但原leader不会回复
-        - 当收到集群超过一半的节点的RequestVote reply后,此时的follower会成为leader
-          1. leader恢复也会变为follower
-     1. follower宕机
-        - 影响不大，leader会幂等的一直发心跳
+     1. 宕机
+        - leader宕机
+          1. 第一个心跳超时的follower发起投票
+             - 注意这个时候它依然会向宕机的原leader发出Reuest Vote,但原leader不会回复
+          1. 当收到集群超过一半的节点的RequestVote reply后,此时的follower会成为leader
+             - leader恢复也会变为follower
+        - follower宕机
+          1. 影响不大，leader会幂等的一直发心跳
    - 日志复制
-     1. 认识：leader将请求包装成log entry分发，数据状态为
+     1. 认识：leader将请求包装成log entry分发，数据状态为是否commit
      1. 步骤
-        - Uncommitted：未提交，leader接收到的数据，1
-          1. leader进行分发，2
-          1. 集群至少一半的节点已接收到数据返回给leader后，3
+        - Uncommitted：未提交，leader接收到的数据 1
+          1. 进行WAL记录，leader进行分发，2
+          1. 集群至少一半的节点已接收到数据返回给leader后，否则为悬而未决状态 3
           1. leader向client确认数据已接收，4
         - Committed：已提交
           1. client返回leader ack，leader修改数据为已提交，5
-          1. leader向follower告知该数据状态已提交，6
+          1. leader异步通知follower该数据状态已提交，6
           1. follower开始commit自己的数据,此时raft集群达到主节点和从节点的一致，7
      1. 异常处理
         - 1 数据未到达leader节点前：leader挂掉不影响一致性
@@ -432,6 +439,8 @@
      1. 形成原因：遇见网络分区一段时间后，超时各选各的主，造成多leader，网络恢复后无法处理
      1. 解决方案
         - 网络分区恢复后：leader间比较term值，小的降为follower
+          1. 节点commit日志最多的选举为leader
+          1. commit日志同样多，则term、log index越大选举为leader
         - 分区中的所有节点会回滚roll back自己的数据日志，并匹配新leader的log日志，然后实现同步提交更新自身的值
         - 最终集群达到整体一致，集群存在唯一leader
 1. Paxos
@@ -580,6 +589,8 @@
    - 继承
    - 抽象
    - 多态
+### 程序
+1. 命令和程序：命令也是程序，命令解释器 bash
 ### 技术体系
 1. 桌面开发架构
    - 分类

@@ -1,101 +1,99 @@
 ### 解决方案
+#### 安全
 1. SELinux：Security Enhanced Linux，安全强化Linux，是强制访问控制系统的一种实现，用于指明进程可以访问的资源，增强系统抵御0-Day的攻击
    - 特点：可查看、热更改、进程初始化/继承/执行三方面进行策略控制、控制范围包括文件系统/目录/文件/文件启动描述符/端口/消息接口/网络接口
    - 使用
      1. getenforce、/usr/sbin/sestatus -v：运行状态，Enforcing/Permissive/Disabled，记录警告并阻止/记录警告不阻止/禁用
      1. setenforce：Enforcing|Permissive|1|0，切换状态保持至关机，从Disabled切出时，要重启并重新创建安全标签(touch /.autorelabel && reboot)
      1. /etc/sysconfig/selinux、/etc/selinux/config：永久修改，修改后重启
-1. 进程守护
-   - 工具：supervisor、systemd、monit(还能性能监控)
-     1. supervisor：进程管理器，用于保证进程的自动重启等。通过fork/exec的方式将这些被管理的进程当作supervisor的子进程来启动，配置进程命令即可，python写的
-        - 启动
-            ```
-            supervisord -c supervisor.conf                                            // 通过配置文件启动supervisor
-            supervisorctl -c supervisor.conf start/stop [all]|[zzg_worker]            // 启动停止所有/一个
-            ```
-        - 操作
-          1. `supervisorctl start/stop/restart all/xx`
-          1. `supervisorctl status`        //查看所有进程的状态
-          1. `supervisorctl update`        //配置文件修改后使用该命令加载新的配置
-          1. `supervisorctl reload`        //重新启动配置中的所有程序
-        - supervisor的配置文件：supervisor.conf
-            ```conf
-            [unix_http_server]
-            file=/tmp/supervisor_zzg.sock                   ; UNIX socket 文件，supervisorctl 会使用
-            chmod=0770                                      ; socket 文件的 mode，默认是 0700
-            chown=zhaozhigang:www                           ; socket 文件的 owner，格式： uid:gid
+#### 进程守护
+1. 工具：supervisor、systemd、monit(还能性能监控)
+1. supervisor：进程管理器，用于保证进程的自动重启等。通过fork/exec的方式将这些被管理的进程当作supervisor的子进程来启动，配置进程命令即可，python写的
+   - 启动
+    ```sh
+    supervisord -c supervisor.conf                                            // 通过配置文件启动supervisor
+    supervisorctl -c supervisor.conf start/stop [all]|[zzg_worker]            // 启动停止所有/一个
+    ```
+   - 操作
+     1. `supervisorctl start/stop/restart all/xx`
+     1. `supervisorctl status`        //查看所有进程的状态
+     1. `supervisorctl update`        //配置文件修改后使用该命令加载新的配置
+     1. `supervisorctl reload`        //重新启动配置中的所有程序
+   - supervisor的配置文件：supervisor.conf
+    ```conf
+    [unix_http_server]
+    file=/tmp/supervisor_zzg.sock                   ; UNIX socket 文件，supervisorctl 会使用
+    chmod=0770                                      ; socket 文件的 mode，默认是 0700
+    chown=zhaozhigang:www                           ; socket 文件的 owner，格式： uid:gid
 
-            [inet_http_server]                              ; HTTP 服务器，提供 web 管理界面
-            port=0.0.0.1:9568                               ; Web 管理后台运行的 IP 和端口，如果开放到公网，需要注意安全性
-            username=resource                               ; 登录管理后台的用户名
-            password=1a2s3dqwe                              ; 登录管理后台的密码
+    [inet_http_server]                              ; HTTP 服务器，提供 web 管理界面
+    port=0.0.0.1:9568                               ; Web 管理后台运行的 IP 和端口，如果开放到公网，需要注意安全性
+    username=resource                               ; 登录管理后台的用户名
+    password=1a2s3dqwe                              ; 登录管理后台的密码
 
-            [supervisord]
-            logfile=/tmp/supervisord_zzg.log                ; 日志文件，默认是 $CWD/supervisord.log
-            logfile_maxbytes=50MB                           ; 日志文件大小，超出会 rotate，默认 50MB
-            logfile_backups=10                              ; 日志文件保留备份数量默认 10
-            loglevel=info                                   ; 日志级别，默认 info，其它: debug,warn,trace
-            pidfile=/tmp/supervisord_zzg.pid                ; pid 文件
-            nodaemon=false                                  ; 是否在前台启动，默认是 false，即以 daemon 的方式启动
-            minfds=655350                                   ; 可以打开的文件描述符的最小值，默认 1024
-            minprocs=65535                                  ; 可以打开的进程数的最小值，默认 200
+    [supervisord]
+    logfile=/tmp/supervisord_zzg.log                ; 日志文件，默认是 $CWD/supervisord.log
+    logfile_maxbytes=50MB                           ; 日志文件大小，超出会 rotate，默认 50MB
+    logfile_backups=10                              ; 日志文件保留备份数量默认 10
+    loglevel=info                                   ; 日志级别，默认 info，其它: debug,warn,trace
+    pidfile=/tmp/supervisord_zzg.pid                ; pid 文件
+    nodaemon=false                                  ; 是否在前台启动，默认是 false，即以 daemon 的方式启动
+    minfds=655350                                   ; 可以打开的文件描述符的最小值，默认 1024
+    minprocs=65535                                  ; 可以打开的进程数的最小值，默认 200
 
-            [rpcinterface:supervisor]
-            supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
+    [rpcinterface:supervisor]
+    supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
 
-            [supervisorctl]
-            serverurl=unix:///tmp/supervisor_zzg.sock       ; 通过 UNIX socket 连接 supervisord，路径与 unix_http_server 部分的 file 一致
-            ;serverurl=http://127.0.0.1:9001                ; 通过 HTTP 的方式连接 supervisord
+    [supervisorctl]
+    serverurl=unix:///tmp/supervisor_zzg.sock       ; 通过 UNIX socket 连接 supervisord，路径与 unix_http_server 部分的 file 一致
+    ;serverurl=http://127.0.0.1:9001                ; 通过 HTTP 的方式连接 supervisord
 
-            [include]                                       ; 包含其他配置文件
-            files = /xdfapp/_zzg/*.conf
-            ```
-        - 子进程配置文件
-            ```conf
-            ; /etc/supervisor.d/*.ini
-            [program:zzg_worker]
-            process_name=%(program_name)s_%(process_num)02d
-            command=php /xdfapp/develop/okayAdmin/artisan queue:work redis --daemon --sleep=1 --tries=1 --env=_lj
-            autostart=true
-            autorestart=true
-            user=zhaozhigang
-            numprocs=1
-            redirect_stderr=true
-            stdout_logfile=/tmp/zzg_worker.log
+    [include]                                       ; 包含其他配置文件
+    files = /xdfapp/_zzg/*.conf
+    ```
+   - 子进程配置文件
+    ```conf
+    ; /etc/supervisor.d/*.ini
+    [program:zzg_worker]
+    process_name=%(program_name)s_%(process_num)02d
+    command=php /xdfapp/develop/okayAdmin/artisan queue:work redis --daemon --sleep=1 --tries=1 --env=_lj
+    autostart=true
+    autorestart=true
+    user=zhaozhigang
+    numprocs=1
+    redirect_stderr=true
+    stdout_logfile=/tmp/zzg_worker.log
 
 
-            ; xes的tw配置
-            [program:confd-tw]
-            command=/usr/local/bin/confd -config-file /home/www/confd-tw/etc/confd-tw.toml
-            autostar=true
-            autorestart=true
-            redirect_stderr=true                            ; redirect proc stderr to stdout
-            stdout_logfile =/dev/stdout
-            stderr_logfile=/dev/stdout
-            loglevel=info
-            startretries=3000                               ; 启动重试次数
-            stopwaitsecs=300                                ; 搞死子进程，等待操作系统将SIGCHLD返回给supervisor的秒数，超过了就直接SIGKILL
-            startsecs=10                                    ; 确认是否启动成功的等待秒数
-            ```
-     1. Systemd
-        - 背景：linux采用init进程启动服务，如`/etc/init.d/apache2 start`或`service apache2 start`，缺点为只能串行启动，只启动脚本，不管其他事情，如session信号通知
-        - 理解：linux系统自带，是操作系统一部分，直接与内核交互，性能出色、功能强大、面向目标，体系庞大复杂。给出目标及依赖条件即可执行。即将程序交给系统管理了，d是daemon的缩写，systemd取代initd，成为系统的第一个进程（PID等于1），其他进程都是它的子进程，EL7才能用
-          1. 处理进程和服务
-          1. 挂载文件系统
-          1. 监控网络套接字(如动态开关进程)
-          1. 运行时系统
-        - systemctl
-          1. 认识：是systemd的进程管理命令
-          1. 使用
-             - `systemctl xx start`：兼容service启停
-             - `systemctl enable xx`：开机启动
-        - 功能：处理时称之为单元，有单元类型
-          1. 服务单元：.service文件，控制unix上的传统服务守护进程，编写.service文件，通过设置参数决定某一命令的守护
-          1. 挂载单元：.mount文件，控制文件系统的挂载，类似mount命令
-          1. 目标单元：.target文件，控制其余的单元，通常是通过将他们分组的方式
-          1. 文件单元：.wants文件，定义要执行的文件集合
-   - 命令(nohup/Screen/Tmux)、Node工具(forever/nodemon/pm2)
-   - 写锁(让工作进程和守护进程争抢写锁，当守护获得写锁时重启工作进程并放弃写锁))
+    ; xes的tw配置
+    [program:confd-tw]
+    command=/usr/local/bin/confd -config-file /home/www/confd-tw/etc/confd-tw.toml
+    autostar=true
+    autorestart=true
+    redirect_stderr=true                            ; redirect proc stderr to stdout
+    stdout_logfile =/dev/stdout
+    stderr_logfile=/dev/stdout
+    loglevel=info
+    startretries=3000                               ; 启动重试次数
+    stopwaitsecs=300                                ; 搞死子进程，等待操作系统将SIGCHLD返回给supervisor的秒数，超过了就直接SIGKILL
+    startsecs=10                                    ; 确认是否启动成功的等待秒数
+    ```
+1. Systemd
+   - 背景：linux采用init进程启动服务，如`/etc/init.d/apache2 start`或`service apache2 start`，缺点为只能串行启动，只启动脚本，不管其他事情，如session信号通知
+   - 理解：linux系统自带，是操作系统一部分，直接与内核交互，性能出色、功能强大、面向目标，体系庞大复杂。给出目标及依赖条件即可执行。即将程序交给系统管理了，d是daemon的缩写，systemd取代initd，成为系统的第一个进程（PID等于1），其他进程都是它的子进程，EL7才能用
+     1. 处理进程和服务
+     1. 挂载文件系统
+     1. 监控网络套接字(如动态开关进程)
+     1. 运行时系统
+   - 使用：systemctl，systemd的管理命令
+     1. `systemctl xx start`：兼容service启停
+     1. `systemctl enable xx`：开机启动
+   - 功能：处理时称之为单元，有单元类型
+     1. 服务单元：.service文件，控制unix上的传统服务守护进程，编写.service文件，通过设置参数决定某一命令的守护
+     1. 挂载单元：.mount文件，控制文件系统的挂载，类似mount命令
+     1. 目标单元：.target文件，控制其余的单元，通常是通过将他们分组的方式
+     1. 文件单元：.wants文件，定义要执行的文件集合
+#### DNS
 1. DNS
    - 理解：域名解析服务，域名和ip的绑定查询，一级级的往上查询，使用UDP协议，53端口
      1. dns解析
@@ -143,6 +141,8 @@
      1. 用法：将请求url中的host修改为httpdns解析给我们的ip, 并在请求header中将host指定为原始域名
      1. httpdns下的https的curl写法：`curl -v "https://xxx" --resolve xx.xx.com:443:xx.xx.xx.xx`，注意httpdns面对https时需要提供正确的host，否则证书返回的不对
    - 开源dns服务：Bind、NSD、PowerDNS、Unbound，选用了powerdns
+#### 高可用
+1. 部署方案：![avatar](../images/server/lvs_keepalived_nginx_server.jpg)
 1. 高可用
    - LVS
      1. 认识：Linux Virtual Server，基于linux操作系统实现的负载均衡器
@@ -189,6 +189,7 @@
           1. 检测到故障，虚拟IP地址会自动漂移到备份服务器，即keepalived广播vip对应的vmac地址由主切换到备用，其他客户端更新ARP表，实现故障转移
           1. keepalive设计是对lvs做故障转移，用在nginx上要写脚本
         - 线上故障：vrrp通道被占用
+#### 其他
 1. tumx：多个界面，断网保存用户操作的界面
 1. 数据恢复工具：ext3grep
 1. 文件、目录的变动监控

@@ -1263,6 +1263,53 @@
      1. 利用连接池最大数量作为一个chan(随便struct{}类型就可以)的缓冲大小，存储工作的连接
         - 在从连接池拿连接时写入chan，不停拿不停写，写满阻塞实现了池的最大忙碌数量，这时候计时器介入，实现获取连接的超时逻辑
         - 往连接池放连接时，不停放，不停取出chan的值，作减法
+   - 排队和超时的机制
+    ```go
+    var timers = sync.Pool{
+        New: func() interface{} {
+            t := time.NewTimer(time.Hour)
+            t.Stop()
+            return t
+        },
+    }
+
+    func (p *ConnPool) waitTurn(ctx context.Context) error {
+        select {                                                    // 先看下全协程生命周期是否超时
+        case <-ctx.Done():
+            return ctx.Err()
+        default:
+        }
+
+        select {                                                    // 进行忙碌chan占用，写入则表示占用成功，waitTurn的turn拿到了
+        case p.queue <- struct{}{}:
+            return nil
+        default:
+        }
+
+        // 接下来进入阻塞排队等待turn
+        timer := timers.Get().(*time.Timer)                         // 使用并发池
+        timer.Reset(p.opt.PoolTimeout)
+
+        select {
+        case <-ctx.Done():                                          // 继续监测全协程生命周期是否超时，是的话重新整理好自己的timer
+            if !timer.Stop() {
+                <-timer.C
+            }
+            timers.Put(timer)
+            return ctx.Err()
+        case p.queue <- struct{}{}:                                 // 等待占用，占用成功重新整理好自己的timer
+            if !timer.Stop() {
+                <-timer.C
+            }
+            timers.Put(timer)
+            return nil
+        case <-timer.C:                                             // 超时逻辑
+            timers.Put(timer)
+            atomic.AddUint32(&p.stats.Timeouts, 1)
+            return ErrPoolTimeout
+        }
+    }
+    ```
 1. sql.DB的连接池实现
    - 认识
      1. 通过MaxOpenConns和MaxIdleConns控制最大的连接数和最大的idle的连接数
@@ -1605,54 +1652,7 @@
             return &RWLocker{}
         }
         ```
-1. 超时排队
-   - go-redis
-    ```go
-    var timers = sync.Pool{
-        New: func() interface{} {
-            t := time.NewTimer(time.Hour)
-            t.Stop()
-            return t
-        },
-    }
-
-    func (p *ConnPool) waitTurn(ctx context.Context) error {
-        select {                                                    // 先看下全协程生命周期是否超时
-        case <-ctx.Done():
-            return ctx.Err()
-        default:
-        }
-
-        select {                                                    // 进行忙碌chan占用，写入则表示占用成功，waitTurn的turn拿到了
-        case p.queue <- struct{}{}:
-            return nil
-        default:
-        }
-
-        // 接下来进入阻塞排队等待turn
-        timer := timers.Get().(*time.Timer)                         // 使用并发池
-        timer.Reset(p.opt.PoolTimeout)
-
-        select {
-        case <-ctx.Done():                                          // 继续监测全协程生命周期是否超时，是的话重新整理好自己的timer
-            if !timer.Stop() {
-                <-timer.C
-            }
-            timers.Put(timer)
-            return ctx.Err()
-        case p.queue <- struct{}{}:                                 // 等待占用，占用成功重新整理好自己的timer
-            if !timer.Stop() {
-                <-timer.C
-            }
-            timers.Put(timer)
-            return nil
-        case <-timer.C:                                             // 超时逻辑
-            timers.Put(timer)
-            atomic.AddUint32(&p.stats.Timeouts, 1)
-            return ErrPoolTimeout
-        }
-    }
-    ```
+#### 并发版爬虫
 1. 爬虫
    - 步骤
      1. 抓取
@@ -1716,6 +1716,71 @@
         - 后续这些自己写的服务process，可以接入服务发现框架consul，实现更健壮的控制
      1. rpc不能传输函数
         - 解决方案：传函数名称的字符串过去，用switch选择
+#### 分布式任务调度
+1. 认识：https://github.com/owenliang/crontab
+   - 实现了服务注册和发现
+   - 节点多任务调度，调度模块涉及并发执行
+   - 依赖etcd的分布式协调服务，做分布式离不开
+     1. 做集群间任务分发
+     1. 做事件广播
+     1. 做分布式锁
+   - 使用cap理论，基于raft协议实现分布式日志同步
+1. 依赖
+   - gorhill/cronexpr
+1. 实现原理
+   - go执行shell的原理是fork子进程进行exec调用，通过pipe获取直接结果
+   - 应用直接接入raft成本太高
+   - 伪分布式
+     1. 经过网络的都可能异常，rpc异常属于常态，导致worker是否完成master不知道，引发worker和master状态不一致、任务重复执行等
+     1. 
+     1. 
+1. 架构设计
+   - 特点
+     1. 所有节点都和etcd交互，利用raft屏蔽分布式环境网络的不确定性
+     1. 无状态master将任务存储到etcd并查询任务，worker通过etcd会实时同步
+     1. 每个worker独立调度全量任务，无需和master产生rpc
+     1. 每个worker用分布式锁抢任务，解决并发调度
+     1. worker存储日志到MongoDB
+   - 结构
+     1. master
+        - 任务管理：将定时任务curd到etcd
+        - 服务发现：通过etcd获取worker列表
+        - 日志管理：查询执行日志
+        - 配置管理
+     1. worker
+        - 任务管理：将目录通过chan传递，内存中建立一模一样的数据
+          1. 任务同步：监听/cron/jobs
+          1. 任务调度：基于cron表达式触发过期任务
+          1. 任务执行：协程池并发执行，基于分布式锁抢占，捕获执行结果写入日志
+          1. 任务控制：监听/cron/killer下的put操作，master把需要kill的put入
+        - 分布式锁：调度互斥，争抢自己要执行的定时任务
+        - 服务注册：健康注册
+        - 日志转储：日志任务调度、执行写入
+          1. 监听调度发来的执行日志，放入batch中
+          1. 对新batch启动定时器，超时未满自动提交
+          1. batch满了立即提交，并取消定时器
+        - 配置管理
+   - 实现摘录
+    ```go
+    // etcd结构
+    /cron/jobs/taskName -> {
+        name,                   // 任务名
+        command,                // shell命令
+        cronExpr                // cron表达式
+    }
+    ```
+1. 意义
+   - 记录下整个架构实现，之后设计分布式架构就有参考了
+1. 实现
+   - 简单任务调度的实现
+     1. 设定一个结构体，包含cron表达式和下次执行时间
+     1. 用一个全局map存储所有的结构体，写入map后，用一个独立协程for循环读取map
+     1. 超过了时间或者到时了就执行，执行完了更新结构体中下次执行时间
+     1. 改进：精确睡到下次任务执行
+   - 常见开源调度架构 - quartz
+     1. 调度master，利用zk做master的standby热备
+     1. 调度master，rpc下发任务给多个执行worker，反之进行状态上报
+#### 流媒体任务调度
 1. 流媒体任务调度
     ```go
     func (r *Runner) startDispatch() {
@@ -1779,6 +1844,7 @@
         }
     }
     ```
+#### 流量转发
 1. 流量转发
    - 使用io.Copy(dst Writer, src Reader)，可实现流量转发
      1. 长连接可以加入心跳机制，保证一直连接，成本低的方式是每次收到信息就重置心跳时间

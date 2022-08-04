@@ -182,8 +182,8 @@
      1. AP：满足可用性，分区容忍性的系统，通常可能对一致性要求低一些，如CouchDB
 1. BASE方案
    - 认识：牺牲某时刻一致性保证最终一致性，对cap的延伸
-     1. Basically Available：基本可用，保证核心可用
-     1. Soft State：软状态，允许系统存在中间状态，不是最终态
+     1. Basically Available：基本可用，损失部分可用性，保证核心可用
+     1. Soft State：软状态，允许系统存在状态同步延迟，不是最终态
      1. Eventually Consistent：最终一致，经过一定时间后，最终能够达到一致的状态
 1. 一致性模型
    - 强一致性
