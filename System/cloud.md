@@ -355,10 +355,11 @@
      1. Secret：机密配置，类似ConfigMap，只是会进行加密
      1. Pods：是共享命名空间和文件系统的容器组，一个pod具有一个ip，该ip在其容器间共享
         - sidecar就是利用pod多个容器实现的
-        - pod在node上，有生命周期，会销毁
+        - pod在node上，会销毁
+          1. 生命周期：挂起、运行、成功、失败、未知，和调度、创建、停止相关
      1. Job：任务
      1. Ingress：路由
-     1. Storage：存储
+     1. Storage：存储，volume
      1. ingress：相当于7层负载均衡器，工作原理类似nginx
      1. service：主要解决的是Pod ip短生命周期带来的问题，kube-proxy是service的一部分，有四种类型，可以实现接受外边的访问
    - 描述
@@ -376,6 +377,26 @@
      1. Deployment：部署
         - 替换
         - 滚动升级
+1. 卷
+   - 认识
+     1. 背景
+        - 容器中文件是临时存放的，崩溃、重启丢失
+        - 一个pod的多个容器需要共享文件时
+     1. docker中的volume是一个目录
+   - 分类
+     1. volume，卷，解决存储，根据不同类型不同作用
+     1. persistentVolume，持久卷，提供了将存储如何供应的细节从其如何使用中抽象出来的api
+     1. storage class：提供了可以自动创建persistentVolume的api
+     1. persistentVolumeClaim：pod通过pvc向storage class申请存储
+   - 类型
+     1. emptyDir：空白卷，pod删除也删除，pod崩溃会保留
+        - 做基于磁盘的归并排序的缓存空间
+        - 为耗时长的任务提供检查点，以便从崩溃前状态恢复执行
+     1. hostPath：能将宿主机上文件、目录挂载到pod中，
+     1. glusterfs
+     1. cephfs
+     1. nfs
+     1. ceph
 1. 架构
    - 操作入口：kubectl、restful api、dashboard
    - master
