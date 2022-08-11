@@ -723,175 +723,6 @@
                 plugin.Register(&MyPlugin)
             }
             ```
-### 算法
-1. Rabin-Karp字符串匹配
-   - 认识：用在了字符子串在另一个字符串的匹配，利用滚动hash计算出母串的hasharray，然后进行比较，再用字符对比解决hash冲突问题
-1. 外部排序
-   - 解析：pipeline思想，将源数据分成一个个的节点，然后归并到最终集
-     1. 每个节点内部使用sort包的内部排序
-     1. 多个节点进行归并计算
-   - 实现
-     1. 多个节点值的归并：可选参数 + 递归
-        ```go
-        func MergeM(inputs ...<-chan int) <-chan int {
-            if len(inputs) == 1 {
-                return inputs[0]
-            }
-
-            m := len(inputs) / 2
-            return Merge(MergeN(inputs[:m]...), MergeN(inputs[m:]...))      // slide和可变参数的转换
-        }
-        ```
-1. 广度优先算法
-   - 认识：上左下右一点点探索，一层层递进，每到一个点都是最短路径，深度优先走不了最短路径
-     1. 往外走好多路线，往回走只有一条，可确定最短路径
-     1. 三种状态，已探索，未探索，待探索
-     1. 爬虫用到，锻炼语言理解
-     1. 找到确定的地方，用程序表达出来
-   - 实现方式
-     1. 用循环创建二维slice
-     1. 使用slice实现队列
-     1. 用Fscanf读取文件
-     1. 对Point的抽象，即坐标：`type point struct{i, j int}`
-1. 手动内存管理
-   - 回收器：多goroutine通信共享channel，实现内存共享池。有获取、回收等操作，实现内存复用，减少累积的内存占用
-    ```go
-    var makes int
-    var frees int
-    
-    func makeBuffer() []byte {
-        makes += 1
-        return make([]byte, rand.Intn(5000000)+5000000)
-    }
-    
-    type queued struct {
-        when time.Time
-        slice []byte
-    }
-    
-    func makeRecycler() (get, give chan []byte) {
-        get = make(chan []byte)
-        give = make(chan []byte)
-    
-        go func() {
-            q := new(list.List)
-            for {
-                if q.Len() == 0 {
-                    q.PushFront(queued{when: time.Now(), slice: makeBuffer()})
-                }
-    
-                e := q.Front()
-    
-                timeout := time.NewTimer(time.Minute)
-                select {
-                case b := <-give:
-                    timeout.Stop()
-                    q.PushFront(queued{when: time.Now(), slice: b})
-    
-                case get <- e.Value.(queued).slice:
-                    timeout.Stop()
-                    q.Remove(e)
-        
-                case <-timeout.C:
-                    e := q.Front()
-                    for e != nil {
-                        n := e.Next()
-                        if time.Since(e.Value.(queued).when) > time.Minute {
-                            q.Remove(e)
-                            e.Value = nil
-                        }
-                        e = n
-                    }
-                }
-            }
-    
-        }()
-    
-        return
-    }
-    
-    func main() {
-        pool := make([][]byte, 20)
-    
-        get, give := makeRecycler()
-    
-        var m runtime.MemStats
-        for {
-            b := <-get
-            i := rand.Intn(len(pool))
-            if pool[i] != nil {
-                give <- pool[i]
-            }
-    
-            pool[i] = b
-    
-            time.Sleep(time.Second)
-    
-            bytes := 0
-            for i := 0; i < len(pool); i++ {
-                if pool[i] != nil {
-                    bytes += len(pool[i])
-                }
-            }
-    
-            runtime.ReadMemStats(&m)
-            fmt.Printf("%d,%d,%d,%d,%d,%d,%d\n", m.HeapSys, bytes, m.HeapAlloc
-                m.HeapIdle, m.HeapReleased, makes, frees)
-        }
-    }
-    ```
-1. Nagle算法
-   - 认识：借用tcp协议里的概念，数据包会在以下两个情况被发送
-     1. 缓冲区的数据包长度达到某个长度（MSS）时
-     1. 或者等待超时（一般为200ms）。在超时之前，来的那么多个数据包，就是凑不齐MSS长度，现在超时了，不等了，立即发送
-   - 特点
-     1. 动态积攒一批处理，提高了吞吐量
-   - 实现：定义一个带锁的全局队列（链表）
-    ```go
-    func CallAPI() error {
-        size := 100
-        batch := 20
-        // 接收任务
-        videoInfos := make([]IVideoInfo, 0, size)
-
-        // 设置一个200ms定时器
-        tick := time.NewTicker(200 * time.Microsecond)
-        defer tick.Stop()
-
-        // 死循环
-        for {
-            select {
-            // 由于定时器，每200ms，都会执行到这一行
-            case <-tick.C:
-                if len(videoInfos) > 0 {
-                    // 200ms超时，发车！去请求下游
-                    limitStartFunc(videoInfos, true)
-                    // 请求结束后把之前收集的数据清空，重新开始收集
-                    // TODO 这里不行吧，上下两行会弄丢数据吧？另外如果limitStartFunc时间太长就排队了
-                    videoInfos = make([]IVideoInfo, 0, size)
-                }
-            // AddChan就是所谓的全局队列
-            case videoInfo, ok := <-AddChan:
-                if !ok {
-                    // 通道关闭时，处理剩余数据
-                    limitStartFunc(videoInfos, false)
-                    videoInfos = make([]IVideoInfo, 0, size)
-                    return nil
-                } else {
-                    videoInfos = append(videoInfos, videoInfo)
-                    // 攒够了一批，发车！
-                    if len(videoInfos) > batch {
-                        limitStartFunc(videoInfos, false)
-                        videoInfos = make([]IVideoInfo, 0, size)
-                        // 重置定时器
-                        tick.Reset(200 * time.Microsecond)
-                    }
-                }
-            }
-        }
-        return nil
-    }
-    ```
 ### 最佳实践
 1. 编写思路
    - 编程起势：首先通过划分结构体，定义不同的功能模块，然后分别实现，最终实现功能
@@ -1248,6 +1079,175 @@
         ```
 1. 性能优化
    - 当一个结构体很大、并且在函数中传递时，可以将结构体拆分成小的，将小的单独传递，将小的组合成原来的大的吗，可以提升性能
+### 算法
+1. Rabin-Karp字符串匹配
+   - 认识：用在了字符子串在另一个字符串的匹配，利用滚动hash计算出母串的hasharray，然后进行比较，再用字符对比解决hash冲突问题
+1. 外部排序
+   - 解析：pipeline思想，将源数据分成一个个的节点，然后归并到最终集
+     1. 每个节点内部使用sort包的内部排序
+     1. 多个节点进行归并计算
+   - 实现
+     1. 多个节点值的归并：可选参数 + 递归
+        ```go
+        func MergeM(inputs ...<-chan int) <-chan int {
+            if len(inputs) == 1 {
+                return inputs[0]
+            }
+
+            m := len(inputs) / 2
+            return Merge(MergeN(inputs[:m]...), MergeN(inputs[m:]...))      // slide和可变参数的转换
+        }
+        ```
+1. 广度优先算法
+   - 认识：上左下右一点点探索，一层层递进，每到一个点都是最短路径，深度优先走不了最短路径
+     1. 往外走好多路线，往回走只有一条，可确定最短路径
+     1. 三种状态，已探索，未探索，待探索
+     1. 爬虫用到，锻炼语言理解
+     1. 找到确定的地方，用程序表达出来
+   - 实现方式
+     1. 用循环创建二维slice
+     1. 使用slice实现队列
+     1. 用Fscanf读取文件
+     1. 对Point的抽象，即坐标：`type point struct{i, j int}`
+1. 手动内存管理
+   - 回收器：多goroutine通信共享channel，实现内存共享池。有获取、回收等操作，实现内存复用，减少累积的内存占用
+    ```go
+    var makes int
+    var frees int
+    
+    func makeBuffer() []byte {
+        makes += 1
+        return make([]byte, rand.Intn(5000000)+5000000)
+    }
+    
+    type queued struct {
+        when time.Time
+        slice []byte
+    }
+    
+    func makeRecycler() (get, give chan []byte) {
+        get = make(chan []byte)
+        give = make(chan []byte)
+    
+        go func() {
+            q := new(list.List)
+            for {
+                if q.Len() == 0 {
+                    q.PushFront(queued{when: time.Now(), slice: makeBuffer()})
+                }
+    
+                e := q.Front()
+    
+                timeout := time.NewTimer(time.Minute)
+                select {
+                case b := <-give:
+                    timeout.Stop()
+                    q.PushFront(queued{when: time.Now(), slice: b})
+    
+                case get <- e.Value.(queued).slice:
+                    timeout.Stop()
+                    q.Remove(e)
+        
+                case <-timeout.C:
+                    e := q.Front()
+                    for e != nil {
+                        n := e.Next()
+                        if time.Since(e.Value.(queued).when) > time.Minute {
+                            q.Remove(e)
+                            e.Value = nil
+                        }
+                        e = n
+                    }
+                }
+            }
+    
+        }()
+    
+        return
+    }
+    
+    func main() {
+        pool := make([][]byte, 20)
+    
+        get, give := makeRecycler()
+    
+        var m runtime.MemStats
+        for {
+            b := <-get
+            i := rand.Intn(len(pool))
+            if pool[i] != nil {
+                give <- pool[i]
+            }
+    
+            pool[i] = b
+    
+            time.Sleep(time.Second)
+    
+            bytes := 0
+            for i := 0; i < len(pool); i++ {
+                if pool[i] != nil {
+                    bytes += len(pool[i])
+                }
+            }
+    
+            runtime.ReadMemStats(&m)
+            fmt.Printf("%d,%d,%d,%d,%d,%d,%d\n", m.HeapSys, bytes, m.HeapAlloc
+                m.HeapIdle, m.HeapReleased, makes, frees)
+        }
+    }
+    ```
+1. Nagle算法
+   - 认识：借用tcp协议里的概念，数据包会在以下两个情况被发送
+     1. 缓冲区的数据包长度达到某个长度（MSS）时
+     1. 或者等待超时（一般为200ms）。在超时之前，来的那么多个数据包，就是凑不齐MSS长度，现在超时了，不等了，立即发送
+   - 特点
+     1. 动态积攒一批处理，提高了吞吐量
+   - 实现：定义一个带锁的全局队列（链表）
+    ```go
+    func CallAPI() error {
+        size := 100
+        batch := 20
+        // 接收任务
+        videoInfos := make([]IVideoInfo, 0, size)
+
+        // 设置一个200ms定时器
+        tick := time.NewTicker(200 * time.Microsecond)
+        defer tick.Stop()
+
+        // 死循环
+        for {
+            select {
+            // 由于定时器，每200ms，都会执行到这一行
+            case <-tick.C:
+                if len(videoInfos) > 0 {
+                    // 200ms超时，发车！去请求下游
+                    limitStartFunc(videoInfos, true)
+                    // 请求结束后把之前收集的数据清空，重新开始收集
+                    // TODO 这里不行吧，上下两行会弄丢数据吧？另外如果limitStartFunc时间太长就排队了
+                    videoInfos = make([]IVideoInfo, 0, size)
+                }
+            // AddChan就是所谓的全局队列
+            case videoInfo, ok := <-AddChan:
+                if !ok {
+                    // 通道关闭时，处理剩余数据
+                    limitStartFunc(videoInfos, false)
+                    videoInfos = make([]IVideoInfo, 0, size)
+                    return nil
+                } else {
+                    videoInfos = append(videoInfos, videoInfo)
+                    // 攒够了一批，发车！
+                    if len(videoInfos) > batch {
+                        limitStartFunc(videoInfos, false)
+                        videoInfos = make([]IVideoInfo, 0, size)
+                        // 重置定时器
+                        tick.Reset(200 * time.Microsecond)
+                    }
+                }
+            }
+        }
+        return nil
+    }
+    ```
 ### 技术方案
 #### 池化：连接池、工作者池
 1. 认识
@@ -1717,28 +1717,26 @@
      1. rpc不能传输函数
         - 解决方案：传函数名称的字符串过去，用switch选择
 #### 分布式任务调度
-1. 认识：https://github.com/owenliang/crontab
-   - 实现了服务注册和发现
+1. 认识：分为master、worker角色负责不同内容，利用etcd作中间件实现分布式高可用、服务注册发现、任务数据分发等，然后批量写入日志
    - 节点多任务调度，调度模块涉及并发执行
    - 依赖etcd的分布式协调服务，做分布式离不开
      1. 做集群间任务分发
      1. 做事件广播
-     1. 做分布式锁
+     1. 做分布式锁：抢任务
+   - 实现服务注册和发现
    - 使用cap理论，基于raft协议实现分布式日志同步
 1. 依赖
-   - gorhill/cronexpr
+   - gorhill/cronexpr：cron表达式解析工具
 1. 实现原理
    - go执行shell的原理是fork子进程进行exec调用，通过pipe获取直接结果
    - 应用直接接入raft成本太高
    - 伪分布式
      1. 经过网络的都可能异常，rpc异常属于常态，导致worker是否完成master不知道，引发worker和master状态不一致、任务重复执行等
-     1. 
-     1. 
 1. 架构设计
    - 特点
      1. 所有节点都和etcd交互，利用raft屏蔽分布式环境网络的不确定性
      1. 无状态master将任务存储到etcd并查询任务，worker通过etcd会实时同步
-     1. 每个worker独立调度全量任务，无需和master产生rpc
+     1. 每个worker独立调度全量任务，无需和master产生rpc(因为通信失败产生误会)
      1. 每个worker用分布式锁抢任务，解决并发调度
      1. worker存储日志到MongoDB
    - 结构
@@ -1771,6 +1769,8 @@
     ```
 1. 意义
    - 记录下整个架构实现，之后设计分布式架构就有参考了
+   - https://github.com/owenliang/crontab
+   - ![avatar](../images/go/go_distribute_crontag.jpeg)
 1. 实现
    - 简单任务调度的实现
      1. 设定一个结构体，包含cron表达式和下次执行时间
@@ -1780,47 +1780,7 @@
    - 常见开源调度架构 - quartz
      1. 调度master，利用zk做master的standby热备
      1. 调度master，rpc下发任务给多个执行worker，反之进行状态上报
-#### 流媒体任务调度
-1. 流媒体任务调度
-    ```go
-    func (r *Runner) startDispatch() {
-        defer func() {
-            if !r.longLived {
-                close(r.Controller)
-                close(r.Data)
-                close(r.Error)
-            }
-        }()
-
-        for {
-            select {                                                    // 指示进行何种任务，生产者消费者模型，dispatcher完后加入到executor
-            case c :=<- r.Controller:
-                if c == READY_TO_DISPATCH {
-                    err := r.Dispatcher(r.Data)                         // 执行任务的数据
-                    if err != nil {
-                        r.Error <- CLOSE
-                    } else {
-                        r.Controller <- READY_TO_EXECUTE
-                    }
-                }
-
-                if c == READY_TO_EXECUTE {
-                    err := r.Executor(r.Data)
-                    if err != nil {
-                        r.Error <- CLOSE
-                    } else {
-                        r.Controller <- READY_TO_DISPATCH
-                    }
-                }
-            case e :=<- r.Error:
-                if e == CLOSE {
-                    return
-                }
-            default:
-            }
-        }
-    }
-    ```
+#### 网关
 1. 网关/反向代理
    - 认识：利用官方httputil包的NewSingleHostReverseProxy方法
    - demo
@@ -1844,7 +1804,6 @@
         }
     }
     ```
-#### 流量转发
 1. 流量转发
    - 使用io.Copy(dst Writer, src Reader)，可实现流量转发
      1. 长连接可以加入心跳机制，保证一直连接，成本低的方式是每次收到信息就重置心跳时间
