@@ -3773,64 +3773,6 @@
      1. http
      1. url
      1. rpc
-        - 认识：支持三个级别：TCP、HTTP、JSONRPC，使用Gob编码的只能go内部
-          1. SOAP RPC：不支持
-        - 访问条件：`func (t *T) MethodName(argType T1, replyType *T2) error`，T/T1/T2必须能被encoding/gob包编解码
-          1. 函数必须是导出的
-          1. 必须有两个导出类型的参数，第一个参数是接收的参数，第二个参数是返回给客户端的参数，第二个参数必须是指针类型的
-          1. 函数要有一个返回值error
-        - tcp协议
-            ```go
-            // client
-            client, err := rpc.Dial("tcp", "127.0.0.1")
-            // Synchronous call
-            var reply int
-            err = client.Call("Xxx.Multiply", args, &reply)
-
-            // server
-            xxx := new(Xxx)
-            rpc.Register(xxx)
-            tcpAddr := net.ResolveTCPAddr("tcp", ":1234")
-            listener := net.ListenTCP("tcp", tcpAddr)
-            for {
-                conn := listener.Accept()                       // 需要自己控制连接
-                rpc.ServeConn(conn)                             // 有连接后，把连接交给rpc来处理
-            }
-            ```
-        - json rpc：使用json编码，不是gob，支持跨语言调用
-            ```go
-            // client
-            client, err := jsonrpc.Dial("tcp", service)
-            // synchronous call
-            args := Args{17, 8}
-            var reply int
-            err = client.Call("Xxx.Multiply", args, &reply)
-
-            // server
-            xxx := new(Xxx)
-            rpc.Register(xxx)
-            tcpAddr := net.ResolveTCPAddr("tcp", ":1234")
-            listener := net.ListenTCP("tcp", tcpAddr)
-            for {
-                conn, _ := listener.Accept()
-                go jsonrpc.ServeConn(conn)                      // 要异步，只能接收一个就阻塞了
-            }
-            ```
-        - http协议
-            ```go
-            // client
-            client := rpc.DialHTTP("tcp", "127.0.0.1:1234")
-            // synchronous call
-            var reply int
-            err = client.Call("Xxx.func", args, &reply)
-
-            // server
-            type Xxx int
-            xxx := new(Xxx)
-            rpc.Register(xxx)
-            rpc.HandleHTTP()                                    // 注册到HTTP协议上
-            err := http.ListenAndServe(":1234", nil)
-            ```
      1. mail：解析邮件消息
      1. smtp：简单邮件传输协议
      1. textproto：实现对基于文本的请求/回复协议的一般性支持
@@ -3844,6 +3786,22 @@
      1. http.Handler
      1. http.Request
      1. http.Response
+   - 方法
+     1. ServeContent()：根据请求头range的ReadSeeker方法
+        ```go
+        // 可拖拽播放的mp4文件输出
+        video, err := os.Open(vl)
+        if err != nil {
+            log.Printf("Error when try to open file: %v", err)
+            sendErrorResponse(w, http.StatusInternalServerError, "Internal Error")
+            return
+        }
+
+        w.Header().Set("Content-Type", "video/mp4")
+        http.ServeContent(w, r, "", time.Now(), video)
+
+        defer video.Close()
+        ```
    - 子包
      1. cookiejar：实现保管在内存中的符合RFC 6265标准的httpCookieJar接口
      1. httputil：提供http公用函数，是http的函数补充
@@ -3854,6 +3812,87 @@
      1. httptest：http测试的单元工具
      1. pprof：返回runtime的统计数据，返回pprof可视化工具规定的格式
      1. httptrace
+   - demo
+    ```go
+    // 一个简单的http服务
+    func handler(w http.ResponseWriter, r *http.Request) {
+        video, err := os.Open("/Users/peanut/Documents/资料/测试资源/016ea36d3ffa47529f086eb1ec149163.mp4")
+        if err != nil {
+            log.Printf("Error when try to open file: %v", err)
+            return
+        }
+
+        data, _ := ioutil.ReadAll(video)
+        w.Header().Set("Content-Type", "video/mp4")
+
+        i, _ := w.Write(data)
+        defer video.Close()
+    }
+
+    func main() {
+        http.HandleFunc("/", handler)
+        log.Fatal(http.ListenAndServe(":8080", nil))
+    }
+    ```
+1. rpc
+   - 认识：支持三个级别：TCP、HTTP、JSONRPC，使用Gob编码的只能go内部
+     1. SOAP RPC：不支持
+   - 访问条件：`func (t *T) MethodName(argType T1, replyType *T2) error`，T/T1/T2必须能被encoding/gob包编解码
+     1. 函数必须是导出的
+     1. 必须有两个导出类型的参数，第一个参数是接收的参数，第二个参数是返回给客户端的参数，第二个参数必须是指针类型的
+     1. 函数要有一个返回值error
+   - tcp协议
+    ```go
+    // client
+    client, err := rpc.Dial("tcp", "127.0.0.1")
+    // Synchronous call
+    var reply int
+    err = client.Call("Xxx.Multiply", args, &reply)
+
+    // server
+    xxx := new(Xxx)
+    rpc.Register(xxx)
+    tcpAddr := net.ResolveTCPAddr("tcp", ":1234")
+    listener := net.ListenTCP("tcp", tcpAddr)
+    for {
+        conn := listener.Accept()                       // 需要自己控制连接
+        rpc.ServeConn(conn)                             // 有连接后，把连接交给rpc来处理
+    }
+    ```
+   - json rpc：使用json编码，不是gob，支持跨语言调用
+    ```go
+    // client
+    client, err := jsonrpc.Dial("tcp", service)
+    // synchronous call
+    args := Args{17, 8}
+    var reply int
+    err = client.Call("Xxx.Multiply", args, &reply)
+
+    // server
+    xxx := new(Xxx)
+    rpc.Register(xxx)
+    tcpAddr := net.ResolveTCPAddr("tcp", ":1234")
+    listener := net.ListenTCP("tcp", tcpAddr)
+    for {
+        conn, _ := listener.Accept()
+        go jsonrpc.ServeConn(conn)                      // 要异步，只能接收一个就阻塞了
+    }
+    ```
+   - http协议
+    ```go
+    // client
+    client := rpc.DialHTTP("tcp", "127.0.0.1:1234")
+    // synchronous call
+    var reply int
+    err = client.Call("Xxx.func", args, &reply)
+
+    // server
+    type Xxx int
+    xxx := new(Xxx)
+    rpc.Register(xxx)
+    rpc.HandleHTTP()                                    // 注册到HTTP协议上
+    err := http.ListenAndServe(":1234", nil)
+    ```
 ### 应用
 1. 文本处理
    - string：分割、连接、转换、取索引、前后缀检测等
