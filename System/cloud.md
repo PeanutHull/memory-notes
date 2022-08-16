@@ -11,14 +11,25 @@
    - web应用的自动化打包和发布
    - 自动化测试和持续集成、发布
    - 应用分发变的很容易
-1. 容器
-   - 认识：是被隔离和限制资源的运行的进程，包含了进程运行所必须的资源如文件系统、系统类库、shell环境等
+1. 实现
+   - 认识：是被隔离和限制资源运行的进程，包含了进程运行所必须的资源如文件系统、系统类库、shell环境等
      1. 容器就是一个进程集合，只需要一个独立的文件系统提供其所需要文件集合即可
      1. 对容器的修改默认不会被保存
+   - 和虚拟机相比：![avatar](../images/system/docker_vs_vm.png)
+     1. 比虚拟机更少的抽象层
+     1. docker在宿主机器操作系统上创建docker引擎，在引擎的基础上再安装应用；VM需要的是Guest OS
+1. 实现
+   - 组成
+     1. 命名空间：容器隔离的基础，包括User，Mnt，Network，UTS，IPC，Pid
+     1. cgroup：限制资源的使用，硬件资源切割为多份，包括cpu，blkio，device，freezer，memory，使用了很多linux的隔离功能
+     1. unionfs：是一种为linux设计的用于把多个文件系统联合到同一个挂载点的文件系统服务
+   - 镜像分层机制
+     1. image layer
+     1. container layer
+     1. union mount point
+1. 体系
    - 镜像：运行时镜像就是容器，保存时容器就是镜像。镜像是分层的
    - 仓库
-   - 命名空间
-   - cgroup：限制资源的使用，硬件资源切割为多份
 1. 组成
    - docker engine
      1. docker server
@@ -433,13 +444,17 @@
         - operator: Controller + CRD
 1. wiki
    - 用8代替8个字符“ubernete”而成的缩写
-   - CRI：k8s的容器运行时，定义了k8s和容器运行时的接口规范，只要实现了该规范的容器运行时都能被k8s所采用，以下是流行的CRI
-     1. containerd：docker自带，通过cri plugin适配CRI
-     1. CRI-O：为CRI量身订造，来自redhat
+   - CRI：k8s的容器运行时，定义了k8s和容器运行时的接口规范，只要实现了该规范的容器运行时都能被k8s所采用，k8s通过CRI操作容器，扩展了对容器的支持范围
+     1. 流行的CRI
+        - containerd：docker自带，通过cri plugin适配CRI
+        - CRI-O：为CRI量身订造，来自redhat
    - OCI：容器运行规范，定义了镜像和容器的运行规范并定义了接口
      1. runC：OCI的一种方式
    - 和docker：![avatar](../images/server/k8s_docker.jpg)
-     1. kubelet通过gRPC控制dockershim，进而控制docker
+     1. kubelet之前通过gRPC控制dockershim，进而控制docker，现在换成了CRI
+   - k3s
+     1. 认识：轻量级kubernetes发行版，小型，部署快，CNCF完全认证的kubernetes产品
+        - 二进制程序不足50MB，只需要512MB内存即可运行
 #### 微服务
 1. 认识
    - 要有服务发现、流量路由调度、负载均衡、请求降级、熔断、mock支持、请求跟踪、监控统计等特性

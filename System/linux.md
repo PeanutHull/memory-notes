@@ -527,7 +527,7 @@
         - fork两次，第一次fork的子进程在fork完成后直接退出，这样第二次fork得到的子进程就没有爸爸了，会自动被init接管
 ### 工具
 1. 定时任务
-   - crontab：linux原生定时器
+   - crontab：linux原生定时器，只能支持到分
      1. -l
      1. -e：打开vi后添加`* * * * *(分时日月周) php index.php >> index.log`
      1. at：执行一次，`at 2:00 tomorrow`

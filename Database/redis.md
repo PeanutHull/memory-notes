@@ -666,7 +666,7 @@
         - info Stats：通用统计
           1. instantaneous_ops_per_sec：ops执行负载
           1. rejected_connections：被拒绝的客户端连接次数，观察这个设置maxclients配置
-          1. sync_partial_err：示主从半同步复制失败的次数，观察这个设置是否需要扩大积压缓冲区
+          1. sync_partial_err：主从半同步复制失败的次数，观察这个设置是否需要扩大积压缓冲区
         - info Server
         - info Memory
           1. used_memory_human:827.46K                  # 内存分配器 (jemalloc) 从操作系统分配的内存总量
