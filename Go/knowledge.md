@@ -340,32 +340,112 @@
      1. 同一个key维护多个历史版本，用于实现watch机制，可以用compact删除
      1. 支持watch机制监听key变化，或某个目录(key前缀)的连续变化，可用于分布式系统的配置分发，状态同步
      1. 支持复杂事务，如if...then...else...的能力
-     1. 支持lease租约机制实现key的自动过期，会返回租约id，etcd帮忙挂上关系，到期了去删除，可以续租。使用：grant创建租约，put a=1 with lease=5
-   - 使用
-     1. 连接
-        - http+json
-        - grpc：更高效
+     1. 支持lease租约机制实现key的自动过期，会返回租约id，etcd帮忙挂上关系，到期了去删除，可以续租
    - 最佳实践
      1. 使用心跳检测：保证服务稳定，通过etcd的目录关联，而不是直接关联，极大减少耦合性
      1. 可代替zookeeper，可做配置存储
    - 使用
+     1. 连接
+        - http+json
+        - grpc：更高效
+     1. 数据操作：`etcdctl set/get/update/rm/mk/ [/xx/xx] xx`，`etcdctl mkdir/setdir/updatedir/rmdir/ls`
+     1. watch：`etcdctl watch/exec-watch`，值一旦变化则输出/执行命令
+     1. txn：事务，`cli.Txn(context.TODO()).If().Then(xx, xx).Commit()`
+        - Txn()：创建
+        - If()/Then()/Else()：条件判断
+        - Commit()：提交
+     1. lease：续约
+        - Grant()：创建一个TTL的Lease，Lessor会将Lease信息持久化存储在boltdb中，`put a=1 with lease=5`
+        - Revoke()：撤销Lease并删除其关联的数据
+        - TimeToLive()：获取一个Lease的剩余时间
+        - KeepAlive()：续期
+        - KeepAliveOnce()
+        - Leases()
+        - Close()
+   - 运维
      1. 基本
         - etcd 服务端，etcdctl 客户端
         - 端口
           1. 2379：http api
           1. 2380：peer通信
-     1. 数据库操作：`etcdctl set/get/update/rm/mk/ [/xx/xx] xx`，`etcdctl mkdir/setdir/updatedir/rmdir/ls`
-     1. 备份数据：`etcdctl backup`
-     1. watch：`etcdctl watch/exec-watch`，值一旦变化则输出/执行命令
-     1. 集群操作：`etcdctl member list/remove/add`，节点管理
-   - 运维
      1. 安装最少3个节点
+     1. 集群操作：`etcdctl member list/remove/add`，节点管理
+     1. 备份数据：`etcdctl backup`
    - 比较：![avatar](../images/serviceSupport.png)
      1. Consul：内置服务注册与发现框架、分布一致性协议实现、健康检查、KV存储、多数据中心方案，go编写
      1. Zookeeper：ZooKeeper是一个分布式的，开放源码的分布式应用程序协调服务，是Google的Chubby一个开源的实现，是Hadoop和Hbase的重要组件。它是一个为分布式应用提供一致性服务的软件，提供的功能包括：配置维护、域名服务、分布式同步、组服务等。现在都用下边俩了，zk out了
      1. Nacos ：是构建以“服务”为中心的现代应用架构 (例如微服务范式、云原生范式) 的服务基础设施致力于发现、配置和管理微服务。并且提供了一组简单易用的特性集，能够快速实现动态服务发现、服务配置、服务元数据及流量管理。帮助开发人员更敏捷和容易地构建、交付和管理微服务平台。
      1. Apollo
      1. Eureka：netflix的服务发现框架，基于REST服务，定位运行在AWS域中的中间层服务，负载均衡和中间层服务故障转移目的。SpringCloud将它集成在其子项目spring-cloud-netflix中，以实现服务发现功能。主要是包含两个组件，Eureka Server和Eureka Client
+   - 分布式锁
+    ```go
+    // 特性使用：事务txn、lease租约、watch监听
+    // 建立连接
+	if client, err = clientv3.New(config); err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	// 1. 上锁并创建租约
+	lease = clientv3.NewLease(client)
+
+	if leaseGrantResp, err = lease.Grant(context.TODO(), 5); err != nil {
+		panic(err)
+	}
+	leaseId = leaseGrantResp.ID
+
+	// 2 自动续约
+	// 创建一个可取消的租约，主要是为了退出的时候能够释放
+	ctx, cancelFunc = context.WithCancel(context.TODO())
+
+	// 3. 释放租约
+	defer cancelFunc()
+	defer lease.Revoke(context.TODO(), leaseId)
+
+	if keepRespChan, err = lease.KeepAlive(ctx, leaseId); err != nil {
+		panic(err)
+	}
+	// 续约应答
+	go func() {
+		for {
+			select {
+			case keepResp = <-keepRespChan:
+				if keepRespChan == nil {
+					fmt.Println("租约已经失效了")
+					goto END
+				} else { // 每秒会续租一次, 所以就会受到一次应答
+					fmt.Println("收到自动续租应答:", keepResp.ID)
+				}
+			}
+		}
+	END:
+	}()
+
+	// 1.3 在租约时间内去抢锁（etcd 里面的锁就是一个 key）
+	kv = clientv3.NewKV(client)
+
+	// 创建事务
+	txn = kv.Txn(context.TODO())
+
+	//if 不存在 key，then 设置它，else 抢锁失败
+	txn.If(clientv3.Compare(clientv3.CreateRevision("lock"), "=", 0)).
+		Then(clientv3.OpPut("lock", "g", clientv3.WithLease(leaseId))).
+		Else(clientv3.OpGet("lock"))
+
+	// 提交事务
+	if txnResp, err = txn.Commit(); err != nil {
+		panic(err)
+	}
+
+	if !txnResp.Succeeded {
+		fmt.Println("锁被占用:", string(txnResp.Responses[0].GetResponseRange().Kvs[0].Value))
+		return
+	}
+
+	// 抢到锁后执行业务逻辑，没有抢到退出
+	fmt.Println("处理任务")
+	time.Sleep(5 * time.Second)
+    ```
 ### 微服务
 1. 微服务
    - 理解：微服务架构是一种更独立的架构模式，能够单独更新和发布。是分布式网状结构，它提倡将单一应用程序划分成一组小的服务，服务之间互相协调、互相配合，为用户提供最终价值。微服务架构 ≈ 模块化开发 + 分布式计算

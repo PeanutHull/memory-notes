@@ -816,6 +816,12 @@
 1. 好处
    - 增大系统容量，如内存、磁盘
    - 提高可用性：即使部分节点 
+#### 分布式锁
+1. 实现方式
+   - mysql：利用排它锁，`select * from lock where lock_name=xxx for update;`
+     1. 问题：性能和sql超时导致的锁超时
+   - redis
+   - etcd/zk
 ### 集群
 1. 认识：一组节点node作为一个整体cluster集中在一起提供服务
 1. 特性
@@ -918,3 +924,47 @@
    - supervisor
 ### rpc
 1. SPRC：搜狗基于Sogou C++ Workflow的企业级RPC系统，qps几十万，支持Protobuf、Thrift
+### 库存扣减
+1. 演进
+   - 单数据库事务保证
+     1. 认识：保证订单+库存扣减的正确性
+        - 性能问题突出，分库分片也无法解决
+     1. demo
+        ```sql
+        Insert into antiRe(code) value (‘订单号+Sku’)
+        Update stockNum set num=num-下单数量 where skuId=商品ID and num-下单数量>0      // 由数据库保证不超卖
+        ```
+   - redis超卖判断 + 数据库持久化
+     1. 认识
+        - 数据库不必再超卖判断
+        - 订单号分库分表，消除数据热点
+     1. redis
+        - 多库存项扣减
+            ```sh
+            // 演示单项扣减，多项相同
+            hset iphone inStock 1               # 设置一个可售库存
+            hget iphone inStock                 # 查看可售库存为1
+            hincrby iphone inStock -1           # 卖出扣减一个，返回剩余0，下单成功
+            hget iphone inStock                 # 验证剩余0
+            hincrby iphone inStock -1           # 应用并发超卖但Redis单线程返回剩余-1，下单失败
+            hincrby iphone inStock 1            # 识别-1，回滚库存加一，剩余0
+            hget iphone inStock                 # 库存恢复正常
+            ```
+        - 扣减的幂等性保证：增加一个防重码校验，`set a100_iphone "1" NX EX 10`
+        - 单向保证：顺序要对
+          1. 扣减库存：1.扣减库存 2.写入防重码，反过来会超卖
+          1. 回滚库存：1.写入防重码 2.扣减库存
+     1. 持久化设计
+        - 事务demo
+            ```sql
+            Insert into antiRe(code) value (‘订单号+Sku’)
+            Update stockNum set num=num-下单数量 where skuId=商品ID
+            ```
+        - 任务引擎实现最终一致性：面临子任务的后续一堆处理中，先把任务落库，通过数据库事务保证子任务拆分和父任务完成的事务一致性
+          1. 把任务调度抽象为业务无关的框架
+          1. 就是抽象个引擎，支持简单的流程编排，并保证至少成功一次，去处理后续的流程
+   - 服务接入端加上防刷
+     1. 认识：解决过热SKU打向Redis单片的性能抖动
+        - 服务端加上毫秒级时间窗的限流：如10ms超过2个就限流，50台服务器一秒可卖1万个货，根据实际情况调整阈值就可以
+   - 服务接入端提前分配库存
+   - 后台差异对比：只要有异构一定有差异，扫描db中数据修复redis中的数据
