@@ -149,12 +149,12 @@
         - 传输层：对应传输层，包含tcp、udp
         - 网际互联层：对应传输层，包括3个主要协议：网际协议(ip)、互联网组管理协议(igmp)、互联网控制报文协议(icmp)
         - 网络接口层：对应数据链路层、物理层，包含地址解析协议(arp)
-     1. 数据封装过程
+     1. 数据封装过程：![avatar](../images/common/data_packet_struct.jpg)
         - 应用数据                                   字节流
         - 应用层                                 FTP头+数据
         - 传输层                           TCP头+FTP头+数据
         - 网络层                      IP头+TCP头+FTP头+数据
-        - 数据链路层           以太帧头+IP头+TCP头+FTP头+数据
+        - 数据链路层           以太帧头18+IP头+TCP头+FTP头+数据
 1. 数据包
    - ip中是mtu包，tcp中mss包
    - 丢包场景
@@ -250,22 +250,26 @@
      1. MSL：Max Segment Lifetime，最长报文段寿命
      1. ISN：Initial Sequence Number，SYN的初始序号，32bit的计数器，每4ms加1。防止在网络中被延迟的分组在以后又被传送，而导致某个连接的一方对它做错误的解释。是动态生成的
 1. 建立连接
-   - 认识：3次握手，为了确认双方的接收能力和发送能力是否正常
+   - 认识：3次握手，为了确认双方分别的接收、发送能力都正常，即都是全双工的，可靠更多的靠重传机制
      1. 服务端：进入LISTEN状态
      1. 客户端：发送SYN包(seq=x)，进入SYN_SEND状态
      1. 服务端：返回SYN(seq=y)+ACK(x+1)应答包，进入SYN_RECV状态
      1. 客户端：收到服务端包后，发送ACK(y+1)，双方进入ESTABLISHED状态
 1. 传输数据
    - 流量控制
+     1. 认识：接收方有接收窗口才能继续收数据，用于双方网速、处理能力不同的协调
      1. 方式
         - win控制：大于0才能传数据包
         - 发送方有周期性探测包探测大小
      1. 认识
         - udp不需要，因为不需要确认
    - 拥塞控制
-     1. 认识：调整网络负载，基于整个网络来考虑，因为重传可能带来网络风暴
+     1. 认识：调节网络负载，基于整个网络来考虑
+        - 因为一直重传可能带来网络风暴，
+        - 动态调整win大小，不只是依赖接收窗口的控制
      1. 拥塞策略算法
         - 慢启动：一点点加速探测网络通道秩序
+        - 拥塞避免？？？
         - 快速重传：服务端主动告诉客户端重传
         - 快速恢复
    - 粘包/拆包
@@ -298,7 +302,7 @@
    - keepalive：保活机制
    - reset报文：RST包，用于释放连接，如服务端在以下情况发送RST包：客户端尝试和未对外提供服务的端口连接时返回、数据交互时程序崩溃时发送、不在其已建立的TCP连接列表内发送、超出重传后超时发送
 1. 断开连接
-   - 认识：4次挥手，整了2次FIN、ACK
+   - 认识：4次挥手，因为连接是全双工的，需要双方都确认关闭，整了2次FIN、ACK
      1. 主动关闭方状态：FIN-WAIT-1、FIN-WAIT-2、TIME-WAIT、CLOSE
      1. 被动关闭方状态：CLOSE-WAIT、LAST-ACK、CLOSE
      1. 谁先断开连接，谁就会产生TIME_WAIT
@@ -585,6 +589,24 @@
      1. Sec-WebSocket-Key 校验key，校验原理是什么？？？
      1. Sec-WebSocket-Protocol 需要的服务名称
      1. Sec-WebSocket-Version 版本号
+   - 协议细节
+     1. 握手
+        ```php
+        // 发起请求
+        GET /chat HTTP/1.1
+        Host: example.com
+        Upgrade: websocket
+        Connection: Upgrade
+        Sec-WebSocket-Key:dGhIIHNhbXBsZSBub25jZQ==..
+
+        // 响应请求
+        HTTP/1.1 101 Switching Protocols
+        Upgrade: websocket
+        Connection: Upgrade
+        Sec-WebSocket-Accept:s3pPLMBiTxaQ9kYGzzhZRbK+x00=
+        Sec-WebSocket-Protocol: chat
+        ```
+     1. data：![avatar](../images/common/websocket_data.jpg)
 1. http2.0
    - 场景
      1. 需要请求的资源数更多了
