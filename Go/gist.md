@@ -1,22 +1,124 @@
-### 语法练习
-1. 数据类型转换
-   - 实例
+### 最佳实践
+1. 编写思路
+   - 编程起势：首先通过划分结构体，定义不同的功能模块，然后分别实现，最终实现功能
+     1. 封装模块
+        - 在一个文件中定义一组接口interface
+        - 定义结构体struct，可以在一个文件或文件夹中专门存放需要用到的struct
+        - 定义new结构体struct的方法，用sync.Once实现单例返回，返回值为接口interface
+        - 定义属于结构体struct、并且实现了接口interface的所有方法，完成~
+     1. 定义对象：针对一类组合，要定义一个结构体作为包装这个对象的载体，而不是孤零零的散着各种数据，面向对象嘛
+   - 函数式编程：通过参数、返回值、变量都是函数的形式，实现更加灵活的处理
+     1. 将具体执行的逻辑包装成一个方法，大家执行这个方法，内部自己定义，就可以将实现解耦了，大家不用关心执行的内容了
+     1. 针对需要外部定义处理的函数，用函数式编程，实现外部定义实现，内部调度，执行那个方法就可以了
+        ```go
+        type Han struct {
+            UseMethod func(int) bool
+        }
+
+        func main() {
+            h := Han{
+                UseMethod: func(i int) bool {
+                    return true
+                },
+            }
+            // 使用
+            h.UseMethod(1)
+        }
+        ```
+   - 并行思想：之前用的读io然后处理的单线程模式，改为：起多个不同的协程(有的处理读io，有的处理逻辑)，协程之间通过chan传递数据，一边读取一边处理的协程模式了
+     1. 耗时的goroutine可以多起几个
+   - 如何设计一个特定领域的整体的处理框架，整体架构就是先划分不同角色，怎么划分好角色最重要，然后利用interface去高内聚每个角色，之间相互配合，实现更强的扩展性
+1. 避坑指南
+   - 谨慎使用全局变量，全局变量不会像PHP一样，在完成一次请求之后被销毁，而是会被改变
+   - 形参是slice、map类型的参数，注意值可被全局修改，array则不会
+     1. 因为：浅复制过程中slice和map底层的类型是个结构体，实际存储值的类型是个指针
+     1. 解决：深拷贝，开辟新内存，指针指向新内存地址，并把原有的值复制过去
+        ```go
+        package main
+
+        import "fmt"
+
+        func main() {
+            paramDemo := []int32{1}
+            fmt.Println("main.paramDemo 1", paramDemo)
+            // 初始化新空间
+            paramDemoCopy := make([]int32, len(paramDemo))
+            // 深拷贝
+            copy(paramDemoCopy, paramDemo)
+            demo(paramDemoCopy)
+            fmt.Println("main.paramDemo 2", paramDemo)
+        }
+
+        func demo(paramDemo []int32) ([]int32, error) {
+            paramDemo[0] = 2
+            return paramDemo, nil
+        }
+
+        // [Running] go run ".../demo/main.go"
+        // main.paramDemo 1 [1]
+        // main.paramDemo 2 [1]
+        ```
+   - 资源使用完毕，记得释放资源或回收资源
+     1. 原因
+        - 资源连接数线性增长
+        - 如果一直持有，资源服务端也有超时时间
+     1. 方法：写成`defer close()`
+   - 不要依赖map遍历的顺序
+     1. 因为：底层实现都是数组+类似拉链法，以下3点都决定了map本来就是无序的，所以Go语言为了避免开发者依赖元素顺序，每次遍历的时候都是随机了一个索引起始值。然后PHP通过额外的内存空间维护了map元素的顺序
+        - hash函数无序写入
+        - 成倍扩容
+        - 等量扩容
+   - 不要并发写map，会触发panic
+   - 注意判断指针类型不为空nil，再操作
     ```go
-    var f float64 = float64(i)
-    // 或者
-    f := float64(i)
+    resp, err := http.Get("https://www.example.com")
 
-    // string转为int、int64
-    aa := "111"
-	// 这样是转成 int
-	b, err := strconv.Atoi(aa)
-	fmt.Printf("b: %d, err: %v   \n", b, err)
+    // 错误示范
+	if resp.StatusCode != http.StatusOK || err != nil {
+		// 当 resp为nil时 会触发panic
+		// 当 resp.StatusCode != http.StatusOK 时err可能为nil 触发panic
+		log.Printf("err: %s", err.Error())
+	}
 
-	// 这样是转成 int64
-	c, err := strconv.ParseInt(aa, 10, 64)
-	fmt.Printf("c: %d, err: %v   \n", c, err)
+    // 正确示范
+    if err != nil {
+		// 报错并记录异常日志
+		log.Printf("err: %s", err.Error())
+		return
+	}
+	// 模拟业务code不为成功的code
+	if resp != nil && resp.StatusCode != http.StatusOK {
+		// 报错并记录异常日志
+	}
     ```
-   - 实现类型检查的方法
+   - json解析不存在的默认给类型零值，所以接口请求参数不要使用0作为特殊意义值
+1. 性能优化
+   - 当一个结构体很大、并且在函数中传递时，可以将结构体拆分成小的，将小的单独传递，将小的组合成原来的大的嘛，可以提升性能
+   - 全局变量可以避免重复申请带来的内存交互
+#### 语法练习
+1. 数据类型
+   - 引号输出
+     1. 使用反引号：`a := `"xx"``
+     1. 使用转义：`a := "\"xx\""`
+     1. 使用strconv包：`a := strconv.Quote("xx")`
+   - 类型转换
+     1. 实例
+        ```go
+        var f float64 = float64(i)
+        // 或者
+        f := float64(i)
+
+        // string转为int、int64
+        aa := "111"
+        // 这样是转成 int
+        b, err := strconv.Atoi(aa)
+        fmt.Printf("b: %d, err: %v   \n", b, err)
+
+        // 这样是转成 int64
+        c, err := strconv.ParseInt(aa, 10, 64)
+        fmt.Printf("c: %d, err: %v   \n", c, err)
+        ```
+   - 类型检查
      1. 需要无数的`if v,ok=value.(xxType);!ok{}`
      1. 或者用`v.(xxType)`直到panic
      1. 或者封装snyc.Map并且对外提供指定类型的Load，Delete等方法实现类型限定
@@ -54,6 +156,24 @@
             cMap.m.Delete(key)
         }
         ```
+   - 判断接口类型 + 结构体切片用法
+    ```go
+    // 参数支持constant.ServerConfig或者[]constant.ServerConfig
+    func (n *ConfigureCenterNacos) InitServer(opts interface{}) (interface{}, error) {
+        switch v := opts.(type) {                                                           // v获取了opts的值和类型
+        case constant.ServerConfig:
+            n.serverConfig = []constant.ServerConfig{                                       // 结构体切片的赋值方式
+                v,
+            }
+            return n.serverConfig, nil
+        case []constant.ServerConfig:
+            n.serverConfig = v
+            return n.serverConfig, nil
+        default:
+            return nil, errors.New("config opts error")
+        }
+    }
+    ```
 1. slice
    - 当作函数参数传递时修改slice
     ```go
@@ -164,6 +284,7 @@
     ```
 1. 死循环：`for {}`
 1. 函数
+   - 基础
     ```go
     // 多值返回
     func swap(x, y string) (string, string) {           // 缩写参数类型
@@ -184,6 +305,72 @@
     func Del(key ...string) {
         err = vr.Del(key...)                            // 使用...传递可选参数
         return
+    }
+    ```
+   - 可选参数实践
+    ```go
+    // 使用NewQueue，动态改变可选的新参数的方法
+    // 用新的方法处理不同情况下不同的参数，NewQueue相当于一个代理方法
+    type Queue struct {
+        Name     string
+        MaxLimit int
+
+        // monitor
+        MonitorInterval int
+    }
+
+    type QueueOption func(*Queue)
+
+    func WithMaxLimit(max int) QueueOption {
+        return func(q *Queue) {
+            q.MaxLimit = max
+        }
+    }
+
+    func WithMonitorInterval(seconds int) QueueOption {
+        return func(q *Queue) {
+            q.MonitorInterval = seconds
+        }
+    }
+
+    func NewQueue(name string, options ...QueueOption) *Queue {
+        queue := &Queue{name, 10, 5}
+
+        for _, o := range options {
+            o(queue)
+        }
+
+        return queue
+    }
+    ```
+   - 函数式编程和循环
+    ```go
+    for _, m := range mySlice {
+        correctM ：= m
+        a := myStruct{
+            name: "xx"
+            myFunc: func() int {
+                return m                // 这里只是返回了一个函数，这个函数的执行时机是整个for循环结束后，所以这么写m无法达到目的，应该使用另外定义的变量
+            }
+        }
+    }
+    ```
+   - 闭包
+    ```go
+    // 闭包，闭包是一个函数值，来自函数体的外部的变量引用，函数可以对这个引用值进行访问和赋值；换句话说这个函数被“绑定”在这个变量上
+    func adder() func(int) int {   // 函数adder返回一个闭包。每个闭包都被绑定到其各自的sum变量上，pos按照pos的节奏，neg按照..，两个独立变量被赋值
+        sum := 0
+        return func(x int) int {
+            sum += x
+            return sum
+        }
+    }
+    pos, neg := adder(), adder()
+    for i := 0; i < 10; i++ {
+        fmt.Println(
+            pos(i),
+            neg(-2*i),
+        )
     }
     ```
 1. 结构体
@@ -210,24 +397,6 @@
      1. %d：数字
      1. %v：slice
    - `fmt.Println(m)`
-1. 闭包
-    ```go
-    // 闭包，闭包是一个函数值，来自函数体的外部的变量引用，函数可以对这个引用值进行访问和赋值；换句话说这个函数被“绑定”在这个变量上
-    func adder() func(int) int {   // 函数adder返回一个闭包。每个闭包都被绑定到其各自的sum变量上，pos按照pos的节奏，neg按照..，两个独立变量被赋值
-        sum := 0
-        return func(x int) int {
-            sum += x
-            return sum
-        }
-    }
-    pos, neg := adder(), adder()
-    for i := 0; i < 10; i++ {
-        fmt.Println(
-            pos(i),
-            neg(-2*i),
-        )
-    }
-    ```
 1. 反射
    - 类型
      1. `reflect.Kind`：内置元类型，表示reflect包中定义的十几种，每种有一个整数编号
@@ -407,7 +576,67 @@
     val.Method(1).Call(nil)                             //获取到第二个方法，调用它
     val.MethodByName("SumNum").Call(nil)
     ```
-1. 代码简化
+1. 上下文
+   - context
+     1. pipeLine的每个工人函数都使用switch处理case <-ctx.Done()。作为生产线上的命令控制
+        ```go
+        func lineParser(ctx context.Context, base int, in <-chan string) (<-chan int64, <-chan error, error) {
+            ...
+            go func() {
+                defer close(out)
+                defer close(errc)
+
+                for line := range in {
+
+                    n, err := strconv.ParseInt(line, base, 64)
+                    if err != nil {
+                        errc <- err
+                        return
+                    }
+
+                    select {
+                    case out <- n:
+                    case <-ctx.Done():
+                        return
+                    }
+                }
+            }()
+            return out, errc, nil
+        }
+        ```
+     1. 超时控制
+        ```go
+        ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+        defer cancel()
+
+        select {
+        case <-time.After(1 * time.Second):
+            fmt.Println("overslept")
+        case <-ctx.Done():
+            fmt.Println(ctx.Err()) // prints "context deadline exceeded"
+        }
+        ```
+     1. 传递数据
+        ```go
+        var UserId = FooKey("user-id")
+
+        ctx := context.Background()
+        // 设置
+        ctx = context.WithValue(ctx, UserId, "1")
+        // 获取
+        fmt.Println(ctx.Value(UserId))
+        ```
+1. io
+   - io/ioutil：读取所有字符
+    ```go
+    resp, err := http.Get("http://example.com?user_id=121212")
+	if err != nil {
+	}
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+	}
+    ```
+1. 代码简写
     ```go
     []T{T{}, T{}}
     // 切片表达式简化为
@@ -425,7 +654,7 @@
     // 迭代简化为
     for range v {...}
     ```
-### 应用实例
+#### 应用实例
 1. 数学相关
    - 生成随机数
     ```go
@@ -454,34 +683,52 @@
         //%d 替换成24
     }
     ```
-1. url编解码
-   - get参数
-    ```go
-    // url encode
-	v := url.Values{}
-	v.Add("a", "aa")
-	v.Add("b", "bb")
-	v.Add("c", "有没有人")
-	body := v.Encode()
-	fmt.Println(v)
-	fmt.Println(body)
-	// url decode
-	m, _ := url.ParseQuery(body)
-	fmt.Println(m)
-    ```
-   - 内容
-    ```go
-    urltest := "http://www.baidu.com/s?wd=自由度"
-    // 编码
-	encodeurl:= url.QueryEscape(urltest)
-	fmt.Println(encodeurl)
-    // 解码
-	decodeurl,err := url.QueryUnescape(encodeurl)
-	if err != nil {
-		fmt.Println(err)
-	}
-    fmt.Println(decodeurl)
-    ```
+1. web
+   - url编解码
+     1. get参数
+        ```go
+        // url encode
+        v := url.Values{}
+        v.Add("a", "aa")
+        v.Add("b", "bb")
+        v.Add("c", "有没有人")
+        body := v.Encode()
+        fmt.Println(v)
+        fmt.Println(body)
+        // url decode
+        m, _ := url.ParseQuery(body)
+        fmt.Println(m)
+        ```
+     1. 内容
+        ```go
+        urltest := "http://www.baidu.com/s?wd=自由度"
+        // 编码
+        encodeurl:= url.QueryEscape(urltest)
+        fmt.Println(encodeurl)
+        // 解码
+        decodeurl,err := url.QueryUnescape(encodeurl)
+        if err != nil {
+            fmt.Println(err)
+        }
+        fmt.Println(decodeurl)
+        ```
+   - web错误处理
+     1. defer + panic + recover：多加一层panic，优化默认http的的报错展示
+     1. Type Assertion：通过类型定义，区分用户展示和服务器展示
+     1. 函数式编程：实现错误处理的代理，接收各种逻辑处理函数遇到的错误，形式为
+        ```go
+        func errorWrapper(handler appHandler) func(http.ResponseWriter, *http.Request) {
+            return func(writer http.ResponseWriter, request *http.Request) {
+                // 多加一层panic
+                defer func() {
+                    if r := recover(); r != nil {
+
+                    }
+                }
+                // 错误逻辑处理
+            }
+        }
+        ```
 1. 读取二进制的bmp文件头
     ```go
     import (
@@ -723,362 +970,6 @@
                 plugin.Register(&MyPlugin)
             }
             ```
-### 最佳实践
-1. 编写思路
-   - 编程起势：首先通过划分结构体，定义不同的功能模块，然后分别实现，最终实现功能
-     1. 封装模块
-        - 在一个文件中定义一组接口interface
-        - 定义结构体struct，可以在一个文件或文件夹中专门存放需要用到的struct
-        - 定义new结构体struct的方法，用sync.Once实现单例返回，返回值为接口interface
-        - 定义属于结构体struct、并且实现了接口interface的所有方法，完成~
-     1. 定义对象：针对一类组合，要定义一个结构体作为包装这个对象的载体，而不是孤零零的散着各种数据，面向对象嘛
-   - 函数式编程：通过参数、返回值、变量都是函数的形式，实现更加灵活的处理
-     1. 将具体执行的逻辑包装成一个方法，大家执行这个方法，内部自己定义，就可以将实现解耦了，大家不用关心执行的内容了
-     1. 针对需要外部定义处理的函数，用函数式编程，实现外部定义实现，内部调度，执行那个方法就可以了
-        ```go
-        type Han struct {
-            UseMethod func(int) bool
-        }
-
-        func main() {
-            h := Han{
-                UseMethod: func(i int) bool {
-                    return true
-                },
-            }
-            // 使用
-            h.UseMethod(1)
-        }
-        ```
-   - 并行思想：之前用的读io然后处理的单线程模式，改为：起多个不同的协程(有的处理读io，有的处理逻辑)，协程之间通过chan传递数据，一边读取一边处理的协程模式了
-     1. 耗时的goroutine可以多起几个
-   - 如何设计一个特定领域的整体的处理框架，整体架构就是先划分不同角色，怎么划分好角色最重要，然后利用interface去高内聚每个角色，之间相互配合，实现更强的扩展性
-1. 避坑指南
-   - 谨慎使用全局变量，全局变量不会像PHP一样，在完成一次请求之后被销毁，而是会被改变
-   - 形参是slice、map类型的参数，注意值可被全局修改，array则不会
-     1. 因为：浅复制过程中slice和map底层的类型是个结构体，实际存储值的类型是个指针
-     1. 解决：深拷贝，开辟新内存，指针指向新内存地址，并把原有的值复制过去
-        ```go
-        package main
-
-        import "fmt"
-
-        func main() {
-            paramDemo := []int32{1}
-            fmt.Println("main.paramDemo 1", paramDemo)
-            // 初始化新空间
-            paramDemoCopy := make([]int32, len(paramDemo))
-            // 深拷贝
-            copy(paramDemoCopy, paramDemo)
-            demo(paramDemoCopy)
-            fmt.Println("main.paramDemo 2", paramDemo)
-        }
-
-        func demo(paramDemo []int32) ([]int32, error) {
-            paramDemo[0] = 2
-            return paramDemo, nil
-        }
-
-        // [Running] go run ".../demo/main.go"
-        // main.paramDemo 1 [1]
-        // main.paramDemo 2 [1]
-        ```
-   - 资源使用完毕，记得释放资源或回收资源
-     1. 原因
-        - 资源连接数线性增长
-        - 如果一直持有，资源服务端也有超时时间
-     1. 方法：写成`defer close()`
-   - 不要依赖map遍历的顺序
-     1. 因为：底层实现都是数组+类似拉链法，以下3点都决定了map本来就是无序的，所以Go语言为了避免开发者依赖元素顺序，每次遍历的时候都是随机了一个索引起始值。然后PHP通过额外的内存空间维护了map元素的顺序
-        - hash函数无序写入
-        - 成倍扩容
-        - 等量扩容
-   - 不要并发写map，会触发panic
-   - 注意判断指针类型不为空nil，再操作
-    ```go
-    resp, err := http.Get("https://www.example.com")
-
-    // 错误示范
-	if resp.StatusCode != http.StatusOK || err != nil {
-		// 当 resp为nil时 会触发panic
-		// 当 resp.StatusCode != http.StatusOK 时err可能为nil 触发panic
-		log.Printf("err: %s", err.Error())
-	}
-
-    // 正确示范
-    if err != nil {
-		// 报错并记录异常日志
-		log.Printf("err: %s", err.Error())
-		return
-	}
-	// 模拟业务code不为成功的code
-	if resp != nil && resp.StatusCode != http.StatusOK {
-		// 报错并记录异常日志
-	}
-    ```
-   - json解析不存在的默认给类型零值，所以接口请求参数不要使用0作为特殊意义值
-1. 实用技巧
-   - 全局变量：可以避免重复申请带来的内存交互
-   - sync.Pool
-    ```go
-    // 使用sync.Pool
-    func BenchmarkDemo_Pool(b *testing.B) {
-        // 使用缓存池sync.Pool
-        demoPool := &sync.Pool{
-            // 定义初始化结构体的匿名函数
-            New: func() interface{} {
-                return &AddressModule{
-                    Country: &Country{
-                        ID:   0,
-                        Name: "",
-                    },
-                    Province: &Province{
-                        ID:   0,
-                        Name: "",
-                    },
-                    City: &City{
-                        ID:   0,
-                        Name: "",
-                    },
-                    County: &County{
-                        ID:   0,
-                        Name: "",
-                    },
-                    Street: &Street{
-                        ID:   0,
-                        Name: "",
-                    },
-                }
-            },
-        }
-        b.RunParallel(func(pb *testing.PB) {
-            for pb.Next() {
-                // 从缓存池中获取对象
-                addressModule, _ := (demoPool.Get()).(*AddressModule)
-                // 下面这段代码没意义 只是为了不报语法错误
-                if addressModule == nil {
-                    return
-                }
-
-                // 重置对象 准备归还对象到缓存池
-                addressModule.Consignee = ""
-                addressModule.Email = ""
-                addressModule.Mobile = 0
-                addressModule.Country.ID = 0
-                addressModule.Country.Name = ""
-                addressModule.Province.ID = 0
-                addressModule.Province.Name = ""
-                addressModule.County.ID = 0
-                addressModule.County.Name = ""
-                addressModule.Street.ID = 0
-                addressModule.Street.Name = ""
-                addressModule.DetailedAddress = ""
-                addressModule.PostalCode = ""
-                addressModule.IsDefault = false
-                addressModule.Label = ""
-                addressModule.Longitude = ""
-                addressModule.Latitude = ""
-                // 还对象到缓存池
-                demoPool.Put(addressModule)
-            }
-        })
-    }
-
-    // 使用sync.Pool执行结果
-    // goos: darwin
-    // goarch: amd64
-    // pkg: demo
-    // cpu: Intel(R) Core(TM) i5-7360U CPU @ 2.30GHz
-    // BenchmarkDemo_Pool-4   	988550808	        12.41 ns/op	       0 B/op	       0 allocs/op
-    // PASS
-    // ok  	demo	14.215s
-    ```
-   - sync/singleflight：缓存等穿透时减少请求数
-    ```go
-    func TestDemo_Singleflight(t *testing.T) {
-        t.Parallel()
-        singleGroup := singleflight.Group{}
-        wg := sync.WaitGroup{}
-        // 模拟并发远程调用
-        for i := 0; i < 3; i++ {
-            wg.Add(1)
-            go func() {
-                defer wg.Done()
-                // 使用singleflight
-                res, err, shared := singleGroup.Do("cache_key", func() (interface{}, error) {
-                    resp, err := http.Get("http://example.com")
-                    if err != nil {
-                        return nil, err
-                    }
-                    body, err := ioutil.ReadAll(resp.Body)
-                    if err != nil {
-                        return nil, err
-                    }
-                    return body, nil
-                })
-                if err != nil {
-                    t.Error(err)
-                    return
-                }
-                _, _ = res.([]byte)
-                t.Log("log", shared, err)
-            }()
-        }
-
-        wg.Wait()
-    }
-    ```
-1. 应用场景
-   - 引号输出
-     1. 使用反引号：`a := `"xx"``
-     1. 使用转义：`a := "\"xx\""`
-     1. 使用strconv包：`a := strconv.Quote("xx")`
-   - 判断接口类型 + 结构体切片用法
-    ```go
-    // 参数支持constant.ServerConfig或者[]constant.ServerConfig
-    func (n *ConfigureCenterNacos) InitServer(opts interface{}) (interface{}, error) {
-        switch v := opts.(type) {                                                           // v获取了opts的值和类型
-        case constant.ServerConfig:
-            n.serverConfig = []constant.ServerConfig{                                       // 结构体切片的赋值方式
-                v,
-            }
-            return n.serverConfig, nil
-        case []constant.ServerConfig:
-            n.serverConfig = v
-            return n.serverConfig, nil
-        default:
-            return nil, errors.New("config opts error")
-        }
-    }
-    ```
-   - 函数
-     1. 可选参数实践
-        ```go
-        // 使用NewQueue，动态改变可选的新参数的方法
-        // 用新的方法处理不同情况下不同的参数，NewQueue相当于一个代理方法
-
-
-        type Queue struct {
-            Name     string
-            MaxLimit int
-
-            // monitor
-            MonitorInterval int
-        }
-
-        type QueueOption func(*Queue)
-
-        func WithMaxLimit(max int) QueueOption {
-            return func(q *Queue) {
-                q.MaxLimit = max
-            }
-        }
-
-        func WithMonitorInterval(seconds int) QueueOption {
-            return func(q *Queue) {
-                q.MonitorInterval = seconds
-            }
-        }
-
-        func NewQueue(name string, options ...QueueOption) *Queue {
-            queue := &Queue{name, 10, 5}
-
-            for _, o := range options {
-                o(queue)
-            }
-
-            return queue
-        }
-        ```
-     1. 函数式编程和循环
-        ```go
-        for _, m := range mySlice {
-            correctM ：= m
-            a := myStruct{
-                name: "xx"
-                myFunc: func() int {
-                    return m                // 这里只是返回了一个函数，这个函数的执行时机是整个for循环结束后，所以这么写m无法达到目的，应该使用另外定义的变量
-                }
-            }
-        }
-        ```
-   - context
-     1. pipeLine的每个工人函数都使用switch处理case <-ctx.Done()。作为生产线上的命令控制
-        ```go
-        func lineParser(ctx context.Context, base int, in <-chan string) (<-chan int64, <-chan error, error) {
-            ...
-            go func() {
-                defer close(out)
-                defer close(errc)
-
-                for line := range in {
-
-                    n, err := strconv.ParseInt(line, base, 64)
-                    if err != nil {
-                        errc <- err
-                        return
-                    }
-
-                    select {
-                    case out <- n:
-                    case <-ctx.Done():
-                        return
-                    }
-                }
-            }()
-            return out, errc, nil
-        }
-        ```
-     1. 超时控制
-        ```go
-        ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
-        defer cancel()
-
-        select {
-        case <-time.After(1 * time.Second):
-            fmt.Println("overslept")
-        case <-ctx.Done():
-            fmt.Println(ctx.Err()) // prints "context deadline exceeded"
-        }
-        ```
-     1. 传递数据
-        ```go
-        var UserId = FooKey("user-id")
-
-        ctx := context.Background()
-        // 设置
-        ctx = context.WithValue(ctx, UserId, "1")
-        // 获取
-        fmt.Println(ctx.Value(UserId))
-        ```
-   - io/ioutil：读取所有字符
-    ```go
-    resp, err := http.Get("http://example.com?user_id=121212")
-	if err != nil {
-	}
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-	}
-    ```
-   - web错误处理
-     1. defer + panic + recover：多加一层panic，优化默认http的的报错展示
-     1. Type Assertion：通过类型定义，区分用户展示和服务器展示
-     1. 函数式编程：实现错误处理的代理，接收各种逻辑处理函数遇到的错误，形式为
-        ```go
-        func errorWrapper(handler appHandler) func(http.ResponseWriter, *http.Request) {
-            return func(writer http.ResponseWriter, request *http.Request) {
-                // 多加一层panic
-                defer func() {
-                    if r := recover(); r != nil {
-
-                    }
-                }
-                // 错误逻辑处理
-            }
-        }
-        ```
-1. 性能优化
-   - 当一个结构体很大、并且在函数中传递时，可以将结构体拆分成小的，将小的单独传递，将小的组合成原来的大的吗，可以提升性能
 ### 算法
 1. Rabin-Karp字符串匹配
    - 认识：用在了字符子串在另一个字符串的匹配，利用滚动hash计算出母串的hasharray，然后进行比较，再用字符对比解决hash冲突问题
@@ -1406,9 +1297,9 @@
     ```
 1. Worker Pool
    - 认识
-     1. 创建一个固定数量的goroutine（Worker），由这一组Worker去处理连接，防止大量的goroutine使用
+     1. 创建一组固定数量的goroutine（Worker），由这一组Worker去处理连接，防止大量的goroutine使用
    - 要求
-     1. 有些是在后台默默执行的，
+     1. 有些是在后台默默执行的
      1. 不需要等待返回结果
      1. 有些需要等待一批任务执行完
      1. 有些Worker Pool的生命周期和程序一样长
@@ -1417,6 +1308,76 @@
      1. gammazero/workerpool：提供了更便利的 Submit 和 SubmitWait 方法提交任务，还可以提供当前的 worker 数和任务数以及关闭 Pool 的功能
      1. ivpusic/grpool
      1. dpaks/goworkers
+   - 简易demo
+    ```go
+    var (
+        cOnce   sync.Once
+        GlobalP *CalculatePool
+    )
+
+    type CalculatePool struct {
+        Max        int                                                          // 池子最大数
+        WaitChanel chan func()                                                  // 等待队列，等待最大数
+        Quit       chan int                                                     // 停止控制位，通过close控制
+        Wg         *sync.WaitGroup
+        TaskRun    int                                                          // 优化点：1. 结束时判断是否还有任务没完成，可以在加任务处(外边)套waitGroup直接暴力解决。2. 并发加减有问题，保证并发安全
+    }
+
+    func InitCalculatePool(poolSize int, waitBuff int) *CalculatePool {
+        cOnce.Do(func() {
+            GlobalP = new(CalculatePool)
+            GlobalP.Max = poolSize
+            GlobalP.Wg = new(sync.WaitGroup)
+            GlobalP.WaitChanel = make(chan func(), waitBuff)
+            GlobalP.Quit = make(chan int)
+            go GlobalP.Start() // 默认启动
+        })
+        return GlobalP
+    }
+
+    func (p *CalculatePool) Start() {
+        defer func() {
+            p.close()
+        }()
+        for i := 0; i < p.Max; i++ {
+            p.Wg.Add(1)
+            go p.work(i)
+        }
+        p.Wg.Wait()
+    }
+
+    func (p *CalculatePool) close() {
+        close(p.Quit)
+    }
+
+    func (p *CalculatePool) work(no int) {
+        logger.D("debug_pool_nu", "___start calculate--[pooNo]:%d", no)
+        defer func() {
+            recover()                                                       // 处理实际运行程序的panic情况
+            p.Wg.Done()
+        }()
+        for {
+            select {
+            case funcD := <-p.WaitChanel:
+                logger.D("debug_2", "___start calculate--[pooNo]:%d,[func]%+v", no, funcD)
+                // 执行函数
+                funcD()
+                p.TaskRun--
+            case _, ok := <-p.Quit:
+                if ok {
+                    return
+                }
+            default:
+                time.Sleep(time.Duration(5) * time.Millisecond)
+            }
+        }
+    }
+
+    func (p *CalculatePool) AddWork(funcD func()) {
+        p.TaskRun++
+        p.WaitChanel <- funcD
+    }
+    ```
 #### 锁
 1. 锁
    - 实践
@@ -1892,6 +1853,202 @@
         } 
         fmt.Println("send over") 
     } 
+    ```
+1. 微服务网关设计
+   - 认识：https://github.com/e421083458/go_gateway
+#### 其他
+1. 基于cpu使用率动态调整工作协程数程序的小框架
+    ```go
+    // pod中使用go.uber.org/automaxprocs获取可用cpu数量，直接top命令获取的是宿主机的
+    // 容器在运行中会将cpu的时间片信息记录到/sys/fs/cgroup/cpuacct/cpuacct.usage文件中，其中cgroup是容器化的环境标识
+    // 我们只需按一定频率读取文件内容做解析，将上一次记录的时间片和本次的相减，再除以两次采样的时间差，再除以cpu核数，就得到了容器当前真实的cpu使用率
+    type statT struct {
+        currentUsage float64
+        currentTime  float64
+
+        iterUsage float64
+        iterTime  float64
+
+        lastUsage float64
+    }
+
+    var stat statT
+
+    func init() {
+        stat.currentUsage = getContainerCpuAcctUsage()
+        stat.currentTime = float64(time.Now().UnixNano())
+
+        go func() {
+            var ticker = time.NewTicker(1 * time.Second) // 采样频率
+            for {
+                select {
+                case <-ticker.C:
+                    stat.iterUsage = stat.currentUsage
+                    stat.iterTime = stat.currentTime
+
+                    stat.currentUsage = getContainerCpuAcctUsage()
+                    stat.currentTime = float64(time.Now().UnixNano())
+
+                    stat.lastUsage = (stat.currentUsage - stat.iterUsage) * 100 / (stat.currentTime - stat.iterTime)
+                }
+            }
+        }()
+    }
+
+    func getContainerCpuAcctUsage() (usage float64) {
+        var file = `/sys/fs/cgroup/cpuacct/cpuacct.usage`
+
+        buf, err := ioutil.ReadFile(file)
+        if err != nil {
+            //log.Printf(`can not read file: %s, err: %v`, file, err)
+            return
+        }
+
+        content := strings.Replace(string(buf), "\n", "", -1)
+        usage, err = strconv.ParseFloat(content, 64)
+        if err != nil {
+            log.Printf(`can not parse content, file: %s, err: %v`, content, err)
+        }
+
+        return
+    }
+
+    func GetCpuUsage() (usage float64) {
+        if stat.iterTime <= 0 {
+            return
+        }
+
+        var cpuNum = runtime.GOMAXPROCS(-1)
+
+        usage = stat.lastUsage / float64(cpuNum)
+
+        return
+    }
+
+    // SetupSignalHandler setup signal handler
+    func SetupSignalHandler(shutdownFunc func()) {
+        usrDefSignalChan := make(chan os.Signal, 1)
+
+        signal.Notify(usrDefSignalChan, syscall.SIGUSR1)
+        go func() {
+            buf := make([]byte, 1<<16)
+            for {
+                sig := <-usrDefSignalChan
+                if sig == syscall.SIGUSR1 {
+                    stackLen := runtime.Stack(buf, true)
+                    log.Printf("\n=== Got signal [%s] to dump goroutine stack. ===\n%s\n=== Finished dumping goroutine stack. ===\n", sig, buf[:stackLen])
+                }
+            }
+        }()
+
+        closeSignalChan := make(chan os.Signal, 1)
+        signal.Notify(closeSignalChan,
+            syscall.SIGHUP,
+            syscall.SIGINT,
+            syscall.SIGTERM,
+            syscall.SIGQUIT)
+
+        go func() {
+            sig := <-closeSignalChan
+            log.Printf("got signal to exit, signal: %v", sig)
+            shutdownFunc()
+        }()
+    }
+
+    func GracefulExit(ctx context.Context) bool {
+        select {
+        case <-ctx.Done():
+            return true
+
+        default:
+            return false
+        }
+    }
+
+    // GenerateRandom 生成一个区间范围的随机数,左闭右开
+    func GenerateRandom(min, max int) int {
+        if min >= max {
+            return max
+        }
+
+        rand.Seed(time.Now().UnixNano())
+        randNum := rand.Intn(max - min)
+        randNum += min
+
+        return randNum
+    }
+
+    func Worker(ctx context.Context, workId int) {
+        sleep := GenerateRandom(1, 5)
+        log.Printf(`work id is: %d, spend time: %ds`, workId, sleep)
+
+        time.Sleep(time.Duration(sleep) * time.Second)
+    }
+
+    func main() {
+        ctx, cancelFn := context.WithCancel(context.Background())
+
+        SetupSignalHandler(func() {
+            log.Println(`get exit signal`)
+            cancelFn()
+        })
+
+        var (
+            ticker = time.NewTicker(3 * time.Second)
+            cpuNum = runtime.GOMAXPROCS(-1)
+            wg     sync.WaitGroup
+        )
+
+        for {
+            for i := 0; i < cpuNum; i++ {
+                wg.Add(1)
+
+                go func(workId int) {
+                    defer wg.Done()
+
+                    for {
+                        select {
+                        case <-ctx.Done():
+                            log.Printf(`child goroutine get exit signal, workId: %d`, workId)
+                            return
+
+                        case <-ticker.C:
+                            cpuUsage := GetCpuUsage()
+                            log.Printf(`workId: %d, cup current usage: %.2f`, workId, cpuUsage)
+
+                            // 由于demo程序无法触cpu占用过高而动态调整协程数，采用随机数
+                            // 此处可以根据业务来实现各种控制策略
+
+                            randUsage := GenerateRandom(0, 100)
+                            if randUsage <= 80 {
+                                log.Printf(`child goroutine will exit with randdom cpu usage, workId: %d, randUsage: %d`,
+                                    workId, randUsage)
+                                return
+                            }
+
+                        default:
+                            // do something
+                            Worker(ctx, workId)
+                        }
+                    }
+                }(i)
+            }
+
+            wg.Wait() // 等待所有工作协程退出，进入下一轮
+
+            if GracefulExit(ctx) {
+                log.Println(`graceful exit work loop event`)
+                break
+            }
+
+            log.Printf(`trigger dynamic adjustment`)
+        }
+
+        <-ctx.Done()
+
+        time.Sleep(time.Second * 5) // 等待所有协程安全退出
+        log.Printf(`graceful exit`)
+    }
     ```
 ### 应用案例
 1. 千万级WebSocket弹幕消息推送服务

@@ -550,7 +550,7 @@
 
     k := 3                  // 简短格式：短声明 + 类型推导
     ```
-   - 特点
+   - 属性
      1. _：匿名变量，类似黑洞，可像其他标识符那样用于变量的声明或任何类型都可以给它赋值，但任何赋给这个标识符的值都将被抛弃，可极大增强代码灵活性
      1. 变量类型转换：必须是显式的，只能发生在两种兼容的类型之间，如int和bool不可以。`a := int32(b)`
      1. 作用域
@@ -949,7 +949,7 @@
      1. 认识：`panic recover`，抛出、接收异常
         - panic：中断原有流程，进入panic流程。执行每一层的已经载入的defer函数，如果没有遇到recover进程打印异常信息后程序退出
           1. 可手动触发，可运行时错误产生，如访问越界的数组
-          1. panic无法跨协程, 当前协程产生的异常, 必须由当前协程处理
+          1. panic无法跨协程, 当前协程产生的异常, 必须由当前协程处理，如果当前协程不处理，整个进程所有协程退出
           1. panic可以嵌套
         - recover：可以捕获到panic的输入值，让进入panic流程中的goroutine恢复正常执行
           1. 只能在defer语句中使用，直接使用返回nil没有任何效果
@@ -1003,7 +1003,7 @@
         - Reflection goes from interface value to reflection object
         - Reflection goes from reflection object to interface value
         - To modify a reflection object, the value must be settable
-1. 内存逃逸
+1. 内存/内存逃逸
    - 认识：变量通过能证明整个生命周期运行时完全可知的校验，就可以在栈上分配，否则就是逃逸了，要在堆上分配
      1. 能在编译期确定作用域的，就会到堆上
      1. 堆上分配开销大很多
@@ -1427,6 +1427,7 @@
      1. 无缓冲chan
         - 即同步chan，不会存储数据，双方都没准备好，双方都会阻塞
         - 读写不能放一个协程里，写读颠倒会死锁
+        - 无缓冲chan只是有缓冲chan数量为0的特例，他们的其他特性是一样的
      1. 有缓冲chan
         - 可以提高性能
         - 缓冲区满时写阻塞，缓冲区空时读会阻塞
@@ -2378,6 +2379,80 @@
      1. 有大量的相同类型的临时对象，不断地被创建销毁：sync.Pool
      1. 大量的并发Client请求：池化Client
      1. goroutine数量非常多：通过Worker Pool降低数量
+   - demo
+    ```go
+    // 使用sync.Pool
+    func BenchmarkDemo_Pool(b *testing.B) {
+        // 使用缓存池sync.Pool
+        demoPool := &sync.Pool{
+            // 定义初始化结构体的匿名函数
+            New: func() interface{} {
+                return &AddressModule{
+                    Country: &Country{
+                        ID:   0,
+                        Name: "",
+                    },
+                    Province: &Province{
+                        ID:   0,
+                        Name: "",
+                    },
+                    City: &City{
+                        ID:   0,
+                        Name: "",
+                    },
+                    County: &County{
+                        ID:   0,
+                        Name: "",
+                    },
+                    Street: &Street{
+                        ID:   0,
+                        Name: "",
+                    },
+                }
+            },
+        }
+        b.RunParallel(func(pb *testing.PB) {
+            for pb.Next() {
+                // 从缓存池中获取对象
+                addressModule, _ := (demoPool.Get()).(*AddressModule)
+                // 下面这段代码没意义 只是为了不报语法错误
+                if addressModule == nil {
+                    return
+                }
+
+                // 重置对象 准备归还对象到缓存池
+                addressModule.Consignee = ""
+                addressModule.Email = ""
+                addressModule.Mobile = 0
+                addressModule.Country.ID = 0
+                addressModule.Country.Name = ""
+                addressModule.Province.ID = 0
+                addressModule.Province.Name = ""
+                addressModule.County.ID = 0
+                addressModule.County.Name = ""
+                addressModule.Street.ID = 0
+                addressModule.Street.Name = ""
+                addressModule.DetailedAddress = ""
+                addressModule.PostalCode = ""
+                addressModule.IsDefault = false
+                addressModule.Label = ""
+                addressModule.Longitude = ""
+                addressModule.Latitude = ""
+                // 还对象到缓存池
+                demoPool.Put(addressModule)
+            }
+        })
+    }
+
+    // 使用sync.Pool执行结果
+    // goos: darwin
+    // goarch: amd64
+    // pkg: demo
+    // cpu: Intel(R) Core(TM) i5-7360U CPU @ 2.30GHz
+    // BenchmarkDemo_Pool-4   	988550808	        12.41 ns/op	       0 B/op	       0 allocs/op
+    // PASS
+    // ok  	demo	14.215s
+    ```
 1. 只执行一次
    - 认识：`sync.Once`，一个函数在所有goroutine执行且仅执行一次，常用于单例对象的初始化或只需初始化一次的共享资源的场景
    - 方法
@@ -2468,6 +2543,41 @@
         ```
 1. `sync/singleflight`
    - 认识：重复函数调用抑制
+   - demo：缓存等穿透时减少请求数
+    ```go
+    func TestDemo_Singleflight(t *testing.T) {
+        t.Parallel()
+        singleGroup := singleflight.Group{}
+        wg := sync.WaitGroup{}
+        // 模拟并发远程调用
+        for i := 0; i < 3; i++ {
+            wg.Add(1)
+            go func() {
+                defer wg.Done()
+                // 使用singleflight
+                res, err, shared := singleGroup.Do("cache_key", func() (interface{}, error) {
+                    resp, err := http.Get("http://example.com")
+                    if err != nil {
+                        return nil, err
+                    }
+                    body, err := ioutil.ReadAll(resp.Body)
+                    if err != nil {
+                        return nil, err
+                    }
+                    return body, nil
+                })
+                if err != nil {
+                    t.Error(err)
+                    return
+                }
+                _, _ = res.([]byte)
+                t.Log("log", shared, err)
+            }()
+        }
+
+        wg.Wait()
+    }
+    ```
 1. 并发版map
    - 认识：`sync.Map`，并发安全版的基于特定场景的map
      1. RWLock配合map方案在高读取+多核cpu上表现不佳，为了改善多核读多写少的性能而引入
