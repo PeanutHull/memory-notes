@@ -3863,7 +3863,6 @@
         m.Bounds()
         m.At(0, 0).RGBA()
         ```
-   - database/sql：数据库驱动的标准接口
 #### net
 1. net
    - 类型
@@ -4134,7 +4133,16 @@
    - sha：`h := sha256.New()`，crypto/sha256/sha1
    - md5：`h := md5.New()`，crypto/md5
 1. 数据库
-   - database/sql：接口，无官方数据库驱动，为驱动定义了标准接口，有sql.Register、driver.Driver、driver.Conn等
+   - database/sql：接口，数据库驱动的官方标准、通用接口
+     1. 类型
+        - Conn：表示单个数据库连接
+        - DB：表示n个数据库连接池，使用的正确姿势
+     1. 方法
+        - sql.Register：命名一个数据库驱动
+   - database/sql/driver：定义了被sql包使用的、数据库驱动程序需要实现的接口，大多数代码应该使用sql包
+     1. 类型
+        - driver.Driver：数据库驱动必须实现的接口
+        - driver.Conn：是到数据库的连接，多个goroutine不会同时使用
    - MySQL：github的go-sql-driver/mysql，beego的orm
    - NOSQL：github的garyburd/redigo
 1. web服务

@@ -1146,15 +1146,14 @@
    - 感觉大多数都用chan实现了，也就很简单了
 1. go-redis的连接池实现
    - 特点
-     1. 只实现了简单的轮询形式，没有加权等筛选
+     1. 只实现了简单的轮询形式，没有加权形式
+     1. 有最小连接队列特性
+     1. 有超时逻辑
    - 实现
-     1. 使用chan作为存储池
-     1. 使用mutex作为增减chan与其配套数据的互斥保证
-     1. 队列、池子就是slice和chan的配合使用
-     1. 利用连接池最大数量作为一个chan(随便struct{}类型就可以)的缓冲大小，存储工作的连接
-        - 在从连接池拿连接时写入chan，不停拿不停写，写满阻塞实现了池的最大忙碌数量，这时候计时器介入，实现获取连接的超时逻辑
-        - 往连接池放连接时，不停放，不停取出chan的值，作减法
-   - 排队和超时的机制
+     1. slice和chan配合使用
+        - 使用chan(queue属性)作为从池中获取最大可用数量的保证，拿完了则阻塞(占满)，这时候计时器介入，实现获取连接的超时逻辑：waitTurn()方法
+        - 使用slice存储所有连接conns和空闲连接idleConns，使用mutex作为增减chan与其配套数据的互斥保证
+   - 拿连接排队和超时的机制
     ```go
     var timers = sync.Pool{
         New: func() interface{} {
@@ -1201,10 +1200,23 @@
         }
     }
     ```
-1. sql.DB的连接池实现
+1. sql.DB
    - 认识
-     1. 通过MaxOpenConns和MaxIdleConns控制最大的连接数和最大的idle的连接数
-     1. freeConn保存了idle的连接，优先尝试从freeConn获取已有的连接
+     1. 属性
+        - MaxOpenConns：最大打开连接数
+        - MaxIdleConns：最大空闲连接数
+        - maxLifetime：最长重用时间间隔
+        - maxIdleTime：关闭前的最长空闲时间
+     1. gorm的连接池复用了sql.DB
+   - 实现
+     1. freeConn：`[]*driverConn`
+     1. connRequests：`map[uint64]chan connRequest`
+     1. openerCh：`chan struct{}`，需要打开新连接的阻塞队列
+     1. cleanerCh：`chan struct{}`，？
+   - 原理
+     1. freeConn保存了idle的连接，获取连接优先尝试从freeConn空闲的拿
+   - 方法
+     1. conn：获取连接
 1. gomemcache
    - 采用Mutex+Slice实现Pool
    - 实现

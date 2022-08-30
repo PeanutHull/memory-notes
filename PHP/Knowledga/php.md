@@ -549,6 +549,7 @@
         pm.start_servers = 96                                   // 启动时创建数/最小子进程数量
         pm.min_spare_servers = 72                               // 闲置时最少数
         pm.max_spare_servers = 144                              // 闲置时最大数
+        pm.process_idle_timeout = 10s;                          // 闲置时长
         pm.max_requests = 102400                                // 每个子进程最大处理请求数就被回收，可防止内存泄露
         pm.status_path = /php7fpmstatus
 
