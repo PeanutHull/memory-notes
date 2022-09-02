@@ -1347,6 +1347,12 @@
     var i ISayHello                             // 1. 定义接口变量
     i = ameriacal                               // 2. 赋值给变量，即ameriacal实现了ISayHello
     i.sayHello()                   
+    // 惯用用法：在多个接口的大型项目中允许实现灵活决定是否要实现某个接口
+    func (dc *driverConn) resetSession(ctx context.Context) error {
+        if cr, ok := dc.ci.(driver.SessionResetter); ok {               // 实现了才执行
+            return cr.ResetSession(ctx)
+        }
+    }
     ```
 ### 协程
 #### 基本
@@ -1420,6 +1426,7 @@
 1. channel
    - 认识：有类型的管道，用于协程间通信，操作符<-
      1. 使得goroutine可以在没有明确的锁或竞态变量(共享内存)的情况下同步，更高级，可以用-race检测数据访问冲突，内部还是有锁的
+     1. 一般用在无状态的处理，数据库连接池就不合适
    - 特性：![avatar](../images/channel_status.webp)
      1. nil的chan
         - 只声明不分配资源，var声明的是，make不是
@@ -4143,7 +4150,7 @@
      1. 类型
         - driver.Driver：数据库驱动必须实现的接口
         - driver.Conn：是到数据库的连接，多个goroutine不会同时使用
-   - MySQL：github的go-sql-driver/mysql，beego的orm
+   - MySQL：github的go-sql-driver/mysql
    - NOSQL：github的garyburd/redigo
 1. web服务
    - 发起http请求

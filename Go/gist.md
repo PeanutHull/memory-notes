@@ -1202,21 +1202,144 @@
     ```
 1. sql.DB
    - 认识
-     1. 属性
-        - MaxOpenConns：最大打开连接数
-        - MaxIdleConns：最大空闲连接数
-        - maxLifetime：最长重用时间间隔
-        - maxIdleTime：关闭前的最长空闲时间
+     1. 目的是降低频繁创建和关闭连接的开销
+     1. 主要内容是获取连接、释放连接、复用连接、清理连接。用的时候取出一个空闲的，如果没有就等待或者新建
+        - 尽量减少阻塞的请求。同时尽量回收连接
      1. gorm的连接池复用了sql.DB
-   - 实现
-     1. freeConn：`[]*driverConn`
-     1. connRequests：`map[uint64]chan connRequest`
-     1. openerCh：`chan struct{}`，需要打开新连接的阻塞队列
-     1. cleanerCh：`chan struct{}`，？
-   - 原理
-     1. freeConn保存了idle的连接，获取连接优先尝试从freeConn空闲的拿
+   - 属性
+     1. MaxOpenConns：最大打开连接数
+     1. MaxIdleConns：最大空闲连接数
+     1. maxLifetime：最长重用时间间隔，只针对freeConn中的
+     1. maxIdleTime：关闭前的最长空闲时间
+   - 设计
+     1. 设计哲学
+        - 抽象底层的实现接口，中间件实现平台层逻辑，对上层应用提供一个标准的API，对驱动层定义一个标准接口层
+          1. 隔离了不同的数据库实现，应用层不关心底层
+          1. 增强功能但是调用接口不变，驱动层实现的接口和应用层的调用接口几乎一模一样
+        - 复杂功能放在sql包内部实现
+          1. 并发的安全性支持
+          1. 连接池的管理
+        - 面向组合的编程
+          1. 如sql包中定义数据结构组合了driver层的接口变量和内部数据元素
+        - 定义一个连接接口Connector，用来创建连接（依赖倒置原则），当初始化DB时再将具体实现注入到DB对象中（也就是依赖注入）
+     1. 设计实现
+        - 将需要加锁的字段和锁放在一起，用空行和其他字段分开，更好的看到需要加锁的字段
+        - 之前靠返回值来设计逻辑，现在用管道通信，代码解耦，更好的设计逻辑
+        - 设计数据结构的时候一定有个主体，确定整体框架
+        - 限制与配置，给数据结构一个边界的考量，看到可能与不可能
+        - 统计与分析，给数据结构一个状态的考量
+     1. 不足
+        - 大量的锁，代码非常难看
+        - 包中各个实体资源的复用、回收、清理等逻辑较混乱，阅读代码很难搞清楚实体依赖关系、生存期等，就是过程代码 + 组合的形式
+        - 大牛的特点，你不要管我的实现，我只要保持接口的清晰，你只管用就好了，至于内部实现是我自己的事情，我不保证可读性，我可以使用我认为的任何技巧
+   - 组成
+     1. database/sql：包含了sql的通用形接口和类型，是对外应用层，是db的抽象
+        - DB：数据库连接池管理器结构体类型，![avatar](../images/go/database_sql_db.png)
+          1. connector：连接创建器
+          1. numOpen：总连接数，正在用的、在连接池里的、将要打开的连接数量
+          1. maxOpen：最大连接数，正在用的、在连接池里的的连接数量
+          1. maxIdle：连接池的大小，即freeConn的大小，大了更多空闲连接，小了更多阻塞请求要等待连接
+          1. waitCount：请求等待的总，即connRequests的kv总数
+          1. maxLifeTime：连接总生存时间，从创建到关闭，包含idle时间
+
+          1. openerCh：连接请求chan，需要打开新连接的阻塞队列
+          1. freeConn：`[]*driverConn`
+          1. stop：用于取消协程
+          1. cleanerCh：`chan struct{}`，？
+
+          1. connRequests：`map[uint64]chan connRequest`，请求队列，递增管理每个请求，每多个请求就自增为key的存储每个请求的缓冲chan
+        - driverConn：用互斥锁包装的driver.Conn，在所有调用driver.Conn的期间保持
+          1. *DB
+          1. createdAt
+          1. inUse
+        - Conn：单个数据库的连接接口
+          1. *DB：表示属于哪个管理器
+          1. *driverConn：会返回到连接池中
+     1. database/sql/driver：数据库驱动的抽象接口
+        - Driver，驱动接口
+          1. Open()
+        - Connector：连接创建器接口，提供了Connect()用于创建实际连接
+          1. dsnConnector：实现了Connector接口的dsn连接创建器类型
+        - Conn：连接接口，需要由不同数据库去实现。这才是是真正的连接，多个协程不会同时使用
+          1. Prepare()
+          1. Begin()
+          1. Close()
+        - Rows：是Query接口的返回，是一个迭代器抽象，可以通过rows.Next遍历查询操作返回的所有结果行。rows依赖于它的子成员rowsi
+        - Stmt：Prepare会返回一个stmt，表示一个被prepared的语句。然后就可以提供具体参数，调用这个stmt的Exec执行
+          1. Prepare完成之后该Prepare使用的连接机会被回收，而不会等到它返回的stmt执行close才被回收
+          1. 每个prepare statement的id只会被执行该prepare语句的连接识别。也就是说每个prepare statement只和唯一一个连接绑定，不能在一条连接上prepare，而在另一条连接上Exec，使用css结构来记录绑定关系
+          1. 
+     1. 数据库驱动的操作的具体实现
+        - 分类
+          1. github.com/go-sql-driver/mysql
+          1. sqlite3
+        - 功能
+          1. 实现和数据库服务端的通信部分功能，缓冲区管理、通信编码等
+          1. 通过封装通信细节使得返回的rows支持迭代器功能，以及将conn封装在stmt中，使stmt支持执行指令的功能
    - 方法
-     1. conn：获取连接
+     1. 打开方法
+        - sql.Register(）：先注册数据库驱动
+        - sql.Open(）
+          1. 获取某个数据库驱动：driver.Driver，是database/sql/driver包的接口
+          1. 建立连接：使用创建连接器
+             - 判断驱动实现driver.DriverContext接口，则调用OpenConnector方法获取连接创建器Connector
+             - 否则使用dsnConnector类型
+        - sql.OpenDB()
+          1. 创建可取消的上下文，并交给用于创建连接的协程connectionOpener
+          1. 创建sql.DB
+     1. 连接池方法
+        - sql.DB.conn()：新增连接
+          1. 判断db、上下文是否关闭
+          1. 如果策略是先从空闲中获取就获取一个连接、生命周期判断
+          1. 创建连接
+             - 使用具体驱动创建连接：`ci, err := db.connector.Connect(ctx)`
+             - 封装成一个driverConn类型
+          1. 已达最大创建连接数等待
+             - 如果用户停止了等待则删除该请求，并且记录等待时间，如果连接已建立则放回到连接池中
+             - 如果有连接释放，则从req中获得一个连接并返回
+        - sql.DB.putConn()：将连接放入空闲slice，如果放满了就关闭
+        - sql.DB.putConnDBLocked()：判断是否存在等待的请求，存在直接用，不存在扔到freeConn
+        - startCleanerLocked()：定时根据maxLifetime(连接最大生命时长)来清理连接。被SetConnMaxIdleTime()/SetConnMaxLifetime()/putConnDBLocked()调用
+            ```go
+            for {
+                select {
+                case <-t.C:
+                case <-db.cleanerCh:            // 单纯起到阻塞作用，感觉直接等待调度就好，如果用sleep还得加个定时器，成本更高
+                }
+
+                db.mu.Lock()                    // 搭配锁去操作数据
+                db.mu.Unlock()
+            }
+            ```
+        - sql.DB.maybeOpenNewConnections：连接一次出错的兜底方法，一次性触发所有请求去发起连接
+     1. 执行方法
+        - 查询
+          1. sql.QueryContext() —— sql.query() —— sql.DB.conn()、sql.DB.queryDC()
+          1. sql.QueryRowContext()：只查询一行
+        - 执行：sql.DB.Exec() —— sql.DB.ExecContext() —— sql.DB.exec() —— sql.DB.conn()、sql.DB.execDC()：不返还结果集，主要是非select的场景
+   - 流程：![avatar](../images/go/database_sql_open_process.png)
+     1. 打开连接：获取数据库驱动、初始化sql.DB、异步协程监听需要新建连接的chan
+     1. 执行
+        - 获取连接sql.DB.conn()
+        - 执行查询、更新等操作
+        - 释放连接sql.driverConn.releaseConn()到空闲slice
+   - 原理
+     1. sql.DB.freeConn保存了idle的连接，获取连接优先尝试从freeConn空闲的拿
+     1. 异步协程监听db.openerCh获得一个创建连接的信号
+     1. 正常的freeConn的增减都是用锁按流程操作，只有异常才用db.openerCh添加连接
+     1. 通过db.stop设置上下文关闭的信号
+     1. 清理
+        - 数据库初始化完之后不会直接挂一个清理连接的协程，而是放回连接池发起一次清理连接池空闲连接的动作，重新设置连接最大生存时间的时候也触发一次，一上来就搞多low，肯定没超时
+        - 先获取超时的所有连接，才一个一个close
+     1. 提供了两种获取连接的策略，alwaysNewConn/cachedOrNewConn，总是新建/优先复用free连接
+     1. 方法带Locked后缀的，都是需要外边用锁保护的
+     1. 方法带Context后缀的，都是有上下文的
+   - 最佳实践
+     1. db.Conn()能够持续占用一条连接，但在该连接中没办法调用之前prepare生成的stmt，但在事务中可以，tx.Stmt()可以生成特定于该事务的stmt
+     1. 每次对连接池操作时，都要先加一把全局大锁，当连接数较多且请求量较大时，会存在较为严重的锁竞争。一个简单的方式是将大连接池拆分为多个小连接池，一般情况下通过简单轮询将请求打散在多个连接池上
+     1. 数据库连接池的回收策略是针对freeConn的，换句话说，连接如果被一直占用，哪怕已经超过了生存时间，也不会被回收
+   - 更新
+     1. 1.16.x优化：增加maxIdleTime，空闲连接毕竟占的是资源，一旦创建了很多，最大生存时间又很长，是很占内存的
 1. gomemcache
    - 采用Mutex+Slice实现Pool
    - 实现
@@ -1310,6 +1433,7 @@
 1. Worker Pool
    - 认识
      1. 创建一组固定数量的goroutine（Worker），由这一组Worker去处理连接，防止大量的goroutine使用
+     1. 协程抢占式执行任务，没有状态
    - 要求
      1. 有些是在后台默默执行的
      1. 不需要等待返回结果
