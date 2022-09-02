@@ -1142,9 +1142,10 @@
 ### 技术方案
 #### 池化：连接池、工作者池
 1. 认识
-   - 原理：![avatar](../images/conn_pool.png)
+   - 连接池原理：![avatar](../images/conn_pool.png)
+   - 工作者池是抢占，连接池是先查空闲的队列
    - 感觉大多数都用chan实现了，也就很简单了
-1. go-redis的连接池实现
+1. go-redis的连接池
    - 特点
      1. 只实现了简单的轮询形式，没有加权形式
      1. 有最小连接队列特性
@@ -1200,7 +1201,7 @@
         }
     }
     ```
-1. sql.DB
+1. sql.DB连接池
    - 认识
      1. 目的是降低频繁创建和关闭连接的开销
      1. 主要内容是获取连接、释放连接、复用连接、清理连接。用的时候取出一个空闲的，如果没有就等待或者新建
@@ -1340,7 +1341,7 @@
      1. 数据库连接池的回收策略是针对freeConn的，换句话说，连接如果被一直占用，哪怕已经超过了生存时间，也不会被回收
    - 更新
      1. 1.16.x优化：增加maxIdleTime，空闲连接毕竟占的是资源，一旦创建了很多，最大生存时间又很长，是很占内存的
-1. gomemcache
+1. gomemcache的连接池
    - 采用Mutex+Slice实现Pool
    - 实现
     ```go
@@ -1381,7 +1382,7 @@
         return cn, true
     }
     ```
-1. fatih/pool的连接池实现
+1. fatih/pool的tcp连接池
    - 认识：最常用的tcp连接池，非常稳定，已经归档了
      1. Pool 是通过 Channel 实现的，空闲的连接放入到 Channel 中
    - 使用套路如下
@@ -1414,6 +1415,60 @@
         mu       sync.RWMutex
         c        *channelPool
         unusable bool
+    }
+
+    // Get implements the Pool interfaces Get() method. If there is no new
+    // connection available in the pool, a new connection will be created via the
+    // Factory() method.
+    func (c *channelPool) Get() (net.Conn, error) {
+        conns, factory := c.getConnsAndFactory()
+        if conns == nil {
+            return nil, ErrClosed
+        }
+
+        // wrap our connections with out custom net.Conn implementation (wrapConn
+        // method) that puts the connection back to the pool if it's closed.
+        select {
+        case conn := <-conns:
+            if conn == nil {
+                return nil, ErrClosed
+            }
+
+            return c.wrapConn(conn), nil
+        default:
+            conn, err := factory()
+            if err != nil {
+                return nil, err
+            }
+
+            return c.wrapConn(conn), nil
+        }
+    }
+
+    // put puts the connection back to the pool. If the pool is full or closed,
+    // conn is simply closed. A nil conn will be rejected.
+    func (c *channelPool) put(conn net.Conn) error {
+        if conn == nil {
+            return errors.New("connection is nil. rejecting")
+        }
+
+        c.mu.RLock()
+        defer c.mu.RUnlock()
+
+        if c.conns == nil {
+            // pool is closed, close passed connection
+            return conn.Close()
+        }
+
+        // put the resource back into the pool. If the pool is full, this will
+        // block and the default case will be executed.
+        select {
+        case c.conns <- conn:
+            return nil
+        default:
+            // pool is full, close passed connection
+            return conn.Close()
+        }
     }
 
     // 通过把 net.Conn 包装成 PoolConn，实现了拦截 net.Conn 的 Close 方法，避免了真正地关闭底层连接
