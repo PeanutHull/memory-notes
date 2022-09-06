@@ -1490,13 +1490,52 @@
      1. 创建一组固定数量的goroutine（Worker），由这一组Worker去处理连接，防止大量的goroutine使用
      1. 协程抢占式执行任务，没有状态
    - 要求
-     1. 有些是在后台默默执行的
-     1. 不需要等待返回结果
-     1. 有些需要等待一批任务执行完
-     1. 有些Worker Pool的生命周期和程序一样长
-     1. 有些只是临时使用，执行完毕后，pool就销毁了
+     1. pool
+        - 有些Worker Pool的生命周期和程序一样长
+        - 有些只是临时使用，执行完毕后，pool就销毁了
+     1. 任务本身
+        - 有些在后台执行
+        - 有些无需等待返回结果
+        - 有些依赖等待一批任务执行完
    - 推荐库
-     1. gammazero/workerpool：提供了更便利的 Submit 和 SubmitWait 方法提交任务，还可以提供当前的 worker 数和任务数以及关闭 Pool 的功能
+     1. gammazero/workerpool：提供了更便利的 Submit和 SubmitWait方法提交任务，提供当前的worker数、task数、关闭Pool
+        ```go
+        // 关键代码
+        // 任务和执行分开；worker去抢，抢不到就新建worker
+        for {
+            select {
+                case task, ok := <-p.taskQueue:
+                    if !ok {
+                        break Loop
+                    }
+                    // Got a task to do.
+                    select {
+                    case p.workerQueue <- task:
+                    default:
+                        // Create a new worker, if not at max.
+                        if workerCount < p.maxWorkers {
+                            wg.Add(1)
+                            go worker(task, p.workerQueue, &wg)
+                            workerCount++
+                        } else {
+                            // Enqueue task to be executed by next available worker.
+                            p.waitingQueue.PushBack(task)
+                            atomic.StoreInt32(&p.waiting, int32(p.waitingQueue.Len()))
+                        }
+                    }
+                    idle = false
+            }
+        }
+
+        // 每个worker循环去抢workQueue
+        func worker(task func(), workerQueue chan func(), wg *sync.WaitGroup) {
+            for task != nil {
+                task()
+                task = <-workerQueue
+            }
+            wg.Done()
+        }
+        ```
      1. ivpusic/grpool
      1. dpaks/goworkers
    - 简易demo

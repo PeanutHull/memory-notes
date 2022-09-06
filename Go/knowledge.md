@@ -216,6 +216,12 @@
 
         defer gClient.Close()
         ```
+#### 网络
+1. chromedp
+   - 认识：golang编写的基于Chrome DevTools Protocol协议的操作chrome headless和chrome devTools的程序
+     1. 可用于需要js解析后形成dom树的场景
+     1. 可实现点击，提交，上传，截图等操作
+     1. 结合go并发可用于爬虫
 ### 中间件
 #### 架构组件
 1. Sentinel
