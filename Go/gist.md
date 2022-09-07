@@ -1142,18 +1142,71 @@
 ### 技术方案
 #### 池化：连接池、工作者池
 1. 认识
-   - 连接池原理：![avatar](../images/conn_pool.png)
+   - 连接池
+     1. 目的是降低频繁创建和关闭连接的开销
+     1. 主要内容是获取连接、释放连接、复用连接、清理连接。用的时候取出一个空闲的，如果没有就等待或者新建
+        - 尽量减少阻塞的请求。同时尽量回收连接
+     1. 原理：![avatar](../images/conn_pool.png)
    - 工作者池是抢占，连接池是先查空闲的队列
    - 感觉大多数都用chan实现了，也就很简单了
 1. go-redis的连接池
-   - 特点
-     1. 只实现了简单的轮询形式，没有加权形式
-     1. 有最小连接队列特性
+   - 特性：池数量控制、空闲连接控制、超时逻辑、
+     1. 拿连接只实现了简单的线性表形式，没有加权等其他形式
+     1. 有最小空闲连接队列特性
      1. 有超时逻辑
+        - 从池子中获取连接超时就报错
+        - 连接创建以来超时就关闭
+        - 空闲连接超时了就关闭
+     1. 自己要实现就要有全局视野，自己有想法了再按照想法去实现就可以了
+   - 组成
+     1. Options：配置项
+        ```go
+        type Options struct {
+            Dialer  func(context.Context) (net.Conn, error)
+            OnClose func(*Conn) error
+
+            PoolFIFO           bool                             // 配置是否FIFO，否则先进后出
+            PoolSize           int                              // 池大小
+            MinIdleConns       int                              // 最小空闲数
+            MaxConnAge         time.Duration                    // 自创建以来连接的最大存活时间，可以理解为最长重用时间
+            PoolTimeout        time.Duration                    // 获取连接池的连接的超时时间
+            IdleTimeout        time.Duration                    // 空闲连接的超时时间
+            IdleCheckFrequency time.Duration                    // 空闲连接的检查频率
+        }
+        ```
+     1. ConnPool：连接池本池
+        ```go
+        type ConnPool struct {
+            opt *Options
+
+            dialErrorsNum uint32 // atomic
+
+            lastDialError atomic.Value
+
+            queue chan struct{}                     // 能获取池子最大数的保证
+
+            connsMu      sync.Mutex
+            conns        []*Conn                    // 总连接数，长度等于queue的容量
+            idleConns    []*Conn                    // 空闲连接数，最大长度等于queue的容量
+            poolSize     int
+            idleConnsLen int
+
+            stats Stats
+
+            _closed  uint32 // atomic
+            closedCh chan struct{}
+        }
+        ```
    - 实现
      1. slice和chan配合使用
-        - 使用chan(queue属性)作为从池中获取最大可用数量的保证，拿完了则阻塞(占满)，这时候计时器介入，实现获取连接的超时逻辑：waitTurn()方法
-        - 使用slice存储所有连接conns和空闲连接idleConns，使用mutex作为增减chan与其配套数据的互斥保证
+        - 使用chan(queue属性)作为从可用池中获取最大可用数量的保证，拿完了则阻塞(占满)，这时候计时器介入，实现获取连接的超时逻辑：waitTurn()方法
+        - 使用slice存储所有连接conns和空闲连接idleConns，使用mutex作为增减chan与配套slice正确的互斥保证
+   - 方法
+     1. Get()：获取连接。从空闲池拿、阻塞了(到最大数)就等待连接、新建连接(大于空闲数小于最大数)
+        - 利用waitTurn实现池子最大数的获取阻塞占用
+        - 之后用锁获取空闲连接
+        - 没有空闲连接就新建一个，然后释放一个queue(waitTurn使用)的数量
+     1. Put()：给连接池新增一个空闲连接
    - 拿连接排队和超时的机制
     ```go
     var timers = sync.Pool{
@@ -1203,10 +1256,8 @@
     ```
 1. sql.DB连接池
    - 认识
-     1. 目的是降低频繁创建和关闭连接的开销
-     1. 主要内容是获取连接、释放连接、复用连接、清理连接。用的时候取出一个空闲的，如果没有就等待或者新建
-        - 尽量减少阻塞的请求。同时尽量回收连接
      1. gorm的连接池复用了sql.DB
+     1. 连接池的操作都是靠锁和流程操作完成，只有异常情况才备用了openerCh来监听新建，而cleanerCh则监听去清理
    - 属性
      1. MaxOpenConns：最大打开连接数
      1. MaxIdleConns：最大空闲连接数
@@ -1246,7 +1297,7 @@
           1. openerCh：连接请求chan，需要打开新连接的阻塞队列
           1. freeConn：`[]*driverConn`
           1. stop：用于取消协程
-          1. cleanerCh：`chan struct{}`，？
+          1. cleanerCh：`chan struct{}`：需要清理的
 
           1. connRequests：`map[uint64]chan connRequest`，请求队列，递增管理每个请求，每多个请求就自增为key的存储每个请求的缓冲chan
         - driverConn：用互斥锁包装的driver.Conn，在所有调用driver.Conn的期间保持
@@ -1326,8 +1377,7 @@
         - 释放连接sql.driverConn.releaseConn()到空闲slice
    - 原理
      1. sql.DB.freeConn保存了idle的连接，获取连接优先尝试从freeConn空闲的拿
-     1. 异步协程监听db.openerCh获得一个创建连接的信号
-     1. 正常的freeConn的增减都是用锁按流程操作，只有异常才用db.openerCh添加连接
+     1. 异步协程监听db.openerCh获得一个创建连接的信号，正常的freeConn的增减都是用锁按流程操作，只有异常才用db.openerCh添加连接，主要用于异常需要创建的情况，感觉锁的成本比协程的成本低才大量用锁
      1. 通过db.stop设置上下文关闭的信号
      1. 清理
         - 数据库初始化完之后不会直接挂一个清理连接的协程，而是放回连接池发起一次清理连接池空闲连接的动作，重新设置连接最大生存时间的时候也触发一次，一上来就搞多low，肯定没超时
@@ -1383,7 +1433,7 @@
     }
     ```
 1. fatih/pool的tcp连接池
-   - 认识：最常用的tcp连接池，非常稳定，已经归档了
+   - 认识：Connection pool for Go's net.Conn interface，最常用的tcp连接池，非常稳定，已经归档了
      1. Pool 是通过 Channel 实现的，空闲的连接放入到 Channel 中
    - 使用套路如下
     ```go
@@ -1487,7 +1537,7 @@
     ```
 1. Worker Pool
    - 认识
-     1. 创建一组固定数量的goroutine（Worker），由这一组Worker去处理连接，防止大量的goroutine使用
+     1. 创建一组固定数量的goroutine（worker），由这一组worker去处理任务，防止大量的goroutine使用
      1. 协程抢占式执行任务，没有状态
    - 要求
      1. pool
@@ -1497,8 +1547,16 @@
         - 有些在后台执行
         - 有些无需等待返回结果
         - 有些依赖等待一批任务执行完
+        - 有些需要暂停
+   - 组成
+     1. dispatch：调度器
+     1. worker：实际处理任务的
+   - 实现
+     1. 初始化worker池配置
+     1. 使用协程开启调度器：设置超时基准时钟，设置worker队列，转发任务
+     1. 使用协程执行worker
    - 推荐库
-     1. gammazero/workerpool：提供了更便利的 Submit和 SubmitWait方法提交任务，提供当前的worker数、task数、关闭Pool
+     1. gammazero/workerpool：提供了更便利的Submit、SubmitWait、Pause方法，提供当前的worker数、task数、关闭Pool
         ```go
         // 关键代码
         // 任务和执行分开；worker去抢，抢不到就新建worker
@@ -1583,11 +1641,11 @@
     func (p *CalculatePool) work(no int) {
         logger.D("debug_pool_nu", "___start calculate--[pooNo]:%d", no)
         defer func() {
-            recover()                                                       // 处理实际运行程序的panic情况
+            recover()                                                                               // 处理实际运行程序的panic情况
             p.Wg.Done()
         }()
         for {
-            select {
+            select {                                                                                // 每个worker中使用select太浪费了，在调度器即可，参考gammazero/workerpool
             case funcD := <-p.WaitChanel:
                 logger.D("debug_2", "___start calculate--[pooNo]:%d,[func]%+v", no, funcD)
                 // 执行函数
