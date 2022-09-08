@@ -1973,21 +1973,20 @@
      1. 做事件广播
      1. 做分布式锁：抢任务
    - 实现服务注册和发现
-   - 使用cap理论，基于raft协议实现分布式日志同步
-1. 依赖
-   - gorhill/cronexpr：cron表达式解析工具
-1. 实现原理
-   - go执行shell的原理是fork子进程进行exec调用，通过pipe获取直接结果
-   - 应用直接接入raft成本太高
-   - 伪分布式
-     1. 经过网络的都可能异常，rpc异常属于常态，导致worker是否完成master不知道，引发worker和master状态不一致、任务重复执行等
+   - 很多设计不合理
+     1. 每个worker全量缓存所有任务，太占内存
+     1. 所有worker一哄而上用锁抢任务
+     1. 日志队列满了直接丢弃日志
 1. 架构设计
+   - 原理
+     1. go执行shell的原理是fork子进程进行exec调用，通过pipe获取直接结果
+     1. 应用直接接入raft成本太高
+     1. 伪分布式
+        - 经过网络的都可能异常，rpc异常属于常态，导致worker是否完成master不知道，引发worker和master状态不一致、任务重复执行等
    - 特点
      1. 所有节点都和etcd交互，利用raft屏蔽分布式环境网络的不确定性
      1. 无状态master将任务存储到etcd并查询任务，worker通过etcd会实时同步
-     1. 每个worker独立调度全量任务，无需和master产生rpc(因为通信失败产生误会)
      1. 每个worker用分布式锁抢任务，解决并发调度
-     1. worker存储日志到MongoDB
    - 结构
      1. master
         - 任务管理：将定时任务curd到etcd
@@ -2007,6 +2006,8 @@
           1. 对新batch启动定时器，超时未满自动提交
           1. batch满了立即提交，并取消定时器
         - 配置管理
+   - 依赖
+     1. gorhill/cronexpr：cron表达式解析工具
    - 实现摘录
     ```go
     // etcd结构
