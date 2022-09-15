@@ -96,10 +96,9 @@
      1. opentelemetry
      1. 听云
      1. 网校探针：发生故障的时候，能够快速定位和解决问题
-     1. skywalking：是观察性分析平台和应用性能管理系统。提供分布式追踪、服务网格遥测分析、度量聚合和可视化一体化解决方案，可用于php
+     1. skywalking：是观察性分析平台和应用性能管理系统。提供分布式追踪、服务网格遥测分析、度量聚合和可视化一体化解决方案，可用于php，支持多语言，支持Istio + Envoy服务网格，国内开源并提交到Apache孵化器，华为
      1. 元老：openTracing、opencensus
      1. zipkin：Spring Cloud全家桶自带
-     1. skywalking：支持多语言，支持Istio + Envoy服务网格，国内开源并提交到Apache孵化器，华为
      1. opencensus：支持多语言，谷歌出品
      1. jeager：Uber
      1. CAT：点评的
