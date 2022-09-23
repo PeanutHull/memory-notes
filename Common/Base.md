@@ -616,6 +616,7 @@
      1. 跨平台
         - Qt + C++/Python：大型GUI
         - Electron + JS：主要桌面端使用，向移动端发展，vs code基于这个
+          1. 基于Chromium + nodeJS的能力 + native API，支持html+css+js进行桌面端开发。
         - Flutter + Dart：主要移动端使用
         - wxWidget：跨平台的开源的c++ GUI库，支持python、perl，使用native API而不是模拟GUI，不如qt那么应用广泛
         - CEF：Chromium Embedded Framework，libcef，为第三方应用提供可嵌入浏览器支持，跨平台提供c/c++接口
