@@ -1037,6 +1037,17 @@
         }
         ```
 1. GC
+   - 发展
+     1. v 1.1 ——2013/5 ——STW ——————————百ms-⼏百ms级别
+     1. v 1.3 ——2014/6 ——Mark STW, Sweep 并⾏ — 百ms级别
+     1. v 1.5 ——2015/8—— 三⾊标记法, 并发标记清除 -10ms级别
+     1. v 1.8 ——2017/2—— hybrid write barrier ————sub ms
+   - 一些说法
+     1. STW 是垃圾收集器中的两个“停止世界”阶段。 在这两个阶段中，goroutine 会停止。
+     1. GC（idle）是在没有工作时标记内存的 goroutine。
+     1. MARK ASSIST 是在分配过程中帮助标记内存的 goroutine。
+     1. 一旦垃圾收集器完成，GXX runtime.bgsweep 是内存扫描阶段。
+     1. GXX runtime.gcBgMarkWorker 是帮助标记内存的专用后台 goroutine。
    - 认识
      1. 自动垃圾回收：使用 Go 语言创建对象的时候，我们没有回收 / 释放的心理负担，想用就用，想创建就创建
      1. 如果你想使用 Go 开发一个高性能的应用程序的话，就必须考虑垃圾回收给性能带来的影响
@@ -4407,6 +4418,12 @@
 
             fmt.Println("调用gRPC方法成功，ProdStock = ", resp.ProdStock)
             ```
+1. rpcx
+   - 认识：RPC服务治理框架
+     1. 高性能：gRPC性能的两倍
+     1. 交叉语言：各种编程语言的调用
+     1. 服务发现：支持直连、Zookeeper、Etcd、Consul、mDNS等注册中心
+     1. 服务治理：支持Failover、Failfast、Failtry、Backup等失败模式，支持随机、轮询、权重、网络质量、一致性哈希、地理位置等路由算法
 1. 国际化
    - 地区：`i18n.SetLocale("zh-CN")`
    - 资源：展示
@@ -4468,6 +4485,7 @@
             C.print(cs)
         }
         ```
+### 测试与分析
 1. 测试
    - 方式
      1. testing包：使用包中方法
@@ -4652,6 +4670,7 @@
         - 生成trace.out文件命令：`go test -benchmem -run=^$ -bench ^BenchmarkDemo_Pool$ demo -v -count=1 -trace=trace.out `
         - web版：`curl http://localhost:8888/debug/pprof/trace?seconds=20 > trace.out`
         - 分析trace.out文件命令：`go tool trace -http=127.0.0.1:8000 trace.out`
+   - -race：race detector
    - `go tool pprof`
      1. 认识：性能分析，找出时间花在哪里
         - 解决那些耗时占比大的，看看怎么解决
@@ -4705,7 +4724,9 @@
             }
             ```
    - 断点调试：dlv
-   - go-torch：开源工具，将profile信息转换成火焰图
+   - go-torch：开源工具，将profile信息转换成火焰图，https://github.com/uber/go-torch
+     1. Flame：火焰图绘制
+     1. graphviz：调用链生成
    - 逃逸分析：`go build -gcflags "-m -l" *.go`
    - 汇编代码：`go run -gcflags -S main.go`
 1. GUI
@@ -4745,7 +4766,6 @@
         - `go tool cgo`
    - 运行和编译
      1. `go run hello.go`：进行高速编译，用作脚本语言
-        - -race：race detector
      1. `go build`
         - 认识：用于测试编译
           1. 会同时编译依赖包，会在GOROOT/src和GOPATH/src搜索包，默认编译当前目录下的所有go文件，可指定要编译的文件名，会忽略_或.开头的go文件，会根据当前系统选择性地编译以系统名结尾的文件(_linux|darwin|windows|freebsd.go)

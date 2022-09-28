@@ -102,14 +102,9 @@
 1. 分类
    - 大型：功能大而全
      1. tars
+     1. Kratos
    - rpc
      1. tars：性能强
-     1. rpcx
-        - 认识：RPC服务治理框架
-          1. 高性能：gRPC性能的两倍
-          1. 交叉语言：各种编程语言的调用
-          1. 服务发现：支持直连、Zookeeper、Etcd、Consul、mDNS等注册中心
-          1. 服务治理：支持Failover、Failfast、Failtry、Backup等失败模式，支持随机、轮询、权重、网络质量、一致性哈希、地理位置等路由算法
    - web
      1. Echo：简约、高性能，2万star
      1. Iris：最快，完善的mvc
@@ -117,51 +112,20 @@
      1. Revel：高效、全栈
      1. Martini：轻巧、功能强大、模块化web，不再维护
 1. wiki
-   - xes解析
+   - xes框架解析
     ```go
     // main函数中
     testing.Init()      // 注册测试标志，用于不使用go test的情况下，进行如基准测试的函数调用
     err = gracehttp.Serve(&http.Server{Addr: ":" + configs.GetServer().Server.Port, Handler: g})        // grace承接http服务
     ```
-   - rpc
-     1. 认识：Remote Procedure Call Protocol，远程过程调用协议，打通了应用层和传输层，不需要关注通信细节直接调用远程方法，实现函数调用模式的网络化
-        - 包含了传输协议、编码协议
-        - 内含多种实现方案(socket/管道)，linux的固定端口111
-     1. 意义
-        - 不用关心连接的网络细节
-        - 分布式部署
-        - 程序内连接，解耦
-        - 面向过程，restful面向资源
-     1. 分类
-        - java：古老的RMI、dobbu、motan、spring cloud
-          1. 如dobbu是产品级的rpc框架
-        - go：rpcx
-        - 跨语言：grpc、thrift
-          1. 没有服务发现、负载均衡等相关机制
-        - 其他：phprpc、yar、swoole、hprose
-     1. thrift：接口描述语言和二进制通讯协议，跨语言，Apache的
-     1. 跨语言rpc
-        - 实现基础
-          1. 通用数据结构
-          1. 网络编程
-        - 实现方式
-          1. 文件
-             - web service
-               1. 实现原理：将被调用的方法名、参数封装到WSDL的xml文件中，然后解析xml进行调用
-               1. 弊端：xml的数据传输低效性，网络传输的路径长(基于http协议)
-          1. 二进制
-             - 新一代rpc实现原理
-               1. 编写描述文件
-               1. 转换描述文件为相应语言的数据结构(结构体、类等)，使用Protobuf
-               1. 翻译：将数据结构转为二进制数据、字节数组
-               1. 传输：通过socket传给另一个编程语言
-               1. 再次翻译：翻译为本语言的数据结构
-               1. 调用执行
 ### 库
+#### db相关
 1. ORM
    - gorm
    - xorm
    - ent
+   - Gaea：小米基于mysql协议的数据库中间件，支持分库分表、sql路由、读写分离等基本特性
+1. redis
    - go-redis
      1. 认识：官方推荐第一个
         - 全命令支持
@@ -216,6 +180,8 @@
 
         defer gClient.Close()
         ```
+#### 进程管理
+1. 相关：![avatar](../images/go/go_process_manage.png)
 #### 网络
 1. chromedp
    - 认识：golang编写的基于Chrome DevTools Protocol协议的操作chrome headless和chrome devTools的程序

@@ -110,14 +110,64 @@
      1. Received KB/Sec
      1. Send KB/Sec
    - 其他压测工具
-     1. ab：`ab -n total -c runNum http://`，QPS/TPS=并发数/平均响应时间
-     1. webbench：最多可以模拟3万个并发连接，`webbench -c 1000 -t 30 http://xxx`
-        - -t：并发
-        - -c：时间
      1. siege
      1. LoadRunner：收费
      1. http_load
+     1. webbench：最多可以模拟3万个并发连接，`webbench -c 1000 -t 30 http://xxx`
+        - -t：并发
+        - -c：时间
+     1. locust
+     1. GoReplay
+     1. TcpCopy
+     1. ab：`ab -n total -c runNum http://`，QPS/TPS=并发数/平均响应时间
      1. wrk：轻量级HTTP性能测试工具，比ab好用？
+        ```lua
+        // wrk.lua文件
+        --school/course/detail
+        --wrk -t 2 -c 10 -d 10s --timeout=5 -s wrk.lua --latency http://api-fzinner.jiaoyanyun.com/
+        -- 这条命令表示，利用 wrk 对 api-fzinner.jiaoyanyun.com 测试网关下某个API 发起压力测试，线程数为 2，模拟 10 个并发请求，持续 10 秒。
+
+
+        wrk.method = "POST"
+        wrk.path = '//detail'
+        wrk.body = '{"userId":100019,"periodId":3,"subjectId":3,"gradeId":10,"versionId":1,"scene":6,"volume":4,"orgId":1063,"productId":100111}'
+        wrk.headers["X-Auth-Appid"] = ""
+        wrk.headers["X-Auth-TimeStamp"] = ""
+        wrk.headers["X-Auth-Sign"] = ""
+        wrk.headers["Content-Type"] = "application/json"
+        wrk.headers["Cookie"] = "_ga=GA1.2.1784594164.1511502670" 
+        wrk.headers["User-Agent"] = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.94 Safari/537.36"
+
+        request = function()
+        return wrk.format(wrk.method, wrk.path, wrk.headers)
+        end
+
+        response = function(status, headers, body)
+            -- print(wrk.path)
+            if status ~= 200 then  
+                -- print(body)  
+                wrk.thread:stop()
+            end
+        end
+
+
+        done = function(summary, latency, requests)
+            io.write("------------------------------------\n")
+            for _, p in pairs({50, 90, 99, 99.999 }) do
+            n = latency:percentile(p)
+            io.write(string.format("%g%%,延时: %d ms\n", p, n/1000))
+            end
+
+            io.write("=============ERROR====================\n")
+            errors = summary["errors"]
+            io.write("total socket connection errors: " .. errors["connect"] .. "\n")
+            io.write("total socket read errors:       " .. errors["read"] .. "\n")
+            io.write("total socket write errors:      " .. errors["write"] .. "\n")
+            io.write("total HTTP status codes > 399:  " .. errors["status"] .. "\n")
+            io.write("total request timeouts:         " .. errors["timeout"] .. "\n")
+            io.write("=============END ERROR================\n")
+        end
+        ```
    - 分布式压测
    - 配套工具
      1. jvisualvm：jdk提供的负载、进程监控插件，能够监控本地以及远程
