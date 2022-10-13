@@ -642,6 +642,8 @@
    - 比较
      1. MFC、Qt、Cocoa 这三个库可以代表那个时间段所产生的技术：面向对象、Direct UI、Layer&GPU加速渲染
      1. 现在都不关心怎么Direct UI，而是新的开发范式，web技术也是可以很复杂，交给浏览器绘制就可以了
+1. 程序移植
+   - windows向mac：开源的wineskin，商业的CrossOver，原理是通过在mac中模拟win32 API让exe运行
 1. windows
    - win32
      1. 认识

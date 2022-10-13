@@ -452,6 +452,7 @@
                     "xx": "xx xx",                      // 单词间是或的关系
                     "xx": {                             // 控制单词间关系
                         "query": "xx xx",
+                        "type": "phrase",               // 指定查询类型？
                         "operator": "and|or",
                         "minimum_should_match": "n"     // 最少满足匹配的单词数
                     }
@@ -460,7 +461,7 @@
                     "query": "",
                     "fields": ["xx", "xx"]
                 },
-                "match_phrase": {                       // 匹配确切解析、接近查询，对词语顺序有要求
+                "match_phrase": {                       // 确切匹配和解析、接近查询，对词语顺序有要求
                     "xx": "xx xx",
                     "slop": "n"                         // 单词间间隔
                 },
@@ -781,10 +782,61 @@
      1. `requests_per_second`：限流
 1. 聚合分析
    - 认识：aggregation，是除搜索功能外提供的数据统计分析功能，类似sql的sum等，可以对query后的结果进行aggregation
-     1. 支持bucket、metric、pipeline等分析方式，metric是计算方式，bucket对数据分堆，这两个可以组合为xy轴展示的
+     1. 支持bucket、metric、pipeline等分析方式，bucket对数据分堆，metric是计算方式，这两个可以组合为xy轴展示的
         - metric：指标，进行统计计算的方式，如sum、min等，不指定默认按照value_count聚合
-        - bucket：桶，即设置分组条件后的一个个数据集合
+        - bucket：聚合，即桶，即设置分组条件后的一个个数据集合，可以设置子桶，对父桶再拆分
      1. 计算结果实时返回，实时性高
+   - 分析方式
+     1. metric：指标分析，类似统计函数
+        - 单值：输出结果只有一个
+          1. min/max/avg/sum
+          1. value_count：文档总数
+          1. cardinality：去重的文档总数，结果近似准确不精准
+        - 多值
+          1. stats/extended_stats：一次性返回min/max/avg/sum的统计值，extended stats多了方差、标准差
+          1. percentile/percentile rank：百分位数统计，rank可获取指定值的位置，结果是近似准确的，不是精准
+          1. top hits：一般用于分桶后获取该桶内最匹配的顶部文档数据
+     1. bucket
+        - 认识：分组分析，类似group by，按照一定规则将文档放入不同桶中，用于分类
+        - 分桶规则
+          1. terms：根据唯一值分桶，每个唯一值算一个桶，text类型则按照分词结果分桶
+          1. range：根据范围分桶，`ranges`
+            - date range
+          1. histogram：根据固定间隔分桶，`interval`间隔大小，`extended_bounds`被间隔的数据范围
+            - date histogram：根据时间间隔分桶，针对日期的直方图或柱状图，时序数据分析中常用。`calendar_interval`，`format`
+          1. filter：将规则仅限于某一集合
+          1. composite：符合聚合，可从不同来源创建复合存储桶，可以流式处理桶，类似scroll之于文档
+     1. matrix：矩阵分析
+     1. pipeline：管道分析，基于上级聚合分析再进行分析，支持链式调用，会输出到原结果中
+        - 输出位置
+          1. parent：内嵌到现有结果
+             - derivative：求导，导数
+             - moving average：移动平均值
+             - cumulative sum：累积加和
+          1. sibling：与现有结果同级
+             - max/min/avg/sum bucket
+             - stats/extended stats bucket
+             - percentiles bucket
+   - 作用范围：默认query结果集，可通过以下修改
+     1. filter：为聚合分析设定过滤条件，不改变query的结果
+     1. post-filter：在聚合分析后生效，作用于文档过滤
+     1. global：无视过滤条件，基于全部文档分析
+   - 排序
+     1. 认识：默认按照doc_count排序，分两种
+     1. 分类
+        - 内置排序
+          1. `_count`：按照文档数，terms/histogram有效
+          1. `_term`：按词项的字符串值的字母顺序排序。只针对terms
+          1. `_key`：分桶后的key值排序，只针对histogram
+        - 度量指标排序：就是按照字段排序
+   - 应用
+     1. bucket + metric：可以先分组再计算，更加强大
+     1. 精准度：
+        - min：精确
+        - terms
+          1. 不一定准确，因为数据分散在不同的分片，只会取每个分片的top数据然后进行总和。某个数据进入不到所在分片的top就会被少算，可设置分片为1，或者合理设置shard-size大小解决，`show_term_doc_count_error`可查看每个bucket误算的最大值。尽量保证每个shard都把文档返回
+          1. 是为了获得top，不是为了分页，分页用composite
+        - 近似统计算法：海量数据/精确度/实时性，只能同时满足其二，es是牺牲精准度
    - 使用
     ```json
     GET index/_search
@@ -845,57 +897,6 @@
         }
     }
     ```
-   - 分析方式
-     1. metric：指标分析，类似统计函数
-        - 单值：输出结果只有一个
-          1. min/max/avg/sum
-          1. value_count：文档总数
-          1. cardinality：去重的文档总数，结果近似准确不精准
-        - 多值
-          1. stats/extended_stats：一次性返回min/max/avg/sum的统计值，extended stats多了方差、标准差
-          1. percentile/percentile rank：百分位数统计，rank可获取指定值的位置，结果是近似准确的，不是精准
-          1. top hits：一般用于分桶后获取该桶内最匹配的顶部文档数据
-     1. bucket
-        - 认识：分组分析，类似group by，按照一定规则将文档放入不同桶中，用于分类
-        - 分桶规则
-          1. terms：根据唯一值分桶，每个唯一值算一个桶，text类型则按照分词结果分桶
-          1. range：根据范围分桶，`ranges`
-            - date range
-          1. histogram：根据固定间隔分桶，`interval`间隔大小，`extended_bounds`被间隔的数据范围
-            - date histogram：根据时间间隔分桶，针对日期的直方图或柱状图，时序数据分析中常用。`calendar_interval`，`format`
-          1. filter：将规则仅限于某一集合
-          1. composite：符合聚合，可从不同来源创建复合存储桶，可以流式处理桶，类似scroll之于文档
-     1. matrix：矩阵分析
-     1. pipeline：管道分析，基于上级聚合分析再进行分析，支持链式调用，会输出到原结果中
-        - 输出位置
-          1. parent：内嵌到现有结果
-             - derivative：求导，导数
-             - moving average：移动平均值
-             - cumulative sum：累积加和
-          1. sibling：与现有结果同级
-             - max/min/avg/sum bucket
-             - stats/extended stats bucket
-             - percentiles bucket
-   - 作用范围：默认query结果集，可通过以下修改
-     1. filter：为聚合分析设定过滤条件，不改变query的结果
-     1. post-filter：在聚合分析后生效，作用于文档过滤
-     1. global：无视过滤条件，基于全部文档分析
-   - 排序
-     1. 认识：默认按照doc_count排序，分两种
-     1. 分类
-        - 内置排序
-          1. `_count`：按照文档数，terms/histogram有效
-          1. `_term`：按词项的字符串值的字母顺序排序。只针对terms
-          1. `_key`：分桶后的key值排序，只针对histogram
-        - 度量指标排序：就是按照字段排序
-   - 应用
-     1. bucket + metric：可以先分组再计算，更加强大
-     1. 精准度：
-        - min：精确
-        - terms
-          1. 不一定准确，因为数据分散在不同的分片，只会取每个分片的top数据然后进行总和。某个数据进入不到所在分片的top就会被少算，可设置分片为1，或者合理设置shard-size大小解决，`show_term_doc_count_error`可查看每个bucket误算的最大值。尽量保证每个shard都把文档返回
-          1. 是为了获得top，不是为了分页，分页用composite
-        - 近似统计算法：海量数据/精确度/实时性，只能同时满足其二，es是牺牲精准度
 1. cat
 1. x-pack：官方提供的sql形式查询的方式
 1. Modules
@@ -1089,7 +1090,7 @@
         - timelion：时序数据
         - apm：性能指标和错误
         - devTools：开发者工具
-        - monitoring：
+        - monitoring
         - management：系统管理
    - beats：轻量级数据传送者、日志收集处理工具(agent)
      1. 分类
