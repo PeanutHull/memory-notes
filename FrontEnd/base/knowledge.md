@@ -136,6 +136,7 @@ alert(jsonobj.name);
             header("Access-Control-Allow-Credentials:true");                    // 是否允许发送cookie，前端需显性打开，true的话上一不能为*，因为cookie同源
             header("Access-Control-Allow-Methods:POST,GET");
             header("Access-Control-Allow-Headers:prelogid,DNTX-Requested-With"); // 指定6个基本响应头之外的，Cache-Control/Content-Language/Content-Type/Expires/Last-Modified/Pragma
+            header("Access-Control-Expose-Headers:X-Pagenation-Count"); //  指定6个基本响应头之外的可暴露的头部
             ```
         - 浏览器对其分类：
           1. 类别：同时满足以上条件是简单的

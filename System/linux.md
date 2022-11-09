@@ -1084,15 +1084,16 @@
    - 嵌入式/专用操作系统：vxWorks、ucos
 1. linux的发行版本
    - RedHat
-     1. RHEL：Redhat Enterprise Linux，红帽的企业级商业化版本。红帽：来源于开源社区，服务于开源社区
      1. Fedora：红帽赞助的社区免费版本，有点像实验版本，经过测试稳定后，增加的特性和功能会迁移到RHEL上
-     1. Centos：模仿红帽企业版的免费版本，无法得到红帽公司的商业支持，但可以获得开源社区的维护和支持，使用上相差无几
+     1. RHEL：Redhat Enterprise Linux，红帽的企业级商业化版本。红帽：来源于开源社区，服务于开源社区
+        - Centos：模仿红帽企业版的免费版本，无法得到红帽公司的商业支持，但可以获得开源社区的维护和支持，使用上相差无几
    - SUSE
      1. SUSE Linux Enterprise：novell公司的商业化版本
      1. openSUSE：novell公司的社区版本
    - Debian
      1. Debian：免费版本
      1. Ubuntu：类似Debian的免费版本
+   - openEuler：华为欧拉，数字基础设施的开源操作系统
 1. 目录结构
    - 系统目录
      1. /：根目录，不要存放文件，/etc、/bin、/dev、/lib、/sbin应该和根目录在一个分区中
