@@ -4846,7 +4846,7 @@
    - 开发
      1. 配置GOROOT、GOPATH
      1. 配置代理：`GOPROXY=https://goproxy.cn;GOPRIVATE=*.100tal.com`
-     1. 配置注释空格：设置 Preferences > Editor > Code Style > Go > Other 勾选上 Add leading space to comments
+     1. 配置注释空格：设置 Preferences > Editor(编辑器) > Code Style(代码样式) > Go > Other 勾选上 Add leading space to comments
      1. 配置goimport、gofmt，在Tools > File Watcher
      1. 运行
         - go工具实参：`-gcflags="all=-N -l"`
