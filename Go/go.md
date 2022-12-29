@@ -4220,8 +4220,12 @@
         ```
 1. 加解密
    - base64
-     1. `base64.StdEncoding.EncodeToString(src)`
-     1. `base64.StdEncoding.DecodeString(string(src))`
+     1. 普通
+        - `base64.StdEncoding.EncodeToString(src)`
+        - `base64.StdEncoding.DecodeString(string(src))`
+     1. 兼容url
+        - `base64.URLEncoding.EncodeToString(src)`
+        - `base64.URLEncoding.DecodeString(string(src))`
    - aes：`aes.NewCipher`，crypto.des/aes、crypto/cipher
    - sha：`h := sha256.New()`，crypto/sha256/sha1
    - md5：`h := md5.New()`，crypto/md5
