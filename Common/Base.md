@@ -820,15 +820,16 @@
 1. Rabin-Karp字符串匹配
    - 认识：用在了字符子串在另一个字符串的匹配，利用滚动hash计算出母串的hasharray，然后进行比较，再用字符对比解决hash冲突问题
 1. 雪花算法：参见"唯一id"分类
-#### 一致性算法
+##### 一致性算法
 1. 分类
-   - paxos
-   - raft
-   - zab：zookeeper基于paxos提出了zab协议
+   - 共识
+     1. paxos
+     1. raft
+     1. zab：zookeeper基于paxos提出了zab协议
+     1. gossip：cassandra、consul的闲话算法
    - 一致性hash
      1. es的hash路由算法
      1. haproxy的hash算法
-   - gossip：cassandra、consul的闲话算法
 1. raft
    - 背景：选主、保持一致
      1. 抽屉理论：可以确保日志不会丢失，复制给了大多数。60个抽屉31个放了东西，随意拉开30个抽屉都会拿到东西
@@ -897,6 +898,7 @@
           1. commit日志同样多，则term、log index越大选举为leader
         - 分区中的所有节点会回滚roll back自己的数据日志，并匹配新leader的log日志，然后实现同步提交更新自身的值
         - 最终集群达到整体一致，集群存在唯一leader
+1. 一致性hash？？？
 ### 程序
 1. 命令和程序：命令也是程序，命令解释器 bash
 #### 编程
