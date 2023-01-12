@@ -209,18 +209,20 @@
      1. 同源策略：检测Referer和Origin字段，非法的Reffer来源直接拒绝访问
      1. 当前session构造唯一token放入请求头、参数中，攻击者不能拿到这个token
 ### 加密方式
+1. 认识
+   - 没有绝对安全的加密，越复杂、越难破解的加密算法需要的计算时间也越长
 1. 摘要算法
    - 特点
      1. 只要源文本不同，计算得到的结果，必然不同（或者说机会很少），哈希碰撞
      1. 无法从结果反推出源数据
    - 分类
-     1. MD5：Message-Digest Algorithm 5，报文摘要算法，单向加密
-     1. SHA：单向加密，SHA-256、SHA-1
+     1. MD5：Message-Digest Algorithm 5，消息摘要算法，单向加密
+     1. SHA：Secure Hash Algorithm 安全散列算法，单向加密，SHA-256、SHA-1
      1. HMAC：把key混入计算哈希的过程，对所有哈希算法都通用
 1. 对称加密算法
    - DES：Data Encryption Standard，对称加密标准，被AES替代
    - AES
-     1. 认识：Advanced Encryption Standard，对称加密标准，又称Rijndael加密法，美国联邦政府采用的一种区块加密标准。AES-128、AES-192、AES-256
+     1. 认识：Advanced Encryption Standard，高级加密标准，又称Rijndael加密法，美国联邦政府采用的一种区块加密标准。AES-128、AES-192、AES-256
         - 是基于数据块的加密方式，即分组密码（区别于基于比特位的流密码）
         - 密钥长度（位）：128、192、256
         - CBC和CTR安全性最高且最常用
