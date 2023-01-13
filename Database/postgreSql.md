@@ -85,9 +85,6 @@
    - PostGIS：地理查询相关
    - timescaledb：存储时序数据
    - PipelineDB：
-   - 
-   - 
-   - 
 1. 命令
    - createdb
 1. 运维
