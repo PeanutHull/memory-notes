@@ -765,7 +765,6 @@
    - GeoHash算法：将二维经纬度数据映射到一维的整数，这样所有元素都将在挂载到一条线上，距离靠近的二维坐标映射到一维后的点之间距离也会很接近
      1. 映射算法：它将整个地球看成一个二维平面，然后划分成了一系列正方形的方格，对方格进行整数编码，二刀法等
    - TOTP：从共享密钥和当前时间计算一次性密码的算法，用于许多双因素身份验证系统，用oath-toolkit登录
-   - 八皇后问题方案：递归回溯，本质上是一种枚举法，不满足就调整上一级数据
 1. 评估方式
    - 指标：多方面的因素
      1. 问题规模
@@ -871,7 +870,7 @@
 #### 算法思想
 1. 贪心
    - 认识：greedy algorithm，尽可能让期望值最大，应用于哈夫曼、PK最小生成树算法、Dijkstra单源最短路径算法
-     1. 使算法失效的影响项：前面的选择，会影响后面的选择
+     1. 使算法失效的影响项：前面的选择，会影响后面的选择，或者贪心无法控制边界
    - 应用场景
      1. 理解
         - 分糖果：大小不等的m个糖果数量小于等于n个对糖果大小的需求不等的孩子数量，如何分配尽可能满足最多数量的孩子？不断找出对糖果大小需求最小的孩子先满足，然后循环，达成最大期望器
@@ -880,10 +879,123 @@
         - 区间覆盖：n个有不同起始端点和结束端点的区间，如何选出最多的满足两两不相交但可以接触的区间数量？找到这些区间中最左端点和最右端点，然后每次选择时左端点跟前面的已覆盖区间不重合的，右端点又尽量小的，这样可以让剩下的未覆盖区间尽可能的大，就可以放置更多的区间
      1. 实际：任务调度、教师排课等，这些类似于区间覆盖问题
 1. 分治
-     1. 认识：Divide Conquer，即分而治之，一般用递归实现
+   - 认识：Divide Conquer，即分而治之，将问题划分成n个规模较小且结构与原问题相似的子问题，一般用递归解决这些子问题，最后合并其结果就得到原问题的解
+   - 应用举例：求一组数据的有序对个数或者逆序对个数呢？有序和逆序一样，利用归并排序过程中每次合并计算逆序对个数，然后加总和即可得出
+   - 场景
+     1. 海量数据处理，如MapReduce
 1. 回溯
+   - 认识：从一组可能的解中选择出一个满足要求的解。走不通就返回上一个(调整上一级数据)继续走，很多用在搜索上，适合用递归实现，本质是穷举带回头，应用于缺乏规律，或我们还不了解其规律的搜索场景中
+     1. 剪枝操作是提高回溯效率的一种技巧，即判定边界条件及时返回
+   - 应用举例
+     1. 八皇后：不满足就调整上一级数据(回溯)
+        - 问题：8x8棋盘放8个棋子，每个棋子所在的行、列、对角线都不能有另一个棋子，期望找到所有满足这种要求的放棋子方式？需要逐行往上考察每一行是否满足，即有回溯
+        - 代码
+            ```java
+            int[] result = new int[8];// 全局或成员变量,下标表示行,值表示queen存储在哪一列
+            public void cal8queens(int row) { //调用方式：cal8queens(0);
+                if (row == 8) { // 8个棋子都放置好了，打印结果
+                    printQueens(result);
+                    return; // 8行棋子都放好了，已经没法再往下递归了，所以return
+                }
+                for (int column = 0; column < 8; ++column) { // 每一行都有8中放法
+                    if (isOk(row, column)) { //有些放法不满足要求
+                        result[row] = column; // 第row行的棋子放到了column列
+                        cal8queens(row+1); // 考察下一行
+                    }
+                }
+            }
+
+            private boolean isOk(int row, int column) {//判断row行column列放置是否合适
+                int leftup = column - 1, rightup = column + 1;
+                for (int i = row-1; i >= 0; --i) { //逐行往上考察每一行
+                    if (result[i] == column) return false; //第i行的column列有棋子吗？
+                    if (leftup >= 0) { //考察左上对角线：第i行leftup列有棋子吗？
+                        if (result[i] == leftup) return false;
+                    }
+                    if (rightup < 8) { //考察右上对角线：第i行rightup列有棋子吗？
+                        if (result[i] == rightup) return false;
+                    }
+                    --leftup; ++rightup;
+                }
+                return true;
+            }
+
+            private void printQueens(int[] result) { //打印出一个二维矩阵
+                for (int row = 0; row < 8; ++row) {
+                    for (int column = 0; column < 8; ++column) {
+                        if (result[row] == column) System.out.print("Q ");
+                        else System.out.print("* ");
+                    }
+                    
+                    System.out.println();
+                }
+                System.out.println();
+            }
+            ```
+     1. 0-1背包：经典解法是动态规划，用回溯简单但不那么高效
+        - 问题：背包总承载Wkg，n个重量不等的不可分割的物品，不超背包总重量下如何让背包中物品总重量最大？用贪心不行了因为不可分割，因为用贪心边界无法探知，改成装入的物品数量最多可用贪心，
+        - 解决：不重复地穷举出这总共的2^n种装法，把物品依次排列分解为n个阶段，进行处理看看装不装的进去。先假定前边的是否确定，然后处理后边
+        - 代码
+            ```java
+            public int maxW = Integer.MIN_VALUE; //存储背包中物品总重量的最大值
+            // cw表示当前已经装进去的物品的重量和；i表示考察到哪个物品了；
+            // w背包重量；items表示每个物品的重量；n表示物品个数
+            // 假设背包可承受重量100，物品个数10，物品重量存储在数组a中，那可以这样调用函数：
+            // f(0, 0, a, 10, 100)
+            public void f(int i, int cw, int[] items, int n, int w) {
+                if (cw == w ||i == n) { // cw==w表示装满了;i==n表示已经考察完所有的物品
+                    if (cw > maxW) maxW = cw;
+                    return;
+                }
+                f(i+1, cw, items, n, w);
+                if (cw + items[i] <= w) {// 已经超过可以背包承受的重量的时候，就不要再装了
+                    f(i+1,cw + items[i], items, n, w);
+                }
+            }
+            ```
+     1. 正则表达式的匹配方式：先随意选择一种匹配方案，然后继续考察剩下的字符。如中途发现无法继续匹配下去就回到这个岔路口，重新选择一种匹配方案，然后再继续匹配剩下的字符
+        ```java
+        public class Pattern {
+            private boolean matched = false;
+            private char[] pattern; //正则表达式
+            private int plen; //正则表达式长度
+
+            public Pattern(char[] pattern, int plen) {
+                this.pattern = pattern;
+                this.plen = plen;
+            }
+
+            public boolean match(char[] text, int tlen) { //文本串及长度
+                matched = false;
+                rmatch(0, 0, text, tlen);
+                return matched;
+            }
+            private void rmatch(int ti, int pj, char[] text, int tlen) {
+                if (matched) return; //如果已经匹配了，就不要继续递归了
+                if (pj == plen) { //正则表达式到结尾了
+                    if (ti == tlen) matched = true; //文本串也到结尾了
+                    return;
+                }
+                if (pattern[pj] == '*') { // *匹配任意个字符
+                    for (int k = 0; k <= tlen-ti; ++k) {
+                        rmatch(ti+k, pj+1, text, tlen);
+                    }
+                } else if (pattern[pj] == '?') { // ?匹配0个或者1个字符
+                    rmatch(ti, pj+1, text, tlen);
+                    rmatch(ti+1, pj+1, text, tlen);
+                } else if (ti < tlen && pattern[pj] == text[ti]) { //纯字符匹配才行
+                    rmatch(ti+1, pj+1, text, tlen);
+                }
+            }
+        }
+        ```
+   - 应用场景
+     1. 算法如深度优先搜索
+     1. 软件开发如正则表达式匹配、编译原理的语法分析等
+     1. 数学如独、八皇后、0-1背包、图的着色、旅行商问题、全排列等
 1. 动态规划
    - 认识：Dynamic Programming DP，将一个问题拆成几个子问题，分别求解这些子问题，即可推断出大问题的解。（严格定义：如果给定某一阶段的状态，则在这一阶段以后过程的发展不受这阶段以前各段状态的影响。）
+     1. 将原问题拆分为若干个子问题，先求解子问题，然后从这些子问题的解得出原问题的解
         - 能否使用DP解决的条件：能将大问题拆成几个小问题，且满足无后效性、最优子结构性质
           1. 无后效性：未来与过去无关
           1. 最优子结构性质：大问题的最优解可以由小问题的最优解推出
