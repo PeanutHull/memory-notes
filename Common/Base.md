@@ -683,9 +683,6 @@
    - 应用
      1. 获取用户的粉丝列表不好计算，采用逆邻接表实现
      1. 快速判断两个用户之间是否是关注与被关注的关系，选择那种结构？红黑树、跳表、有序动态数组、散列表？因为按照用户名首字母排序，分页来用户粉丝列表或关注列表，跳表再合适不过，因为跳表本身有序，分页就高效，几十万用户完全可以存内存里，几亿用户哈希分片存储，或用硬盘
-
-
-
    - 分类
      1. 按照结构分类
         - 十字链表
@@ -699,7 +696,6 @@
      1. 欧拉路
      1. 网络流
    - 组成
-     1. 拓扑排序
      1. 最短路径
         - Dijkstra，迪杰斯特拉
         - Bellman-Ford，贝尔曼-福特
@@ -1522,6 +1518,7 @@
    - 前中后序二叉树遍历
 #### 图
 1. 图的搜索
+   - 认识：针对无权图
    - 深度优先算法
    - 广度优先算法
      1. 认识：BFS，上左下右一点点探索，一层层递进，每到一个点都是最短路径，深度优先走不了最短路径
@@ -1534,7 +1531,83 @@
         - 使用slice实现队列
         - 用Fscanf读取文件
         - 对Point的抽象，即坐标：`type point struct{i, j int}`
-1. 最短路径
+1. 拓扑排序算法
+   - 认识：对有向无环图图构造拓扑序列，解决工程是否能顺利进行的问题，分全局有序、局部有序
+   - 实现方法
+     1. Kahn算法
+     1. DFS深度优先搜索算法
+   - 应用
+     1. 如何确定代码源文件的编译依赖关系？a依赖b，b依赖c之类的
+1. 最短路径算法
+   - 认识：针对有权图，即图中的每条边都有一个权重，如何计算两点之间的最短路径和权重最小
+   - 算法
+     1. Dijkstra，著名
+        ```java
+        //因为Java提供的优先级队列，没有暴露更新数据的接口，所以我们需要重新实现一个
+        private class PriorityQueue { //根据vertex.dist构建小顶堆
+            private Vertex[] nodes;
+            private int count;
+            public PriorityQueue(int v) {
+                this.nodes = new Vertex[v+1];
+                this.count = v;
+            }
+            public Vertex poll() { // TODO:留给读者实现...
+            }
+            public void add(Vertex vertex) {
+                // TODO:留给读者实现...
+            }
+            //更新结点的值，并且从下往上堆化，重新符合堆的定义。时间复杂度O(logn)。
+            public void update(Vertex vertex) {
+                // TODO:留给读者实现...
+            }
+            public boolean isEmpty() {
+                // TODO:留给读者实现...
+            }
+        }
+
+        public void dijkstra(int s, int t) { //从顶点s到顶点t的最短路径
+            int[] predecessor = new int[this.v]; //用来还原最短路径
+            Vertex[] vertexes = new Vertex[this.v];
+            for (int i = 0; i < this.v; ++i) {
+                vertexes[i] = new Vertex(i, Integer.MAX_VALUE);
+            }
+            PriorityQueue queue = new PriorityQueue(this.v);//小顶堆
+            boolean[] inqueue = new boolean[this.v]; //标记是否进入过队列
+            vertexes[s].dist = 0;
+            queue.add(vertexes[s]);
+            inqueue[s] = true;
+            while (!queue.isEmpty()) {
+                Vertex minVertex= queue.poll(); //取堆顶元素并删除
+                if (minVertex.id == t) break; //最短路径产生了
+                for (int i = 0; i < adj[minVertex.id].size(); ++i) {        
+                    Edge e = adj[minVertex.id].get(i); //取出一条minVetex相连的边
+                    Vertex nextVertex = vertexes[e.tid]; // minVertex-->nextVertex
+                    if (minVertex.dist + e.w < nextVertex.dist) { //更新next的dist
+                        nextVertex.dist = minVertex.dist + e.w;
+                        predecessor[nextVertex.id] = minVertex.id;
+                        if (inqueue[nextVertex.id] == true) {
+                            queue.update(nextVertex); //更新队列中的dist值
+                        } else {
+                            queue.add(nextVertex);
+                            inqueue[nextVertex.id] = true;
+                        }
+                    }
+                }
+            }
+            //输出最短路径
+            System.out.print(s);
+            print(s, t, predecessor);
+        }
+        private void print(int s, int t, int[] predecessor) {
+            if (s == t) return;
+            print(s, predecessor[t], predecessor);
+            System.out.print("->" + t);
+        }
+        ```
+     1. Bellford
+     1. Floyd
+   - 应用
+     1. 地图路线规划：将地图抽象为有权图，抽象为求两个顶点间的最短路径
 1. 最小生成树
 1. 二分图
 #### 哈希算法
@@ -1803,6 +1876,8 @@
         - 分区中的所有节点会回滚roll back自己的数据日志，并匹配新leader的log日志，然后实现同步提交更新自身的值
         - 最终集群达到整体一致，集群存在唯一leader
 1. 一致性hash？？？
+### 数据结构与算法 - 高级
+
 ### 程序
 1. 命令和程序：命令也是程序，命令解释器 bash
 #### 编程
@@ -1982,6 +2057,13 @@
      1. IDA：还原出汇编指令
      1. F5插件：还原出高级语言
      1. ChatGPT：解析代码的逻辑，https://github.com/JusticeRage/Gepetto
+### 数据
+#### 存储结构
+1. 位图
+   - 认识：BitMap，用位的形式表示两种状态
+   - 特点：空间节省巨大，时间也有优势，只能表示两种状态
+   - 实现方式：利用int、char等数据类型的位运算实现
+1. 
 ### 技术体系
 1. 桌面开发架构
    - 分类
