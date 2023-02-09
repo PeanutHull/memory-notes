@@ -29,10 +29,20 @@
     logger.Info("Success..", zap.String("statusCode", resp.Status), zap.String("url", url))
     ```
 ### 框架
-1. Gin：以更好的性能实现类似Martini框架的API，5万star
+1. Gin：以更好的性能实现类似Martini的API框架，5万star
    - 特点
-     1. 简洁
-     1. 高性能路由
+     1. 简洁：只专注于对http handler的web处理，用了随之配合的一些组件
+     1. 高性能路由：会形成路由树，应该是字典树
+   - 结构
+     1. Engine：是gin的实例，最终调用http.ListenAndServe(address, engine)来启动
+     1. RouterGroup
+        - 方法有：路由分组Group()、http方法POST()等
+        - 添加路由：`Engine.addRoute()`
+        - 路由匹配：使用julienschmidt/httprouter
+     1. context
+     1. 
+     1. 
+     1. 
    - validator
      1. 功能
         - 自定义约束

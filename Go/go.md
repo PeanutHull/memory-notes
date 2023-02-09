@@ -4744,6 +4744,57 @@
         - 基于Pathfinder的高效矢量渲染器
         - 基于piet-gpu的实验渲染器，两种渲染器都支持Vulkan、Metal、Direct3D 11和OpenGL ES
 ### 运维
+1. 运行环境
+   - 环境变量
+     1. GOROOT：go的安装路径，可以不设置，默认在/usr/local/go，编译的时候从GOROOT找system libariry
+     1. GOPATH：开发的工作空间，作为编译后二进制的存放目的地和import包时的搜索路径。必须设置，可以有多个。可以弄俩，第一个放第三方包(因为默认安装到第一个)，第二个自己的
+        - src：源码目录，import时来src查找
+        - bin：可执行命令，go get二进制文件下载的目的地
+        - pkg：包对象，编译生成的lib文件存储的地方
+     1. GO111MODULE：mod功能是否打开
+        - off：使用$GOPATH/src或vendor
+        - on：在$GOPATH/src不找也不存放，放在$GOPATH/pkg/mod，多项目可共享
+        - auto：检测到go.mod就开启
+     1. 代理相关
+        - 走代理
+          1. `GOPROXY=https://proxy.golang.org,direct|off`
+             - 多个代理逗号分隔
+             - direct：回源到模块版本的源地址去抓取
+          1. `GOSUMDB=sum.golang.org|off`：校验是否被篡改
+        - 不走代理
+          1. `GOPRIVATE=*.100tal.com`：设置不走代理的，GOPRIVATE会作为下边俩的默认值
+          1. `GONOPROXY=*.100tal.com`
+          1. `GONOSUMDB=*.100tal.com`
+     1. CGO_ENABLED
+   - 编译
+     1. 一个package只能有一个main，否则build不过
+   - 开发
+     1. 配置GOROOT、GOPATH
+     1. 配置代理：`GOPROXY=https://goproxy.cn;GOPRIVATE=*.100tal.com`
+     1. 配置注释空格：设置 Preferences > Editor(编辑器) > Code Style(代码样式) > Go > Other 勾选上 Add leading space to comments
+     1. 配置goimport、gofmt，在Tools > File Watcher
+     1. 运行
+        - go工具实参：`-gcflags="all=-N -l"`
+        - 程序实参：`-conf=$ProjectFileDir$/configs/dev`
+   - 部署
+     1. supervisor来管理go程序，go自己用异常捕捉来处理
+     1. 打包linux的：`CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build main.go`
+     1. 编译脚本
+        ```shell
+        #!/bin/bash
+
+        # 设置环境变量
+        export GO111MODULE=on
+        export GOPROXY=https://goproxy.cn,direct
+        export GOSUMDB="off"
+        export GOPRIVATE=*.100tal.com
+
+        # 配置git，能够拉取gitlab依赖
+        git config --global url."ssh://git@git.100tal.com/".insteadOf https://git.100tal.com/
+
+        # 编译
+        make
+        ```
 1. cli
    - 查看
      1. `go version`
@@ -4795,25 +4846,25 @@
           1. 跨平台
              - GOOS=linux
              - GOARCH=amd64 
-     1. `go install`：编译和安装，将编译好的结果移到$GOPATH/pkg或$GOPATH/bin。.a移到$GOPATH/pkg，可执行文件移到$GOPATH/bin
+     1. `go install`：编译和安装，用于安装第三方库的可执行文件。将编译好的结果移到$GOPATH/pkg或$GOPATH/bin。.a移到$GOPATH/pkg，可执行文件移到$GOPATH/bin
         - `go install example.com/pkg@v1.2.3`：忽略mod文件指定依赖版本
      1. `go clean`：移除当前源码包里面编译生成的文件，如_obj/、_test/、test.out
    - 模块
      1. `go get`
-        - 认识：动态安装远程代码包，包含clone和install，不推荐使用。本质是先通过源码工具clone代码到GOROOT/src目录，然后执行go install
+        - 认识：安装远程包，用于编辑go.mod变更依赖，包含clone、compile、install三个步骤。原理类似先通过源码工具clone代码到GOROOT/src目录，然后执行go install
           1. 会回写go.mod文件，更新直接的模块依赖
           1. 会自动根据不同域名调用不同源码工具，如git或svn
         - 参数
+          1. `-d`：不构建和安装，只下载，go-get应该与-d标志一起使用，以调整当前模块的依赖关系而不构建包，不推荐使用go-get来构建和安装包。在未来的版本中，-d标志将始终启用
           1. 支持build的参数
           1. `golang.org/x/text@latest`：指定包名和版本
              - latest：拉取最新的版本，若存在tag，则优先使用
              - master：拉取 master 分支的最新 commit
              - v0.3.2：指定tag
              - 342b2e：指定commit，最终转换为tag
-             - none：
+             - none
           1. `-u`：强制使用网络更新直接或间接的依赖模块
           1. `-t ./...`：包括单元测试中用到的
-          1. `-d`：不构建或安装，只下载
           1. `-v`：显示执行的命令
      1. `go list`：查看安装的package
         - -f '{<!-- -->{.GoFiles}}'：查看将被编译的文件名
@@ -4822,64 +4873,14 @@
      1. gofmt：格式化
      1. govet：代码格式错误检查
      1. gometalinter：代码静态分析并规范化其输出的linter工具集
-     1. godegragh：
-1. 运行
-   - 环境变量
-     1. GOROOT：go的安装路径，可以不设置，默认在/usr/local/go，编译的时候从GOROOT找system libariry
-     1. GOPATH：开发的工作空间，作为编译后二进制的存放目的地和import包时的搜索路径。必须设置，可以有多个。可以弄俩，第一个放第三方包(因为默认安装到第一个)，第二个自己的
-        - src：源码目录，import时来src查找
-        - bin：可执行命令，go get二进制文件下载的目的地
-        - pkg：包对象，编译生成的lib文件存储的地方
-     1. GO111MODULE：mod功能是否打开
-        - off：使用$GOPATH/src或vendor
-        - on：在$GOPATH/src不找也不存放，放在$GOPATH/pkg/mod，多项目可共享
-        - auto：检测到go.mod就开启
-     1. 代理相关
-        - 走代理
-          1. `GOPROXY=https://proxy.golang.org,direct|off`
-             - 多个代理逗号分隔
-             - direct：回源到模块版本的源地址去抓取
-          1. `GOSUMDB=sum.golang.org|off`：校验是否被篡改
-        - 不走代理
-          1. `GOPRIVATE=*.100tal.com`：设置不走代理的，GOPRIVATE会作为下边俩的默认值
-          1. `GONOPROXY=*.100tal.com`
-          1. `GONOSUMDB=*.100tal.com`
-     1. CGO_ENABLED
-   - 编译
-     1. 一个package只能有一个main，否则build不过
-   - 开发
-     1. 配置GOROOT、GOPATH
-     1. 配置代理：`GOPROXY=https://goproxy.cn;GOPRIVATE=*.100tal.com`
-     1. 配置注释空格：设置 Preferences > Editor(编辑器) > Code Style(代码样式) > Go > Other 勾选上 Add leading space to comments
-     1. 配置goimport、gofmt，在Tools > File Watcher
-     1. 运行
-        - go工具实参：`-gcflags="all=-N -l"`
-        - 程序实参：`-conf=$ProjectFileDir$/configs/dev`
-   - 部署
-     1. supervisor来管理go程序，go自己用异常捕捉来处理
-     1. 打包linux的：`CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build main.go`
-     1. 编译脚本
-        ```shell
-        #!/bin/bash
-
-        # 设置环境变量
-        export GO111MODULE=on
-        export GOPROXY=https://goproxy.cn,direct
-        export GOSUMDB="off"
-        export GOPRIVATE=*.100tal.com
-
-        # 配置git，能够拉取gitlab依赖
-        git config --global url."ssh://git@git.100tal.com/".insteadOf https://git.100tal.com/
-
-        # 编译
-        make
-        ```
+     1. godegragh
 1. 依赖管理
    - Go Module
      1. 认识：官方的包依赖版本管理工具，前身vgo
         - 支持vendor、GOPATH
         - go命令内置对模块的支持
         - 至少1.11及以上版本，最好1.13或以上，撑13以下是老版本，哈哈
+        - 区分install、get、mod三个命令的区别
      1. 组成
         - go.mod文件，可以将工程从GOPATH中移出来
             ```go
@@ -4900,18 +4901,17 @@
             exclude example.com/thismodule v1.3.0                           // 从使用中排除特定模块版本
             ```
         - go.sum文件：用来校验文件，都是命令行自动操作
-     1. 命令：`go mod <command> [arguments]`
-        - init：初始化
-
+     1. 命令
+        - `go mod <command> [arguments]`
+          1. init：初始化
+          1. download：下载
+          1. edit -module/require/version/print xx：手动修改依赖文件
+          1. tidy：整理，需要的加，不要的删
+          1. verify：验证是否被篡改过
+          1. graph：查看现有的依赖结构
+          1. why：查看为什么需要依赖某模块
+          1. vendor：导出依赖放入vendor目录
         - `go get`：添加
-        - tidy：整理，需要的加，不要的删
-        - download：下载
-        - edit -module/require/version/print xx：手动修改依赖文件
-        - vendor：导出依赖放入vendor目录
-        - verify：验证是否被篡改过
-
-        - graph：查看现有的依赖结构
-        - why：查看为什么需要依赖某模块
    - 发展
      1. 阶段
         - GOPATH：所有包必须放GOPATH目录下，无法支持不同版本包存在
@@ -4923,6 +4923,7 @@
         - 17年：Dep作为准官方试验
         - 18年：Modules作为官方试验，v1.11
         - 19年：默认开启Go Mod，v1.13
+        - GO111MODULE默认为on，v1.16
    - 其他
      1. dep
         - 认识：实现了tag管理代码，而不是trunk/mainline，如go get下载的代码
