@@ -186,6 +186,9 @@
 1. 命令
    - brew update：自身更新
 
+   - brew tap：列出已有仓库
+     1. brew tap <user/repo>：添加仓库
+     1. brew untap <user/repo>：移除仓库
    - brew info/search：查看包
    - brew list：查看已安装
 
@@ -199,3 +202,16 @@
    - brew cleanup go：清理旧的升级包
 1. 信息
    - 位置：/usr/local/Cellar
+### iTerm2
+1. iTerm快捷键设置：Profiles->Keys
+   - ctrl + a/e：移动到行首尾
+   - ctrl + ←/→：单词移动，需设置`Send Escape Sequence + d/f`
+   - shift + ←/→：单词选择，需设置`Move Start of Selection Left By Word`，`Move End of Selection Right By Word`
+   - ctrl + w：单词删除
+1. 插件
+   - 已安装：参考https://www.zhihu.com/question/511866354
+     1. bat：cat的升级版
+     1. dust：du + rust
+   - 感兴趣
+     1. tokei：统计目录内的代码行数
+     

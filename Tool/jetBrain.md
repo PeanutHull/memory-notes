@@ -120,3 +120,10 @@ settings -> editor -> editor tabs -> 勾选 mark modifed tabs
      1. xdebug_call_class()      // 取文件名，行号，函数名
      1. xdebug_get_headers()     // header信息
      1. xdebug_time_index()      // 执行时间
+### Clion
+1. Build,Execcution,Deployment
+   - Toolchains：配置执行的环境，有本机、minGW等
+   - CMake：设置cmake构建选项，添加debug和release(发布包)
+1. Run,Debug Configurations
+   - Program arguments：表示添加运行时的命令行参数
+   - Working directory：添加`$Proje
