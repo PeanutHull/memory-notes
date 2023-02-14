@@ -212,6 +212,7 @@
    - 已安装：参考https://www.zhihu.com/question/511866354
      1. bat：cat的升级版
      1. dust：du + rust
+     1. mcfly：小型神经网络搜索输入历史，ctrl-r使用
    - 感兴趣
      1. tokei：统计目录内的代码行数
      
