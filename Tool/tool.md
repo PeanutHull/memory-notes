@@ -62,6 +62,7 @@
 ### Chrome
 1. 功能
    - 网络：chrome://net-internals/#events，包括dns
+   - 背景黑色：chrome://flags/#enable-force-dark
 ### DevTool
 1. 简介
  - 官方文档：https://developers.google.com/web/tools/
