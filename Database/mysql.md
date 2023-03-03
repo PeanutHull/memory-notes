@@ -252,6 +252,17 @@
           1. 删除老表
         - 工具
           1. pt-online-schema-change：`pt-online-schema-change --alter="" --execute`
+   - 字段
+     1. default：默认值
+        - text没有
+     1. null
+        - 认识：null值，设置为not null会自动调用默认值；需要行中的额外空间来记录其值是否为null，使用null会影响索引效率，因为索引将null也视作一般数据节点
+        - 和c语言的区别
+          1. '\0'表示空占用空间，null不占用
+          1. 空值('')不占用空间，null占用空间
+        - 因为text没有默认值，设置为not null在没有值的情况下会调用默认值，所以会有冲突
+        - 最佳实践
+          1. 尽量给所有值都加上not null
 #### sql
 1. sql
    - 分类
