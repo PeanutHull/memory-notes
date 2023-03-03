@@ -4428,6 +4428,7 @@
      1. 交叉语言：各种编程语言的调用
      1. 服务发现：支持直连、Zookeeper、Etcd、Consul、mDNS等注册中心
      1. 服务治理：支持Failover、Failfast、Failtry、Backup等失败模式，支持随机、轮询、权重、网络质量、一致性哈希、地理位置等路由算法
+1. SPRC：搜狗基于Sogou C++ Workflow的企业级RPC系统，qps几十万，支持Protobuf、Thrift
 1. 国际化
    - 地区：`i18n.SetLocale("zh-CN")`
    - 资源：展示

@@ -553,6 +553,16 @@
      1. 不换行和连接符：`print(x, end="", sep='&')`
      1. `print("OS error: {0}".format(err))`
    - 序列化/反序列化：pickle，用于对象信息的保存
+### 最佳实践
+1. 爬虫
+   - 分类
+     1. 通用爬虫
+     1. 聚焦爬虫：如聚合去哪儿、艺龙的评价数据
+   - 库
+     1. pholcus
+     1. gocrawl
+     1. colly
+     1. hu17889/go_spider
 ### wiki
 1. 保留字
    - class，from，import，return，
