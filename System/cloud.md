@@ -403,7 +403,7 @@
      1. emptyDir：空白卷，pod删除也删除，pod崩溃会保留
         - 做基于磁盘的归并排序的缓存空间
         - 为耗时长的任务提供检查点，以便从崩溃前状态恢复执行
-     1. hostPath：能将宿主机上文件、目录挂载到pod中，
+     1. hostPath：能将宿主机上文件、目录挂载到pod中
      1. glusterfs
      1. cephfs
      1. nfs

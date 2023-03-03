@@ -113,3 +113,6 @@
    - Adobe Animate：flash改名，用于矢量图形和动画
    - FlipaClip：逐帧动画工具，通过多帧图片自动合成一张动图或者短视频
    - 专业的：3DSMax / Maya / C4D / Blender
+### other
+1. 搜索引擎
+   - 组成：搜集、分析、索引、查询
