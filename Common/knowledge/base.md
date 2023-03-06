@@ -1842,36 +1842,6 @@
      1. 混合型
         - 理解：结合，半编译型语言，C#在编译的时候不是直接编译成机器码而是中间码，.NET平台提供了中间语言运行库运行中间码，中间语言运行库类似于Java虚拟机。.net在编译成IL代码后，保存在dll中，首次运行时由JIT在编译成机器码缓存在内存中，下次直接执行。Java先生成字节码再在Java虚拟机中解释执行。严格来说混合型语言属于解释型语言。C#更接近编译型语言
         - 包含：C#
-1. 编译
-   - 认识：
-     1. JIT：just in time，即时编译，表示运行时将指令转为二进制机器码，jit可以将opcode直接转为机器码，大幅提升性能
-   - 阶段
-     1. Frontend：前端，分析源代码，检查语法级错误，并构建针对语言的抽象语法树（AST）
-     1. Optimizer：优化器，用于中间代码优化，进一步优化转为新表示方式
-     1. Backend：后端，生成可执行机器码
-   - 编译器
-     1. LLVM
-        - 认识：Low Level Virtual Machine 低级虚拟机，这个名字不贴切。是一个模块化和可重复使用的编译器和工具技术的集合。提供编译器相关的支持，能够进行程序语言的编译期优化、链接优化、在线编译优化、代码生成等，包含LLVM中介码（LLVM IR）、LLVM除错工具、LLVM C++标准库
-          1. 被作为实现各种静态和运行时编译语言通用基础架构（GCC家族、Java、.Net、Python、Ruby、Scheme、Haskell、D等）
-        - 特点
-          1. 三个模块相互独立，可以充分复用。如如果开发一门新的语言，只要制造一个该语言的前端，将源码编译为bitcode，优化和后端不用管。同理，如果新的芯片架构问世，只需基于LLVM重新编写一套目标平台的后端即可
-        - 组成
-          1. 前端将各种类型的源代码编译为中间代码，即bitcode，不同语言不同编译器前端，如clang负责c/c++/oc，flang负责fortran，swiftc负责swift
-          1. LLVM IR：Intermediate Representation，不同的前后端使用统一的中间代码。有3种表示形式，但本质上是等价的。
-             - text：便于阅读的文本格式，类似于汇编语言，拓展名 .ll，`clang -S -emit-llvm main.m`
-             - memory：内存格式
-             - bitcode：二进制格式，拓展名 .bc，`clang -c -emit-llvm main.m`
-          1. 优化阶段是一个通用的阶段，针对的是统一的LLVM IR
-          1. Clang：LLVM项目的子项目，使用模块化设计，可以将自身功能以库的方式来供上层应用来调用。如编码规范检查、IDE中的语法高亮、语法检查等上层应用，都用的这个
-        - 步骤
-          1. 词法分析：生成Token
-             - 显示每个Token的类型、值、位置：`clang -fmodules -E -Xclang -dump-tokens main.m`
-          1. 语法分析：利用上面输出的Token先按照语法组合成语义，生成类似VarDecl这样的节点，然后将这些节点按照层级关系构成抽象语法树 AST
-        - wiki
-          1. LLVM起源于伊利诺伊大学的研究，LLVM开始成长之后，成为众多编译工具及低级工具技术的统称
-     1. wiki
-        - Xcode使用LLVM，Xcode5之前是GCC
-        - GCC相比LLVM，前后端耦合在了一起。所以支持新语言，或新平台，就困难
 1. 组成
    - expression：表达式，表达式总是能够返回一个值
    - statement：语句，语句则只干活并不返回。一个语句由n个表达式组成
@@ -1897,7 +1867,7 @@
      1. 很方便，很强大，就是出了问题不知道在哪，控制台日志能看晕
      1. 就像开着坦克上高速的感觉
    - python - flask
-     1. 写起来很爽、部属愁死人
+     1. 写起来很爽、部署愁死人
    - js - express/koa
      1. 好写好部属，库不要太多
      1. 无静态检查的语言让我们这些java、.net程序员怎么放心的写啊？--typescript或许是解决办法？
@@ -1917,11 +1887,89 @@
    - GPL：GUN Public License，包括linux。为最初的作者保留版权，可以改但是得开源
    - LGPL
 #### 编译
+1. 认识：受到乔姆斯基文法的启发，从汇编语言发展到用编译来实现高级编程语言
+   - JIT：just in time，即时编译，表示运行时将指令转为二进制机器码，jit可以将opcode直接转为机器码，大幅提升性能
+1. 编译器
+   - GCC：一统之前纷争的天下
+   - LLVM：由于GCC无法模块化、前后端耦合在一起，支持新语言或新平台较难等而诞生，可以轻松集成到IDE中
+     1. 起源于伊利诺伊大学的研究，LLVM开始成长之后，成为众多编译工具及低级工具技术的统称
+     1. 2005年，Chris Lattner加入苹果，负责苹果的编译器、XCode等工具的开发，以及LLVM社区的发展，Xcode使用LLVM，Xcode5之前是GCC
+1. 阶段
+   - Frontend：前端，分析源代码，检查语法级错误，并构建针对语言的抽象语法树（AST）
+     1. Lex：词法分析，源代码字符串分割成一个个token
+     1. YACC：语法分析，把分割好的token变成抽象语法树AST
+   - Optimizer：优化器，优化中间代码，进一步优化转为新表示方式
+   - Backend：后端，生成各平台可执行的机器码
 1. 反编译
    - 工具
      1. IDA：还原出汇编指令
      1. F5插件：还原出高级语言
      1. ChatGPT：解析代码的逻辑，https://github.com/JusticeRage/Gepetto
+##### 编译器
+1. GCC
+   - 认识：GNU Compile Collection，unix上的GNU编译器套装。开源的跨平台的支持多种前端和后端的Unix和Linux的标准编译器，包含C/C++/Java/Python/OC/Ada/Fortran/Pascal等编译器，能够为很多不同机器生成机器码。紧跟c标准的变动
+     1. gcc：GNU C Compiler，c编译器
+     1. g++：c++编译器
+   - 作用：源代码 —— 预处理器 .i —— 编译器 .s —— 汇编器 .o —— 连接器 —— 可执行二进制文件
+     1. `gcc -E hello.c hello.i`：预处理阶段，预处理器cpp进行宏展开、删除注释等简单工作
+     1. `gcc -S hello.c hello.s`：编译阶段，cc，转成汇编
+     1. `gcc -c hello.c hello.o`：汇编阶段，as，翻译成机器指令，打包成可重定位目标文件，包括词法分析、语法分析、语义检查、中间码生成、代码优化、目标代码生成
+     1. `gcc -o hello.o a.o`：链接阶段，ld，用输入的可重定位目标文件和分别进行编译生成的程序模块(如果有)及系统提供的标准库函数连接一起，生成可执行目标文件，默认使用动态库。对汇编结果做调整(如将函数地址从偏移量转换为逻辑地址)
+        - 符号解析：将目标文件中每个符号（静态变量、函数、全局变量）和其定义进行关联
+        - 重定位：重新编排来自不同文件的符号的定义与具体在虚拟内存中的地址(.rel.text来描述)。变量不再有内外部之分，都成了本地变量
+   - 使用
+     1. -I：指定编译查找的路径
+     1. `gcc -std=c11`：切换编译使用的c标准
+     1. `gcc -O2 -g -o p main.c sum.c`：
+        - -g：生成调试信息，core dump文件
+        - O2：2级优化
+        - -o：目标文件名
+     1. `gcc sourceCode.c xx/xx.a -o xx`：使用静态库.a，也可以直接用.o
+     1. `gcc -shared -fPIC sourceCode1.c sourceCodeN.c -o xx.so`：导出动态链接库，fPIC用于生成地址无关代码，因为编译时无法确定符号的运行时地址，只能基于全局偏离表给出相对位置
+     1. `gcc sourceCode.c -LlibraryPath -llibraryName -o xx`：引用动态库进行编译
+   - 多文件编译：-o compileName.out
+     1. 源文件编译
+        - 引入文件
+          1. `#include b.c`
+          1. gcc a.c
+        - 全部编译：gcc a.c b.c -o rs.out
+        - 分开编译：gcc a.c b.o
+     1. 头文件编译：使用头文件指示函数情况
+        - vim b.h：`int method()`
+        - `#include b.h`
+        - gcc a.c b.o
+   - 链接
+   - wiki
+     1. 编译器：转换为目标代码
+        - ICL：Intel C/C++ Compiler
+        - VectorC
+        - windows的gcc移植版
+          1. MinGW：Minimalist GNU on Windows，开源，包含几乎所有win32API。主要方向是能使用win32API来编程，最接近win32，更像是vc的替代品
+          1. Cygwin：在windows平台上提供一个类UNIX模拟环境，当然包括gcc了，目标是让unix程序在windows下直接被编译。是cygnus solutions公司开发的自由软件
+          1. Djgpp：应用于dos系统
+        - MSVC：微软(ms)的VC编译器，windows下默认的C编译器
+     1. windows的unix环境
+        - MSYS：Minimal GNU（POSIX）system on Windows，是windows下最优秀的小型GNU环境，提供模拟unix环境来使用MinGW
+        - WSL：Windows Subsystem for Linux，windows下的linux子系统
+          1. WSL2基于hyper-v功能的子集提供了“真正的linux内核”，比1的linux要更完整
+1. LLVM
+   - 认识：Low Level Virtual Machine 低级虚拟机，这个名字不贴切。是一个模块化和可重复使用的编译器和工具技术的集合。提供编译器相关的支持，能够进行程序语言的编译期优化、链接优化、在线编译优化、代码生成等，包含LLVM中介码（LLVM IR）、LLVM除错工具、LLVM C++标准库
+     1. 被作为实现各种静态和运行时编译语言通用基础架构（GCC家族、Java、.Net、Python、Swift、Lua、C#、Ruby、Scheme、Haskell、D等）
+     1. 由于GCC
+   - 特点
+     1. 三个模块相互独立，可以充分复用。如如果开发一门新的语言，只要制造一个该语言的前端，将源码编译为bitcode，优化和后端不用管。同理，如果新的芯片架构问世，只需基于LLVM重新编写一套目标平台的后端即可
+   - 组成
+     1. 前端将各种类型的源代码编译为中间代码，即bitcode，不同语言不同编译器前端，如clang负责c/c++/oc，flang负责fortran，swiftc负责swift
+     1. LLVM IR：Intermediate Representation，不同的前后端使用统一的中间代码。有3种表示形式，但本质上是等价的。
+        - text：便于阅读的文本格式，类似于汇编语言，拓展名 .ll，`clang -S -emit-llvm main.m`
+        - memory：内存格式
+        - bitcode：二进制格式，拓展名 .bc，`clang -c -emit-llvm main.m`
+     1. 优化阶段是一个通用的阶段，针对的是统一的LLVM IR
+     1. Clang：LLVM项目的子项目，使用模块化设计，可以将自身功能以库的方式来供上层应用来调用。如编码规范检查、IDE中的语法高亮、语法检查等上层应用，都用的这个
+   - 步骤
+     1. 词法分析：生成Token
+        - 显示每个Token的类型、值、位置：`clang -fmodules -E -Xclang -dump-tokens main.m`
+     1. 语法分析：利用上面输出的Token先按照语法组合成语义，生成类似VarDecl这样的节点，然后将这些节点按照层级关系构成抽象语法树 AST
 ### 数据
 #### 类型
 1. 字节序

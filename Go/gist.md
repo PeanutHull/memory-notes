@@ -175,6 +175,23 @@
     }
     ```
 1. slice
+   - slice底层和append的值传递特性
+    ```go
+    a := make([]int, 0, 5)
+    a = append(a, 1)
+    b := append(a, 2)
+    c := append(a, 3)
+    fmt.Printf("v=%v || p=%p\n", a, &a) // v=[1] || p=0xc00000c060
+    fmt.Printf("v=%v || p=%p\n", b, &b) // v=[1 3] || p=0xc00000c080
+    fmt.Printf("v=%v || p=%p\n", c, &c) // v=[1 3] || p=0xc00000c0a0
+
+    type slice struct {
+        array unsafe.Pointer
+        len   int
+        cap   int
+    }
+    // 原因：append对于参数a是值传递，因为slice底层指向点相同，所以第二次和第三次都是针对a进行追加，导致第二次被覆盖，同时因为是新值b和c的内存地址不同，b和c都是slice哦
+    ```
    - 当作函数参数传递时修改slice
     ```go
     func fn(in []int) {
