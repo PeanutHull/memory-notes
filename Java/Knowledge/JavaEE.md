@@ -272,3 +272,48 @@
    - J2ee 1.4：2002年，EJB2.0
    - JavaEE 5：2006年，EJB3.0，简化开发、引入注释、更新的web服务、加强的持久化模型
    - JavaEE 7：提高生产力，带注释的POJO————html5：WebSockets、json、Servlet3.1 NIO、REST————企业需求：批量处理实现不间断OLTP性能、简化多线程并发任务的定义提高可扩展性、简化JMS具有选择性和灵活性
+1. java发展历史
+   - 初始阶段
+     1. 诞生：1995年，一处编译处处运行的跨平台特性
+     1. 特性
+        - AWT、Swing写GUI程序
+     1. 发展
+        - JDK1.2：集成了Collection框架，使之拥有了常见的数据结构
+        - HotSpt JVM：可以把最常用的字节码编译成本地代码来执行，速度杠杠的
+   - j2ee阶段
+     1. 认识：开始面向web，一揽子规范，囊括了企业应用开发的方方面面
+     1. 特性
+        - 页面展示：Servlet、JSP
+        - 特性中间件
+          1. WebLogic：提供声明式的事务管理，安全管理在XML配置文件中声明下就行，不用写代码
+          1. WebSphere：将EJB自动能不过他们都是收费的，只有把它分布到多个机器上
+          1. JBoss：只有这个开源免费
+        - 组件
+          1. EJB
+          1. JTA
+          1. RMI
+          1. JMS
+          1. JAXP
+          1. Java Mail
+   - SSH阶段
+     1. 认识：j2ee很繁琐，很笨拙。即使名字改成java ee还是被oracle抛弃。现代化开发
+     1. 特性
+        - spring：支持依赖注入、AOP
+        - struts
+        - hibernate
+     1. 插曲：遇到了Ruby On Rails的挑战(性能高10倍，约定重于配置、不要重复自己)，解决：Groovy、Grails
+   - web2.0阶段
+     1. 特性
+        - 注解
+        - 泛型
+        - 函数式编程
+        - 并发编程
+
+        - Netty,Vert.x,webFlux
+     1. 微服务、服务网格
+        - SpringMVC
+        - Spring Boot
+        - Spring Cloud：负载均衡、网关、降级
+     1. 其他方面
+        - Hadoop
+        - Android
