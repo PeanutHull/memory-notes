@@ -95,12 +95,6 @@
      1. 文件单元：.wants文件，定义要执行的文件集合
 #### DNS
 1. DNS
-   - 理解：域名解析服务，域名和ip的绑定查询，一级级的往上查询，使用UDP协议，53端口
-     1. dns解析
-        - 正向查询：A记录，域名找ip
-        - 反向查询：PTR记录，ip找域名
-        - 迭代查询：服务器角度，是否多次查询
-        - 递归查询
    - 组成
      1. bind服务
         - 理解：加州大学开发的开源、稳定、应用广泛的dns服务
@@ -129,18 +123,6 @@
         - dns转发：子域授权
         - dns主从模式：主从传输、主从同步、数据加密、事务签名
         - dns传输限制
-     1. 智能dns
-        - 理解：能够基于IP信息给不同的用户最合适的服务器IP，关键在于搭建ip库，提供完整准确的ip地址和位置，由第三方、isp、APINC提供。即把地理位置和dns解析服务器绑定一起，不用走多余的网络路线
-          1. 特点：减少动态服务响应延迟，cdn加速，负载均衡，防止ddos
-        - 攻击
-          1. dns污染：dns劫持
-          1. ddos
-          1. 放大攻击：dns服务器被作为肉鸡
-     1. CDN：：内容分发网络，部署大量网络节点通过服务器缓存加速，让用户就近更快访问网络。指标有带宽、命中率、请求数
-   - httpDNS：指通过ip和http协议直接访问dns服务器获取解析，绕过本地运营商。因为智能dns有很多弊端，如nat转换导致解析链路加长、域名劫持等原因，移动端用的多
-     1. 用法：将请求url中的host修改为httpdns解析给我们的ip, 并在请求header中将host指定为原始域名
-     1. httpdns下的https的curl写法：`curl -v "https://xxx" --resolve xx.xx.com:443:xx.xx.xx.xx`，注意httpdns面对https时需要提供正确的host，否则证书返回的不对
-   - 开源dns服务：Bind、NSD、PowerDNS、Unbound，选用了powerdns
 #### 高可用
 1. 部署方案：![avatar](../images/server/lvs_keepalived_nginx_server.jpg)
 1. 高可用
