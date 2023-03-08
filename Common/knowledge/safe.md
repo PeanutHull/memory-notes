@@ -248,6 +248,7 @@
 1. Aircrack-ng：网络的监视，测试，攻击和破解
 1. Wireshark
 1. Nmap：识别网络中的开放端口和漏洞、设备
+   - nmap -p1-1000 xx.com | grep filtered > 1000
 1. Metasploit：漏洞利用
 1. Hashcat：开源密码破解工具
 1. JTR：密码破解和恢复工具
