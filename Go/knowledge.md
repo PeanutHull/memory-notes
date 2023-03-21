@@ -1,33 +1,3 @@
-### 日志
-1. log的缺陷
-   - 不支持日志切割
-     1. 日期方式
-     1. 最大行数方式
-     1. 最大容量方式
-   - 不支持多个日志级别
-   - 不支持日志格式化
-   - 大量使用interface{}和反射，内存分配次数多，性能低
-1. logrus：最活跃的日志库
-   - 特点
-     1. 完全兼容标准日志库，拥有七种日志级别：Trace, Debug, Info, Warning, Error, Fataland Panic
-     1. 可扩展的Hook机制，允许使用者通过Hook的方式将日志分发到任意地方，如本地文件系统，logstash，elasticsearch或者mq等，或者通过Hook定义日志内容和格式等
-     1. 可选的日志输出格式，内置了两种日志格式JSONFormater和TextFormatter，还可以自定义日志格式
-     1. Field机制，通过Filed机制进行结构化的日志记录
-     1. 线程安全
-1. zap：uber开源的高性能日志库，结构化的多日志级别的日志格式，性能比logrus好，更少的内存分配次数
-   - 组成
-     1. Sugared Logger
-     1. Logger：比SugaredLogger更快，只支持强类型的结构化日志记录
-   - 使用
-     1. 日志切割：搭配lumberjack
-     1. 全局Logger：`zap.S()`，`zap.L()`
-   - demo
-    ```go
-    logger, _ = zap.NewProduction()
-    defer logger.Sync()
-    logger.Error("Error fetching url..", zap.String("url", url), zap.Error(err))
-    logger.Info("Success..", zap.String("statusCode", resp.Status), zap.String("url", url))
-    ```
 ### 框架
 1. Gin：以更好的性能实现类似Martini的API框架，5万star
    - 特点
@@ -129,6 +99,36 @@
     err = gracehttp.Serve(&http.Server{Addr: ":" + configs.GetServer().Server.Port, Handler: g})        // grace承接http服务
     ```
 ### 库
+#### 日志相关
+1. log标准库的缺陷
+   - 不支持日志切割
+     1. 日期方式
+     1. 最大行数方式
+     1. 最大容量方式
+   - 不支持多个日志级别
+   - 不支持日志格式化
+   - 大量使用interface{}和反射，内存分配次数多，性能低
+1. logrus：最活跃的日志库
+   - 特点
+     1. 完全兼容标准日志库，拥有七种日志级别：Trace, Debug, Info, Warning, Error, Fataland Panic
+     1. 可扩展的Hook机制，允许使用者通过Hook的方式将日志分发到任意地方，如本地文件系统，logstash，elasticsearch或者mq等，或者通过Hook定义日志内容和格式等
+     1. 可选的日志输出格式，内置了两种日志格式JSONFormater和TextFormatter，还可以自定义日志格式
+     1. Field机制，通过Filed机制进行结构化的日志记录
+     1. 线程安全
+1. zap：uber开源的高性能日志库，结构化的多日志级别的日志格式，性能比logrus好，更少的内存分配次数
+   - 组成
+     1. Sugared Logger
+     1. Logger：比SugaredLogger更快，只支持强类型的结构化日志记录
+   - 使用
+     1. 日志切割：搭配lumberjack
+     1. 全局Logger：`zap.S()`，`zap.L()`
+   - demo
+    ```go
+    logger, _ = zap.NewProduction()
+    defer logger.Sync()
+    logger.Error("Error fetching url..", zap.String("url", url), zap.Error(err))
+    logger.Info("Success..", zap.String("statusCode", resp.Status), zap.String("url", url))
+    ```
 #### db相关
 1. ORM
    - gorm
@@ -192,7 +192,7 @@
         ```
 #### 进程管理
 1. 相关：![avatar](../images/go/go_process_manage.png)
-#### 网络
+#### 网络相关
 1. chromedp
    - 认识：golang编写的基于Chrome DevTools Protocol协议的操作chrome headless和chrome devTools的程序
      1. 可用于需要js解析后形成dom树的场景
@@ -200,7 +200,7 @@
      1. 结合go并发可用于爬虫
 ### 中间件
 #### 架构组件
-1. Sentinel
+1. sentinel
    - 认识：面向分布式服务架构的高可用流量防护组件，以流量为切入点，从限流、流量整形、熔断降级、系统负载保护、热点防护等多个维度来帮助开发者保障微服务的稳定性
      1. 承接ali的双11流量
    - 生态：![avatar](../images/about_sentinel.png)
