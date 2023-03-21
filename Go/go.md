@@ -1,31 +1,29 @@
 ### go
-1. 认识：全称golang，静态强类型、编译型、并发型具有垃圾回收的开源语言，感觉却像动态类型的解释型语言
-   - 简洁清晰高效
-   - 并发机制，goroutine跟channel，有效利用多核和网络，并发而生
-   - go可直接编译成机器码，支持跨平台编译
-   - 方便的自动垃圾回收
-   - 丰富的内置类型支持，支持函数多返回值、匿名函数和闭包、类型和接口、反射
-   - 丰富的标准库支持、强大的工具类库
-   - 强大的运行时反射机制，便于在线的性能分析，以及堆栈分析
-   - 能与c语言交互
-   - 类似于C+Python：高效+简单的代码实现复杂逻辑
+1. 认识：全称golang，静态强类型、编译型、并发型具有垃圾回收的开源编程语言。现代的、良好支持网络与多核计算的语言，结合了解释型语言的游刃有余，动态类型语言的开发效率，以及静态类型的安全性
+   - 性能
+     1. 并发机制，goroutine跟channel，有效利用多核和网络，为并发而生
+     1. 可直接编译成机器码，支持跨平台编译
+   - 简单：清晰高效
+     1. 类似于C+Python
+   - 强大
+     1. 方便的自动垃圾回收
+     1. 强大的运行时反射机制，便于在线的性能分析，以及堆栈分析
+     1. 丰富的内置类型如结构体、slice、map等，支持函数多返回值
+     1. 丰富的标准库、强大的工具类库
 1. 特点
-   - 性能、简单
-   - 每个Go程序都是由包组成的
-   - 现代的、支持网络与多核计算的语言，结合了解释型语言的游刃有余，动态类型语言的开发效率，以及静态类型的安全性
-1. 原则
-   - 通过通信共享内存，不要通过共享内存来通信
-   - 复制一点总比依赖一点好：A little copying is better than a little dependency
-     1. 只要核心：去掉多余无用代码
-     1. 依赖最小版本选择：避免复杂依赖
-1. 编程范式
-   - 面向接口
-   - 函数式编程
-   - 并发编程
+   - 原则
+     1. 通过通信共享内存，不要通过共享内存来通信
+     1. 复制一点总比依赖一点好：A little copying is better than a little dependency
+        - 只要核心：去掉多余无用代码
+        - 依赖最小版本选择：避免复杂依赖
+   - 编程范式
+     1. 面向接口
+     1. 函数式编程
+     1. 并发编程
 1. 用途
+   - 网络编程：web、api应用
    - 服务器编程：处理日志
    - 分布式系统：数据库代理器、NewSQL
-   - 网络编程：Web应用、api应用
    - 内存数据库：groupcache、couchbase
    - 云平台：k8s
 1. 示例
@@ -35,7 +33,7 @@
     import "fmt"
 
     func main() {
-        fmt.Println("Hello, 世界\n")
+        fmt.Println("Hello, 世界")
     }
     ```
 ### 语法
@@ -3307,9 +3305,10 @@
 1. 实例
     ```go
     ctx= context.TODO()
+    // 设置数据
     ctx = context.WithValue(ctx, "key1", "0001")
-    ctx = context.WithValue(ctx, "key2", "0001")
-    ctx = context.WithValue(ctx, "key3", "0001")
+    // 获取数据
+    v := ctx.Value("key1")
     ```
 1. demo
    - demo1
@@ -3591,9 +3590,10 @@
         }
     }
     ```
-### 包
+### 包和依赖
 1. package
    - 认识：包，是go基本的分发单位和工程管理中依赖的体现，可以提供更好的可重用性与封装性
+     1. 每个Go程序都是由包组成的
    - 定义
      1. 程序必须以package开头，用来表示所属代码包，`package packageName`
      1. 同一个目录下go文件包名必须相同，即同一个目录下可有多个文件
@@ -3636,6 +3636,93 @@
    - 导出
      1. 认识：用package定义
         - 首字母大小写来区分包的可见性，首字母大写的名称是被导出的，可被其他包读取的
+1. Go Module
+   - 认识：依赖管理，官方的包依赖版本管理工具，前身vgo
+     1. 支持vendor、GOPATH
+     1. go命令内置对模块的支持
+     1. 至少1.11及以上版本，最好1.13或以上，撑13以下是老版本，哈哈
+     1. 区分install、get、mod三个命令的区别
+   - 组成
+     1. go.mod：依赖配置文件，可以将工程从GOPATH中移出来
+        ```go
+        module rsc.io/hello                                             // 模块名
+
+        go 1.12
+
+        require (
+            golang.org/x/text v0.0.0-20180208041248-4e4a3210bb54
+            rsc.io/quote v1.5.2
+            github.com/BurntSushi/toml v0.4.1 // indirect               // 表示该模块为间接依赖
+        )
+
+        replace (                                                       // 指定替换包
+            golang.org/x/text => github.com/golang/text v0.3.0
+        )
+        
+        exclude example.com/thismodule v1.3.0                           // 从使用中排除特定模块版本
+        ```
+     1. go.sum：用来校验依赖的文件，都是命令行自动操作
+   - 命令
+     1. `go mod <command> [arguments]`
+        - init：初始化
+        - download：下载
+        - edit -module/require/version/print xx：手动修改依赖文件
+        - tidy：整理，需要的加，不要的删
+        - verify：验证是否被篡改过
+        - graph：查看现有的依赖结构
+        - why：查看为什么需要依赖某模块
+        - vendor：导出依赖放入vendor目录
+     1. `go get`：添加
+        - 认识：安装远程包，用于编辑go.mod变更依赖，包含clone、compile、install三个步骤。原理类似先通过源码工具clone代码到GOROOT/src目录，然后执行go install
+          1. 会回写go.mod文件，更新直接的模块依赖
+          1. 会自动根据不同域名调用不同源码工具，如git或svn
+        - 参数
+          1. `-d`：不构建和安装，只下载，go-get应该与-d标志一起使用，以调整当前模块的依赖关系而不构建包，不推荐使用go-get来构建和安装包。在未来的版本中，-d标志将始终启用
+          1. 支持build的参数
+          1. `golang.org/x/text@latest`：指定包名和版本
+             - latest：拉取最新的版本，若存在tag，则优先使用
+             - master：拉取 master 分支的最新 commit
+             - v0.3.2：指定tag
+             - 342b2e：指定commit，最终转换为tag
+             - none
+          1. `-u`：强制使用网络更新直接或间接的依赖模块
+          1. `-t ./...`：包括单元测试中用到的
+          1. `-v`：显示执行的命令
+     1. `go list`：查看安装的package
+        - -f '{<!-- -->{.GoFiles}}'：查看将被编译的文件名
+   - 发展
+     1. 阶段
+        - GOPATH：所有包必须放GOPATH目录下，无法支持不同版本包存在
+        - Vendor：工程子目录存放依赖包，没有版本记录
+        - Module：官方指定默认开启
+     1. 时间线
+        - 13年：Godep
+        - 16年：vendor机制 默认开启，v1.6
+        - 17年：Dep作为准官方试验
+        - 18年：Modules作为官方试验，v1.11
+        - 19年：默认开启Go Mod，v1.13
+        - GO111MODULE默认为on，v1.16
+   - 其他
+     1. dep
+        - 认识：实现了tag管理代码，而不是trunk/mainline，如go get下载的代码
+          1. 依赖管理工具为应用管理代码，而go get为GOPATH管理代码
+        - 组成
+          1. `Gopkg.toml`：配置文件，可以手工修改
+          1. `Gopkg.lock`
+          1. vendor：依赖管理目录，vendor属性是go编译时，先从项目根目录的vendor目录查找代码，有则不再去GOPATH中查找
+        - 命令
+          1. `dep init`：初始化新项目
+          1. `dep status`
+          1. `dep check`：检查toml和lock文件是否同步
+          1. `dep ensure`
+             - `dep ensure`：安装依赖
+             - `dep ensure -update`：更新依赖
+             - `dep ensure -add github.com/pkg/errors`：添加依赖
+          1. `dep version`：dep的版本
+     1. godep：Godeps/Godeps.json
+     1. glide：glide.yaml、glide.lock，官方建议迁移到dep
+     1. govendor
+     1. gvt
 ### 标准库
 1. 语法相关
    - reflect
@@ -4855,100 +4942,13 @@
      1. `go clean`：移除当前源码包里面编译生成的文件，如_obj/、_test/、test.out
    - 模块
      1. `go get`
-        - 认识：安装远程包，用于编辑go.mod变更依赖，包含clone、compile、install三个步骤。原理类似先通过源码工具clone代码到GOROOT/src目录，然后执行go install
-          1. 会回写go.mod文件，更新直接的模块依赖
-          1. 会自动根据不同域名调用不同源码工具，如git或svn
-        - 参数
-          1. `-d`：不构建和安装，只下载，go-get应该与-d标志一起使用，以调整当前模块的依赖关系而不构建包，不推荐使用go-get来构建和安装包。在未来的版本中，-d标志将始终启用
-          1. 支持build的参数
-          1. `golang.org/x/text@latest`：指定包名和版本
-             - latest：拉取最新的版本，若存在tag，则优先使用
-             - master：拉取 master 分支的最新 commit
-             - v0.3.2：指定tag
-             - 342b2e：指定commit，最终转换为tag
-             - none
-          1. `-u`：强制使用网络更新直接或间接的依赖模块
-          1. `-t ./...`：包括单元测试中用到的
-          1. `-v`：显示执行的命令
-     1. `go list`：查看安装的package
-        - -f '{<!-- -->{.GoFiles}}'：查看将被编译的文件名
+     1. `go list`
    - 工具
      1. golint：代码规范的错误
      1. gofmt：格式化
      1. govet：代码格式错误检查
      1. gometalinter：代码静态分析并规范化其输出的linter工具集
      1. godegragh
-1. 依赖管理
-   - Go Module
-     1. 认识：官方的包依赖版本管理工具，前身vgo
-        - 支持vendor、GOPATH
-        - go命令内置对模块的支持
-        - 至少1.11及以上版本，最好1.13或以上，撑13以下是老版本，哈哈
-        - 区分install、get、mod三个命令的区别
-     1. 组成
-        - go.mod文件，可以将工程从GOPATH中移出来
-            ```go
-            module rsc.io/hello                                             // 模块名
-
-            go 1.12
-
-            require (
-                golang.org/x/text v0.0.0-20180208041248-4e4a3210bb54
-                rsc.io/quote v1.5.2
-                github.com/BurntSushi/toml v0.4.1 // indirect               // 表示该模块为间接依赖
-            )
-
-            replace (                                                       // 指定替换包
-                golang.org/x/text => github.com/golang/text v0.3.0
-            )
-            
-            exclude example.com/thismodule v1.3.0                           // 从使用中排除特定模块版本
-            ```
-        - go.sum文件：用来校验文件，都是命令行自动操作
-     1. 命令
-        - `go mod <command> [arguments]`
-          1. init：初始化
-          1. download：下载
-          1. edit -module/require/version/print xx：手动修改依赖文件
-          1. tidy：整理，需要的加，不要的删
-          1. verify：验证是否被篡改过
-          1. graph：查看现有的依赖结构
-          1. why：查看为什么需要依赖某模块
-          1. vendor：导出依赖放入vendor目录
-        - `go get`：添加
-   - 发展
-     1. 阶段
-        - GOPATH：所有包必须放GOPATH目录下，无法支持不同版本包存在
-        - Vendor：工程子目录存放依赖包，没有版本记录
-        - Module：官方指定默认开启
-     1. 时间线
-        - 13年：Godep
-        - 16年：vendor机制 默认开启，v1.6
-        - 17年：Dep作为准官方试验
-        - 18年：Modules作为官方试验，v1.11
-        - 19年：默认开启Go Mod，v1.13
-        - GO111MODULE默认为on，v1.16
-   - 其他
-     1. dep
-        - 认识：实现了tag管理代码，而不是trunk/mainline，如go get下载的代码
-          1. 依赖管理工具为应用管理代码，而go get为GOPATH管理代码
-        - 组成
-          1. `Gopkg.toml`：配置文件，可以手工修改
-          1. `Gopkg.lock`
-          1. vendor：依赖管理目录，vendor属性是go编译时，先从项目根目录的vendor目录查找代码，有则不再去GOPATH中查找
-        - 命令
-          1. `dep init`：初始化新项目
-          1. `dep status`
-          1. `dep check`：检查toml和lock文件是否同步
-          1. `dep ensure`
-             - `dep ensure`：安装依赖
-             - `dep ensure -update`：更新依赖
-             - `dep ensure -add github.com/pkg/errors`：添加依赖
-          1. `dep version`：dep的版本
-     1. godep：Godeps/Godeps.json
-     1. glide：glide.yaml、glide.lock，官方建议迁移到dep
-     1. govendor
-     1. gvt
 ### wiki
 1. Goscript：通过 WASM 实现，Go语言规范的非官方实现，用于Rust项目的内嵌或封装。像 Lua 之于 Redis/WoW，或者 Python 之于 NumPy
 1. 关键字和标识符、符号：程序一般由关键字、常量、变量、运算符、类型和函数组成
