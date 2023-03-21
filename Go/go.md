@@ -38,55 +38,44 @@
     ```
 ### 语法
 1. 语法
-   - 关键字：函数外的每个语句都必须以关键字(var/func/...)开始
-   - 行分隔符：每行可以不加分号，写在一行可用;区分不推荐
+   - 行分隔符：每行可以不加分号，写在一行可用;区分，不推荐
    - 注释：多行/* */、单行//
+   - 关键字：函数外的每个语句都必须以关键字(var/func/...)开始
    - 标识符：用来命名变量、类型等程序实体
+   - 符号
+1. 关键字：25个
+   - var、const、map、struct、type
+   - if、else、for、range、switch、case、fallthrough、break、continue、default
+   - goto、defer
+   - func、interface、return
+   - go、chan、select
+   - package、import
 1. 标识符
-   - 认识：可以直接使用，而不用声明
+   - 认识：对各种变量、方法、函数等命名时使用的字符序列称为标识符，包括变量名、函数名、常量名、类型名、包名
+     1. 只能由字母、数字和下划线组成；第一个字符必须是字母或下划线，不能是数字；不能是Go的关键字；区分大小写；长度没有限制
    - 组成
-     1. nil
-        - 认识：是一个预先声明的标识符，表示声明了没有赋值，只表示slice/map/channel/point/func/interface六种类型的零值，和null有很多不同点
-          1. nil和空不同，nil不会指向底层地址，空会
-          1. 设计思想：能不分配的内存就先不分配，nil pointer其实是一切nil值的根本形态，制定很多固定的特殊用法，目的使得nil的使用是非常自然的，这样是好是坏？
-        - 特点
-          1. nil是不能比较的`nil==nil`
-          1. 不同类型nil的指针是一样的，地址都是0x0。不同类型的nil值占用的内存大小可能是不一样的
-          1. 不是关键字只是变量名(在buildin/buildin.go中)，如可以定义一个名为nil的变量`var nil = errors.New("11")`不推荐
-          1. nil也是有类型的，(*int)(nil)和(interface{})(nil)就是两个不同的变量，即不相等
-          1. untyped nil：没有类型的nil，直接写一个nil就是untyped nil
-             - 不能直接赋值给变量
-             - 可以与一些特定类型的变量进行比较，会根据不同的变量，就会有不同的逻辑
-             - 实例
-                ```go
-                var a = nil                     // 报错
-                var a = (*int)(nil)             // 可以
-                var _ Conn = (*DBConn)(nil)
-                
-                var a *B
-                print(a == nil)                 // true
-                ```
-          1. 当一个interface的value和type都unset的时候，它才等于nil
-        - 实例
-            ```go
-            type A interface{}
-            type B struct{}
-            var a *B
-
-            print(a == nil)                 // true
-            print(a == (*B)(nil))           // true
-            print((A)(a) == (*B)(nil))      // true，类型都是*B，值都是nil
-
-            print((A)(a) == nil)            // false，结构体的type不是nil
-            ```
-        - 最佳实践
-          1. 检查slice是否为空，请始终使用len(s)==0，而非nil
-          1. 作为函数返回值时，不应该明确返回长度为0的slice，应该返回nil代替
+     1. 空白标识符：_，用作匿名占位
+     1. 预先声明的标识符：39个，可直接使用，不用声明
+        - 类型
+          1. bool、byte、string、uintptr
+          1. int、int8、int16、int32、int64、uint、uint8、uint16、uint32、uint64、float32、float64、complex64、complex128
+          1. error、rune
+        - 常量
+          1. true、false、iota
+        - 零值
+          1. nil
+        - 方法
+          1. len、cap
+          1. append、copy、delete
+          1. print、println：输出到标准错误流，不建议写程序使用，debug可以用
+          1. make、new、close
+          1. panic、recover
+          1. complex、real、imag
    - 方法
      1. 数据操作
         - `len(v T)`：长度，string、array、slice、map、chan、pointer(指向元素的数量)
         - `cap(v T)`：容量，array、slice(返回cap)、chan、pointer(指向元素的数量)
-        - `append(slice []T, elems ...T)`、copy(Dst, Src)：slice，容量够重新分配地址以容纳新元素，不够分配新底层数组，变长参数
+        - `append(slice []T, elems ...T)`、`copy(dst, src)`：slice，容量够重新分配地址以容纳新元素，不够分配新底层数组，变长参数
             ```go
             append(x,4,5,6)                     // 支持多个参数
             append(x,y...)                      // 只支持两个参数，表示把y作为x的类型进行添加
@@ -105,6 +94,40 @@
           1. `func complex(r, i FloatType) ComplexType`
           1. `func real(c ComplexType) FloatType`
           1. `func imag(c ComplexType) FloatType`
+   - nil
+     1. 认识：是一个预先声明的标识符，表示声明了没有赋值，只表示slice/map/channel/point/func/interface六种类型的零值，和null有很多不同点
+        - nil和空不同，nil不会指向底层地址，空会
+        - 设计思想：能不分配的内存就先不分配，nil pointer其实是一切nil值的根本形态，制定很多固定的特殊用法，目的使得nil的使用是非常自然的，这样是好是坏？
+     1. 特点
+        - nil是不能比较的`nil==nil`
+        - 不同类型nil的指针是一样的，地址都是0x0。不同类型的nil值占用的内存大小可能是不一样的
+        - 不是关键字只是变量名(在buildin/buildin.go中)，如可以定义一个名为nil的变量`var nil = errors.New("11")`不推荐
+        - nil也是有类型的，(*int)(nil)和(interface{})(nil)就是两个不同的变量，即不相等
+        - untyped nil：没有类型的nil，直接写一个nil就是untyped nil
+          1. 不能直接赋值给变量
+          1. 可以与一些特定类型的变量进行比较，会根据不同的变量，就会有不同的逻辑
+          1. 实例
+            ```go
+            var a = nil                     // 报错
+            var a = (*int)(nil)             // 可以
+            var _ Conn = (*DBConn)(nil)
+            
+            var a *B
+            print(a == nil)                 // true
+            ```
+        - 当一个interface的value和type都unset的时候，它才等于nil
+     1. 实例
+        ```go
+        type A interface{}
+        type B struct{}
+        var a *B
+
+        print(a == nil)                 // true
+        print(a == (*B)(nil))           // true
+        print((A)(a) == (*B)(nil))      // true，类型都是*B，值都是nil
+
+        print((A)(a) == nil)            // false，结构体的type不是nil
+        ```
 1. 运算符
    - + 字符串连接符
    - 引号
@@ -138,7 +161,7 @@
         - 引用：8byte
    - 复合类型
      1. 非引用类型：array、struct
-     1. 引用类型：Slice、Map、Channel、Pointer
+     1. 引用类型：slice、map、channel、pointer
      1. 派生
         - func
         - interface
@@ -322,6 +345,8 @@
    - 最佳实践
      1. 创建slice时，尽可能为make()函数提供一个容量值，如果不能确定，也要预估一个，性能相差4倍
      1. 不要留下不使用的切片部分如果需要从切片中切下一小块并仅使用它，该切片的主要部分也将被保留。正确的做法是，为这小块切片使用新的副本，而将旧的切片扔给 GC
+     1. 检查slice是否为空，始终使用len(s)==0，而非nil
+     1. 作为函数返回值时，不应该明确返回长度为0的slice，应该返回nil代替
    - 初始化
     ```go
     // 声明
@@ -1091,8 +1116,8 @@
         ```go
 
         ```
-### 面向对象
-1. 理解：核心是合成复用
+### 面向接口
+1. 理解：面向对象，核心是合成复用
 1. struct
    - 理解：结构体，`type struct`，字段的组合
      1. 不支持多态
@@ -4951,33 +4976,6 @@
      1. godegragh
 ### wiki
 1. Goscript：通过 WASM 实现，Go语言规范的非官方实现，用于Rust项目的内嵌或封装。像 Lua 之于 Redis/WoW，或者 Python 之于 NumPy
-1. 关键字和标识符、符号：程序一般由关键字、常量、变量、运算符、类型和函数组成
-   - 关键字：25个
-     1. var、const、map、struct、type
-     1. if、else、for、range、switch、case、fallthrough、break、continue、default
-     1. goto、defer
-     1. func、interface、return
-     1. go、chan、select
-     1. package、import
-   - 标识符：39个
-     1. 分类
-        - 空白标识符：_，用作匿名占位
-        - 预先声明的标识符
-          1. 类型
-             - bool、byte、string、uintptr
-             - int、int8、int16、int32、int64、uint、uint8、uint16、uint32、uint64、float32、float64、complex64、complex128
-             - error、rune
-          1. 常量
-             - true、false、iota
-          1. 零值
-             - nil
-          1. 方法
-             - len、cap
-             - append、copy、delete
-             - print、println：输出到标准错误流，不建议写程序使用，debug可以用
-             - make、new、close
-             - panic、recover
-             - complex、real、image
 1. 历史
    - 07年开发
    - 09年开源
