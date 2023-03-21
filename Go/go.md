@@ -938,6 +938,21 @@
         }
         ```
      1. hacker方式：每个运行的goroutine结构的g指针保存在当前goroutine的TLS对象中，不同Go版本的goroutine的结构可能不同，常用库`petermattis/goid`
+1. plugin
+   - 认识：go的运行时动态加载插件机制，即热插拔，v1.8
+     1. 支持将go包编译为共享库.so的形式单独发布
+     1. 没有广泛使用，一违背了静态编译的优势，二有一些约束
+        - 只支持Linux, FreeBSD和macOS
+        - 主程序与plugin的共同依赖包的版本必须一致
+        - 主程序与plugin使用的编译器版本必须一致
+        - 使用plugin的主程序仅能使用动态链接
+   - 使用
+     1. 编写
+        - 必须包含一个main包
+     1. 打包：`go build -buildmode=plugin`，打包为.so的插件
+     1. 使用：`plugin.Open("path")`
+   - 最佳实践
+     1. 存在插件的版本管理问题
 ### 面向接口
 1. 理解：面向对象，核心是合成复用
 1. struct
@@ -3570,12 +3585,7 @@
      1. glide：glide.yaml、glide.lock，官方建议迁移到dep
      1. govendor
      1. gvt
-### 标准库
-1. 语法相关
-   - reflect
-   - errors
-     1. `errors.New("xxxx")`
-   - builtin：为go的预声明标识符提供文档
+### 标准库包
 1. 基础类型和变量
    - bytes：实现操作[]byte的常用函数
    - sort：常见数据类型的排序操作
@@ -3733,20 +3743,7 @@
      1. 子包
         - syslog：使用域套接字、udp、tcp时可向syslog守护进程发送日志，可以Dial远端也可以本地，不再更新，有替代产品
    - flag：用于命令行的标签解析
-1. 语言相关
-   - runtime
-     1. 子包
-        - cgo：含有cgo工具生成的代码的运行时支持
-        - debug：debug包含有程序在运行时调试其自身的功能
-        - pprof：按照可视化工具pprof所要求的格式写出运行时分析数据
-        - race：实现数据竞争检测逻辑
-        - trace：Go execution tracer
-     1. 组成
-        - `runtime.GOMAXPROCS`：使用最大核心数
-        - `runtime.NumCPU`：cpu核心数
-        - `runtime.Gosched()`：使goroutine让出调度
-        - `runtime.Goexit()`：使goroutine立即终止
-        - NumGoroutine
+1. 语法相关
    - container：数据结构
      1. heap：任意类型的堆操作
      1. list：双向链表
@@ -3799,11 +3796,42 @@
                 fmt.Println("demo now is ",demo)
             }
             ```
+   - reflect
+   - errors
+     1. `errors.New("xxxx")`
+   - builtin：为go的预声明标识符提供文档
+1. 语言相关
+   - runtime
+     1. 子包
+        - cgo：含有cgo工具生成的代码的运行时支持
+        - debug：debug包含有程序在运行时调试其自身的功能
+        - pprof：按照可视化工具pprof所要求的格式写出运行时分析数据
+        - race：实现数据竞争检测逻辑
+        - trace：Go execution tracer
+     1. 组成
+        - `runtime.GOMAXPROCS`：使用最大核心数
+        - `runtime.NumCPU`：cpu核心数
+        - `runtime.Gosched()`：使goroutine让出调度
+        - `runtime.Goexit()`：使goroutine立即终止
+        - NumGoroutine
    - internal：内部包，不在internal根目录的不让引用
      1. cpu
      1. poll
      1. syscall
      1. race
+   - debug：调试包
+     1. dwarf
+     1. elf
+     1. gosym
+     1. macho
+     1. pe
+     1. plan9obj
+   - testing：go包的自动测试支持
+     1. iotest
+     1. quick
+     1. B
+        - 方法
+          1. RunParallel
 1. 应用相关
    - fmt
      1. 认识：类似c的printf、scanf的格式化输入输出，scann扫描格式化文本以生成值
@@ -4423,24 +4451,6 @@
         - 基于piet-gpu的实验渲染器，两种渲染器都支持Vulkan、Metal、Direct3D 11和OpenGL ES
 ### 测试、运行与性能
 1. 工具链
-   - go：语法包
-     1. tool：build、install、fmt
-     1. test、benchmark、builtin
-   - plugin：组件包，实现了go插件的加载和符号解析
-   - debug：调试包
-     1. dwarf
-     1. elf
-     1. gosym
-     1. macho
-     1. pe
-     1. plan9obj
-   - testing：go包的自动测试支持
-     1. iotest
-     1. quick
-     1. B
-        - 方法
-          1. RunParallel
-1. cli
    - 查看
      1. `go version`
      1. `go env`：查看当前go的环境变量
@@ -4497,12 +4507,6 @@
    - 模块
      1. `go get`
      1. `go list`
-   - 工具
-     1. golint：代码规范的错误
-     1. gofmt：格式化
-     1. govet：代码格式错误检查
-     1. gometalinter：代码静态分析并规范化其输出的linter工具集
-     1. godegragh
 1. 测试
    - 方式
      1. testing包：使用包中方法
@@ -4524,18 +4528,6 @@
 
         func TestMain(m *testing.M) {
             m.Run()                                 // 有了TestMain没有Run其他test不执行，包括benchmark
-        }
-        ```
-   - benchmark使用
-     1. 认识
-        - 函数一般以Benchmark开头
-        - case一般会跑N次，case无法达到一个稳态时无法完成测试
-     1. 使用
-        ```go
-        // 调用：go test -bench=.
-        func BenchmarkAll(b *testing.B) {               // 会自动跑到稳态时，才停止
-            for n:=0; n <b.N; n++ {
-            }
         }
         ```
    - 分类
@@ -4596,89 +4588,102 @@
             }
         }
         ```
-     1. 基准测试
-        - 认识：`go test -benchmem -run=^$ -bench ^(BenchmarkSyncMap)$ demo -v -count=1 -cpuprofile=cpu.profile -memprofile=mem.profile -benchtime=10s`
-          1. 生成cpu.profile文件和mem.profile文件
-        - 参数
-          1. -benchmem: 输出内存指标
-          1. -run: 正则，指定需要test的方法
-          1. -bench: 正则，指定需要benchmark的方法
-          1. -v: 即使成功也输出打印结果和日志
-          1. -count: 执行次数
-          1. -cpuprofile: 输出cpu的profile文件
-          1. -memprofile: 输出内存的profile文件
-          1. -benchtime: 执行时间
-        - demo
-            ```go
-            // 简单
-            func BenchmarkSyncMap(b *testing.B) {
-                demoMap := &sync.Map{}
-                b.RunParallel(func(pb *testing.PB) {
-                    for pb.Next() {
-                        demoMap.Store("a", "a")
-                        for i := 0; i < 1000; i++ {
-                            demoMap.Load("a")
-                        }
-                    }
-                })
-            }
-
-            // 对比
-            // 压力测试sync.Map
-            func BenchmarkSyncMap(b *testing.B) {
-                demoMap := &sync.Map{}
-                b.RunParallel(func(pb *testing.PB) {
-                    for pb.Next() {
-                        demoMap.Store("a", "a")
-                        for i := 0; i < 1000; i++ {
-                            demoMap.Load("a")
-                        }
-                    }
-                })
-            }
-
-            // 用读写锁实现一个并发map
-            type ConcurrentMap struct {
-                value map[string]string
-                mutex sync.RWMutex
-            }
-
-            // 写
-            func (c *ConcurrentMap) Store(key string, val string) {
-                c.mutex.Lock()
-                defer c.mutex.Unlock()
-                if c.value == nil {
-                    c.value = map[string]string{}
-                }
-                c.value[key] = val
-            }
-
-            // 读
-            func (c *ConcurrentMap) Load(key string) string {
-                c.mutex.Lock()
-                defer c.mutex.Unlock()
-                return c.value[key]
-            }
-
-            // 压力测试并发map
-            func BenchmarkConcurrentMap(b *testing.B) {
-                demoMap := &ConcurrentMap{}
-                b.RunParallel(func(pb *testing.PB) {
-                    for pb.Next() {
-                        demoMap.Store("a", "a")
-                        for i := 0; i < 1000; i++ {
-                            demoMap.Load("a")
-                        }
-                    }
-                })
-            }
-            ```
    - 测试框架
      1. GoConvey
      1. GoStub
      1. GoMock
      1. Monkey
-1. 性能分析
+#### 性能分析
+1. 基准测试
+   - 认识：`go test -benchmem -run=^$ -bench ^(BenchmarkSyncMap)$ demo -v -count=1 -cpuprofile=cpu.profile -memprofile=mem.profile -benchtime=10s`
+     1. 生成cpu.profile文件和mem.profile文件
+   - 参数
+     1. -benchmem: 输出内存指标
+     1. -run: 正则，指定需要test的方法
+     1. -bench: 正则，指定需要benchmark的方法
+     1. -v: 即使成功也输出打印结果和日志
+     1. -count: 执行次数
+     1. -cpuprofile: 输出cpu的profile文件
+     1. -memprofile: 输出内存的profile文件
+     1. -benchtime: 执行时间
+   - demo
+    ```go
+    // 简单
+    func BenchmarkSyncMap(b *testing.B) {
+        demoMap := &sync.Map{}
+        b.RunParallel(func(pb *testing.PB) {
+            for pb.Next() {
+                demoMap.Store("a", "a")
+                for i := 0; i < 1000; i++ {
+                    demoMap.Load("a")
+                }
+            }
+        })
+    }
+
+    // 对比
+    // 压力测试sync.Map
+    func BenchmarkSyncMap(b *testing.B) {
+        demoMap := &sync.Map{}
+        b.RunParallel(func(pb *testing.PB) {
+            for pb.Next() {
+                demoMap.Store("a", "a")
+                for i := 0; i < 1000; i++ {
+                    demoMap.Load("a")
+                }
+            }
+        })
+    }
+
+    // 用读写锁实现一个并发map
+    type ConcurrentMap struct {
+        value map[string]string
+        mutex sync.RWMutex
+    }
+
+    // 写
+    func (c *ConcurrentMap) Store(key string, val string) {
+        c.mutex.Lock()
+        defer c.mutex.Unlock()
+        if c.value == nil {
+            c.value = map[string]string{}
+        }
+        c.value[key] = val
+    }
+
+    // 读
+    func (c *ConcurrentMap) Load(key string) string {
+        c.mutex.Lock()
+        defer c.mutex.Unlock()
+        return c.value[key]
+    }
+
+    // 压力测试并发map
+    func BenchmarkConcurrentMap(b *testing.B) {
+        demoMap := &ConcurrentMap{}
+        b.RunParallel(func(pb *testing.PB) {
+            for pb.Next() {
+                demoMap.Store("a", "a")
+                for i := 0; i < 1000; i++ {
+                    demoMap.Load("a")
+                }
+            }
+        })
+    }
+    ```
+1. benchmark使用
+   - 认识
+     1. 函数一般以Benchmark开头
+     1. case一般会跑N次，case无法达到一个稳态时无法完成测试
+   - 使用
+    ```go
+    // 调用：go test -bench=.
+    func BenchmarkAll(b *testing.B) {               // 会自动跑到稳态时，才停止
+        for n:=0; n <b.N; n++ {
+        }
+    }
+    ```
+1. 性能方法
    - `go tool cover -html=c.out`：分析由`go test -coverprofile`生成的覆盖率测试的结果，绿色是覆盖的，红色未覆盖，采用插桩源码方式
    - `go tool trace`
      1. 认识：调用链路，找出程序在一段时间内正在做什么，诊断性能问题，如延迟，并行化、竞争异常
@@ -4793,10 +4798,19 @@
    - 配置GOROOT、GOPATH
    - 配置代理：`GOPROXY=https://goproxy.cn;GOPRIVATE=*.100tal.com`
    - 配置注释空格：设置 Preferences > Editor(编辑器) > Code Style(代码样式) > Go > Other 勾选上 Add leading space to comments
-   - 配置goimport、gofmt，在Tools > File Watcher
+   - 配置goimports、gofmt，在Tools > File Watcher
    - 运行
      1. go工具实参：`-gcflags="all=-N -l"`
      1. 程序实参：`-conf=$ProjectFileDir$/configs/dev`
+   - 工具
+     1. golint：代码规范的错误
+     1. govet：代码格式错误检查
+     1. gofmt：格式化
+     1. goimports
+     1. gometalinter：代码静态分析并规范化其输出的linter工具集
+     1. godegragh
+     1. goplay
+     1. godoc
 ### wiki
 1. 历史
    - 07年开发
