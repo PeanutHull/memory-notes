@@ -168,7 +168,7 @@
    - 扩展类型
      1. 组合扩展：struct组合之前的类型
      1. 别名扩展：type定义别名再扩展
-   - 特点
+   - 应用
      1. 类型零值：变量无初始化时的默认值，可以表现为0，false，""，nil
      1. 类型推导：不指定其类型时，由右值推导得出
      1. 类型转换：T(v)，将值v转换为类型T，不同类型相互转换的时候需要显式转换
@@ -179,120 +179,6 @@
         - 不可比较的类型：slice、map、func
         - 如果复合类型中有不可比较的类型，那么复合类型就不可比较
         - 接口值的动态值不可比较，直接比较会panic
-   - 实例
-    ```go
-    // 声明自定义类型
-    type aStruct struct {}
-    type Ia interface{}
-
-    type aInt int                           // 一般类型声明，相当于类型别名。类型别名与原类型是两种类型，不能直接操作，需要进行类型转换
-    type 字符串 = string
-    type myFunc func(int) int               // 自定义一个叫myFunc的函数类型，函数的签名必须符合输入为int，输出为int。有时会使代码更加简洁
-    newFunc := myFunc(sum10)                // newFunc是一个变量，变量类型为myFunc，值为sum10函数
-
-    // 给新加的自定义int类型添加方法
-    type myInt int
- 
-    func (mi myInt) IsZero() bool {
-        return mi == 0
-    }
-    
-    func main() {
-        var a myInt
-        a = 0
-        fmt.Println(a.IsZero())        // true
-    }
-
-    // 给新加的自定义函数添加方法
-    type myFunc func(int) int
- 
-    func (mf myfunc) sum(a,b int) int {
-        c := a + b
-        return mf(c)
-    }
-
-    type myFunc func(int) int
- 
-    // 用处举例：外部注入(干预)自定义handlerSum函数的执行过程
-        1. 不变的共用的是sum方法
-        1. 可以使得handlerSum接受的外部更抽象化，只要是继承实现了sum接口的变量就可以了，可以是一个struct变量，也可以是一个自定义函数类型变量
-    func (f myFunc) sum (a, b int) int {
-        res := a + b
-        return f(res)
-    }
-    
-    func sum10(num int) int {
-        return num * 10
-    }
-    
-    func sum100(num int) int {
-        return num * 100
-    }
-    
-    func handlerSum(handler myFunc, a, b int) int {
-        res := handler.sum(a, b)
-        fmt.Println(res)
-        return res
-    }
-    
-    func main() {
-        newFunc1 := myFunc(sum10)
-        newFunc2 := myFunc(sum100)
-    
-        handlerSum(newFunc1, 1, 1)    // 20
-        handlerSum(newFunc2, 1, 1)    // 200
-    }
-
-    // 抽象化封装
-    type sumable interface {
-        sum(int, int) int
-    }
-    
-    // myFunc继承sumable接口
-    type myFunc func(int) int
-    
-    func (f myFunc) sum (a, b int) int {
-        res := a + b
-        return f(res)
-    }
-    
-    func sum10(num int) int {
-        return num * 10
-    }
-    
-    func sum100(num int) int {
-        return num * 100
-    }
-    
-    // icansum结构体继承sumable接口
-    type icansum struct {
-        name string
-        res int
-    }
-    
-    func (ics *icansum) sum(a, b int) int {
-        ics.res = a + b
-        return ics.res
-    }
-    
-    // handler只要是继承了sumable接口的任何变量都行，我只需要你提供sum函数就好
-    func handlerSum(handler sumable, a, b int) int {
-        res := handler.sum(a, b)
-        fmt.Println(res)
-        return res
-    }
-    
-    func main() {
-        newFunc1 := myFunc(sum10)
-        newFunc2 := myFunc(sum100)
-    
-        handlerSum(newFunc1, 1, 1)    // 20
-        handlerSum(newFunc2, 1, 1)    // 200
-    
-        ics := &icansum{"I can sum", 0}
-        handlerSum(ics, 1, 1)         // 2
-    }
-    ```
 1. string
    - 认识：字符串，是一串字符连接的任意字节的固定长度的变宽常量字符序列，由单个字节连接起来，使用utf-8编码
      1. 使用双引号或反引号创建
@@ -302,7 +188,7 @@
         - 内部用指针指向UTF-8字节数组
         - 想要改变：先将字符串转为字节数组`[]byte`或字符数组`[]rune`，有中文使用字符数组
    - 最佳实践
-     1. string 和 []byte 在底层结构上非常相近，有时这两种类型之间可以通过强转换来避免内存分配
+     1. string和[]byte在底层结构上非常相近，有时这两种类型之间可以通过强转换来避免内存分配
      1. 可以池化字符串，从而帮助编译器只存储一次相同的字符串
      1. 我们可以使用 map（级联）而不是复合键，我们可以使用字节切片。尽量不使用 fmt 包，因为它所有的方法都用到了反射
    - 使用
@@ -347,6 +233,11 @@
      1. 不要留下不使用的切片部分如果需要从切片中切下一小块并仅使用它，该切片的主要部分也将被保留。正确的做法是，为这小块切片使用新的副本，而将旧的切片扔给 GC
      1. 检查slice是否为空，始终使用len(s)==0，而非nil
      1. 作为函数返回值时，不应该明确返回长度为0的slice，应该返回nil代替
+     1. 拷贝大切片一定比小切片代价大吗？
+        - 将一个 slice 变量分配给另一个变量只会复制三个字段(一个 uintptr，两个int)。所以 拷贝大切片跟小切片的代价应该是一样的
+     1. 字符串转成byte数组，会发生内存拷贝吗？
+        - 严格来说，只要是发生类型强转都会发生内存拷贝
+        - 在底层转换二者，只需要把 StringHeader 的地址强转成 SliceHeader 就行
    - 初始化
     ```go
     // 声明
@@ -1030,72 +921,6 @@
         - Reflection goes from interface value to reflection object
         - Reflection goes from reflection object to interface value
         - To modify a reflection object, the value must be settable
-1. 内存/内存逃逸
-   - 认识：变量通过能证明整个生命周期运行时完全可知的校验，就可以在栈上分配，否则就是逃逸了，要在堆上分配
-     1. 能在编译期确定作用域的，就会到堆上
-     1. 堆上分配开销大很多
-     1. 如何进行逃逸分析普通使用者不用关心，这是语言编译该考虑的，但是使用上可避免
-   - 引发逃逸的情况
-     1. 在方法内把局部变量指针返回：局部变量逃逸。局部变量原本应在栈中分配、栈中回收。但由于返回时被外部引用，因此其生命周期大于栈，则溢出
-     1. 发送指针或带有指针的值到channel中：指针的值逃逸。编译时没有办法知道哪个goroutine会在channel上接收数据，所以编译器无法知道变量什么时候被释放
-     1. 在一个切片上存储指针或带指针的值：切片的值逃逸。其底层数组可能在栈上分配，但其引用的值一定在堆上，如`[]*string`
-     1. slice的底层数组重新分配：slice逃逸，slice编译时在栈上，基于运行时扩充则会在堆上
-     1. 在interface类型上调用方法：方法都是动态调度的因为方法的真正实现只能在运行时知道， 如io.Reader类型的变量r, 调用r.Read(b)会使r的值和切片b的背后存储都逃逸
-   - 最佳实践
-     1. 不要盲目使用指针作为函数参数，虽然会减少复制操作。当参数为变量自身时，复制是在栈上完成，开销远比变量逃逸到堆上开销小
-     1. 尽量少写逃逸代码，提高运行效率
-   - 操作
-     1. 观察逃逸情况：`go build -gcflags=-m main.go`，提示`xx escapes to heap`
-     1. 避免逃逸检测
-        ```go
-        // 作用是遮蔽输入和输出的依赖关系。使编译器不认为p会通过x逃逸， 因为uintptr()产生的引用是编译器无法理解的
-        // 用于清楚被unsafe.Pointer引用的数据肯定不会被逃逸但编译器却不知道的情况，要小心使用
-        func noescape(p unsafe.Pointer) unsafe.Pointer {
-            x := uintptr(p)
-            return unsafe.Pointer(x ^ 0)
-        }
-        // 使用示例
-        func NewA(s string) A {                                 // NewA会逃逸
-           return A{S: &s}
-        }
-        func NewATrick(s string) ATrick {
-            return ATrick{S: noescape(unsafe.Pointer(&s))}
-        }
-        ```
-1. GC
-   - 发展
-     1. v 1.1 ——2013/5 ——STW ——————————百ms-⼏百ms级别
-     1. v 1.3 ——2014/6 ——Mark STW, Sweep 并⾏ — 百ms级别
-     1. v 1.5 ——2015/8—— 三⾊标记法, 并发标记清除 -10ms级别
-     1. v 1.8 ——2017/2—— hybrid write barrier ————sub ms
-   - 一些说法
-     1. STW 是垃圾收集器中的两个“停止世界”阶段。 在这两个阶段中，goroutine 会停止。
-     1. GC（idle）是在没有工作时标记内存的 goroutine。
-     1. MARK ASSIST 是在分配过程中帮助标记内存的 goroutine。
-     1. 一旦垃圾收集器完成，GXX runtime.bgsweep 是内存扫描阶段。
-     1. GXX runtime.gcBgMarkWorker 是帮助标记内存的专用后台 goroutine。
-   - 认识
-     1. 自动垃圾回收：使用 Go 语言创建对象的时候，我们没有回收 / 释放的心理负担，想用就用，想创建就创建
-     1. 如果你想使用 Go 开发一个高性能的应用程序的话，就必须考虑垃圾回收给性能带来的影响
-        - GC STW(Stop the World) 的存在大的哈希表是非常要命的
-          1. 堆上有4千万个对象，GC的扫描过程就超过了4秒钟
-   - local cache的优化思路
-     1. offheap（堆外内存），GC 只会扫描堆上的对象，那就把对象都搞到栈上去，但是这样这个缓存库就高度依赖 offheap 的 malloc 和 free 操作了
-     1. 参考 freecache 的思路，用 ringbuffer 存 entry，绕过了 map 里存指针
-     1. 利用Go 1.5+的特性：当map中的key和value都是基础类型时，GC就不会扫到map里的key和value
-   - 拷贝场景
-     1. 投射到 interface
-     1. chan的接收和发送
-     1. 替换map中的元素
-     1. 向slice添加元素
-     1. 迭代（range）
-   - 不会内联的场景
-     1. recovery
-     1. select 块
-     1. 类型声明
-     1. defer
-     1. goroutine
-     1. for-range
 1. 运行时
    - 获取goroutine id
      1. 简单方式
@@ -1113,9 +938,6 @@
         }
         ```
      1. hacker方式：每个运行的goroutine结构的g指针保存在当前goroutine的TLS对象中，不同Go版本的goroutine的结构可能不同，常用库`petermattis/goid`
-        ```go
-
-        ```
 ### 面向接口
 1. 理解：面向对象，核心是合成复用
 1. struct
@@ -1559,6 +1381,19 @@
             ```
         - 双向通道可以赋值给单向,反过来不可以
      1. main协程没有其他协程并且阻塞时，会fatal error deadlock(源码逻辑)
+   - 和基本并发原语
+     1. 认识
+        - 管道是内置类型，sync、atomic需要引入包才能使用
+        - 管道和基本并发原语是有竞争关系的
+        - 管道用于协调，锁用于同步、并发保护
+     1. 选择使用准则
+        - 共享资源的并发访问使用传统并发原语
+        - 消息通知机制使用 chan，除非只想signal一个goroutine，才使用 sync.cond
+
+        - 需要和select结合，使用 chan
+        - 简单等待所有任务的完成用 waitGroup，也有 chan 的推崇者用 chan，都可以
+        - 需要和超时配合时，使用 chan 和 context
+        - 复杂的任务编排和消息传递使用 chan
    - 实例
     ```go
     ch := make(chan int)        // ch是一个指针类型
@@ -1618,19 +1453,6 @@
     // 将当前goroutine阻塞住
     select {}
     ```
-1. channel和基本并发原语
-   - 认识
-     1. 管道是内置类型，sync、atomic需要引入包才能使用
-     1. 管道和基本并发原语是有竞争关系的
-     1. 管道用于协调，锁用于同步、并发保护
-   - 选择使用准则
-     1. 共享资源的并发访问使用传统并发原语
-     1. 消息通知机制使用 chan，除非只想signal一个goroutine，才使用 sync.cond
-
-     1. 需要和select结合，使用 chan
-     1. 简单等待所有任务的完成用 waitGroup，也有 chan 的推崇者用 chan，都可以
-     1. 需要和超时配合时，使用 chan 和 context
-     1. 复杂的任务编排和消息传递使用 chan
 1. 应用场景
    - 数据传递：将数据从一个goroutine转移到另一个goroutine中，即数据的拥有权 (引用) 托付出去
    - 队列、缓存
@@ -3982,23 +3804,7 @@
      1. poll
      1. syscall
      1. race
-1. 工具链
-   - go：语法包
-   - plugin：组件包，实现了go插件的加载和符号解析
-   - debug：调试包
-     1. dwarf
-     1. elf
-     1. gosym
-     1. macho
-     1. pe
-     1. plan9obj
-   - testing：go包的自动测试支持
-     1. iotest
-     1. quick
-     1. B
-        - 方法
-          1. RunParallel
-1. 应用级
+1. 应用相关
    - fmt
      1. 认识：类似c的printf、scanf的格式化输入输出，scann扫描格式化文本以生成值
         - 格式化动作源自c但更简单
@@ -4210,7 +4016,7 @@
     rpc.HandleHTTP()                                    // 注册到HTTP协议上
     err := http.ListenAndServe(":1234", nil)
     ```
-### 应用
+### 应用方面
 1. 文本处理
    - string：分割、连接、转换、取索引、前后缀检测等
      1. strings包
@@ -4537,13 +4343,13 @@
 
             fmt.Println("调用gRPC方法成功，ProdStock = ", resp.ProdStock)
             ```
-1. rpcx
-   - 认识：RPC服务治理框架
-     1. 高性能：gRPC性能的两倍
-     1. 交叉语言：各种编程语言的调用
-     1. 服务发现：支持直连、Zookeeper、Etcd、Consul、mDNS等注册中心
-     1. 服务治理：支持Failover、Failfast、Failtry、Backup等失败模式，支持随机、轮询、权重、网络质量、一致性哈希、地理位置等路由算法
-1. SPRC：搜狗基于Sogou C++ Workflow的企业级RPC系统，qps几十万，支持Protobuf、Thrift
+   - 其他
+     1. rpcx：RPC服务治理框架
+        - 高性能：gRPC性能的两倍
+        - 交叉语言：各种编程语言的调用
+        - 服务发现：支持直连、Zookeeper、Etcd、Consul、mDNS等注册中心
+        - 服务治理：支持Failover、Failfast、Failtry、Backup等失败模式，支持随机、轮询、权重、网络质量、一致性哈希、地理位置等路由算法
+     1. SPRC：搜狗基于Sogou C++ Workflow的企业级RPC系统，qps几十万，支持Protobuf、Thrift
 1. 国际化
    - 地区：`i18n.SetLocale("zh-CN")`
    - 资源：展示
@@ -4605,7 +4411,98 @@
             C.print(cs)
         }
         ```
-### 测试与分析
+1. GUI
+   - govcl
+     1. 认识：跨平台的开源的gui库，核心绑定于liblcl
+        - 原生的，不是基于html的，更别说DirectUI
+   - fyne
+   - gio
+     1. 认识：全平台的可移植的即时模式gui程序，对浏览器的实验性支持 (Webassembly/WebGL)
+     1. 组成
+        - 基于Pathfinder的高效矢量渲染器
+        - 基于piet-gpu的实验渲染器，两种渲染器都支持Vulkan、Metal、Direct3D 11和OpenGL ES
+### 测试、运行与性能
+1. 工具链
+   - go：语法包
+     1. tool：build、install、fmt
+     1. test、benchmark、builtin
+   - plugin：组件包，实现了go插件的加载和符号解析
+   - debug：调试包
+     1. dwarf
+     1. elf
+     1. gosym
+     1. macho
+     1. pe
+     1. plan9obj
+   - testing：go包的自动测试支持
+     1. iotest
+     1. quick
+     1. B
+        - 方法
+          1. RunParallel
+1. cli
+   - 查看
+     1. `go version`
+     1. `go env`：查看当前go的环境变量
+     1. `go doc`：用于查看文档
+        - `godoc -http=:8080`：生成本机的go官网，可用浏览器打开
+     1. `go help`
+   - 编写
+     1. `go fmt`
+        - 认识：格式化代码文件，是gofmt的简单封装
+          1. 传入文件路径会格式化这个文件 ———— 如果传入目录格式化目录中所有.go文件 ———— 如果不传参数，格式化当前目录下的所有.go文件
+          1. 默认不对代码进行简化，-s启动简化
+     1. `go test`
+     1. `go fix`：转换老版本的代码到新版本
+     1. `go generate`：用于在编译前自动化生成某类代码
+        - 写法举例：`//go:generate go tool yacc -o gopher.go -p parser gopher.y`
+   - 调试
+     1. `go vet`：代码格式错误检查
+     1. `go bug`：调试
+     1. `go tool`
+        - `go tool compile -N -l -S main.go`：不优化编译，可用dlv调试
+        - `go tool pprof`：性能分析工具
+        - `go tool cover`：覆盖率分析工具
+        - `go tool cgo`
+   - 运行和编译
+     1. `go run hello.go`：进行高速编译，用作脚本语言
+     1. `go build`
+        - 认识：用于测试编译
+          1. 会同时编译依赖包，会在GOROOT/src和GOPATH/src搜索包，默认编译当前目录下的所有go文件，可指定要编译的文件名，会忽略_或.开头的go文件，会根据当前系统选择性地编译以系统名结尾的文件(_linux|darwin|windows|freebsd.go)
+          1. 普通包不产生任何文件只做检查性编译，main包生成可执行文件
+        - 条件编译
+          1. 认识：`// +build condition`，构建约束，和编译条件`-tags`相同字符的才编译在包中
+             - 约束可以出现在任何文件中
+             - +build必须出现在package之前，之后应要有一个空行
+             -  *_GOOS、*_GOARCH、*_GOOS_GOARCH结尾的隐式包含构建约束
+          1. 语法
+             - 只允许是字母数字或_
+             - 多个条件之间，空格表示OR；逗号表示AND；叹号(!)表示NOT
+             - 一个文件可以有多个+build，关系是AND
+          1. 应用
+             - `// +build ignore`：用于不想编译某文件
+        - 参数
+          1. -v：打印包名
+          1. -o：指定输出的可执行文件
+          1. -ldflags "-s -w"
+             - -s：去掉符号信息，panic时候的stack trace就没有任何文件名/行号信息了，等价于c/c++的strip
+             - -w：去掉DWARF调试信息，不能用gdb调试了
+          1. -gcflags "-N -l"：关闭内联优化
+          1. 跨平台
+             - GOOS=linux
+             - GOARCH=amd64 
+     1. `go install`：编译和安装，用于安装第三方库的可执行文件。将编译好的结果移到$GOPATH/pkg或$GOPATH/bin。.a移到$GOPATH/pkg，可执行文件移到$GOPATH/bin
+        - `go install example.com/pkg@v1.2.3`：忽略mod文件指定依赖版本
+     1. `go clean`：移除当前源码包里面编译生成的文件，如_obj/、_test/、test.out
+   - 模块
+     1. `go get`
+     1. `go list`
+   - 工具
+     1. golint：代码规范的错误
+     1. gofmt：格式化
+     1. govet：代码格式错误检查
+     1. gometalinter：代码静态分析并规范化其输出的linter工具集
+     1. godegragh
 1. 测试
    - 方式
      1. testing包：使用包中方法
@@ -4849,133 +4746,58 @@
      1. graphviz：调用链生成
    - 逃逸分析：`go build -gcflags "-m -l" *.go`
    - 汇编代码：`go run -gcflags -S main.go`
-1. GUI
-   - govcl
-     1. 认识：跨平台的开源的gui库，核心绑定于liblcl
-        - 原生的，不是基于html的，更别说DirectUI
-   - fyne
-   - gio
-     1. 认识：全平台的可移植的即时模式gui程序，对浏览器的实验性支持 (Webassembly/WebGL)
-     1. 组成
-        - 基于Pathfinder的高效矢量渲染器
-        - 基于piet-gpu的实验渲染器，两种渲染器都支持Vulkan、Metal、Direct3D 11和OpenGL ES
 ### 运维
-1. 运行环境
-   - 环境变量
-     1. GOROOT：go的安装路径，可以不设置，默认在/usr/local/go，编译的时候从GOROOT找system libariry
-     1. GOPATH：开发的工作空间，作为编译后二进制的存放目的地和import包时的搜索路径。必须设置，可以有多个。可以弄俩，第一个放第三方包(因为默认安装到第一个)，第二个自己的
-        - src：源码目录，import时来src查找
-        - bin：可执行命令，go get二进制文件下载的目的地
-        - pkg：包对象，编译生成的lib文件存储的地方
-     1. GO111MODULE：mod功能是否打开
-        - off：使用$GOPATH/src或vendor
-        - on：在$GOPATH/src不找也不存放，放在$GOPATH/pkg/mod，多项目可共享
-        - auto：检测到go.mod就开启
-     1. 代理相关
-        - 走代理
-          1. `GOPROXY=https://proxy.golang.org,direct|off`
-             - 多个代理逗号分隔
-             - direct：回源到模块版本的源地址去抓取
-          1. `GOSUMDB=sum.golang.org|off`：校验是否被篡改
-        - 不走代理
-          1. `GOPRIVATE=*.100tal.com`：设置不走代理的，GOPRIVATE会作为下边俩的默认值
-          1. `GONOPROXY=*.100tal.com`
-          1. `GONOSUMDB=*.100tal.com`
-     1. CGO_ENABLED
-   - 编译
-     1. 一个package只能有一个main，否则build不过
-   - 开发
-     1. 配置GOROOT、GOPATH
-     1. 配置代理：`GOPROXY=https://goproxy.cn;GOPRIVATE=*.100tal.com`
-     1. 配置注释空格：设置 Preferences > Editor(编辑器) > Code Style(代码样式) > Go > Other 勾选上 Add leading space to comments
-     1. 配置goimport、gofmt，在Tools > File Watcher
-     1. 运行
-        - go工具实参：`-gcflags="all=-N -l"`
-        - 程序实参：`-conf=$ProjectFileDir$/configs/dev`
-   - 部署
-     1. supervisor来管理go程序，go自己用异常捕捉来处理
-     1. 打包linux的：`CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build main.go`
-     1. 编译脚本
-        ```shell
-        #!/bin/bash
+1. 环境变量
+   - GOROOT：go的安装路径，可以不设置，默认在/usr/local/go，编译的时候从GOROOT找system libariry
+   - GOPATH：开发的工作空间，作为编译后二进制的存放目的地和import包时的搜索路径。必须设置，可以有多个。可以弄俩，第一个放第三方包(因为默认安装到第一个)，第二个自己的
+     1. src：源码目录，import时来src查找
+     1. bin：可执行命令，go get二进制文件下载的目的地
+     1. pkg：包对象，编译生成的lib文件存储的地方
+   - GO111MODULE：mod功能是否打开
+     1. off：使用$GOPATH/src或vendor
+     1. on：在$GOPATH/src不找也不存放，放在$GOPATH/pkg/mod，多项目可共享
+     1. auto：检测到go.mod就开启
+   - 代理相关
+     1. 走代理
+        - `GOPROXY=https://proxy.golang.org,direct|off`
+          1. 多个代理逗号分隔
+          1. direct：回源到模块版本的源地址去抓取
+        - `GOSUMDB=sum.golang.org|off`：校验是否被篡改
+     1. 不走代理
+        - `GOPRIVATE=*.100tal.com`：设置不走代理的，GOPRIVATE会作为下边俩的默认值
+        - `GONOPROXY=*.100tal.com`
+        - `GONOSUMDB=*.100tal.com`
+   - CGO_ENABLED
+1. 编译
+   - 一个package只能有一个main，否则build不过
+1. 部署
+   - supervisor来管理go程序，go自己用异常捕捉来处理
+   - 打包linux的：`CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build main.go`
+   - 编译脚本
+    ```sh
+    #!/bin/bash
 
-        # 设置环境变量
-        export GO111MODULE=on
-        export GOPROXY=https://goproxy.cn,direct
-        export GOSUMDB="off"
-        export GOPRIVATE=*.100tal.com
+    # 设置环境变量
+    export GO111MODULE=on
+    export GOPROXY=https://goproxy.cn,direct
+    export GOSUMDB="off"
+    export GOPRIVATE=*.100tal.com
 
-        # 配置git，能够拉取gitlab依赖
-        git config --global url."ssh://git@git.100tal.com/".insteadOf https://git.100tal.com/
+    # 配置git，能够拉取gitlab依赖
+    git config --global url."ssh://git@git.100tal.com/".insteadOf https://git.100tal.com/
 
-        # 编译
-        make
-        ```
-1. cli
-   - 查看
-     1. `go version`
-     1. `go env`：查看当前go的环境变量
-     1. `go doc`：用于查看文档
-        - `godoc -http=:8080`：生成本机的go官网，可用浏览器打开
-     1. `go help`
-   - 编写
-     1. `go fmt`
-        - 认识：格式化代码文件，是gofmt的简单封装
-          1. 传入文件路径会格式化这个文件 ———— 如果传入目录格式化目录中所有.go文件 ———— 如果不传参数，格式化当前目录下的所有.go文件
-          1. 默认不对代码进行简化，-s启动简化
-     1. `go test`
-     1. `go fix`：转换老版本的代码到新版本
-     1. `go generate`：用于在编译前自动化生成某类代码
-        - 写法举例：`//go:generate go tool yacc -o gopher.go -p parser gopher.y`
-   - 调试
-     1. `go vet`：代码格式错误检查
-     1. `go bug`：调试
-     1. `go tool`
-        - `go tool compile -N -l -S main.go`：不优化编译，可用dlv调试
-        - `go tool pprof`：性能分析工具
-        - `go tool cover`：覆盖率分析工具
-        - `go tool cgo`
-   - 运行和编译
-     1. `go run hello.go`：进行高速编译，用作脚本语言
-     1. `go build`
-        - 认识：用于测试编译
-          1. 会同时编译依赖包，会在GOROOT/src和GOPATH/src搜索包，默认编译当前目录下的所有go文件，可指定要编译的文件名，会忽略_或.开头的go文件，会根据当前系统选择性地编译以系统名结尾的文件(_linux|darwin|windows|freebsd.go)
-          1. 普通包不产生任何文件只做检查性编译，main包生成可执行文件
-        - 条件编译
-          1. 认识：`// +build condition`，构建约束，和编译条件`-tags`相同字符的才编译在包中
-             - 约束可以出现在任何文件中
-             - +build必须出现在package之前，之后应要有一个空行
-             -  *_GOOS、*_GOARCH、*_GOOS_GOARCH结尾的隐式包含构建约束
-          1. 语法
-             - 只允许是字母数字或_
-             - 多个条件之间，空格表示OR；逗号表示AND；叹号(!)表示NOT
-             - 一个文件可以有多个+build，关系是AND
-          1. 应用
-             - `// +build ignore`：用于不想编译某文件
-        - 参数
-          1. -v：打印包名
-          1. -o：指定输出的可执行文件
-          1. -ldflags "-s -w"
-             - -s：去掉符号信息，panic时候的stack trace就没有任何文件名/行号信息了，等价于c/c++的strip
-             - -w：去掉DWARF调试信息，不能用gdb调试了
-          1. -gcflags "-N -l"：关闭内联优化
-          1. 跨平台
-             - GOOS=linux
-             - GOARCH=amd64 
-     1. `go install`：编译和安装，用于安装第三方库的可执行文件。将编译好的结果移到$GOPATH/pkg或$GOPATH/bin。.a移到$GOPATH/pkg，可执行文件移到$GOPATH/bin
-        - `go install example.com/pkg@v1.2.3`：忽略mod文件指定依赖版本
-     1. `go clean`：移除当前源码包里面编译生成的文件，如_obj/、_test/、test.out
-   - 模块
-     1. `go get`
-     1. `go list`
-   - 工具
-     1. golint：代码规范的错误
-     1. gofmt：格式化
-     1. govet：代码格式错误检查
-     1. gometalinter：代码静态分析并规范化其输出的linter工具集
-     1. godegragh
+    # 编译
+    make
+    ```
+1. 开发
+   - 配置GOROOT、GOPATH
+   - 配置代理：`GOPROXY=https://goproxy.cn;GOPRIVATE=*.100tal.com`
+   - 配置注释空格：设置 Preferences > Editor(编辑器) > Code Style(代码样式) > Go > Other 勾选上 Add leading space to comments
+   - 配置goimport、gofmt，在Tools > File Watcher
+   - 运行
+     1. go工具实参：`-gcflags="all=-N -l"`
+     1. 程序实参：`-conf=$ProjectFileDir$/configs/dev`
 ### wiki
-1. Goscript：通过 WASM 实现，Go语言规范的非官方实现，用于Rust项目的内嵌或封装。像 Lua 之于 Redis/WoW，或者 Python 之于 NumPy
 1. 历史
    - 07年开发
    - 09年开源
@@ -4987,7 +4809,7 @@
      1. 库文件管理模块go module
    - 1.18
      1. net/netip包：之前ip包设计不合理。定义了ip地址类型Addr，占用更少内存（24 byte），不可变（immutable），具有可比性（支持==并作为map键）
-1. wiki
+1. 特点
    - 语法糖
      1. ...：可变参数
      1. :=：声明、赋值、类型推断
@@ -5018,26 +4840,25 @@
         - 析构函数和垃圾回收不匹配
         - RAII技巧性太强，隐藏了意图
           1. Resource Acquisition Is Initialization：资源获取就是初始化，是c++一种管理资源、避免泄漏的惯用法。构造时获取资源，对象生命期内控制对资源的访问，对象析构时释放资源
-   - 开发工具链
-     1. tool：build、install、fmt
-     1. test、benchmark、builtin
-   - 箴言
-     1. 不要通过共享内存进行通信，通过通信共享内存
-     1. 并发不是并行
-     1. 管道用于协调；互斥量（锁）用于同步
-     1. 接口越大，抽象就越弱
-     1. 利用好零值
-     1. 空接口 interface{} 没有任何类型约束
-     1. Gofmt 的风格不是人们最喜欢的，但 gofmt 是每个人的最爱
-     1. 允许一点点重复比引入一点点依赖更好
-     1. 系统调用必须始终使用构建标记进行保护
-     1. 必须始终使用构建标记保护 Cgo
-     1. Cgo 不是 Go
-     1. 使用标准库的 unsafe 包，不能保证能如期运行
-     1. 清晰比聪明更好
-     1. 反射永远不清晰
-     1. 错误是值
-     1. 不要只检查错误，还要优雅地处理它们
-     1. 设计架构，命名组件，（文档）记录细节
-     1. 文档是供用户使用的
-     1. 不要（在生产环境）使用 panic()
+1. 箴言
+   - 不要通过共享内存进行通信，通过通信共享内存
+   - 并发不是并行
+   - 管道用于协调；互斥量（锁）用于同步
+   - 接口越大，抽象就越弱
+   - 利用好零值
+   - 空接口 interface{} 没有任何类型约束
+   - Gofmt 的风格不是人们最喜欢的，但 gofmt 是每个人的最爱
+   - 允许一点点重复比引入一点点依赖更好
+   - 系统调用必须始终使用构建标记进行保护
+   - 必须始终使用构建标记保护 Cgo
+   - Cgo 不是 Go
+   - 使用标准库的 unsafe 包，不能保证能如期运行
+   - 清晰比聪明更好
+   - 反射永远不清晰
+   - 错误是值
+   - 不要只检查错误，还要优雅地处理它们
+   - 设计架构，命名组件，（文档）记录细节
+   - 文档是供用户使用的
+   - 不要（在生产环境）使用 panic()
+1. 周边
+   - Goscript：通过WASM实现，Go语言规范的非官方实现，用于Rust项目的内嵌或封装。像Lua之于Redis/WoW，或者Python之于NumPy

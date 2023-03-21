@@ -1,100 +1,4 @@
 ### 最佳实践
-1. 编写思路
-   - 编程起势：首先通过划分结构体，定义不同的功能模块，然后分别实现，最终实现功能
-     1. 封装模块
-        - 在一个文件中定义一组接口interface
-        - 定义结构体struct，可以在一个文件或文件夹中专门存放需要用到的struct
-        - 定义new结构体struct的方法，用sync.Once实现单例返回，返回值为接口interface
-        - 定义属于结构体struct、并且实现了接口interface的所有方法，完成~
-     1. 定义对象：针对一类组合，要定义一个结构体作为包装这个对象的载体，而不是孤零零的散着各种数据，面向对象嘛
-   - 函数式编程：通过参数、返回值、变量都是函数的形式，实现更加灵活的处理
-     1. 将具体执行的逻辑包装成一个方法，大家执行这个方法，内部自己定义，就可以将实现解耦了，大家不用关心执行的内容了
-     1. 针对需要外部定义处理的函数，用函数式编程，实现外部定义实现，内部调度，执行那个方法就可以了
-        ```go
-        type Han struct {
-            UseMethod func(int) bool
-        }
-
-        func main() {
-            h := Han{
-                UseMethod: func(i int) bool {
-                    return true
-                },
-            }
-            // 使用
-            h.UseMethod(1)
-        }
-        ```
-   - 并行思想：之前用的读io然后处理的单线程模式，改为：起多个不同的协程(有的处理读io，有的处理逻辑)，协程之间通过chan传递数据，一边读取一边处理的协程模式了
-     1. 耗时的goroutine可以多起几个
-   - 如何设计一个特定领域的整体的处理框架，整体架构就是先划分不同角色，怎么划分好角色最重要，然后利用interface去高内聚每个角色，之间相互配合，实现更强的扩展性
-1. 避坑指南
-   - 谨慎使用全局变量，全局变量不会像PHP一样，在完成一次请求之后被销毁，而是会被改变
-   - 形参是slice、map类型的参数，注意值可被全局修改，array则不会
-     1. 因为：浅复制过程中slice和map底层的类型是个结构体，实际存储值的类型是个指针
-     1. 解决：深拷贝，开辟新内存，指针指向新内存地址，并把原有的值复制过去
-        ```go
-        package main
-
-        import "fmt"
-
-        func main() {
-            paramDemo := []int32{1}
-            fmt.Println("main.paramDemo 1", paramDemo)
-            // 初始化新空间
-            paramDemoCopy := make([]int32, len(paramDemo))
-            // 深拷贝
-            copy(paramDemoCopy, paramDemo)
-            demo(paramDemoCopy)
-            fmt.Println("main.paramDemo 2", paramDemo)
-        }
-
-        func demo(paramDemo []int32) ([]int32, error) {
-            paramDemo[0] = 2
-            return paramDemo, nil
-        }
-
-        // [Running] go run ".../demo/main.go"
-        // main.paramDemo 1 [1]
-        // main.paramDemo 2 [1]
-        ```
-   - 资源使用完毕，记得释放资源或回收资源
-     1. 原因
-        - 资源连接数线性增长
-        - 如果一直持有，资源服务端也有超时时间
-     1. 方法：写成`defer close()`
-   - 不要依赖map遍历的顺序
-     1. 因为：底层实现都是数组+类似拉链法，以下3点都决定了map本来就是无序的，所以Go语言为了避免开发者依赖元素顺序，每次遍历的时候都是随机了一个索引起始值。然后PHP通过额外的内存空间维护了map元素的顺序
-        - hash函数无序写入
-        - 成倍扩容
-        - 等量扩容
-   - 不要并发写map，会触发panic
-   - 注意判断指针类型不为空nil，再操作
-    ```go
-    resp, err := http.Get("https://www.example.com")
-
-    // 错误示范
-	if resp.StatusCode != http.StatusOK || err != nil {
-		// 当 resp为nil时 会触发panic
-		// 当 resp.StatusCode != http.StatusOK 时err可能为nil 触发panic
-		log.Printf("err: %s", err.Error())
-	}
-
-    // 正确示范
-    if err != nil {
-		// 报错并记录异常日志
-		log.Printf("err: %s", err.Error())
-		return
-	}
-	// 模拟业务code不为成功的code
-	if resp != nil && resp.StatusCode != http.StatusOK {
-		// 报错并记录异常日志
-	}
-    ```
-   - json解析不存在的默认给类型零值，所以接口请求参数不要使用0作为特殊意义值
-1. 性能优化
-   - 当一个结构体很大、并且在函数中传递时，可以将结构体拆分成小的，将小的单独传递，将小的组合成原来的大的嘛，可以提升性能
-   - 全局变量可以避免重复申请带来的内存交互
 #### 语法练习
 1. 数据类型
    - 引号输出
@@ -172,6 +76,120 @@
         default:
             return nil, errors.New("config opts error")
         }
+    }
+    ```
+   - 自定义类型
+    ```go
+    // 声明自定义类型
+    type aStruct struct {}
+    type Ia interface{}
+
+    type aInt int                           // 一般类型声明，相当于类型别名。类型别名与原类型是两种类型，不能直接操作，需要进行类型转换
+    type 字符串 = string
+    type myFunc func(int) int               // 自定义一个叫myFunc的函数类型，函数的签名必须符合输入为int，输出为int。有时会使代码更加简洁
+    newFunc := myFunc(sum10)                // newFunc是一个变量，变量类型为myFunc，值为sum10函数
+
+    // 给新加的自定义int类型添加方法
+    type myInt int
+ 
+    func (mi myInt) IsZero() bool {
+        return mi == 0
+    }
+    
+    func main() {
+        var a myInt
+        a = 0
+        fmt.Println(a.IsZero())        // true
+    }
+
+    // 给新加的自定义函数添加方法
+    type myFunc func(int) int
+ 
+    func (mf myfunc) sum(a,b int) int {
+        c := a + b
+        return mf(c)
+    }
+
+    type myFunc func(int) int
+ 
+    // 用处举例：外部注入(干预)自定义handlerSum函数的执行过程
+        1. 不变的共用的是sum方法
+        1. 可以使得handlerSum接受的外部更抽象化，只要是继承实现了sum接口的变量就可以了，可以是一个struct变量，也可以是一个自定义函数类型变量
+    func (f myFunc) sum (a, b int) int {
+        res := a + b
+        return f(res)
+    }
+    
+    func sum10(num int) int {
+        return num * 10
+    }
+    
+    func sum100(num int) int {
+        return num * 100
+    }
+    
+    func handlerSum(handler myFunc, a, b int) int {
+        res := handler.sum(a, b)
+        fmt.Println(res)
+        return res
+    }
+    
+    func main() {
+        newFunc1 := myFunc(sum10)
+        newFunc2 := myFunc(sum100)
+    
+        handlerSum(newFunc1, 1, 1)    // 20
+        handlerSum(newFunc2, 1, 1)    // 200
+    }
+
+    // 抽象化封装
+    type sumable interface {
+        sum(int, int) int
+    }
+    
+    // myFunc继承sumable接口
+    type myFunc func(int) int
+    
+    func (f myFunc) sum (a, b int) int {
+        res := a + b
+        return f(res)
+    }
+    
+    func sum10(num int) int {
+        return num * 10
+    }
+    
+    func sum100(num int) int {
+        return num * 100
+    }
+    
+    // icansum结构体继承sumable接口
+    type icansum struct {
+        name string
+        res int
+    }
+    
+    func (ics *icansum) sum(a, b int) int {
+        ics.res = a + b
+        return ics.res
+    }
+    
+    // handler只要是继承了sumable接口的任何变量都行，我只需要你提供sum函数就好
+    func handlerSum(handler sumable, a, b int) int {
+        res := handler.sum(a, b)
+        fmt.Println(res)
+        return res
+    }
+    
+    func main() {
+        newFunc1 := myFunc(sum10)
+        newFunc2 := myFunc(sum100)
+    
+        handlerSum(newFunc1, 1, 1)    // 20
+        handlerSum(newFunc2, 1, 1)    // 200
+    
+        ics := &icansum{"I can sum", 0}
+        handlerSum(ics, 1, 1)         // 2
     }
     ```
 1. slice
@@ -408,12 +426,6 @@
 	p := &v
     p.X
     ```
-1. 打印
-   - `fmt.Printf("s[%d] == %d\n", i, s[i])`
-     1. %s：字符串
-     1. %d：数字
-     1. %v：slice
-   - `fmt.Println(m)`
 1. 反射
    - 类型
      1. `reflect.Kind`：内置元类型，表示reflect包中定义的十几种，每种有一个整数编号
@@ -678,6 +690,12 @@
     rand.Seed(time.Now().Unix())        // 需要改变随机数种子，否则每次程序启动生成的随机数相同，因为种子默认为1
     rand.Int()
     ```
+1. 打印
+   - `fmt.Printf("s[%d] == %d\n", i, s[i])`
+     1. %s：字符串
+     1. %d：数字
+     1. %v：slice
+   - `fmt.Println(m)`
 1. 时间相关
    - 计算时间差
     ```go
@@ -987,6 +1005,103 @@
                 plugin.Register(&MyPlugin)
             }
             ```
+#### 思路思想
+1. 编写思路
+   - 编程起势：首先通过划分结构体，定义不同的功能模块，然后分别实现，最终实现功能
+     1. 封装模块
+        - 在一个文件中定义一组接口interface
+        - 定义结构体struct，可以在一个文件或文件夹中专门存放需要用到的struct
+        - 定义new结构体struct的方法，用sync.Once实现单例返回，返回值为接口interface
+        - 定义属于结构体struct、并且实现了接口interface的所有方法，完成~
+     1. 定义对象：针对一类组合，要定义一个结构体作为包装这个对象的载体，而不是孤零零的散着各种数据，面向对象嘛
+   - 函数式编程：通过参数、返回值、变量都是函数的形式，实现更加灵活的处理
+     1. 将具体执行的逻辑包装成一个方法，大家执行这个方法，内部自己定义，就可以将实现解耦了，大家不用关心执行的内容了
+     1. 针对需要外部定义处理的函数，用函数式编程，实现外部定义实现，内部调度，执行那个方法就可以了
+        ```go
+        type Han struct {
+            UseMethod func(int) bool
+        }
+
+        func main() {
+            h := Han{
+                UseMethod: func(i int) bool {
+                    return true
+                },
+            }
+            // 使用
+            h.UseMethod(1)
+        }
+        ```
+   - 并行思想：之前用的读io然后处理的单线程模式，改为：起多个不同的协程(有的处理读io，有的处理逻辑)，协程之间通过chan传递数据，一边读取一边处理的协程模式了
+     1. 耗时的goroutine可以多起几个
+   - 如何设计一个特定领域的整体的处理框架，整体架构就是先划分不同角色，怎么划分好角色最重要，然后利用interface去高内聚每个角色，之间相互配合，实现更强的扩展性
+1. 避坑指南
+   - 谨慎使用全局变量，全局变量不会像PHP一样，在完成一次请求之后被销毁，而是会被改变
+   - 形参是slice、map类型的参数，注意值可被全局修改，array则不会
+     1. 因为：浅复制过程中slice和map底层的类型是个结构体，实际存储值的类型是个指针
+     1. 解决：深拷贝，开辟新内存，指针指向新内存地址，并把原有的值复制过去
+        ```go
+        package main
+
+        import "fmt"
+
+        func main() {
+            paramDemo := []int32{1}
+            fmt.Println("main.paramDemo 1", paramDemo)
+            // 初始化新空间
+            paramDemoCopy := make([]int32, len(paramDemo))
+            // 深拷贝
+            copy(paramDemoCopy, paramDemo)
+            demo(paramDemoCopy)
+            fmt.Println("main.paramDemo 2", paramDemo)
+        }
+
+        func demo(paramDemo []int32) ([]int32, error) {
+            paramDemo[0] = 2
+            return paramDemo, nil
+        }
+
+        // [Running] go run ".../demo/main.go"
+        // main.paramDemo 1 [1]
+        // main.paramDemo 2 [1]
+        ```
+   - 资源使用完毕，记得释放资源或回收资源
+     1. 原因
+        - 资源连接数线性增长
+        - 如果一直持有，资源服务端也有超时时间
+     1. 方法：写成`defer close()`
+   - 不要依赖map遍历的顺序
+     1. 因为：底层实现都是数组+类似拉链法，以下3点都决定了map本来就是无序的，所以Go语言为了避免开发者依赖元素顺序，每次遍历的时候都是随机了一个索引起始值。然后PHP通过额外的内存空间维护了map元素的顺序
+        - hash函数无序写入
+        - 成倍扩容
+        - 等量扩容
+   - 不要并发写map，会触发panic
+   - 注意判断指针类型不为空nil，再操作
+    ```go
+    resp, err := http.Get("https://www.example.com")
+
+    // 错误示范
+	if resp.StatusCode != http.StatusOK || err != nil {
+		// 当 resp为nil时 会触发panic
+		// 当 resp.StatusCode != http.StatusOK 时err可能为nil 触发panic
+		log.Printf("err: %s", err.Error())
+	}
+
+    // 正确示范
+    if err != nil {
+		// 报错并记录异常日志
+		log.Printf("err: %s", err.Error())
+		return
+	}
+	// 模拟业务code不为成功的code
+	if resp != nil && resp.StatusCode != http.StatusOK {
+		// 报错并记录异常日志
+	}
+    ```
+   - json解析不存在的默认给类型零值，所以接口请求参数不要使用0作为特殊意义值
+1. 性能优化
+   - 当一个结构体很大、并且在函数中传递时，可以将结构体拆分成小的，将小的单独传递，将小的组合成原来的大的嘛，可以提升性能
+   - 全局变量可以避免重复申请带来的内存交互
 ### 算法
 1. 外部排序
    - 解析：pipeline思想，将源数据分成一个个的节点，然后归并到最终集
@@ -1144,7 +1259,7 @@
     }
     ```
 ### 技术方案
-#### 池化：连接池、工作者池
+#### 池
 1. 认识
    - 连接池
      1. 因为资源有限，目的是降低频繁创建和关闭连接的开销
@@ -1154,6 +1269,7 @@
      1. 原理：![avatar](../images/conn_pool.png)
    - 工作者池是抢占，连接池是先查空闲的队列
    - 感觉大多数都用chan实现了，也就很简单了
+##### 连接池
 1. go-redis的连接池
    - 特性：池数量控制、空闲连接控制、超时逻辑、
      1. 拿连接只实现了简单的线性表形式，没有加权等其他形式
@@ -1259,7 +1375,7 @@
         }
     }
     ```
-1. sql.DB连接池
+1. sql.DB的连接池
    - 认识
      1. gorm的连接池复用了sql.DB
      1. 连接池的操作都是靠锁和流程操作完成，只有异常情况才备用了openerCh来监听新建，而cleanerCh则监听去清理
@@ -1540,6 +1656,7 @@
         return p.c.put(p.Conn)
     }
     ```
+##### 工作者池
 1. Worker Pool
    - 认识
      1. 创建一组固定数量的goroutine（worker），由这一组worker去处理任务，防止大量的goroutine使用
@@ -2503,77 +2620,3 @@
           1. 用户建立连接后，WS-Gateway将连接信息映射关系缓存到redis进行会话节点存储，并通过kafkaWS-API推送消息
           1. WS-API通过kafka接收客户端上线、上行消息，处理后通过kafka返回消息
           1. WS-Gateway通过kafka接收，返回给客户端
-### wiki
-1. 问题
-   - 拷贝大切片一定比小切片代价大吗？
-     1. 将一个 slice 变量分配给另一个变量只会复制三个字段(一个 uintptr，两个int)。所以 拷贝大切片跟小切片的代价应该是一样的
-   - 字符串转成byte数组，会发生内存拷贝吗？
-     1. 严格来说，只要是发生类型强转都会发生内存拷贝
-     1. 在底层转换二者，只需要把 StringHeader 的地址强转成 SliceHeader 就行
-#### config
-1. yaml
-   - 认识：YAML Ain't a Markup Language，用于跨不同语言和框架的配置文件，xml子集，01年开始，后缀.yaml或.yml
-     1. 缩进和冒号为主要特征，复杂
-   - 举例
-    ```conf
-    key: 
-        child-key: value
-        child-key2: value2
-        
-    a1: abc  # string
-    a2: true # boolean
-    b1: nil  # string
-    b2: null # null
-    b3: NULL # null
-    b4: NuLL # string
-
-    c:
-        x: c.x
-        y: c.y
-    e:
-        - x: e[0].x
-          y: e[0].y
-        - x: e[1].x
-          y: e[1].y
-    ```
-1. toml
-   - 认识：Tom's Obvious，Minimal Language，目标成为最小的配置文件格式
-     1. 语义精确，格式易于阅读
-   - 特点
-     1. 区分大小写
-     1. 文件只能包含UTF-8编码的Unicode字符
-     1. 空格表示制表符（0x09）或空格（0x20）
-     1. 换行符表示LF（0x0A）或CRLF（0x0D0A）
-   - 举例
-    ```conf
-    [server]
-    name = "magic-lamp"
-    port = "8000"
-    mode = "test"
-    debug = true
-
-    [auth.ucenter]
-    appID = ""
-    secret = ""
-
-
-    [f.A]
-    x.y = "f.A.x.y"
-
-    [f.B]
-    x.y = """
-    f.
-        B.
-            x.
-                y
-    """
-
-    [f.C]
-    points = [
-        { x=1, y=1, z=0 },
-        { x=2, y=4, z=0 },
-        { x=3, y=9, z=0 },
-    ]
-    ```
-1. dotenv项目：从.env文件加载配置到环境变量，认为配置要放在环境变量中，Ruby的
-1. .ini

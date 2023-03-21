@@ -124,23 +124,6 @@
           1. 相等则返回value
 1. 结构体
    - 内存对齐
-1. sync.Map
-   - 实现
-     1. 空间换时间。通过冗余的两个数据结构（只读的 read 字段、可写的 dirty），来减少加锁对性能的影响
-     1. 优先从read字段读取、更新、删除，因为对 read 字段的读取不需要锁
-     1. 动态调整：miss 次数多了之后，将 dirty 数据提升为 read，避免总是从 dirty 中加锁读取
-     1. double-checking：加锁之后先还要再检查 read 字段，确定真的不存在才操作 dirty 字段
-     1. 延迟删除：删除一个键值只是打标记，只有在提升 dirty 字段为 read 字段的时候才清理删除的数据
-   - 认识：通过空间换时间的方式，内部使用键固定的read和包含所有键值对的dirty两个map来进行读写分离，降低锁时间来提高效率
-     1. 所有对read上已有的键值对的增删改查都是无锁实现（read中标记删除的例外），基于使用场景“写特别少几乎固定”也就是说基本用不上锁，从而大大提高性能
-     1. read和dirty存储的都是值的地址，是共享地址的，就是说所有对read的无锁增删改查都会同步反馈在dirty上
-     1. 通过读写分离，降低锁时间来提高效率，写dirty，读read
-     1. dirty始终反映着最新值，从而为快速切换做准备
-   - 特性
-     1. 新写入的 key 会保存到 dirty 中，如果这时 dirty 为 nil，就会先新创建一个 dirty，并将 read 中未被删除的元素拷贝到 dirty。当 dirty 为 nil 的时候，read 就代表 map 所有的数据；当 dirty 不为 nil 的时候，dirty 才代表 map 所有的数据
-     1. 调用 Load 或 LoadOrStore 函数时，如果在 read 中没有找到 key，则会将 misses 值原子地增加 1，当 misses 增加到和 dirty 的长度相等时，会将 dirty 提升为 read。以期减少“读 miss”
-   - 关于range：如果发现read表和dirty表不一致，那么会提前触发一次表替换（因为Range本身时间复杂度为O(N)所以可以分摊部分消耗。Range可以通过返回false提前中断，不过考虑到中间可能涉及到的替换表，时间复杂度不会有太多的变化
-   - 关于kv类型：尽量避免使用函数、切片、map作为key，因为他们不可比较
 ### 语法
 1. defer
    - 数据结构：defer有栈地址
@@ -232,14 +215,32 @@
    - 思想
      1. 资源池、资源池分离：对有一定规模约束的资源进行池化管理，如内存池、机器池、协程池、线程池等
      1. 计算存储分离，分别从逻辑、数据结构两个角度进行设计，规划二者的耦合关系
-#### channel
+#### Channel
 1. 数据类型：runtime.hchan
 1. 方法
    - makechan：目标生成hchan对象，makechan64只做了size检查，底层都是makechan
    - chansend：chansend1调用chansend
    - chanrecv1、chanrecv2：一个参数、两个参数，会调用chanrecv
    - closechan
-#### mutex
+#### Sync
+1. sync.Map
+   - 实现
+     1. 空间换时间。通过冗余的两个数据结构（只读的 read 字段、可写的 dirty），来减少加锁对性能的影响
+     1. 优先从read字段读取、更新、删除，因为对 read 字段的读取不需要锁
+     1. 动态调整：miss 次数多了之后，将 dirty 数据提升为 read，避免总是从 dirty 中加锁读取
+     1. double-checking：加锁之后先还要再检查 read 字段，确定真的不存在才操作 dirty 字段
+     1. 延迟删除：删除一个键值只是打标记，只有在提升 dirty 字段为 read 字段的时候才清理删除的数据
+   - 认识：通过空间换时间的方式，内部使用键固定的read和包含所有键值对的dirty两个map来进行读写分离，降低锁时间来提高效率
+     1. 所有对read上已有的键值对的增删改查都是无锁实现（read中标记删除的例外），基于使用场景“写特别少几乎固定”也就是说基本用不上锁，从而大大提高性能
+     1. read和dirty存储的都是值的地址，是共享地址的，就是说所有对read的无锁增删改查都会同步反馈在dirty上
+     1. 通过读写分离，降低锁时间来提高效率，写dirty，读read
+     1. dirty始终反映着最新值，从而为快速切换做准备
+   - 特性
+     1. 新写入的 key 会保存到 dirty 中，如果这时 dirty 为 nil，就会先新创建一个 dirty，并将 read 中未被删除的元素拷贝到 dirty。当 dirty 为 nil 的时候，read 就代表 map 所有的数据；当 dirty 不为 nil 的时候，dirty 才代表 map 所有的数据
+     1. 调用 Load 或 LoadOrStore 函数时，如果在 read 中没有找到 key，则会将 misses 值原子地增加 1，当 misses 增加到和 dirty 的长度相等时，会将 dirty 提升为 read。以期减少“读 miss”
+   - 关于range：如果发现read表和dirty表不一致，那么会提前触发一次表替换（因为Range本身时间复杂度为O(N)所以可以分摊部分消耗。Range可以通过返回false提前中断，不过考虑到中间可能涉及到的替换表，时间复杂度不会有太多的变化
+   - 关于kv类型：尽量避免使用函数、切片、map作为key，因为他们不可比较
+#### Mutex
 1. 组成
     ```go
     type Mutex struct {
@@ -636,7 +637,110 @@
         return c, func() { c.cancel(true, Canceled) }
     }
     ```
+### 应用
+1. http
+   - 核心组成
+     1. 创建一个路由表，http.NewServeMux()
+     1. 向路由表注册路由，并绑定处理器Handler{}
+     1. 调用 http.ListenAndServe(":9090", mutex)提供服务
+   - 路由表结构体解析
+    ```go
+    type ServeMux struct {
+        mu sync.RWMutex             // 锁，由于请求涉及到并发处理，因此这里需要一个锁机制
+        m map[string]muxEntry       // 路由规则，一个 string 对应一个 mux 实体，这里的 string 就是注册的路由表达式
+        es []muxEntry               // 路由表达式切片，按路由从最⻓到最短排序，用来实现最⻓前缀匹配
+        hosts bool                  // 是否在任意的规则中带有 host 信息
+    }
+    ```
+   - 流程
+     1. 实例化 Server
+     1. 调用 Server 的 ListenAndServe ()
+     1. 调用 net.Listen ("tcp", addr) 监听端口
+     1. 启动一个 for 循环，在循环体中 Accept 请求
+     1. 对每个请求实例化一个 Conn，并且开启一个 goroutine 为这个请求进行服务 go c.serve () 6 读取每个请求的内容，把请求分配到路由表处理
+     1. 判断 handler 是否为空，如果没有设置 handler，handler 就设置为 DefaultServeMux 8 调用 handler 的 ServeHttp
+     1. 根据 request 选择 handler，并且进入到这个 handler 的 ServeHTTP
+     1. 选择 handler:
+        - map精确匹配
+        - 切片最⻓前缀匹配，`strings.HasPrefix`
+        - 如果没有路由满足，调用 NotFoundHandler 的 ServeHTTP
+   - 连接管理
+    ```go
+    res, err := client.Do(req)
+    func (c *Client) Do(req *Request) (*Response, error) {
+        return c.do(req)
+    }
+
+    func (c *Client) do(req *Request) {
+        // ...
+        if resp, didTimeout, err = c.send(req, deadline); err != nil {
+            // ...
+        }
+        // ...
+    }
+    func send(ireq *Request, rt RoundTripper, deadline time.Time) {
+        // ...
+        resp, err = rt.RoundTrip(req)
+        // ...
+    }
+
+    // 从这里进入 RoundTrip 逻辑   /src/net/http/roundtrip.go: 16
+    func (t *Transport) RoundTrip(req *Request) (*Response, error) {
+        return t.roundTrip(req)
+    }
+
+    func (t *Transport) roundTrip(req *Request) (*Response, error) {
+        // 尝试去获取一个空闲连接，用于发起 http 连接
+        pconn, err := t.getConn(treq, cm)
+        // ...
+    }
+
+    // 重点关注这个函数，返回是一个长连接
+    func (t *Transport) getConn(treq *transportRequest, cm connectMethod) (*persistConn, error) {
+        // 省略了大量逻辑，只关注下面两点
+        // 有空闲连接就返回
+        pc := <-t.getIdleConnCh(cm)
+
+        // 没有创建连接
+        pc, err := t.dialConn(ctx, cm)
+
+    }
+    ```
 ### 内存管理
+1. GC
+   - 发展
+     1. v 1.1 ——2013/5 ——STW ——————————百ms-⼏百ms级别
+     1. v 1.3 ——2014/6 ——Mark STW, Sweep 并⾏ — 百ms级别
+     1. v 1.5 ——2015/8—— 三⾊标记法, 并发标记清除 -10ms级别
+     1. v 1.8 ——2017/2—— hybrid write barrier ————sub ms
+   - 一些说法
+     1. STW 是垃圾收集器中的两个“停止世界”阶段。 在这两个阶段中，goroutine 会停止。
+     1. GC（idle）是在没有工作时标记内存的 goroutine。
+     1. MARK ASSIST 是在分配过程中帮助标记内存的 goroutine。
+     1. 一旦垃圾收集器完成，GXX runtime.bgsweep 是内存扫描阶段。
+     1. GXX runtime.gcBgMarkWorker 是帮助标记内存的专用后台 goroutine。
+   - 认识
+     1. 自动垃圾回收：使用 Go 语言创建对象的时候，我们没有回收 / 释放的心理负担，想用就用，想创建就创建
+     1. 如果你想使用 Go 开发一个高性能的应用程序的话，就必须考虑垃圾回收给性能带来的影响
+        - GC STW(Stop the World) 的存在大的哈希表是非常要命的
+          1. 堆上有4千万个对象，GC的扫描过程就超过了4秒钟
+   - local cache的优化思路
+     1. offheap（堆外内存），GC 只会扫描堆上的对象，那就把对象都搞到栈上去，但是这样这个缓存库就高度依赖 offheap 的 malloc 和 free 操作了
+     1. 参考 freecache 的思路，用 ringbuffer 存 entry，绕过了 map 里存指针
+     1. 利用Go 1.5+的特性：当map中的key和value都是基础类型时，GC就不会扫到map里的key和value
+   - 拷贝场景
+     1. 投射到 interface
+     1. chan的接收和发送
+     1. 替换map中的元素
+     1. 向slice添加元素
+     1. 迭代（range）
+   - 不会内联的场景
+     1. recovery
+     1. select 块
+     1. 类型声明
+     1. defer
+     1. goroutine
+     1. for-range
 1. 背景
    - 多线程的今天之前共享内存，线程之前在申请内存(虚拟内存)时，由于并行问题会产生竞争不安全，加锁又会影响性能
    - 内存分配、内存回收、内存整理
@@ -650,6 +754,38 @@
    - mcache：线程缓存
    - mcentral：中央缓存，136个mcentral类型元素的数组构成
    - mheap：堆内存
+1. 内存/内存逃逸
+   - 认识：变量通过能证明整个生命周期运行时完全可知的校验，就可以在栈上分配，否则就是逃逸了，要在堆上分配
+     1. 能在编译期确定作用域的，就会到堆上
+     1. 堆上分配开销大很多
+     1. 如何进行逃逸分析普通使用者不用关心，这是语言编译该考虑的，但是使用上可避免
+   - 引发逃逸的情况
+     1. 在方法内把局部变量指针返回：局部变量逃逸。局部变量原本应在栈中分配、栈中回收。但由于返回时被外部引用，因此其生命周期大于栈，则溢出
+     1. 发送指针或带有指针的值到channel中：指针的值逃逸。编译时没有办法知道哪个goroutine会在channel上接收数据，所以编译器无法知道变量什么时候被释放
+     1. 在一个切片上存储指针或带指针的值：切片的值逃逸。其底层数组可能在栈上分配，但其引用的值一定在堆上，如`[]*string`
+     1. slice的底层数组重新分配：slice逃逸，slice编译时在栈上，基于运行时扩充则会在堆上
+     1. 在interface类型上调用方法：方法都是动态调度的因为方法的真正实现只能在运行时知道， 如io.Reader类型的变量r, 调用r.Read(b)会使r的值和切片b的背后存储都逃逸
+   - 最佳实践
+     1. 不要盲目使用指针作为函数参数，虽然会减少复制操作。当参数为变量自身时，复制是在栈上完成，开销远比变量逃逸到堆上开销小
+     1. 尽量少写逃逸代码，提高运行效率
+   - 操作
+     1. 观察逃逸情况：`go build -gcflags=-m main.go`，提示`xx escapes to heap`
+     1. 避免逃逸检测
+        ```go
+        // 作用是遮蔽输入和输出的依赖关系。使编译器不认为p会通过x逃逸， 因为uintptr()产生的引用是编译器无法理解的
+        // 用于清楚被unsafe.Pointer引用的数据肯定不会被逃逸但编译器却不知道的情况，要小心使用
+        func noescape(p unsafe.Pointer) unsafe.Pointer {
+            x := uintptr(p)
+            return unsafe.Pointer(x ^ 0)
+        }
+        // 使用示例
+        func NewA(s string) A {                                 // NewA会逃逸
+           return A{S: &s}
+        }
+        func NewATrick(s string) ATrick {
+            return ATrick{S: noescape(unsafe.Pointer(&s))}
+        }
+        ```
 1. 内存逃逸
    - 认识：将变量的内存分配在合适的地方，要不然就找不到了。判断整个生命周期是否在运行时完全可知，如果变量通过了这些校验就可以在栈上分配。https://zhuanlan.zhihu.com/p/145468000
    - 逃逸分析：基本原则是如果函数返回了变量的引用，那么这个变量就会逃逸。编译器通过分析代码决定变量分配的地方
@@ -761,76 +897,18 @@
    - 虚拟内存
      1. 认识：进程运行在虚拟内存上的、连续的，和物理内存通过MMU(Memory Manage Unit)映射
         - 安全：隔绝篡改
-### 应用
-1. http
-   - 核心组成
-     1. 创建一个路由表，http.NewServeMux()
-     1. 向路由表注册路由，并绑定处理器Handler{}
-     1. 调用 http.ListenAndServe(":9090", mutex)提供服务
-   - 路由表结构体解析
-    ```go
-    type ServeMux struct {
-        mu sync.RWMutex             // 锁，由于请求涉及到并发处理，因此这里需要一个锁机制
-        m map[string]muxEntry       // 路由规则，一个 string 对应一个 mux 实体，这里的 string 就是注册的路由表达式
-        es []muxEntry               // 路由表达式切片，按路由从最⻓到最短排序，用来实现最⻓前缀匹配
-        hosts bool                  // 是否在任意的规则中带有 host 信息
-    }
-    ```
-   - 流程
-     1. 实例化 Server
-     1. 调用 Server 的 ListenAndServe ()
-     1. 调用 net.Listen ("tcp", addr) 监听端口
-     1. 启动一个 for 循环，在循环体中 Accept 请求
-     1. 对每个请求实例化一个 Conn，并且开启一个 goroutine 为这个请求进行服务 go c.serve () 6 读取每个请求的内容，把请求分配到路由表处理
-     1. 判断 handler 是否为空，如果没有设置 handler，handler 就设置为 DefaultServeMux 8 调用 handler 的 ServeHttp
-     1. 根据 request 选择 handler，并且进入到这个 handler 的 ServeHTTP
-     1. 选择 handler:
-        - map精确匹配
-        - 切片最⻓前缀匹配，`strings.HasPrefix`
-        - 如果没有路由满足，调用 NotFoundHandler 的 ServeHTTP
-   - 连接管理
-    ```go
-    res, err := client.Do(req)
-    func (c *Client) Do(req *Request) (*Response, error) {
-        return c.do(req)
-    }
-
-    func (c *Client) do(req *Request) {
-        // ...
-        if resp, didTimeout, err = c.send(req, deadline); err != nil {
-            // ...
-        }
-        // ...
-    }
-    func send(ireq *Request, rt RoundTripper, deadline time.Time) {
-        // ...
-        resp, err = rt.RoundTrip(req)
-        // ...
-    }
-
-    // 从这里进入 RoundTrip 逻辑   /src/net/http/roundtrip.go: 16
-    func (t *Transport) RoundTrip(req *Request) (*Response, error) {
-        return t.roundTrip(req)
-    }
-
-    func (t *Transport) roundTrip(req *Request) (*Response, error) {
-        // 尝试去获取一个空闲连接，用于发起 http 连接
-        pconn, err := t.getConn(treq, cm)
-        // ...
-    }
-
-    // 重点关注这个函数，返回是一个长连接
-    func (t *Transport) getConn(treq *transportRequest, cm connectMethod) (*persistConn, error) {
-        // 省略了大量逻辑，只关注下面两点
-        // 有空闲连接就返回
-        pc := <-t.getIdleConnCh(cm)
-
-        // 没有创建连接
-        pc, err := t.dialConn(ctx, cm)
-
-    }
-    ```
-### 源码阅读
+### wiki
+1. 认识
+   - 通过这样复杂的检查、判断和设置，实现一些目的。了解了设计思想，看实现是一个证实的过程
+   - 现在的 Mutex 代码已经复杂得接近不可读的状态了，而且代码也非常长，删减后占了几乎三页纸。但是，作为第一个要详细介绍的同步原语，我还是希望能更清楚地剖析 Mutex 的实现，向你展示它的演化和为了一个貌似很小的 feature 不得不将代码变得非常复杂的原因
+1. 重难点
+   - 并发模型GPM
+   - goroutine、channel调度
+   - 内存管理、GC
+1. goyacc：和yacc的功能一样，根据输入的语法规则文件，生成该语法规则的golang版的yacc
+   - Lex & Yacc：用来生成词法分析器和语法分析器的工具，yacc用c写的
+     1. Flex&Bison：Flex是由Vern Paxon实现的一个Lex，Bison则是GNU版本的YACC
+#### 源码阅读
 1. 方法
    - 如果你阅读的是syscall包，恭喜你，感觉正常：再简洁的语言，遇到环境相关，仍然会有很多 tricks，甚至用到 Cgo
    - 如果你阅读的是os一类的包，恭喜你，感觉也挺正常：涉及到与其他层面的调用， 正常
@@ -887,14 +965,3 @@
    - 组成
      1. ‌runtime.iface 表示第一种
      1. runtime.eface 表示第二种不包含任何方法的接口
-### wiki
-1. 认识
-   - 通过这样复杂的检查、判断和设置，实现一些目的。了解了设计思想，看实现是一个证实的过程
-   - 现在的 Mutex 代码已经复杂得接近不可读的状态了，而且代码也非常长，删减后占了几乎三页纸。但是，作为第一个要详细介绍的同步原语，我还是希望能更清楚地剖析 Mutex 的实现，向你展示它的演化和为了一个貌似很小的 feature 不得不将代码变得非常复杂的原因
-1. 重难点
-   - 并发模型GPM
-   - goroutine、channel调度
-   - 内存管理、GC
-1. goyacc：和yacc的功能一样，根据输入的语法规则文件，生成该语法规则的golang版的yacc
-   - Lex & Yacc：用来生成词法分析器和语法分析器的工具，yacc用c写的
-     1. Flex&Bison：Flex是由Vern Paxon实现的一个Lex，Bison则是GNU版本的YACC
