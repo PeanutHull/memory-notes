@@ -1314,7 +1314,11 @@
    - 消息传递
      1. chan
    - 开发
-     1. 检测：-race，有时候肯定不准，编译器不是万能的
+     1. 检测：-race，race detector 冲突检测，编译器内置数据冲突检测器，有时候不准编译器不是万能的
+        - go test -race mypkg：测试时检测
+        - go run -race main.go：运行时检测
+        - go build -race main.go：编译时检测
+        - go install -race mypkg：安装时检测
      1. 共享变量导致的计数不准
         ```go
         var n int32
@@ -4553,7 +4557,7 @@
      1. 函数一般以Benchmark开头
      1. case一般会跑N次，case无法达到一个稳态时无法完成测试，会自动跑到稳态时，才停止
    - 使用：`go test -bench=.`
-     1. 举例：`go test -benchmem -run=^$ -bench ^(BenchmarkSyncMap)$ demo -v -count=1 -cpuprofile=cpu.profile -memprofile=mem.profile -benchtime=10s`
+     1. 举例：`go test -bench -benchmem -run=^$ ^(BenchmarkSyncMap)$ demo -v -count=1 -cpuprofile=cpu.profile -memprofile=mem.profile -benchtime=10s`
      1. 参数
         - -benchmem: 输出内存指标
         - -run: 正则，指定需要test的方法
@@ -4619,42 +4623,43 @@
         })
     }
     ```
-1. 性能方法
-   - `go tool trace`
-     1. 认识：调用链路，找出程序在一段时间内正在做什么，诊断性能问题，如延迟，并行化、竞争异常
-        - 清晰查看每个逻辑处理器中Goroutine的执行过程，可以很直观看出Goroutine的阻塞消耗，包含网络阻塞、同步阻塞(锁)、系统调用阻塞、调度等待、GC执行耗时、GC STW(Stop The World)耗时
-     1. 步骤
-        - 生成trace.out文件命令：`go test -benchmem -run=^$ -bench ^BenchmarkDemo_Pool$ demo -v -count=1 -trace=trace.out `
-        - web版：`curl http://localhost:8888/debug/pprof/trace?seconds=20 > trace.out`
-        - 分析trace.out文件命令：`go tool trace -http=127.0.0.1:8000 trace.out`
-   - -race：race detector
-   - `go tool pprof`
-     1. 认识：性能分析，找出时间花在哪里
-        - 解决那些耗时占比大的，看看怎么解决
-     1. 分析场景
-        - 静态应用：查看profile文件，可视化看到火焰图、调用链路耗时图、Top函数，`go tool pprof -http=:8000 cpu.profile`，
-          1. 步骤：循环头尾进行，不断优化
-             - -cpuprofile生成profile
-             - pprof分析profile
-             - 分析慢在哪里
-             - 优化代码
-          1. -http: 指定ip:port，启动web服务可视化查看分析，浏览器会自动打开页面 
-        - web应用
+1. trace
+   - 认识：调用链路，找出程序在一段时间内正在做什么，用于诊断性能问题，如延迟，并行化、竞争异常
+     1. 清晰查看每个逻辑处理器中Goroutine的执行过程，及阻塞消耗如网络阻塞、同步阻塞(锁)、系统调用阻塞、调度等待、GC耗时、GC STW(Stop The World)
+   - 步骤：`go tool trace`
+     1. 生成trace.out
+        - `go test -bench -benchmem -run=^$ ^BenchmarkDemo_Pool$ demo -v -count=1 -trace=trace.out`
+        - `curl http://localhost:8888/debug/pprof/trace?seconds=20 > trace.out`：web方式
+     1. 分析trace.out：`go tool trace -http=127.0.0.1:8000 trace.out`
+1. pprof
+   - 认识：性能分析，找出时间花在哪里。通过分析profile文件，实现可视化的火焰图、链路耗时图、top函数
+   - 使用
+     1. 步骤：重复进行，不断优化
+        - 先-cpuprofile生成profile文件
+        - 使用pprof分析profile：`go tool pprof -http=127.0.0.1:8000 cpu.profile`，
+        - 查看慢在哪里优化代码
+        - 优先解决耗时大的
+     1. web应用：`go tool pprof`
+        - 开启访问入口
             ```go
-            // 开启访问入口
+            // 
             go func() {
                 http.ListenAndServe(":8888", nil)
             }()
-            // 直接访问
-            http://localhost:8888/debug/pprof/
-            // pprof工具获取
-            go tool pprof -http=:8000 http://localhost:8888/debug/pprof/profile?seconds=5
 
             // 另一边可以施加流量，用以观察
             siege -c 50 -t 100 "http://localhost:8080/ping"
+            ```
+        - 获取分析文件
+            ```go
+            // 直接访问
+            http://localhost:8888/debug/pprof
 
-
-            // demo
+            // pprof工具获取
+            go tool pprof -http=:8000 http://localhost:8888/debug/pprof/profile?seconds=5
+            ```
+        - demo
+            ```go
             import (
                 "net/http"
                 _ "net/http/pprof"
@@ -4666,26 +4671,27 @@
             // 模拟接口逻辑
             func main() {
                 r := gin.Default()
+
+                // 业务逻辑
                 r.GET("/ping", func(c *gin.Context) {
                     GlobalVarDemo++
                     c.JSON(200, gin.H{
                         "message": GlobalVarDemo,
                     })
                 })
+                // 启动web服务
+                r.Run()
+
                 // 再开启一个端口获取pprof数据
                 go func() {
                     http.ListenAndServe(":8888", nil)
                 }()
-                // 启动web服务
-                r.Run()
             }
             ```
-   - 断点调试：dlv
-   - go-torch：开源工具，将profile信息转换成火焰图，https://github.com/uber/go-torch
-     1. Flame：火焰图绘制
-     1. graphviz：调用链生成
-   - 逃逸分析：`go build -gcflags "-m -l" *.go`
-   - 汇编代码：`go run -gcflags -S main.go`
+     1. 工具
+        - go-torch：将profile转换成火焰图的开源工具，https://github.com/uber/go-torch
+          1. Flame：火焰图绘制
+          1. graphviz：调用链生成
 ### 运维
 1. 环境变量
    - GOROOT：go的安装路径，可以不设置，默认在/usr/local/go，编译的时候从GOROOT找system libariry
@@ -4711,6 +4717,7 @@
 1. 编译
    - 运行
      1. `go run hello.go`：进行高速编译，用作脚本语言
+        - 汇编代码：`go run -gcflags -S main.go`
    - 编译：一个package只能有一个main，否则build不过
      1. `go tool compile -N -l -S main.go`：不优化编译，可用dlv调试
      1. `go build`
@@ -4734,7 +4741,9 @@
           1. -ldflags "-s -w"
              - -s：去掉符号信息，panic时候的stack trace就没有任何文件名/行号信息了，等价于c/c++的strip
              - -w：去掉DWARF调试信息，不能用gdb调试了
-          1. -gcflags "-N -l"：关闭内联优化
+          1. -gcflags
+             - 关闭内联优化：`go build -gcflags "-N -l" *.go`
+             - 逃逸分析：`go build -gcflags "-m -l" *.go`
           1. 跨平台
              - GOOS=linux
              - GOARCH=amd64 
@@ -4775,6 +4784,7 @@
      1. `go generate`：用于在编译前自动化生成某类代码，举例：`//go:generate go tool yacc -o gopher.go -p parser gopher.y`
      1. `go bug`
      1. `go tool cgo`
+   - 断点调试：dlv
 ### wiki
 1. 历史
    - 07年开发
