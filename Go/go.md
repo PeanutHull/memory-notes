@@ -3552,6 +3552,8 @@
           1. `-v`：显示执行的命令
      1. `go list`：查看安装的package
         - -f '{<!-- -->{.GoFiles}}'：查看将被编译的文件名
+     1. `go install`：编译和安装，用于安装第三方库的可执行文件。将编译好的结果移到$GOPATH/pkg或$GOPATH/bin，.a移到$GOPATH/pkg，可执行文件移到$GOPATH/bin
+        - `go install example.com/pkg@v1.2.3`：忽略mod文件指定依赖版本
    - 发展
      1. 阶段
         - GOPATH：所有包必须放GOPATH目录下，无法支持不同版本包存在
@@ -4449,180 +4451,126 @@
      1. 组成
         - 基于Pathfinder的高效矢量渲染器
         - 基于piet-gpu的实验渲染器，两种渲染器都支持Vulkan、Metal、Direct3D 11和OpenGL ES
-### 测试、运行与性能
-1. 工具链
-   - 查看
-     1. `go version`
-     1. `go env`：查看当前go的环境变量
-     1. `go doc`：用于查看文档
-        - `godoc -http=:8080`：生成本机的go官网，可用浏览器打开
-     1. `go help`
-   - 编写
-     1. `go fmt`
-        - 认识：格式化代码文件，是gofmt的简单封装
-          1. 传入文件路径会格式化这个文件 ———— 如果传入目录格式化目录中所有.go文件 ———— 如果不传参数，格式化当前目录下的所有.go文件
-          1. 默认不对代码进行简化，-s启动简化
-     1. `go test`
-     1. `go fix`：转换老版本的代码到新版本
-     1. `go generate`：用于在编译前自动化生成某类代码
-        - 写法举例：`//go:generate go tool yacc -o gopher.go -p parser gopher.y`
-   - 调试
-     1. `go vet`：代码格式错误检查
-     1. `go bug`：调试
-     1. `go tool`
-        - `go tool compile -N -l -S main.go`：不优化编译，可用dlv调试
-        - `go tool pprof`：性能分析工具
-        - `go tool cover`：覆盖率分析工具
-        - `go tool cgo`
-   - 运行和编译
-     1. `go run hello.go`：进行高速编译，用作脚本语言
-     1. `go build`
-        - 认识：用于测试编译
-          1. 会同时编译依赖包，会在GOROOT/src和GOPATH/src搜索包，默认编译当前目录下的所有go文件，可指定要编译的文件名，会忽略_或.开头的go文件，会根据当前系统选择性地编译以系统名结尾的文件(_linux|darwin|windows|freebsd.go)
-          1. 普通包不产生任何文件只做检查性编译，main包生成可执行文件
-        - 条件编译
-          1. 认识：`// +build condition`，构建约束，和编译条件`-tags`相同字符的才编译在包中
-             - 约束可以出现在任何文件中
-             - +build必须出现在package之前，之后应要有一个空行
-             -  *_GOOS、*_GOARCH、*_GOOS_GOARCH结尾的隐式包含构建约束
-          1. 语法
-             - 只允许是字母数字或_
-             - 多个条件之间，空格表示OR；逗号表示AND；叹号(!)表示NOT
-             - 一个文件可以有多个+build，关系是AND
-          1. 应用
-             - `// +build ignore`：用于不想编译某文件
-        - 参数
-          1. -v：打印包名
-          1. -o：指定输出的可执行文件
-          1. -ldflags "-s -w"
-             - -s：去掉符号信息，panic时候的stack trace就没有任何文件名/行号信息了，等价于c/c++的strip
-             - -w：去掉DWARF调试信息，不能用gdb调试了
-          1. -gcflags "-N -l"：关闭内联优化
-          1. 跨平台
-             - GOOS=linux
-             - GOARCH=amd64 
-     1. `go install`：编译和安装，用于安装第三方库的可执行文件。将编译好的结果移到$GOPATH/pkg或$GOPATH/bin。.a移到$GOPATH/pkg，可执行文件移到$GOPATH/bin
-        - `go install example.com/pkg@v1.2.3`：忽略mod文件指定依赖版本
-     1. `go clean`：移除当前源码包里面编译生成的文件，如_obj/、_test/、test.out
-   - 模块
-     1. `go get`
-     1. `go list`
-1. 测试
-   - 方式
-     1. testing包：使用包中方法
-     1. go test：自动读取源码目录下*_test.go文件，生成并运行测试用的可执行文件
-   - go test使用
-     1. 写法
+### 测试与性能
+1. 单元测试
+   - 认识
+     1. testing包：可以使用包中的方法
+   - 操作：`go test`
+     1. 认识：自动读取源码目录下*_test.go文件，自动生成并运行测试用的可执行文件
         - 必须import一个testing，以_test.go结束
         - 每个test case必须以Test开头，否则不执行
         - test case的入参为t *testing.T或者b *testing.B
-     1. 实践
-        - 使用t.Run()来执行子test，用于控制测试的依赖
-        - 使用testMain作为入口，做一些初始化的工作
      1. 实例
         ```go
         func TestDemo(t *testing.T) {
             t.SkipNow()                            // 跳过写到第一行才管用
-            t.Errorf("aaaaaa")                  // 触发会跳过当前case
+            t.Errorf("aaaaaa")                     // 触发会跳过当前case
         }
 
         func TestMain(m *testing.M) {
             m.Run()                                 // 有了TestMain没有Run其他test不执行，包括benchmark
         }
         ```
-   - 分类
-     1. 单元测试：`go test -timeout 30s -run ^TestDemo$ demo -v -count=1`
-        ```go
-        // 简单
-        func TestDemo(t *testing.T) {
-            t.Parallel()
-            // 模拟调用接口
-            resp, err := http.Get("http://example.com?user_id=121212")
-            if err != nil {
-                t.Error(err)
-                return
-            }
-            body, err := ioutil.ReadAll(resp.Body)
-            if err != nil {
-                t.Error(err)
-                return
-            }
-            t.Log("body", string(body))
+     1. 最佳实践
+        - 使用testMain作为入口，做一些初始化的工作
+        - 使用t.Run()来执行子test，用于控制测试的依赖
+   - 使用方式：`go test -timeout 30s -run ^TestDemo$ demo -v -count=1`
+    ```go
+    // 简单
+    func TestDemo(t *testing.T) {
+        t.Parallel()
+        // 模拟调用接口
+        resp, err := http.Get("http://example.com?user_id=121212")
+        if err != nil {
+            t.Error(err)
+            return
         }
-        // 多个测试用例
-        func TestDemo(t *testing.T) {
-            t.Parallel()
-            tests := []struct {
-                TestName string
-                *Req
-            }{
-                {
-                    TestName: "测试用例1",
-                    Req: &Req{
-                        UserID: 12121212,
-                    },
-                },
-                {
-                    TestName: "测试用例2",
-                    Req: &Req{
-                        UserID: 829066,
-                    },
-                },
-            }
-            for _, v := range tests {
-                t.Run(v.TestName, func(t *testing.T) {
-                    // 模拟调用接口
-                    url := fmt.Sprintf("http://example.com?user_id=%d", v.UserID)
-                    resp, err := http.Get(url)
-                    if err != nil {
-                        t.Error(err)
-                        return
-                    }
-                    body, err := ioutil.ReadAll(resp.Body)
-                    if err != nil {
-                        t.Error(err)
-                        return
-                    }
-                    t.Log("body", string(body), url)
-                })
-            }
+        body, err := ioutil.ReadAll(resp.Body)
+        if err != nil {
+            t.Error(err)
+            return
         }
-        ```
+        t.Log("body", string(body))
+    }
+    // 多个测试用例
+    func TestDemo(t *testing.T) {
+        t.Parallel()
+        tests := []struct {
+            TestName string
+            *Req
+        }{
+            {
+                TestName: "测试用例1",
+                Req: &Req{
+                    UserID: 12121212,
+                },
+            },
+            {
+                TestName: "测试用例2",
+                Req: &Req{
+                    UserID: 829066,
+                },
+            },
+        }
+        for _, v := range tests {
+            t.Run(v.TestName, func(t *testing.T) {
+                // 模拟调用接口
+                url := fmt.Sprintf("http://example.com?user_id=%d", v.UserID)
+                resp, err := http.Get(url)
+                if err != nil {
+                    t.Error(err)
+                    return
+                }
+                body, err := ioutil.ReadAll(resp.Body)
+                if err != nil {
+                    t.Error(err)
+                    return
+                }
+                t.Log("body", string(body), url)
+            })
+        }
+    }
+    ```
    - 测试框架
      1. GoConvey
      1. GoStub
      1. GoMock
      1. Monkey
+1. cover
+   - 认识：代码覆盖率分析
+   - 步骤
+     1. `go test -coverprofile`：生成覆盖率测试结果
+        - -covermode=count：在每个代码块插入计数器以统计代码块被执行的次数，可发现频繁执行的热点代码
+     1. `go tool cover -html=c.out`：分析以上结果，绿色是覆盖的，红色未覆盖，采用插桩源码方式
+   - 工具
+     1. gocov：可将生成的覆盖率文件cover.out转换成可被sonar识别的Cobertura格式的xml
+1. 静态代码分析工具
+   - golangci-lint
+   - gometalinter：停止维护
 #### 性能分析
-1. 基准测试
-   - 认识：`go test -benchmem -run=^$ -bench ^(BenchmarkSyncMap)$ demo -v -count=1 -cpuprofile=cpu.profile -memprofile=mem.profile -benchtime=10s`
-     1. 生成cpu.profile文件和mem.profile文件
-   - 参数
-     1. -benchmem: 输出内存指标
-     1. -run: 正则，指定需要test的方法
-     1. -bench: 正则，指定需要benchmark的方法
-     1. -v: 即使成功也输出打印结果和日志
-     1. -count: 执行次数
-     1. -cpuprofile: 输出cpu的profile文件
-     1. -memprofile: 输出内存的profile文件
-     1. -benchtime: 执行时间
+1. bench
+   - 认识：即benchmark，基准测试
+     1. 函数一般以Benchmark开头
+     1. case一般会跑N次，case无法达到一个稳态时无法完成测试，会自动跑到稳态时，才停止
+   - 使用：`go test -bench=.`
+     1. 举例：`go test -benchmem -run=^$ -bench ^(BenchmarkSyncMap)$ demo -v -count=1 -cpuprofile=cpu.profile -memprofile=mem.profile -benchtime=10s`
+     1. 参数
+        - -benchmem: 输出内存指标
+        - -run: 正则，指定需要test的方法
+        - -bench: 正则，指定需要benchmark的方法
+        - -v: 即使成功也输出打印结果和日志
+        - -count: 执行次数
+        - -cpuprofile: 输出cpu的profile文件
+        - -memprofile: 输出内存的profile文件
+        - -benchtime: 执行时间
    - demo
     ```go
-    // 简单
-    func BenchmarkSyncMap(b *testing.B) {
-        demoMap := &sync.Map{}
-        b.RunParallel(func(pb *testing.PB) {
-            for pb.Next() {
-                demoMap.Store("a", "a")
-                for i := 0; i < 1000; i++ {
-                    demoMap.Load("a")
-                }
-            }
-        })
+    func BenchmarkAll(b *testing.B) {
+        for n:=0; n <b.N; n++ {}
     }
 
-    // 对比
     // 压力测试sync.Map
+    // 简单
     func BenchmarkSyncMap(b *testing.B) {
         demoMap := &sync.Map{}
         b.RunParallel(func(pb *testing.PB) {
@@ -4671,20 +4619,7 @@
         })
     }
     ```
-1. benchmark使用
-   - 认识
-     1. 函数一般以Benchmark开头
-     1. case一般会跑N次，case无法达到一个稳态时无法完成测试
-   - 使用
-    ```go
-    // 调用：go test -bench=.
-    func BenchmarkAll(b *testing.B) {               // 会自动跑到稳态时，才停止
-        for n:=0; n <b.N; n++ {
-        }
-    }
-    ```
 1. 性能方法
-   - `go tool cover -html=c.out`：分析由`go test -coverprofile`生成的覆盖率测试的结果，绿色是覆盖的，红色未覆盖，采用插桩源码方式
    - `go tool trace`
      1. 认识：调用链路，找出程序在一段时间内正在做什么，诊断性能问题，如延迟，并行化、竞争异常
         - 清晰查看每个逻辑处理器中Goroutine的执行过程，可以很直观看出Goroutine的阻塞消耗，包含网络阻塞、同步阻塞(锁)、系统调用阻塞、调度等待、GC执行耗时、GC STW(Stop The World)耗时
@@ -4774,7 +4709,36 @@
         - `GONOSUMDB=*.100tal.com`
    - CGO_ENABLED
 1. 编译
-   - 一个package只能有一个main，否则build不过
+   - 运行
+     1. `go run hello.go`：进行高速编译，用作脚本语言
+   - 编译：一个package只能有一个main，否则build不过
+     1. `go tool compile -N -l -S main.go`：不优化编译，可用dlv调试
+     1. `go build`
+        - 认识：构建，用于测试编译
+          1. 会同时编译依赖包，会在GOROOT/src和GOPATH/src搜索包，默认编译当前目录下的所有go文件，可指定要编译的文件名，会忽略_或.开头的go文件，会根据当前系统选择性地编译以系统名结尾的文件(_linux|darwin|windows|freebsd.go)
+          1. 普通包不产生任何文件只做检查性编译，main包生成可执行文件
+        - 条件编译
+          1. 认识：`// +build condition`，构建约束，和编译条件`-tags`相同字符的才编译在包中
+             - 约束可以出现在任何文件中
+             - +build必须出现在package之前，之后应要有一个空行
+             -  *_GOOS、*_GOARCH、*_GOOS_GOARCH结尾的隐式包含构建约束
+          1. 语法
+             - 只允许是字母数字或_
+             - 多个条件之间，空格表示OR；逗号表示AND；叹号(!)表示NOT
+             - 一个文件可以有多个+build，关系是AND
+          1. 应用
+             - `// +build ignore`：用于不想编译某文件
+        - 参数
+          1. -v：打印包名
+          1. -o：指定输出的可执行文件
+          1. -ldflags "-s -w"
+             - -s：去掉符号信息，panic时候的stack trace就没有任何文件名/行号信息了，等价于c/c++的strip
+             - -w：去掉DWARF调试信息，不能用gdb调试了
+          1. -gcflags "-N -l"：关闭内联优化
+          1. 跨平台
+             - GOOS=linux
+             - GOARCH=amd64 
+     1. `go clean`：移除当前源码包里面编译生成的文件，如_obj/、_test/、test.out
 1. 部署
    - supervisor来管理go程序，go自己用异常捕捉来处理
    - 打包linux的：`CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build main.go`
@@ -4794,23 +4758,23 @@
     # 编译
     make
     ```
-1. 开发
-   - 配置GOROOT、GOPATH
-   - 配置代理：`GOPROXY=https://goproxy.cn;GOPRIVATE=*.100tal.com`
-   - 配置注释空格：设置 Preferences > Editor(编辑器) > Code Style(代码样式) > Go > Other 勾选上 Add leading space to comments
-   - 配置goimports、gofmt，在Tools > File Watcher
-   - 运行
-     1. go工具实参：`-gcflags="all=-N -l"`
-     1. 程序实参：`-conf=$ProjectFileDir$/configs/dev`
-   - 工具
-     1. golint：代码规范的错误
-     1. govet：代码格式错误检查
-     1. gofmt：格式化
-     1. goimports
-     1. gometalinter：代码静态分析并规范化其输出的linter工具集
-     1. godegragh
-     1. goplay
-     1. godoc
+1. 工具链
+   - 查看
+     1. `go version`
+     1. `go env`：查看当前go的环境变量
+     1. 文档
+        - `go doc`：查看go程序上的文档，如某个具体go程序，`go doc applet/internal/repo/applet.go`
+        - `godoc`：查看官方文档，v1.5开始自带，v1.13之后需安装
+          1. `godoc fmt`
+          1. ` -http=:8080`：生成本机的go官网，可用浏览器打开
+     1. `go help`
+   - 编写
+     1. `go vet`：代码格式错误检查 
+     1. `go fmt`：格式化代码文件，是gofmt的简单封装
+     1. `go fix`：转换老版本的代码到新版本，是命令go tool fix的简单封装
+     1. `go generate`：用于在编译前自动化生成某类代码，举例：`//go:generate go tool yacc -o gopher.go -p parser gopher.y`
+     1. `go bug`
+     1. `go tool cgo`
 ### wiki
 1. 历史
    - 07年开发
@@ -4876,3 +4840,17 @@
    - 不要（在生产环境）使用 panic()
 1. 周边
    - Goscript：通过WASM实现，Go语言规范的非官方实现，用于Rust项目的内嵌或封装。像Lua之于Redis/WoW，或者Python之于NumPy
+1. 开发配置
+   - 配置GOROOT、GOPATH
+   - 配置代理：`GOPROXY=https://goproxy.cn;GOPRIVATE=*.100tal.com`
+   - 配置注释空格：设置 Preferences > Editor(编辑器) > Code Style(代码样式) > Go > Other 勾选上 Add leading space to comments
+   - 配置goimports、gofmt，在Tools > File Watcher
+   - 运行
+     1. go工具实参：`-gcflags="all=-N -l"`
+     1. 程序实参：`-conf=$ProjectFileDir$/configs/dev`
+   - 工具
+     1. gofmt：代码格式化
+     1. goimports：代码包管理
+     1. govet：代码格式错误检查，关注正确性
+     1. golint：代码规范检查，关注编码风格，打印出代码规范的错误
+     1. gometalinter：代码静态分析并规范化其输出的linter工具集
