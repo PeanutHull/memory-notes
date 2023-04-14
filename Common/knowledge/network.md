@@ -430,7 +430,8 @@
           1. 1.0默认关闭，1.1默认开启
           1. keepalive_timeout设置超时时间
      1. Date：创建报文的日期时间
-     1. Transfer-Encoding：指定报文主体的传输编码方式
+     1. Transfer-Encoding：指定报文主体的传输编码方式，有这个字段实现了该功能的两端将不会立即断开连接
+        - chunked
      1. Pragma：报文指令
      1. Trailer：报文末端的首部一览
      1. Upgrade：升级为其他协议

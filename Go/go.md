@@ -4631,6 +4631,9 @@
         - `go test -bench -benchmem -run=^$ ^BenchmarkDemo_Pool$ demo -v -count=1 -trace=trace.out`
         - `curl http://localhost:8888/debug/pprof/trace?seconds=20 > trace.out`：web方式
      1. 分析trace.out：`go tool trace -http=127.0.0.1:8000 trace.out`
+   - 工具
+     1. go-callvis：通过分析main包将代码的调用关系可视化，即用箭头图显示所有方法的调用关系
+        - 使用：`go-callvis main.go`
 1. pprof
    - 认识：性能分析，找出时间花在哪里。通过分析profile文件，实现可视化的火焰图、链路耗时图、top函数
    - 使用
@@ -4689,7 +4692,7 @@
             }
             ```
      1. 工具
-        - go-torch：将profile转换成火焰图的开源工具，https://github.com/uber/go-torch
+        - go-torch：将profile转换成火焰图的开源工具
           1. Flame：火焰图绘制
           1. graphviz：调用链生成
 ### 运维
