@@ -409,7 +409,7 @@
      1. --no-dev：跳过require-dev中的包
      1. -V
    - 功能
-     1. 锁文件：会将把安装时确切的版本号列表写入，install会在lock存在情况下下载lock中的，忽略json中的，update则会更新lock文件
+     1. 锁文件：会将把安装时确切的版本号列表写入，install会在lock存在情况下下载lock中的，忽略json中的，update会更新lock文件
      1. 自动加载：composer自动会生成一个vender/autoload.php，载入这个文件后，直接new，就会自动载入。命名空间的申明应该以\\结束
         - 在composer.json的autoload字段中增加自己的autoloader
             ```json
@@ -470,6 +470,8 @@
             ]
         }
         ```
+   - 最佳实践
+     1. composer.lock提交到代码库，利用lock文件确认深层次依赖中每一个的版本号，命令` composer install -vvv --no-dev --ignore-platform-reqs --no-interaction --optimize-autoloader`
 1. PHP配置：php.ini。register_globals(变量注入代码)、allow_url_include(包含远程文件)、allow_url_fopen、date.timezone、display_errors、error_reporting、safe_mode、post_max_size
    - pcre.jit：
    - session.gc_maxlifetime
