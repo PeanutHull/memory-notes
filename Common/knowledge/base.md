@@ -2294,38 +2294,7 @@
      1. POSIX NFA
    - 工具
      1. peretest：命令行，帮忙判断是否匹配
-### 各路技术体系
-1. 桌面开发架构
-   - 分类
-     1. 跨平台
-        - Qt + C++/Python：大型GUI
-        - Electron + JS：主要桌面端使用，向移动端发展，vs code基于这个
-          1. 基于Chromium + nodeJS的能力 + native API，支持html+css+js进行桌面端开发。
-        - Flutter + Dart：主要移动端使用
-        - wxWidget：跨平台的开源的c++ GUI库，支持python、perl，使用native API而不是模拟GUI，不如qt那么应用广泛
-        - CEF：Chromium Embedded Framework，libcef，为第三方应用提供可嵌入浏览器支持，跨平台提供c/c++接口
-        - Hybrid PC
-        - SDL：Simple DirectMedia Layer，是一个跨平台开发库，旨在提供对以下内容的低级接口，音频、键盘、鼠标、游戏杆、基于OpenGL和Direct3D的图形硬件
-     1. windows
-        - MFC+C++、WTL/WinForms+C#：上世纪，只适合标准界面，没有突破进步
-          1. MFC：1992
-          1. WinForms：2002，使用GDI+，GDI+是GDI的“面向对象包装”，使用c++实现
-        - WPF+C#：2006，window presentation Foundation，微软推出的打破GUI编程旧模式的创新技术，现代，可实现复杂效果，整体渲染框架基于D3D，取代以上三个，使用xaml
-          1. DirectX：Direct eXtension，使用c++实现
-          1. 跟html一样，就是界面加元素，c#加事件、动作
-        - UWP：2012，只win10，Direct UI、硬件加速、双向绑定、模板、资源字典、高DPI支持
-        - WinUI3：支持win32和uwp
-     1. linux
-        - GTK + C
-     1. macOS
-        - OC
-        - SwiftUI
-     1. android
-        - java
-        - kotlin
-   - 比较
-     1. MFC、Qt、Cocoa 这三个库可以代表那个时间段所产生的技术：面向对象、Direct UI、Layer&GPU加速渲染
-     1. 现在都不关心怎么Direct UI，而是新的开发范式，web技术也是可以很复杂，交给浏览器绘制就可以了
+### 技术体系
 1. web编程
    - Web基础
      1. Web工作方式
@@ -2388,8 +2357,37 @@
      1. 用户认证
      1. 多语言支持
      1. pprof支持
-1. 程序移植
-   - windows向mac：开源的wineskin，商业的CrossOver，原理是通过在mac中模拟win32 API让exe运行
+1. 桌面开发架构
+   - 分类
+     1. 跨平台
+        - Qt + C++/Python：大型GUI
+        - Electron + JS：主要桌面端使用，向移动端发展，vs code基于这个
+          1. 基于Chromium + nodeJS的能力 + native API，支持html+css+js进行桌面端开发。
+        - Flutter + Dart：主要移动端使用
+        - wxWidget：跨平台的开源的c++ GUI库，支持python、perl，使用native API而不是模拟GUI，不如qt那么应用广泛
+        - CEF：Chromium Embedded Framework，libcef，为第三方应用提供可嵌入浏览器支持，跨平台提供c/c++接口
+        - Hybrid PC
+        - SDL：Simple DirectMedia Layer，是一个跨平台开发库，旨在提供对以下内容的低级接口，音频、键盘、鼠标、游戏杆、基于OpenGL和Direct3D的图形硬件
+     1. windows
+        - MFC+C++、WTL/WinForms+C#：上世纪，只适合标准界面，没有突破进步
+          1. MFC：1992
+          1. WinForms：2002，使用GDI+，GDI+是GDI的“面向对象包装”，使用c++实现
+        - WPF+C#：2006，window presentation Foundation，微软推出的打破GUI编程旧模式的创新技术，现代，可实现复杂效果，整体渲染框架基于D3D，取代以上三个，使用xaml
+          1. DirectX：Direct eXtension，使用c++实现
+          1. 跟html一样，就是界面加元素，c#加事件、动作
+        - UWP：2012，只win10，Direct UI、硬件加速、双向绑定、模板、资源字典、高DPI支持
+        - WinUI3：支持win32和uwp
+     1. linux
+        - GTK + C
+     1. macOS
+        - OC
+        - SwiftUI
+     1. android
+        - java
+        - kotlin
+   - 比较
+     1. MFC、Qt、Cocoa 这三个库可以代表那个时间段所产生的技术：面向对象、Direct UI、Layer&GPU加速渲染
+     1. 现在都不关心怎么Direct UI，而是新的开发范式，web技术也是可以很复杂，交给浏览器绘制就可以了
 1. windows
    - win32
      1. 认识
@@ -2401,11 +2399,14 @@
         - 使用以上为核心的第三方UI工具包
    - uwp
    - 客户端安装包：普遍基于NSIS实现，就是最普通那种。可以使用QT+NSIS插件实现定制安装包功能
-1. 数学方法
-   - 数理逻辑
-   - 微积分
-   - 行列式
-   - 范畴论：是使用箭头连接的物体，彼此之间存在某种关系的概念、事物、对象等等，都构成"范畴"。随便什么东西，只要能找出它们之间的关系，就能定义一个"范畴"
+1. wiki
+   - 程序移植
+     1. windows向mac：开源的wineskin，商业的CrossOver，原理是通过在mac中模拟win32 API让exe运行
+   - 数学方法
+     1. 数理逻辑
+     1. 微积分
+     1. 行列式
+     1. 范畴论：是使用箭头连接的物体，彼此之间存在某种关系的概念、事物、对象等等，都构成"范畴"。随便什么东西，只要能找出它们之间的关系，就能定义一个"范畴"
 ### wiki
 1. 时间
    - GMT：格林尼治时间，和UTC相等，是旧的，UTC替代
