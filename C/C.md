@@ -343,6 +343,18 @@
         int (*p)(int, int) = & max;        // &可以省略
         p(a, b)                            // 调用
         ```
+1. 特性
+   - 空
+     1. 空字符：''或'\0'，字符编码为0，用于标记字符串结尾，是一个字符，占1字节
+     1. 空指针：NULL，不和任何数据的有效地址对应，用于文件结尾或未按预期，是一个地址，通常占4字节
+     1. void：函数返回、参数为空(不带参数可以接受void)、指针指向void(类型为void *的指针代表对象的地址，可以转换为任何数据类型)
+     1. EOF
+        - End Of File，头文件stdio.h中的常量，由于ascii不能为负定为-1，作为文件结束的标志
+        - 也表示错误的函数返回值，如`while(fscanf("%d",&n) != EOF)`
+   - 存储占用
+     1. 字符'0'：char c = '0'; 它的ASCII码实际上是48。内存中二进制表示：00110000
+     1. 字符'\0' :ASCII码为0，即二进制00000000，表示一个字符串结束的标志。这是转义字符（整体视为一个字符）
+     1. 整数0 ：内存中表示为：00000000 00000000 00000000 00000000；虽然都是0，但是跟上面字符'\0'存储占用长度是不一样的
 ### 语法
 1. 变量
    - 认识：程序可操作存储区的名称，变量类型决定存储的大小和布局，如枚举、指针、数组、结构、联合等
@@ -416,9 +428,18 @@
      1. 当程序退出时操作系统会自动释放所有分配给程序的内存，一定使用free释放内存
    - 函数
      1. malloc：int num，分配内存，单位为字节，堆区分配指定大小的内存空间，函数执行完成后不会被初始化，值未知，需要手动初始化内存的值
+        - 在申请时必须指明大小
+        - 判断是否申请成功，若不成功则不能进行使用，否则会造成内存出错
+        - 返回指针是一个void * ,所以在使用前必须进行强制转换
+        - 显式初始化， 堆区的内容在自动分配时不会初始化(包括清零操作)，所以程序中要进行必要的初始化
      1. calloc：int num/size，批量分配内存，分配num个长度为size的连续空间，每个字节初始化为0
      1. realloc：void *address/int newsize，重新分配内存，改变原来申请内存的空间大小，把内存扩展到newsize
      1. free：void *address，释放address指向的内存块，也就是释放 动态分配的内存空间
+        - 只能释放堆区，不能释放静态区、栈区
+        - 申请完内存忘记释放或释放一部分，会导致内存泄露
+        - 重复释放导致内存出错，再次释放会破坏其他的应用程序的数据
+        - malloc必须和free成对使用
+        - 在内存释放结束之后，指针要清空(p == NULL)， 因为在执行free函数之后，指针指向的空间会释放，但是p仍然是一个地址值
    - 原理：malloc/free底层由brk，mmap，munmap系统调用实现
 1. 线程
    - 认识：标准库中c11才支持线程，各平台都有自己的线程实现方案，平台的c库都没有完成对c11的支持
@@ -474,6 +495,10 @@
      1. fputc：指定输出流，成功返回字符
      1. fputs：不追加换行符
      1. fprintf
+        - %d 十进制整型，%f 浮点型
+        - %c 字符，%s 字符串
+        - %p 指针
+        - %x 十六进制, %a 浮点数/十六进制/p计数法，%lu 32位无符号整数，%E 以指数形式输出单/双精度实数
    - 移动文件指针
      1. rewind、fseek、ftell、fgetpos、fsetpos
      1. whence：SEEK_SET,SEEK_CUR,SEEK_END，文件头，当前点，文件尾
@@ -941,7 +966,300 @@
      1. `conan.lock`
      1. `conanbuildinfo.cmake`
    - 使用：install、search、info等
-### Wiki
+### 最佳实践
+#### 代码练习
+1. 存储类别
+   - 特性
+     1. 作用域：描述可见性
+        - 文件作用域
+        - 块作用域
+     1. 链接：描述可见性
+        - 内部：一个文件内
+        - 外部：另一个文件
+     1. 存储期：描述内存存在时间
+        - 静态
+        - 线程：每个线程的私有备份，线程期一直存在
+        - 自动：进存退消
+        - 动态分配
+   - 分类
+     1. 自动
+     1. 寄存器
+     1. 静态、无链接：块中static
+     1. 静态、外部链接：没有static
+     1. 静态、内部链接：函数外static
+   - 函数的存储类别
+     1. 外部：默认，可被其他文件访问
+     1. 静态：只能本文件
+     1. 内联：C99
+1. 存储类说明符
+   - static
+        ```c
+        #include <stdio.h>
+
+        void func1(void);           // 函数声明
+        static int count=10;        // 全局变量 - static 是默认的
+        
+        int main() {
+            while (count--) {
+                func1();
+            }
+            return 0;
+        }
+        
+        void func1(void)
+        {
+            // 'thingy' 是 'func1' 的局部变量，只初始化一次，每次调用函数 'func1'，'thingy' 值不会被重置
+            static int thingy=5;
+            thingy++;
+            printf(" thingy 为 %d ， count 为 %d\n", thingy, count);
+        }
+        ```
+1. 变量限定符
+    ```c
+    volatile const int loc;             // 程序不能更改，代理可更改，两个符号顺序无所谓
+    ```
+1. 定义可变参数
+    ```c
+    #include <stdio.h>
+    #include <stdarg.h>
+
+    void average(int num, ...){
+        va_list valist;                     # 创建va_list类型变量
+        
+        va_start(valist, num);              # 为 num 个参数初始化 valist
+        for (i = 0; i < num; i++) {
+            va_arg(valist, int);            # 访问所有赋给 valist 的参数
+        }
+        va_end(valist);                     # 清理为 valist 保留的内存
+    }
+    ```
+1. io
+   - gets：`char *gets(char *s)`
+   - puts：`int puts(const char *s)`
+1. 文件
+   - 函数
+     1. fopen：`FILE *fopen(const char * filename, const char * mode);`
+     1. fclose：`int fclose(FILE *fp);`
+
+     1. fgetc：`int fgetc(FILE * fp);`
+     1. fgets：`char *fgets(char *buf, int n, FILE *fp);`
+     1. fscanf：`int fscanf(FILE *fp, const char *format, ...)`
+
+     1. fputc：`int fputc(int c, FILE *fp );`
+     1. fputs：`int fputs(const char *s, FILE *fp);`
+     1. fprintf：`int fprintf(FILE *fp, const char *format, ...)`，输出到标准错误流：`fprintf(stderr, i)`
+
+     1. fseek：`int fseek(FILE *fp, long offset, int whence);`
+   - 示例代码
+     1. 读取文件
+        ```c+
+        int ch;
+        FILE * fp;
+        fp = fopen("a.txt", "r");
+        while ((ch = getc(fp)) != EOF) {        // 如果单判断ch值尚未确定，
+            putchar(ch);
+        }
+        ```
+1. 预处理命令示例
+    ```c
+    // 宏定义
+    #define MAX_ARRAY_LENGTH 20
+    // 宏定义运算符
+    #define tokenpaster(n) \
+        printf ("token" #n " = %d", token##n)
+    #define MAX(x,y) ((x) > (y) ? (x) : (y))            // 宏函数
+
+    int main(void) {
+        int token34 = 40;
+
+        tokenpaster(34);
+        return 0;
+    }
+
+    // 文件包含
+    #include <stdio.h>                      # 从系统库中获取stdio.h
+    #include "myheader.h"                   # 从本地目录中获取myheader.h
+
+    // 条件预处理
+    #ifndef MESSAGE
+        #define MESSAGE "aaa"
+    #endif
+    // 是否定义判断符
+    #if !defined (MESSAGE)
+        #define MESSAGE "aaa"
+    #endif
+    ```
+1. 头文件
+    ```c
+    // 宏名配置头文件
+    #define SYSTEM_H "system_1.h"
+    #include SYSTEM_H
+    // 有条件引用
+    #if SYSTEM_1
+    # include "system_1.h"
+    #elif SYSTEM_2
+    # include "system_2.h"
+    #elif SYSTEM_3
+    #endif
+    // 实际实用：使用_GLOBAL_H将所有头文件集合，所有文件就拥有了
+    #ifndef _GLOBAL_H
+    #define _GLOBAL_H
+    #include 其他头文件...
+    #endif
+    ```
+1. 作用域
+    ```c
+    int *getx() {
+        int x = 10;
+        return &x;
+    }
+
+    int main(void) {
+        int *p = getx();        # 因为getx()中变量x的作用域为getx()函数内部，这里得到一个临时栈变量x的地址，getx()函数调用结束后地址就无效了，但是后面的*p=20仍然在对其进行访问并修改，结果可能对也可能错
+        *p = 20;
+        printf("%d", *p);
+        getchar();
+    }
+    ```
+1. typedef
+   - typedef：为类型取新名字，作为缩写使用，通常大写，提高程序可读性
+    ```c
+    // 为单字节数字定义了术语 BYTE
+    typedef unsigned char BYTE;
+    BYTE  b1, b2;                    // 相当于unsigned char b1,b2
+    // 对结构体使用typedof定义新数据类型，使用新类型直接定义结构变量
+    typedef struct Books {} Book;
+    Book book;
+    ```
+   - typedef和#define：都是为数据类型定义
+     1. #define不仅可以为类型定义名称，也能为数值定义名称。就是字面上的替换
+     1. typedof编译器执行解释，#define语句由预编译器处理
+     1. #define对typedef定义的名称不能扩展
+     1. 连续定义变量时，typedef能保证所有变量为同类型，#define不行
+        ```c
+        #define PTR_INT int *
+        PTR_INT p1, p2;             //p1、p2 类型不相同，宏展开后变为int *p1, p2;
+        typedef int * PTR_INT
+        PTR_INT p1, p2;             //p1、p2 类型相同，都指向int类型的指针
+        ```
+#### application
+1. 无限循环：`for( ; ; ) {}`
+1. 输入输出
+    ```c
+    // 获取输入参数
+    int main(int argc, char *argv[]) {                  // argc 1参数个数，argv 字符串数组
+        printf("可执行程序 %s ,参数个数为[%d], 运行输出：[%s]\n",argv[0],argc,argv[1]); 
+        return 0;
+    }
+    // ./a.out Hello,World!
+    // 判断停止输入
+    while(scanf("%d",&n)!=EOF|-1);
+    // 获取空格后继续输入
+    scanf("%[^\n]", str;
+    ```
+1. 内联汇编获取寄存器的值
+    ```c
+    unsigned ueax,uebx,uecx,uedx;
+    __asm  //使用__asm进行内联汇编
+    {
+        //使用mov指令将eax寄存器的内容保存到ueax变量
+        mov ueax, eax
+        mov uebx, ebx
+        mov uecx, ecx
+        mov uedx, edx
+    }
+    printf("eax=%x\tebx=%x\tecx=%x\tedx=%x\n", ueax, uebx, uecx, uedx);
+    return 0;
+    ```
+1. 使用回调函数
+    ```c
+    #include <stdlib.h>  
+    #include <stdio.h>
+    
+    void populate_array(int *array, size_t arraySize, int (*getNextValue)(void)) {
+        for (size_t i=0; i<arraySize; i++)
+            array[i] = getNextValue();
+    }
+
+    // 回调函数 
+    int getNextRandomValue(void) {          // 获取随机值
+        return rand();
+    }
+    
+    int main(void) {
+        int myarray[10];
+        populate_array(myarray, 10, getNextRandomValue);
+        for(int i = 0; i < 10; i++) {
+            printf("%d ", myarray[i]);
+        }
+        printf("\n");
+        return 0;
+    }
+    ```
+1. 错误处理
+    ```c
+    FILE * pf;
+    int errnum;
+    pf = fopen ("unexist.txt", "rb");
+    if (pf == NULL)
+    {
+        errnum = errno;
+        fprintf(stderr, "错误号: %d\n", errno);
+        perror("通过 perror 输出错误");
+        fprintf(stderr, "打开文件错误: %s\n", strerror( errnum ));
+    }
+    else
+    {
+        fclose (pf);
+    }
+    ```
+#### 项目实战
+1. 项目体会
+   - 先写头文件：划分、定义核心模块
+   - 核心方法写好后，可以被测试用例和ui的方法调用，这样核心就完成了，实现和上层的解耦
+   - 编写测试用例，保证接口正确性
+   - 内存泄露问题要高度警觉，使用了new和malloc一定要尽早的(调用链条不能太长)、谁调用谁释放，gui程序特别容易发生内存泄露
+   - sqllite非常小巧，可以嵌入到程序中当存储，好用
+   - c中全是用回调函数写东西，要平衡好垃圾回收和方法聚类封装，可以适当引入下mvc思想，划分清晰
+1. 计算器
+   - 架构
+     1. 底层相同的计算器核心接口定义
+     1. 上层console和图形界面
+   - 项目编写过程
+     1. operation——calculator——ui
+     1. console_ui——unit_test_ui
+     1. gtk_ui
+   - 先写头文件：划分、定义核心计算模块、计算器本身上下文
+     1. 创建计算器上下文
+        - 分配内存：`CalcContext *calc_context = malloc(sizeof(CalcContext));`，用malloc分配内存，CalcContext是自己定义的承载计算器上下文的结构体
+     1. 清空刚创建的上下文
+        ```c
+        static void ClearAll(CalcContext *context) {
+            context->input_buffer[0] = 0;                                       // 清空字符串
+            memset(&context->previous_operation, 0, sizeof(Operation));         // 清空结构体
+        }
+        ```
+     1. 清除结构体
+        ```c
+        void DestroyCalcContext(CalcContext **p_context){
+            free(*p_context);
+            *p_context = NULL;
+        }
+        ```
+   - 编写ui和计算器核心方法绑定，使用宏代替重复代码，并且利用了嵌套宏实现多次宏替换
+1. 跨平台下载软件
+   - 架构
+     1. gtk做gui
+     1. 线程池实现下载任务，分为主线程和专注于下载的io线程
+     1. 底层libcurl和sqllite3，记录下载记录和进度
+   - 项目编写过程
+     1. sqlite_manager(sql封装层)——task_info(下载任务的DAO层)
+     1. http_manager——http_common(curl封装)
+     1. threadpool_manager——request_api
+     1. ui_main——ui_new_task(新建任务的ui)
+     1. ui_task_list(负责承接db和curl层的封装)——ui_download_task(负责ui展示的更新)
+   - 先写头文件：定义接口和模块
+### wiki
 1. 关键字
    - 基本
      1. char/int/short/long/float/double
@@ -989,6 +1307,10 @@
         ```
    - C14
 1. wiki
+   - gets()这个函数只有一个参数，那就是字符缓冲区的指针，并没有指定该缓冲区的大小。当输入一个很长字符串时，gets()会把每个字符都存入到栈中，因此可能导致程序异常终止。建议使用fgets()替代
+   - 结构体、联合体
+     1. 联合体是成员变量共享一块内存，可以根据使用确定含义
+     1. 结构体不共享，并且存在内存对齐
    - 特性
      1. 源代码不可见，已经编译好了，可在头文件中看到对外接口(函数原型)
      1. unix的标准c库一般在/usr/lib
@@ -1010,3 +1332,6 @@
    - 判断是否等于0：要判断是否小于精度误差最小值
      1. `fabsf(float_value) < 1e-6`
      1. `fabs(double_value) < 1e-15`
+   - cpu的cache最佳实践
+     1. 避免false sharing，多核同步性能损耗
+     1. 使用cache预取，不用等着了stall，比如在ARM处理器上就有一条指令叫pld，prefetch可以用pld指令
