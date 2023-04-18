@@ -441,6 +441,23 @@
    - 认识：Attribute Base Access Control 基于属性的权限控制，通过动态计算一个或一组属性是否满足设置好的逻辑进行授权判断。设计复杂，控制可以更加细粒度。如允许所有班主任在上课时间自由进出校门
      1. 属性四类：用户属性（如用户年龄），环境属性（如当前时间），操作属性（如读取），对象属性（如一篇文章，又称资源属性）
      1. 配置文件管理
+1. ADDS：Active Directory Domain Service，ad域服务器，利用ldap命名路径（LDAP naming path）来表示对象在ad内的位置，提供查询、修改等服务。ad域内的资源以Object(对象)的形式存在，对象通过属性描述特征，就像电话簿中的一个记录，有姓名、地址等
+   - LDAP：Lightweight Directory Access Protocol，轻量级目录访问协议，用来查询、更新Active Directory的目录服务通信协议，可以允许任何程序获得目录和其他信息，类似电话薄
+     1. 目录：指一种按照树状结构存储信息的数据库
+   - AD域切换技术方案：分三个阶段实施
+     1. 活跃账号同步
+        - 建立一张新的xes_admins表（新表名：xes_admins_ldap）
+        - adminapi对接新的LDAP
+        - 所有登录admin系统的账号，都在新的LDAP查询一次账号信息，在xes_admins表找到对应的adminid，再写入xes_admins_ldap中
+     1. 数据比对
+        - 比对xes_admins与xes_admins_ldap表中的数据，找到有差异的行数据
+        - 针对有差异的行数据做甄别，判断是否有潜在风险，确认无风险后，做到数据一致
+        - 如果判断没有风险，找一个晚上业务空闲时间做xes_admins表切换
+     1. 在线数据切换
+        - 将xes_admins表中的临时账户数据一次性导入到xes_admins_ldap表（临时账户数据是指没有匹配到工号的数据）
+          1. 注：考虑到审计需要和老员工离职再入职等情况，不能只导正常账户，“冻结”和“注销”的数据也要导入到新表
+        - 禁止xes_admins表新增，将xes_admins表名改为xes_admins_old，将xes_admins_ldap表名改为xes_admins（理论上表重名可以online操作，需要咨询DBA）
+        - xes_admins_old 表自增id + 10000 （万一出现问题便于回滚）
 #### IM
 1. 方案
    - 扩散读：每条消息只存一份，群聊成员都读取同一份数据
