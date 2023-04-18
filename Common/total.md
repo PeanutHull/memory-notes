@@ -65,8 +65,9 @@
      1. 金丝雀：就一套，不断翻量
 #### 网校服务梳理
 1. 网校架构
-   - 服务体系：lvs+keepalived -> openresty -> server
+   - 服务体系：lvs+keepalived -> openresty -> vanrish -> server
      1. openresty
+        - 接入端、API端划分：HA、API
         - 网关upstream
      1. server
         - php+nginx
