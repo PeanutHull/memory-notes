@@ -360,66 +360,7 @@
         Sec-WebSocket-Protocol: chat
         ```
      1. 数据传输：![avatar](../../images/common/websocket_data.jpg)
-1. http2
-   - web发展的背景
-     1. 更多要请求的资源数
-     1. 更高的实时性
-     1. 浏览器只能最多6个并发连接
-   - 1.1的不足
-     1. 采取行尾\r\n方式切分消息，需要计算量大的状态机解析消息
-     1. 请求响应模式导致了等待，没有利用tcp全双工双向通信
-     1. ascii传输效率低，空间浪费
-     1. 无状态需要重复发送头部等数据
-     1. 网络安全风险
-   - 认识：双向并行传输，改进传输性能，突破性能限制，没有改变1.x的语义，前身是SPDY
-     1. 多路复用，二进制分帧：可承载任意数量的双向数据流，即客户端可一次发起多个请求，服务器可一次返回多个响应，双方可同时互相发送数据，是和1
-     1. 头部压缩：1.x头部元数据以纯文本形式发送，给请求增加几百字节的负荷，如cookie。使用encoder通讯双方各自cache一份header fields表，避免header重复传输，减小传输大小
-     1. 服务器推送：服务器可主动推送
-   - 多路复用：在tcp之上增加二进制分帧层，用frame封装header和body，.1最重要的区别
-     1. stream：流，已建立连接上的双向字节流
-     1. 消息：数据流，包含header帧、body帧，可以设置优先级、依赖
-     1. frame：帧，通信最小单位，会标识所属的流，可以乱序发送，然后再根据帧头部的流标识符重新组装
-1. http3
-   - 认识：即HTTP over QUIC，运行在QUIC之上的协议被称为HTTP/3
-     1. 以前是http+tls+tcp实现，quic是http+quic+udp实现
-   - http/2的问题
-     1. 有序字节流引发的队头阻塞，使多路复用能力大打折扣
-     1. TCP与TLS叠加了握手时延，建链时长还有1倍的下降空间
-     1. 基于TCP四元组确定一个连接，这种诞生于有线网络的设计，并不适合移动状态下的无线网络，这意味着IP地址的频繁变动会导致TCP连接、TLS会话反复握手，成本高昂
-1. QUIC
-   - 认识：Quick UDP Internet Connection 快速UDP互联网连接，谷歌制定的基于UDP的多路并发传输协议。融合了TCP、TLS、HTTP/2等协议的特性
-     1. 是用来替代TCP、SSL/TLS的传输层协议
-   - 特点
-     1. 基于UDP协议重新定义了连接：实现了无序、并发字节流的传输，解决了队头阻塞问题
-     1. 重新定义了TLS协议加密QUIC头部的方式：既提高了网络攻击成本，又降低了建立连接的速度，1个RTT就可以同时完成建链与密钥协商，以前一大堆的握手/RTT
-     1. 将Packet、QUIC Frame、HTTP3 Frame分离，实现了连接迁移功能，降低了5G环境下高速移动设备的连接维护成本
-     1. 新的HTTP头压缩机制：QPACK，是对HTTP/2中使用的HPACK的增强。在QPACK下，HTTP头可以在不同的QUIC流中不按顺序到达
-   - 优势
-     1. 改进的拥塞控制
-     1. 前向冗余纠错
 1. 应用
-   - 压缩
-     1. 认识：内容编码的一种，内容即body请求体，也可以搅乱、加密。纯文本可压缩到40%，gzip对jpg支持不够好
-     1. 组成
-        - 请求头
-          1. `Accept-Encoding:gzip,deflate`：以下算法全部无损
-             - gzip：GNU zip格式压缩，就是找相同字符进行替换进行减小体积，所以html/css/js效果好
-             - compress：Unix的文件压缩程序
-             - deflate：zlib的格式压缩
-             - identity：没有编码
-        - 响应头
-          1. `Content-Encoding:gzip`
-          1. `Content-Length:xx`：这个指压缩后大小，字节
-   - 表单提交
-     1. enctype属性：表单数据的编码方式
-        - `application/x-www-form-urlencoded`：名称/值，默认的编码方式
-          1. 当action为get：就用x-www-form-urlencoded方式转为字符串并加到url后面(url编码)
-          1. 当action为post：浏览器把form数据封装到http body中发送
-        - `multipart/form-data`：以二进制格式传输数据，改造post方式而来，一个控件对应一个部分，比urlencoded传输更大数据，传输文件时使用
-          1. 当action为get：url参数追加形式，没有被上传文件的实际数据
-          1. 当action为post：Content-Type会追加boundary，其值作为请求体的文件数据分隔符，支持post的工具改变数据包装方式都能支持
-        - `text/plain`：以纯文本形式进行编码，空格转换为加号，不对特殊字符编码。不含任何控件或格式字符
-   - 断点续传：利用http请求头的Range确定传输的起点，响应头Content-Range返回大小。php使用fread/fseek确定读取文件的范围和小大从而实现功能
    - 连接控制
      1. 认识：keepalive，复用tcp连接，要和tcp的keepalive区别
         - 减少握手次数
@@ -429,27 +370,53 @@
         - connection头：keepalive或close，采用哪种形式
         - keep_alive头：连接最少保持时间
    - 缓存控制
+     1. 认识：先读取cache-control确认缓存策略是强制还是对比，然后执行相应逻辑
      1. 强制缓存：缓存有效时不与服务器交互
-        - Expires：1.0支持，返回到期时间，下一次请求时请求时间小于到期时间直接使用缓存
+        - expires：1.0支持，返回到期时间，下一次请求时请求时间小于到期时间直接使用缓存
           1. 缺点：服务器时间和客户端不一致
-        - Cache-Control：1.1支持，优先级高于Expires
+        - pragma
+          1. no-cache：和Cache-Control的一样，可被Cache-Control代替
+        - cache-control：1.1支持，优先级高于expires
           1. private：客户端可以缓存
-          1. publick：客户端和代理服务器都可以缓存
+          1. public：客户端和代理服务器都可以缓存
           1. max-age=xx：缓存的内容在xx秒后失效
           1. no-cache：需要使用对比缓存来验证
           1. no-store：所有内容都不缓存，强制和对比都不触发
-        - pragma
-          1. no-cache：和Cache-Control的一样，可被Cache-Control代替
      1. 对比缓存：不管缓存是否有效都先与服务器交互，生效的状态码是304
         - Last-Modified：第一次请求时，服务器返回资源的最后修改时间
+        - ETag：优先级高于Last-Modified，表示当前资源在服务器的唯一表示，生成规则服务器决定
         - If-Modified—Since：再次请求时，此字段告知上次请求资源的最后修改时间，服务器和资源的最后修改时间对比，改动返回200，未改动返回304
           1. 缺点：只能精确到秒级
-        - ETag：优先级高于Last-Modified，表示当前资源在服务器的唯一表示，生成规则服务器决定
         - If-None-Match：优先级高于If-Modified—Since，再次请求时，告知服务器上次返回的唯一标识
-     1. 浏览器缓存机制
+     1. 浏览器缓存使用机制
         - 输入url，使用缓存
-        - f5：跳过强缓存，会检查协商缓存
+        - f5：跳过强制缓存，会检查对比缓存
         - 强制刷新：不用缓存
+   - 断点续传
+     1. 认识：利用range头确定传输的字节范围，响应头Content-Range返回大小。php使用fread/fseek确定读取文件的范围和小大从而实现功能
+   - 登录认证方式
+     1. BASIC基本认证，使用base64认证，直接传输账号密码
+     1. DIGEST摘要认证，接收服务端的质询码，计算后服务端验证
+     1. SSL客户端认证
+   - 压缩
+     1. 认识：内容编码的一种，内容即body请求体，可以搅乱、加密。纯文本可压缩到40%，gzip对jpg支持不够好
+     1. 组成
+        - 请求头
+          1. `Accept-Encoding:gzip,deflate`：以下算法全部无损
+             - gzip：GNU zip格式压缩，就是找相同字符进行替换进行减小体积，所以html/css/js效果好
+             - compress：Unix的文件压缩程序
+             - deflate：zlib的格式压缩
+             - identity：没有编码
+        - 响应头
+          1. `Content-Encoding:gzip`
+          1. `Content-Length:xx`：指压缩后大小，字节
+   - 表单提交
+     1. enctype属性：表单数据的编码方式
+        - `application/x-www-form-urlencoded`：键值对，url编码方式，默认
+        - `multipart/form-data`：二进制编码方式，一个控件对应一个部分，适合传输更大数据，如传输文件
+          1. get请求：没有被上传文件的实际数据
+          1. post请求：Content-Type会追加boundary，其值作为请求体的文件数据分隔符
+        - `text/plain`：纯文本编码方式，空格转为加号，不对特殊字符编码。不含任何控件或格式字符
    - 获取客户端ip
      1. 参数
         - HTTP_CLIENT_IP：未成标准，不一定服务器都实现，一和二可以用来表示负载均衡后的真实ip
@@ -464,13 +431,57 @@
      1. 请求头
         - x-forwarded-for；累加的逐级ip，因为代理往上走会再新加一层连接
         - x-real-ip：真实ip
-   - 登录认证
-     1. BASIC 基本认证，使用base64认证，直接传输账号密码
-     1. DIGEST 摘要认证，接收服务端的质询码，计算后服务端验证
-     1. SSL客户端认证
    - 优化
      1. 减少http请求数：每个新的请求都需要3次握手，很费时间
      1. 减少传输文件大小：使用压缩
+1. http2
+   - 认识：在ssl层之上增加二进制分帧层，用frame封装header和body，实现了双向并行传输，提高传输性能，突破性能限制，没有改变1.x的语义，前身是SPDY
+     1. web发展的背景
+        - 更多要请求的资源数
+        - 更高的实时性
+     1. 1.1的不足
+        - 采取行尾\r\n方式切分消息，需要计算量大的状态机解析消息
+        - 请求响应模式导致了等待，没有利用tcp全双工双向通信
+        - ascii传输效率低，空间浪费
+        - 无状态需要重复发送头部等数据
+        - 网络安全风险
+   - 特点
+     1. 多路复用：可承载任意数量的双向数据流，即客户端可一次发起多个请求，服务器可一次返回多个响应，双方可同时互相发送数据，是和1.1最重要的区别
+        - stream：流，已建立连接上的双向字节流
+        - 消息：数据流，包含header帧、body帧，可以设置优先级、依赖
+        - frame：帧，通信最小单位，会标识所属的流，可以乱序发送，然后再根据帧头部的流标识符重新组装
+     1. 头部压缩：1.x头部元数据以纯文本形式发送，给请求增加几百字节的负荷，如cookie。使用encoder通讯双方各自cache一份header fields表，避免header重复传输，减小传输大小
+     1. 服务器推送：服务器可主动推送
+   - SPDY
+     1. 认识：google开发的基于tcp的对http的增强的协议，目的是降低延迟，提升速度，提升网络使用体验，因IETF标准了SPDY推出了http2，都放弃支持SPDY
+        - 页面加载时间减少一半
+        - 减少部署复杂性，使用tcp作为传输层，不改现有网络设施
+        - 支持SDPY改的是客户端代理和web服务器
+     1. 功能
+        - 单tcp连接支持并发http请求
+        - http报头压缩，减少带宽、包数量
+        - 强制ssl
+        - 高级特征：允许服务器对客户端发起连接并推送数据
+        - 请求优先级
+     1. 原理：在ssl层之上增加SPDY会话层，为编码和传输数据设计新帧格式，这样一个tcp可以实现并发流
+1. http3
+   - 认识：即HTTP over QUIC，运行在QUIC之上的协议被称为HTTP/3
+     1. 以前是http+tls+tcp实现，quic是http+quic+udp实现
+   - http/2的问题
+     1. 有序字节流引发的队头阻塞，使多路复用能力大打折扣
+     1. TCP与TLS叠加了握手时延，建链时长还有1倍的下降空间
+     1. 基于TCP四元组确定一个连接，这种诞生于有线网络的设计，并不适合移动状态下的无线网络，这意味着IP地址的频繁变动会导致TCP连接、TLS会话反复握手，成本高昂
+1. QUIC
+   - 认识：Quick UDP Internet Connection 快速UDP互联网连接，谷歌制定的基于UDP的多路并发传输协议。融合了TCP、TLS、HTTP/2等协议的特性
+     1. 是用来替代TCP、SSL/TLS的传输层协议，包含了ssl
+   - 特点
+     1. 基于UDP协议重新定义了连接：实现了无序、并发字节流的传输，解决了队头阻塞问题
+     1. 重新定义了TLS协议加密QUIC头部的方式：既提高了网络攻击成本，又降低了建立连接的速度，1个RTT就可以同时完成建链与密钥协商，以前一大堆的握手/RTT
+     1. 将Packet、QUIC Frame、HTTP3 Frame分离，实现了连接迁移功能，降低了5G环境下高速移动设备的连接维护成本
+     1. 新的HTTP头压缩机制：QPACK，是对HTTP/2中使用的HPACK的增强。在QPACK下，HTTP头可以在不同的QUIC流中不按顺序到达
+   - 优势
+     1. 改进的拥塞控制
+     1. 前向冗余纠错
 1. http头
    - 通用
      1. Cache-Control：控制缓存的行为，如`Cache-Control: private, max-age=0, no-cache`，
@@ -544,18 +555,6 @@
     ```
 1. wiki
    - ajax的['HTTP_X_REQUESTED_WITH']为'xmlhttprequest'
-   - SPDY
-     1. 认识：google开发的基于tcp的对http的增强的协议，目的是降低延迟，提升速度，提升网络使用体验，因IETF标准了SPDY推出了http2，都放弃支持SPDY
-        - 页面加载时间减少一半
-        - 减少部署复杂性，使用tcp作为传输层，不改现有网络设施
-        - 支持SDPY改的是客户端代理和web服务器
-     1. 功能
-        - 单tcp连接支持并发http请求
-        - http报头压缩，减少带宽、包数量
-        - 强制ssl
-        - 高级特征：允许服务器对客户端发起连接并推送数据
-        - 请求优先级
-     1. 原理：在ssl层之上增加SPDY会话层，为编码和传输数据设计新帧格式，这样一个tcp可以实现并发流
 #### TCP
 1. 认识：面向连接，可靠性的基于字节流的协议，提供顺序控制/重发控制/流量控制/拥塞控制，7次握手，窗口发送数据，数据发送会有回执确认。用于需要可靠传输的情况，建立连接的有应答机制的基于字节流的可靠传输
    - 一条tcp连接是由源IP、源端口、目的IP、目的端口四元组决定的，所以服务器可以支持的连接数理论无穷尽
