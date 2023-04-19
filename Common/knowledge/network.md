@@ -192,122 +192,46 @@
 ### 网络协议
 #### HTTP
 1. 认识：HyperText Transfer Protocol，超文本传输协议，通信开销小，简单快速
-   - 请求过程：不止这些，基于浏览器的策略和长连接，nginx的策略肯定比这复杂的多
+1. 发展
+   - http/0.9：1991年
+   - http/1.0：基本成型，性能缺陷无法复用连接，队头阻塞，1996年
+   - http/1.1：大范围使用的，1999年
+   - SPDY：2009年
+   - QUIC：2013年
+   - http/2：2015年
+   - http/3：2018年
+1. http/1.0
+   - 特点
+     1. 无连接：规定和服务器保持短暂的连接。每次请求都需建立tcp连接，服务器完成后立即断开
+   - 请求过程：不止这些，还会受到浏览器的策略和特性、web server的策略
      1. 建立tcp连接
-     1. 浏览器发送请求、头信息
+     1. 浏览器发送请求头信息、数据
      1. 服务器发送应答头信息、数据
      1. 服务器关闭tcp连接
-   - 实例
-    ```http
-    GET xx/xx HTTP/1.1          // 请求行，可以包含server信息，如 GET www.xx.com/xx HTTP/1.1
-    Host: xxx.com
-    Cookie: xx=xx
-    ```
-1. 特点
-   - 请求响应模式
-   - 无状态
-   - 以ascii码传输，以字节为单位
-   - 信息安全交由tls解决
-1. http头
-   - 通用
-     1. Cache-Control：控制缓存的行为，如`Cache-Control: private, max-age=0, no-cache`，
-        - 请求指令：
-          1. no-cache：强制向源服务器再次验证，防止从缓存中返回过期的资源
-          1. no-store：不缓冲
-          1. max-age：秒，指定缓存有效的最大Age值
-          1. s-maxage：覆盖max-age、expires，仅用于共享缓存，私有缓存会被忽略
-        - 响应指令：public/private，其他人是否可使用缓存
-     1. Connection：逐跳首部、连接的管理，close、keep-alive、upgrade
-        - 长连接：服务和客户端都返回Keep-Alive表示长链接
-          1. 1.0默认关闭，1.1默认开启
-          1. keepalive_timeout设置超时时间
-     1. Date：创建报文的日期时间
-     1. Transfer-Encoding：指定报文主体的传输编码方式，有这个字段实现了该功能的两端将不会立即断开连接
-        - chunked
-     1. Pragma：报文指令
-     1. Trailer：报文末端的首部一览
-     1. Upgrade：升级为其他协议
-     1. Via：代理服务器的相关信息
-     1. Warning：错误通知
-   - 请求头
-    ```
-    Host                            请求资源所在服务器，主要用来实现虚拟主机，v1.1必须存在，否则400 Bad Request
-    Accept                          用户代理可处理的媒体类型
-    Accept-Charset                  优先的字符集
-    Accept-Encoding                 优先的内容编码
-    Accept-Language                 优先的语言（自然语言）
-    If-Match                        比较实体标记（ETag）
-    If-Modified-Since               比较资源的更新时间
-    If-None-Match                   比较实体标记（与 If-Match 相反）
-    If-Range                        资源未更新时发送实体 Byte 的范围请求
-    If-Unmodified-Since             比较资源的更新时间（与If-Modified-Since相反）
-    Range                           实体的字节范围请求
-    User-Agent HTTP                 客户端程序的信息
-    Authorization                   Web认证信息
-    Proxy-Authorization             代理服务器要求客户端的认证信息
-    Referer                         请求中url的原始获取方
-    Max-Forwards                    最大传输逐跳数
-    TE                              传输编码的优先级
-    Expect                          期待服务器的特定行为
-    From                            用户的电子邮箱地址
-    ```
-   - 响应头
-    ```
-    Server                          HTTP服务器的安装信息
-    Set-Cookie
-    Accept-Ranges                   是否接受字节范围请求
-    ETag                            资源的匹配信息
-    Age                             推算资源创建经过时间
-    Retry-After                     对再次发起请求的时机要求
-    Location                        令客户端重定向至指定URI
-    Refresh
-    WWW-Authenticate                服务器对客户端的认证信息
-    Proxy-Authenticate              代理服务器对客户端的认证信息
-    Vary                            代理服务器缓存的管理信息
-    Content-Disposition             请求内容存为文件时提供默认文件名，如attachment;filename="aaa.csv"，设置为空可以防止浏览器下载
-    ```
-   - 实体头
-    ```
-    Allow                           服务器支持的HTTP方法
-    Content-Type                    实体主体的媒体类型，默认为text/html
-    Content-Length                  实体主体的大小（单位：字节），keep-alive时不需要
-    Content-Encoding                实体主体适用的编码方式
-    Content-Language                实体主体的自然语言
-    Content-Location                替代对应资源的URI
-    Content-MD5                     实体主体的报文摘要
-    Content-Range                   实体主体的位置范围
-    Expires                         实体主体过期的日期时间，是http1.0的标准，cache-control的优先级更高
-    Last-Modified                   资源的最后修改日期时间
-    ```
-1. 请求
-   - 方法：get/post/put/delete/head/options/trace/connect
-   - 组成：
-     1. 请求行
-     1. 头信息
+1. http/1.1
+   - 认识
+     1. 请求响应模式
+     1. 无状态：服务器不跟踪每个客户端也不记录过去的请求
+     1. 以ascii码为编码格式传输，以字节为单位
+     1. 信息安全交由ssl解决
+     1. web使用http协议作应用层协议，然后使用tcp/ip做传输层协议将它发到网络上
+   - 特点
+     1. 增加连接复用
+     1. 增加分块传输/断点传输
+     1. 增加长连接：增加Connection头，设置Keep-Alive
+        - 支持请求管道化：pipelining，基于长连接可以在一个连接发送多个请求，但客户端必须按顺序接收响应，不能并行。无法解决头阻塞，太苛刻很少应用，现代浏览器采用同时多个tcp连接并行加载资源
+     1. 增加缓存处理：增加cache-control，强缓存和协商缓存
+     1. 增加host字段：使得一个服务器可以创建多个站点
+   - 组成
+     1. 请求行/响应行
+        - 请求方法：get/post/put/delete/head/options/trace/connect
+     1. 头信息：包含日期时间、内容类型和长度、编码字符集等
      1. 空行：CR+LF，回车换行，0x0d0x0a
      1. 主体
-   - 实体类型
-     1. multipart/form-data
-     1. multipart/byteranges
-   - Get
-        ```
-        GET / HTTP/1.1
-        Host: xx.com
-        Accept: text/html
-        Cache-Control: no-cache
-        ```
-   - Post：头信息每行一条，空行之后便是body，普通的post实体是键值对
-        ```HTTP
-        POST / HTTP/1.1
-        Content-Type: application/x-www-form-urlencoded
-        Accept-Encoding: gzip, deflate
-        Host: w.sohu.com
-        Content-Length: 21
-        Connection: Keep-Alive
-        Cache-Control: no-cache
-        ```
-1. 响应
-   - 数字和文字的状态码：负责表示HTTP请求的返回结果
+        - 实体类型
+          1. multipart/form-data
+          1. multipart/byteranges
+   - 响应状态码
      1. 1xx：请求处理中
      1. 2xx：正常处理。200 ok，206 范围请求
      1. 3xx：重定向
@@ -332,78 +256,82 @@
         - 502 bad gateway，上游无效响应(无法连接、连接断开等)
         - 503 service unavailable，服务不可用，提醒稍后再试，fpm不够用，可返回Retry-After头表示恢复时间
         - 504 gateway timeout，响应超时
-   - 响应头：服务器类型(UA)、日期时间、内容类型和长度
-   - 响应正文
-1. keepalive
-   - 认识：复用tcp连接，要和tcp的keepalive区别
-     1. 减少握手次数
-     1. 通过减少并发连接数减少服务器资源消耗
-     1. 降低tcp拥塞控制的影响
-   - 协议
-     1. connection头：keepalive或close，采用哪种形式
-     1. keep_alice头：连接最少保持时间
+   - 格式demo
+     1. GET
+        ```
+        GET / HTTP/1.1
+        Host: xx.com
+        Accept: text/html
+        Cache-Control: no-cache
+        ```
+     1. Post：头信息每行一条，空行之后便是body
+        ```
+        POST / HTTP/1.1
+        Content-Type: application/x-www-form-urlencoded
+        Accept-Encoding: gzip, deflate
+        Host: w.sohu.com
+        Content-Length: 21
+        Connection: Keep-Alive
+        Cache-Control: no-cache
+        ```
 1. https
-   - http的攻击方式
-     1. http代理攻击
-     1. http劫持
-     1. dns劫持
-   - 认识：http+ssl/tls，加密发生在应用层与传输层间，传输层传输的是加密后的密文，防止传输过程中被监听。即http和tcp中间加了ssl/tls。调试工具看到的是应用层数据
-     1. 就是客户端先用服务器的公钥非对称加密自己生成的对称加密的秘钥给服务端，之后双方就可以用对称加密通信了，成本低，又安全
-   - SSL/TLS
-     1. 认识：通常用ssl指代SSL/TLS协议，因为ssl更常用。版本号：TLSv1.2
-        - 服务器公钥放在数字证书中
-        - 通过对套件里不同组件的切换，实现不同效果，如文件太大降低对称加密强度
-     1. 组成：![avatar](../../images/tls_safe_kit.png)
-        - SSL：Secure Socket Layer 安全套接层，http之下tcp之上的一个协议加密层。网景公司开发，SSL2.0和3.0不安全
+   - 认识：防止传输过程中被监听。http和tcp中间加了ssl/tls
+     1. http的攻击方式
+        - http代理攻击
+        - http劫持
+        - dns劫持
+   - 组成
+     1. http+ssl/tls
+     1. 数字证书
+        - 认识：用于确定服务器公钥真正的来源，是一个经证书授权中心数字签名的包含公开密钥拥有者信息以及公开密钥的文件，利用了数字签名来确保服务端公钥不被篡改
+          1. 一般会包含公钥、公钥拥有者名称、CA的数字签名、有效期、授权中心名称、证书序列号等信息
+          1. PKI：Public Key Infrastructure 公钥基础设施。利用公钥技术为网络应用提供加密和数字签名等密码服务以及必需的密钥和证书管理体系的标准。![avatar](../../images/pki_base_station.png)
+             - 认证中心：CA机构
+             - X.500目录服务器(证书保存)
+             - 服务器向ca申请公钥和私钥，nginx把公钥证书发给浏览器，浏览器通过crl，ocsp找ca验证，查询太慢nginx先查好了然后提供，证书会过期
+        - 类型
+          1. DV：域名验证
+          1. OV：组织验证
+          1. EV：扩展验证，显示公司名字，越来越贵、费事
+        - 证书链：一般分三级，顶级证书机构、二级证书机构
+        - 原理：CA会用自己的私钥将证书内容的摘要进行加密。因为 CA 的公钥是公开的，任何人都可以用公钥解密出 CA 的数字签名的摘要，再用同样的摘要算法提取出证书的摘要和解密 CA 数字签名后的摘要比对，一致则说明这个证书没有被篡改过，可以信任
+1. ssl/tls
+   - 认识：通常用ssl指代ssl/tls协议因为ssl更常用。版本号：TLSv1.2
+     1. 通过对套件里不同组件的切换，实现不同效果，如文件太大降低对称加密强度
+   - 组成
+     1. 组件：![avatar](../../images/tls_safe_kit.png)
+        - SSL：Secure Socket Layer 安全套接层，http之下tcp之上的协议加密层。网景公司开发，SSL2.0和3.0不安全
         - TLS：Transport Layer Security，传输层安全协议。继承ssl协议并写入RFC，标准化后的名称。利用对称加密、公私钥不对称加密及其密钥交换算法，CA系统进行加密且可信任的信息传输
-        - SNI：为解决一个服务器使用多个域名和证书的SSL/TLS扩展，原理是进行SSL/TLS握手之前先发送要访问的域名，服务器根据域名返回合适的证书
-     1. 协议组
-        - tls记录协议
-        - tls握手协议
+        - SNI：为解决一个服务器使用多个域名和证书的ssl/tls扩展，原理是进行ssl/tls握手之前先发送要访问的域名，服务器根据域名返回合适的证书
      1. 加密方式：ECC、RSA、DSA、DH
-     1. 协议栈：握手、记录、修改密码规范、警报
-     1. 运作流程
-        - 握手阶段
-             - 客户端发送ClientHello、接收公钥并加密客户端生成的会话密钥
-             - 服务器确认会话密钥(session key)，发送ServerHello，包括协议版本/加密算法/随机数，通知客户端开始用对称加密通信
-             - 三个随机数组合，因为不相信都是随机的，三方都随机，随机性会提高很多层级
-        - 应用数据传输阶段：按照SSL记录协议收发应用数据
+     1. 协议栈：握手、记录、修改密码规范、警报等协议
+   - 加密过程
+     1. 客户端发送ClientHello，接收并使用服务器的公钥非对称加密自己生成的对称加密的会话秘钥，传给服务端
+     1. 服务端非对称解密得到客户端对称加密的秘钥，即确认会话密钥(session key)，发送ServerHello通知客户端开始用对称加密通信，完成握手
+        - 使用了协议版本/加密算法/随机数等
+        - 三方都添加随机数，随机性会提高很多层级
+     1. 之后双方用对称加密通信，成本低，又安全
+   - 场景
      1. session的恢复、优化传输
         - session ID：双方都有直接用，只能保留在一台服务器上
         - session ticket：只有服务器才能解密，解密后就不必重新生成对话密钥了
-     1. wiki
-        - 历史
-          1. ssl3.0：1995
-          1. tls1.0：1999
-          1. tls1.1：2006
-          1. tls1.2：2008
-          1. tls1.3：2018
-             - 握手时间降低一半
-             - 废物不安全的秘钥协商方式：解决1.2太多安全套件中那些不安全的，
-1. wiki
-   - 数字签名：确保不被篡改
-   - 数字证书
-     1. 认识：用于确定数字签名的公钥真正的来源，是一个经证书授权中心数字签名的包含公开密钥拥有者信息以及公开密钥的文件
-        - 一般会包含公钥、公钥拥有者名称、CA的数字签名、有效期、授权中心名称、证书序列号等信息
-        - PKI：Public Key Infrastructure 公钥基础设施。利用公钥技术为网络应用提供加密和数字签名等密码服务以及必需的密钥和证书管理体系的标准。![avatar](../../images/pki_base_station.png)
-          1. 认证中心：CA机构
-          1. X.500目录服务器(证书保存)
-          1. 服务器向ca申请公钥和私钥，nginx把公钥证书发给浏览器，浏览器通过crl，ocsp找ca验证，查询太慢nginx先查好了然后提供，证书会过期
-     1. 类型
-        - DV：域名验证
-        - OV：组织验证
-        - EV：扩展验证，显示公司名字，越来越贵、费事
-     1. 证书链：一般分三级，顶级证书机构、二级证书机构
-     1. 原理：CA会用自己的私钥将证书内容的摘要进行加密。因为 CA 的公钥是公开的，任何人都可以用公钥解密出 CA 的数字签名的摘要，再用同样的摘要算法提取出证书的摘要和解密 CA 数字签名后的摘要比对，一致则说明这个证书没有被篡改过，可以信任
-1. webSocket
-   - 理解：全双工通讯的网络技术，属于应用层协议，基于tcp传输协议，并复用http的握手通道，属于http1.1
+   - 历史
+     1. ssl3.0：1995
+     1. tls1.0：1999
+     1. tls1.1：2006
+     1. tls1.2：2008
+     1. tls1.3：2018
+        - 握手时间降低一半
+        - 废除不安全的秘钥协商方式：解决1.2太多安全套件中那些不安全的
+1. websocket
+   - 认识：全双工通讯的应用层协议，复用http的握手通道，基于tcp传输，属于http1.1
      1. 更好的二进制支持
      1. 较少的控制开销：数据交换的数据头部较小
      1. 支持扩展
    - 步骤
-     1. 建立连接：先期使用http建立一次连接，之后转换为websocket
-        ```
-        // 两个http请求头表示发起websocket请求
+     1. 建立连接：先期使用http建立连接，之后转换为websocket
+        ```c
+        // 表示发起websocket请求
         Upgrade: websocket
         Connection: Upgrade
         ```
@@ -431,33 +359,44 @@
         Sec-WebSocket-Accept:s3pPLMBiTxaQ9kYGzzhZRbK+x00=
         Sec-WebSocket-Protocol: chat
         ```
-     1. data：![avatar](../../images/common/websocket_data.jpg)
-1. http2.0
-   - 场景
-     1. 需要请求的资源数更多了
-     1. 实时性要求高
-     1. 浏览器只能最多6个并发链接
+     1. 数据传输：![avatar](../../images/common/websocket_data.jpg)
+1. http2
+   - web发展的背景
+     1. 更多要请求的资源数
+     1. 更高的实时性
+     1. 浏览器只能最多6个并发连接
    - 1.1的不足
      1. 采取行尾\r\n方式切分消息，需要计算量大的状态机解析消息
      1. 请求响应模式导致了等待，没有利用tcp全双工双向通信
      1. ascii传输效率低，空间浪费
      1. 无状态需要重复发送头部等数据
      1. 网络安全风险
-   - 多路复用
-     1. 客户端一次发起多个请求，服务器一次返回多个响应
-     1. 双方可以同时互相发送数据
-   - SPDY
-     1. 认识：google开发的基于tcp的对http的增强的协议，目的是降低延迟，提升速度，提升网络使用体验，IETF标准了SPDY推出了http2，都放弃支持了
-        - 页面加载时间减少一半
-        - 减少部署复杂性，使用tcp作为传输层，不改现有网络设施
-        - 支持SDPY改的是客户端代理和web服务器
-     1. 功能
-        - 单tcp连接支持并发http请求
-        - http报头压缩，减少带宽、包数量
-        - 强制ssl
-        - 高级特征：允许服务器对客户端发起连接并推送数据
-        - 请求优先级
-     1. 原理：在ssl层之上增加SPDY会话层，为编码和传输数据设计新帧格式，这样一个tcp可以实现并发流
+   - 认识：双向并行传输，改进传输性能，突破性能限制，没有改变1.x的语义，前身是SPDY
+     1. 多路复用，二进制分帧：可承载任意数量的双向数据流，即客户端可一次发起多个请求，服务器可一次返回多个响应，双方可同时互相发送数据，是和1
+     1. 头部压缩：1.x头部元数据以纯文本形式发送，给请求增加几百字节的负荷，如cookie。使用encoder通讯双方各自cache一份header fields表，避免header重复传输，减小传输大小
+     1. 服务器推送：服务器可主动推送
+   - 多路复用：在tcp之上增加二进制分帧层，用frame封装header和body，.1最重要的区别
+     1. stream：流，已建立连接上的双向字节流
+     1. 消息：数据流，包含header帧、body帧，可以设置优先级、依赖
+     1. frame：帧，通信最小单位，会标识所属的流，可以乱序发送，然后再根据帧头部的流标识符重新组装
+1. http3
+   - 认识：即HTTP over QUIC，运行在QUIC之上的协议被称为HTTP/3
+     1. 以前是http+tls+tcp实现，quic是http+quic+udp实现
+   - http/2的问题
+     1. 有序字节流引发的队头阻塞，使多路复用能力大打折扣
+     1. TCP与TLS叠加了握手时延，建链时长还有1倍的下降空间
+     1. 基于TCP四元组确定一个连接，这种诞生于有线网络的设计，并不适合移动状态下的无线网络，这意味着IP地址的频繁变动会导致TCP连接、TLS会话反复握手，成本高昂
+1. QUIC
+   - 认识：Quick UDP Internet Connection 快速UDP互联网连接，谷歌制定的基于UDP的多路并发传输协议。融合了TCP、TLS、HTTP/2等协议的特性
+     1. 是用来替代TCP、SSL/TLS的传输层协议
+   - 特点
+     1. 基于UDP协议重新定义了连接：实现了无序、并发字节流的传输，解决了队头阻塞问题
+     1. 重新定义了TLS协议加密QUIC头部的方式：既提高了网络攻击成本，又降低了建立连接的速度，1个RTT就可以同时完成建链与密钥协商，以前一大堆的握手/RTT
+     1. 将Packet、QUIC Frame、HTTP3 Frame分离，实现了连接迁移功能，降低了5G环境下高速移动设备的连接维护成本
+     1. 新的HTTP头压缩机制：QPACK，是对HTTP/2中使用的HPACK的增强。在QPACK下，HTTP头可以在不同的QUIC流中不按顺序到达
+   - 优势
+     1. 改进的拥塞控制
+     1. 前向冗余纠错
 1. 应用
    - 压缩
      1. 认识：内容编码的一种，内容即body请求体，也可以搅乱、加密。纯文本可压缩到40%，gzip对jpg支持不够好
@@ -481,6 +420,14 @@
           1. 当action为post：Content-Type会追加boundary，其值作为请求体的文件数据分隔符，支持post的工具改变数据包装方式都能支持
         - `text/plain`：以纯文本形式进行编码，空格转换为加号，不对特殊字符编码。不含任何控件或格式字符
    - 断点续传：利用http请求头的Range确定传输的起点，响应头Content-Range返回大小。php使用fread/fseek确定读取文件的范围和小大从而实现功能
+   - 连接控制
+     1. 认识：keepalive，复用tcp连接，要和tcp的keepalive区别
+        - 减少握手次数
+        - 通过减少并发连接数减少服务器资源消耗
+        - 降低tcp拥塞控制的影响
+     1. 操作
+        - connection头：keepalive或close，采用哪种形式
+        - keep_alive头：连接最少保持时间
    - 缓存控制
      1. 强制缓存：缓存有效时不与服务器交互
         - Expires：1.0支持，返回到期时间，下一次请求时请求时间小于到期时间直接使用缓存
@@ -521,35 +468,94 @@
      1. BASIC 基本认证，使用base64认证，直接传输账号密码
      1. DIGEST 摘要认证，接收服务端的质询码，计算后服务端验证
      1. SSL客户端认证
-1. 优化
-   - 传输
+   - 优化
      1. 减少http请求数：每个新的请求都需要3次握手，很费时间
-     1. 减少传输文件大小
-1. 历史
-   - 认识：90年诞生，96年1.0版本，97年1.1版本，15年HTTP2发布
-   - 版本特性
-     1. http 1.0：性能缺陷无法复用连接，队头阻塞
-        - 无状态、无连接，规定和服务器保持短暂的连接。每次请求都需要建立tcp连接，服务器完成后立即断开(无连接)，服务器不跟踪每个客户端也不记录过去的请求(无状态)
-        - 上一个请求到达之后下一个才能发送
-     1. http 1.1：大范围使用的
-        - 增加长连接：增加Connection头，设置Keep-Alive
-        - 缓存处理：增加cache-control，强缓存和协商缓存
-        - 断点传输
-        - 增加host字段：使得一个服务器可以创建多个站点
-        - 支持请求管道化：pipelining，基于长连接可以在一个连接发送多个请求，但客户端必须按顺序接收响应，不能并行。无法解决头阻塞，太苛刻很少应用，现代浏览器采用同时多个tcp连接并行加载资源
-     1. http 2.0：多路复用，二进制分帧，双向并行传输，突破性能限制，改进传输性能，没有改变1.x的语义
-        - 多路复用：在一个tcp连接之上增加二进制分帧层，把header和body用frame封装了，承载任意数量的双向数据流，和1.1最重要的区别
-          1. stream：流，已建立连接上的双向字节流
-          1. 消息：数据流，包含header帧、body帧，可以设置优先级、依赖
-          1. frame：帧，通信最小单位，会标识所属的流，可以乱序发送，然后再根据帧头部的流标识符重新组装
-        - 头部压缩：1.x头部元数据以纯文本形式发送，给请求增加几百字节的负荷，如cookie。使用encoder，通讯双方各自cache一份header fields表，避免header重复传输，减小传输大小
-        - 服务器推送：服务器可主动推送
-     1. http 3：基于quic协议，Quick UDP Internet Connection，谷歌制定的基于UDP的低时延传输层协议。融合了包括TCP，TLS，HTTP/2等协议的特性
-        - 新的HTTP头压缩机制：QPACK，是对HTTP/2中使用的HPACK的增强。在QPACK下，HTTP头可以在不同的QUIC流中不按顺序到达
-        - 2016年，第一次QUIC工作组会议，受到关注，目前仍是草案状态
+     1. 减少传输文件大小：使用压缩
+1. http头
+   - 通用
+     1. Cache-Control：控制缓存的行为，如`Cache-Control: private, max-age=0, no-cache`，
+        - 请求指令：
+          1. no-cache：强制向源服务器再次验证，防止从缓存中返回过期的资源
+          1. no-store：不缓冲
+          1. max-age：秒，指定缓存有效的最大Age值
+          1. s-maxage：覆盖max-age、expires，仅用于共享缓存，私有缓存会被忽略
+        - 响应指令：public/private，其他人是否可使用缓存
+     1. Connection：逐跳首部、连接的管理，close、keep-alive、upgrade
+        - 长连接：服务和客户端都返回Keep-Alive表示长链接
+          1. 1.0默认关闭，1.1默认开启
+          1. keepalive_timeout设置超时时间
+     1. Date：创建报文的日期时间
+     1. Transfer-Encoding：body的编码方式，有这个字段实现了该功能的两端将不会立即断开连接
+        - chunked
+     1. Pragma：报文指令
+     1. Trailer：报文末端的首部一览
+     1. Upgrade：升级为其他协议
+     1. Via：代理服务器的相关信息
+     1. Warning：错误通知
+   - 请求头
+    ```
+    Host                            请求资源所在服务器，主要用来实现虚拟主机，v1.1必须存在，否则400 Bad Request
+    Accept                          用户代理可处理的媒体类型
+    Accept-Charset                  优先的字符集
+    Accept-Encoding                 优先的内容编码
+    Accept-Language                 优先的语言（自然语言）
+    If-Match                        比较实体标记（ETag）
+    If-Modified-Since               比较资源的更新时间
+    If-None-Match                   比较实体标记（与 If-Match 相反）
+    If-Range                        资源未更新时发送实体 Byte 的范围请求
+    If-Unmodified-Since             比较资源的更新时间（与If-Modified-Since相反）
+    Range                           实体的字节范围请求
+    User-Agent HTTP                 客户端程序的信息
+    Authorization                   Web认证信息
+    Proxy-Authorization             代理服务器要求客户端的认证信息
+    Referer                         请求中url的原始获取方
+    Max-Forwards                    最大传输逐跳数
+    TE                              传输编码的优先级
+    Expect                          期待服务器的特定行为
+    From                            用户的电子邮箱地址
+    ```
+   - 响应头
+    ```
+    Server                          HTTP服务器的信息
+    Set-Cookie
+    Accept-Ranges                   是否接受字节范围请求
+    ETag                            资源的匹配信息
+    Age                             推算资源创建经过时间
+    Retry-After                     对再次发起请求的时机要求
+    Location                        令客户端重定向至指定URI
+    Refresh
+    WWW-Authenticate                服务器对客户端的认证信息
+    Proxy-Authenticate              代理服务器对客户端的认证信息
+    Vary                            代理服务器缓存的管理信息
+    Content-Disposition             请求内容存为文件时提供默认文件名，如attachment;filename="aaa.csv"，设置为空可以防止浏览器下载
+    ```
+   - 实体头
+    ```
+    Allow                           服务器支持的HTTP方法
+    Content-Type                    实体主体的媒体类型，默认为text/html
+    Content-Length                  实体主体的大小（单位：字节），keep-alive时不需要
+    Content-Encoding                实体主体适用的编码方式
+    Content-Language                实体主体的自然语言
+    Content-Location                替代对应资源的URI
+    Content-MD5                     实体主体的报文摘要
+    Content-Range                   实体主体的位置范围
+    Expires                         实体主体过期的日期时间，是http1.0的标准，cache-control的优先级更高
+    Last-Modified                   资源的最后修改日期时间
+    ```
 1. wiki
-   - web使用http协议作应用层协议，然后使用tcp/ip做传输层协议将它发到网络上
    - ajax的['HTTP_X_REQUESTED_WITH']为'xmlhttprequest'
+   - SPDY
+     1. 认识：google开发的基于tcp的对http的增强的协议，目的是降低延迟，提升速度，提升网络使用体验，因IETF标准了SPDY推出了http2，都放弃支持SPDY
+        - 页面加载时间减少一半
+        - 减少部署复杂性，使用tcp作为传输层，不改现有网络设施
+        - 支持SDPY改的是客户端代理和web服务器
+     1. 功能
+        - 单tcp连接支持并发http请求
+        - http报头压缩，减少带宽、包数量
+        - 强制ssl
+        - 高级特征：允许服务器对客户端发起连接并推送数据
+        - 请求优先级
+     1. 原理：在ssl层之上增加SPDY会话层，为编码和传输数据设计新帧格式，这样一个tcp可以实现并发流
 #### TCP
 1. 认识：面向连接，可靠性的基于字节流的协议，提供顺序控制/重发控制/流量控制/拥塞控制，7次握手，窗口发送数据，数据发送会有回执确认。用于需要可靠传输的情况，建立连接的有应答机制的基于字节流的可靠传输
    - 一条tcp连接是由源IP、源端口、目的IP、目的端口四元组决定的，所以服务器可以支持的连接数理论无穷尽
