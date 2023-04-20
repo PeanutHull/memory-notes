@@ -1,3 +1,5 @@
+### 认识
+1. 用户的输入永远不可靠
 ### 攻击
 1. 攻击思路
    - 收集信息
@@ -12,9 +14,10 @@
      1. 密码爆破，后台进入
    - 提权
      1. 服务器提权：爆出物理路径，图片木马
+     1. 挂马，一句话木马：php的如`<?php @eval(echo $_POST['password'])>`
    - 扩大成果：如内网防护低
    - 清除痕迹
-1. web攻击方式
+1. 攻击方式
    - 输入输出验证
      1. XSS
      1. CSRF
@@ -22,7 +25,7 @@
      1. 代码注入
      1. 命令注入
      1. 信息泄露
-     1. 暴力破解
+     1. 暴力破解：穷举、字典、彩虹表(hash和明文的对应表)
      1. 目录穿越：对文件地址使用../等相对路径定位到/etc/passed等绝对路径，实现浏览、修改的目的
      1. 文件上传
         - 远程文件包含：网站会载入外部文件包含在代码里，上传恶意文件就可以执行任意脚本
@@ -44,73 +47,34 @@
      1. 框架漏洞
      1. 基础环境漏洞
    - 透明点击
-   - 密码破解：穷举、字典、彩虹表(hash和明文的对应表)
-1. 搜索黑语法：Google Hacking，即高级搜索，搜索引擎都支持
-   - 特性：过滤、精确、高级操作符、关键词顺序
-   - 操作
-     1. inurl：url中包含的字符串，
-     1. intitle：网页标题包含的字符串，`intitle:index.of “Apache/1.3.27 Server at”`
-     1. intext：网页正文包含的字符串
-   - 实践
-     1. 查询登录界面
-1. 通信截取方式
+1. 通信截取攻击
    - 中间人攻击：在数据被截获的情况下，如果不采用https或者用了不验证证书的话，数据都是会被获取，篡改等，其中dns可以伪装正版页面和请求，控制软件升级进一步控制：开放wifi，使用tcpdump获取数据
-   - 挂马
-     1. 一句话木马：php的如`<?php @eval(echo $_POST['password'])>`
-1. 验证码：识别字符、识别特殊颜色、逻辑计算性、图像识别(如12306的)、手机验证码
-1. 域名劫持
-1. 流量劫持
-### 防御
-1. 部署方式
-   - 旁路部署：通过在核心交换机上设置镜像口，将镜像数据发送到审计设备
-1. 网络防御
-   - 防火墙 Firewall：网络NAT、包过滤规则、端口映射
-   - 入侵检测 IDS
-   - 入侵防御 IPS：数据包进行检测（深度包检测 DPI）对蠕虫、病毒、木马、拒绝服务等攻击进行查杀，增加 IPS 特征库
-   - 统一威胁安全网关 (UTM)：同时具备防火墙、 防毒墙、入侵防护
-   - 上网行为管理
-   - 漏洞扫描
-   - 异常流量清洗
-1. 审计
-   - 网络安全：行为审计、 内容审计、 行为报警、行为控制，提供完整的上网记录，便于信息追踪、系统安全管理和风险防范
-   - 日志
-   - 运维安全审计 堡垒机
-   - 数据库安全
-   - 
-1. 防止暴力破解
-   - 添加验证码、token(后台发的token)
-1. 分析工具：火绒剑（行为分析）、IDA 7.6（反汇编）、Exeinfo PE（PE文件分析）
-1. 防御工具
-   - libModSecurity：是入侵侦测与防护引擎，用于web服务器，可以为nginx配置WAF
-### 路由器
-1. 密码破解：WPA2加密的用BT5或者奶瓶（Beni），先搞到握手包，然后要有一个强大的字典（字典十分重要，是否能破解主要靠字典），然后爆破出密码。WEP加密的也用BT3或BT5抓包破解
-1. 数据抓取
-   - 使用路由器API和后台管理系统
-   - 使用路由器漏洞
-   - 刷路由器固件：路由器刷入openwrt的嵌入式linux系统(如pandorabox)————安装tcpdump————将抓包数据导入本地Wireshark中
-   - 电脑冒充路由器：ARP欺骗，局域网所有数据包发送到这台路由器
-   - 路由器和电脑连接同一个hub，运行抓包软件
-   - Cisco路由器：路由跟踪功能
-   - 主流路由器固件有 dd-wrt,tomato,openwrt三类。现在市场上的商用路由器，价格上远低于一台主机电脑，然后网络功能齐全，且带有大容量的硬盘，只要刷成openwrt之后，就可以拥有自己的私有的git服务器或者文件服务器了
-1. 数据抓取
-   - wifi密码破解：http://blog.csdn.net/zero9988/article/details/51866882
-     1. CDlinux.iso  ：一个Linux系统，集成了wifi密码的PIN码破解软件。
-     1. UltraISO：把CDlinux.iso写入U盘
-     1. grub4dos：取出其中的grldr、grub.exe、menu.lst三个文件
-     1. grubinst_gui2：U盘启动引导安装
-     1. BOOTICE：U盘启动引导安装
-   - Mac地址修改器：修改自己的MAC地址，防止被封
-   - ettercap 0.8.0 (ettercap-graphical)  ： ARP欺骗工具
-   - wireshark：抓包工具
-   - driftnet：抓图片流工具
-1. DNS劫持：linux使用dnsmasq配置一台DNS应用服务器。https://www.cnblogs.com/beer/p/4932146.html#baidu-baike-openwrt
+   - DNS劫持、域名劫持：linux使用dnsmasq配置一台DNS应用服务器。https://www.cnblogs.com/beer/p/4932146.html#baidu-baike-openwrt
+   - 流量劫持
 1. 攻击软件
    - 手机端：dsploit和busybox
    - 路由器：minidwep/aircrack-ng/Elcomsoft Wireless Security Auditor
    - 路由：dns篡改，dhcp查看
    - 端口：arp嗅探端口
    - 远程调试：adb(5555端口)/genymotion
-### sql注入
+#### web攻击方式
+1. XSS
+   - 认识：Cross Site Script 跨站脚本攻击，让网站执行一个非法脚本。如链接中附加js代码，可以获取数据和cookies，修改页面内容等
+     1. 条件：非法脚本必须在浏览器中解析，顺序为HTML——URL——JS
+        - HTML:浏览器解析顺序：能识别的编码符号都解码(但是只在俩个地反解：标签内容和标签属性值)
+        - URL:传输要进行转义：整个URL转用 encodeURI，如果对参数的值转用 encodeURIComponent
+        - Javascript特殊字符：JS的转义都采用\解决，三种类型
+          1. 反斜杠：  \'\"   \\(转义反斜杠本身)
+          1. 十六进制：  \x22\x27
+          1. Unicode：  \u0022\u0027
+     1. 解决：用适当的方法对html、js转义
+   - demo：el.innerHTML = title.value，修改后：el.innerHTML = escapeHTML(title.value);
+1. CSRF
+   - 认识：Cross-Site Request Forgeries 跨站请求伪造，诱导别人用自己的身份发送伪造的请求来实现攻击。即站点A根据用户B的权限来处理恶意站点C所发起的请求
+   - 解决方案
+     1. 同源策略：检测Referer和Origin字段，非法的Reffer来源直接拒绝访问
+     1. 根据当前session构造唯一token放入请求头、参数中，处理请求时校验，因为攻击者无法拿到这个token
+#### sql注入
 1. 理解：构建特殊输入，数据变成了代码被执行
    - 不要相信用户输入
    - 不同网站防护情况不同注入的效果是不同的，不能一条指令走到黑，需要调整注入的参数，例如是否加长时间延迟、是否采用随机头部、是否加大注入级别
@@ -190,25 +154,76 @@
      1. 基于报错注入
      1. 基于时间的盲注
      1. 基于布尔的盲注：返回页面判断条件真假的注入，部分盲注可以观察不同的HTTP状态码，确定响应时间、内容的长度，并在HTTP响应中的查看HTML内容来进行确认
-### 攻击方式
-1. XSS
-   - 概念：跨站脚本(Cross Site Script)：让某网站执行一个非法脚本。Cross Site Script，跨站请求攻击，链接中附加js代码，可以获取数据和cookies，修改页面内容
-   - 发生条件：非法脚本必须在浏览器中解析，点在HTML、URL、javascript，顺序为HTML——URL——JS
-   - HTML:浏览器解析顺序：能识别的编码符号都解码(但是只在俩个地反解：标签内容和标签属性值)
-   - URL:传输要进行转义：整个URL转用 encodeURI，如果对参数的值转用 encodeURIComponent
-   - Javascript特殊字符：JS的转义都采用\解决，三种类型：
-     1. 直接反斜杠：  \'\"   \\(转义反斜杠本身)
-     1. 十六进制：  \x22\x27
-     1. Unicode：  \u0022\u0027
-   - 举例
-     1. 危险写法，这里输入来自用户，用户输入不可靠：el.innerHTML = title.value，修改后：el.innerHTML = escapeHTML(title.value);
-   - 阻止办法：用适当的方法对html、js转义
-1. CSRF
-   - 认识：Cross-Site Request Forgeries，跨站点请求伪造，诱导触发别人利用别人自己的合法身份发送自己伪造的请求来实现攻击。即站点A会报据用户C的权限来处理恶意站点B所发起的请求，达到了目的
-   - 防范方法
-     1. 同源策略：检测Referer和Origin字段，非法的Reffer来源直接拒绝访问
-     1. 当前session构造唯一token放入请求头、参数中，攻击者不能拿到这个token
-### 加密方式
+#### 路由器攻击
+1. 密码破解：WPA2加密的用BT5或者奶瓶（Beni），先搞到握手包，然后有一个强大的字典（字典十分重要，是否能破解主要靠字典），爆破出密码。WEP加密的也用BT3或BT5抓包破解
+1. 数据抓取
+   - 使用路由器API和后台管理系统
+   - 使用路由器漏洞
+   - 刷路由器固件：路由器刷入openwrt的嵌入式linux系统(如pandorabox)————安装tcpdump————将抓包数据导入本地Wireshark中
+   - 电脑冒充路由器：ARP欺骗，局域网所有数据包发送到这台路由器
+   - 路由器和电脑连接同一个hub，运行抓包软件
+   - Cisco路由器：路由跟踪功能
+   - 主流路由器固件有 dd-wrt,tomato,openwrt三类。现在市场上的商用路由器，价格上远低于一台主机电脑，然后网络功能齐全，且带有大容量的硬盘，只要刷成openwrt之后，就可以拥有自己的私有的git服务器或者文件服务器了
+1. 数据抓取
+   - wifi密码破解：http://blog.csdn.net/zero9988/article/details/51866882
+     1. CDlinux.iso  ：一个Linux系统，集成了wifi密码的PIN码破解软件。
+     1. UltraISO：把CDlinux.iso写入U盘
+     1. grub4dos：取出其中的grldr、grub.exe、menu.lst三个文件
+     1. grubinst_gui2：U盘启动引导安装
+     1. BOOTICE：U盘启动引导安装
+   - Mac地址修改器：修改自己的MAC地址，防止被封
+   - ettercap 0.8.0 (ettercap-graphical) ： ARP欺骗工具
+   - wireshark：抓包工具
+   - driftnet：抓图片流工具
+#### 工具
+1. Burpsuite
+   - 认识：代理拦截器，常用攻击工具。针对包的拦截、修改。拦截——抓包——改包——重放
+   - 功能分析
+     1. proxy：设置代理参数，进行拦截、弃包、执行相关动作
+     1. repeater：重放，可修改包、发送包
+     1. intruder：爆破，配置参数，进行爆破
+1. Aircrack-ng
+   - 认识：网络的监视，测试，攻击和破解
+1. Nmap
+   - 认识：识别网络中的开放端口和漏洞、设备，`nmap -p1-1000 xx.com | grep filtered > 1000`
+1. Metasploit：漏洞利用
+1. Hashcat：开源密码破解工具
+1. JTR：密码破解和恢复工具
+1. WPScan：扫描WordPress
+1. Nessus：漏洞扫描
+1. MobSF：移动应用程序的安全评估
+1. 搜索黑语法：Google Hacking，即高级搜索，搜索引擎都支持
+   - 特性：过滤、精确、高级操作符、关键词顺序
+   - 操作
+     1. inurl：url中包含的字符串，
+     1. intitle：网页标题包含的字符串，`intitle:index.of “Apache/1.3.27 Server at”`
+     1. intext：网页正文包含的字符串
+   - 实践
+     1. 查询登录界面
+### 防御
+1. 网络防御
+   - 防火墙 Firewall：网络NAT、包过滤规则、端口映射
+   - 入侵检测 IDS
+   - 入侵防御 IPS：数据包进行检测（深度包检测 DPI）对蠕虫、病毒、木马、拒绝服务等攻击进行查杀，增加 IPS 特征库
+   - 统一威胁安全网关 (UTM)：同时具备防火墙、 防毒墙、入侵防护
+   - 上网行为管理
+   - 漏洞扫描
+   - 异常流量清洗
+   - 防止暴力破解
+     1. 添加验证码、token(后台发的token)
+        - 验证码：识别字符、识别特殊颜色、逻辑计算性、图像识别(如12306的)、手机验证码
+1. 审计范围
+   - 网络安全：行为审计、内容审计、行为报警、行为控制，提供完整的上网记录，便于信息追踪、系统安全管理和风险防范
+   - 日志
+   - 运维安全审计：堡垒机
+   - 数据库安全
+1. 工具
+   - 分析：火绒剑（行为分析）、IDA 7.6（反汇编）、Exeinfo PE（PE文件分析）
+   - 防御
+     1. libModSecurity：是入侵侦测与防护引擎，用于web服务器，可以为nginx配置WAF
+1. 部署方式
+   - 旁路部署：通过在核心交换机上设置镜像口，将镜像数据发送到审计设备
+#### 加密方式
 1. 认识
    - 没有绝对安全的加密，越复杂、越难破解的加密算法需要的计算时间也越长
 1. 摘要算法
@@ -237,25 +252,7 @@
    - RSA：非对称加密，分公钥和私钥，计算开销比aes大。ssh是先rsa加密，再aes加密传数据
    - DSA
    - ECDSA：椭圆曲线签名算法，使用的椭圆曲线是一个已经定义好的标准曲线secp256k1
-### 工具
-1. Burpsuite
-   - 认识：代理拦截器，常用攻击工具。针对包的拦截、修改。拦截——抓包——改包——重放
-   - 功能分析
-     1. proxy：设置代理参数，进行拦截、弃包、执行相关动作
-     1. repeater：重放，可修改包、发送包
-     1. intruder：爆破，配置参数，进行爆破
-1. SQLmap
-1. Aircrack-ng：网络的监视，测试，攻击和破解
-1. Wireshark
-1. Nmap：识别网络中的开放端口和漏洞、设备
-   - nmap -p1-1000 xx.com | grep filtered > 1000
-1. Metasploit：漏洞利用
-1. Hashcat：开源密码破解工具
-1. JTR：密码破解和恢复工具
-1. WPScan：扫描WordPress
-1. Nessus：漏洞扫描
-1. MobSF：移动应用程序的安全评估
-### wiki
+### 最佳实践
 1. 视频安全方案
    - 访问限制：黑白名单的方式
      1. Referer、User-Agent，安全性低，易伪造

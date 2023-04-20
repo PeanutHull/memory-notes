@@ -30,7 +30,7 @@
    - 复杂类型
      1. 数组：array
      1. 对象：object
-     1. 嵌套对象：nested：object
+     1. 嵌套对象：nested object
    - 地理位置
      1. geo_point：点
      1. geo_shape：形状
@@ -126,11 +126,11 @@
         - analysis-icu：中文排序
         - elasticsearch-analysis-ansj：中文分词
         - elasticsearch-ik：中文分词
-     1. 
+
      1. analysis-stconvert
      1. opack
      1. sql：org.elasticsearch.plugin.nlpcn.SqlPlug
-     1. 
+
      1. elasticsearch-head：web管理工具。粗线框为主分片，细的为备份分片
      1. elasticsearch-jdbc：mysql数据导入和计划任务，编写脚本即可实现
      1. logstash-input-jdbc：mysql数据同步更新，可做全量同步和增量同步，数据表中定义订阅的update_time字段即可，其他的可以订阅binlog
@@ -662,12 +662,11 @@
         }
         ```
 1. 关联关系处理
-   - 认识：object类型的一种，用于复杂类型对象数组的索引操作，允许对象数组以相互独立的方式进行索引。适用于字段值为复杂类型的关联关系查询等操作的情况，即字段值为非基本数据类型
-     1. 背景
-        - 因为es中当字段值为复杂数据类型(Object、Geo-Point)时，每个对象元素的属性值被扁平化存储在了数组中，此时已丢失了对应关系，因此无法保证搜索的准确
-        - 不擅长处理关联关系，因为倒排索引不能做动态数据联合
+   - 认识：属于object类型，允许复杂类型的对象数组以相互独立的方式进行索引，适用于字段值为复杂类型(非基本数据类型)的关联查询
+     1. es中当字段值为复杂数据类型时，每个对象元素的属性值被扁平化存储在了数组中，此时已丢失了对应关系，因此无法通过关系查询
+     1. es不擅长处理关联关系，因为倒排索引不能做动态数据联合
    - api
-     1. Nested Object：嵌套文档，独立存储，查询的时候可以横跨多个字段，获取每个array中符合的，普通的object array则不支持这么查，因为它必须在一个数组里
+     1. Nested Object：嵌套文档，独立存储，查询的时候可横跨多个字段，获取每个array中符合的，普通的object array不支持这么查，因为必须在一个数组里
         ```json
         // 创建
         type为nested
@@ -763,8 +762,8 @@
         - 为维护json关系，需要占用内存，读取时候在内存中做join性能差
         - 适用于子文档更新频繁
 1. reindex
-   - 认识：即重建数据，用于mapping设置变更，index设置变更(如分片数修改)，迁移数据。重建更更新数据版本号
-   - 方案：都是基于scroll，以后新增的、修改的无法感知，一般索引不变的时候才做重建操作
+   - 认识：重建数据，用于mapping变更，index设置变更(如分片数修改)，迁移数据。重建会更新数据版本号
+   - 方案：基于scroll，以后新增的、修改的无法感知，一般索引不变的时候才做重建操作
      1. _update_by_query：在现有索引上重建
         ```json
         // POST _update_by_query
@@ -773,7 +772,7 @@
                 "source": "如xx.xx++",                      // 更新字段值
                 "lang": "painless"
             },
-            "query": {}                                     // 可以更新部分文档
+            "query": {}                                     // 指定更新范围
         }
         ```
      1. _reindex：在其他索引上重建，允许将数据重建到其他索引上，也支持远程es集群
@@ -928,7 +927,7 @@
    - `wget github/elasticsearch-head && cd head`
    - `npm install`
    - `npm run start`
-   - `http.cors.enabled: true`，`http.cors.allow-origin: "*"`：最下边添加es配置，解决两个进程跨域问题，
+   - `http.cors.enabled: true`，`http.cors.allow-origin: "*"`：最下边添加es配置，解决两个进程跨域问题
 1. 集群配置
    - master
      1. `cluster.name: clusterName`
@@ -942,7 +941,7 @@
      1. `discovery.zen.ping.unicast.hosts: ["ip"]`：主节点ip
 1. 调试
    - 查看基础信息：`curl http://ip:9200`
-### 实践
+### 最佳实践
 1. 调优
     ```json
     GET index/_search?q=xx
@@ -1024,8 +1023,7 @@
         ```
      1. 副本设置为0，写入完毕再增加
 1. 读性能优化
-   - 没有万金油，实战出真知
-   - 兵来将挡，水来土掩
+   - 没有万金油，实战出真知：兵来将挡，水来土掩
    - 数据模型是否符合业务模型
      1. 因为script无法用到倒排索引，使用成本很大，需要计算的提前计算好写入字段中
    - 数据是否过大
@@ -1034,6 +1032,16 @@
      1. 尽量使用filter上下文，减少算分，同时有缓存机制，极大提高性能
      1. 尽量不使用script进行计算
      1. 结合profile、explain分析慢查询
+1. mapping设置
+   - 索引设置
+     1. 新建索引必须要有type（建议指定为mysql库名）和索引名index（建议指定为mysql表名）
+     1. shard分片数需要指定（建议设为机器数据节点的1.5~3倍，取8片），replication副本数需要指定（建议设为2）
+     1. 建议开启字段的store功能，方便搜索时返回字段值
+     1. 建议keyword类型的数据开启ignore_above模板
+     1. 建议关闭动态索引功能，防止脏数据破坏索引结构
+     1. 建议启动aliases别名模式。别名可以保证冷热数据的透明切换，别名的添加和删除只是操作了一个关系，不影响你的索引数据，可提高数据的健壮性
+   - 类型设置：![avatar](../images/mysql_to_es_type.png)
+### 成熟方案
 1. 马蜂窝binlog同步es实践
    - 方案
      1. go-mysql-elasticsearch开源组件，binlog转入kafka，然后入es
@@ -1064,15 +1072,6 @@
         - 业务变更，中间表也跟着变
         - 数据量越大，改表越困难
         - 业务方需要维护中间表
-1. mapping设置
-   - 索引设置
-     1. 新建索引必须要有type（建议指定为mysql库名）和索引名index（建议指定为mysql表名）
-     1. shard分片数需要指定（建议设为机器数据节点的1.5~3倍，取8片），replication副本数需要指定（建议设为2）
-     1. 建议开启字段的store功能，方便搜索时返回字段值
-     1. 建议keyword类型的数据开启ignore_above模板
-     1. 建议关闭动态索引功能，防止脏数据破坏索引结构
-     1. 建议启动aliases别名模式。别名可以保证冷热数据的透明切换，别名的添加和删除只是操作了一个关系，不影响你的索引数据，可提高数据的健壮性
-   - 类型设置：![avatar](../images/mysql_to_es_type.png)
 ### wiki
 1. 相关 
    - 默认端口：9200
