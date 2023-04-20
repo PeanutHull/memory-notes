@@ -221,6 +221,14 @@
    - sys
      1. 认识：数据来自performance，降低复杂度便于查看，5.7默认安装。字母开头给人看的，x$开头用于工具采集。可以统计哪个表/文件/账号/连接的次数最多/延迟多/内存占用多/线程多少/sql最多
 1. 表
+   - 认识
+     1. 32位最大表文件4GB，64的8TB
+     1. 表间关系：一对一、一对多、多对多
+   - 分类
+     1. 临时表：只有当前连接可见，关闭连接自动删除，如`create temporary table tableName ();`，show tables看不到该表
+        - 系统自动临时表：排序、分组操作中数量超过一定大小后，查询优化器建立的临时表
+     1. 派生表：是select返回的虚拟表，即from使用的独立子查询，可以和子查询互换使用。如`from(select * from table2)derivedTableName`
+     1. 公共表表达式：CTE，是一个命名的临时结果集，仅在单个SQL语句的执行范围内存在，比派生表更易读，性能更高
    - 行
      1. 单表最大值还受主键大小和磁盘大小限制，索引结构只是增加了io次数
    - 列属性
@@ -233,25 +241,9 @@
      1. foreign key：外键列，保证表之间数据完整性和准确性，体现表之间关系，可进行级联操作，由于对业务的强一致性要求，现在由程序控制，不使用外键关联
         - 基本形式：`constraint foreignKeyName foreign key(selfId) references foreignTable(foreignTableId)`
         - 级联限制：`constraint foreignKeyName foreign key(selfId) references foreignTable(foreignTableId) on delete/update cascade;`，删除被连接数据自己也被删除，连带删除
-   - 分类
-     1. 临时表：只有当前连接可见，关闭连接自动删除，如`create temporary table tableName ();`，show tables看不到该表
-        - 系统自动临时表：排序、分组操作中数量超过一定大小后，查询优化器建立的临时表
-     1. 派生表：是select返回的虚拟表，即from使用的独立子查询，可以和子查询互换使用。如`from(select * from table2)derivedTableName`
-     1. 公共表表达式：CTE，是一个命名的临时结果集，仅在单个SQL语句的执行范围内存在，比派生表更易读，性能更高
-   - 表间关系：一对一、一对多、多对多
    - 改变结构
-     1. 特性
-        - 支持在线DDL
-        - 字段类型、字段宽度都会锁表
-     1. 大表结构修改
-        - 步骤
-          1. 建立新表：修改后的结构
-          1. 老表数据导入新表，建立触发器同步修改到新表
-          1. 数据同步完成后，老表添加排它锁
-          1. 重命名老表和新表的名字：重命名之前不需要有锁，很短暂
-          1. 删除老表
-        - 工具
-          1. pt-online-schema-change：`pt-online-schema-change --alter="" --execute`
+     1. 支持在线DDL
+     1. 字段类型、字段宽度都会锁表
    - 字段
      1. default：默认值
         - text没有
@@ -744,7 +736,351 @@
     open num;
     close num;
     ```
-### 实践
+### 架构
+1. 主从
+   - 原理：主库将更改记录到二进制日志binlog，从库复制到中继日志，读取中继重新放到库中。是异步实时的
+     1. 计算主从的LSN，可得出时延
+     1. 使用Replication协议
+   - 作用
+     1. 负载均衡，降低压力：读写分离，采用数据库主从方式，多个从库分担读，主库负责写
+     1. 高可用，故障切换
+        - 对从进行快照保存，可以防止主drop database级的防御
+        - 对从设置read-only，防止误改
+        - 主从自动切换
+     1. 数据备份：异步实时备份，复制不能代替备份，因为执行删除命令同步的很快，这个时候只能依赖备份了
+   - 角色
+     1. 从库线程
+        - Slave_IO_Running：到主库取日志，放入relay log，是顺序写效率较高
+        - Slave_SQL_Running：解析relay log并执行，可能随机io成本较高；是单线程的，一个DDL等待之后的都延迟
+   - 步骤：![avatar](../images/mysql_slave_process.webp)
+     1. master记录到binlog
+     1. slave创建的io线程连接master，请求指定文件的指定位置之后的内容
+     1. master创建独立异步的log dump线程发送binlog
+        - 防止影响主库的更新
+        - 会消耗主库资源，占用带宽等
+     1. slave的io线程将接收的日志依次记录到relay log末尾中，将binlog日志名和位置记录到masterinfo中。防止影响从库的更新
+     1. slave的sql线程检测到relay log新增了内容，解析并执行
+   - 查看
+     1. `show master status;`
+     1. `show slave status;`
+   - 配置
+     1. 主
+        - bin_log=mysql-bin
+        - server_id=100
+     1. 从
+        - bin_log=mysql-bin
+        - server_id=101
+        - relay_log=mysql-relay-bin
+        - log_slave_update=on(可选，是否要当其他的主)
+        - read_only=on(建议)
+   - 场景
+     1. 从库延迟
+        - 认识：正常在毫秒级别，秒级就需告警了
+        - 一些原因
+          1. 一个事务主库执行n分钟，给到从库就会执行n分钟，这个事务导致从库延迟n分钟
+          1. 当主库的TPS并发较高，产生的DDL对relay log的回放超过从库sql线程所能承受的范围，延时就产生了
+          1. 从库的大型查询语句产生的锁等待
+        - 解决方案
+          1. 数据冗余，不要再查，直接传输所有数据
+          1. 使用Cache，但是更新怎么办，不行
+          1. 查主库
+1. 复制
+   - 复制方式
+     1. 异步：主库宕了没同步binlog丢失数据
+     1. 半同步：提交commit后等待至少有一个从库收到binlog并写入到中继日志中，再返回给客户端成功，可确保永远有两个节点拥有完整数据，降低了主库写效率，v5.5
+        - rpl_semi_sync_master_wait_for_slave_count：设置收到的从库数量才触发，v5.7
+     1. 组复制：MGR，MySQL Group Replication，基于paxos协议的状态机复制，需要通过一致性协议层的同意才能提交，大多数节点同意，v5.7
+        - 解决传统异步复制和半同步复制可能产生数据不一致的问题
+        - paxos作为分布式一致性算法被广泛使用
+        - 仅支持InnoDB表，并且每张表一定要有一个主键，用于做write set的冲突检测
+        - 必须打开GTID特性，二进制日志格式必须设置为ROW，用于选主与write set
+   - 复制方法
+     1. 基于日志点的复制
+        - 建立从账号：`grant replication slave on *.* to xx@ip段`
+        - 备份主库
+          1. 被备份表加锁：`mysqldump --master-data=2 --single-transaction`
+          1. 热备，InnoDB不加，其他的加，最好的方式：`xtrabackup --slave-info`
+        - scp传输sql文件
+        - 从导入基础数据
+        - 设置复制链路，包括binglog文件和日志点：`change master to master_host='', master_user='', master_password='', master_log_file='', master_log_pos='';`
+        - 启动复制：`start slave`
+     1. 基于GTID的复制
+        - 认识：从告诉主已经执行到的GTID值，主发送回没没执行的GTID值
+          1. 很方便进行故障转移
+          1. 从不会丢失主的修改：因为自动按照GTID识别同步
+        - 步骤
+          1. 主：`gtid_mode=on`、`enforce-gtid-consiste`、`log-slave-updates=on(5.6要求,5.7去掉了,会带来负担)`
+          1. 从：`gtid_mode=on`、`enforce-gtid-consistency`、`master_info_repository=tables(建议)`、`relay_log_info_repository=table(建议)`
+          1. 备份主库，类似以上
+          1. scp传输sql文件
+          1. 从导入基础数据
+          1. 设置复制链路，gtid方式：`change master to master_host='', master_user='', master_password='', master_auto_position=1;`
+          1. 启动复制：`start slave`
+   - 性能
+     1. 写入binlog的时间，事务太大，主从延迟严重
+     1. binlog传输时间，同机房部署、`binlog_row_image=minimal`
+     1. 从只有一个sql线程，主上的并发写，从变成串行，如大事务后边所有的修改都阻塞，5.7使用多线程复制
+        - `stop slave`
+        - `set global slave_parallel_type='logical_clock'`：使用逻辑时钟方式
+        - `set global slave_parallel_workers=4`：线程数
+        - `start slave`
+   - 常见问题
+     1. 解决方案
+        - 恢复复制
+        - 最终都要数据对比
+     1. 主从宕机
+        - 特点
+          1. 主宕机：主回滚事务，从拿不到
+          1.  从宕机：master_info没写入磁盘，造成重复获取主的二进制日志，基于日志点会出现主键重复、基于Statement出现重复更新
+        - 解决方案
+          1. 跳过二进制日志事件：日志点复制方式
+          1. 注入空事务先恢复中断复制链路：日志点或GTID方式
+     1. 数据损坏
+        - 特点
+          1. 主binlog损坏
+          1. 从relay_log损坏
+        - 解决方案
+          1. 通过change master重新指定
+     1. 从进行了数据修改：丢掉从的修改
+     1. 不唯一的server_id、server_uuid：从之间重复，数据相互拿的不对，甚至主从切换失败
+     1. max_allow_packet：不一致
+   - 无法解决的
+     1. 自动故障转移、主从切换
+     1. 读写分离
+1. 主主
+   - auto_increment_offset设置差1，auto_increment_increment设置为2：防止主键冲突
+   - log_slave_updates：两节点都要开启，就是反着搭建主备同步
+1. 网校架构
+   - 主要
+     1. 一主两从，读写分离
+     1. 版本5.7.24，启用GTID模式，启用半同步复制
+   - 功能划分
+     1. 主库功能（rw）：承载DDL、DML、查询操作，并且通过binlog将所有操作在从库上复现，从而实现主从数据一致
+     1. 线上从库功能（ro）：承载线上查询（select）操作，以减轻主库压力
+     1. 线下从库功能（ofl）：供数据部门（统计类型业务）、开发进行相关查询操作，以避免慢查询影响线上业务
+   - 主从切换机制：Arksentinel
+     1. Arksentinel中每个哨兵均每隔一段时间探测一次状态为“online”+“normal”的数据库实例，判断其是否存活或者正常服务，若不可访问/不可正常服务，则会连续探测多次；其中间隔时长和探测次数可由参数“ping间隔时间(ms)”和“ping次数”指定
+     1. 若某个哨兵连续探测次数达到参数“ping次数”之后节点仍未正常，则该哨兵标记该节点为“SDOWN”状态，此时会询问其他哨兵该节点状态。
+     1. 若其他哨兵中认为该节点状态为“SDOWN”的个数达到quorum（法定数量）后，则Arksentinel认为该节点实例为“ODOWN”状态，即哨兵集群认为该数据库节点已不可用，应当发起故障切换
+        - quorum法定数量是指N个节点中有N/2+1个，例如5个节点的quorum就是3，6个节点的quorum就是4；SDOWN是Subjective Down，某个哨兵主观认为节点宕机；ODOWN是Objective Down，客观事实该节点已经宕机可不服务。
+        - 此处系统还有一个特殊情况处理，若非所有哨兵均认为节点SDOWN，则会延迟后面的投票和选举等操作一段时间，这样是为了极大情况排除机房间断网或者网络闪断而发生切换的情况。
+     1. 哨兵内部会发起选举和投票，以选出一个Leader来执行数据库故障切换操作。
+        - 哨兵的每一次探测、选举和投票，均针对其内部的同一个epoch，即不会发生某个哨兵对上一轮的选举发起投票的情况。
+     1. Leader哨兵会根据用户自定义的故障转移方案完成整个高可用切换，包括MySQL集群关系重新建立、新Master/Write节点关闭read_only参数、VIP/DNS漂移等，并标记故障节点为“offline”+“problem”状态，即不再对外提供服务，需要用户在节点恢复后手动置为“online”状态。
+        - 对于主从复制架构来说，新Master会选取Retrive Binlog最大的节点，即从原Master上获得最多Binlog的节点，其上的Binlog才是相对最完整的。当然新Master/Write节点的选取，还会参照权重、机房和主从复制延迟多个维度，保障数据的完整性和一致性
+   - dbproxy扩容
+     1. 原理图：![avatar](../images/dbproxy_expansion.png)
+     1. 说明
+        - Step 1：业务方将App Server的Mysql请求迁移到Nginx四层代理，Nginx四层代理指向Mysql Proxy及后面的Mysql老集群
+        - Step 2：启动Mysql数据全量同步及增量同步，并始终开启新老两个集群的maxwell binlog抽取，分别写入kafka的不同topic
+        - Step 3：增量数据同步结束后，执行新老集群数据对比，确保两个集群数据一致
+        - Step 4：Nginx四层代理切换流量到新的Mysql Proxy
+     1. 一致性保证
+        - 原因：由于在Step 4的过程中，可能会出现以下两个数据来源的写入乱序，因此切流新Mysql Proxy前需要先关闭Kafka的Data Loader，而Kafka的Data Loader流量来源于业务方写入老的Mysql Proxy的流量，而这个binlog抽取可能会有延迟，该延迟理论值小于10ms（待观察），需流量低谷执行
+          1. Kafka数据抽取，通过Data Loader写入新的Mysql Proxy
+          1. 切流量后，业务方的请求写入新的Mysql Proxy
+        - 步骤
+          1. 停止老的Mysql Proxy流量
+          1. 等大概200ms时间
+          1. 关闭Kafka Consumer（Data Loader）
+          1. 将流量切到新的Mysql Proxy
+          1. 打开Kafka Consumer，观察是否还有遗漏的数据，并进行手动修复（极小概率发生）
+### 中间件
+1. 现有mysql的问题
+   - 无集群化的解决方案
+   - 无在线扩容方案，横向分片需要业务改造
+   - 网络模型限制了连接数
+   - 不支持跨机房部署、sql分发
+   - 不支持Paxos、Raft、Dynamo等一致性协议
+1. 认识
+   - 优点
+     1. 对前端透明
+     1. 自动故障转移(带事务重放)、主从切换、从节点选取
+     1. 集群健康度检查，包括复制链路
+     1. 读写分离、读负载均衡
+     1. 分库分表：垂直、水分拆分
+     1. 防火墙：sql审核、过滤、改写、容错、转换、慢指纹、错误sql指纹
+     1. 连接池
+     1. 配置热加载、ip白名单
+     1. 跨机房双活、多集群、多租户
+     1. 查询路由
+     1. 方便的运维方案：实例申请、建库表、慢查询统计、在线DDL
+   - 缺点
+     1. 增加中间层，执行效率降低，先进行基准测试
+     1. 需要控制是否读写分离
+1. 集群方案
+   - MMM
+     1. 认识：Master-Master replication managerfor Mysql Mysql主主复制管理器，perl实现的双主故障切换、管理的脚本程序
+        - 功能
+          1. 主主的管理、监控、故障迁移、主从备份、节点重新同步、宕机从自动剔除
+          1. 提供多个VIP，同一时间只有一个主可写
+        - 缺点
+          1. 性能没有提升，每个主都要写
+          1. 主从切换容易数据丢失：只做了切换，不会主动补齐丢失的数据
+          1. 无读负载均衡
+     1. 部署：三台服务器，两台配置主主复制，第三台作为从服务器的同时作为监控节点对主主复制进行监控
+   - MHA
+     1. 认识：Master High Availability 主高可用，完成主从架构下完成主从切换和从之间的选举，最大程度保证一致性，30s内完成切换，perl开发
+        - 主从切换
+        - 从之间的选举
+        - 最大程度保证一致性
+          1. 会保存主的binlog，如果主硬件、网络等无法访问，可能会丢失数据，可以结合v5.5半同步功能
+          1. 新主和其他从同步差异
+          1. 应用原主的binlog
+          1. 提升新主
+          1. 迁移其他从
+        - 支持GTID
+     1. 特点
+        - 缺少从的vip功能，也不能自动剔除宕机从
+        - 监控过程中不会管主从复制链路的健康度
+        - 需要打通ssh，存在安全隐患
+        - 无读负载均衡
+     1. 组成
+        - Manager
+        - Node：部署在每台实例上
+   - pxc
+     1. 认识：数据多向同步的同步复制的高可用性和扩展性的集群方案，基于Percona Server 
+        - 多主复制，任意节点写操作
+        - 故障切换、自动节点克隆
+     1. 原理
+        - 在所有集群节点都要提交
+     1. 注意
+        - 尽可能的控制PXC集群的规模，节点越多，数据同步速度越慢
+        - 所有PXC节点的硬件配置要一致，如果不一致，配置低的节点将拖慢数据同步速度
+        - 只支持InnoDB
+   - mysqlProxy
+     1. 认识：mysql官方，很久，实验项目
+   - Orchestrator：mySQL高可用性和复制拓扑管理工具，支持调整复制拓扑、自动故障转移、手动主从切换等，go写的，网校在用
+   - maxscale
+     1. 认识：支持高可用、负载均衡、扩展插件式的数据库中间件，mariaDB出品
+        - 主从复制状态监测，自动故障转移
+        - 读写分离、读负载均衡
+     1. 插件
+        - 认证
+        - 协议
+        - 路由
+        - 监控
+        - 过滤日志：简单防火墙，sql过滤和改写、容错、转换
+   - oneProxy
+     1. 认识：将一个表分片，数据写到两个实例中，也可以保持两个实例都有一个相同的表，貌似也停止维护
+   - mycat
+     1. 认识：开源分布式数据库中间件，13年阿里开源，java写的。支持读写分离、高可用(主没了选从)、拆分(垂直、水平)
+        - 高可用：采用去中心化的集群，在虚拟ip下，在不同的节点部署多个mycat，根据某种策略(ip选举策略)选举某一个为临时master，之间采用心跳机制进行通信维持故障切换。可使用zk、haproxy、keepalived等组件，可以有选举、心跳、切换ip等功能
+        - 功能复杂，细节还待改善
+   - proxySQL
+   - dbproxy：美团开源，Atlas基础上开发，17年停止维护
+   - wxproxy
+     1. 优势
+        - 分片功能实现横向扩容
+          1. 分片查询：Proxy根据SQL语句解析出AST，再根据AST里的WHERE条件判断是否满足id的查询条件，最后将SQL路由至该Shard
+        - proxy的仅有10%性能损失
+        - 监控体系：实现问题的发现、报警、追踪、排查、解除，提供web界面
+        - 双活机房部署支持，配置热加载，秒级主从机房切换
+     1. 功能
+        - 执行计划缓存
+        - 事务追踪
+        - 全局索引
+        - 分布式事务
+        - 平滑的扩容、缩容
+        - 注解路由：通过注释解析
+          1. 强制读主库
+          1. 强制路由到本地机房
+     1. 部署
+        - 前端Nginx+KeepAlived作四层负载均衡，dbproxy本身作为无状态服务，可以非常方便地横向扩容
+        - etcd作配置中心
+     1. 一致性支持：支持多种级别
+        - 弱一致：纯异步的复制机制，通过Maxwell异步复制Binlog支持
+        - 强一致：Proxy在执行SQL写入时，强制双写Local机房及Remote机房，确保两个机房都写成功后，返回客户端
+          1. 强一致场景仍然会有数据不一致风险，比如主机房写入成功，从机房写入失败，则在短暂时间内会有两个机房数据不一致的情况发生，后续可通过业务重试解决
+          1. 使用事务强一致可以避免数据不一致，跨库事务会有一定的开销但总体上不会太大
+        - 事务强一致：通过1PC Best Effort或2PC事务（需要Mysql调整隔离级别Serializable）确保本地机房和远端机房原子性写
+     1. SQL解析缓存
+        - Mysql Proxy在转发SQL请求时，会经历以下几个步骤：
+          1. Mysql协议解析
+          1. SQL解析：确定路由规则
+          1. 路由算法匹配
+          1. 通过连接池分发SQL到后端的Mysql实例
+        - 其中，步骤2耗时较长，因此，我们需要针对SQL解析后的AST增加缓存机制。具体做法是先将请求的SQL转化成SQL Statement（SQL指纹），屏蔽SQL中变量、大小写等
+        - 然后以SQL Statement为Key缓存解析后的AST。
+     1. Proxy高可用：在某个Proxy不可用时，由于Nginx本身有重试机制，当一个upstream中某个Backend无法响应时，Nginx会继续尝试下一个Backend。
+     1. 数据度量
+        - 单行查询的case，单核1W QPS
+        - 同机房部署比直连延迟额外增加在1ms以内
+        - 主从复制延迟
+          1. 同机房300us
+          1. 跨机房视专线网络RTT
+        - 连接数
+          1. 业务到Proxy：核数 * 5000
+          1. Proxy到Mysql：3000/数据库实例
+     1. 核心指标
+        - 服务器资源用量：CPU、RAM、网络带宽、磁盘占用
+        - 慢SQL
+        - 错误SQL
+        - SQL执行延迟
+        - 业务请求QPS
+        - 连接数
+   - gaea
+     1. 认识：定位轻量级, 高性能，小米开源
+   - cetus
+   - DataX：阿里巴巴开源的离线数据同步工具
+   - PMM：percona公司提供的MySQL和MongoDB的监控和管理平台
+   - amoeba
+   - atlas：360开源
+   - kingshard：个人的go开发，读写分离、分库分表、sql黑名单
+1. maxwell
+   - 认识：同步binlog以json写入到kafka、redis、es等流平台，用于ETL、缓存刷新、指标收集、增量到搜索引擎、数据分区迁移、切库binlog回滚等场景，java写的
+     1. 有过滤器功能
+     1. 优缺点
+        - 优点：业务解耦，准实时
+        - 缺点：只能单表操作，不适用于涉及到数据聚合的地方或者有父子关系的
+   - 原理：伪装为slave，接收binlog events，然后根据schemas信息拼装，可接受ddl、xid、row等各种event
+   - 使用
+     1. 流程
+        - mysql配置maxwell用户、给与权限
+        - 配置连接mysql信息
+        - 配置连接kafka信息，topic
+     1. maxwell-bootstrap：基于SELECT*FROM table帮助完成数据初始化
+     1. 特点
+        - timestamp column：对时间类型当字符串处理。所以更合理的做法是提供时区参数，然后maxwell自动处理时区问题
+        - binary column：做base64_encode，消费者需要解码
+   - 配置
+     1. mysql角色
+        - host：主机，建maxwell库表，存储捕获到的schema等信息
+        - replication_host：复制主机，Event监听，读取该主机binlog
+          1. 将host和replication_host分开，可以避免replication_user往生产库里写数据
+        - schema_host：schema主机，捕获表结构schema的主机
+          1. binlog没有字段信息，所以m需要从数据库查出schema，存起来
+     1. 过滤器
+        - --filter='exclude: foodb.*, include: foodb.tbl, include: foodb./table_\d+/'：# 仅匹配foodb数据库的tbl表和所有table_数字的表
+        - --filter = 'exclude: *.*, include: db1.*'：排除所有库所有表，仅匹配db1数据库
+        - --filter = 'exclude: db.tbl.col = reject'：排除含db.tbl.col列值为reject的所有更新
+        - --filter = 'exclude: *.*.col_a = *'：排除任何包含col_a列的更新
+        - --filter = 'blacklist: bad_db.*'：blacklist 黑名单，完全排除bad_db数据库，若要恢复，必须删除maxwel
+     1. 输出格式
+        - 是否包含 binlog position
+        - 是否包含 gtid position
+        - 是否包含 commit and xid
+   - 架构
+     1. 高可用
+        - 最小队列粒度也是表，根据数据量级分开
+        - 不直接支持ha，但支持断点还原
+        - 不支持控制数据速率
+        - 监控：baselogging mechanism,JMX,HTTP,bypush toDatadog
+        - 报警
+          1. 进程是否存在
+          1. 监控异常日志
+          1. 网络监控
+          1. 数据一致性：可手动修改position位置
+        - 主从切换：通过域名访问mysql，跟着切换走
+     1. 架构：跟着数据库在不同集群就行，关系就是和mysql、kafka
+   - 性能表现
+     1. qps 16w，单核2G，20%cpu，7%内存占用，带宽会很高
+   - 其他
+     1. canal Otter：分为服务端和客户端，需要自己编写客户端来消费服务端解析到的数据。性能稳定，功能强大，阿里。maxwell不用客户端了简单
+     1. mysql_streamer
+     1. datax
+     1. flink
+### 最佳实践
 #### 设计实践
 1. 范式
    - 认识：为了消除重复数据，更高一级的范式要求先满足下边的范式。涉及数据库理论研究
@@ -969,7 +1305,7 @@
         show profiles cpu for query N;
         ```
 #### 使用实践
-1. 一些场景
+1. 特定场景
    - 查询这个数据是否存在，存在则存到另一张表里：`create table temp as select * from admin a where exists (select uid from user u where a.userName = u.account);`
    - 查询两张表中是否有相同数据：`select * from admin where uid IN(select uid from temp);`
    - 求差集：`SELECT * FROM A LEFT JOIN B ON A.xx = B.xx WHERE B.id IS NULL union SELECT * FROM A RIGHT JOIN B ON A.xx = B.xx WHERE A.id IS NULL;`
@@ -1009,7 +1345,7 @@
         - 拿time_min在各个分库中比较，得出每个表的虚拟offset，相加从而得到time_min在全局的offset
         - 得到了time_min在全局的offset，自然得到了全局的offset X limit Y，要什么从后推着拿就行
 ### 运维
-#### 基本
+#### 基础
 1. 安装
    - 安装：`yum -y install mysql-server`
    - 设置字符集：`vim /etc/my.cnf` ([mysqld]下添加)
@@ -1038,6 +1374,16 @@
    - tcp/ip套接字：`mysql -h127.0.0.1`
    - 域套接字：`mysql -S /tmp/mysql.sock`
    - 命名管道、共享内存：通过配置开启
+#### 操作
+1. 大表结构修改
+   - 步骤
+     1. 建立新表：修改后的结构
+     1. 老表数据导入新表，建立触发器同步修改到新表
+     1. 数据同步完成后，老表添加排它锁
+     1. 重命名老表和新表的名字：重命名之前不需要有锁，很短暂
+     1. 删除老表
+   - 工具
+     1. pt-online-schema-change：`pt-online-schema-change --alter="" --execute`
 #### 性能和调优
 1. 性能表现
    - 4核8G的机器MySQL5.7大概支撑500的TPS和10000的QPS
@@ -1186,6 +1532,39 @@
         - noop：电梯式，实现了FIFO队列，像电梯的工作方式对io进行组织，新请求到来合并到最近的请求之后保证请求同一介质，倾向饿死读而利于写。对内存、嵌入式最合适
         - anticipatory：预料io调度式，本质和deadline一致，最后一次读后等待6ms才对其他io调度，每个6ms插入新io操作，合并为大写入流，用写入延时换取最大吞吐量，适合写入较多，如文件服务器，数据库性能会很差
         - deadline：截止时间式，确保一个可调整的截止时间内的请求，默认读期限小于写，防止了写因为不能被读取而饿死，是数据库类最好的选择
+1. 碎片整理
+   - 认识
+     1. 产生原因
+        - 删除数据时引起对应的二级索引值的随机的增删改会留下数据空洞，便于插入数据时使用，可能会一直存在，如text、varchar类型
+        - 随机写入（聚集索引非线性增加）会导致页分裂，页分裂导致页面的利用空间少于50%
+     1. 增加了存储，增加io负担降低扫描效率
+     1. 原理：将数据页紧密存储，自然就减少占用了
+   - 解决方案
+     1. 查看
+        - 看data_free
+        ```sql
+        SELECT CONCAT(TRUNCATE(SUM(data_length)/1024/1024,2),'MB') AS data_size,
+            CONCAT(TRUNCATE(SUM(max_data_length)/1024/1024,2),'MB') AS max_data_size,
+            CONCAT(TRUNCATE(SUM(data_free)/1024/1024,2),'MB') AS data_free,
+            CONCAT(TRUNCATE(SUM(index_length)/1024/1024,2),'MB') AS index_size
+        FROM information_schema.tables WHERE TABLE_NAME = 'datainfo';
+        ```
+        - 是否开启独享表空间：`show variables like 'innodb_file_per_table'`
+          1. 独享表空间的无法进行optimize操作，因为会重组索引并释放对应空间
+     1. 方法1：会锁表，比较慢一百万需要37秒。每月、每周一次就可以
+        - ALTER TABLE datainfo ENGINE=InnoDB;
+        - ANALYZE TABLE datainfo;
+        - optimize table datainfo;
+     1. 方法2：`alter table t1 engine = innodb;`，可以先看下data_free
+        - 遍历旧表主键索引的数据页，把数据页中的记录生成B+树结构，存储到磁盘上的临时文件中，数据页遍历完了之后，用临时文件替换掉旧表的数据文件。从MySQL5.6版本之后，这个操作是 Online DDL 的，需要扫描表数据文件对于大表非常耗时，如果是线上服务需要避开业务高峰期，小心操作
+     1. 方法3：建立按月的分区表，只需要创建一个中间普通表，在业务低峰期做两次分区交换，既可以删除无效数据，又能回收空，而且没有空间碎片，不会影响表上的索引及SQL的执行计划
+   - 数据的复用
+     1. 数据节点的复用
+     1. 数据页的复用
+   - 哪些操作会造成数据空洞
+     1. 删除数据
+     1. 插入数据
+     1. 更新数据
 #### 监控
 1. 监控
    - 性能测试：数据多才有参考价值，数据总量超过内存总量，如几百条数据第一条命令下去就全部加载到内存了，没有参考意义
@@ -1535,384 +1914,6 @@
                 Slave_IO_Running: Yes
                 Slave_SQL_Running: Yes
     ```
-#### 其他
-1. 碎片整理
-   - 认识
-     1. 产生原因
-        - 删除数据时引起对应的二级索引值的随机的增删改会留下数据空洞，便于插入数据时使用，可能会一直存在，如text、varchar类型
-        - 随机写入（聚集索引非线性增加）会导致页分裂，页分裂导致页面的利用空间少于50%
-     1. 增加了存储，增加io负担降低扫描效率
-     1. 原理：将数据页紧密存储，自然就减少占用了
-   - 解决方案
-     1. 查看
-        - 看data_free
-        ```sql
-        SELECT CONCAT(TRUNCATE(SUM(data_length)/1024/1024,2),'MB') AS data_size,
-            CONCAT(TRUNCATE(SUM(max_data_length)/1024/1024,2),'MB') AS max_data_size,
-            CONCAT(TRUNCATE(SUM(data_free)/1024/1024,2),'MB') AS data_free,
-            CONCAT(TRUNCATE(SUM(index_length)/1024/1024,2),'MB') AS index_size
-        FROM information_schema.tables WHERE TABLE_NAME = 'datainfo';
-        ```
-        - 是否开启独享表空间：`show variables like 'innodb_file_per_table'`
-          1. 独享表空间的无法进行optimize操作，因为会重组索引并释放对应空间
-     1. 方法1：会锁表，比较慢一百万需要37秒。每月、每周一次就可以
-        - ALTER TABLE datainfo ENGINE=InnoDB;
-        - ANALYZE TABLE datainfo;
-        - optimize table datainfo;
-     1. 方法2：`alter table t1 engine = innodb;`，可以先看下data_free
-        - 遍历旧表主键索引的数据页，把数据页中的记录生成B+树结构，存储到磁盘上的临时文件中，数据页遍历完了之后，用临时文件替换掉旧表的数据文件。从MySQL5.6版本之后，这个操作是 Online DDL 的，需要扫描表数据文件对于大表非常耗时，如果是线上服务需要避开业务高峰期，小心操作
-     1. 方法3：建立按月的分区表，只需要创建一个中间普通表，在业务低峰期做两次分区交换，既可以删除无效数据，又能回收空，而且没有空间碎片，不会影响表上的索引及SQL的执行计划
-   - 数据的复用
-     1. 数据节点的复用
-     1. 数据页的复用
-   - 哪些操作会造成数据空洞
-     1. 删除数据
-     1. 插入数据
-     1. 更新数据
-### 架构
-1. 主从
-   - 原理：主库将更改记录到二进制日志binlog，从库复制到中继日志，读取中继重新放到库中。是异步实时的
-     1. 计算主从的LSN，可得出时延
-     1. 使用Replication协议
-   - 作用
-     1. 负载均衡，降低压力：读写分离，采用数据库主从方式，多个从库分担读，主库负责写
-     1. 高可用，故障切换
-        - 对从进行快照保存，可以防止主drop database级的防御
-        - 对从设置read-only，防止误改
-        - 主从自动切换
-     1. 数据备份：异步实时备份，复制不能代替备份，因为执行删除命令同步的很快，这个时候只能依赖备份了
-   - 角色
-     1. 从库线程
-        - Slave_IO_Running：到主库取日志，放入relay log，是顺序写效率较高
-        - Slave_SQL_Running：解析relay log并执行，可能随机io成本较高；是单线程的，一个DDL等待之后的都延迟
-   - 步骤：![avatar](../images/mysql_slave_process.webp)
-     1. master记录到binlog
-     1. slave创建的io线程连接master，请求指定文件的指定位置之后的内容
-     1. master创建独立异步的log dump线程发送binlog
-        - 防止影响主库的更新
-        - 会消耗主库资源，占用带宽等
-     1. slave的io线程将接收的日志依次记录到relay log末尾中，将binlog日志名和位置记录到masterinfo中。防止影响从库的更新
-     1. slave的sql线程检测到relay log新增了内容，解析并执行
-   - 查看
-     1. `show master status;`
-     1. `show slave status;`
-   - 配置
-     1. 主
-        - bin_log=mysql-bin
-        - server_id=100
-     1. 从
-        - bin_log=mysql-bin
-        - server_id=101
-        - relay_log=mysql-relay-bin
-        - log_slave_update=on(可选，是否要当其他的主)
-        - read_only=on(建议)
-   - 场景
-     1. 从库延迟
-        - 认识：正常在毫秒级别，秒级就需告警了
-        - 一些原因
-          1. 一个事务主库执行n分钟，给到从库就会执行n分钟，这个事务导致从库延迟n分钟
-          1. 当主库的TPS并发较高，产生的DDL对relay log的回放超过从库sql线程所能承受的范围，延时就产生了
-          1. 从库的大型查询语句产生的锁等待
-        - 解决方案
-          1. 数据冗余，不要再查，直接传输所有数据
-          1. 使用Cache，但是更新怎么办，不行
-          1. 查主库
-1. 复制
-   - 复制方式
-     1. 异步：主库宕了没同步binlog丢失数据
-     1. 半同步：提交commit后等待至少有一个从库收到binlog并写入到中继日志中，再返回给客户端成功，可确保永远有两个节点拥有完整数据，降低了主库写效率，v5.5
-        - rpl_semi_sync_master_wait_for_slave_count：设置收到的从库数量才触发，v5.7
-     1. 组复制：MGR，MySQL Group Replication，基于paxos协议的状态机复制，需要通过一致性协议层的同意才能提交，大多数节点同意，v5.7
-        - 解决传统异步复制和半同步复制可能产生数据不一致的问题
-        - paxos作为分布式一致性算法被广泛使用
-        - 仅支持InnoDB表，并且每张表一定要有一个主键，用于做write set的冲突检测
-        - 必须打开GTID特性，二进制日志格式必须设置为ROW，用于选主与write set
-   - 复制方法
-     1. 基于日志点的复制
-        - 建立从账号：`grant replication slave on *.* to xx@ip段`
-        - 备份主库
-          1. 被备份表加锁：`mysqldump --master-data=2 --single-transaction`
-          1. 热备，InnoDB不加，其他的加，最好的方式：`xtrabackup --slave-info`
-        - scp传输sql文件
-        - 从导入基础数据
-        - 设置复制链路，包括binglog文件和日志点：`change master to master_host='', master_user='', master_password='', master_log_file='', master_log_pos='';`
-        - 启动复制：`start slave`
-     1. 基于GTID的复制
-        - 认识：从告诉主已经执行到的GTID值，主发送回没没执行的GTID值
-          1. 很方便进行故障转移
-          1. 从不会丢失主的修改：因为自动按照GTID识别同步
-        - 步骤
-          1. 主：`gtid_mode=on`、`enforce-gtid-consiste`、`log-slave-updates=on(5.6要求,5.7去掉了,会带来负担)`
-          1. 从：`gtid_mode=on`、`enforce-gtid-consistency`、`master_info_repository=tables(建议)`、`relay_log_info_repository=table(建议)`
-          1. 备份主库，类似以上
-          1. scp传输sql文件
-          1. 从导入基础数据
-          1. 设置复制链路，gtid方式：`change master to master_host='', master_user='', master_password='', master_auto_position=1;`
-          1. 启动复制：`start slave`
-   - 性能
-     1. 写入binlog的时间，事务太大，主从延迟严重
-     1. binlog传输时间，同机房部署、`binlog_row_image=minimal`
-     1. 从只有一个sql线程，主上的并发写，从变成串行，如大事务后边所有的修改都阻塞，5.7使用多线程复制
-        - `stop slave`
-        - `set global slave_parallel_type='logical_clock'`：使用逻辑时钟方式
-        - `set global slave_parallel_workers=4`：线程数
-        - `start slave`
-   - 常见问题
-     1. 解决方案
-        - 恢复复制
-        - 最终都要数据对比
-     1. 主从宕机
-        - 特点
-          1. 主宕机：主回滚事务，从拿不到
-          1.  从宕机：master_info没写入磁盘，造成重复获取主的二进制日志，基于日志点会出现主键重复、基于Statement出现重复更新
-        - 解决方案
-          1. 跳过二进制日志事件：日志点复制方式
-          1. 注入空事务先恢复中断复制链路：日志点或GTID方式
-     1. 数据损坏
-        - 特点
-          1. 主binlog损坏
-          1. 从relay_log损坏
-        - 解决方案
-          1. 通过change master重新指定
-     1. 从进行了数据修改：丢掉从的修改
-     1. 不唯一的server_id、server_uuid：从之间重复，数据相互拿的不对，甚至主从切换失败
-     1. max_allow_packet：不一致
-   - 无法解决的
-     1. 自动故障转移、主从切换
-     1. 读写分离
-1. 主主
-   - auto_increment_offset设置差1，auto_increment_increment设置为2：防止主键冲突
-   - log_slave_updates：两节点都要开启，就是反着搭建主备同步
-1. 网校架构
-   - 主要
-     1. 一主两从，读写分离
-     1. 版本5.7.24，启用GTID模式，启用半同步复制
-   - 功能划分
-     1. 主库功能（rw）：承载DDL、DML、查询操作，并且通过binlog将所有操作在从库上复现，从而实现主从数据一致
-     1. 线上从库功能（ro）：承载线上查询（select）操作，以减轻主库压力
-     1. 线下从库功能（ofl）：供数据部门（统计类型业务）、开发进行相关查询操作，以避免慢查询影响线上业务
-   - 主从切换机制：Arksentinel
-     1. Arksentinel中每个哨兵均每隔一段时间探测一次状态为“online”+“normal”的数据库实例，判断其是否存活或者正常服务，若不可访问/不可正常服务，则会连续探测多次；其中间隔时长和探测次数可由参数“ping间隔时间(ms)”和“ping次数”指定
-     1. 若某个哨兵连续探测次数达到参数“ping次数”之后节点仍未正常，则该哨兵标记该节点为“SDOWN”状态，此时会询问其他哨兵该节点状态。
-     1. 若其他哨兵中认为该节点状态为“SDOWN”的个数达到quorum（法定数量）后，则Arksentinel认为该节点实例为“ODOWN”状态，即哨兵集群认为该数据库节点已不可用，应当发起故障切换
-        - quorum法定数量是指N个节点中有N/2+1个，例如5个节点的quorum就是3，6个节点的quorum就是4；SDOWN是Subjective Down，某个哨兵主观认为节点宕机；ODOWN是Objective Down，客观事实该节点已经宕机可不服务。
-        - 此处系统还有一个特殊情况处理，若非所有哨兵均认为节点SDOWN，则会延迟后面的投票和选举等操作一段时间，这样是为了极大情况排除机房间断网或者网络闪断而发生切换的情况。
-     1. 哨兵内部会发起选举和投票，以选出一个Leader来执行数据库故障切换操作。
-        - 哨兵的每一次探测、选举和投票，均针对其内部的同一个epoch，即不会发生某个哨兵对上一轮的选举发起投票的情况。
-     1. Leader哨兵会根据用户自定义的故障转移方案完成整个高可用切换，包括MySQL集群关系重新建立、新Master/Write节点关闭read_only参数、VIP/DNS漂移等，并标记故障节点为“offline”+“problem”状态，即不再对外提供服务，需要用户在节点恢复后手动置为“online”状态。
-        - 对于主从复制架构来说，新Master会选取Retrive Binlog最大的节点，即从原Master上获得最多Binlog的节点，其上的Binlog才是相对最完整的。当然新Master/Write节点的选取，还会参照权重、机房和主从复制延迟多个维度，保障数据的完整性和一致性
-   - dbproxy扩容
-     1. 原理图：![avatar](../images/dbproxy_expansion.png)
-     1. 说明
-        - Step 1：业务方将App Server的Mysql请求迁移到Nginx四层代理，Nginx四层代理指向Mysql Proxy及后面的Mysql老集群
-        - Step 2：启动Mysql数据全量同步及增量同步，并始终开启新老两个集群的maxwell binlog抽取，分别写入kafka的不同topic
-        - Step 3：增量数据同步结束后，执行新老集群数据对比，确保两个集群数据一致
-        - Step 4：Nginx四层代理切换流量到新的Mysql Proxy
-     1. 一致性保证
-        - 原因：由于在Step 4的过程中，可能会出现以下两个数据来源的写入乱序，因此切流新Mysql Proxy前需要先关闭Kafka的Data Loader，而Kafka的Data Loader流量来源于业务方写入老的Mysql Proxy的流量，而这个binlog抽取可能会有延迟，该延迟理论值小于10ms（待观察），需流量低谷执行
-          1. Kafka数据抽取，通过Data Loader写入新的Mysql Proxy
-          1. 切流量后，业务方的请求写入新的Mysql Proxy
-        - 步骤
-          1. 停止老的Mysql Proxy流量
-          1. 等大概200ms时间
-          1. 关闭Kafka Consumer（Data Loader）
-          1. 将流量切到新的Mysql Proxy
-          1. 打开Kafka Consumer，观察是否还有遗漏的数据，并进行手动修复（极小概率发生）
-### 中间件
-1. 现有mysql的问题
-   - 无集群化的解决方案
-   - 无在线扩容方案，横向分片需要业务改造
-   - 网络模型限制了连接数
-   - 不支持跨机房部署、sql分发
-   - 不支持Paxos、Raft、Dynamo等一致性协议
-1. 认识
-   - 优点
-     1. 对前端透明
-     1. 自动故障转移(带事务重放)、主从切换、从节点选取
-     1. 集群健康度检查，包括复制链路
-     1. 读写分离、读负载均衡
-     1. 分库分表：垂直、水分拆分
-     1. 防火墙：sql审核、过滤、改写、容错、转换、慢指纹、错误sql指纹
-     1. 连接池
-     1. 配置热加载、ip白名单
-     1. 跨机房双活、多集群、多租户
-     1. 查询路由
-     1. 方便的运维方案：实例申请、建库表、慢查询统计、在线DDL
-   - 缺点
-     1. 增加中间层，执行效率降低，先进行基准测试
-     1. 需要控制是否读写分离
-1. 集群方案
-   - MMM
-     1. 认识：Master-Master replication managerfor Mysql Mysql主主复制管理器，perl实现的双主故障切换、管理的脚本程序
-        - 功能
-          1. 主主的管理、监控、故障迁移、主从备份、节点重新同步、宕机从自动剔除
-          1. 提供多个VIP，同一时间只有一个主可写
-        - 缺点
-          1. 性能没有提升，每个主都要写
-          1. 主从切换容易数据丢失：只做了切换，不会主动补齐丢失的数据
-          1. 无读负载均衡
-     1. 部署：三台服务器，两台配置主主复制，第三台作为从服务器的同时作为监控节点对主主复制进行监控
-   - MHA
-     1. 认识：Master High Availability 主高可用，完成主从架构下完成主从切换和从之间的选举，最大程度保证一致性，30s内完成切换，perl开发
-        - 主从切换
-        - 从之间的选举
-        - 最大程度保证一致性
-          1. 会保存主的binlog，如果主硬件、网络等无法访问，可能会丢失数据，可以结合v5.5半同步功能
-          1. 新主和其他从同步差异
-          1. 应用原主的binlog
-          1. 提升新主
-          1. 迁移其他从
-        - 支持GTID
-     1. 特点
-        - 缺少从的vip功能，也不能自动剔除宕机从
-        - 监控过程中不会管主从复制链路的健康度
-        - 需要打通ssh，存在安全隐患
-        - 无读负载均衡
-     1. 组成
-        - Manager
-        - Node：部署在每台实例上
-   - pxc
-     1. 认识：数据多向同步的同步复制的高可用性和扩展性的集群方案，基于Percona Server 
-        - 多主复制，任意节点写操作
-        - 故障切换、自动节点克隆
-     1. 原理
-        - 在所有集群节点都要提交
-     1. 注意
-        - 尽可能的控制PXC集群的规模，节点越多，数据同步速度越慢
-        - 所有PXC节点的硬件配置要一致，如果不一致，配置低的节点将拖慢数据同步速度
-        - 只支持InnoDB
-   - mysqlProxy
-     1. 认识：mysql官方，很久，实验项目
-   - Orchestrator：mySQL高可用性和复制拓扑管理工具，支持调整复制拓扑、自动故障转移、手动主从切换等，go写的，网校在用
-   - maxscale
-     1. 认识：支持高可用、负载均衡、扩展插件式的数据库中间件，mariaDB出品
-        - 主从复制状态监测，自动故障转移
-        - 读写分离、读负载均衡
-     1. 插件
-        - 认证
-        - 协议
-        - 路由
-        - 监控
-        - 过滤日志：简单防火墙，sql过滤和改写、容错、转换
-   - oneProxy
-     1. 认识：将一个表分片，数据写到两个实例中，也可以保持两个实例都有一个相同的表，貌似也停止维护
-   - mycat
-     1. 认识：开源分布式数据库中间件，13年阿里开源，java写的。支持读写分离、高可用(主没了选从)、拆分(垂直、水平)
-        - 高可用：采用去中心化的集群，在虚拟ip下，在不同的节点部署多个mycat，根据某种策略(ip选举策略)选举某一个为临时master，之间采用心跳机制进行通信维持故障切换。可使用zk、haproxy、keepalived等组件，可以有选举、心跳、切换ip等功能
-        - 功能复杂，细节还待改善
-   - proxySQL
-   - dbproxy：美团开源，Atlas基础上开发，17年停止维护
-   - wxproxy
-     1. 优势
-        - 分片功能实现横向扩容
-          1. 分片查询：Proxy根据SQL语句解析出AST，再根据AST里的WHERE条件判断是否满足id的查询条件，最后将SQL路由至该Shard
-        - proxy的仅有10%性能损失
-        - 监控体系：实现问题的发现、报警、追踪、排查、解除，提供web界面
-        - 双活机房部署支持，配置热加载，秒级主从机房切换
-     1. 功能
-        - 执行计划缓存
-        - 事务追踪
-        - 全局索引
-        - 分布式事务
-        - 平滑的扩容、缩容
-        - 注解路由：通过注释解析
-          1. 强制读主库
-          1. 强制路由到本地机房
-     1. 部署
-        - 前端Nginx+KeepAlived作四层负载均衡，dbproxy本身作为无状态服务，可以非常方便地横向扩容
-        - etcd作配置中心
-     1. 一致性支持：支持多种级别
-        - 弱一致：纯异步的复制机制，通过Maxwell异步复制Binlog支持
-        - 强一致：Proxy在执行SQL写入时，强制双写Local机房及Remote机房，确保两个机房都写成功后，返回客户端
-          1. 强一致场景仍然会有数据不一致风险，比如主机房写入成功，从机房写入失败，则在短暂时间内会有两个机房数据不一致的情况发生，后续可通过业务重试解决
-          1. 使用事务强一致可以避免数据不一致，跨库事务会有一定的开销但总体上不会太大
-        - 事务强一致：通过1PC Best Effort或2PC事务（需要Mysql调整隔离级别Serializable）确保本地机房和远端机房原子性写
-     1. SQL解析缓存
-        - Mysql Proxy在转发SQL请求时，会经历以下几个步骤：
-          1. Mysql协议解析
-          1. SQL解析：确定路由规则
-          1. 路由算法匹配
-          1. 通过连接池分发SQL到后端的Mysql实例
-        - 其中，步骤2耗时较长，因此，我们需要针对SQL解析后的AST增加缓存机制。具体做法是先将请求的SQL转化成SQL Statement（SQL指纹），屏蔽SQL中变量、大小写等
-        - 然后以SQL Statement为Key缓存解析后的AST。
-     1. Proxy高可用：在某个Proxy不可用时，由于Nginx本身有重试机制，当一个upstream中某个Backend无法响应时，Nginx会继续尝试下一个Backend。
-     1. 数据度量
-        - 单行查询的case，单核1W QPS
-        - 同机房部署比直连延迟额外增加在1ms以内
-        - 主从复制延迟
-          1. 同机房300us
-          1. 跨机房视专线网络RTT
-        - 连接数
-          1. 业务到Proxy：核数 * 5000
-          1. Proxy到Mysql：3000/数据库实例
-     1. 核心指标
-        - 服务器资源用量：CPU、RAM、网络带宽、磁盘占用
-        - 慢SQL
-        - 错误SQL
-        - SQL执行延迟
-        - 业务请求QPS
-        - 连接数
-   - gaea
-     1. 认识：定位轻量级, 高性能，小米开源
-   - cetus
-   - DataX：阿里巴巴开源的离线数据同步工具
-   - PMM：percona公司提供的MySQL和MongoDB的监控和管理平台
-   - amoeba
-   - atlas：360开源
-   - kingshard：个人的go开发，读写分离、分库分表、sql黑名单
-1. maxwell
-   - 认识：同步binlog以json写入到kafka、redis、es等流平台，用于ETL、缓存刷新、指标收集、增量到搜索引擎、数据分区迁移、切库binlog回滚等场景，java写的
-     1. 有过滤器功能
-     1. 优缺点
-        - 优点：业务解耦，准实时
-        - 缺点：只能单表操作，不适用于涉及到数据聚合的地方或者有父子关系的
-   - 原理：伪装为slave，接收binlog events，然后根据schemas信息拼装，可接受ddl、xid、row等各种event
-   - 使用
-     1. 流程
-        - mysql配置maxwell用户、给与权限
-        - 配置连接mysql信息
-        - 配置连接kafka信息，topic
-     1. maxwell-bootstrap：基于SELECT*FROM table帮助完成数据初始化
-     1. 特点
-        - timestamp column：对时间类型当字符串处理。所以更合理的做法是提供时区参数，然后maxwell自动处理时区问题
-        - binary column：做base64_encode，消费者需要解码
-   - 配置
-     1. mysql角色
-        - host：主机，建maxwell库表，存储捕获到的schema等信息
-        - replication_host：复制主机，Event监听，读取该主机binlog
-          1. 将host和replication_host分开，可以避免replication_user往生产库里写数据
-        - schema_host：schema主机，捕获表结构schema的主机
-          1. binlog没有字段信息，所以m需要从数据库查出schema，存起来
-     1. 过滤器
-        - --filter='exclude: foodb.*, include: foodb.tbl, include: foodb./table_\d+/'：# 仅匹配foodb数据库的tbl表和所有table_数字的表
-        - --filter = 'exclude: *.*, include: db1.*'：排除所有库所有表，仅匹配db1数据库
-        - --filter = 'exclude: db.tbl.col = reject'：排除含db.tbl.col列值为reject的所有更新
-        - --filter = 'exclude: *.*.col_a = *'：排除任何包含col_a列的更新
-        - --filter = 'blacklist: bad_db.*'：blacklist 黑名单，完全排除bad_db数据库，若要恢复，必须删除maxwel
-     1. 输出格式
-        - 是否包含 binlog position
-        - 是否包含 gtid position
-        - 是否包含 commit and xid
-   - 架构
-     1. 高可用
-        - 最小队列粒度也是表，根据数据量级分开
-        - 不直接支持ha，但支持断点还原
-        - 不支持控制数据速率
-        - 监控：baselogging mechanism,JMX,HTTP,bypush toDatadog
-        - 报警
-          1. 进程是否存在
-          1. 监控异常日志
-          1. 网络监控
-          1. 数据一致性：可手动修改position位置
-        - 主从切换：通过域名访问mysql，跟着切换走
-     1. 架构：跟着数据库在不同集群就行，关系就是和mysql、kafka
-   - 性能表现
-     1. qps 16w，单核2G，20%cpu，7%内存占用，带宽会很高
-   - 其他
-     1. canal Otter：分为服务端和客户端，需要自己编写客户端来消费服务端解析到的数据。性能稳定，功能强大，阿里。maxwell不用客户端了简单
-     1. mysql_streamer
-     1. datax
-     1. flink
 ### wiki
 1. 路线
    - 路线：基础知识(操作/配置)——优化方式、方法、注意点——各种技术方案——原理
@@ -1920,7 +1921,7 @@
 1. 相关
    - 数据库：文件中读写数据不方便、速度慢，按照数据结构来组织、存储和管理数据的仓库，提供API进行数据操作
    - 关系型数据库：建立在关系模型基础上，由行、表、库等组成
-   - MySQL：瑞典的属于Oracle公司的开源数据库，使用标准sql语句，支持多客户端语言如c、php等，32位最大表文件4GB，64的8TB
+   - MySQL：瑞典的属于Oracle公司的开源数据库，使用标准sql语句，支持多客户端语言如c、php等，
 1. 其他
    - 严格模式
    - NULL与任何其它值的比较永远返回false，即使NULL=NULL也返回false

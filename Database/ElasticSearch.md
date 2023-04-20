@@ -1043,14 +1043,13 @@
    - 类型设置：![avatar](../images/mysql_to_es_type.png)
 ### 成熟方案
 1. 马蜂窝binlog同步es实践
-   - 方案
-     1. go-mysql-elasticsearch开源组件，binlog转入kafka，然后入es
+   - 方案：go-mysql-elasticsearch开源组件，binlog转入kafka，然后入es
    - 细节
      1. 数据同步正确性保证
-        - 顺序性：把每条 Binlog 按照其 Primary Key，Hash 到各个 Partition 上，保证同一条 MySQL 记录的所有 Binlog 数据都发送到同一个 Partition
-          1. 多 Consumer 的情况，一个 Partition 只会分配给一个 Consumer
+        - 顺序性：把每条Binlog按照其PrimaryKey，Hash到各个Partition上，保证同一条MySQL记录的所有Binlog数据都发送到同一个Partition
+          1. 多Consumer的情况，一个Partition只会分配给一个Consumer
      1. 完整性
-        - 利用 Kafka 的 Offset 机制：确认一条 Message 数据成功写入 Elasticsearch 后，才 Commit 该条 Message 的 Offset
+        - 利用Kafka的Offset机制：确认一条Message数据成功写入Elasticsearch后，才Commit该条Message的Offset
      1. es写入
         - 放入slice每200ms或长度达到一定时调用_bulk
    - 组成
@@ -1173,7 +1172,13 @@
    - Graylog：开源的日志聚合、分析、审计、展现和预警工具。功能和ELK类似，但又比ELK要简单，依靠着更加简洁，高效，部署使用简单的优势很快受到许多人的青睐
 1. 问题
    - conflicts=proceed？
-### deep wiki
+### deep
+1. Lucene：被认为是最好的搜索引擎
+   - index：倒排索引，多个segment信息用于同时查，commit point记录多个segment信息，为了提高查询实时性
+     1. segment：单个倒排索引
+        - segment merge：由于segment增多会导致查询变慢，es会定时在后台进行merge操作，有force_merge api
+   - 删除文档：segment生成后不能修改，所以维护.del文件记录已删除的文档，记录的是lucene内部的id，查询返回前过滤掉.del的文档
+   - 更新文档：先删除，再新增
 1. 搜索引擎
    - 认识：先分词，通过倒排索引获取文档id，再用正排索引获取完整内容
    - 索引类型
@@ -1268,13 +1273,6 @@
         - 多看文档
         - 将mapping进行版本管理，添加好注释，可以加个metadata，维护一些文档相关的元数据，方便数据管理，加版本字段可区分老的数据文档
         - 防止字段过多，设置dynamic为true，可拆分多个索引
-1. Lucene：被认为是最好的搜索引擎
-   - index：倒排索引，多个segment信息用于同时查，commit point记录多个segment信息，为了提高查询实时性
-     1. segment：单个倒排索引
-        - segment merge：由于segment增多会导致查询变慢，es会定时在后台进行merge操作，有force_merge api
-   - 删除文档：segment生成后不能修改，所以维护.del文件记录已删除的文档，记录的是lucene内部的id，查询返回前过滤掉.del的文档
-   - 更新文档：先删除，再新增
-### deep
 1. 查询
    - 认识：类似mapreduce，分开聚合
    - 搜索方式

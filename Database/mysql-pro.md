@@ -27,27 +27,6 @@
      1. .myd、.myi：MyISAM数据文件、索引文件
      1. .ibd：InnoDB文件，索引和数据在一起
      1. .index、.0001：binlog文件
-1. 数据更新流程
-   - 认识：流程和wal一致，![avatar](../images/mysql-update.jpeg)
-     1. 读写数据：缓存提高效率
-        - 脏页：缓存中的数据发生变更的内存页
-        - 刷脏页：数据发生变更的缓存刷到磁盘中
-     1. mysql宕机：缓存中数据来不及刷盘，数据丢失，需要用日志恢复
-     1. 磁盘特点：写入系统文件缓存page cache，并没有持久化，非常快，和写内存差不多(本质就是写内存)。一般fsync才占用iops
-     1. 两阶段提交：平衡各方都完成
-     1. 正常数据落盘和redo没有关系，脏页到ibdata
-     1. 事务回滚：redo中commit的发现LSN落后的就重放刷盘，没commit的判断binlog是否完整来重新commit或者回滚
-   - 重启操作
-     1. 数据页中的LSN小于redo log的LSN，说明redo log上记录着数据页没完成的操作，就会从最近的一个check point出发，开始重放刷盘
-     1. 数据库重启先进行crash recovery保证crash-safe，binlog和redolog通过事件xid关联，保证数据一致性
-   - 双一问题：可以主双一，从非双一，提高性能
-     1. sync_binlog不为1，服务器宕机会丢失binlog
-     1. innodb_flush_log_at_trx_commit为1
-        - 可以在redo commit时不进行fsync，就无法保证一致性，但是提高了效率
-        - innodb_support_xa不为1，redo没commit重启后要回滚，但是binlog记录了，造成问题
-   - 数据丢失场景
-     1. mysql宕机：写入了文件缓存就丢不了
-     1. 服务器宕机：没有设置双一，就可能丢
 1. sql执行流程
    - 发送sql到服务器
    - 检查查询缓存是否命中该sql：需要sql一模一样，写频繁会降低查询效率，应该关掉
@@ -72,96 +51,73 @@
         - 对in()优化：先排序再二分查找，比其他等价为多个or的更快
    - 调用存储引擎api执行
    - 返回结果
-### 日志
-1. 日志
+### 索引
+1. BTree
+   - 认识：Balance tree，平衡树。io通过二分查找一级级查向叶子节点，叶子都是有序的
+     1. 对一个索引字段进行检索，采用普通索引还是唯一索引在检索效率上基本上没有差别。因为只是加了约束，整页在内存中判断时cpu的时间可以忽略不记
    - 分类
-     1. error log：错误日志，启动、运行、停止遇到的问题，平时要关注，并进行数据库优化
-     1. general log：通用查询日志，客户端连接和执行的语句
-     1. bin log：二进制日志，记录所有更改数据的语句，可用于复制，事务提交前只写一次
-     1. slow log：慢查询日志，执行时间超过long_query_time的查询或不使用索引的查询
-     1. relay log：中继日志，从接收的主的日志
-     1. 引擎日志
-1. binlog
-   - 认识：记录所有除查询的DDL和DML语句，以事件形式记录的事务安全型的二进制文件集合，包含执行的时间
-     1. 具体的写入时间：配置控制是否执行fsync，只写入了缓存
-     1. 会重写密码，不以纯文本展示；8可以进行加密
-     1. 生成新的日志文件的情况：重启时、执行`flush logs`、大小超过`max_binlog_size`
-     1. 开启1%的性能开销
-   - 用途
-     1. 主从复制：传输binlog
-     1. 数据恢复：使用mysqlbinlog工具，可进行任意时间点恢复
-     1. 增量备份
-     1. 审计：是否有攻击
-   - 组成
-     1. xx.index：索引文件，存储产生的二进制日志序号
-     1. xx.0001
-        - 格式
-          1. Statement：基于sql和上下文环境，不记录每行变化
-             - 减少了日志量节约了io，尤其是修改量大的场景
-             - 主从版本可以不一样，从可以更高
-          1. Row：只记录行的修改点，5.7.7及以上默认，会一步步的优化的更好，主流使用，之前是Statement。最好同时设置`binlog_row_image=minimal`
-             - 避免了存储过程/function/trigger的调用和触发无法被正确复制的问题
-             - 加快从库重放日志的效率
-             - 日志量大，`alter tableh`每条都会记录，新版优化了
-          1. MIXED：混合模式，系统选择，一般用statment，无法完成主从复制的操作用row
-        - 事件类型：QUERY_EVENT、STOP_EVENT等
-   - 格式对复制的影响
-     1. Statement
-        - 为slave正确运行而记录相关信息，但uuid()等非确定性函数还是无法复制导致主从不一致
-        - 日志量较row小
-        - 需要更多的行锁，主上锁多长时间，从就锁多久
-     1. Row
-        - 包含了要精确操作的行的主键ID，不会出现主从不一致
-        - 日志量较statement大多了
-        - 可应用于任何sql的复制，包括非确定函数、存储过程等
-        - 传输数据量大，网络不好延迟大，同机房可保证更好
-        - 减少锁的使用，因为更新时只锁那一条
-        - 要求主从表结构相同
-        - 无法单独执行触发器
-     1. Mixed
-        - 当MySQL判断可能数据不一致时用row格式，否则用statement格式
-   - 写入流程
-     1. 基于session，根据binlog_cache_size写入缓存或临时文件
-     1. group commit，写入磁盘，清空缓存，同时根据sync_binlog判断是否fsync
+     1. btree：二叉查找树，每个节点只存储一个关键字，等于则命中，小于走左节点，大于走右节点
+     1. b-tree：多路查找树，每个节点存储M/2到M个关键字，非叶子节点存储关键字范围和指向的子节点id；所有关键字在整颗树中出现且只出现一次，非叶子节点可以命中，-只是一个连接符不是减
+     1. b+tree
+        - 认识：在b-tree基础上
+          1. 所有数据行都只在叶子节点中出现，非叶子节点作为叶子节点的索引，即总是到叶子节点才命中
+          1. 增加链表将叶子节点串联在一起
+             - 是双向链表，用以支持前后遍历
+        - 最佳实践
+          1. 一般情况，根节点存在内存，其他节点存在磁盘
+        - 比较
+          1. b+tree只在叶子节点存放数据行，而B树则会在叶子和非叶子结点上都放
+          1. b-tree的叶子节点不需要链表串联
+     1. b*tree：在b+tree基础上，为非叶子节点也增加链表指针，将节点的最低利用率从1/2提高到2/3
+   - 实现
+     1. 结构：来自于改造的二叉查找树，树中间的节点不存储数据只作为索引，把每个叶子节点串在一条链表上，链表中数据从小到大有序。原理类似跳表
+     1. 操作
+        - 区间查找：用区间起始值在树中查找直到叶子节点，然后顺着链表往后遍历直到结束值即可
    - 特点
-     1. 一个事务的binlog不会拆开，要确保一次性写入
-     1. 事务组提交：group commit，会把后边来的事务一起处理，到时候他们直接返回，一起处理的越多，效果越好
-   - 使用
-     1. 配置
-        - log-bin：是否开启binlog及文件名
-        - binlog_cache_size：未提交的日志记录缓存的大小，超过了写入临时文件，基于会话。binlog_cache_use、binlog_cache_disk_use用于判断设置是否合适
-        - sync_binlog：写缓冲多少次就同步磁盘，1是同步写磁盘，默认0，建议设置为100~1000
-        - innodb_support_xa：为1解决binlog和innodb的数据文件的同步
-        - max_binlog_size：单个最大值，超过就加序号新建文件
-        - binlog-do-db/binlog-ignore-db：要记录库的范围
-        - log-slave-update：从库需要设置，不记录自己的master的日志
-        - binlog_format：格式
-        - expire_logs_days：保存天数
-     1. sql
-        - `show variables like '%log_bin%';`：查看配置
-        - `show variables like 'binlog_format';`：查看格式
-          1. `set global binlog_format='ROW/STATEMENT/MIXED';`：清空所有
-        - `show binary logs;`：查看二进制文件列表和大小
-        - `show binlog events in '' from pos limit [offset,]count;`：查看某个binlog
-        - `show master status;`：查看日志写入状态
-        - `reset master;`：清空所有
-     1. 工具
-        - mysqlbinlog：查看、恢复
-          1. -v/-vv：显示详细信息
-          1. 直接恢复：`mysqlbinlog /var/lib/mysql/mysqld-bin.000001 | mysql -uroot`
-          1. --database DB_name
-          1. --no-defaults 
-          1. --start/stop-datetime、--start/stop-position
-1. GTID
-   - 认识：Global Transaction ID 全局事务id，已提交事务的唯一的编号，v5.6。格式：source_id:transaction_id
-     1. 全局唯一性
-     1. 趋势递增
-   - 作用
-     1. 保证了同一个事务只在指定的从库执行一次，可以找到正确的复制位置，大大简化复制的维护
-     1. 强化了主备一致性，故障恢复以及容错能力
-        - 之前基于二进制日志的复制中从库需要告知主库从哪个偏移量进行增量同步，如果指定错误会造成数据的遗漏，从而造成数据的不一致
-### 表
-1. 认识：了解其物理存储特征
+     1. 压缩树高度：io次数是查询最大的成本所在，所以减少io次数至关重要：io次数取决于树的高度H，假设当前数据表的数据为N，每个磁盘块的数据项的数量是M，则有：H=log(M+1)N，当数据量N一定的情况下，M越大，H越小；而M=磁盘块大小/数据项大小，磁盘块大小也就是一个数据页的大小，是固定的
+        - 如果数据项占的空间越小，数据项的数量越多，树的高度也就越低，需要的io越少。这也就是为什么每个数据项，即索引字段要尽量的小，比如int占4个字节，要比bigint的8个字节小一半
+        - 这也是为什么B+树要求把真实数据放在叶子节点内而不是内层节点内，一旦放到内层节点内，磁盘块的数据项会大幅度的下降，导致树层级的增高。当数据项为1时，B+树会退化成线性表
+     1. 最左匹配特性：B+树的数据项是复合性数据结构，比如（name，age，gender）的时候，B+树是按照从左到右的顺序来建立搜索树的，比如当（小张，22，女）这样的数据来检索的时候，B+树会优先比较name来确定下一步的搜索方向，如果name相同再依次比较age和gender，最后得到检索的数据。但是，当（22，女）这样没有name的数据来的时候，B+树就不知道下一步该查哪个节点，因为建立搜索树的时候，name就是第一个比较因子，必须根据name来搜索才知道下一步去哪里查询
+     1. 整页读取，在内存中过滤出结果
+   - 比较
+     1. InnoDB叶子节点存储的是主键id，MySIAM存的是物理地址
+   - InnoDB的b+tree索引
+     1. 存储形式
+        - 磁盘的最小单元是扇区，默认512byte
+        - 文件系统的最小单元是块，默认4K
+        - InnoDB引擎的最小单元是页(innodb_page_size)，默认16K
+        - 数据行都存储在页中，一页可以存储多条数据
+     1. 数据组织形式：使用索引组织表，表中的行(记录)都是存储在页中(叶子节点)，也可以是健值和指针(非叶子节点)，当然是有序的
+        - 用于页中数据的查找，如果逐条遍历性能差，引入了b+tree
+        - 主键索引的叶子节点中存储行数据：![avatar](../images/mysql_index_primary_key.webp)
+        - 其他列的索引需要先查到主键id，再去主键索引获取整行的数据。如高度3的树，需要3+3=6次io：![avatar](../images/mysql_index_second_key.webp)
+        - 一棵树可以存多少行？总行数 = 根节点指针数 * 单个叶子节点记录条数，如主键id为bigint 8byte，指针大小6byte，单行数据1kb，那么一页能存16384/14=1170个指针，高度为2的树能存放1170*16=18720条，高度为3的2千万行1170*1170*16=21902400
+     1. 检索形式
+        - 从表空间文件中固定的根页开始
+          1. 主键索引b+tree的根页在整个表空间文件中的第3个页开始，根页偏移量为64的地方存放该b+tree的树高度page level
+        - 循环使用二分查找法，不停确定下一层的页id，直到找到
+     1. 实操
+        - 查看一张表的根页id
+            ```sql
+            SELECT
+            b.name, a.name, index_id, type, a.space, a.PAGE_NO
+            FROM
+            information_schema.INNODB_SYS_INDEXES a,
+            information_schema.INNODB_SYS_TABLES b
+            WHERE
+            a.table_id = b.table_id AND a.space <> 0
+            and b.name like '%sp_job_log';
+            ```
+        - 数据库物理文件存放位置：`show global variables like "%datadir%";`
+        - 查看数高度
+          1. 获取根页id PAGE_NO，如3
+          1. 计算idb的偏移量：16384 * 3 + 64 = 49216
+          1. 查看数据：hexdump -s 49216 -n 10  sp_job_log.ibd，如0100，page_level为1，则高度为1+1=2
+1. wiki
+   - 引擎支持的索引结构
+     1. InnoDB/memory/heap：b+tree、hash
+     1. MySIAM：b+tree、rtree(空间列是rtree)
+   - InnoDB索引和记录是存储在一起的，MyISAM是分开的
 ### 引擎
 1. 认识：基于表
    - 分类
@@ -360,73 +316,115 @@
 1. wiki
    - innoDB最早第三方引擎，被oracle收购，5.5.8开始是默认引擎
    - 数据可靠性指的是：可靠的范围划分，mysql告诉你成功了，他自身能保证数据能找回来，没告诉你成功，那就不会记录，才好理解可靠性机制
-### 索引
-1. BTree
-   - 认识：Balance tree，平衡树。io通过二分查找一级级查向叶子节点，叶子都是有序的
-     1. 对一个索引字段进行检索，采用普通索引还是唯一索引在检索效率上基本上没有差别。因为只是加了约束，整页在内存中判断时cpu的时间可以忽略不记
+### 日志
+1. 日志
    - 分类
-     1. btree：二叉查找树，每个节点只存储一个关键字，等于则命中，小于走左节点，大于走右节点
-     1. b-tree：多路查找树，每个节点存储M/2到M个关键字，非叶子节点存储关键字范围和指向的子节点id；所有关键字在整颗树中出现且只出现一次，非叶子节点可以命中，-只是一个连接符不是减
-     1. b+tree
-        - 认识：在b-tree基础上
-          1. 所有数据行都只在叶子节点中出现，非叶子节点作为叶子节点的索引，即总是到叶子节点才命中
-          1. 增加链表将叶子节点串联在一起
-             - 是双向链表，用以支持前后遍历
-        - 最佳实践
-          1. 一般情况，根节点存在内存，其他节点存在磁盘
-        - 比较
-          1. b+tree只在叶子节点存放数据行，而B树则会在叶子和非叶子结点上都放
-          1. b-tree的叶子节点不需要链表串联
-     1. b*tree：在b+tree基础上，为非叶子节点也增加链表指针，将节点的最低利用率从1/2提高到2/3
-   - 实现
-     1. 结构：来自于改造的二叉查找树，树中间的节点不存储数据只作为索引，把每个叶子节点串在一条链表上，链表中数据从小到大有序。原理类似跳表
-     1. 操作
-        - 区间查找：用区间起始值在树中查找直到叶子节点，然后顺着链表往后遍历直到结束值即可
+     1. error log：错误日志，启动、运行、停止遇到的问题，平时要关注，并进行数据库优化
+     1. general log：通用查询日志，客户端连接和执行的语句
+     1. bin log：二进制日志，记录所有更改数据的语句，可用于复制，事务提交前只写一次
+     1. slow log：慢查询日志，执行时间超过long_query_time的查询或不使用索引的查询
+     1. relay log：中继日志，从接收的主的日志
+     1. 引擎日志
+1. 数据更新流程
+   - 认识：流程和wal一致，![avatar](../images/mysql-update.jpeg)
+     1. 读写数据：缓存提高效率
+        - 脏页：缓存中的数据发生变更的内存页
+        - 刷脏页：数据发生变更的缓存刷到磁盘中
+     1. mysql宕机：缓存中数据来不及刷盘，数据丢失，需要用日志恢复
+     1. 磁盘特点：写入系统文件缓存page cache，并没有持久化，非常快，和写内存差不多(本质就是写内存)。一般fsync才占用iops
+     1. 两阶段提交：平衡各方都完成
+     1. 正常数据落盘和redo没有关系，脏页到ibdata
+     1. 事务回滚：redo中commit的发现LSN落后的就重放刷盘，没commit的判断binlog是否完整来重新commit或者回滚
+   - 重启操作
+     1. 数据页中的LSN小于redo log的LSN，说明redo log上记录着数据页没完成的操作，就会从最近的一个check point出发，开始重放刷盘
+     1. 数据库重启先进行crash recovery保证crash-safe，binlog和redolog通过事件xid关联，保证数据一致性
+   - 双一问题：可以主双一，从非双一，提高性能
+     1. sync_binlog不为1，服务器宕机会丢失binlog
+     1. innodb_flush_log_at_trx_commit为1
+        - 可以在redo commit时不进行fsync，就无法保证一致性，但是提高了效率
+        - innodb_support_xa不为1，redo没commit重启后要回滚，但是binlog记录了，造成问题
+   - 数据丢失场景
+     1. mysql宕机：写入了文件缓存就丢不了
+     1. 服务器宕机：没有设置双一，就可能丢
+1. binlog
+   - 认识：记录所有除查询的DDL和DML语句，以事件形式记录的事务安全型的二进制文件集合，包含执行的时间
+     1. 具体的写入时间：配置控制是否执行fsync，只写入了缓存
+     1. 会重写密码，不以纯文本展示；8可以进行加密
+     1. 生成新的日志文件的情况：重启时、执行`flush logs`、大小超过`max_binlog_size`
+     1. 开启1%的性能开销
+   - 用途
+     1. 主从复制：传输binlog
+     1. 数据恢复：使用mysqlbinlog工具，可进行任意时间点恢复
+     1. 增量备份
+     1. 审计：是否有攻击
+   - 组成
+     1. xx.index：索引文件，存储产生的二进制日志序号
+     1. xx.0001
+        - 格式
+          1. Statement：基于sql和上下文环境，不记录每行变化
+             - 减少了日志量节约了io，尤其是修改量大的场景
+             - 主从版本可以不一样，从可以更高
+          1. Row：只记录行的修改点，5.7.7及以上默认，会一步步的优化的更好，主流使用，之前是Statement。最好同时设置`binlog_row_image=minimal`
+             - 避免了存储过程/function/trigger的调用和触发无法被正确复制的问题
+             - 加快从库重放日志的效率
+             - 日志量大，`alter tableh`每条都会记录，新版优化了
+          1. MIXED：混合模式，系统选择，一般用statment，无法完成主从复制的操作用row
+        - 事件类型：QUERY_EVENT、STOP_EVENT等
+   - 格式对复制的影响
+     1. Statement
+        - 为slave正确运行而记录相关信息，但uuid()等非确定性函数还是无法复制导致主从不一致
+        - 日志量较row小
+        - 需要更多的行锁，主上锁多长时间，从就锁多久
+     1. Row
+        - 包含了要精确操作的行的主键ID，不会出现主从不一致
+        - 日志量较statement大多了
+        - 可应用于任何sql的复制，包括非确定函数、存储过程等
+        - 传输数据量大，网络不好延迟大，同机房可保证更好
+        - 减少锁的使用，因为更新时只锁那一条
+        - 要求主从表结构相同
+        - 无法单独执行触发器
+     1. Mixed
+        - 当MySQL判断可能数据不一致时用row格式，否则用statement格式
+   - 写入流程
+     1. 基于session，根据binlog_cache_size写入缓存或临时文件
+     1. group commit，写入磁盘，清空缓存，同时根据sync_binlog判断是否fsync
    - 特点
-     1. 压缩树高度：io次数是查询最大的成本所在，所以减少io次数至关重要：io次数取决于树的高度H，假设当前数据表的数据为N，每个磁盘块的数据项的数量是M，则有：H=log(M+1)N，当数据量N一定的情况下，M越大，H越小；而M=磁盘块大小/数据项大小，磁盘块大小也就是一个数据页的大小，是固定的
-        - 如果数据项占的空间越小，数据项的数量越多，树的高度也就越低，需要的io越少。这也就是为什么每个数据项，即索引字段要尽量的小，比如int占4个字节，要比bigint的8个字节小一半
-        - 这也是为什么B+树要求把真实数据放在叶子节点内而不是内层节点内，一旦放到内层节点内，磁盘块的数据项会大幅度的下降，导致树层级的增高。当数据项为1时，B+树会退化成线性表
-     1. 最左匹配特性：B+树的数据项是复合性数据结构，比如（name，age，gender）的时候，B+树是按照从左到右的顺序来建立搜索树的，比如当（小张，22，女）这样的数据来检索的时候，B+树会优先比较name来确定下一步的搜索方向，如果name相同再依次比较age和gender，最后得到检索的数据。但是，当（22，女）这样没有name的数据来的时候，B+树就不知道下一步该查哪个节点，因为建立搜索树的时候，name就是第一个比较因子，必须根据name来搜索才知道下一步去哪里查询
-     1. 整页读取，在内存中过滤出结果
-   - 比较
-     1. InnoDB叶子节点存储的是主键id，MySIAM存的是物理地址
-   - InnoDB的b+tree索引
-     1. 存储形式
-        - 磁盘的最小单元是扇区，默认512byte
-        - 文件系统的最小单元是块，默认4K
-        - InnoDB引擎的最小单元是页(innodb_page_size)，默认16K
-        - 数据行都存储在页中，一页可以存储多条数据
-     1. 数据组织形式：使用索引组织表，表中的行(记录)都是存储在页中(叶子节点)，也可以是健值和指针(非叶子节点)，当然是有序的
-        - 用于页中数据的查找，如果逐条遍历性能差，引入了b+tree
-        - 主键索引的叶子节点中存储行数据：![avatar](../images/mysql_index_primary_key.webp)
-        - 其他列的索引需要先查到主键id，再去主键索引获取整行的数据。如高度3的树，需要3+3=6次io：![avatar](../images/mysql_index_second_key.webp)
-        - 一棵树可以存多少行？总行数 = 根节点指针数 * 单个叶子节点记录条数，如主键id为bigint 8byte，指针大小6byte，单行数据1kb，那么一页能存16384/14=1170个指针，高度为2的树能存放1170*16=18720条，高度为3的2千万行1170*1170*16=21902400
-     1. 检索形式
-        - 从表空间文件中固定的根页开始
-          1. 主键索引b+tree的根页在整个表空间文件中的第3个页开始，根页偏移量为64的地方存放该b+tree的树高度page level
-        - 循环使用二分查找法，不停确定下一层的页id，直到找到
-     1. 实操
-        - 查看一张表的根页id
-            ```sql
-            SELECT
-            b.name, a.name, index_id, type, a.space, a.PAGE_NO
-            FROM
-            information_schema.INNODB_SYS_INDEXES a,
-            information_schema.INNODB_SYS_TABLES b
-            WHERE
-            a.table_id = b.table_id AND a.space <> 0
-            and b.name like '%sp_job_log';
-            ```
-        - 数据库物理文件存放位置：`show global variables like "%datadir%";`
-        - 查看数高度
-          1. 获取根页id PAGE_NO，如3
-          1. 计算idb的偏移量：16384 * 3 + 64 = 49216
-          1. 查看数据：hexdump -s 49216 -n 10  sp_job_log.ibd，如0100，page_level为1，则高度为1+1=2
-1. wiki
-   - 引擎支持的索引结构
-     1. InnoDB/memory/heap：b+tree、hash
-     1. MySIAM：b+tree、rtree(空间列是rtree)
-   - InnoDB索引和记录是存储在一起的，MyISAM是分开的
+     1. 一个事务的binlog不会拆开，要确保一次性写入
+     1. 事务组提交：group commit，会把后边来的事务一起处理，到时候他们直接返回，一起处理的越多，效果越好
+   - 使用
+     1. 配置
+        - log-bin：是否开启binlog及文件名
+        - binlog_cache_size：未提交的日志记录缓存的大小，超过了写入临时文件，基于会话。binlog_cache_use、binlog_cache_disk_use用于判断设置是否合适
+        - sync_binlog：写缓冲多少次就同步磁盘，1是同步写磁盘，默认0，建议设置为100~1000
+        - innodb_support_xa：为1解决binlog和innodb的数据文件的同步
+        - max_binlog_size：单个最大值，超过就加序号新建文件
+        - binlog-do-db/binlog-ignore-db：要记录库的范围
+        - log-slave-update：从库需要设置，不记录自己的master的日志
+        - binlog_format：格式
+        - expire_logs_days：保存天数
+     1. sql
+        - `show variables like '%log_bin%';`：查看配置
+        - `show variables like 'binlog_format';`：查看格式
+          1. `set global binlog_format='ROW/STATEMENT/MIXED';`：清空所有
+        - `show binary logs;`：查看二进制文件列表和大小
+        - `show binlog events in '' from pos limit [offset,]count;`：查看某个binlog
+        - `show master status;`：查看日志写入状态
+        - `reset master;`：清空所有
+     1. 工具
+        - mysqlbinlog：查看、恢复
+          1. -v/-vv：显示详细信息
+          1. 直接恢复：`mysqlbinlog /var/lib/mysql/mysqld-bin.000001 | mysql -uroot`
+          1. --database DB_name
+          1. --no-defaults 
+          1. --start/stop-datetime、--start/stop-position
+1. GTID
+   - 认识：Global Transaction ID 全局事务id，已提交事务的唯一的编号，v5.6。格式：source_id:transaction_id
+     1. 全局唯一性
+     1. 趋势递增
+   - 作用
+     1. 保证了同一个事务只在指定的从库执行一次，可以找到正确的复制位置，大大简化复制的维护
+     1. 强化了主备一致性，故障恢复以及容错能力
+        - 之前基于二进制日志的复制中从库需要告知主库从哪个偏移量进行增量同步，如果指定错误会造成数据的遗漏，从而造成数据的不一致
 ### 事务
 1. ACID实现原理
    - 原子性：redo
@@ -438,7 +436,7 @@
      1. MVCC
    - 持久性：redo
      1. redo：redo日志记录LSN，数据页头部也记录LSN，数据库启动时，对比两个LSN，会将redo中多出来的写回页中
-     1. 写入原子性：redo日志以512字节存储，称为重做日志块。磁盘一个扇区是512字节，操作系统与磁盘的数据交换扇区为基本单位。只需无缓冲写入磁盘就可保证数据原子写入
+     1. 写入原子性：redolog的存储单位是512byte，磁盘扇区大小512byte，扇区是操作系统与磁盘数据交换的基本单位。只需无缓冲写入磁盘就可保证数据原子写入
 1. MVCC
    - 认识：Multi-Version Concurrency Control 数据多版本并发控制，一致性数据快照，即非锁定读
      1. mvcc做的事情就是将所有可能读的请求都放在事务开始之前，让你先读到，保证了读写并行、写读并行
