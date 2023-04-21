@@ -599,14 +599,13 @@
      1. 页锁：BDB被InnoDB取代，并发介于表和行之间，会死锁
 1. mysql中的锁
    - Shared and Exclusive Lock
-        - 特点
+        - 认识：共享和排它锁
           1. 强锁
           1. 锁级别：有主键或索引行级别，无则表级别
           1. 仅适用于InnoDB，必须在事务中执行
-          1. 存在写锁时普通select拿不到，for update读写都拿不到，update/delete/insert自动加，select任何锁不加
         - 分类
           1. Shared  Lock：共享锁，读锁，s，其他人读可以并行，锁拥有者不能修改，保证了拥有者释放锁时其他人读取的是对的，`lock in share mode`
-          1. Exclusive Locks：排他锁，写锁，x，其他人读写都不能并行，`for update`
+          1. Exclusive Locks：排他锁，写锁，x，其他人读写都不能并行，`for update`，update/delete/insert自动加，select任何锁不加
    - Intention Lock
         - 认识：意向锁，表锁，为了允许行锁和表锁共存，实现多粒度锁机制。申请表锁时为了快速知道是否可锁，否则需要一行行去看是否有锁
           1. 弱锁，仅仅表明意向
@@ -852,7 +851,7 @@
      1. 线上从库功能（ro）：承载线上查询（select）操作，以减轻主库压力
      1. 线下从库功能（ofl）：供数据部门（统计类型业务）、开发进行相关查询操作，以避免慢查询影响线上业务
    - 主从切换机制：Arksentinel
-     1. Arksentinel中每个哨兵均每隔一段时间探测一次状态为“online”+“normal”的数据库实例，判断其是否存活或者正常服务，若不可访问/不可正常服务，则会连续探测多次；其中间隔时长和探测次数可由参数“ping间隔时间(ms)”和“ping次数”指定
+     1. Arksentinel中每个哨兵均每隔一段时间探测一次状态为“online”+“normal”的数据库实例，判断其是否存活或正常服务，若不可访问/不可正常服务，则会连续探测多次；其中间隔时长和探测次数可由参数“ping间隔时间(ms)”和“ping次数”指定
      1. 若某个哨兵连续探测次数达到参数“ping次数”之后节点仍未正常，则该哨兵标记该节点为“SDOWN”状态，此时会询问其他哨兵该节点状态。
      1. 若其他哨兵中认为该节点状态为“SDOWN”的个数达到quorum（法定数量）后，则Arksentinel认为该节点实例为“ODOWN”状态，即哨兵集群认为该数据库节点已不可用，应当发起故障切换
         - quorum法定数量是指N个节点中有N/2+1个，例如5个节点的quorum就是3，6个节点的quorum就是4；SDOWN是Subjective Down，某个哨兵主观认为节点宕机；ODOWN是Objective Down，客观事实该节点已经宕机可不服务。
@@ -1078,6 +1077,63 @@
    - atlas：360开源
    - kingshard：个人的go开发，读写分离、分库分表、sql黑名单
 ### 最佳实践
+1. 认识
+   - 认识
+     1. 要考虑使用时的场景进行设计
+   - 大表
+     1. 定义：一般是超一千万行，大小超10G
+     1. 风险
+        - 慢查询
+        - DDL操作
+          1. 建索引：v5.5之前锁表，之后不锁表但主从延迟，修改时间是要double的
+   - 大事务
+     1. 定义：运行时间较长、操作数据较多的事务
+     1. 风险
+        - 锁定太多数据，造成大量阻塞、锁超时
+        - 容易主从延迟
+        - 回滚时间长
+     1. 解决
+        - 避免一次操作太多数据
+        - 移除不必要的sql
+1. 分表分片
+   - 认识
+     1. 分表：可以将两种方式结合使用
+        - 水平拆分：用于数据本身有独立性，可以拆分，逻辑分层算法无法变更，关键字段取模方式拆到多个表中，降低单表大小
+        - 垂直拆分：把属性较多、数据较大的表某些字段拆分到不同的表中，查询时可减少io次数，但是应用增加复杂度。分主表、扩展表。因为数据库的内存buffer存row
+     1. 分片
+        - 方式
+          1. hash取模：针对分片键
+          1. 范围：针对分片键划分
+          1. 时间跨度：年、月、日
+          1. 一致性hash
+          1. 映射表：分区键和分片分配
+        - 如何生成全局唯一id
+          1. 分配auto_increment_increment和auto_increment_offset参数
+          1. 全局id生成节点
+     1. 分区：对用户透明，底层分为多个物理分区。用partition by定义每个分区存放的数据，优化器自动使用。适用于数据多，只在表最后有热点数据，其他都是历史数据。分区可以分布在不同机器上独立维护，有很多功能不能用
+        - 存储更多数据：可分布在不同的物理设备
+        - 优化查询：where语句中包含分区条件时，只会使用某几个分区
+        - 类型：RANGE、LIST、HASH、KEY
+          1. 两级映射：指定id范围和表的关系，不够了加关系就行，可通过中间件实现
+        - 适用于所有数据和索引，两者不能分开
+   - 相同数据跨表分页：偏门做法
+     1. 全局视野法：改造分页sql，每个表都取出来，然后放一起再排序。`offset X limit Y`改为`offset 0 limit X+Y`。精准返回，页码增加性能急剧下降
+     1. 业务折衷
+        - 禁止跳页查询：第一页作为第二页的查询条件，再全局视野
+        - 允许数据精度损失：认定数据足够随机，取模去取数据
+     1. 二次查询法
+        - 将order by time offset X limit Y，改写成order by time offset X/N limit Y
+        - 找到所有表中的最小值time_min
+        - between二次查询，order by time between $time_min and $time_N_max
+        - 拿time_min在各个分库中比较，得出每个表的虚拟offset，相加从而得到time_min在全局的offset
+        - 得到了time_min在全局的offset，自然得到了全局的offset X limit Y，要什么从后推着拿就行
+1. 特定场景
+   - 查询这个数据是否存在，存在则存到另一张表里：`create table temp as select * from admin a where exists (select uid from user u where a.userName = u.account);`
+   - 查询两张表中是否有相同数据：`select * from admin where uid IN(select uid from temp);`
+   - 求差集：`SELECT * FROM A LEFT JOIN B ON A.xx = B.xx WHERE B.id IS NULL union SELECT * FROM A RIGHT JOIN B ON A.xx = B.xx WHERE A.id IS NULL;`
+   - 求全集：`SELECT * FROM A LEFT JOIN B ON A.xx = B.xx union SELECT * FROM A RIGHT JOIN B ON A.xx = B.xx;`
+   - 原所有id增加5万，必须倒叙操作：`update user SET uid=uid+50000 order by uid desc;`
+   - 插入不重复数据行，mysql特有不是标准sql语法：`INSERT token(udid) values ('{$udid}') ON DUPLICATE KEY UPDATE activetime ='{$time}'`
 #### 设计实践
 1. 范式
    - 认识：为了消除重复数据，更高一级的范式要求先满足下边的范式。涉及数据库理论研究
@@ -1095,39 +1151,6 @@
         - 没有冗余、表更新快体积小、操作更快
         - 查询需要多表关联，导致性能降低，更难进行索引优化
    - 反范式化：没有冗余的数据库未必是最好的数据库，有时为了提高运行效率，就必须降低范式标准，适当保留冗余数据，达到以空间换时间的目的
-1. 结构优化策略
-   - 要考虑使用时的场景进行设计
-1. 查询优化策略
-   - 优化包含not in和<>的子查询：将`select xx NOT IN (select xx)`优化为`LEFT JOIN xx WHERE b.xx IS NULL`
-1. 索引优化策略
-   - 查询
-     1. 索引列上不能使用表达式或函数：无法使用索引了
-     1. 字符串字段使用前缀索引
-     1. 索引列的选择性：选择区分度高的，尤其是前缀索引
-     1. 联合索引和左右顺序：经常用到的优先，区分度高的优先，数据宽度小的优先
-     1. 特定情况下使用hash索引优化查询
-     1. 降低重复的索引：如单列和联合最左字段重复
-   - 排序：explain中type为index就是用到了
-     1. 索引的列顺序和order by子句顺序完全一致
-     1. 索引中所有列的方向(升降序)和order by子句完全一致
-     1. order by中的字段全部在关联表中的第一张表中
-   - 锁：减少锁定的行数
-   - 维护
-     1. 查找未被使用过的索引
-        ```sql
-        SELECT object_schema, object_name, index_name,b.`TABLE_ROWS`
-        FROM performance_schema.table_io_waits_summary_by_index_usage a
-        JOIN information_schema.tables b ON
-            a.`OBJECT_SCHEMA`=b.`TABLE_SCHEMA` AND
-            a.`OBJECT NAME`=b.`TABLE NAME`
-        WHERE index_name IS NOT NULL AND count star = 0
-        ORDER BY object_schema, object_name;
-        ```
-     1. 更新索引统计信息、减少索引碎片
-1. 事务优化策略
-   - 减少锁的范围
-   - 允许更多的并行
-   - 选择正确的锁类型
 1. 设计和使用
    - 数据类型
      1. 尽量使用更简单的类型，数据长度越短越好(更少存储内存空间)
@@ -1144,24 +1167,6 @@
      1. 增加create_time/update_time字段，用于数据归档/自定义差异备份
      1. 大数据字段独立表进行存储，提交表性能
      1. 名称不要和关键字碰撞
-   - 索引
-     1. 建立原则
-        - 数据量少的、数据经常改变的、数据差别不大的不能建立
-        - 字符串使用前缀索引，节省大量空间
-        - 尽可能扩展和整合索引，而不是增加索引
-        - 最左前缀原则：不用给组合索引最左边的列单独建立索引
-     1. 使用原则
-        - like：最左原则，%aa%不使用索引，而aa%使用
-        - or：前后条件都有索引才使用索引，否则用union
-        - !=、not in、<>：不使用索引，范围查询可能用到索引如>、in等
-        - 字符串列加引号，否则索引失效
-        - 不在列上运算：因为每个行要运算所以索引失效
-        - 使用索引列排序：唯一索引原则
-        - 优化器会评估，有可能放弃使用索引
-        - on、using子句上有索引，否则全表
-   - 事务
-     1. 不能运行大事务，否则导致主从延迟，事务执行多长时间，就延迟多长时间
-     1. 事务执行成本很高，50万事务需要执行2分钟
    - 查询
      1. 无select *，sql中无计算、无函数
      1. 提高索引利用率
@@ -1174,6 +1179,13 @@
      1. 尽量inner join让优化器自动选择驱动表
      1. 一个大查询可以分解为小查询，内部每秒能扫描百万行
      1. 开启查询缓存
+     1. 优化包含not in和<>的子查询：将`select xx NOT IN (select xx)`优化为`LEFT JOIN xx WHERE b.xx IS NULL`
+   - 事务
+     1. 事务执行成本很高，50万事务需要执行2分钟
+     1. 不能运行大事务，否则导致主从延迟，事务执行多长时间，就延迟多长时间
+     1. 减少锁的范围
+     1. 允许更多的并行
+     1. 选择正确的锁类型
    - 运维
      1. 慢查询日志，不要直接打开，使用pt-query-digest工具分析
      1. set profile = 1;show profile;show profile for query 1;获取sql执行时间
@@ -1185,6 +1197,44 @@
         - 请求日志写本地log，然后用filebeat抽取到es
         - 图片、文本等扔了oss
         - 复杂统计分析类的SQL放了ck中
+1. 索引优化策略
+   - 创建
+     1. 数据量少的、数据经常改变的、数据差别不大的不能建立
+     1. 字符串使用前缀索引，节省大量空间
+     1. 尽可能扩展和整合索引，而不是增加索引
+     1. 最左前缀原则：不用给组合索引最左边的列单独建立索引
+   - 使用原则
+     1. like：最左原则，%aa%不使用索引，而aa%使用
+     1. or：前后条件都有索引才使用索引，否则用union
+     1. !=、not in、<>：不使用索引，范围查询可能用到索引如>、in等
+     1. 字符串列加引号，否则索引失效
+     1. 不在列上运算：因为每个行要运算所以索引失效
+     1. 使用索引列排序：唯一索引原则
+     1. 优化器会评估，有可能放弃使用索引
+     1. on、using子句上有索引，否则全表
+   - 查询
+     1. 索引列上不能使用表达式或函数：无法使用索引了
+     1. 字符串字段使用前缀索引
+     1. 索引列的选择性：选择区分度高的，尤其是前缀索引
+     1. 联合索引和左右顺序：经常用到的优先，区分度高的优先，数据宽度小的优先
+     1. 特定情况下使用hash索引优化查询
+     1. 降低重复的索引：如单列和联合最左字段重复
+   - 排序：explain中type为index就是用到了
+     1. 索引的列顺序和order by子句顺序完全一致
+     1. 索引中所有列的方向(升降序)和order by子句完全一致
+     1. order by中的字段全部在关联表中的第一张表中
+   - 维护
+     1. 查找未被使用过的索引
+        ```sql
+        SELECT object_schema, object_name, index_name,b.`TABLE_ROWS`
+        FROM performance_schema.table_io_waits_summary_by_index_usage a
+        JOIN information_schema.tables b ON
+            a.`OBJECT_SCHEMA`=b.`TABLE_SCHEMA` AND
+            a.`OBJECT NAME`=b.`TABLE NAME`
+        WHERE index_name IS NOT NULL AND count star = 0
+        ORDER BY object_schema, object_name;
+        ```
+     1. 更新索引统计信息、减少索引碎片
 1. 使用规范
    - 建库、表
      1. 建表语句必须在sql审核平台审核通过，不然不予以创建，审核地址：http://app.xesv5.com/zeus
@@ -1196,7 +1246,7 @@
           1. datetime	0001-01-01 00:00:00	9999/12/31 23:59
           1. timestamp	1970/1/1 8:00	2038/1/19 11:14
           1. date	1000-01-01	9999/12/31
-     1. 尽可能不要使用text,blob类型，如果必须使用，不要设置not null属性，不指定DEFAULT。
+     1. 尽可能不要使用text,blob类型，如果必须使用，不要设置not null属性，不指定DEFAULT
      1. 不要在数据库中使用varbinary或blob存储图片及文件，mysql 并不适合大量存储这类型文件
      1. 表注释部分要说明此表作用和建表人 例如：COMMENT='课程内容信息-建表人名'
      1. 如果使用分表，表名内有明确的标识作为后缀
@@ -1224,24 +1274,9 @@
      1. 删除、更新、或查询大量数据时，where 条件必须加上id范围，每次操作1万到2万行，循环执行，且有1秒的sleep时间。例如：where id > 0 and id < 10000
      1. 不在业务高峰期批量写入、更新、删除
      1. 禁止联库查询
-     1. 禁止使用 SELECT * 查询### 维护
-1. wiki
-   - 大表
-     1. 定义：一般是超一千万行，大小超10G
-     1. 风险
-        - 慢查询
-        - DDL操作
-          1. 建索引：v5.5之前锁表，之后不锁表但主从延迟，修改时间是要double的
-   - 大事务
-     1. 定义：运行时间较长、操作数据较多的事务
-     1. 风险
-        - 锁定太多数据，造成大量阻塞、锁超时
-        - 容易主从延迟
-        - 回滚时间长
-     1. 解决
-        - 避免一次操作太多数据
-        - 移除不必要的sql
+     1. 禁止使用 SELECT * 查询
 #### 优化实践
+1. 认识
 1. explain
    - 理解：sql语句分析，将过程和索引等信息列出来
    - 使用解析
@@ -1263,9 +1298,8 @@
      1. ref：另外表的数据列名字
      1. row：预计读出的数据行数，里面所有数字乘积代表需要处理的组合数
      1. extra：问题解决提示信息
-1. 实时获取性能问题sql：`select id,user,host,db,command,time,status,info from information_schema.PROCESSLIST where time >= 60`
 1. sql度量
-   - 获取查询各个阶段的时间花销：推荐用performance_schema代替
+   - 认识：获取查询各个阶段的时间花销：推荐用performance_schema代替
      1. 包含的指标
         - starting
         - checking permissions
@@ -1301,47 +1335,20 @@
         show profiles for query N;              # 查询详细时间
         show profiles cpu for query N;
         ```
-#### 使用实践
-1. 特定场景
-   - 查询这个数据是否存在，存在则存到另一张表里：`create table temp as select * from admin a where exists (select uid from user u where a.userName = u.account);`
-   - 查询两张表中是否有相同数据：`select * from admin where uid IN(select uid from temp);`
-   - 求差集：`SELECT * FROM A LEFT JOIN B ON A.xx = B.xx WHERE B.id IS NULL union SELECT * FROM A RIGHT JOIN B ON A.xx = B.xx WHERE A.id IS NULL;`
-   - 求全集：`SELECT * FROM A LEFT JOIN B ON A.xx = B.xx union SELECT * FROM A RIGHT JOIN B ON A.xx = B.xx;`
-   - 原所有id增加5万，必须倒叙操作：`update user SET uid=uid+50000 order by uid desc;`
-   - 插入不重复数据行，mysql特有不是标准sql语法：`INSERT token(udid) values ('{$udid}') ON DUPLICATE KEY UPDATE activetime ='{$time}'`
-1. 分表分区
-   - 认识
-     1. 分区：对用户透明，底层分为多个物理分区。用partition by定义每个分区存放的数据，优化器自动使用。适用于数据多，只在表最后有热点数据，其他都是历史数据。分区可以分布在不同机器上独立维护，有很多功能不能用
-        - 存储更多数据：可分布在不同的物理设备
-        - 优化查询：where语句中包含分区条件时，只会使用某几个分区
-        - 类型：RANGE、LIST、HASH、KEY
-          1. 两级映射：指定id范围和表的关系，不够了加关系就行，可通过中间件实现
-        - 适用于所有数据和索引，两者不能分开
-     1. 分表：可以将两种方式结合使用
-        - 水平拆分：用于数据本身有独立性，可以拆分，逻辑分层算法无法变更，关键字段取模方式拆到多个表中，降低单表大小
-        - 垂直拆分：把属性较多、数据较大的表某些字段拆分到不同的表中，查询时可减少io次数，但是应用增加复杂度。分主表、扩展表。因为数据库的内存buffer存row
-     1. 分片
-        - 方式
-          1. hash取模：针对分片键
-          1. 范围：针对分片键划分
-          1. 时间跨度：年、月、日
-          1. 一致性hash
-          1. 映射表：分区键和分片分配
-        - 如何生成全局唯一id
-          1. 分配auto_increment_increment和auto_increment_offset参数
-          1. 全局id生成节点
-   - 跨表分页
-     1. 全局视野法：改造分页sql，每个表都取出来，然后放一起再排序。`offset X limit Y`改为`offset 0 limit X+Y`。精准返回，页码增加性能急剧下降
-     1. 业务折衷
-        - 禁止跳页查询：第一页作为第二页的查询条件，再全局视野
-        - 允许数据精度损失：认定数据足够随机，取模去取数据
-     1. 二次查询法
-        - 将order by time offset X limit Y，改写成order by time offset X/N limit Y
-        - 找到所有表中的最小值time_min
-        - between二次查询，order by time between $time_min and $time_N_max
-        - 拿time_min在各个分库中比较，得出每个表的虚拟offset，相加从而得到time_min在全局的offset
-        - 得到了time_min在全局的offset，自然得到了全局的offset X limit Y，要什么从后推着拿就行
+   - demo
+     1. 实时获取性能问题sql：`select id,user,host,db,command,time,status,info from information_schema.PROCESSLIST where time >= 60`
 ### 运维
+1. 问题排查思路
+   - 查看现场：`show full processlist`
+   - 分析情况：`explain xx`
+   - 查看信息
+     1. 正在执行的事务：`select * from information_schema.innodb_trx`
+     1. 锁等待：`select * from information_schema.innodb_lock_waits w inner join information_schema.innodb_trx b on b.trx_id=w.blocking_trx_id inner join information_schema.innodb_trx r on r.trx_id=w.requesting_trx_id`
+     1. 锁表情况：`show open tables where In_use > 0`
+     1. 锁定的事务：`select * from information_schema.innodb_locks`
+     1. 锁等待的事务：`select * from information_schema.innodb_lock_waits`
+     1. 死锁：``
+   - 日志分析：general.log
 1. 大表结构修改
    - 步骤
      1. 建立新表：修改后的结构
@@ -1386,8 +1393,8 @@
 1. 影响性能的方面
    - 硬件、系统
      1. 主数据库用RAID10做保障，从用RAID0、RAID5节省成本，注意5磁盘损坏性能的大幅下降
-     1. san/nas等网络存储设备：数据库需要大量随机io他们不是优势，一旦出问题需要厂商协助恢复时间长，可以作为备份使用
      1. 足够的内存可以将随机io变为顺序io，把多次写变为一次写
+     1. san/nas等网络存储设备：数据库需要大量随机io他们不是优势，一旦出问题需要厂商协助恢复时间长，可以作为备份使用
    - 系统参数、数据库参数、存储引擎
    - 表结构、索引、sql
 1. 调优
@@ -1484,9 +1491,9 @@
    - 内核
      1. 配置文件：`/etc/sysctl.conf`
      1. 网路
+        - net.ipv4.tcp_max_syn_backlog：65535，还未获得连接的请求的最大数量，超出被抛弃
         - net.core.somaxconn：65535，socket listen的backlog上限，监听队列每个端口最大的长度
         - net.core.netdev_max_backlog：65535，当个别接口接收包的速度快于内核处理速度时允许的最大的包数量
-        - net.ipv4.tcp_max_syn_backlog：65535，还未获得连接的请求的最大数量，超出被抛弃
         - net.core.netdev_budget：每次软中断处理的网络包个数
         - net.ipv4.tcp_max_tw_buckets＝5000：同时保持TIME_WAIT套接字的最大数量
 
@@ -1817,17 +1824,6 @@
    - 断开新实例到老实例同步，开启新主库可写入
    - 发布，验证业务
    - 删除旧实例
-1. 问题排查思路
-   - 查看现场：`show full processlist`
-   - 分析情况：`explain xx`
-   - 查看信息
-     1. 正在执行的事务：`select * from information_schema.innodb_trx`
-     1. 锁等待：`select * from information_schema.innodb_lock_waits w inner join information_schema.innodb_trx b on b.trx_id=w.blocking_trx_id inner join information_schema.innodb_trx r on r.trx_id=w.requesting_trx_id`
-     1. 锁表情况：`show open tables where In_use > 0`
-     1. 锁定的事务：`select * from information_schema.innodb_locks`
-     1. 锁等待的事务：`select * from information_schema.innodb_lock_waits`
-     1. 死锁：``
-   - 日志分析：general.log
 1. 配置从
    - 主配置
     ```conf
