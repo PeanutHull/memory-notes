@@ -219,7 +219,7 @@
           1. metadata_locks
           1. rwlock_instances
    - sys
-     1. 认识：数据来自performance，降低复杂度便于查看，5.7默认安装。字母开头给人看的，x$开头用于工具采集。可以统计哪个表/文件/账号/连接的次数最多/延迟多/内存占用多/线程多少/sql最多
+     1. 认识：数据来自performance，复杂度低，便于查看，5.7默认安装。字母开头给人看的，x$开头用于工具采集。可以统计哪个表/文件/账号/连接的次数最多/延迟多/内存占用多/线程多少/sql最多
 1. 表
    - 认识
      1. 32位最大表文件4GB，64的8TB
@@ -234,27 +234,26 @@
    - 列属性
      1. primary key：主键列，作为一行的唯一标识符用来定位，不能重复不能为空，特殊的唯一索引，可有复合主键 `primary key(id,name)`
      1. auto_increment：自增，必须是索引列(index/primary key)，只能有一个自增列，可以设置起始值和步长
-     1. unique/not null/default
+     1. unique
+     1. default：设置默认的值
+        - text没有默认值
+     1. null、not null
+        - 认识：null值，设置为not null会自动调用默认值；需要行中的额外空间来记录其值是否为null，使用null会影响索引效率，因为索引将null也视作一般数据节点
+        - 和c语言的区别
+          1. '\0'表示空占用空间，null不占用
+          1. 空值('')不占用空间，null占用空间
+        - 最佳实践
+          1. 尽量给所有值都加上not null
+        - 因为text没有默认值，设置为not null在没有值的情况下会调用默认值，所以会有冲突
      1. 时间
         - DEFAULT CURRENT_TIMESTAMP
-        - ON UPDATE CURRENT_TIMESTAMP
+        - ON UPDATE CURRENT_TIMESTAMP：每次更新某个字段，都会随之更新时间
      1. foreign key：外键列，保证表之间数据完整性和准确性，体现表之间关系，可进行级联操作，由于对业务的强一致性要求，现在由程序控制，不使用外键关联
         - 基本形式：`constraint foreignKeyName foreign key(selfId) references foreignTable(foreignTableId)`
         - 级联限制：`constraint foreignKeyName foreign key(selfId) references foreignTable(foreignTableId) on delete/update cascade;`，删除被连接数据自己也被删除，连带删除
    - 改变结构
      1. 支持在线DDL
      1. 字段类型、字段宽度都会锁表
-   - 字段
-     1. default：默认值
-        - text没有
-     1. null
-        - 认识：null值，设置为not null会自动调用默认值；需要行中的额外空间来记录其值是否为null，使用null会影响索引效率，因为索引将null也视作一般数据节点
-        - 和c语言的区别
-          1. '\0'表示空占用空间，null不占用
-          1. 空值('')不占用空间，null占用空间
-        - 因为text没有默认值，设置为not null在没有值的情况下会调用默认值，所以会有冲突
-        - 最佳实践
-          1. 尽量给所有值都加上not null
 #### sql
 1. sql
    - 分类
@@ -283,6 +282,7 @@
     show table status from baseName like \G;                # 表信息
     desc/describe tables;                                   # 查看表结构
     show create database/table baseName/tableName;          # 输出标准sql
+
     ## create
     create table table_name(                                                                # 创建表
         id int unsigned primary key auto_increment,
@@ -292,6 +292,7 @@
     create table tableName1 like tableName;                                                 # 复制表结构
     insert into tableName1 select * from tableName;                                         # 复制表数据
     create table tableName1 select * from tableName;                                        # 复制表结构和数据
+
     ## alter
     alter table tableName rename newName;                                                   # rename，修改表名
     alter table tableName add columnName int unsigned not null default 0;                   # add，追加字段
@@ -303,21 +304,11 @@
     alter table tableName drop primary key;                                                 # drop，删除主键，先删除自增，再删字段
     alter table tableName drop index indexName;                                             # drop，删除索引
     alter table tableName engine=mysiam                                                     # 修改引擎
+
     ## lock
-    lock tables tableName write/read local;                                                 # 表级锁，锁表的读/写，local允许其他用户表尾添加行
+    lock tables tableName write/read local;                                                 # 读/写的表级锁，local允许其他用户表尾添加行
     unlock tables;
     ```
-     1. 删除
-        - 认识
-          1. 不可回滚
-          1. 可以减少表空间
-        - 组成
-          1. drop
-             - drop database/table if exists baseName/tableName;                            # 删除库/表，会删除被依赖的约束(constrain)、触发器(trigger)、索引(index)，存储过程/函数保留变为invalid状态
-             - drop index indexName on table                                                # 删除索引
-          1. truncate table;                                                                # 数据清空，主键归0，其他不变
-             - 只能用于表，不会触发触发器
-             - 直接删除表再新建，不支持where，比delete快
    - DML
     ```sql
     ## 查询
@@ -332,23 +323,17 @@
     group by having condition1 and condition2                                               # 分类筛选
     order by xx1 desc/asc/rand() xx2 asc                                                    # 排序，多个排序规则
     limit x/limit x offset y/limit x.y                                                      # 限制条数/跳过x行的y行
+
     ## 插入数据
     insert into table(xx) set XX=xx/(,,) values (,) on duplicate key update;                # 插入数据，如果引发唯一或主键索引重复则更新
     replace into table (,,) values (,,);                                                    # 插入或更新，命中主键修改，未命中添加
+
     ## 更新数据
     update table set XX1=xx1, XX2=xx;                                                       # 更新所有数据
     update t1,t2 set t1.xx=xx,t2.xx=xx                                                      # 多表更新
     update t1 join t2 on t1.xx=t2.xx set t1.xx=xx
     ```
-     1. 删除数据
-        - 认识
-          1. 会走事务，可回滚，可返回删除的条数，会触发触发器
-          1. 是一条一条删除，会记录redo和undo日志，不会减少表或索引所占用的空间，下次插入会覆盖，使用optimize会立刻释放磁盘空间
-        - delete
-          1. delete from table where XX=xx;                                                    # 删除
-          1. delete from table;                                                                # 删除所有数据
-          1. delete t1,t2 from t1 join t2 on t1.xx=t2.xx;                                      # 多表数据删除
-### 基本操作
+#### 基本操作
 1. 查询方式
    - 关联查询
      1. 形式
@@ -363,9 +348,10 @@
    - 组合查询
      1. union：自动处理重合，即去掉重复的数据，以第一个取出的为准
      1. union all：不处理重合，相反，更快
-   - 嵌套查询：select * from (select ...);
+   - 嵌套查询
+     1. select * from (select ...);
 1. 查询调整
-   - 分页：limit 100 offset 517325，这个会查询51万的数据，只保留了你需要的100条，用id>n去实现索引
+   - 分页：limit 100 offset 517325，这个会查询51万的数据，只保留了你需要的100条，用id>n使用索引从而过滤数据
    - 分组
      1. group by：用列的值进行分组/计算，必须在where之后order by之前，select的字段除了被group的其他要么被统计，要么没有
      1. having：筛选成组后的数据，作用于组，如`having sum(age) > 10`
@@ -389,19 +375,11 @@
         - 时间戳
           1. 转为时间戳：`unix_timestamp('2018-01-15 09:45:16');`
           1. 转为时间：` from_unixtime(date, '%Y-%c-%d %h:%i:%s')`
-1. 其他
-   - checksum：在逻辑备份时候前后可以用于验证数据一致性，`checksum table xxx`
-     1. 无关：是否有索引、字符集、引擎类型
-     1. 有关：字段顺序
 1. 更新
    - replace：是标准sql的mysql扩展，使用primary key/unique key确定是否插入新行
      1. 注意：会抹掉其他未指定数据，应作为插入使用，而不是更新
      1. 原理：将数据插入，成功则结束；否则引发重复键错误，先删除原有记录，然后更新
-   - DELAY_KEY_WRITE
-     1. 认识：在表关闭之前，将对表的update操作只更新数据到磁盘，而不更新索引到磁盘，把对索引的更改记录在内存，在关闭表的时候一起更新索引到磁盘
-        - 使索引更新更快
-        - 重启或掉电会导致索引没更新，启动参数加上--myisam-recover
-     1. 操作：`ALTER TABLE xxx DELAY_KEY_WRITE=1`
+   - update
 1. 用户和权限管理
    - user
     ```sql
@@ -435,6 +413,27 @@
         - PROCESS：查看/杀死线程
         - RELOAD：重载授权表、清空日志/主机缓存/表缓存
         - SHUTDOWN：关闭服务器
+#### 进阶操作
+1. 删除
+     1. 删除库表
+        - 认识
+          1. 不可回滚
+          1. 可以减少表空间
+        - 组成
+          1. drop
+             - drop database/table if exists baseName/tableName;                            # 删除库/表，会删除被依赖的约束(constrain)、触发器(trigger)、索引(index)，存储过程/函数保留变为invalid状态
+             - drop index indexName on table                                                # 删除索引
+          1. truncate table;                                                                # 数据清空，主键归0，其他不变
+             - 只能用于表，不会触发触发器
+             - 直接删除表再新建，不支持where，比delete快
+     1. 删除数据
+        - 认识
+          1. 会走事务，可回滚，可返回删除的条数，会触发触发器
+          1. 是一条一条删除，会记录redo和undo日志，不会减少表或索引所占用的空间，下次插入会覆盖，使用optimize会立刻释放磁盘空间
+        - delete
+          1. delete from table where XX=xx;                                                    # 删除
+          1. delete from table;                                                                # 删除所有数据
+          1. delete t1,t2 from t1 join t2 on t1.xx=t2.xx;                                      # 多表数据删除
 ### 功能
 #### 索引
 1. 认识：为加快查询速度，对数据列进行排序的一种结构，包含所有记录的引用指针，查询时先查索引，引擎实现
@@ -448,7 +447,7 @@
      1. 聚集索引：主键、聚簇索引，叶子节点包含所有数据，还存储下一个叶子节点的指针
      1. 非聚集索引：二级、非聚簇索引，只存放主键id和当前索引的数据，有二次查询问题(获取本普通索引之外的数据需要找到主键id，然后去主键索引上拿数据)
    - 根据属性
-     1. Hash
+     1. hash
      1. btree
      1. full-text：全文索引，倒排索引实现
 1. 使用场景
@@ -560,39 +559,46 @@
      1. 内存易失：刷盘
 #### 锁
 1. 锁
-   - 特点
+   - 认识：并发控制
      1. 行锁基于索引项加锁实现，只有通过索引条件检索数据，InnoDB才使用行级锁，否则，InnoDB将使用表锁
      1. 目前处理死锁的方法是：将持有最少行级排它锁的事务回滚
      1. 并发抢锁的休眠时间应该为范围随机，防止多次争抢
-   - 概念
-     1. 悲观乐观的选择：数据争抢更严重的用悲观
-     1. 加锁方式
-        - 悲观锁
-          1. 理解：Pessimistic Locking，读取的时候为后面的更新加锁，之后再来的读写都会等待，属于数据库的锁
-             - 每次取数据时都认为其他线程会修改
-          1. 意义：数据修改排他性，高并发下，数据可以正确写入。但带来数据库性能的大量开销，影响并发访问性，特别是长事务
-        - 乐观锁
-          1. 理解：Optimistic Locking，乐观并发控制。基于数据版本记录机制或CAS操作实现
-            - 每次去取数据的时候总认为不会有其他线程对数据进行修改
-          1. 优缺点：程序实现，不会存在死锁。但是阻止不了程序之外的数据库操作
-          1. 乐观锁的并发方案：让版本低的并发更新回滚，并发低时性能好，并发高时失败率高
-          1. 流程：如updatetime/version等版本标识字段，根据version更新数据，一旦发现其他并发操作更新，会回退，并从新执行自己
-             - 读数据时，将version/时间戳一同读出
-             - 更新数据时，对比数据局版本
-             - 版本正确，更新数据，version加1
-             - 版本错误，认为是过期数据，采取补救措施
-     1. 基于范围
-        - 表锁：MyISAM，性能开销小，加锁快，无死锁，冲突高，并发低。可以并发读
-          1. 写的时候读写都加锁等待，系统自动加锁。因为一次获取所有锁，不会死锁
-          1. 必须一次锁定所有用到的表，别名也要指定，否则出错
-        - 行锁：InnoDB，记录锁，开销大，加锁慢，有死锁，冲突低，并发高。基于索引，如果改的字段是索引或者自增字段，会锁住整个表
-        - 页锁：BDB被InnoDB取代，并发介于表和行之间，会死锁
-     1. 加锁方式
-        - 一次性锁协议：所有锁一次性申请和释放，不会产生死锁
-        - 两阶段锁协议：分成加锁(不能解锁)阶段，和释放第一个锁后就进入解锁(不能加锁)阶段
-          1. 使得事务具有较高的并发度，因为解锁不必发生在事务结尾，但有死锁
-   - mysql的锁
-     1. Shared and Exclusive Lock
+   - 加锁方式
+     1. 一次性锁协议：所有锁一次性申请和释放，不会产生死锁
+     1. 两阶段锁协议：分成加锁(不能解锁)阶段，和释放第一个锁后就进入解锁(不能加锁)阶段
+        - 使得事务具有较高的并发度，因为解锁不必发生在事务结尾，但有死锁
+   - 锁带来的问题
+     1. 死锁：两个或两个以上争夺资源而相互等待，若无外力将无法推进，导致异常
+     1. 活锁：不会阻塞执行，但也不能继续执行，需要一直重复，可能会成功，会降低执行效率，引入随机性解决
+        - 像两个过于礼貌的人在路上相遇，彼此让路，然后在另一条路上相遇，然后一直循环
+     1. 饥饿：可运行进程能继续执行，但被调度器无限期忽视，而不能被执行，通过计数取样解决
+   - 查看
+     1. 表锁争用情况：`show status like 'table%';`
+     1. 行锁争用情况：`show status like 'innodb_row_lock%';`，使用监视器`CREATE TABLE innodb_monitor(a INT) ENGINE=INNODB;Show innodb status\G;DROP TABLE innodb_monitor;`
+1. 分类
+   - 悲观乐观的选择：数据争抢更严重的用悲观
+     1. 悲观锁：：Pessimistic Locking，读取的时候为后面的更新加锁，之后再来的读写都会等待，属于数据库锁
+        - 数据修改排他性，每次取数据时都认为其他线程会修改
+        - 高并发下，数据可以正确写入。但带来数据库性能的大量开销，影响并发访问性，特别是长事务
+     1. 乐观锁
+        - 理解：Optimistic Locking，基于数据版本记录机制或CAS操作实现
+          1. 每次取数据总认为不会有其他线程对数据进行修改
+          1. 程序实现，不会存在死锁。但阻止不了程序之外的数据库操作
+          1. 并发低时性能好，并发高时失败率高
+        - 并发方案：让版本低的并发更新回滚
+        - 流程：如updatetime/version等版本标识字段，根据version更新数据，一旦发现其他并发操作更新，会回退，并从新执行自己
+          1. 读数据时，将version/时间戳一同读出
+          1. 更新数据时，对比数据版本
+          1. 版本正确，更新数据，version加1
+          1. 版本错误，认为是过期数据，回滚重新执行
+   - 基于范围
+     1. 表锁：MyISAM，性能开销小，加锁快，无死锁，冲突高，并发低。可以并发读
+        - 写的时候读写都加锁等待，系统自动加锁。因为一次获取所有锁，不会死锁
+        - 必须一次锁定所有用到的表，别名也要指定，否则出错
+     1. 行锁：InnoDB，记录锁，开销大，加锁慢，有死锁，冲突低，并发高。基于索引，如果改的字段是索引或者自增字段，会锁住整个表
+     1. 页锁：BDB被InnoDB取代，并发介于表和行之间，会死锁
+1. mysql中的锁
+   - Shared and Exclusive Lock
         - 特点
           1. 强锁
           1. 锁级别：有主键或索引行级别，无则表级别
@@ -601,7 +607,7 @@
         - 分类
           1. Shared  Lock：共享锁，读锁，s，其他人读可以并行，锁拥有者不能修改，保证了拥有者释放锁时其他人读取的是对的，`lock in share mode`
           1. Exclusive Locks：排他锁，写锁，x，其他人读写都不能并行，`for update`
-     1. Intention Lock
+   - Intention Lock
         - 认识：意向锁，表锁，为了允许行锁和表锁共存，实现多粒度锁机制。申请表锁时为了快速知道是否可锁，否则需要一行行去看是否有锁
           1. 弱锁，仅仅表明意向
           1. 给一个数据行加锁前必须先取得该表对应的意向锁
@@ -609,23 +615,23 @@
         - 分类
           1. 意向共享锁：is
           1. 意向排他锁：ix
-     1. Auto-inc Lock
+   - Auto-inc Lock
         - 认识：自增锁，特殊的表级锁，专门针对事务插入AUTO_INCREMENT类型的列
           1. 如果插入位置冲突，多个事务会阻塞，以保证数据一致性
           1. innodb_autoinc_lock_mode：调节该锁的模式与行为，3种配置，0加自增锁，1回滚自增列不连续，2批量插入自增列可能不连续，主从同步可能出问题
-     1. Record Lock
+   - Record Lock
         - 认识：记录锁，索引记录上加锁
-     1. Gap Lock
+   - Gap Lock
         - 认识：间隙锁，范围查找自动锁定区间内所有行，索引记录中的间隔加锁，不可以被其他事务读取/修改，防止幻读
         - 分类
           1. Insert Intention Lock
              - 认识：插入意向锁，插入操作时使用，多个事务在同一个索引、同一个范围区间插入记录时，如果插入的位置冲突会阻塞
              - 实际是gap锁上加一个LOCK_INSERT_INTENTION标记
-     1. Next-key Lock
+   - Next-key Lock
         - 认识：Ordinary Lock 临键锁，同时锁住索引的记录和间隙
           1. 在RR下有效，防止幻读
           1. 两种锁可能只成功一个，所以next-key是半开半闭区间，且是下界开，上界闭
-     1. Metadata Lock
+   - Metadata Lock
         - 认识：MDL锁，是server层的锁，主要用于隔离DML和DDL操作之间的干扰
           1. 每执行一条DML、DDL语句时都会申请，DML需MDL读锁，DDL需MDL写锁，有活动事务时会等待
           1. 加锁过程自动控制
@@ -634,36 +640,29 @@
           1. `get_lock(key, timeout)`：按key名加锁，使用元数据锁定(MDL)，没人用
           1. `release_lock(key)/release_all_lock()`：释放锁，关闭连接锁也释放
           1. `is_free_lock(key)/is_used_lock(key)`
-   - 查看
-     1. 表锁争用情况：`show status like 'table%';`
-     1. 行锁争用情况：`show status like 'innodb_row_lock%';`，使用监视器`CREATE TABLE innodb_monitor(a INT) ENGINE=INNODB;Show innodb status\G;DROP TABLE innodb_monitor;`
-   - 死锁
-     1. 表现
+1. 死锁
+   - 认识：互相持有对方的锁都不放开，没有外力就一直僵持
+     1. 产生的条件：破坏以下4个条件的n个即可
+        - 互斥：至少一个资源被排他性独享，其他线程必须处于等待状态，直到资源被释放
+        - 不可剥夺：资源只能由持有它的 goroutine 来释放
+        - 持有和等待：goroutine 持有一个资源，并且还在请求其它 goroutine 持有的资源
+        - 环路等待
+     1. 会出现的地方
         - 记录锁（LOCK_REC_NOT_GAP）: lock_mode X locks rec but not gap
         - 间隙锁（LOCK_GAP）: lock_mode X locks gap before rec
         - 插入意向锁（LOCK_INSERT_INTENTION）: lock_mode X locks gap before rec insert intention
         - Next-key锁（LOCK_ORNIDARY）: lock_mode X
-     1. U锁：查看一个事务中是否有写，有写就将操作同一数据的读锁直接提升为写锁，防止读写读写交叉的死锁，属于细微的极致优化
-     1. 最佳实践
-        - 通常来说，死锁都是应用设计的问题。死锁的关键在于两个(或以上)的Session加锁的顺序不一致
-        - 如果并发查询多个表，约定访问顺序
-        - 批量处理数据时事先对数据排序，保证每个线程按固定顺序处理记录，也可以大大降低出现死锁的可能
-        - 在同一个事务中，尽可能做到一次锁定获取所需要的资源，不要先共享锁，再排它锁
-        - 小事务发生锁冲突的几率也更小
-     1. 处理方案
-        - 尽可能不死锁：使用轻量级锁
-        - 碰撞检测：性能高成本低
-        - 等锁超时
-   - 锁类型
-     1. 死锁：两个或两个以上争夺资源而相互等待，若无外力将无法推进，导致异常
-     1. 活锁：不会阻塞执行，但也不能继续执行，需要一直重复，可能会成功，会降低执行效率，引入随机性解决
-        - 像两个过于礼貌的人在路上相遇，彼此让路，然后在另一条路上相遇，然后一直循环
-     1. 饥饿：可运行进程能继续执行，但被调度器无限期忽视，而不能被执行，通过计数取样解决
-1. 死锁避免方法，破坏以下4个条件的一个或几个即可
-   - 互斥：至少一个资源是被排他性独享的，其他线程必须处于等待状态，直到资源被释放
-   - 持有和等待：goroutine 持有一个资源，并且还在请求其它 goroutine 持有的资源
-   - 不可剥夺：资源只能由持有它的 goroutine 来释放
-   - 环路等待
+   - 解决方案
+     1. 合格的设计：通常来说死锁都是应用设计的问题。死锁的关键在于两个(或以上)的session加锁的顺序不一致
+        - 降低成本
+          1. 尽量使用更轻量级锁，更小的事务
+          1. 在同一个事务中，尽可能做到一次锁定获取所需要的资源，不要先共享锁，再排它锁
+             - U锁：先查看事务中是否有写操作，有就将之前读同一数据的读锁直接提升为写锁，防止读写读写交叉造成死锁
+        - 有序顺行
+          1. 如果并发查询多个表，约定访问顺序
+          1. 批量处理数据时事先对数据排序，保证每个线程按固定顺序处理记录，也可以大大降低出现死锁的可能
+     1. 设置等锁超时机制
+     1. 引入碰撞检测：性能高成本低
 #### 其他
 1. 预解析
    - 理解：使用占位符预先准备查询语句，不用解析语句，查询速度更快，防止注入。步骤有：prepare、execute、deallocate prepare(发布)
@@ -748,32 +747,15 @@
         - 对从设置read-only，防止误改
         - 主从自动切换
      1. 数据备份：异步实时备份，复制不能代替备份，因为执行删除命令同步的很快，这个时候只能依赖备份了
-   - 角色
-     1. 从库线程
-        - Slave_IO_Running：到主库取日志，放入relay log，是顺序写效率较高
-        - Slave_SQL_Running：解析relay log并执行，可能随机io成本较高；是单线程的，一个DDL等待之后的都延迟
    - 步骤：![avatar](../images/mysql_slave_process.webp)
      1. master记录到binlog
      1. slave创建的io线程连接master，请求指定文件的指定位置之后的内容
      1. master创建独立异步的log dump线程发送binlog
         - 防止影响主库的更新
         - 会消耗主库资源，占用带宽等
-     1. slave的io线程将接收的日志依次记录到relay log末尾中，将binlog日志名和位置记录到masterinfo中。防止影响从库的更新
-     1. slave的sql线程检测到relay log新增了内容，解析并执行
-   - 查看
-     1. `show master status;`
-     1. `show slave status;`
-   - 配置
-     1. 主
-        - bin_log=mysql-bin
-        - server_id=100
-     1. 从
-        - bin_log=mysql-bin
-        - server_id=101
-        - relay_log=mysql-relay-bin
-        - log_slave_update=on(可选，是否要当其他的主)
-        - read_only=on(建议)
-   - 场景
+     1. slave的io线程Slave_IO_Running将接收的日志顺序记录到relay log末尾中，顺序写效率高，将binlog日志和位置记录到masterinfo中。防止影响从库的更新
+     1. slave的sql线程Slave_SQL_Running检测到relay log新增了内容，解析其并执行，可能随机io成本较高；是单线程的，一个DDL等待之后的都延迟
+   - 最佳实践
      1. 从库延迟
         - 认识：正常在毫秒级别，秒级就需告警了
         - 一些原因
@@ -784,6 +766,20 @@
           1. 数据冗余，不要再查，直接传输所有数据
           1. 使用Cache，但是更新怎么办，不行
           1. 查主库
+   - 运维
+     1. 查看
+        - `show master status;`
+        - `show slave status;`
+     1. 配置
+        - 主
+          1. bin_log=mysql-bin
+          1. server_id=100
+        - 从
+          1. bin_log=mysql-bin
+          1. server_id=101
+          1. relay_log=mysql-relay-bin
+          1. log_slave_update=on(可选，是否要当其他的主)
+          1. read_only=on(建议)
 1. 复制
    - 复制方式
      1. 异步：主库宕了没同步binlog丢失数据
@@ -831,7 +827,7 @@
      1. 主从宕机
         - 特点
           1. 主宕机：主回滚事务，从拿不到
-          1.  从宕机：master_info没写入磁盘，造成重复获取主的二进制日志，基于日志点会出现主键重复、基于Statement出现重复更新
+          1. 从宕机：master_info没写入磁盘，造成重复获取主的二进制日志，基于日志点会出现主键重复、基于Statement出现重复更新
         - 解决方案
           1. 跳过二进制日志事件：日志点复制方式
           1. 注入空事务先恢复中断复制链路：日志点或GTID方式
@@ -847,9 +843,6 @@
    - 无法解决的
      1. 自动故障转移、主从切换
      1. 读写分离
-1. 主主
-   - auto_increment_offset设置差1，auto_increment_increment设置为2：防止主键冲突
-   - log_slave_updates：两节点都要开启，就是反着搭建主备同步
 1. 网校架构
    - 主要
      1. 一主两从，读写分离
@@ -885,30 +878,35 @@
           1. 关闭Kafka Consumer（Data Loader）
           1. 将流量切到新的Mysql Proxy
           1. 打开Kafka Consumer，观察是否还有遗漏的数据，并进行手动修复（极小概率发生）
-### 中间件
-1. 现有mysql的问题
-   - 无集群化的解决方案
-   - 无在线扩容方案，横向分片需要业务改造
-   - 网络模型限制了连接数
-   - 不支持跨机房部署、sql分发
-   - 不支持Paxos、Raft、Dynamo等一致性协议
-1. 认识
-   - 优点
-     1. 对前端透明
-     1. 自动故障转移(带事务重放)、主从切换、从节点选取
-     1. 集群健康度检查，包括复制链路
-     1. 读写分离、读负载均衡
-     1. 分库分表：垂直、水分拆分
-     1. 防火墙：sql审核、过滤、改写、容错、转换、慢指纹、错误sql指纹
-     1. 连接池
-     1. 配置热加载、ip白名单
-     1. 跨机房双活、多集群、多租户
-     1. 查询路由
-     1. 方便的运维方案：实例申请、建库表、慢查询统计、在线DDL
-   - 缺点
-     1. 增加中间层，执行效率降低，先进行基准测试
-     1. 需要控制是否读写分离
-1. 集群方案
+1. 其他架构
+   - Orchestrator：mySQL高可用性和复制拓扑管理工具，支持调整复制拓扑、自动故障转移、手动主从切换等，go写的，网校在用
+   - pxc
+     1. 认识：数据多向同步复制的高可用性和扩展性的集群方案，基于Percona Server 
+        - 多主复制，任意节点写操作
+        - 故障切换、自动节点克隆
+     1. 原理
+        - 在所有集群节点都要提交
+     1. 注意
+        - 尽可能的控制PXC集群的规模，节点越多，数据同步速度越慢
+        - 所有PXC节点的硬件配置要一致，如果不一致，配置低的节点将拖慢数据同步速度
+        - 只支持InnoDB
+   - maxscale
+     1. 认识：支持高可用、负载均衡、扩展插件式的数据库中间件，mariaDB出品
+        - 主从复制状态监测，自动故障转移
+        - 读写分离、读负载均衡
+     1. 插件
+        - 认证
+        - 协议
+        - 路由
+        - 监控
+        - 过滤日志：简单防火墙，sql过滤和改写、容错、转换
+   - mycat
+     1. 认识：开源分布式数据库中间件，13年阿里开源，java写的。支持读写分离、高可用(主没了选从)、拆分(垂直、水平)
+        - 高可用：去中心化集群，vip下在不同的节点部署多个mycat，根据某种策略(如ip选举)选举为临时master，之间采用心跳机制进行通信维持故障切换。可使用zk、haproxy、keepalived等组件，可以有选举、心跳、切换ip等功能
+        - 功能复杂，细节还待改善
+   - 主主
+     1. auto_increment_offset设置差1，auto_increment_increment设置为2：防止主键冲突
+     1. log_slave_updates：两节点都要开启，就是反着搭建主备同步
    - MMM
      1. 认识：Master-Master replication managerfor Mysql Mysql主主复制管理器，perl实现的双主故障切换、管理的脚本程序
         - 功能
@@ -938,38 +936,90 @@
      1. 组成
         - Manager
         - Node：部署在每台实例上
-   - pxc
-     1. 认识：数据多向同步的同步复制的高可用性和扩展性的集群方案，基于Percona Server 
-        - 多主复制，任意节点写操作
-        - 故障切换、自动节点克隆
-     1. 原理
-        - 在所有集群节点都要提交
-     1. 注意
-        - 尽可能的控制PXC集群的规模，节点越多，数据同步速度越慢
-        - 所有PXC节点的硬件配置要一致，如果不一致，配置低的节点将拖慢数据同步速度
-        - 只支持InnoDB
+### 中间件
+1. 认识
+   - 现有mysql的问题
+     1. 无集群化的解决方案
+     1. 无在线扩容方案，横向分片需要业务改造
+     1. 网络模型限制了连接数
+     1. 不支持跨机房部署、sql分发
+     1. 不支持Paxos、Raft、Dynamo等一致性协议
+   - 优点
+     1. 对前端透明
+     1. 拥有连接池特性
+     1. 查询路由
+     1. 读写分离、读负载均衡
+     1. 分库分表：垂直、水分拆分
+
+     1. 集群健康度检查，包括复制链路
+     1. 自动故障转移(带事务重放)、主从切换、从节点选取
+     1. 跨机房双活、多集群、多租户
+
+     1. 配置热加载、ip白名单
+     1. 防火墙：sql审核、过滤、改写、容错、转换、慢指纹、错误sql指纹
+     1. 方便的运维方案：实例申请、建库表、慢查询统计、在线DDL
+   - 缺点
+     1. 增加中间层，执行效率降低，先进行基准测试
+1. maxwell
+   - 认识：同步binlog以json写入到kafka、redis、es等流平台，用于ETL、缓存刷新、指标收集、增量到搜索引擎、数据分区迁移、切库binlog回滚等场景，java写的
+     1. 有过滤器功能
+     1. 优缺点
+        - 优点：业务解耦，准实时
+        - 缺点：只能单表操作，不适用于涉及到数据聚合的地方或者有父子关系的
+     1. 性能表现：qps 16w，单核2G，20%cpu，7%内存占用，带宽会很高
+   - 原理：伪装为slave，接收binlog events，然后根据schemas信息拼装，可接受ddl、xid、row等各种event
+   - 架构
+     1. 高可用
+        - 最小队列粒度也是表，根据数据量级分开
+        - 不直接支持ha，但支持断点还原
+        - 不支持控制数据速率
+        - 监控：baselogging mechanism,JMX,HTTP,bypush toDatadog
+        - 报警
+          1. 进程是否存在
+          1. 监控异常日志
+          1. 网络监控
+          1. 数据一致性：可手动修改position位置
+        - 主从切换：通过域名访问mysql，跟着切换走
+     1. 架构：跟着数据库在不同集群就行，关系就是和mysql、kafka
+   - 运维
+     1. 流程
+        - mysql配置maxwell用户、给与权限
+        - 配置连接mysql信息
+        - 配置连接kafka信息，topic
+     1. maxwell-bootstrap：基于SELECT*FROM table帮助完成数据初始化
+     1. 特点
+        - timestamp column：对时间类型当字符串处理。所以更合理的做法是提供时区参数，然后maxwell自动处理时区问题
+        - binary column：做base64_encode，消费者需要解码
+   - 进行配置
+     1. mysql角色
+        - host：主机，建maxwell库表，存储捕获到的schema等信息
+        - replication_host：复制主机，Event监听，读取该主机binlog
+          1. 将host和replication_host分开，可以避免replication_user往生产库里写数据
+        - schema_host：schema主机，捕获表结构schema的主机
+          1. binlog没有字段信息，所以m需要从数据库查出schema，存起来
+     1. 过滤器
+        - --filter='exclude: foodb.*, include: foodb.tbl, include: foodb./table_\d+/'：# 仅匹配foodb数据库的tbl表和所有table_数字的表
+        - --filter = 'exclude: *.*, include: db1.*'：排除所有库所有表，仅匹配db1数据库
+        - --filter = 'exclude: db.tbl.col = reject'：排除含db.tbl.col列值为reject的所有更新
+        - --filter = 'exclude: *.*.col_a = *'：排除任何包含col_a列的更新
+        - --filter = 'blacklist: bad_db.*'：blacklist 黑名单，完全排除bad_db数据库，若要恢复，必须删除maxwel
+     1. 输出格式
+        - 是否包含 binlog position
+        - 是否包含 gtid position
+        - 是否包含 commit and xid
+   - 同类
+     1. canal Otter：分为服务端和客户端，需要自己编写客户端来消费服务端解析到的数据。性能稳定，功能强大，阿里。maxwell无客户端更简单
+     1. mysql_streamer
+     1. datax
+     1. flink
+1. 其他
    - mysqlProxy
      1. 认识：mysql官方，很久，实验项目
-   - Orchestrator：mySQL高可用性和复制拓扑管理工具，支持调整复制拓扑、自动故障转移、手动主从切换等，go写的，网校在用
-   - maxscale
-     1. 认识：支持高可用、负载均衡、扩展插件式的数据库中间件，mariaDB出品
-        - 主从复制状态监测，自动故障转移
-        - 读写分离、读负载均衡
-     1. 插件
-        - 认证
-        - 协议
-        - 路由
-        - 监控
-        - 过滤日志：简单防火墙，sql过滤和改写、容错、转换
    - oneProxy
      1. 认识：将一个表分片，数据写到两个实例中，也可以保持两个实例都有一个相同的表，貌似也停止维护
-   - mycat
-     1. 认识：开源分布式数据库中间件，13年阿里开源，java写的。支持读写分离、高可用(主没了选从)、拆分(垂直、水平)
-        - 高可用：采用去中心化的集群，在虚拟ip下，在不同的节点部署多个mycat，根据某种策略(ip选举策略)选举某一个为临时master，之间采用心跳机制进行通信维持故障切换。可使用zk、haproxy、keepalived等组件，可以有选举、心跳、切换ip等功能
-        - 功能复杂，细节还待改善
    - proxySQL
    - dbproxy：美团开源，Atlas基础上开发，17年停止维护
-   - wxproxy
+   - wxproxy：网校的
      1. 优势
         - 分片功能实现横向扩容
           1. 分片查询：Proxy根据SQL语句解析出AST，再根据AST里的WHERE条件判断是否满足id的查询条件，最后将SQL路由至该Shard
@@ -1027,59 +1077,6 @@
    - amoeba
    - atlas：360开源
    - kingshard：个人的go开发，读写分离、分库分表、sql黑名单
-1. maxwell
-   - 认识：同步binlog以json写入到kafka、redis、es等流平台，用于ETL、缓存刷新、指标收集、增量到搜索引擎、数据分区迁移、切库binlog回滚等场景，java写的
-     1. 有过滤器功能
-     1. 优缺点
-        - 优点：业务解耦，准实时
-        - 缺点：只能单表操作，不适用于涉及到数据聚合的地方或者有父子关系的
-   - 原理：伪装为slave，接收binlog events，然后根据schemas信息拼装，可接受ddl、xid、row等各种event
-   - 使用
-     1. 流程
-        - mysql配置maxwell用户、给与权限
-        - 配置连接mysql信息
-        - 配置连接kafka信息，topic
-     1. maxwell-bootstrap：基于SELECT*FROM table帮助完成数据初始化
-     1. 特点
-        - timestamp column：对时间类型当字符串处理。所以更合理的做法是提供时区参数，然后maxwell自动处理时区问题
-        - binary column：做base64_encode，消费者需要解码
-   - 配置
-     1. mysql角色
-        - host：主机，建maxwell库表，存储捕获到的schema等信息
-        - replication_host：复制主机，Event监听，读取该主机binlog
-          1. 将host和replication_host分开，可以避免replication_user往生产库里写数据
-        - schema_host：schema主机，捕获表结构schema的主机
-          1. binlog没有字段信息，所以m需要从数据库查出schema，存起来
-     1. 过滤器
-        - --filter='exclude: foodb.*, include: foodb.tbl, include: foodb./table_\d+/'：# 仅匹配foodb数据库的tbl表和所有table_数字的表
-        - --filter = 'exclude: *.*, include: db1.*'：排除所有库所有表，仅匹配db1数据库
-        - --filter = 'exclude: db.tbl.col = reject'：排除含db.tbl.col列值为reject的所有更新
-        - --filter = 'exclude: *.*.col_a = *'：排除任何包含col_a列的更新
-        - --filter = 'blacklist: bad_db.*'：blacklist 黑名单，完全排除bad_db数据库，若要恢复，必须删除maxwel
-     1. 输出格式
-        - 是否包含 binlog position
-        - 是否包含 gtid position
-        - 是否包含 commit and xid
-   - 架构
-     1. 高可用
-        - 最小队列粒度也是表，根据数据量级分开
-        - 不直接支持ha，但支持断点还原
-        - 不支持控制数据速率
-        - 监控：baselogging mechanism,JMX,HTTP,bypush toDatadog
-        - 报警
-          1. 进程是否存在
-          1. 监控异常日志
-          1. 网络监控
-          1. 数据一致性：可手动修改position位置
-        - 主从切换：通过域名访问mysql，跟着切换走
-     1. 架构：跟着数据库在不同集群就行，关系就是和mysql、kafka
-   - 性能表现
-     1. qps 16w，单核2G，20%cpu，7%内存占用，带宽会很高
-   - 其他
-     1. canal Otter：分为服务端和客户端，需要自己编写客户端来消费服务端解析到的数据。性能稳定，功能强大，阿里。maxwell不用客户端了简单
-     1. mysql_streamer
-     1. datax
-     1. flink
 ### 最佳实践
 #### 设计实践
 1. 范式
@@ -1345,6 +1342,15 @@
         - 拿time_min在各个分库中比较，得出每个表的虚拟offset，相加从而得到time_min在全局的offset
         - 得到了time_min在全局的offset，自然得到了全局的offset X limit Y，要什么从后推着拿就行
 ### 运维
+1. 大表结构修改
+   - 步骤
+     1. 建立新表：修改后的结构
+     1. 老表数据导入新表，建立触发器同步修改到新表
+     1. 数据同步完成后，老表添加排它锁
+     1. 重命名老表和新表的名字：重命名之前不需要有锁，很短暂
+     1. 删除老表
+   - 工具
+     1. pt-online-schema-change：`pt-online-schema-change --alter="" --execute`
 #### 基础
 1. 安装
    - 安装：`yum -y install mysql-server`
@@ -1374,16 +1380,6 @@
    - tcp/ip套接字：`mysql -h127.0.0.1`
    - 域套接字：`mysql -S /tmp/mysql.sock`
    - 命名管道、共享内存：通过配置开启
-#### 操作
-1. 大表结构修改
-   - 步骤
-     1. 建立新表：修改后的结构
-     1. 老表数据导入新表，建立触发器同步修改到新表
-     1. 数据同步完成后，老表添加排它锁
-     1. 重命名老表和新表的名字：重命名之前不需要有锁，很短暂
-     1. 删除老表
-   - 工具
-     1. pt-online-schema-change：`pt-online-schema-change --alter="" --execute`
 #### 性能和调优
 1. 性能表现
    - 4核8G的机器MySQL5.7大概支撑500的TPS和10000的QPS
@@ -1435,6 +1431,11 @@
    - mysql
      1. 命令行、配置文件
      1. 全局参数、会话参数
+        - DELAY_KEY_WRITE
+          1. 认识：在表关闭之前，将对表的update操作只更新数据到磁盘，而不更新索引到磁盘，把对索引的更改记录在内存，在关闭表的时候一起更新索引到磁盘
+             - 使索引更新更快
+             - 重启或掉电会导致索引没更新，启动参数加上--myisam-recover
+     1. 操作：`ALTER TABLE xxx DELAY_KEY_WRITE=1`
      1. 内存
         - mysql自身运行的占用：无法控制
         - 最大使用内存
@@ -1747,6 +1748,9 @@
      1. 实时备份
         - 实时二进制日志备份：`mysqlbinlog --raw --read-from-remote-server --stop-never --host localhost --port 3306 -u -p xxxx xx.000011`
      1. 基于时间点备份
+   - checksum：在逻辑备份时候前后可以用于验证数据一致性，`checksum table xxx`
+     1. 无关：是否有索引、字符集、引擎类型
+     1. 有关：字段顺序
 1. 恢复
    - 逻辑日志导入
      1. mysql -u -p databaseName < data.sql
