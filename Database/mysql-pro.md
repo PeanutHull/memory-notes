@@ -1,6 +1,7 @@
 ### mysql
 1. 认识：单进程多线程，插件式的表存储引擎
    - 数据多了，性能下降不是线性的
+   - 可靠性指的是自身的可靠，只保证自己可靠，注意区分出事节点，明确问题的归属
 1. 架构
    - 服务层：————负责跨存储引擎功能的实现，如存储过程、触发器、视图
      1. 连接器：————管理连接、连接权限验证，用户权限信息放在一个变量中以供后续使用，长连接多了容易内存爆满
@@ -209,6 +210,7 @@
      1. 支持崩溃后安全恢复
    - 特性
      1. mvcc
+     1. wal
      1. insert buffer：插入缓存，性能提升
      1. double write：二次写
      1. adaptive hash index：主动式hash索引，读取数据时自动在内存构建hash索引
@@ -267,45 +269,85 @@
         - Undo表空间：存储Undo信息
      1. 日志文件
         - ib_logfileN：重做日志文件
+1. innoDB数据更新机制
+   - 认识：wal一致，![avatar](../images/mysql-update.jpeg)
+   - 场景
+     1. 重启
+        - 做完清理工作再shutdown，如各种刷盘
+     1. 宕机
+        - 事务回滚：redo中commit的发现LSN落后的就重放刷盘，没commit的判断binlog是否完整来重新commit或者回滚
+     1. 数据丢失
+        - mysql宕机：写入了文件系统缓存就丢不了
+        - 服务器宕机：没有设置双一，就可能丢
+
+
+
+   - 重启操作
+     1. 数据页中的LSN小于redo log的LSN，说明redo log上记录着数据页没完成的操作，就会从最近的一个check point出发，开始重放刷盘
+     1. 数据库重启先进行crash recovery保证crash-safe，binlog和redolog通过事件xid关联，保证数据一致性
+   - 双一问题：可以主双一，从非双一，提高性能
+     1. sync_binlog不为1，服务器宕机会丢失binlog
+     1. innodb_flush_log_at_trx_commit为1
+        - 可以在redo commit时不进行fsync，就无法保证一致性，但是提高了效率
+        - innodb_support_xa不为1，redo没commit重启后要回滚，但是binlog记录了，造成问题
+1. WAL
+   - 认识：Write-Ahead Logging，日志先行机制，先写日志再持久化数据文件，利用日志的高效率的顺序写实现灵活控制的可靠持久化的一种机制，兼顾了提高性能和可靠持久化。崩溃时即使数据没有持久化也可以通过日志文件恢复，类似两阶段提交
+     1. 写入文件系统缓存page cache，并没有持久化，非常快，和写内存差不多(本质就是写内存)。fsync才占用iops，耗时才非常大
+     1. 参与的对象有：内存脏页、redolog、binlog、数据文件
+     1. 整个过程没有完整结束，需要用redolog和binlog配合恢复
+   - 步骤
+     1. 执行器：通知innoDB进行数据更新
+     1. innoDB：将新数据更新到内存脏页中
+     1. innoDB：之后开始写入redolog，并将该记录置为prepare状态
+     1. 执行器：写入binlog，完成持久化
+     1. innoDB：提交事务，并更新redolog中对应数据为commit状态
+        - redolog提交后才能进行事务的commit，因为保证持久性，即Force Log at Commit
+     1. mySQL空闲时，会将内存中的数据落盘
+   - 解释
+     1. 步骤
+        - 账本记录卖一瓶可乐（redolog 处于 prepare）
+        - 收钱放入抽屉（binlog）
+        - 收完钱，在账本该记录上打对勾，代表抵账（redolog 置为 commit）
+     1. 纠错
+        - 若收钱过程被打断，则整理交易时，发现只是记账了却没收钱，则删除该账本记录（回滚）
+        - 若收了钱，有事情耽误了抵账，对账时将账本该记录打勾即可（即commit）
+   - wiki
+     1. 内存脏页：即脏页，内存页中缓存的数据发生变更，刷脏页就是持久化
 1. 日志
-   - 认识
-     1. undo是回滚，redo是前滚
-     1. redo和binlog相比
-        - redo引擎层产生，binlog库上层产生，binlog会包含redo的
-        - redo是物理格式，记录每个页的修改；binlog是逻辑日志，记录对应sql
-        - 写入磁盘时机：redo不断写入，binlog事务commit后一次写入
+   - 认识：undo是回滚，记录之前的数据，redo是重做，记录将要执行的操作
    - undolog
      1. 认识：回滚日志，用于回滚/崩溃恢复，记录数据修改前的数据，记录与当前操作相反的逻辑日志，用于做相反操作
         - update/delete存放数据旧记录
         - insert记录新数据行的PK(rowid)
    - redolog
-     1. 认识：重做日志，存储事务日志，保证可靠的事务，存储每个页的修改，不是某行
-        - 一是延迟同步了磁盘文件，二是顺序写速度快，三可以用来恢复数据
-        - InnoDB独有，顺序整块写，效率高。大小固定，写满后循环记录
-        - 至少有一个文件组，至少2个文件，循环2个文件一个个写入。可有多个镜像日志组，更高可靠性，有了高可用方案如磁盘阵列可不用
+     1. 认识：重做日志，存储事务日志，用来恢复事务前的数据状态，保证可靠的事务，innoDB独有
+        - 顺序写速度快，大小固定，写满后循环记录
+     1. 功能
         - 有LSN落后数量最多检查阈值，否则需要将缓冲池的脏页列表的部分写回磁盘，会阻塞用户线程
+        - 高可用：至少一个文件组、2个文件，循环2个文件依次写入
+          1. 多个镜像文件组会有更高可靠性，有了高可用方案如磁盘阵列可不用
         - 不需要对redo进行读取
-     1. 结构：有几十种类型
-        - redo_log_type：类型
+        - 会延迟同步binlog文件
+     1. 结构
+        - redo_log_type：类型，有几十种
         - space：表空间id
-        - page_no：页偏移量
+        - page_no：页号
         - redo_log_body：数据部分，恢复时需要调用相应函数进行解析
      1. 流程
         - 先写入buffer，然后顺序写入日志文件
         - 刷盘：根据innodb_flush_log_at_trx_commit确定刷盘策略
-          1. 流程：![avatar](../images/redo-buffer.jpeg)
+          1. 流程：![avatar](../images/redo-buffer.jpeg)，check point到write pos是未刷盘的，当write pos追上check point，先推动check point向前移动，空出位置再记录新的日志
              - write pos：当前记录的LSN
              - check point：已刷盘的LSN，之前的已刷盘
-             - check point到write pos是未刷盘的，当write pos追上check point，先推动check point向前移动，空出位置再记录新的日志
           1. 特点
              - 触发条件有主线程、事务提交
              - 主线程每秒将buffer写入文件，不论事务是否提交
              - 每秒刷盘和崩溃恢复的逻辑，innodb认为redo log在commit时不需要fsync了，写到page cache就够了
         - 固定512byte(扇区大小)写磁盘，扇区是写入的最小单位，保证写入必定成功，不需要doublewrite
      1. 组成
-        - LSN：Log Sequence Number 日志逻辑序列号，版本标记的计数，单调递增的值，写多少日志，就加多少
+        - LSN：Log Sequence Number 日志序号，版本标记的计数，单调递增的值，写多少日志，就加多少
         - checkpoint
-          1. 认识：保证checkpoint之前的脏页都刷新回磁盘，那么崩溃恢复直接从checkpoint的点开始应用redo即可
+          1. 认识：保证checkpoint之前的脏页都刷回磁盘，那么崩溃恢复直接从checkpoint的点开始应用redo即可
           1. 分类
              - sharp checkpoint：保证所有的脏页刷新到磁盘
              - fuzzy checkpoint
@@ -319,42 +361,26 @@
           1. 1：默认，最安全，性能最差，调用fsync，为了保持持久性，必须为1，才能保证宕机能够用redo恢复。flush log除非磁盘或者操作系统做了伪刷新
           1. 2：异步写，等待操作系统落盘，不能保证commit时肯定写入了redo log，6倍性能提升
         - innodb_log_file_size：日志文件大小，太小老checkpoint性能抖动，太大恢复时间长
-1. WAL
-   - 认识：Write-Ahead Logging，日志先行，先写日志再持久化数据文件，保证持久化数据之前日志已经记录
-     1. binlog和redo log都落盘了，保证mysql不丢数据
-     1. 写磁盘需要随机写，顺序写性能高
-   - 步骤
-     1. 执行器通知引擎数据更新
-     1. 引擎将新数据更新到脏页内存中
-     1. 引擎此时开始记录redolog，并将该记录置为prepare状态
-     1. 执行器写binlog
-     1. 引擎提交事务，并更新此行数据的redolog状态为commit
-     1. Force Log at Commit：持久化redo后才能进行事务的commit，保证持久性
-     1. 当MySQL空闲时，会将内存中的数据落盘
-   - 解释
-     1. 步骤
-        - 账本记录卖一瓶可乐（redolog 处于 prepare）
-        - 收钱放入抽屉（binlog）
-        - 收完钱，在账本该记录上打对勾，代表抵账（redolog 置为 commit）
-     1. 纠错
-        - 若收钱过程被打断，则整理交易时，发现只是记账了却没收钱，则删除该账本记录（回滚）
-        - 若收了钱，有事情耽误了抵账，那么之后闲下来对账的时候，将账本该记录打勾即可（即commit）
+     1. redo和binlog
+        - redo引擎层产生，binlog库上层产生，binlog会包含redo的
+        - redo是物理格式，记录每个页的修改；binlog是逻辑日志，记录对应sql
+        - 写入磁盘时机：redo不断写入，binlog事务提交后一次写入
 1. double write
    - 认识：两次写，保证redo数据页的完整可靠性。即再写一个页的副本，redo前先通过副本还原该页。有些文件系统提供了部分写失效的防范机制(ZFS)，不用开启两次写
-     1. 部分写失效：一页没有写完整，redo log是无法解决，页本身损坏重做无意义
+     1. 部分写失效：一页没有写完整，redolog是无法解决，页本身损坏重做无意义
      1. 文件系统写失效：只写入了页缓存，并没有同步到磁盘上
         - unix的高速页缓存机制：大多数磁盘io都通过缓冲进行，用fsync主动触发，同步磁盘太慢了
    - 组成
      1. 内存buffer：2m大小
-     1. 共享表空间：2m大小，连续128个页，2个区extent
+     1. 共享表空间：2m大小，连续128个页，2个区
    - 写入流程：在redo commit之后进行
      1. 缓冲池脏页刷新时，先memcpy到buffer
      1. buffer分2次，每次1m顺序写入共享表空间，然后立即fsync
         - 因为顺序写入，开销不大
      1. buffer再写入各个表空间
    - 恢复流程
-     1. redo log失败的话，通过binlog计算正确的数据，重新写入redo log
-     1. 从redo log获取页副本，复制到redo log，再应用重做操作
+     1. redolog失败的话，通过binlog计算正确的数据，重新写入redolog
+     1. 从redolog获取页副本，复制到redolog，再应用重做操作
 1. 索引
    - 认识：聚集方式
      1. 数据存在共享表空间，可通过配置分开
@@ -367,27 +393,6 @@
 1. wiki
    - innoDB最早是第三方引擎，被oracle收购，5.5.8开始是默认引擎
 ### 日志
-1. 数据更新流程
-   - 认识：流程和wal一致，![avatar](../images/mysql-update.jpeg)
-     1. 读写数据：缓存提高效率
-        - 脏页：缓存中的数据发生变更的内存页
-        - 刷脏页：数据发生变更的缓存刷到磁盘中
-     1. mysql宕机：缓存中数据来不及刷盘，数据丢失，需要用日志恢复
-     1. 磁盘特点：写入系统文件缓存page cache，并没有持久化，非常快，和写内存差不多(本质就是写内存)。一般fsync才占用iops
-     1. 两阶段提交：平衡各方都完成
-     1. 正常数据落盘和redo没有关系，脏页到ibdata
-     1. 事务回滚：redo中commit的发现LSN落后的就重放刷盘，没commit的判断binlog是否完整来重新commit或者回滚
-   - 重启操作
-     1. 数据页中的LSN小于redo log的LSN，说明redo log上记录着数据页没完成的操作，就会从最近的一个check point出发，开始重放刷盘
-     1. 数据库重启先进行crash recovery保证crash-safe，binlog和redolog通过事件xid关联，保证数据一致性
-   - 双一问题：可以主双一，从非双一，提高性能
-     1. sync_binlog不为1，服务器宕机会丢失binlog
-     1. innodb_flush_log_at_trx_commit为1
-        - 可以在redo commit时不进行fsync，就无法保证一致性，但是提高了效率
-        - innodb_support_xa不为1，redo没commit重启后要回滚，但是binlog记录了，造成问题
-   - 数据丢失场景
-     1. mysql宕机：写入了文件缓存就丢不了
-     1. 服务器宕机：没有设置双一，就可能丢
 1. binlog
    - 认识：记录所有除查询的DDL和DML语句，以事件形式记录的事务安全型的二进制文件集合，包含执行的时间
      1. 具体的写入时间：配置控制是否执行fsync，只写入了缓存
