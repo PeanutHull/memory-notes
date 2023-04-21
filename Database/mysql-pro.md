@@ -38,6 +38,27 @@
         - 对in()优化：先排序再二分查找，比其他等价为多个or的更快
    - 调用存储引擎api执行
    - 返回结果
+1. mysql存储结构
+   - 数据文件
+     1. .frm：存储表的元数据信息，主要是表结构、视图
+     1. .ibd：innodb data文件，索引和数据在一起
+     1. .index、.0001：binlog文件
+     1. .myd、.myi：MyISAM数据文件、索引文件
+   - 日志
+     1. binlog：二进制日志，记录所有更改数据的语句，可用于复制，事务提交前只写一次
+     1. relaylog：中继日志，从接收的主的日志
+
+     1. slowlog：慢查询日志，执行时间超过long_query_time的查询或不使用索引的查询
+     1. errorlog：错误日志，启动、运行、停止遇到的问题，平时要关注，并进行数据库优化
+     1. general log：通用查询日志，客户端连接和执行的语句
+     1. 引擎日志
+   - 系统文件目录
+     1. --basedir = /usr
+     1. --datadir = /var/lib/mysql
+     1. --plugin-dir = /usr/lib64/mysql/plugin
+     1. --log-error = /var/log/mysqld.log
+     1. --pid-file = /var/run/mysqld/mysqld.pid
+     1. --socket = /var/lib/mysql/mysql.sock
 ### 索引
 1. BTree
    - 认识：Balance tree，平衡树。io通过二分查找一级级查向叶子节点，叶子都是有序的
@@ -180,49 +201,36 @@
      1. .csm：表元数据，如状态和数据量
 #### InnoDB
 1. InnoDB
-   - 认识：性能优秀，数据存在共享表空间，可通过配置分开。多种行锁机制组合，行锁通过给索引上的索引项加锁来实现，![avatar](../images/db/innoDB_struct.jpeg)
-     1. 事务
-     1. 行级锁
+   - 认识：性能优秀
+     1. 事务：支持sql标准的4种隔离级别
+     1. 多种行级锁
      1. 非锁定读：通过读取undo实现，没有额外开销，默认读取不产生锁，因为没人改
-     1. sql标准的4种隔离级别
      1. 通过工具支持热备份
      1. 支持崩溃后安全恢复
-     1. 全文索引、外键
-     1. 索引是其表空间的组成部分
    - 特性
      1. mvcc
      1. insert buffer：插入缓存，性能提升
      1. double write：二次写
-     1. adaptive hash index：读取数据时自动在内存构建hash索引
+     1. adaptive hash index：主动式hash索引，读取数据时自动在内存构建hash索引
      1. read ahead：预读
      1. next-key locking：避免幻读phantom
-   - 特点
-     1. innoDB的每一个表都有聚集索引
-        - 如果表定义了PK，则PK就是聚集索引
-        - 如果表没有定义PK，则第一个非空unique列是聚集索引
-        - 否则，InnoDB会创建一个隐藏的rowid作为聚集索引
-   - 存储结构分类
-     1. 逻辑存储结构
-     1. 物理存储结构
-1. 逻辑存储结构
-   - 索引：聚集方式
-   - 组成
-     1. tablespace
-        - 认识：表空间，设计为数据按照表空间存放，包含数据、索引、插入缓冲bitmap，即ibd(innodb data)文件
-          1. 默认表空间文件初始大小10m、名称ibdate1
-          1. 多文件可组合表示表空间，即不同磁盘文件负载可平均，可提高性能，可自动扩充大小
-          1. 可指定独立表空间，不用系统表空间，命名为tableName.ibd，应该多用独立表空间
-     1. segment/inode：段，引擎自身完成，空间分配的最小单位。每个segment都会从表空间FREE_PAGE中分配32个page
+1. 存储结构
+   - 逻辑存储结构
+     1. tablespace：表空间，包含数据、索引、插入缓冲bitmap，即ibd文件
+        - 默认表空间文件初始大小10m、名称ibdate1
+        - 可指定独立表空间，不用系统表空间，命名为tableName.ibd，提倡
+        - 多文件可组合表示表空间，即多个磁盘文件负载可平均，可提高性能，可自动扩充大小
+     1. segment/inode：段，innoDB自身控制，空间分配的最小单位。每个segment都会从表空间FREE_PAGE中分配32个page
         - 组成
+          1. 索引段：b+tree的非叶子节点
           1. 数据段：b+tree的叶子节点
-          1. 索引段：非叶子节点
           1. 回滚段
         - page不够用的扩展规则
           1. 当前小于1个extent，则扩展到1个extent
           1. 小于32MB每次一个extent
           1. 大于32MB每次4个extent
      1. extent：区，连续页组成，都是1m，逻辑管理单位
-     1. page：数据页/块，默认16k，32位int表示，对应innodb的64TB存储容量(16kb * 2^32)。innodb磁盘管理的最小单位
+     1. page：数据页/块，大小默认16k，页号是一个32位int表示页数量，对应innodb单表的64TB存储容量(16kb * 2^32)。innodb磁盘管理的最小单位
         - 结构
           1. 页头：页号、前后指针、伪记录
           1. 数据
@@ -236,8 +244,8 @@
           1. transaction system page：事务数据页
           1. insert buffer bitmap：插入缓冲位图页
           1. insert buffer free list：插入缓冲空闲列表页
-          1. uncompressed blob page：二进制大对象
-          1. compressed blob page
+          1. uncompressed blob page：未压缩的二进制页
+          1. compressed blob page：压缩的二进制页
         - 和索引
           1. 在每个数据页里选出主键id和所在页号，组成新的record放入新生成的数据页中，加入上下页层级概念，就是B+树，用于加速查询，2层的2次io就可以完成
           1. 最末级叶子节点存放数据，其他只放下一步的页号
@@ -248,24 +256,28 @@
           1. Compact：紧凑，5.0.3以后默认
           1. Dynamic：动态，将长字段完全off-page存储
           1. Compressed：压缩，行数据会以zlib算法进行压缩
-1. 物理存储结构
-   - 数据文件
-     1. 系统表空间：存储系统数据，如information_schema
-     1. 用户表空间
-     1. 共享表空间：共用的，`.ibdata1`
-     1. 独占表空间：表独立存储，innodb_file_per_table=1开启
-        - `table_name.frm`：存储表结构信息
-        - `table_name.ibd`：存储数据
-     1. Undo表空间：存储Undo信息
-   - 日志文件
-     1. ib_logfile0/ib_logfile1：重做日志文件
-1. 引擎日志
+   - 物理存储结构
+     1. 数据文件
+        - 系统表空间：存储系统数据，如information_schema
+        - 用户表空间
+        - 共享表空间：共用的，`.ibdata1`
+        - 独占表空间：表独立存储，innodb_file_per_table=1开启
+          1. `table_name.frm`：存储表结构信息
+          1. `table_name.ibd`：存储数据
+        - Undo表空间：存储Undo信息
+     1. 日志文件
+        - ib_logfileN：重做日志文件
+1. 日志
    - 认识
      1. undo是回滚，redo是前滚
      1. redo和binlog相比
         - redo引擎层产生，binlog库上层产生，binlog会包含redo的
         - redo是物理格式，记录每个页的修改；binlog是逻辑日志，记录对应sql
         - 写入磁盘时机：redo不断写入，binlog事务commit后一次写入
+   - undolog
+     1. 认识：回滚日志，用于回滚/崩溃恢复，记录数据修改前的数据，记录与当前操作相反的逻辑日志，用于做相反操作
+        - update/delete存放数据旧记录
+        - insert记录新数据行的PK(rowid)
    - redolog
      1. 认识：重做日志，存储事务日志，保证可靠的事务，存储每个页的修改，不是某行
         - 一是延迟同步了磁盘文件，二是顺序写速度快，三可以用来恢复数据
@@ -307,8 +319,6 @@
           1. 1：默认，最安全，性能最差，调用fsync，为了保持持久性，必须为1，才能保证宕机能够用redo恢复。flush log除非磁盘或者操作系统做了伪刷新
           1. 2：异步写，等待操作系统落盘，不能保证commit时肯定写入了redo log，6倍性能提升
         - innodb_log_file_size：日志文件大小，太小老checkpoint性能抖动，太大恢复时间长
-   - undolog
-     1. 认识：用于回滚/崩溃恢复，记录数据修改前的数据，记录与当前操作相反的逻辑日志，做相反操作。update/delete操作存放数据旧记录，insert操作记录新数据行的PK(rowid)
 1. WAL
    - 认识：Write-Ahead Logging，日志先行，先写日志再持久化数据文件，保证持久化数据之前日志已经记录
      1. binlog和redo log都落盘了，保证mysql不丢数据
@@ -345,30 +355,18 @@
    - 恢复流程
      1. redo log失败的话，通过binlog计算正确的数据，重新写入redo log
      1. 从redo log获取页副本，复制到redo log，再应用重做操作
+1. 索引
+   - 认识：聚集方式
+     1. 数据存在共享表空间，可通过配置分开
+     1. 索引是其表空间的组成部分
+   - innoDB表都有聚集索引
+     1. 如果定义了PK，则PK就是聚集索引
+     1. 如果表没有定义PK，则第一个非空unique列是聚集索引
+     1. 否则，InnoDB会创建一个隐藏的rowid作为聚集索引
+   - 行锁的实现：通过给索引上的索引项加锁来实现，![avatar](../images/db/innoDB_struct.jpeg)
 1. wiki
-   - innoDB最早第三方引擎，被oracle收购，5.5.8开始是默认引擎
-   - 数据可靠性指的是：可靠的范围划分，mysql告诉你成功了，他自身能保证数据能找回来，没告诉你成功，那就不会记录，才好理解可靠性机制
+   - innoDB最早是第三方引擎，被oracle收购，5.5.8开始是默认引擎
 ### 日志
-1. mysql文件
-   - 系统文件
-     1. --basedir = /usr
-     1. --datadir = /var/lib/mysql
-     1. --plugin-dir = /usr/lib64/mysql/plugin
-     1. --log-error = /var/log/mysqld.log
-     1. --pid-file = /var/run/mysqld/mysqld.pid
-     1. --socket = /var/lib/mysql/mysql.sock
-   - 数据文件
-     1. .frm：存储表的元数据信息，主要是表结构，视图也在
-     1. .myd、.myi：MyISAM数据文件、索引文件
-     1. .ibd：InnoDB文件，索引和数据在一起
-     1. .index、.0001：binlog文件
-   - 日志
-     1. error log：错误日志，启动、运行、停止遇到的问题，平时要关注，并进行数据库优化
-     1. general log：通用查询日志，客户端连接和执行的语句
-     1. bin log：二进制日志，记录所有更改数据的语句，可用于复制，事务提交前只写一次
-     1. slow log：慢查询日志，执行时间超过long_query_time的查询或不使用索引的查询
-     1. relay log：中继日志，从接收的主的日志
-     1. 引擎日志
 1. 数据更新流程
    - 认识：流程和wal一致，![avatar](../images/mysql-update.jpeg)
      1. 读写数据：缓存提高效率
