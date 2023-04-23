@@ -415,25 +415,25 @@
         - SHUTDOWN：关闭服务器
 #### 进阶操作
 1. 删除
-     1. 删除库表
-        - 认识
-          1. 不可回滚
-          1. 可以减少表空间
-        - 组成
-          1. drop
-             - drop database/table if exists baseName/tableName;                            # 删除库/表，会删除被依赖的约束(constrain)、触发器(trigger)、索引(index)，存储过程/函数保留变为invalid状态
-             - drop index indexName on table                                                # 删除索引
-          1. truncate table;                                                                # 数据清空，主键归0，其他不变
-             - 只能用于表，不会触发触发器
-             - 直接删除表再新建，不支持where，比delete快
-     1. 删除数据
-        - 认识
-          1. 会走事务，可回滚，可返回删除的条数，会触发触发器
-          1. 是一条一条删除，会记录redo和undo日志，不会减少表或索引所占用的空间，下次插入会覆盖，使用optimize会立刻释放磁盘空间
-        - delete
-          1. delete from table where XX=xx;                                                    # 删除
-          1. delete from table;                                                                # 删除所有数据
-          1. delete t1,t2 from t1 join t2 on t1.xx=t2.xx;                                      # 多表数据删除
+   - 删除库表
+     1. 认识
+        - 不可恢复
+        - 可以减少表空间
+     1. 组成
+        - drop
+          1. drop database/table if exists baseName/tableName;  # 删除库/表，会删除被依赖的外键、触发器、索引，存储过程/函数保留变为invalid状态
+          1. drop index indexName on table                      # 删除索引
+        - truncate table;                                       # 数据清空，主键归0，其他不变
+          1. 只能用于表，不会触发触发器
+          1. 直接删除表再新建，不支持where，比delete快
+   - 删除数据
+     1. 认识：delete
+        - 会走事务，可回滚，可返回删除的条数，会触发触发器
+        - 是标记删除的形式，不会减少表或索引所占用的空间，是一条一条删除，会记录redo和undo日志，下次插入会覆盖，使用optimize会立刻释放磁盘空间
+     1. delete
+        - delete from table where XX=xx;                                                    # 删除
+        - delete from table;                                                                # 删除所有数据
+        - delete t1,t2 from t1 join t2 on t1.xx=t2.xx;                                      # 多表数据删除
 ### 功能
 #### 索引
 1. 认识：为加快查询速度，对数据列进行排序的一种结构，包含所有记录的引用指针，查询时先查索引，引擎实现
@@ -502,9 +502,9 @@
      1. 故障恢复：未完全恢复的时候，依然不能被外部看到
      1. 死锁：使用轻量级锁、碰撞检测、等锁超时
    - 常见事务单元
-     1. 添加一个索引
-     1. 读取一行记录
      1. 写入一行记录，同时更新索引
+     1. 读取一行记录
+     1. 添加一个索引
      1. 删除整张表
    - 使用
     ```sql
@@ -1341,14 +1341,12 @@
      1. 死锁：``
    - 日志分析：general.log
 1. 大表结构修改
-   - 步骤
+   - 工具：`pt-online-schema-change --alter="" --execute`，原理如下
      1. 建立新表：修改后的结构
      1. 老表数据导入新表，建立触发器同步修改到新表
      1. 数据同步完成后，老表添加排它锁
      1. 重命名老表和新表的名字：重命名之前不需要有锁，很短暂
      1. 删除老表
-   - 工具
-     1. pt-online-schema-change：`pt-online-schema-change --alter="" --execute`
 #### 基础
 1. 安装
    - 安装：`yum -y install mysql-server`
