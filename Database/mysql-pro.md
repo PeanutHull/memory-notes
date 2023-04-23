@@ -42,9 +42,20 @@
 1. mysql存储结构
    - 数据文件
      1. .frm：存储表的元数据信息，主要是表结构、视图
-     1. .ibd：innodb data文件，索引和数据在一起
+     1. .ibd：innoDB data文件，索引和数据在一起
+     1. .myd、.myi：myISAM数据文件、索引文件
      1. .index、.0001：binlog文件
-     1. .myd、.myi：MyISAM数据文件、索引文件
+   - 物理存储结构
+     1. 数据文件
+        - 系统表空间：存储系统数据，如information_schema
+        - 用户表空间
+        - 共享表空间：共用的，`.ibdata1`
+        - 独占表空间：表独立存储
+          1. `table_name.frm`：存储表结构信息
+          1. `table_name.ibd`：存储数据
+        - Undo表空间：存储Undo信息
+     1. 日志文件
+        - ib_logfileN：重做日志文件
    - 日志
      1. binlog：二进制日志，记录所有更改数据的语句，可用于复制，事务提交前只写一次
      1. relaylog：中继日志，从接收的主的日志
@@ -61,6 +72,17 @@
      1. --pid-file = /var/run/mysqld/mysqld.pid
      1. --socket = /var/lib/mysql/mysql.sock
 ### 索引
+1. 索引
+   - InnoDB索引和记录是存储在一起都在表空间，MyISAM是分开的
+   - 索引组织表：innoDB的表都有聚集索引，都有主键
+     1. 如果定义了PK，则PK就是聚集索引
+     1. 如果表没有定义PK，则第一个非空unique列是聚集索引
+     1. 否则，InnoDB会创建一个隐藏的rowid，6byte作为聚集索引
+   - 行锁的实现：通过给索引上的索引项加锁来实现
+   - 会将表的索引装载到内存中
+   - 引擎支持的索引结构
+     1. InnoDB/memory/heap：b+tree、hash
+     1. MySIAM：b+tree、rtree(空间列是rtree)
 1. BTree
    - 认识：Balance tree，平衡树。io通过二分查找一级级查向叶子节点，叶子都是有序的
      1. 对一个索引字段进行检索，采用普通索引还是唯一索引在检索效率上基本上没有差别。因为只是加了约束，整页在内存中判断时cpu的时间可以忽略不记
@@ -122,11 +144,10 @@
           1. 获取根页id PAGE_NO，如3
           1. 计算idb的偏移量：16384 * 3 + 64 = 49216
           1. 查看数据：hexdump -s 49216 -n 10  sp_job_log.ibd，如0100，page_level为1，则高度为1+1=2
-1. wiki
-   - 引擎支持的索引结构
-     1. InnoDB/memory/heap：b+tree、hash
-     1. MySIAM：b+tree、rtree(空间列是rtree)
-   - InnoDB索引和记录是存储在一起的，MyISAM是分开的
+     1. 记录查找的过程
+        - B+树索引本身不能找到具体的行，而是找到该记录所在的页
+        - 把页读入内存的缓存池中
+        - 根据Page Directory进行二叉查找到记录
 ### 事务
 1. ACID实现原理
    - 原子性：redo
@@ -209,30 +230,37 @@
      1. 通过工具支持热备份
      1. 支持崩溃后安全恢复
    - 特性
-     1. mvcc
      1. wal
      1. insert buffer：插入缓存，性能提升
      1. double write：二次写
      1. adaptive hash index：主动式hash索引，读取数据时自动在内存构建hash索引
      1. read ahead：预读
+     1. mvcc
      1. next-key locking：避免幻读phantom
-1. 存储结构
-   - 逻辑存储结构
-     1. tablespace：表空间，包含数据、索引、插入缓冲bitmap，即ibd文件
-        - 默认表空间文件初始大小10m、名称ibdate1
-        - 可指定独立表空间，不用系统表空间，命名为tableName.ibd，提倡
-        - 多文件可组合表示表空间，即多个磁盘文件负载可平均，可提高性能，可自动扩充大小
-     1. segment/inode：段，innoDB自身控制，空间分配的最小单位。每个segment都会从表空间FREE_PAGE中分配32个page
+   - 数据
+     1. 存储大小限制：共享表空间页大小16k就64TB、64k就256TB，独立表空间单表受文件系统限制
+     1. 单表
+        - 最多1017个列
+        - 最多64个二级索引
+1. 逻辑存储结构
+   - tablespace：表空间，包含所有数据，即ibd文件
+     1. 认识
+        - 共享表空间文件名称ibdate1，为默认的
+        - 可指定独立的表空间，命名为tableName.ibd，只包含数据、索引、插入缓冲bitmap页，提倡
+        - 多文件可组合表示一个表空间，即多个磁盘文件负载可平均，可提高性能，可自动扩充大小
+     1. 组成
+        -数据，索引，插入缓冲bitmap页，undo信息，插入缓冲索引页、二次写缓冲、系统事务信息
+   - segment/inode：段，innoDB自身管理，空间分配的最小单位。数据即索引，索引即数据。每个segment都会从表空间FREE_PAGE中分配32个page
         - 组成
-          1. 索引段：b+tree的非叶子节点
           1. 数据段：b+tree的叶子节点
+          1. 索引段：b+tree的非叶子节点
           1. 回滚段
         - page不够用的扩展规则
           1. 当前小于1个extent，则扩展到1个extent
           1. 小于32MB每次一个extent
           1. 大于32MB每次4个extent
-     1. extent：区，连续页组成，都是1m，逻辑管理单位
-     1. page：数据页/块，大小默认16k，页号是一个32位int表示页数量，对应innodb单表的64TB存储容量(16kb * 2^32)。innodb磁盘管理的最小单位
+   - extent：区，连续页组成，大小都是1m，一个区中有64个连续的页，逻辑管理单位
+   - page：数据页/块，大小默认16k，页号是一个32位int表示页数量，对应innodb单表的64TB存储容量(16kb * 2^32)。innodb磁盘管理的最小单位
         - 结构
           1. 页头：页号、前后指针、伪记录
           1. 数据
@@ -252,44 +280,48 @@
           1. 在每个数据页里选出主键id和所在页号，组成新的record放入新生成的数据页中，加入上下页层级概念，就是B+树，用于加速查询，2层的2次io就可以完成
           1. 最末级叶子节点存放数据，其他只放下一步的页号
           1. 页的页号并不是连续的，在磁盘里也不一定是挨在一起的，这就是空洞
-     1. row：行
-        - 记录格式
-          1. Redundant：稀疏，最早
-          1. Compact：紧凑，5.0.3以后默认
-          1. Dynamic：动态，将长字段完全off-page存储
-          1. Compressed：压缩，行数据会以zlib算法进行压缩
-   - 物理存储结构
-     1. 数据文件
-        - 系统表空间：存储系统数据，如information_schema
-        - 用户表空间
-        - 共享表空间：共用的，`.ibdata1`
-        - 独占表空间：表独立存储，innodb_file_per_table=1开启
-          1. `table_name.frm`：存储表结构信息
-          1. `table_name.ibd`：存储数据
-        - Undo表空间：存储Undo信息
-     1. 日志文件
-        - ib_logfileN：重做日志文件
+   - row：行，数据页中存储的一行行真实的记录，InnoDB是面向列的则按行进行存放，每页最少2行最多16KB/2-200行，用链表连接起来即b+tree
+     1. 认识
+        - 数据大的行记录如大字符串、text用行溢出数据存储，指针指向页类型为未压缩二进制大对象页
+     1. 记录格式
+        - Redundant：稀疏，最早
+          1. 没有NULL标志位
+        - Compact：紧凑，5.0.3以后默认
+          1. NULL值列不占用任何存储空间
+        - Dynamic：动态，Compact的升级版，完全的行溢出方式
+        - Compressed：压缩，Compact的升级版，行数据会以zlib算法进行压缩
 1. innoDB数据更新机制
-   - 认识：wal一致，![avatar](../images/mysql-update.jpeg)
+   - 认识：wal一致，![avatar](../images/mysql-update.jpeg)、![avatar](../images/db/innoDB_struct.jpeg)
+     1. 主线程每秒将脏页写入文件，不论事务是否提交
    - 场景
      1. 重启
-        - 做完清理工作再shutdown，如各种刷盘
+        - 做完清理工作再关闭，如各种刷盘
+        - 崩溃恢复检查
+          1. redolog页是否损坏，通过共享表空间的doubleWrite数据页 恢复redolog
+          1. 数据页中LSN是否小于redolog的LSN，说明redo log上记录着数据页没完成的操作，就会从最近的一个check point出发，开始重放刷盘
+          1. redolog是否失败，通过binlog计算正确的数据，重新写入redolog
      1. 宕机
         - 事务回滚：redo中commit的发现LSN落后的就重放刷盘，没commit的判断binlog是否完整来重新commit或者回滚
      1. 数据丢失
         - mysql宕机：写入了文件系统缓存就丢不了
         - 服务器宕机：没有设置双一，就可能丢
-
-
-
-   - 重启操作
-     1. 数据页中的LSN小于redo log的LSN，说明redo log上记录着数据页没完成的操作，就会从最近的一个check point出发，开始重放刷盘
-     1. 数据库重启先进行crash recovery保证crash-safe，binlog和redolog通过事件xid关联，保证数据一致性
-   - 双一问题：可以主双一，从非双一，提高性能
+   - 双一问题：可以设置为主双一，从非双一，提高从的性能，从而提高整体性能
      1. sync_binlog不为1，服务器宕机会丢失binlog
+        - sync_binlog为1，innodb_support_xa不为1会造成问题，崩溃恢复时由于redolog没commit，事务会被回滚，但是binlog记录了所以不能回滚
      1. innodb_flush_log_at_trx_commit为1
         - 可以在redo commit时不进行fsync，就无法保证一致性，但是提高了效率
-        - innodb_support_xa不为1，redo没commit重启后要回滚，但是binlog记录了，造成问题
+     1. 配置
+        - innodb_log_file_size：redolog文件大小，太小老checkpoint性能抖动，太大恢复时间长
+        - innodb_flush_log_at_trx_commit：提交事务时的binlog文件写入策略
+          1. 0：不写，等待主线程每秒刷新，10倍性能提升，最多丢失1秒的数据
+          1. 1：默认，最安全，性能最差，调用fsync，为了保持持久性，必须为1，才能保证宕机能够用redo恢复。flush log除非磁盘或者操作系统做了伪刷新
+          1. 2：异步写，等待操作系统落盘，不能保证commit时肯定写入了redo log，6倍性能提升
+
+        - sync_binlog：表示每写缓冲多少次就同步到磁盘，1表示采用同步写，redolog没commit时就写入，性能最差，默认0采用操作系统机制进行同步
+        - innodb_support_xa
+          1. 作用
+             - 支持多实例分布式事务(外部xa事务)，分布式数据库环境
+             - 支持内部xa事务，即确保binlog与redolog之间数据一致性
 1. WAL
    - 认识：Write-Ahead Logging，日志先行机制，先写日志再持久化数据文件，利用日志的高效率的顺序写实现灵活控制的可靠持久化的一种机制，兼顾了提高性能和可靠持久化。崩溃时即使数据没有持久化也可以通过日志文件恢复，类似两阶段提交
      1. 写入文件系统缓存page cache，并没有持久化，非常快，和写内存差不多(本质就是写内存)。fsync才占用iops，耗时才非常大
@@ -320,76 +352,60 @@
         - update/delete存放数据旧记录
         - insert记录新数据行的PK(rowid)
    - redolog
-     1. 认识：重做日志，存储事务日志，用来恢复事务前的数据状态，保证可靠的事务，innoDB独有
-        - 顺序写速度快，大小固定，写满后循环记录
-     1. 功能
-        - 有LSN落后数量最多检查阈值，否则需要将缓冲池的脏页列表的部分写回磁盘，会阻塞用户线程
+     1. 认识：重做日志，存储事务日志，用来恢复事务前的数据状态和将要的修改，保证可靠的事务，innoDB独有
+        - 顺序循环写速度快，大小固定，写满后循环记录(不需要对redo进行读取)
+        - LSN落后数量阈值检测，超出将脏页写回磁盘，会阻塞用户线程
+        - 触发redolog更新的条件有主线程、事务提交等
         - 高可用：至少一个文件组、2个文件，循环2个文件依次写入
           1. 多个镜像文件组会有更高可靠性，有了高可用方案如磁盘阵列可不用
-        - 不需要对redo进行读取
-        - 会延迟同步binlog文件
      1. 结构
         - redo_log_type：类型，有几十种
         - space：表空间id
         - page_no：页号
         - redo_log_body：数据部分，恢复时需要调用相应函数进行解析
-     1. 流程
-        - 先写入buffer，然后顺序写入日志文件
+     1. 写入流程：write pos到check point是未刷盘的，追上时推动check point向前移动覆盖来空出位置，![avatar](../images/redo-buffer.jpeg)
         - 刷盘：根据innodb_flush_log_at_trx_commit确定刷盘策略
-          1. 流程：![avatar](../images/redo-buffer.jpeg)，check point到write pos是未刷盘的，当write pos追上check point，先推动check point向前移动，空出位置再记录新的日志
-             - write pos：当前记录的LSN
-             - check point：已刷盘的LSN，之前的已刷盘
-          1. 特点
-             - 触发条件有主线程、事务提交
-             - 主线程每秒将buffer写入文件，不论事务是否提交
-             - 每秒刷盘和崩溃恢复的逻辑，innodb认为redo log在commit时不需要fsync了，写到page cache就够了
-        - 固定512byte(扇区大小)写磁盘，扇区是写入的最小单位，保证写入必定成功，不需要doublewrite
+        - redolog block大小是512byte写磁盘，等于扇区大小，保证写入必定成功，不需要doublewrite
      1. 组成
         - LSN：Log Sequence Number 日志序号，版本标记的计数，单调递增的值，写多少日志，就加多少
+        - write pos：当前记录的LSN
         - checkpoint
-          1. 认识：保证checkpoint之前的脏页都刷回磁盘，那么崩溃恢复直接从checkpoint的点开始应用redo即可
+          1. 认识：已刷盘的LSN，之前的已刷盘，保证checkpoint之前的脏页都刷回磁盘，那么崩溃恢复直接从checkpoint的点开始应用redo即可
           1. 分类
              - sharp checkpoint：保证所有的脏页刷新到磁盘
              - fuzzy checkpoint
           1. 触发情形
              - master thread固定频率checkpoint
-             - redo log不够用了，强制checkpoint以释放redo空间被新事务覆盖(write pos追上check point)
+             - redolog不够用了，强制checkpoint以释放redo空间被新事务覆盖(write pos追上check point)
              - buffer不够用了，LRU list淘汰page，淘汰的page属于脏页，需要强制checkpoint
-     1. 配置
-        - innodb_flush_log_at_trx_commit：提交事务时的文件写入策略
-          1. 0：不写，等待主线程每秒刷新，10倍性能提升，最多丢失1秒的数据
-          1. 1：默认，最安全，性能最差，调用fsync，为了保持持久性，必须为1，才能保证宕机能够用redo恢复。flush log除非磁盘或者操作系统做了伪刷新
-          1. 2：异步写，等待操作系统落盘，不能保证commit时肯定写入了redo log，6倍性能提升
-        - innodb_log_file_size：日志文件大小，太小老checkpoint性能抖动，太大恢复时间长
      1. redo和binlog
         - redo引擎层产生，binlog库上层产生，binlog会包含redo的
         - redo是物理格式，记录每个页的修改；binlog是逻辑日志，记录对应sql
-        - 写入磁盘时机：redo不断写入，binlog事务提交后一次写入
 1. double write
-   - 认识：两次写，保证redo数据页的完整可靠性。即再写一个页的副本，redo前先通过副本还原该页。有些文件系统提供了部分写失效的防范机制(ZFS)，不用开启两次写
-     1. 部分写失效：一页没有写完整，redolog是无法解决，页本身损坏重做无意义
-     1. 文件系统写失效：只写入了页缓存，并没有同步到磁盘上
+   - 认识：两次写，解决redolog数据页被写坏的可能，保证其完整可靠性。因为16k的页要写到512byte的扇区里
+     1. 有些文件系统提供了部分写失效的防范机制(ZFS)，不用开启两次写
+   - 实现：即再写一个副本，检测到是不完整的数据页时进行还原
+     1. 组成
+        - 内存中的double write buffer：2m
+        - 共享表空间：2m，2个区，连续128个页
+     1. 写入流程
+        - 内存脏页要刷新时，先memcpy内存拷贝到double write buffer
+        - double write buffer分2次，每次1m顺序写入共享表空间，然后立即fsync
+          1. 因为顺序写入，开销不大
+        - double write buffer再写入各个表空间
+     1. 认识
+        - 如果double write的数据页被写坏了怎么办？没关系，因为是先往共享表空间中写double write数据页，再往各个表对应的表空间文件中写实际的数据页，恰恰说明各个表对应的表空间文件中的数据页没坏，恢复的流程不会被打断 
+   - 运维
+     1. 配置：`SHOW VARIABLES LIKE 'innodb_doublewrite%';`
+        - innodb_doublewrite：开关
+        - innodb_doublewrite_batch_size
+     1. 运行状态：`SHOW STATUS LIKE 'innodb_dblwr_%';`
+        - Innodb_dblwr_pages_written：BP写入到dblwr的page数
+        - Innodb_dblwr_writes：写文件的次数
+   - wiki
+     1. 部分写失效：一页没有写完整，redolog自身无法解决
+     1. 文件系统写失效：只写入了页缓存，并没有落盘
         - unix的高速页缓存机制：大多数磁盘io都通过缓冲进行，用fsync主动触发，同步磁盘太慢了
-   - 组成
-     1. 内存buffer：2m大小
-     1. 共享表空间：2m大小，连续128个页，2个区
-   - 写入流程：在redo commit之后进行
-     1. 缓冲池脏页刷新时，先memcpy到buffer
-     1. buffer分2次，每次1m顺序写入共享表空间，然后立即fsync
-        - 因为顺序写入，开销不大
-     1. buffer再写入各个表空间
-   - 恢复流程
-     1. redolog失败的话，通过binlog计算正确的数据，重新写入redolog
-     1. 从redolog获取页副本，复制到redolog，再应用重做操作
-1. 索引
-   - 认识：聚集方式
-     1. 数据存在共享表空间，可通过配置分开
-     1. 索引是其表空间的组成部分
-   - innoDB表都有聚集索引
-     1. 如果定义了PK，则PK就是聚集索引
-     1. 如果表没有定义PK，则第一个非空unique列是聚集索引
-     1. 否则，InnoDB会创建一个隐藏的rowid作为聚集索引
-   - 行锁的实现：通过给索引上的索引项加锁来实现，![avatar](../images/db/innoDB_struct.jpeg)
 1. wiki
    - innoDB最早是第三方引擎，被oracle收购，5.5.8开始是默认引擎
 ### 日志
