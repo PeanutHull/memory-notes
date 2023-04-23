@@ -739,12 +739,13 @@
    - 原理：主库将更改记录到二进制日志binlog，从库复制到中继日志，读取中继重新放到库中。是异步实时的
      1. 计算主从的LSN，可得出时延
      1. 使用Replication协议
+     1. 需要外部解决自动故障转移、主从切换等问题
    - 作用
      1. 负载均衡，降低压力：读写分离，采用数据库主从方式，多个从库分担读，主库负责写
      1. 高可用，故障切换
-        - 对从进行快照保存，可以防止主drop database级的防御
         - 对从设置read-only，防止误改
         - 主从自动切换
+        - 对从进行快照保存，可以防止主drop database级的防御
      1. 数据备份：异步实时备份，复制不能代替备份，因为执行删除命令同步的很快，这个时候只能依赖备份了
    - 步骤：![avatar](../images/mysql_slave_process.webp)
      1. master记录到binlog
@@ -752,35 +753,9 @@
      1. master创建独立异步的log dump线程发送binlog
         - 防止影响主库的更新
         - 会消耗主库资源，占用带宽等
-     1. slave的io线程Slave_IO_Running将接收的日志顺序记录到relay log末尾中，顺序写效率高，将binlog日志和位置记录到masterinfo中。防止影响从库的更新
+     1. slave的io线程Slave_IO_Running将接收的日志顺序记录到relay log末尾中，顺序写效率高，将binlog日志和位置记录到masterinfo中
      1. slave的sql线程Slave_SQL_Running检测到relay log新增了内容，解析其并执行，可能随机io成本较高；是单线程的，一个DDL等待之后的都延迟
-   - 最佳实践
-     1. 从库延迟
-        - 认识：正常在毫秒级别，秒级就需告警了
-        - 一些原因
-          1. 一个事务主库执行n分钟，给到从库就会执行n分钟，这个事务导致从库延迟n分钟
-          1. 当主库的TPS并发较高，产生的DDL对relay log的回放超过从库sql线程所能承受的范围，延时就产生了
-          1. 从库的大型查询语句产生的锁等待
-        - 解决方案
-          1. 数据冗余，不要再查，直接传输所有数据
-          1. 使用Cache，但是更新怎么办，不行
-          1. 查主库
-   - 运维
-     1. 查看
-        - `show master status;`
-        - `show slave status;`
-     1. 配置
-        - 主
-          1. bin_log=mysql-bin
-          1. server_id=100
-        - 从
-          1. bin_log=mysql-bin
-          1. server_id=101
-          1. relay_log=mysql-relay-bin
-          1. log_slave_update=on(可选，是否要当其他的主)
-          1. read_only=on(建议)
-1. 复制
-   - 复制方式
+   - 主从复制方式
      1. 异步：主库宕了没同步binlog丢失数据
      1. 半同步：提交commit后等待至少有一个从库收到binlog并写入到中继日志中，再返回给客户端成功，可确保永远有两个节点拥有完整数据，降低了主库写效率，v5.5
         - rpl_semi_sync_master_wait_for_slave_count：设置收到的从库数量才触发，v5.7
@@ -789,7 +764,7 @@
         - paxos作为分布式一致性算法被广泛使用
         - 仅支持InnoDB表，并且每张表一定要有一个主键，用于做write set的冲突检测
         - 必须打开GTID特性，二进制日志格式必须设置为ROW，用于选主与write set
-   - 复制方法
+   - 主从复制方法
      1. 基于日志点的复制
         - 建立从账号：`grant replication slave on *.* to xx@ip段`
         - 备份主库
@@ -811,18 +786,15 @@
           1. 从导入基础数据
           1. 设置复制链路，gtid方式：`change master to master_host='', master_user='', master_password='', master_auto_position=1;`
           1. 启动复制：`start slave`
-   - 性能
-     1. 写入binlog的时间，事务太大，主从延迟严重
-     1. binlog传输时间，同机房部署、`binlog_row_image=minimal`
-     1. 从只有一个sql线程，主上的并发写，从变成串行，如大事务后边所有的修改都阻塞，5.7使用多线程复制
-        - `stop slave`
-        - `set global slave_parallel_type='logical_clock'`：使用逻辑时钟方式
-        - `set global slave_parallel_workers=4`：线程数
-        - `start slave`
-   - 常见问题
-     1. 解决方案
-        - 恢复复制
-        - 最终都要数据对比
+   - 最佳实践
+     1. 从库延迟
+        - 认识：正常在毫秒级别，秒级就需告警了
+        - 一些原因
+          1. 一个事务主库执行n分钟，给到从库就会执行n分钟，这个事务导致从库延迟n分钟
+          1. 当主库的TPS并发较高，产生的DDL对relay log的回放超过从库sql线程所能承受的范围，延时就产生了
+          1. 从库的大型查询语句产生的锁等待
+        - 解决方案
+          1. binlog传输时间，同机房部署、`binlog_row_image=minimal`
      1. 主从宕机
         - 特点
           1. 主宕机：主回滚事务，从拿不到
@@ -830,18 +802,37 @@
         - 解决方案
           1. 跳过二进制日志事件：日志点复制方式
           1. 注入空事务先恢复中断复制链路：日志点或GTID方式
+     1. 建立复制：最终都要数据对比
      1. 数据损坏
         - 特点
           1. 主binlog损坏
           1. 从relay_log损坏
         - 解决方案
           1. 通过change master重新指定
-     1. 从进行了数据修改：丢掉从的修改
-     1. 不唯一的server_id、server_uuid：从之间重复，数据相互拿的不对，甚至主从切换失败
-     1. max_allow_packet：不一致
-   - 无法解决的
-     1. 自动故障转移、主从切换
-     1. 读写分离
+     1. 其他
+        - 从进行了数据修改：丢掉从的修改
+        - 不唯一的server_id、server_uuid：从之间重复，数据相互拿的不对，甚至主从切换失败
+        - max_allow_packet：不一致
+   - 运维
+     1. 查看
+        - `show master status;`
+        - `show slave status;`
+     1. 配置
+        - 主
+          1. bin_log=mysql-bin
+          1. server_id=100
+        - 从
+          1. bin_log=mysql-bin
+          1. server_id=101
+          1. relay_log=mysql-relay-bin
+          1. log_slave_update=on(可选，是否要当其他的主)
+          1. read_only=on(建议)
+   - wiki
+     1. 从只有一个sql线程，主上的并发写，从变成串行，如某个session有大事务其他所有的session修改都阻塞，5.7从使用多线程复制
+        - `stop slave`
+        - `set global slave_parallel_type='logical_clock'`：使用逻辑时钟方式
+        - `set global slave_parallel_workers=4`：线程数
+        - `start slave`
 1. 网校架构
    - 主要
      1. 一主两从，读写分离

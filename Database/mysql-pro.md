@@ -367,7 +367,6 @@
         - 刷盘：根据innodb_flush_log_at_trx_commit确定刷盘策略
         - redolog block大小是512byte写磁盘，等于扇区大小，保证写入必定成功，不需要doublewrite
      1. 组成
-        - LSN：Log Sequence Number 日志序号，版本标记的计数，单调递增的值，写多少日志，就加多少
         - write pos：当前记录的LSN
         - checkpoint
           1. 认识：已刷盘的LSN，之前的已刷盘，保证checkpoint之前的脏页都刷回磁盘，那么崩溃恢复直接从checkpoint的点开始应用redo即可
@@ -411,27 +410,27 @@
 ### 日志
 1. binlog
    - 认识：记录所有除查询的DDL和DML语句，以事件形式记录的事务安全型的二进制文件集合，包含执行的时间
-     1. 具体的写入时间：配置控制是否执行fsync，只写入了缓存
-     1. 会重写密码，不以纯文本展示；8可以进行加密
-     1. 生成新的日志文件的情况：重启时、执行`flush logs`、大小超过`max_binlog_size`
      1. 开启1%的性能开销
+     1. 具体的写入时间：配置控制是否执行fsync，还是只写入了缓存
+     1. 生成新的日志文件的情况：重启时、执行`flush logs`、大小超过`max_binlog_size`
+     1. 会重写密码，不以纯文本展示；8可以进行加密
    - 用途
      1. 主从复制：传输binlog
+     1. 增量备份：
      1. 数据恢复：使用mysqlbinlog工具，可进行任意时间点恢复
-     1. 增量备份
      1. 审计：是否有攻击
    - 组成
      1. xx.index：索引文件，存储产生的二进制日志序号
      1. xx.0001
         - 格式
-          1. Statement：基于sql和上下文环境，不记录每行变化
+          1. Statement：基于sql和上下文环境，不会记录每行变化，只记录要执行的操作
              - 减少了日志量节约了io，尤其是修改量大的场景
              - 主从版本可以不一样，从可以更高
           1. Row：只记录行的修改点，5.7.7及以上默认，会一步步的优化的更好，主流使用，之前是Statement。最好同时设置`binlog_row_image=minimal`
+             - 日志量大，`alter table`每条都会记录，新版优化了
+             - 从库重放日志更快
              - 避免了存储过程/function/trigger的调用和触发无法被正确复制的问题
-             - 加快从库重放日志的效率
-             - 日志量大，`alter tableh`每条都会记录，新版优化了
-          1. MIXED：混合模式，系统选择，一般用statment，无法完成主从复制的操作用row
+          1. MIXED：混合模式，系统选择，一般用statment，遇到无法完成主从复制的操作用row
         - 事件类型：QUERY_EVENT、STOP_EVENT等
    - 格式对复制的影响
      1. Statement
@@ -448,12 +447,13 @@
         - 无法单独执行触发器
      1. Mixed
         - 当MySQL判断可能数据不一致时用row格式，否则用statement格式
-   - 写入流程
-     1. 基于session，根据binlog_cache_size写入缓存或临时文件
-     1. group commit，写入磁盘，清空缓存，同时根据sync_binlog判断是否fsync
-   - 特点
-     1. 一个事务的binlog不会拆开，要确保一次性写入
-     1. 事务组提交：group commit，会把后边来的事务一起处理，到时候他们直接返回，一起处理的越多，效果越好
+   - 操作
+     1. 认识
+        - 一个事务的binlog不会拆开，会确保一次性写入
+        - 事务组提交：group commit，会把后边来的事务一起处理，到时候他们直接返回，一起处理的越多，效果越好
+     1. 写入流程
+        - 基于session，根据binlog_cache_size写入缓存或临时文件
+        - 进行group commit，写入磁盘，清空缓存，同时根据sync_binlog判断是否fsync
    - 使用
      1. 配置
         - log-bin：是否开启binlog及文件名
@@ -480,11 +480,14 @@
           1. --database DB_name
           1. --no-defaults 
           1. --start/stop-datetime、--start/stop-position
-1. GTID
-   - 认识：Global Transaction ID 全局事务id，已提交事务的唯一的编号，v5.6。格式：source_id:transaction_id
-     1. 全局唯一性
-     1. 趋势递增
-   - 作用
-     1. 保证了同一个事务只在指定的从库执行一次，可以找到正确的复制位置，大大简化复制的维护
-     1. 强化了主备一致性，故障恢复以及容错能力
-        - 之前基于二进制日志的复制中从库需要告知主库从哪个偏移量进行增量同步，如果指定错误会造成数据的遗漏，从而造成数据的不一致
+1. 组成
+   - LSN：Log Sequence Number 日志序号，版本标记的计数，单调递增的值，写多少日志，就加多少
+   - GTID
+     1. 认识：Global Transaction ID 全局事务id，已提交事务的唯一的编号，v5.6。格式：source_id:transaction_id
+        - 全局唯一性
+        - 趋势递增
+     1. 作用
+        - 保证了同一个事务只在指定的从库执行一次，可以找到正确的复制位置，大大简化复制的维护
+        - 强化了主备一致性，故障恢复以及容错能力
+          1. 之前基于二进制日志的复制中从库需要告知主库从哪个偏移量进行增量同步，如果指定错误会造成数据的遗漏，从而造成数据的不一致
+   - rowId：行id
