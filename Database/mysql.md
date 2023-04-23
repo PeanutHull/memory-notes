@@ -1450,6 +1450,7 @@
           1. innodb_buffer_pool_size：innodb缓冲池大小，对性能非常重要，要缓存索引、数据、自适应hash索引、插入缓冲、锁、其他内部数据结构，还帮助延迟顺序写入，要分配足够的内存大小，重启才能更改，太大了重启慢需要刷脏页，总大小 = 每个线程需要的内存 * 连接数 - 系统保留内存
           1. key_buffer_size：MySIAM的索引缓冲，因为系统表还在用MySIAM
      1. io：性能和安全的取平衡
+        - innodb_page_size：页大小，默认16k
         - innodb_log_file_size/innodb_log_file_in_group：事务日志大小的单个和个数，即redolog的，事务日志总大小为二者相乘，事务日志是循环写入的，配置多个是没有意义的，业务忙设置大些，一般记录一个小时的信息
         - innodb_log_buffer_size：日志缓冲区大小，能够保留至少一秒的事务就够，32M~128M
         - innodb_flush_log_at_trx_commit：事务日志的刷新频繁程度，和innodb_log_buffer_size搭配的
