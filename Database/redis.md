@@ -6,7 +6,7 @@
    - 所有操作都是原子的
    - 数据持久化、LRU回收
    - 主从同步、Sentinel提供高可用，Cluster提供自动分区
-### 组成
+#### 基本
 1. 数据类型
    - string
      1. 认识：字符串，键值对类型、二进制安全的字符串，意味着可包含任意对象(如一个图片)，最大512MB
@@ -91,7 +91,7 @@
    - hash：存对象数据，如用户基本信息，直接更新即可
    - set：做不重复的集合，存不重复用户名啦、每日投票一次啦
    - zset：有序的不重复集合，如热门内容的排序，只需修改score，排行榜
-1. key
+1. 操作
    - 库
      1. select index：切换库，更像命名空间，隔离key名冲突。索引号只能是数字不能自定义，可设置数量，开始和默认是0
      1. move：移动key到某个库中
@@ -131,6 +131,43 @@
      1. randomkey：随机返回
      1. dump：序列化
      1. echo string：打印字符串
+1. 模块
+   - bitmaps
+     1. 认识：位图，即位的数组，用位可以表示两种情况，节省存储，如员工全年签到数据
+        - 其实就是普通的字符串，也就是byte数组，可以用get/set，也可以用getbit/setbit看成「位数组」来处理
+     1. 操作：「零存整取」、「零存零取」、「整存零取」都行，「零存」使用setbit对位值进行逐个设置，「整存」使用字符串一次性填充所有位数组
+        - getbit/setbit
+        - bitcount/bitpos
+        - bitfield：v3.2，多个位的操作
+   - hyperLogLog
+     1. 认识：不精确的去重计数方案，标准误差0.81%，如统计千万级UV的页面，要个数就行
+        - 输入元素数量非常大时，计算基数所需的空间总是固定的、很小的，就可以计算接近2^64个不同元素的基数
+        - 只计算基数，不储存输入元素，无法知道在不在里边
+        - 稀疏矩阵占用空间渐渐超过了阈值时才会一次性转变成稠密矩阵，才会占用12k的空间
+        - 涉及概率论
+     1. 命令
+        - pfadd/pfmerge：添加、合并
+        - pfcount：返回估算值
+   - GeoHash
+     1. 认识：geospatial，地理空间索引半径查找，如附近的人，v3.2
+        - 结构只是个zset，score是GeoHash的52位整数值
+     1. 操作
+        - geoadd：没有删除
+        - geopos/geohash：获取经纬度坐标、hash
+        - georadiusbymember/georadius：附近的其他元素
+        - geodist：计算两个元素之间的距离
+     1. wiki
+        - 最佳实践
+          1. 全部放在一个zset中，使用单独实例部署，不使用集群环境
+          1. 数据量大了，按国家/省/按市等拆分，降低单个zset集合大小
+        - 附近人实现
+          1. 勾股定理，经纬度坐标的密度不一样，勾股定律计算平方差时之后再求和时，需要按一定的系数比加权求和
+          1. 一般通过矩形区域来限定元素的数量，然后对区域内元素进行全量距离计算再排序
+          1. 矩形区域计算，r为半径：`select id from positions where x0-r < x < x0+r and y0-r < y < y0+r`
+        - 经纬度
+          1. 经度范围(-180, 180]，经度正负以本初子午线 (英国格林尼治天文台) 为界，东正西负
+          1. 纬度范围(-90,90]，纬度正负以赤道为界，北正南负
+#### 功能
 1. 功能
    - 管道
      1. 认识：pipeline，不直接响应，一次性发送多条命令，一次性返回所有响应。减少了多次数据往返时间，提高服务端利用率
@@ -183,48 +220,15 @@
         1. `script exists script`：是否已加载
         1. `script kill`：杀死脚本
         1. `script flush`：移除
-1. 模块
-   - bitmaps
-     1. 认识：位图，即位的数组，用位可以表示两种情况，节省存储，如员工全年签到数据
-        - 其实就是普通的字符串，也就是byte数组，可以用get/set，也可以用getbit/setbit看成「位数组」来处理
-     1. 操作：「零存整取」、「零存零取」、「整存零取」都行，「零存」使用setbit对位值进行逐个设置，「整存」使用字符串一次性填充所有位数组
-        - getbit/setbit
-        - bitcount/bitpos
-        - bitfield：v3.2，多个位的操作
-   - hyperLogLog
-     1. 认识：不精确的去重计数方案，标准误差0.81%，如统计千万级UV的页面，要个数就行
-        - 输入元素数量非常大时，计算基数所需的空间总是固定的、很小的，就可以计算接近2^64个不同元素的基数
-        - 只计算基数，不储存输入元素，无法知道在不在里边
-        - 稀疏矩阵占用空间渐渐超过了阈值时才会一次性转变成稠密矩阵，才会占用12k的空间
-        - 涉及概率论
-     1. 命令
-        - pfadd/pfmerge：添加、合并
-        - pfcount：返回估算值
-   - GeoHash
-     1. 认识：geospatial，地理空间索引半径查找，如附近的人，v3.2
-        - 结构只是个zset，score是GeoHash的52位整数值
-     1. 操作
-        - geoadd：没有删除
-        - geopos/geohash：获取经纬度坐标、hash
-        - georadiusbymember/georadius：附近的其他元素
-        - geodist：计算两个元素之间的距离
-     1. wiki
-        - 最佳实践
-          1. 全部放在一个zset中，使用单独实例部署，不使用集群环境
-          1. 数据量大了，按国家/省/按市等拆分，降低单个zset集合大小
-        - 附近人实现
-          1. 勾股定理，经纬度坐标的密度不一样，勾股定律计算平方差时之后再求和时，需要按一定的系数比加权求和
-          1. 一般通过矩形区域来限定元素的数量，然后对区域内元素进行全量距离计算再排序
-          1. 矩形区域计算，r为半径：`select id from positions where x0-r < x < x0+r and y0-r < y < y0+r`
-        - 经纬度
-          1. 经度范围(-180, 180]，经度正负以本初子午线 (英国格林尼治天文台) 为界，东正西负
-          1. 纬度范围(-90,90]，纬度正负以赤道为界，北正南负
-1. 目录
-   - 配置，数据，日志
-1. 日志
-   - 分类
-     1. redis.log：人可读
-     1. sentinel.log：人可读
+
+
+
+
+
+
+
+
+        
 1. 持久化
    - 比较
      1. rdb是全量快照，aof是增量日志
@@ -275,12 +279,6 @@
      1. 恢复：将dump.rdb和aof文件放到redis目录并启动即可，即重放
         - 单纯使用rdb会丢失大量数据
 ### 应用
-1. Bloom Filter
-   - 认识：布隆过滤器，可理解为不怎么精确的set结构，v4.0
-   - 操作
-     1. bf.reserve：参数设置，initial_size估计的过大浪费存储空间，过小影响准确率
-     1. bf.add/bf.madd
-     1. bf.exists/bf.mexists
 1. 队列
    - 即时队列
      1. 措施
@@ -438,9 +436,22 @@
             return $luaScript;
         }
         ```
+1. 布隆过滤器
+   - 认识：Bloom Filter，可理解为不怎么精确的set结构，v4.0
+   - 操作
+     1. bf.reserve：参数设置，initial_size估计的过大浪费存储空间，过小影响准确率
+     1. bf.add/bf.madd
+     1. bf.exists/bf.mexists
+1. 分区
+   - 认识：分割数据到多个Redis实例。提高容量，扩展计算能力和带宽
+     1. 不支持多个key同时操作，事务中也不行
+     1. 多实体数据库维护复杂，容量调整复杂，用presharding解决
+   - 类型
+     1. 范围：不同范围放到不同实例中，需要维护范围表
+     1. hash：使用crc32将key转为数字，然后取模(模为实例数量)确定实例
+   - 自动分区：cluster
 ### 架构
-1. 单机
-   - 认识：简单，不需要数据同步，单点故障隐患，性能瓶颈
+1. 单机：单点故障隐患，性能瓶颈
 1. 主从
    - 认识：利用复制实现数据在不同库的同步，实现读写分离、冗余备份，可继续向下配置树状从
      1. 从从同步减轻同步负担
@@ -640,15 +651,9 @@
      1. `cluster addslots {0...5461}`：分配槽位
      1. `cluster replicate xx`：分配为某节点的从
      1. `redis-cli -cluster`：连接集群，c是集群模式
-1. 扩容：横向扩容、纵向扩容
-1. 分区
-   - 认识：分割数据到多个Redis实例。提高容量，扩展计算能力和带宽
-     1. 不支持多个key同时操作，事务中也不行
-     1. 多实体数据库维护复杂，容量调整复杂，用presharding解决
-   - 类型
-     1. 范围：不同范围放到不同实例中，需要维护范围表
-     1. hash：使用crc32将key转为数字，然后取模(模为实例数量)确定实例
-   - 自动分区：cluster
+1. 普通tw架构：tw + sentinel + haproxy + keepalived
+   - haproxy：负载均衡
+   - keepalived：高可用
 1. 网校tw架构
    - hash分片数据到redis上
    - 高可用：confd + etcd + tw + redis一从热备 + sentinel
@@ -664,16 +669,6 @@
      1. 哨兵监控：完成主从切换后，通知etcd，然后confd更新客户端ip配置文件
    - 架构图：![avatar](../images/redis_wx_framework.png)
    - 扩容：找新机器，用工具同步存量+增量的旧数据，然后挂到tw上
-1. 普通tw架构：tw + sentinel + haproxy + keepalived
-   - haproxy：负载均衡
-   - keepalived：高可用
-1. 阿里云指标
-   - 认识：百万QPS，最好性能512G内存、最大连载数320000、最大吞吐1536M
-   - 功能
-     1. 负载均衡
-     1. 多个proxy，负责故障转移
-     1. 分片服务器，单节点，不需同步数据，不提供数据持久化和备份策略，节点故障会丢失数据。集群版是双节点
-     1. 配置服务器，即Configserver，存储集群配置信息及分区策略，采用双副本的高可用架构
 ### 中间件
 1. TwemProxy
    - 认识：twitter开源的redis/memcache的快速、轻量级的单线程代理服务器，可对多台redis/memcache进行管理和分配。就是分片、分布式方案
@@ -711,8 +706,16 @@
    - 数据在硬盘上是压缩的，迁移到redis需要将当前的容量乘以5
 1. Cluster：太复杂，是去中心化的。没有tw的简单，用的稳定
 ### 运维
+1. 客户端：发起连接，`redis-cli -h host -p port -a password`
 1. 命令
-   - 服务器
+   - 操作
+     1. ping：查看是否运行
+     1. config
+        - `config get requirepass`：查看密码
+        - `config set requirepass xxx/''`：设置/取消密码
+     1. debug segfault：让redis崩溃
+     1. monitor：实时打印接收到的命令，调试用，输出非常多，可以快速ctrl+c
+   - 查看
      1. info：所有的服务器信息
         - info Stats：通用统计
           1. instantaneous_ops_per_sec：ops执行负载
@@ -724,7 +727,7 @@
           1. used_memory_rss_human:3.61M                # 操作系统看到的内存占用 ,top 命令看到的内存
           1. used_memory_peak_human:829.41K             # Redis 内存消耗的峰值
           1. used_memory_lua_human:37.00K               # lua 脚本引擎占用的内存大小
-        - info CPU：
+        - info CPU
         - info Persistence：持久化
         - info Replication：主从
           1. backlog相关：主从复制的效率
@@ -733,14 +736,8 @@
         - info Clients
           1. connected_clients：客户端连接数
      1. client list：客户端列表
-     1. ping：查看是否运行
-     1. monitor：实时打印接收到的命令，调试用，输出非常多，可以快速ctrl+c
-     1. debug segfault：让redis崩溃
-     1. config
-        - `config get requirepass`：查看密码
-        - `config set requirepass xxx/''`：设置/取消密码
-   - 数据
-     1. save/bgsave/lastsave：默认生成dump.rdb文件，查看最后一次保存确认是否后台保存成功
+   - 数据操作
+     1. save/bgsave/lastsave：默认生成dump.rdb文件，查看最后一次保存，确认是否后台保存成功
         - save会阻塞所有客户端请求，避免生产环境使用
         - bgsave是fork新进程进行，fork过程中会造成阻塞，设计或使用不好同样阻塞很长时间，和save执行内容相同
         - 比较：![avatar](../images/save_vs_bgsave.png)
@@ -748,32 +745,35 @@
    - 其他
      1. slowlog subcommand：管理慢日志
      1. sync：用于复制功能的内部
-     1. `src/redis-cli -h host -p port -a password`：客户端发起连接
-   - 配置
-     1. 操作：`config get/set/rewrite */configName configValue`
-     1. 分类
-        - 基础
-          1. port/bind/timeout(无操作连接超时时间，为0不断)
-          1. maxclients：最大连接数
-          1. databases：数量
-          1. maxmemory：最大占用内存，单位字节
-          1. maxmemory-policy：超最大内存后淘汰策略
-             - volatile-lru、allkeys-lru：根据lru算法，删除过期/一个键。并不准确，随机取n(maxmemory-samples)个找最久未被使用
-             - volatile-random、allkeys-random：随机删除过期/一个键
-             - volatile-ttl：删除过期时间最近的一个键
-             - noeviction：不删除，只报错
-          1. maxmemory-samples
-          1. include：子配置文件地址
-          1. requirepass：设置密码，`auth` 检验密码是否正确
-        - 日志
-          1. loglevel：debug/verbose/notice/warning
-          1. logfile：文件地址，守护进程方式运行时日志发送给/dev/null
-        - 内存
-          1. vm-enabled：是否启用虚拟内存机制
-          1. vm-swap-file：虚拟内存文件路径，多Redis实例不可共享
-          1. vm-max-memory 0/vm-page-size 32/vm-pages 134217728/vm-max-threads 4
-1. 守护进程
-   - daemonize no：yes
+1. 配置
+   - 操作：`config get/set/rewrite */configName configValue`
+   - 分类
+     1. 基础
+        - port/bind/timeout(无操作连接超时时间，为0不断)
+        - maxclients：最大连接数
+        - databases：数量
+        - maxmemory：最大占用内存，单位字节
+        - maxmemory-policy：超最大内存后淘汰策略
+          1. volatile-lru、allkeys-lru：根据lru算法，删除过期/一个键。并不准确，随机取n(maxmemory-samples)个找最久未被使用
+          1. volatile-random、allkeys-random：随机删除过期/一个键
+          1. volatile-ttl：删除过期时间最近的一个键
+          1. noeviction：不删除，只报错
+        - maxmemory-samples
+        - include：子配置文件地址
+        - requirepass：设置密码，`auth` 检验密码是否正确
+     1. 日志
+        - loglevel：debug/verbose/notice/warning
+        - logfile：文件地址，守护进程方式运行时日志发送给/dev/null
+     1. 内存
+        - vm-enabled：是否启用虚拟内存机制
+        - vm-swap-file：虚拟内存文件路径，多Redis实例不可共享
+        - vm-max-memory 0/vm-page-size 32/vm-pages 134217728/vm-max-threads 4
+     1. 守护进程：daemonize no：yes
+1. 日志
+   - 目录：配置，数据，日志
+   - 分类
+     1. redis.log：人可读
+     1. sentinel.log：人可读
 1. 安全
    - 命令改写：rename-command
    - Lua脚本安全
@@ -812,7 +812,7 @@
     chkconfig irqbalance on
     ```
 ### 性能和服务治理
-1. 性能测试
+1. 基准测试
    - redis-benchmark
      1. -h/-p：地址端口
      1. -s：指定socket
@@ -821,57 +821,34 @@
      1. -d：字节形式指定set/get大小
      1. -k：1=keep alive 0=reconnect
 1. 性能监控
-   - qps、读写峰值
-   - 客户端数
-   - cpu
-   - 内存
-   - 流量入和出
-   - kv大小
-   - 命中率
-1. 服务治理：连接数过多、慢查询、短连接、长连接
+   - 连接数
+   - qps、峰值
+   - kv大小、命中率
+   - cpu、内存、流量出入
+1. 服务治理：连接数过多、慢查询
    - 主从延迟：外部程序监听，进行报警
    - 脏数据
      1. 主从延迟
      1. 从可写
    - 复制
-     1. 规避全量复制：增大复制缓冲区
+     1. 增大复制缓冲区
      1. 规避复制风暴
         - 主重启，多从同时复制：提供故障转移机制，或者改为树状复制结构，因为同时发送多个RDB费带宽
+1. 阿里云指标
+   - 认识：百万QPS，最好性能512G内存、最大连载数320000、最大吞吐1536M
+   - 功能
+     1. 负载均衡
+     1. 多个proxy，负责故障转移
+     1. 分片服务器，单节点，不需同步数据，不提供数据持久化和备份策略，节点故障会丢失数据。集群版是双节点
+     1. 配置服务器，即Configserver，存储集群配置信息及分区策略，采用双副本的高可用架构
 ### 最佳实践
 1. 使用
-   - 结构体用hash还是string
-     1. string
-        - 每次访问大量字段
-        - 值不能存储为字符串的时候
-     1. hash
-        - 大多数情况中只访问少量字段
-        - 始终知道哪些字段可用
-   - 现象
-     1. 大key
-        - 扩容时产生卡顿，被删除内存会一次性回收，卡顿会再次产生
-        - redis-cli –-bigkeys -i 0.1：渐进式扫描排名靠前的大key
+   - 结构体大多数情况中只访问少量字段用hash，否则用string
+   - 大key
+     1. 扩容时产生卡顿，被删除内存会一次性回收，卡顿会再次产生
+     1. redis-cli –-bigkeys -i 0.1：渐进式扫描排名靠前的大key
    - 过期
-     1. 设置随机过期：大量key设置相同过期时间，同一时间大批量的key过期，同时100个请求，每个请求耗费25ms回收时间，第101个请求需要等待2500ms，造成不可用
-1. 使用规范
-   - key名设计
-     1. 【建议】：可读性和管理性，以业务名为前缀，以一定规则分割，比如业务名:表名:id
-     1. 【建议】: 简洁性，保证语义的前提下，控制key的长度，当key较长时，内存占用也不容易忽视
-     1. 【建议】：redis单实例内存控制在 10G以内，内存越大，触发持久化的操作阻塞主线程的时间越长
-   - value设计
-     1. 【强制】：禁止在redis中存储图片
-     1. 【强制】：禁止在集合结构中只存不清，对于集合结构中数据增加频繁必须要有删除机制
-     1. 【建议】：拒绝bigkey（防止网卡流量，慢查询)： string类型控制在10KB以内，hash、list、set、zset元素个数不要超过5000。
-     1. 【建议】：选择合适的数据类型： 存储数据时选择合适的数据类型，要合理控制key和value的大小和个数以使用更优化的数据结构，如 ziplist
-   - 命令使用
-     1. 【强制】：禁止使用 FLUSHDB FLUSHALL KEYS BGSZVE SAVE BGREWRITEAOF命令
-     1. 【强制】：使用 SCAN 命令时应该批次使用，单次扫描key数量不应超过 2万，间隔0.5s
-     1. 【建议】：使用批量操作以提高效率
-     1. 【建议】：谨慎全量操作hash set等集合结构，O(N)命令关注N的数量，如hgetall/lrange/smembers/zrange要明确N的值, 遍历需求可用hscan、sscan、zscan代替
-     1. 【建议】：zset服务器消耗最高，要排序还要去重，尽量少用    
-   - 客户端使用
-     1. 【强制】：新上线或者迁移的redis服务强制使用密码，应用层要进行配置
-     1. 【强制】：只允许读取本部门redis， 需要使用其他部门数据则将数据服务化
-     1. 【建议】：应用层自行处理长连接断开问题，db组只负责维护redis服务域名的存活，应用层要考虑dns切換之后原来的连接无法使用的状况
+     1. 设置随机过期：大量key设置相同过期时间，同一时间大批量的key过期，同时100个请求每个耗费25ms回收时间，第101个请求需要等待2500ms，造成不可用
 1. 缓存常见问题：![avatar](../images/redis_tips.webp)
    - 缓存穿透：缓存和数据库中都没有数据，但是用户一直发起请求
      1. 加强校验，避免非法请求
@@ -917,6 +894,26 @@
           1. 写db失败怎么办？可引入互斥读锁，阻塞其他读请求，将写缓存和写db作为一个事务
         - write behind：后写模式，异步批量更新数据库
           1. 适合读写都频繁，弱一致的场景，需保证异步写的完整性，适合如浏览量、点击量
+1. 使用规范
+   - key名设计
+     1. 【建议】：可读性和管理性，以业务名为前缀，以一定规则分割，比如业务名:表名:id
+     1. 【建议】: 简洁性，保证语义的前提下，控制key的长度，当key较长时，内存占用也不容易忽视
+     1. 【建议】：redis单实例内存控制在 10G以内，内存越大，触发持久化的操作阻塞主线程的时间越长
+   - value设计
+     1. 【强制】：禁止在redis中存储图片
+     1. 【强制】：禁止在集合结构中只存不清，对于集合结构中数据增加频繁必须要有删除机制
+     1. 【建议】：拒绝bigkey（防止网卡流量，慢查询)： string类型控制在10KB以内，hash、list、set、zset元素个数不要超过5000。
+     1. 【建议】：选择合适的数据类型： 存储数据时选择合适的数据类型，要合理控制key和value的大小和个数以使用更优化的数据结构，如 ziplist
+   - 命令使用
+     1. 【强制】：禁止使用 FLUSHDB FLUSHALL KEYS BGSZVE SAVE BGREWRITEAOF命令
+     1. 【强制】：使用 SCAN 命令时应该批次使用，单次扫描key数量不应超过 2万，间隔0.5s
+     1. 【建议】：使用批量操作以提高效率
+     1. 【建议】：谨慎全量操作hash set等集合结构，O(N)命令关注N的数量，如hgetall/lrange/smembers/zrange要明确N的值, 遍历需求可用hscan、sscan、zscan代替
+     1. 【建议】：zset服务器消耗最高，要排序还要去重，尽量少用    
+   - 客户端使用
+     1. 【强制】：新上线或者迁移的redis服务强制使用密码，应用层要进行配置
+     1. 【强制】：只允许读取本部门redis， 需要使用其他部门数据则将数据服务化
+     1. 【建议】：应用层自行处理长连接断开问题，db组只负责维护redis服务域名的存活，应用层要考虑dns切換之后原来的连接无法使用的状况
 ### wiki
 1. 历史
    - 2009年，开源
@@ -935,7 +932,7 @@
    - ruby：redis-rb，最稳定的客户端
    - python：redis-py
    - node：node_redis、ioredis，前者早，后者功能丰富
-1. Memcache：高性能分布式内存对象缓存系统，内存里维护一个统一的巨大的hash表，能够存储图像等数据
+1. memcache：高性能分布式内存对象缓存系统，内存里维护一个统一的巨大的hash表，能够存储图像等数据
 1. 读书笔记
    - 《深度历险》
      1. 基础数据结构再看下，是深入的大头
@@ -948,7 +945,7 @@
      1. 11章缓存设计，12.1，12.4大key
      1. 13简单看下
      1. 14可以当手册查
-### lua
+#### lua
 1. lua
    - 认识：高效的、简洁轻量的、动态类型的、可扩展的脚本语言，lua是葡萄牙语月亮的意思，是卫星语言，能够方便嵌入其他语言中
      1. redis内嵌lua就是为了提供给用户无限可能，因为命令不可能无限提供
