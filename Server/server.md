@@ -1,7 +1,54 @@
-### 部署
-1. 基于systemctl + nginx实现高可用
-### confd+etcd
-1. 认识：用于做服务的配置中心
+### 认识
+1. caddy：开源的go写的http服务器
+   - http新特性支持全面，如http2、quic、https
+   - 配置简便，5秒可完成配置
+1. apache
+   - 特点
+     1. 模块化，模块多
+     1. 支持虚拟主机
+     1. 支持cgi、fastcgi、ssl、servlet
+   - 工作模式
+     1. cgi模式
+        - 用法：`Action application/x-httpd-php "/php/php-cgi.exe"`
+        - 原理：apache调用php.exe去解释文件，再将结果以网页的形式返回给客户机
+     1. 模块模式
+        - 用法：`LoadModule php5_module "c:/php/php5apache2.dll"`
+        - 原理：php和apache一起启动并运行
+     1. FastCGI模式
+        - 下载fastcgi模块mod_fcgid.so/mod_fcgid.pd
+        - 添加配置
+   - 常用命令
+     1. httpd.exe -t // 检测配置文件是否正确
+     1. httpd.exe -k install
+     1. httpd.exe -k start/stop/restart
+   - window下安装apache+php
+     1. 安装目录
+        - Apache：C://http/http/Apache24
+        - PHP：C://http/php
+     1. 安装vc_redist.x64.exe和vcredist_x64
+     1. apache配置修改
+        - 将c:/Apache24全部替换成c:/http/http/Apache24
+        - 在#LoadModule xml2enc_module modules/mod_xml2enc.so下面添加
+          1. LoadModule php5_module "C:/http/php/php5apache2_4.dll"
+          1. AddType application/x-httpd-php .php .html .htm
+          1. PHPIniDir "C:/http/php"
+        - 将DirectoryIndex index.html改为DirectoryIndex index.php index.html
+        - 将ServerName www.example.com:80的注释去掉
+     1. php环境配置
+        - 把php文件目录下的libeay32.dll/php5ts.dll/ssleay32.dll和ext文件中的php_curl.dll复制到windows/system32下
+        - 把C:/http/php和C:/http/php/ext加入环境变量
+     1. php配置
+        - 将php.ini-development在当前目录复制一份，保存为php.ini
+        - extension_dir 指向c://http/php/ext
+        - extension=php_curl.dll的分号去掉
+        - date.timezone = 修改为date.timezone = Asia/Shanghai，去掉分号
+     1. 启动
+        - 双击C://http/php/php.exe
+        - httpd.exe -k install
+        - httpd.exe -k start
+1. 部署：基于systemctl + nginx实现高可用，不是nginx + keepalive？
+### 服务组件
+#### confd
 1. confd
    - 认识：是一个轻量级的配置管理工具，应用非常广泛的是etcd+confd，后端支持的数据类型有：etcd、consul、vault、environment variables、redis、zookeeper、dynamodb、stackengine、rancher
      1. 可通过查询etcd，结合配置模板引擎，用于保持本地配置最新
@@ -54,51 +101,3 @@
             {{end}}
             ];
             ```
-### caddy
-1. 认识：开源的go写的http服务器
-   - http新特性支持全面，如http2、quic、https
-   - 配置简便，5秒可完成配置
-### apache
-1. 特点
-   - 模块化，模块多
-   - 支持虚拟主机
-   - 支持cgi、fastcgi、ssl、servlet
-1. 工作模式
-   - cgi模式
-     1. 用法：`Action application/x-httpd-php "/php/php-cgi.exe"`
-     1. 原理：apache调用php.exe去解释文件，再将结果以网页的形式返回给客户机
-   - 模块模式
-     1. 用法：`LoadModule php5_module "c:/php/php5apache2.dll"`
-     1. 原理：php和apache一起启动并运行
-   - FastCGI模式
-     1. 下载fastcgi模块mod_fcgid.so/mod_fcgid.pd
-     2. 添加配置
-1. 常用命令
-   - httpd.exe -t // 检测配置文件是否正确
-   - httpd.exe -k install
-   - httpd.exe -k start/stop/restart
-#### window下安装apache+php
-1. 安装目录
-   - Apache：C://http/http/Apache24
-   - PHP：C://http/php
-1. 安装vc_redist.x64.exe和vcredist_x64
-1. apache配置修改
-   - 将c:/Apache24全部替换成c:/http/http/Apache24
-   - 在#LoadModule xml2enc_module modules/mod_xml2enc.so下面添加
-     1. LoadModule php5_module "C:/http/php/php5apache2_4.dll"
-     1. AddType application/x-httpd-php .php .html .htm
-     1. PHPIniDir "C:/http/php"
-   - 将DirectoryIndex index.html改为DirectoryIndex index.php index.html
-   - 将ServerName www.example.com:80的注释去掉
-1. php环境配置
-   - 把php文件目录下的libeay32.dll/php5ts.dll/ssleay32.dll和ext文件中的php_curl.dll复制到windows/system32下
-   - 把C:/http/php和C:/http/php/ext加入环境变量
-1. php配置
-   - 将php.ini-development在当前目录复制一份，保存为php.ini
-   - extension_dir 指向c://http/php/ext
-   - extension=php_curl.dll的分号去掉
-   - date.timezone = 修改为date.timezone = Asia/Shanghai，去掉分号
-1. 启动
-   - 双击C://http/php/php.exe
-   - httpd.exe -k install
-   - httpd.exe -k start
