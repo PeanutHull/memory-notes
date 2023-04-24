@@ -250,3 +250,14 @@
 1. Erlang
    - 认识：支持多核的特性，分布式特性。面向并发，结构化，动态类型，内建并行计算支持。OTP是实现健壮性和容错性的工具和类库和完整的结构化框架
 1. time to live 过期时间
+1. AMQP
+   - 认识：Advanced Message Queue 高级消息队列协议，是应用层的面向消息的中间件设计和开放标准，基于此协议客户端和消息中间件传递消息，不受产品/语言限制。模型架构和rabbitMQ一样
+     1. 用exchange做路由转发到队列，不需要关心具体哪些队列，这是特点
+   - 组成
+     1. channel：网络通道，就是一个会话
+     1. virtual host：虚拟地址，用于逻辑隔离，最上层的消息路由，不能包含多个同名的exchange和message queue
+     1. exchange：交换机，根据路由键转发消息到绑定的队列
+        - binging：exchange和queue的虚拟连接，可以包含routing key
+        - routing key：一个路由规则，用来确定如何路由一个特定消息
+     1. message queue：队列，保存消息
+     1. message：由properties和body组成，如消息优先级、延迟等

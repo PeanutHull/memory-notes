@@ -1,6 +1,6 @@
-### 基础
+### 认识
 1. 认识：高吞吐量、高负载量的分布式流处理平台和消息系统。适用于消息传输、流式数据处理、在线和离线分析
-   - 流处理平台：能构建实时的流数据处理程序来处理数据流
+   - 流处理平台：能构建实时的流数据处理程序来处理数据流，大数据时代数据管道技术首选
    - 提供发布订阅、topic的支持：本身是分布式流处理平台，只是支持发布订阅和Topic，才认为可以做队列
    - 天生分布式：基于zk，组件原生支持水平热扩展、集群容错、消息自动平衡
    - 高性能：高吞吐量/高并发/低延迟/时间复杂度O(1)，单机写入TPS约在100万条/秒，消息大小10个字节
@@ -11,7 +11,96 @@
    - 用户活动跟踪、运营指标监控，即实时处理
    - 缺点：严格的顺序机制，不支持标准的消息协议，不支持消息优先级
    - 适用：大数据日志处理，实时性稍低
+1. 功能
+   - 提供offset管理，可以使用历史数据
+   - 保证排序、零消息丢失和高效的一次性处理
+   - 发布/订阅：消息系统，使用推拉模式
+   - 内置流处理：连接、聚合、过滤器、转换
+   - 实时事件响应
+   - 消息压缩传输：消费者获取，镜像数据传输
+   - 集群镜像：提供官方工具同步并重新发布消息
+   - 自己的二进制消息传输协议
+   - 支持数据批量发送拉取
+   - 支持消息堆积
+1. 设计
+   - 多分区、多副本、多订阅者，基于zk调度
+   - 快速持久化：多副本/容错性/消息自动平衡
+   - 利用zk进行服务协调管理
+   - 支持同步和异步复制
+   - 副本模式
+     1. 同步：生产者从zk找到leader，发布消息后存入leader的log中，follow使用一个channel来pull消息，写入自己log后发送确认消息，收到所有follow的确认消息才给生产者发送ack
+     1. 异步：写入log后立即发送确认信息，无法保证broker故障时的消息分发
+1. 重难点
+   - 消息偏移量
+   - 日志存储机制
+   - 主题订阅
+   - 故障发现
 ### 组成
+1. topic
+   - 认识：主题，逻辑概念，用于存储、区分消息，在broker上存储
+     1. 紧凑的二进制字节数组，避免了java繁重的堆上内存分配
+   - serializer：序列化器，对象、字节相互转换的编解码器
+1. partition
+   - 认识：分区，有序的数据存储基本单元，一个topic分为n个有序号的partition
+     1. 只支持顺序读写，只能在partition尾部追加消息，总是写最新的segment，每个消息有一个位移
+     1. 单partition消息保证有序，全局不保证
+        - 要保证消息顺序partition可以设为1，一个partation只能有一个consume，性能太低，不如天生有序的rabbiemq呢
+        - 可以使用key + offset做到业务有序，一个key确定同一类型，offset作为顺序的判断，如先存了es，时序数据库中，攒够了一起处理
+     1. 是分布式的，保证伸缩性，用于负载均衡，根据实际需要设置数量，实现性能最大化
+   - 分配
+     1. 将所有Broker（假设共n个Broker）和待分配的Partition排序
+     1. 将第i个Partition分配到第（i mod n）个Broker上 （这个就是leader）
+     1. 将第i个Partition的第j个Replica分配到第（(i + j) mode n）个Broker上
+   - partition reassign：分区重分配，发生在分区数变化，或分区更改到其他broker
+   - 组成
+     1. offset：偏移量，递增的整数值。既可表示消息存在的位置，也能表示消费者消费到的位置
+1. replica
+   - 认识：副本，分区的复制，用于防止数据丢失
+     1. 一个分区可以多个副本，每个都可能成为leader
+     1. 主失效立即再选举，从挂掉/卡住/同步太慢会被删除再创建一个
+     1. kafaka保证同一个分区的多个副本不会在一个节点上
+   - 组成
+    1. leader：首领副本，同一个Topic只有一个
+        - 接受生产消费请求
+        - 明确同步的follower
+    1. prefer leader：首选首领，即希望成为leader的分区。如果设置自动leader平衡，那么首选首领不是当前首领时会自动触发选举
+    1. follower：主要用于备份消息
+        - 从leader复制数据，可以有多个
+   - ISR
+     1. 认识：in-sync replica，同步的副本，集合里的才能选为主
+        - leader检测follower的偏移量，滞后一定程度时踢出ISR，追上再加回，自动的
+        - 集合中所有副本都收到消息才会置为已提交
+        - kafka的信息交付承诺：在ISR存活的条件下已提交信息不会丢失
+     1. 配置
+        - min insync replicas：最少同步副本
+1. message
+     1. key：消息键，决定哪个partition
+     1. batch：分批发送
+     1. schema：消息编码方式
+   - 属性
+     1. 消费超时时间
+     1. 最大重试次数：业务方消费消息的时间超过"消费超时时间"时，消息会判断消费失败，重新投递给业务方的最大重试次数
+     1. QOS：并发回调个数
+     1. key
+        - 有key：按照key进行哈希，相同key去一个partition
+        - 无key：round-robin来选partition
+#### 角色
+1. 角色：![avatar](../images/kafka_struct.jpeg)
+   - cluster
+     1. 认识：集群，很多台机器组成
+        - 天然支持集群，没有单节点说法，一台也是集群，通过brokerId区分不同节点
+        - 依赖zk进行协调，连接同一个zk就是同一个集群
+     1. 组成
+        - controller：执行者，活跃broker中选举，负责partition在broker的分配、leader的选举、broker监控，在zk的/brokers/ids节点上注册watch
+   - broker
+     1. 认识：kafka集群的部署节点
+        - 对消息集群内分区部署平衡，partition会平均分布在节点中，自己有协调机制
+        - 访问任意一个broker都可以完成请求，因为有数据同步机制
+     1. 组成
+        - replicaManager：管理当前节点所有分区和副本
+        - temporary node：临时节点，其他broker订阅zk的临时节点从而知道有broker宕机
+   - client
+     1. metadata request：元数据请求，客户端可向任意broker获取topic的分区/副本/leader。客户端会缓存信息并定时刷新，客户端会直接发送请求到leader
 1. producer
    - 认识
      1. 批量发送，会积攒一批，然后一起发送
@@ -32,6 +121,9 @@
      1. abortTransaction
    - 客户端原理：![avatar](../images/kafka_producer_client.png)
    - thread safe：线程安全，生产者时线程安全，消费者不是线程安全的
+   - 生产幂等性
+     1. 为每个producer分配一个唯一标识pid，producer为每一个partition维护一个单调递增的seq
+     1. 当req_seq == broker_seq+1时，broker才会接受该消息，大了还没写入，小了已经写入了
 1. consumer group
    - 认识：一组consumer，kafka消费的单位
      1. 单partition只能由组中某个消费者消费，否则kafka需要加锁，会影响性能，就这样规定了
@@ -105,101 +197,7 @@
    - consumer
    - stream processor：高效将输入流转换到输出流
    - connector
-### 构成
-1. client
-   - metadata request：元数据请求，客户端向任意broker发请求topic的分区、分区副本，leader位置。帮助客户端直接发送请求到leader。客户端会缓存信息，并定时刷新
-1. broker
-   - 认识：节点，一台机器，kafka集群的服务器节点
-     1. partition会平均分布在节点中
-     1. replicaManager：管理当前Broker所有分区和副本
-   - temporary node：临时节点，其他broker订阅zk的临时节点从而知道有broker宕机
-1. cluster
-   - 认识：集群，很多台机器组成
-   - 组成
-     1. controller：执行者，从集群活跃broker中选举出充当控制器的角色，负责partition在broker的分配、leader的选举、broker监控
-1. topic
-   - 认识：主题，逻辑概念，用于存储、区分消息，在broker上存储
-     1. 紧凑的二进制字节数组，避免了java繁重的堆上内存分配
-   - serializer：序列化器，对象、字节相互转换的编解码器
-1. partition
-   - 认识：分区，有序的数据存储基本单元，一个topic分为n个有序号的partition
-     1. 只支持顺序读写，只能在partition尾部追加消息，总是写最新的segment，每个消息有一个位移
-     1. 单partition消息保证有序，全局不保证
-        - 要保证消息顺序partition可以设为1，一个partation只能有一个consume，性能太低，不如天生有序的rabbiemq呢
-        - 可以使用key + offset做到业务有序，一个key确定同一类型，offset作为顺序的判断，如先存了es，时序数据库中，攒够了一起处理
-     1. 是分布式的，保证伸缩性，用于负载均衡，根据实际需要设置数量，实现性能最大化
-   - 分配
-     1. 将所有Broker（假设共n个Broker）和待分配的Partition排序
-     1. 将第i个Partition分配到第（i mod n）个Broker上 （这个就是leader）
-     1. 将第i个Partition的第j个Replica分配到第（(i + j) mode n）个Broker上
-   - partition reassign：分区重分配，发生在分区数变化，或分区更改到其他broker
-   - 组成
-     1. offset：偏移量，递增的整数值。既可表示消息存在的位置，也能表示消费者消费到的位置
-1. replica
-   - 认识：副本，分区的复制，用于防止数据丢失
-     1. 一个分区可以多个副本，每个都可能成为leader
-     1. 主失效立即再选举，从挂掉/卡住/同步太慢会被删除再创建一个
-     1. kafaka保证同一个分区的多个副本不会在一个节点上
-   - 组成
-    1. leader：首领副本，同一个Topic只有一个
-        - 接受生产消费请求
-        - 明确同步的follower
-    1. prefer leader：首选首领，即希望成为leader的分区。如果设置自动leader平衡，那么首选首领不是当前首领时会自动触发选举
-    1. follower：主要用于备份消息
-        - 从leader复制数据，可以有多个
-   - ISR
-     1. 认识：in-sync replica，同步的副本，集合里的才能选为主
-        - leader检测follower的偏移量，滞后一定程度时踢出ISR，追上再加回，自动的
-        - 集合中所有副本都收到消息才会置为已提交
-        - kafka的信息交付承诺：在ISR存活的条件下已提交信息不会丢失
-     1. 配置
-        - min insync replicas：最少同步副本
-1. message
-     1. key：消息键，决定哪个partition
-     1. batch：分批发送
-     1. schema：消息编码方式
-   - 属性
-     1. 消费超时时间
-     1. 最大重试次数：业务方消费消息的时间超过"消费超时时间"时，消息会判断消费失败，重新投递给业务方的最大重试次数
-     1. QOS：并发回调个数
-     1. key
-        - 有key：按照key进行哈希，相同key去一个partition
-        - 无key：round-robin来选partition
-### 设计
-1. 设计
-   - 多分区、多副本、多订阅者，基于zk调度
-   - 快速持久化：多副本/容错性/消息自动平衡
-   - 利用zk进行服务协调管理
-   - 支持同步和异步复制
-   - 副本模式
-     1. 同步：生产者从zk找到leader，发布消息后存入leader的log中，follow使用一个channel pull消息，写入自己log后发送确认消息，收到所有确认消息才给生产者发送
-     1. 异步：写入log后立即发送确认信息，无法保证broker故障时的消息分发
-1. 功能
-   - 提供offset管理，可以使用历史数据
-   - 保证排序、零消息丢失和高效的一次性处理
-   - 发布/订阅：消息系统，使用推拉模式
-   - 内置流处理：连接、聚合、过滤器、转换
-   - 实时事件响应
-   - 消息压缩传输：消费者获取，镜像数据传输
-   - 集群镜像：提供官方工具同步并重新发布消息
-   - 自己的二进制消息传输协议
-   - 支持数据批量发送拉取
-   - 支持消息堆积
-1. kafka拓扑结构：![avatar](../images/kafka_struct.jpeg)
-1. 集群
-   - 认识
-     1. 天然支持集群，没有单节点说法，一台也是集群，通过brokerId区分不同节点
-     1. 依赖zk进行协调，连接同一个zk就是同一个集群
-1. produce
-   - 生产幂等性
-     1. 为每个producer分配一个唯一标识pid，producer为每一个partition维护一个单调递增的seq
-     1. 当req_seq == broker_seq+1时，broker才会接受该消息，大了还没写入，小了已经写入了
-1. broker
-   - 认识：部署节点
-        - 对消息集群内平衡，就是不会将一个Topic的多个partation，也不会将一个partation的多个副本放在一个broker上，自己有协调机制
-        - 访问任意一个broker都可以完成请求，因为有数据同步机制
-   - controller
-        - 在zk的/brokers/ids节点上注册watch
+#### 设计
 1. partition
    - 读写
      1. 特点
@@ -223,22 +221,6 @@
         - 1，当写Leader成功后就返回,其他的replica都是通过fetcher去同步的,所以kafka是异步写，主备切换可能丢数据
         - -1，要等到ISR里大于min.insync.replicas同步成功，才能返回成功，延时取决于最慢的机器。强一致，不会丢数据
      1. epoch机制
-1. 情况设计
-   - 节点故障
-     1. 认识
-        - 不会因为节点故障丢失数据
-        - kafka的语义担保也能很大程度避免数据丢失
-        - 会对消息进行reblance，减少节点消息热度太高
-     1. 判定标准：心跳未保持、消息落后leader太多
-     1. 动作：移除
-   - leader选举
-     1. unclean leader election：不完全首领选举，允许不同步的副本成为首领，提高可用性，增加丢消息的风险
-     1. 过程
-        - 没有采用多数投票来选举，首先通过抢注zookeeper的/controller+epoch机制竞争leader
-        - 当controller发现有broker离开集群，在ISR中选择速度比较快的作为leader，谁先接收到算谁
-        - 随后新leader开始接受生产消费请求，follower从leader复制数据
-   - leader容灾
-     1. broker宕机后，controller从zk的/brokers/topics/[topic]/partitions/[partition]/state中，读取ISR（in-sync replica已同步的副本）列表，选一个出来做leader
 1. 日志
    - 认识
      1. 以partition为单位进行保存，offset就是起始位置
@@ -271,21 +253,22 @@
      1. 组成
         - baseOffset：对应segment文件中的第几条message。方便使用数值压缩算法节省空间。如varint
         - position：在segment中的绝对位置
-1. 实现方式
-   - 日志存储机制
-   - 偏移量
-   - 主题订阅、故障发现
-### 最佳实践
-1. topic分区数如何确定
-   - 特点
-     1. kafka集群非常喜欢顺序读写，过多的分区会使得集群退化为随机读写
-   - 原则
-     1. 最好为broker的倍数，一般为3的倍数，这样分区可以均匀分布在所有broker上
-     1. key hash的业务，需要在最初就定义好分区数，因为如果添加分区，原来的数据是不会自动重新hash的
-1. out-of-range
-   - 认识：一般是消费速度不够快，服务端已经删除了消息。要么增大kafka的保留策略，要么提高消费能力
-1. 实现顺序消费
-   - 业务自己封装基于分区的顺序消费，即不同分区，放到不同线程，另外提高并发度之一就是降低锁的粒度，可以基于业务key的放到不同线程中处理，如不同用户的账户增减可以并行
+1. 情况设计
+   - leader选举
+     1. unclean leader election：不完全首领选举，允许不同步的副本成为首领，提高可用性，增加丢消息的风险
+     1. 过程
+        - 没有采用多数投票来选举，首先通过抢注zookeeper的/controller+epoch机制竞争leader
+        - 当controller发现有broker离开集群，在ISR中选择速度比较快的作为leader，谁先接收到算谁
+        - 随后新leader开始接受生产消费请求，follower从leader复制数据
+   - leader容灾
+     1. broker宕机后，controller从zk的/brokers/topics/[topic]/partitions/[partition]/state中，读取ISR（in-sync replica已同步的副本）列表，选一个出来做leader
+   - broker容灾
+     1. 认识
+        - 不会因为节点故障丢失数据
+        - kafka的语义担保也能很大程度避免数据丢失
+        - 会对消息进行reblance，减少节点消息热度太高
+     1. 判定标准：心跳未保持、消息落后leader太多
+     1. 动作：移除
 ### 架构
 1. 中间件
    - MQProxy
@@ -445,30 +428,40 @@
      1. 最佳实践
         - 断掉所有访问：使用域名访问，切断解析，保证一定无流量进入
         - 进行删除
+### 最佳实践
+1. topic分区数如何确定
+   - 特点
+     1. kafka集群非常喜欢顺序读写，过多的分区会使得集群退化为随机读写
+   - 原则
+     1. 最好为broker的倍数，一般为3的倍数，这样分区可以均匀分布在所有broker上
+     1. key hash的业务，需要在最初就定义好分区数，因为如果添加分区，原来的数据是不会自动重新hash的
+1. 实现顺序消费
+   - 业务自己封装基于分区的顺序消费，即不同分区，放到不同线程，另外提高并发度之一就是降低锁的粒度，可以基于业务key的放到不同线程中处理，如不同用户的账户增减可以并行
+1. out-of-range
+   - 认识：一般是消费速度不够快，服务端已经删除了消息。要么增大kafka的保留策略，要么提高消费能力
 ### wiki
 1. 端口
    - kafka：9092
    - zk：2181
-1. SASL：一种身份认证框架，sasl验证架构决定服务器本身如何存储客户端的身份证书以及如何核验客户端提供的密码。成功通过验证服务端能确定用户的身份和权限
-   - kafka使用java认证和授权服务（JAAS）进行SASL配置
-1. 其他
-   - 大数据时代数据管道技术首选
-   - Confluent Platform：分为开源和商业版本，提供了kafka没有的完善的跨数据中心数据备份和集群监控方案等
-   - linux比windows的io模型和网络传输的零拷贝都厉害
 1. 历史
    - 最新：2.8
    - 2019.10：2.3.1
    - 2017.11：稳定版本
    - 2011：加入apache
    - 2010：开源，由Scala和Java编写，最初由Linkedin开发，最后贡献给Apache基金会并成为顶级开源项目
-1. 版本更新
+1. 版本
    - 0.11：事务支持，11版本前非常依赖zk，之后慢慢减轻
    - 0.10：推出kafka streams组件，成为流式处理框架，本质还是消息的流转
    - 0.8：集群间备份，java重写生产者，不再依赖zk
-1. LinkIn开源的东西
-   - Databus：分布式数据同步系统
-   - Cubert：高性能计算引擎
-   - ParSeq：java异步处理框架
+1. 其他
+   - Confluent Platform：分为开源和商业版本，提供了kafka没有的完善的跨数据中心数据备份和集群监控方案等
+   - linux比windows的io模型和网络传输的零拷贝都厉害
+   - SASL：一种身份认证框架，sasl验证架构决定服务器本身如何存储客户端的身份证书以及如何核验客户端提供的密码。成功通过验证服务端能确定用户的身份和权限
+     1. kafka使用java认证和授权服务（JAAS）进行SASL配置
+   - LinkIn开源的东西
+     1. Databus：分布式数据同步系统
+     1. Cubert：高性能计算引擎
+     1. ParSeq：java异步处理框架
 ### 源码与实现
 1. 认识
    - 底层实现知道原理，来龙去脉，不变应万变
