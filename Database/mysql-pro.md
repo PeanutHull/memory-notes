@@ -285,6 +285,7 @@
      1. 数据行都存储在页中，一页可以存储多条数据
    - 认识：wal一致，![avatar](../images/mysql-update.jpeg)、![avatar](../images/db/innoDB_struct.jpeg)
      1. 主线程每秒将脏页写入文件，不论事务是否提交
+     1. 通过写前日志和两阶段提交，实现不丢失数据
    - 场景
      1. 重启
         - 做完清理工作再关闭，如各种刷盘
