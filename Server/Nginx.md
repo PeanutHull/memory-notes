@@ -848,7 +848,7 @@
         - 所有配置只在进程启动时加载一次
         - PHP死掉不会带死apache，而且会立即启动一个新的php进程
         - fastcgi是适用高并发场景的，对web服务器不挑可以自由更换
-   - SCGI：Simple CGI，精简数据协议和响应过程的FCGI，为适应ajax和rest，做出更快更简介应答，并规定http响应后立刻关闭链接，适合SOA提倡的请求-忘记的通信模式
+   - SCGI：Simple CGI，精简数据协议和响应过程的FCGI，为适应ajax和rest做出更快更简介应答，规定http响应后立刻关闭链接，适合SOA提倡的请求-忘记的通信模式
    - WSGI：Web Server Gateway Interface，
    - GRPC
     ```conf

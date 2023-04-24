@@ -35,7 +35,7 @@
 1. Kafka Vs Rabbitmq
    - 图：![avatar](../images/kafkaVsRabbitmq.png)
    - 特性对比：![avatar](../images/queue_characterk_vs_r.png)
-   - RabbitMQ的优势在于灵活的路由和丰富的特性，使用队列的机制，可以让编码迭代很舒服。Kafka的优势在于重复消费和流（这对流式计算很重要），以及它的性能
+   - RabbitMQ的优势在于灵活的路由和丰富的特性，可以让编码迭代很舒服。Kafka的优势在于重复消费和流（这对流式计算很重要），以及它的性能
    - kafka的优势
      1. Kafka的吞吐量比RabbitMQ高出至少一个数量级，消息体为1KB的情况下，RabbitMQ单Queue性能在55000msg/s - 60000msg/s之间，Kafka的性能在240000records/sec ～ 250000records/sec之间，kafka集群性能比rabbit高
      1. 高负载的情况下，Kafka比RabbitMQ更稳定，占用的机器资源更少，且不会有类似于RabbitMQ的流控限制、高CPU和内存占用等情况发生
@@ -47,8 +47,7 @@
      1. Kafka消费模式为pull，RabbitMQ通常为push。所以Kafka消费进度由客户端控制，RabbitMQ由服务端控制，从而导致Kafka消费者在提交offset方面较为复杂，RabbitMQ只需要ack就好
      1. Kafka在优先级队列、延时队列等方面支持不如RabbitMQ好
 ### 最佳实践
-1. 幂等性保障
-   - 用于消费端
+1. 消费端幂等性保障
      1. 唯一id + 指纹码
      1. redis原子性实现
 1. 消息强顺序性：拆分多个queue，每个queue一个消费者
