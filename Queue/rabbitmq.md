@@ -1,4 +1,4 @@
-### RabbitMQ
+### 认识
 1. 认识：开源的消息中间件，支持AMQP、STOMP、MQTT协议。erlang编写，因为兔子敏捷并且繁殖很疯狂
    - 高可靠：支持持久化、传输确认、发布确认、跟踪机制
    - 高可用：集群模式丰富，集群镜像
@@ -105,20 +105,41 @@
      1. 消息体
      1. 属性
      1. header
-1. vhost
-   - 认识：虚拟主机，多租户。拥有独立的交换器、队列、权限，逻辑、数据分离，避免命名冲突，易扩展，vhost是AMQP的概念基础，默认/，账号密码guest/guest
-1. user
-   - 认识：跨越vhost存在
+#### 角色
 1. broker
    - 认识：节点，消息队列服务器实体
      1. RPC：可以和客户端进行RPC通信
    - 属性
      1. policies：策略，如高可用等
 1. channel
-   - 认识：信道，建立在连接上的双向数据流的虚拟连接，所有消息通过信道发送，多路复用一个tcp connection，避免tcp高额的新建销毁成本    
-1. 特性
-   - 持久化：需要设置交换器和队列的持久化，才能保证消息的持久化有用，所有消息持久化极大影响性能
+   - 认识：信道，建立在连接上的双向数据流的虚拟连接，所有消息通过信道发送，多路复用一个tcp connection，避免tcp高额的新建销毁成本   
+1. vhost
+   - 认识：虚拟主机，多租户。拥有独立的交换器、队列、权限，逻辑、数据分离，避免命名冲突，易扩展，vhost是AMQP的概念基础，默认/，账号密码guest/guest
+1. user
+   - 认识：跨越vhost存在
+#### 设计
+1. 消息可靠性投递：confirm，可通过事务、发送方确认机制，都能保证消息已正确送达。后者更轻量级，二者互斥。持久化的话落盘后rabbitmq才会回复确认，是指确认发往交换器。确认就是落盘了，崩溃数据不丢失
+   - 发送方确认：confirmSelect不阻塞，可以继续发送下一条，可用waitForConfirm的返回结果进行失败的逻辑处理。原理是开启确认模式后，当前信道每个消息被指派一个唯一id，然后确认时返回这个id。批量confirm和异步confirm性能更高，一个一个的confirm性能只比事务少了一个tcp的ack
+     1. channel开启确认模式 `channel.confirmSelect()`
+     1. channel添加监听，addConfirmListener
+   - ReturnListener：用于监听不可达的消息，`Mandatory:true`，false直接删除
+   - 事务：消息落库，消息状态打标。一条消息一个commit，发送消息后commit会一直阻塞，直到消息成功被接收，事务才能提交成功
+     1. select、commit、rollback：开启事务模式、提交、回滚，提交成功则消息一定到达了rabbitMQ
+1. qos：服务质量保证，消费端限流，防止压垮消费者。在非自动确认消息下，一定数量消息未被确认前，不进行消费新消息
+   - prefetchSize：0，rabbitmq没实现
+   - prefetchCount：qos值
+   - global：设置channel/consumer级别，rabbitmq没实现
+1. 数据文件
+   - mnesia：数据库
+   - metadata.json：元数据，就是vhost、交换器那一堆的数据文件
+1. 持久化
+   - 认识需要设置交换器和队列的持久化，才能保证消息的持久化有用，所有消息持久化极大影响性能
      1. 分类：交换器、队列、消息
+1. 原理
+   - 存储机制：持久化的入队列就写入磁盘，内存中也备份一份，内存吃紧就清除。非持久化的只保存在内存中，内存吃紧换入硬盘
+   - 集群内部利用erlang的分布式通信框架OTP
+   - 流控
+   - 镜像队列原理
 ### 架构
 1. 集群
    - 认识
@@ -160,28 +181,6 @@
      1. 要有发送方确认
      1. 交换器、队列、消息要持久化、备份
      1. 消费者设置手动确认
-### 设计与实现
-1. 消息可靠性投递：confirm，可通过事务、发送方确认机制，都能保证消息已正确送达。后者更轻量级，二者互斥。持久化的话落盘后rabbitmq才会回复确认，是指确认发往交换器。确认就是落盘了，崩溃数据不丢失
-   - 发送方确认：confirmSelect不阻塞，可以继续发送下一条，可用waitForConfirm的返回结果进行失败的逻辑处理。原理是开启确认模式后，当前信道每个消息被指派一个唯一id，然后确认时返回这个id。批量confirm和异步confirm性能更高，一个一个的confirm性能只比事务少了一个tcp的ack
-     1. channel开启确认模式 `channel.confirmSelect()`
-     1. channel添加监听，addConfirmListener
-   - ReturnListener：用于监听不可达的消息，`Mandatory:true`，false直接删除
-   - 事务：消息落库，消息状态打标。一条消息一个commit，发送消息后commit会一直阻塞，直到消息成功被接收，事务才能提交成功
-     1. select、commit、rollback：开启事务模式、提交、回滚，提交成功则消息一定到达了rabbitMQ
-1. qos：服务质量保证，消费端限流，防止压垮消费者。在非自动确认消息下，一定数量消息未被确认前，不进行消费新消息
-   - prefetchSize：0，rabbitmq没实现
-   - prefetchCount：qos值
-   - global：设置channel/consumer级别，rabbitmq没实现
-1. 数据文件
-   - mnesia：数据库
-   - metadata.json：元数据，就是vhost、交换器那一堆的数据文件
-### 原理
-1. 原理
-   - 存储机制
-     1. 现象：持久化的入队列就写入磁盘，内存中也备份一份，内存吃紧就清除。非持久化的只保存在内存中，内存吃紧换入硬盘
-   - 集群内部利用erlang的分布式通信框架OTP
-   - 流控
-   - 镜像队列原理
 ### 运维
 1. 安装
    - 安装erlang
@@ -193,10 +192,6 @@
      1. 环境变量：rabbitmq-env.conf
      1. 配置文件：rabbitmq.config
      1. 运行时参数：不会同步到集群中，运行时可更改，不用重启。分vhost级别、globle级别
-1. 运行指标
-   - 消息：发送速度、确认速度、消费速度、消息总数
-   - 磁盘读写速度、句柄数
-   - socket连接数、connection数、channel数
 1. 管理
    - rabbitmqadmin：基于HTTP API的零依赖命令行管理工具
    - rabbitmqctl
@@ -238,18 +233,15 @@
      1. `lists`
    - rabbitmq-diagnostics：监控、健康检查、可观察性工具
    - rabbitmq-queues：对仲裁队列的操作
+1. 监控
+   - 消息：发送速度、确认速度、消费速度、消息总数
+   - 磁盘读写速度、句柄数
+   - socket连接数、connection数、channel数
 ### wiki
-1. 队列历史
-   - 商业的有微软的MSMQ、IBM的WebSphere
-   - JMS试图通过公共Java API的方式，隐藏不同mq的实际接口，解决互通问题，但是使用单独接口胶合众多不同的接口也是存在很多问题。老牌ActiveMQ是JMS的一种实现
-   - 消息通信标准化方案：2006年思科、红帽等联合制定了AMQP的公开标准。rabbitMQ是其开源实现，阿里的rocketMQ、kafka
-1. rabbitMQ历史
+1. 历史
    - RabbitMQ Technologies Ltd开发并提供商业支持
    - 2010年被VMWare收购
    - 最新版本3.8
-1. Erlang
-   - 认识：支持多核的特性，分布式特性。面向并发，结构化，动态类型，内建并行计算支持。OTP是实现健壮性和容错性的工具和类库和完整的结构化框架
-1. time to live 过期时间
 1. AMQP
    - 认识：Advanced Message Queue 高级消息队列协议，是应用层的面向消息的中间件设计和开放标准，基于此协议客户端和消息中间件传递消息，不受产品/语言限制。模型架构和rabbitMQ一样
      1. 用exchange做路由转发到队列，不需要关心具体哪些队列，这是特点
@@ -261,3 +253,6 @@
         - routing key：一个路由规则，用来确定如何路由一个特定消息
      1. message queue：队列，保存消息
      1. message：由properties和body组成，如消息优先级、延迟等
+1. 其他
+   - Erlang：支持多核的特性，分布式特性。面向并发，结构化，动态类型，内建并行计算支持。OTP是实现健壮性和容错性的工具和类库和完整的结构化框架
+   - time to live 过期时间
