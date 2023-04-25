@@ -1,8 +1,12 @@
-### Linux
+### 认识
 1. 特点
    - 一切皆文件
    - 对后缀不敏感
-### 文件、目录
+### 基本操作
+#### 文件、目录
+1. 认识
+   - .开头的文件和目录都是隐藏的
+   - 目录为蓝色，-l参数下-为文件、d为目录、l为符号链接
 1. 查看
    - 目录
      1. pwd
@@ -161,10 +165,7 @@
    - md5sum：查看校验和，32位小写
      1. `md5sum a.sql`
      1. `echo -n "hello world"|md5sum`
-1. wiki
-   - .开头的文件和目录都是隐藏的
-   - 目录为蓝色，-l参数下-为文件、d为目录、l为符号链接
-### 用户、权限
+##### 用户、权限
 1. 用户和用户组
    - 查看
      1. /etc/passwd
@@ -194,80 +195,43 @@
      1. setfacl
      1. chgrp
      1. su/sudo
-### 网络
-1. 应用
-   - wget
-   - curl
-     1. -X POST：
-     1. -x '127.0.0.1：80'
-     1. -H 'CONTENT-TYPE:application/json' -H 'traceid:123abc'：多个就写多个-H
-     1. -d '{"id":xx}'：http post data
-     1. -i 查看返回头
-     1. -v：查看请求详细信息
-     1. `curl ipinfo.io/curl cip.cc`：查看出口ip
-   - rsync
-     1. 认识：linux的文件备份、同步工具
-        - 计算源文件和目标文件的差异，仅同步差异（因为全量成本高）
-        - 压缩、解压数据以进一步提高速度
-     1. 参数
-        - --address=
-        - --port=10873
-        - --daemon
-        - -r：同步
-        - -av：同步文件，删除--delete
-   - samba
-     1. 运维：`yum install samba`，配置：`/etc/samba/smb.conf`，即可开始共享文件
-   - scp
-     1. 上传：`scp [-r] local addr@ip:/addr`
-     1. 下载：`scp [-r] addr@ip:/addr local`
-   - rcp
-     1. 认识：remote file copy 远程文件拷贝，把远程的文件拿过来
-     1. 例子：`rcp root@127.0.0.1:/xxx xxx`
-   - sz/rz
-   - ftp/sftp
-   - ssh
-   - telnet：用于远程登录，基于TCP/IP协议族一员的telnet协议，采用明文传送报文安全性不好，都用ssh
-   - nc
-1. 检测
-   - ping：连通性
-   - telnet ip port：检测端口是否打开
-   - dig：域名检测，从DNS域名服务器查询主机地址信息
-   - nslookup：域名检测
-   - host
-   - tracepath：端对端路由检测
-   - route
-     1. 认识：可显示、操作ip路由表，可设置网关来访问Internet
-     1. 操作
-        - 查看
-          1. -n：不显示主机名，直接显示ip、port
-        - 操作：`route add/del [-net|-host] [网域或主机] netmask [mask] [gw|dev]`
-          1. -net    ：表示后面接的路由为一个网域
-          1. -host   ：表示后面接的为连接到单部主机的路由
-          1. netmask ：与网域有关，可以设定netmask决定网域的大小
-          1. gw      ：指定网关ip
-          1. dev     ：指定发送网卡，如eth0
-     1. 实操：`route add -net 192.168.62.0 netmask 255.255.255.0 gw 192.168.1.1`
-     1. 结果解析
-        - Destination：目标网络或目标主机
-        - Gateway：网关地址，没有显示星号
-        - Genmask：网络掩码
-        - Flags：总共有多个旗标，代表的意义如下：                        
-          1. U：该路由是启动的                      
-          1. H：目标是主机而非网域                      
-          1. G：需要透过外部的主机来转递封包                      
-          1. R：使用动态路由时，恢复路由资讯的旗标                      
-          1. D：已经由服务或转port功能设定为动态路由                       
-          1. M：路由已经被修改了                      
-          1. !：这个路由将不会被接受
-        - Metric 距离、跳数。暂无用。
-        - Ref：恒为0，Number of references to this route. (Not used in the Linux  ker-nel.)
-        - Use：该路由被使用的次数，可以粗略估计通向指定网络地址的网络流量。
-        - Iface：网络接口名
-   - traceroute：显示网络数据包传输到指定主机的路径信息，追踪数据传输路由状况
-   - openssl：查看网站证书链`openssl s_client -connect github.com:443 -showcerts`
-     1. 网站检测：myssl.com
-   - lsof：list open files，列出打开文件。linux环境下任何事物都以文件的形式存在
-     1. i:80：查看端口号，root用户查看
+#### 网络
+1. 认识
+   - 端口号1024以下是系统保留的，总共65526个
+1. 组成
+   - /etc/sysconfig/network-scripts/ifcfg-eth0
+   - hostname
+   - ifdown/ifup
+   - ethtool
+   - 防火墙：都是内核的netfilter在干活，以下2个作用都是维护规则
+     1. iptables
+        - 编辑：`vim /etc/sysconfig/iptables`
+        - 增加：`-A INPUT -m state --state NEW -m tcp -p tcp –-dport 80 -j ACCEPT`
+        - 状态/重启/关闭：`/etc/init.d/iptables status/restart/stop`
+     1. centos7防火墙配置
+        - 添加端口：firewall-cmd --zone=public --add-port=80/tcp --permanent
+        - 查看端口：firewall-cmd --zone=public --list-ports
+        - 开关：systemctl start/disable/restart firewalld
+1. 参数
+   - 查看
+     1. 查看进程连接、排队状况：`netstat -lntup`
+     1. 查看各个tcp状态的数量：`netstat -an | awk '/^tcp/ {++S[$NF]}  END {for (a in S) print a,S[a]}'`
+   - 连接队列设置
+     1. SYN queue：`/proc/sys/net/ipv4/tcp_max_syn_backlog`
+        - 查看SYN queue溢出：`netstat -s | grep LISTEN`
+     1. Accept queue：`/proc/sys/net/core/somaxconn`或/etc/sysctl.conf的`net.core.somaxconn=128`
+        - 查看Accept queue溢出：`netstat -s | grep TCPBacklogDrop`
+     1. 重传SYN+ACK次数：`net.ipv4.tcp_synack_retries`：默认为5，表示重发5次，每次等待30~40秒，即半连接默认时间大约为180秒
+     1. keepalive相关
+        - tcp_keepalive_time：从连接开始到发送探测数据包之间的空闲时间
+        - tcp_keepalive_probes：发送探测数据包的最大数量，之后关闭连接
+        - tcp_keepalive_intvl：发送两个探测数据包的间隔时间
+   - 路由设置
+     1. 子网通信：两个子网想要通信，需要连接两个网络的路由器，或者同时位于两个网络的网关
+     1. 永久保存路由
+        - `/etc/rc.local`添加
+        - `/etc/sysconfig/network`添加到末尾
+        - `/etc/sysconfig/static-router`：`any net x.x.x.x/24 gw y.y.y.y`
 1. 查看
    - ifconfig：显示、设置网络
      1. -a：inet addr，ip addr
@@ -350,43 +314,80 @@
         - 抓get的包：`tcpdump -s 0 -A -vv 'tcp[((tcp[12:1] & 0xf0) >> 2):4] = 0x47455420'# or$ tcpdump -vvAls0 | grep 'GET'`
         - 提取请求头：` tcpdump -nn -A -s1500 -l | grep "User-Agent:"`
         - 找出发包最多的ip：`tcpdump -nnn -t -c 200 | cut -f 1,2,3,4 -d '.' | sort | uniq -c | sort -nr | head -n 20`
-1. 配置
-   - /etc/sysconfig/network-scripts/ifcfg-eth0
-   - hostname
-   - ifdown/ifup
-   - ethtool
-   - 防火墙：都是内核的netfilter在干活，以下2个作用都是维护规则
-     1. iptables
-        - 编辑：`vim /etc/sysconfig/iptables`
-        - 增加：`-A INPUT -m state --state NEW -m tcp -p tcp –-dport 80 -j ACCEPT`
-        - 状态/重启/关闭：`/etc/init.d/iptables status/restart/stop`
-     1. centos7防火墙配置
-        - 添加端口：firewall-cmd --zone=public --add-port=80/tcp --permanent
-        - 查看端口：firewall-cmd --zone=public --list-ports
-        - 开关：systemctl start/disable/restart firewalld
-1. 路由
-   - 子网通信：两个子网想要通信，需要连接两个网络的路由器，或者同时位于两个网络的网关
-   - 永久保存路由
-     1. `/etc/rc.local`添加
-     1. `/etc/sysconfig/network`添加到末尾
-     1. `/etc/sysconfig/static-router`：`any net x.x.x.x/24 gw y.y.y.y`
-1. 参数
-   - 查看
-     1. SYN queue：`/proc/sys/net/ipv4/tcp_max_syn_backlog`
-     1. Accept queue：`/proc/sys/net/core/somaxconn`或/etc/sysctl.conf的`net.core.somaxconn=128`
-     1. 重传SYN+ACK次数：`net.ipv4.tcp_synack_retries`：默认为5，表示重发5次，每次等待30~40秒，即半连接默认时间大约为180秒
-     1. 查看进程连接、排队状况：`netstat -lntup`
-     1. 查看各个tcp状态的数量：`netstat -an | awk '/^tcp/ {++S[$NF]}  END {for (a in S) print a,S[a]}'`
-   - 队列
-     1. 查看SYN queue溢出：`netstat -s | grep LISTEN`
-     1. 查看Accept queue溢出：`netstat -s | grep TCPBacklogDrop`
-   - keepalive
-     1. tcp_keepalive_time：从连接开始到发送探测数据包之间的空闲时间
-     1. tcp_keepalive_probes：发送探测数据包的最大数量，之后关闭连接
-     1. tcp_keepalive_intvl：发送两个探测数据包的间隔时间
-1. wiki
-   - 端口号1024以下是系统保留的，总共65526个
-### 磁盘
+1. 检测
+   - ping：连通性
+   - telnet ip port：检测端口是否打开
+   - dig：域名检测，从DNS域名服务器查询主机地址信息
+   - nslookup：域名检测
+   - host
+   - tracepath：端对端路由检测
+   - route
+     1. 认识：可显示、操作ip路由表，可设置网关来访问Internet
+     1. 操作
+        - 查看
+          1. -n：不显示主机名，直接显示ip、port
+        - 操作：`route add/del [-net|-host] [网域或主机] netmask [mask] [gw|dev]`
+          1. -net    ：表示后面接的路由为一个网域
+          1. -host   ：表示后面接的为连接到单部主机的路由
+          1. netmask ：与网域有关，可以设定netmask决定网域的大小
+          1. gw      ：指定网关ip
+          1. dev     ：指定发送网卡，如eth0
+     1. 实操：`route add -net 192.168.62.0 netmask 255.255.255.0 gw 192.168.1.1`
+     1. 结果解析
+        - Destination：目标网络或目标主机
+        - Gateway：网关地址，没有显示星号
+        - Genmask：网络掩码
+        - Flags：总共有多个旗标，代表的意义如下：                        
+          1. U：该路由是启动的                      
+          1. H：目标是主机而非网域                      
+          1. G：需要透过外部的主机来转递封包                      
+          1. R：使用动态路由时，恢复路由资讯的旗标                      
+          1. D：已经由服务或转port功能设定为动态路由                       
+          1. M：路由已经被修改了                      
+          1. !：这个路由将不会被接受
+        - Metric 距离、跳数。暂无用。
+        - Ref：恒为0，Number of references to this route. (Not used in the Linux  ker-nel.)
+        - Use：该路由被使用的次数，可以粗略估计通向指定网络地址的网络流量。
+        - Iface：网络接口名
+   - traceroute：显示网络数据包传输到指定主机的路径信息，追踪数据传输路由状况
+   - openssl：查看网站证书链`openssl s_client -connect github.com:443 -showcerts`
+     1. 网站检测：myssl.com
+   - lsof：list open files，列出打开文件。linux环境下任何事物都以文件的形式存在
+     1. i:80：查看端口号，root用户查看
+1. 应用
+   - wget
+   - curl
+     1. -X POST：
+     1. -x '127.0.0.1：80'
+     1. -H 'CONTENT-TYPE:application/json' -H 'traceid:123abc'：多个就写多个-H
+     1. -d '{"id":xx}'：http post data
+     1. -i 查看返回头
+     1. -v：查看请求详细信息
+     1. `curl ipinfo.io/curl cip.cc`：查看出口ip
+   - rsync
+     1. 认识：linux的文件备份、同步工具
+        - 计算源文件和目标文件的差异，仅同步差异（因为全量成本高）
+        - 压缩、解压数据以进一步提高速度
+     1. 参数
+        - --address=
+        - --port=10873
+        - --daemon
+        - -r：同步
+        - -av：同步文件，删除--delete
+   - samba
+     1. 运维：`yum install samba`，配置：`/etc/samba/smb.conf`，即可开始共享文件
+   - scp
+     1. 上传：`scp [-r] local addr@ip:/addr`
+     1. 下载：`scp [-r] addr@ip:/addr local`
+   - rcp
+     1. 认识：remote file copy 远程文件拷贝，把远程的文件拿过来
+     1. 例子：`rcp root@127.0.0.1:/xxx xxx`
+   - sz/rz
+   - ftp/sftp
+   - ssh
+   - telnet：用于远程登录，基于TCP/IP协议族一员的telnet协议，采用明文传送报文安全性不好，都用ssh
+   - nc
+#### 磁盘
 1. 认识
    - linux规定，硬盘用sda/sdb/sdc依次命名，一块硬盘只能存在4个主分区，为sda1/sda2/sda3/sda4，逻辑分区不限制数量，从5开始
    - 磁盘的最小单元是扇区，扇区是操作系统与磁盘数据交换的基本单位，默认大小512byte
@@ -401,6 +402,9 @@
         - swapoff：关闭/回收
         - mkswap：格式化
    - 挂载点：把sda1挂载到根目录/上，则所有数据都在sda1分区
+1. 查看
+   - iotop: 查看进程和磁盘，将进程按磁盘读写次数、频率排序，无法统计内核的io
+   - iostat：查看io状态，`iostat/iostat 3/iostat 3 3`：用法和mpstat一致。`iostat -dxm 3`
 1. 操作
    - mount/umount：挂载
      1. /dev/sd*：设备文件，`mount /dev/sda1 /mnt/sda1`
@@ -426,9 +430,6 @@
    - parted
    - mkfs：对分区进行格式化
    - lvreduce
-1. 查看
-   - iotop: 查看进程和磁盘，将进程按磁盘读写次数、频率排序，无法统计内核的io
-   - iostat：查看io状态，`iostat/iostat 3/iostat 3 3`：用法和mpstat一致。`iostat -dxm 3`
 1. 实用
    - 经验
      1. df -m以兆为结尾查看磁盘空间，du查看文件占用
@@ -440,14 +441,14 @@
           1. echo -> 16：覆盖指向的那个文件编号
    - 查询大于200M的文件：`find / -type f -size +200M | xargs ls -Slh`
    - 查看占用：`du -h --max-depth=1 /*`
-### 内存
+#### 内存
 1. free：-m 以兆显示内存状态
 1. vmstat：Virtual Meomory Statistics，虚拟内存统计信息，是实时系统监控工具，包括进程情况、内存情况、交换页、I/O、系统中断、CPU。`vmstat/vmstat 3/vmstat 3 3`：用法和mpstat一致
    - `vmstat -a`：查看活动和非活动内存
 1. pmap：查看进程内存占用信息。`pmap -d xx`
-### cpu
+#### cpu
 1. nice：设置cpu使用优先级，如用来对付那些缓慢而且漫长的io进程
-### 进程
+#### 进程
 1. 运行
    - 后台运行：xx &
    - 断开shell继续运行：因为shell断开进程收到SIGHUP，该信号的默认处理导致进程终止，进程不终止主要是处理SIGHUP信号
@@ -527,7 +528,7 @@
         - 在SIGCHLD信号处理函数中调用wait来释放资源
         - 显示调用signal(SIGCHLD, SIG_IGN)来忽略SIGCHLD信号，这样子进程结束后，由内核来wait和释放资源
         - fork两次，第一次fork的子进程在fork完成后直接退出，这样第二次fork得到的子进程就没有爸爸了，会自动被init接管
-### 工具
+#### 工具
 1. 定时任务
    - crontab：linux原生定时器，只能支持到分
      1. -l
@@ -613,7 +614,250 @@
    - Socket：应用层与各种网络协议通信的中间软件抽象层，是一组调用接口/API/封装。用socket组织数据，兼容多网络协议，负责程序通信，以符合指定的协议
 1. 网络
    - netcat：tcp/ip的瑞士军刀，体积小，功能灵活
-### shell
+#### 系统
+1. 查看状态
+   - 系统信息
+     1. uname -a：显示系统信息
+     1. uptime：当前系统时间、开机到现在运行时间、用户在线数、系统平均负载
+     1. runlevel：查看系统运行级别，修改系统默认运行级别`cat /etc/inittab id:3:initdefault:`
+     1. dmesg：显示内核相关信息
+   - 系统版本
+     1. `cat /etc/redhat-release`：查看centos版本
+     1. `cat /proc/version`：查看内核版本
+     1. `getconf LONG_BIT`：查看centos位数
+   - 内核
+     1. `cat /proc/sys/kernel`
+   - 硬件
+     1. `cat /proc/cpuinfo`：cpu信息
+     1. `lscpu`：cpu信息
+   - 硬盘
+     1. `cat /proc/meminfo`：查看物理内存和文件缓存情况
+   - 状态
+     1. ps
+     1. top/htop
+     1. dstat
+     1. vmstat
+     1. iostat
+     1. netstat
+     1. nicstat
+     1. pidstat
+     1. mpstat
+        - 认识：Multiprocessor Statistics，实时系统监控工具，查看cpu信息
+        - 使用
+          1. `mpstat`：从启动以来的平均值
+          1. `mpstat 5 2`：生成2个间隔5秒的报告
+          1. `mpstat -P ALL 5 2`：分别查看每个cpu
+1. 环境变量
+   - 认识：系统预定义的参数。window也有。作用：在程序里可以获得环境变量的值，根据值决定如何操作，运行，找路径，文件夹等等
+     1. SHELL：当前用户使用的Shell
+     1. HOSTNAME：主机名
+     1. LANG：系统所用语言，`echo $LANG`
+   - 组成
+     1. `/etc/bashrc或/etc/profile或/etc/environment`：全局
+     1. `~/.bashrc或~/.bash_profile或~/.bash_login`：个人
+   - 操作
+     1. 查看
+        - `echo $SHELL`：查看单个
+        - `env`：当前用户所有
+        - `export`：系统定义所有
+        - `set`：显示所有本地定义的shell变量，也可以用作修改
+     1. 设置
+        - `export PATH=/php/bin:$PATH`：临时修改PATH，用:连接，用$PATH防止覆盖。仅对当前用户立即生效，关闭窗口后无效，
+        - `source .bash_profile`：使生效，修改后要么重新登录要么用source
+1. ulimit
+   - 认识：用户资源限制，生产环境配置：![avatar](../images/ulimit.png)
+   - 分类
+   - -a：列出所有资源极限
+   - -c：设置core文件最大值
+   - -d：设置一个进程数据段的最大值
+   - -f：Shell创建文件的文件大小的最大值
+   - -h：指定设置某个给定资源的硬极限。如果用户拥有 root 用户权限，可以增大硬极限。任何用户均可减少硬极限
+   - -l：可以锁住的物理内存的最大值
+   - -m：可以使用的常驻内存的最大值
+   - -n：每个进程可以同时打开的最大文件数
+   - -p：设置管道的最大值，单位为block，1block=512bytes
+   - -s：指定堆栈的最大值：单位：kbytes
+   - -S：指定为给定的资源设置软极限。软极限可增大到硬极限的值。如果 -H 和 -S 标志均未指定，极限适用于以上二者
+   - -t：指定每个进程所使用的秒数,单位：seconds
+   - -u：可以运行的最大并发进程数
+   - -v：Shell可使用的最大的虚拟内存，单位：kbytes
+   - -x：最多能拿到的文件锁数量
+1. 输入输出
+   - 分类
+     1. 标准输入文件stdin 0
+     1. 标准输出文件stdout 1
+     1. 标准错误输出文件stderr 2
+   - 命令
+     1. echo：输出，-e 支持反斜线控制的字符转换，\a 警告音 \n 换行键 \r 回车键 \t 制表符，Tan键 \v 垂直制表符
+     1. print：默认带换行符，printf 没有
+     1. write/wall：给同一台机器正在登录的其他用户发消息，历史上最古老的即时通信，wall给所有人发
+1. 命令
+   - 执行
+     1. sudo、su、setfacl
+     1. command1 && command2，可以一次执行两个命令，前一个报错则停止运行
+     1. echo &?：获取上一条命令的错误码
+     1. watch：可以重复执行命令，默认2秒间隔，搭配cat方便查看文件内容`watch cat xx`
+        - -n：执行间隔时间
+        - -d：高亮显示变化的区域
+   - 重定向
+     1. |：管道，前面输出作为后面输入。`cat file.txt | uniq | grep txt | sort`
+     1. > >>：输出
+        - `more file1 file2 file3 > file2`：清空file2
+        - `cat file1 1 >> file2`：追加，1标准输出流
+        - `> file3`：清空文件
+        - demo
+            ```shell
+            cat > ~/xjj <<EOF
+            echo "pleasant taste"
+            EOF
+            ```
+     1. < <<：输入，表示当前命令的标准输入为来自命令行中一对分隔号之间的内容
+     1. tee：将程序的输出结果重定向，同时显示和保存。`echo "127.0.0.1 foobar" | tee -a /etc/hosts`
+     1. xargs：给命令传递参数的过滤器，捕获一个命令输出，传递给另外一个命令，一般和管道一起使用。因为很多命令不支持管道来传递参数
+        - 可读取管道、标准输入、文件输出的数据，并转换成命令行参数
+        - 可将单/多行文本输入转换为其他格式，例多行变单行，单行变多行
+        - 默认命令为echo，换行和空白经过xargs处理被空格替代
+     1. `2>&1 > /dev/null`，shell会自动打开和关闭0、1、2这三个文件描述符
+        - /dev/null是黑洞，只写文件，写进去找不回来
+        - 2>&1：&表示等同于，2等同于1
+   - 通配符
+     1. 分类
+        - * 一个或多个
+        - ? 单一字符
+        - [] 包含在其中的任意字符，- 字符范围
+     1. 举例
+        - `ls /dev/sda[12345]`：出现/dev/sda1  /dev/sda2  /dev/sda3
+        - `ls [0-9]?.conf`：以数字开头，随后一个是任意字符，接着以.conf结尾的所有文
+   - wiki
+     1. man/info：查看命令手册。帮助一般为：-h/-help/--help
+     1. 输出语句中有空格需加双引号
+1. 日志
+   - 认识：一般保存在/var/log目录下，linux日志守护进程为syslog，希望生成日志的程序都可以向syslog发送信息。发行版的日志系统都略有差异
+     1. 类别
+        - kern：系统内核
+        - local0.local7：由自定义程序使用
+        - auth/authpriv：用户认证日志，如login/su命令
+        - ftp：ftp服务
+        - cron：定时任务
+        - daemon：守护进程
+        - console：系统控制台
+        - lpr：打印机
+        - mail：邮件
+        - mark：产生时间戳，系统每隔一段时间向日志文件中输出当前时间，每行的格式类似于 May 26 11:17:09 rs2 -- MARK --，可以由此推断系统发生故障的大概时间
+        - news：网络新闻传输协议(nntp)
+        - ntp：网络时间协议(ntp)，提供高精准度的时间校正，LAN上与标准间差小于1毫秒，WAN上几十毫秒
+        - user：用户进程
+     1. 优先级：emerg、alert、crit、err、warning、notice、info、debug
+     1. 常用日志文件
+        - /var/log/boot.log：系统开机自检
+        - /var/log/syslog：只记录警告信息，常常是系统出问题的信息
+        - /var/log/messages ：常见的系统和服务
+        - /var/log/secure ：Linux系统安全日志，记录用户和工作组变坏情况、用户登陆认证情况
+        - /var/log/btmp ：记录Linux登陆失败的用户、时间以及远程IP地址
+        - /var/log/lastlog ：最后一次用户成功登陆的时间、ip等信息
+        - /var/log/wtmp：该日志文件永久记录每个用户登录、注销及系统的启动、停机的事件，使用last命令查看
+        - /var/run/utmp：该日志文件记录有关当前登录的每个用户的信息。如 who、w、users、finger等就需要访问这个文件
+   - 命令
+     1. journalctl：查看内存日志
+     1. last：显示所有登入系统的用户信息
+     1. lastlog：所有用户最后一次登录的时间信息
+1. 开关机
+   - chkconfig：开机启动项
+     1. --list
+     1. --add/--del name
+     1. --level 2345 name on/off
+   - shutdown：关机、重启，是最安全的会保存用户的配置和服务。halt、poweroff、init 0：关机，reboot init 6：重启
+     1. -h：关机
+     1. -r：重启
+     1. -c：取消前一个关机命令
+   - 运行级别
+     1. 0  关机
+     1. 1  单用户，即window的安全模式，启动最小的程序模式，多用于修复系统
+     1. 2  不完全多用户，不含NFS服务
+     1. 3  完全多用户，标准的运行级
+     1. 4  未分配
+     1. 5  图形界面
+     1. 6  重启
+   - logout、exit、q：退出
+   - 整个桌面进程都拖死，因为linux运行着7个工作台的，切到第一个工作台，杀死那个进程，ctrl+alt+1
+1. 时间
+   - date：查看时间
+     1. -s：设置系统时间
+   - timedatectl：查看时间详细信息，时区等
+   - chronyc：centos7.2开始用chrony同步时间
+#### 应用
+1. find
+   - 全局查找文件：`find / -name "nginx.conf"`
+   - 查找txt结尾的文件并输出：`find -name "*.txt" -print`
+   - 查找所有sh文件并输出：`find ".sh" -print`
+   - 查找当前目前目录所有文件的指定内容
+     1. `grep -rn "内容"`：查找精确，还带高亮
+     1. `find . -type f -exec grep -n 内容 '{}' ';' -print`：查找精确
+     1. `find . | xargs grep -rin "内容"`：查找出了重复内容
+   - 删除目录中的所有class文件：`find . | grep .class$ | xargs rm -rvf`
+   - 把所有的rmvb文件拷贝到目录：`ls *.rmvb | xargs -n1 -i cp {} /tmp`
+1. grep
+   - 显示e或a：`grep 'w[ea]ll' a.log`
+   - 匹配以非2、1、0开头的行：`grep ^[^210] file`
+#### wiki
+1. 操作系统分类
+   - 硬实时：RT-Linux
+   - 软实时
+   - 嵌入式/专用操作系统：vxWorks、ucos
+1. linux的发行版本
+   - RedHat
+     1. Fedora：红帽赞助的社区免费版本，有点像实验版本，经过测试稳定后，增加的特性和功能会迁移到RHEL上
+     1. RHEL：Redhat Enterprise Linux，红帽的企业级商业化版本。红帽：来源于开源社区，服务于开源社区
+        - Centos：模仿红帽企业版的免费版本，无法得到红帽公司的商业支持，但可以获得开源社区的维护和支持，使用上相差无几
+   - SUSE
+     1. SUSE Linux Enterprise：novell公司的商业化版本
+     1. openSUSE：novell公司的社区版本
+   - Debian
+     1. Debian：免费版本
+     1. Ubuntu：类似Debian的免费版本
+   - openEuler：华为欧拉，数字基础设施的开源操作系统
+1. 目录结构
+   - 系统目录
+     1. /：根目录，不要存放文件，/etc、/bin、/dev、/lib、/sbin应该和根目录在一个分区中
+     1. /boot：启动文件存放
+     1. /etc：系统配置文件
+     1. /dev：设备文件
+     1. /sbin：可执行命令
+     1. /lib：函数库
+     1. /srv：数据
+     1. /var：数据经常变化
+     1. /mnt：磁盘挂载点
+     1. /proc：内存数据
+   - 软件安装目录
+     1. /opt：存放应用安装
+     1. /usr：/usr/bin 存放应用程序，/usr/sbin 存放可执行文件，/usr/local 习惯安装应用程序
+   - 其他目录：/home、/root、/tmp、/lost+fount
+1. mac环境变量默认地址
+   - /bin、/sbin：系统命令目录
+   - /usr/bin、/usr/sbin：用户程序命令目录，如php、php-config、phpize、php-fpm
+1. 历史
+   - linux
+     1. 1991，linus开源
+     1. 1994，内核1.0发布
+     1. 2010，centos6，内核2.6发布，ext4
+     1. 2017，centos7.4，内核3.1，xfs
+     1. 最新内核5.4
+   - unix
+     1. 1969，AT&T实验室一个研究项目
+     1. 1979，无偿提供使用
+        - BSD：伯克利软件发行版，伯克利分校修改的unix版本。1989，无unix代码的完全开源的BSD诞生，后续有FreeBSD、OpenBSD
+   - GUN：GUN's Not UNIX，GUN计划，自由软件计划，参与者包括emacs、gcc、linux，即革奴计划，理查德·斯托曼1983年发起，目标打造出一套完全自由（即自由使用、自由更改、自由发布）、开源的操作系统
+1. 命令
+   - i       忽略大小写
+   - n       显示行号
+   - r/-R    一般没区别
+   - 字符串参数最好采用是双引号括，一是以防被误解为shell命令，二是可以用来查找多个单词组成的字符串
+1. 命令的语法风格
+   - UNIX 风格：选项可组合，选项前必有“-”连字符
+   - BSD 风格：选项可组合，选项前不能有“-”连字符
+   - GNU 风格：选项前有两个“-”连字符
+1. 文件append不都是原子性的：取决于文件长度和系统写buffer的长度。如果日志内容长度超过buff长度，那么一次写操作需要多次刷buffer，而多次刷缓存时没有锁住就会被其他线程抢用，导致内容乱序
+##### shell
 1. 理解：壳，命令行解释器，利用ASCII码表转换将命令传给内核，敲命令的界面就是shell。支持命令执行、条件判断、循环控制
 1. 运算符：expr、let
 1. 变量
@@ -894,246 +1138,3 @@
     git tag $newTag;
     git push origin tag $newTag;
     ```
-### 系统
-1. 查看状态
-   - 系统信息
-     1. uname -a：显示系统信息
-     1. uptime：当前系统时间、开机到现在运行时间、用户在线数、系统平均负载
-     1. runlevel：查看系统运行级别，修改系统默认运行级别`cat /etc/inittab id:3:initdefault:`
-     1. dmesg：显示内核相关信息
-   - 系统版本
-     1. `cat /etc/redhat-release`：查看centos版本
-     1. `cat /proc/version`：查看内核版本
-     1. `getconf LONG_BIT`：查看centos位数
-   - 内核
-     1. `cat /proc/sys/kernel`
-   - 硬件
-     1. `cat /proc/cpuinfo`：cpu信息
-     1. `lscpu`：cpu信息
-   - 硬盘
-     1. `cat /proc/meminfo`：查看物理内存和文件缓存情况
-   - 状态
-     1. ps
-     1. top/htop
-     1. dstat
-     1. vmstat
-     1. iostat
-     1. netstat
-     1. nicstat
-     1. pidstat
-     1. mpstat
-        - 认识：Multiprocessor Statistics，实时系统监控工具，查看cpu信息
-        - 使用
-          1. `mpstat`：从启动以来的平均值
-          1. `mpstat 5 2`：生成2个间隔5秒的报告
-          1. `mpstat -P ALL 5 2`：分别查看每个cpu
-1. 环境变量
-   - 认识：系统预定义的参数。window也有。作用：在程序里可以获得环境变量的值，根据值决定如何操作，运行，找路径，文件夹等等
-     1. SHELL：当前用户使用的Shell
-     1. HOSTNAME：主机名
-     1. LANG：系统所用语言，`echo $LANG`
-   - 组成
-     1. `/etc/bashrc或/etc/profile或/etc/environment`：全局
-     1. `~/.bashrc或~/.bash_profile或~/.bash_login`：个人
-   - 操作
-     1. 查看
-        - `echo $SHELL`：查看单个
-        - `env`：当前用户所有
-        - `export`：系统定义所有
-        - `set`：显示所有本地定义的shell变量，也可以用作修改
-     1. 设置
-        - `export PATH=/php/bin:$PATH`：临时修改PATH，用:连接，用$PATH防止覆盖。仅对当前用户立即生效，关闭窗口后无效，
-        - `source .bash_profile`：使生效，修改后要么重新登录要么用source
-1. ulimit
-   - 认识：用户资源限制，生产环境配置：![avatar](../images/ulimit.png)
-   - 分类
-   - -a：列出所有资源极限
-   - -c：设置core文件最大值
-   - -d：设置一个进程数据段的最大值
-   - -f：Shell创建文件的文件大小的最大值
-   - -h：指定设置某个给定资源的硬极限。如果用户拥有 root 用户权限，可以增大硬极限。任何用户均可减少硬极限
-   - -l：可以锁住的物理内存的最大值
-   - -m：可以使用的常驻内存的最大值
-   - -n：每个进程可以同时打开的最大文件数
-   - -p：设置管道的最大值，单位为block，1block=512bytes
-   - -s：指定堆栈的最大值：单位：kbytes
-   - -S：指定为给定的资源设置软极限。软极限可增大到硬极限的值。如果 -H 和 -S 标志均未指定，极限适用于以上二者
-   - -t：指定每个进程所使用的秒数,单位：seconds
-   - -u：可以运行的最大并发进程数
-   - -v：Shell可使用的最大的虚拟内存，单位：kbytes
-   - -x：最多能拿到的文件锁数量
-1. 输入输出
-   - 分类
-     1. 标准输入文件stdin 0
-     1. 标准输出文件stdout 1
-     1. 标准错误输出文件stderr 2
-   - 命令
-     1. echo：输出，-e 支持反斜线控制的字符转换，\a 警告音 \n 换行键 \r 回车键 \t 制表符，Tan键 \v 垂直制表符
-     1. print：默认带换行符，printf 没有
-     1. write/wall：给同一台机器正在登录的其他用户发消息，历史上最古老的即时通信，wall给所有人发
-1. 命令
-   - 执行
-     1. sudo、su、setfacl
-     1. command1 && command2，可以一次执行两个命令，前一个报错则停止运行
-     1. echo &?：获取上一条命令的错误码
-     1. watch：可以重复执行命令，默认2秒间隔，搭配cat方便查看文件内容`watch cat xx`
-        - -n：执行间隔时间
-        - -d：高亮显示变化的区域
-   - 重定向
-     1. |：管道，前面输出作为后面输入。`cat file.txt | uniq | grep txt | sort`
-     1. > >>：输出
-        - `more file1 file2 file3 > file2`：清空file2
-        - `cat file1 1 >> file2`：追加，1标准输出流
-        - `> file3`：清空文件
-        - demo
-            ```shell
-            cat > ~/xjj <<EOF
-            echo "pleasant taste"
-            EOF
-            ```
-     1. < <<：输入，表示当前命令的标准输入为来自命令行中一对分隔号之间的内容
-     1. tee：将程序的输出结果重定向，同时显示和保存。`echo "127.0.0.1 foobar" | tee -a /etc/hosts`
-     1. xargs：给命令传递参数的过滤器，捕获一个命令输出，传递给另外一个命令，一般和管道一起使用。因为很多命令不支持管道来传递参数
-        - 可读取管道、标准输入、文件输出的数据，并转换成命令行参数
-        - 可将单/多行文本输入转换为其他格式，例多行变单行，单行变多行
-        - 默认命令为echo，换行和空白经过xargs处理被空格替代
-     1. `2>&1 > /dev/null`，shell会自动打开和关闭0、1、2这三个文件描述符
-        - /dev/null是黑洞，只写文件，写进去找不回来
-        - 2>&1：&表示等同于，2等同于1
-   - 通配符
-     1. 分类
-        - * 一个或多个
-        - ? 单一字符
-        - [] 包含在其中的任意字符，- 字符范围
-     1. 举例
-        - `ls /dev/sda[12345]`：出现/dev/sda1  /dev/sda2  /dev/sda3
-        - `ls [0-9]?.conf`：以数字开头，随后一个是任意字符，接着以.conf结尾的所有文
-   - wiki
-     1. man/info：查看命令手册。帮助一般为：-h/-help/--help
-     1. 输出语句中有空格需加双引号
-1. 日志
-   - 认识：一般保存在/var/log目录下，linux日志守护进程为syslog，希望生成日志的程序都可以向syslog发送信息。发行版的日志系统都略有差异
-     1. 类别
-        - kern：系统内核
-        - local0.local7：由自定义程序使用
-        - auth/authpriv：用户认证日志，如login/su命令
-        - ftp：ftp服务
-        - cron：定时任务
-        - daemon：守护进程
-        - console：系统控制台
-        - lpr：打印机
-        - mail：邮件
-        - mark：产生时间戳，系统每隔一段时间向日志文件中输出当前时间，每行的格式类似于 May 26 11:17:09 rs2 -- MARK --，可以由此推断系统发生故障的大概时间
-        - news：网络新闻传输协议(nntp)
-        - ntp：网络时间协议(ntp)，提供高精准度的时间校正，LAN上与标准间差小于1毫秒，WAN上几十毫秒
-        - user：用户进程
-     1. 优先级：emerg、alert、crit、err、warning、notice、info、debug
-     1. 常用日志文件
-        - /var/log/boot.log：系统开机自检
-        - /var/log/syslog：只记录警告信息，常常是系统出问题的信息
-        - /var/log/messages ：常见的系统和服务
-        - /var/log/secure ：Linux系统安全日志，记录用户和工作组变坏情况、用户登陆认证情况
-        - /var/log/btmp ：记录Linux登陆失败的用户、时间以及远程IP地址
-        - /var/log/lastlog ：最后一次用户成功登陆的时间、ip等信息
-        - /var/log/wtmp：该日志文件永久记录每个用户登录、注销及系统的启动、停机的事件，使用last命令查看
-        - /var/run/utmp：该日志文件记录有关当前登录的每个用户的信息。如 who、w、users、finger等就需要访问这个文件
-   - 命令
-     1. journalctl：查看内存日志
-     1. last：显示所有登入系统的用户信息
-     1. lastlog：所有用户最后一次登录的时间信息
-1. 开关机
-   - chkconfig：开机启动项
-     1. --list
-     1. --add/--del name
-     1. --level 2345 name on/off
-   - shutdown：关机、重启，是最安全的会保存用户的配置和服务。halt、poweroff、init 0：关机，reboot init 6：重启
-     1. -h：关机
-     1. -r：重启
-     1. -c：取消前一个关机命令
-   - 运行级别
-     1. 0  关机
-     1. 1  单用户，即window的安全模式，启动最小的程序模式，多用于修复系统
-     1. 2  不完全多用户，不含NFS服务
-     1. 3  完全多用户，标准的运行级
-     1. 4  未分配
-     1. 5  图形界面
-     1. 6  重启
-   - logout、exit、q：退出
-   - 整个桌面进程都拖死，因为linux运行着7个工作台的，切到第一个工作台，杀死那个进程，ctrl+alt+1
-1. 时间
-   - date：查看时间
-     1. -s：设置系统时间
-   - timedatectl：查看时间详细信息，时区等
-   - chronyc：centos7.2开始用chrony同步时间
-### 应用
-1. find
-   - 全局查找文件：`find / -name "nginx.conf"`
-   - 查找txt结尾的文件并输出：`find -name "*.txt" -print`
-   - 查找所有sh文件并输出：`find ".sh" -print`
-   - 查找当前目前目录所有文件的指定内容
-     1. `grep -rn "内容"`：查找精确，还带高亮
-     1. `find . -type f -exec grep -n 内容 '{}' ';' -print`：查找精确
-     1. `find . | xargs grep -rin "内容"`：查找出了重复内容
-   - 删除目录中的所有class文件：`find . | grep .class$ | xargs rm -rvf`
-   - 把所有的rmvb文件拷贝到目录：`ls *.rmvb | xargs -n1 -i cp {} /tmp`
-1. grep
-   - 显示e或a：`grep 'w[ea]ll' a.log`
-   - 匹配以非2、1、0开头的行：`grep ^[^210] file`
-### wiki
-1. 操作系统分类
-   - 硬实时：RT-Linux
-   - 软实时
-   - 嵌入式/专用操作系统：vxWorks、ucos
-1. linux的发行版本
-   - RedHat
-     1. Fedora：红帽赞助的社区免费版本，有点像实验版本，经过测试稳定后，增加的特性和功能会迁移到RHEL上
-     1. RHEL：Redhat Enterprise Linux，红帽的企业级商业化版本。红帽：来源于开源社区，服务于开源社区
-        - Centos：模仿红帽企业版的免费版本，无法得到红帽公司的商业支持，但可以获得开源社区的维护和支持，使用上相差无几
-   - SUSE
-     1. SUSE Linux Enterprise：novell公司的商业化版本
-     1. openSUSE：novell公司的社区版本
-   - Debian
-     1. Debian：免费版本
-     1. Ubuntu：类似Debian的免费版本
-   - openEuler：华为欧拉，数字基础设施的开源操作系统
-1. 目录结构
-   - 系统目录
-     1. /：根目录，不要存放文件，/etc、/bin、/dev、/lib、/sbin应该和根目录在一个分区中
-     1. /boot：启动文件存放
-     1. /etc：系统配置文件
-     1. /dev：设备文件
-     1. /sbin：可执行命令
-     1. /lib：函数库
-     1. /srv：数据
-     1. /var：数据经常变化
-     1. /mnt：磁盘挂载点
-     1. /proc：内存数据
-   - 软件安装目录
-     1. /opt：存放应用安装
-     1. /usr：/usr/bin 存放应用程序，/usr/sbin 存放可执行文件，/usr/local 习惯安装应用程序
-   - 其他目录：/home、/root、/tmp、/lost+fount
-1. mac环境变量默认地址
-   - /bin、/sbin：系统命令目录
-   - /usr/bin、/usr/sbin：用户程序命令目录，如php、php-config、phpize、php-fpm
-1. 历史
-   - linux
-     1. 1991，linus开源
-     1. 1994，内核1.0发布
-     1. 2010，centos6，内核2.6发布，ext4
-     1. 2017，centos7.4，内核3.1，xfs
-     1. 最新内核5.4
-   - unix
-     1. 1969，AT&T实验室一个研究项目
-     1. 1979，无偿提供使用
-        - BSD：伯克利软件发行版，伯克利分校修改的unix版本。1989，无unix代码的完全开源的BSD诞生，后续有FreeBSD、OpenBSD
-   - GUN：GUN's Not UNIX，GUN计划，自由软件计划，参与者包括emacs、gcc、linux，即革奴计划，理查德·斯托曼1983年发起，目标打造出一套完全自由（即自由使用、自由更改、自由发布）、开源的操作系统
-1. 命令
-   - i       忽略大小写
-   - n       显示行号
-   - r/-R    一般没区别
-   - 字符串参数最好采用是双引号括，一是以防被误解为shell命令，二是可以用来查找多个单词组成的字符串
-1. 命令的语法风格
-   - UNIX 风格：选项可组合，选项前必有“-”连字符
-   - BSD 风格：选项可组合，选项前不能有“-”连字符
-   - GNU 风格：选项前有两个“-”连字符
-1. 文件append不都是原子性的：取决于文件长度和系统写buffer的长度。如果日志内容长度超过buff长度，那么一次写操作需要多次刷buffer，而多次刷缓存时没有锁住就会被其他线程抢用，导致内容乱序

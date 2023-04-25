@@ -33,6 +33,52 @@
      1. 进/线程管理
      1. 低级存储器管理：硬盘、内存
      1. 中断和陷入管理：中断、异常
+### dos
+1. 操作
+   - 目录操作
+    ```
+    cd           显示当前目录或改变目录
+    cd ..        退回上级目录
+    c：          进入C盘
+    dir          显示目录中文件和子目录，查看文件
+    md/mkdir     创建目录
+    ```
+   - 文件操作
+    ```
+    cd .>a.txt                    创建
+    del                           删除
+    copy C:\1\mima.txt C:\2\      复制
+    find                          查找
+    ```
+   - 其他
+    ```
+    cls                 清屏
+    calc                计算器
+    regedit             注册表
+    edit                文本编辑器
+    exit                退出cmd
+    netsh               强大的命令行下修改tcp/ip配置的工具
+    shutdown -h now     关机
+    rononce -p          15秒关机
+    ```
+1. 应用
+   - 使cmd后台运行
+     1. 将脚本写入xxx.cmd
+     1. 在xxx_hide.vbs中写入
+        ```
+        // /c后面是所要隐藏的脚本名
+        Set ws = CreateObject("Wscript.Shell")
+        ws.run "cmd /c redis_server.cmd",vbhide
+        ```
+     1. 执行xxx_hide.vbs即可
+   - 杀掉pid
+    ```
+    tasklist|find -i "redis"           // 获得pid
+    taskkill /f /pid *                 // 强制杀掉pid
+    ```
+1. wiki
+   - cmd 在windows下是DOS模拟器
+   - 在当前目录的地址栏输入cmd，进入对应目录cmd
 ### IO
 1. Linux I/O读写方式
    - I/O中断：由CPU自身负责数据的传输过程，需要CPU中断。每次进程读取磁盘数据时都需要CPU中断，然后发起I/O请求等待数据读取和拷贝完成，每次的I/O中断都导致CPU的上下文切换。2次CPU拷贝，4次上下文切换。用户空间和内核空间的内存数据来回复制，才能下一步操作

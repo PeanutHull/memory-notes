@@ -147,7 +147,7 @@
     server xxx1 x.x.x.x:5672 check inter 5000 rise 2 fall 3             # 主节点，每5秒健康检查，2次成功服务可用，3次失败服务不可用
     server xxx2 x.x.x.x:5672 backup check inter 5000 rise 2 fall 3      # 备用节点
     ```
-#### 热备监控切换器
+#### 热备监控器
 1. keepalived
    - 认识：以VRRP协议为基础实现服务热备，一般应用为：lvs+keepalived、nginx+keepalived、haProxy+keepalived
      1. 健康检查：可根据ip、端口、http请求判断是否正常，即工作在OSI的3、4、7层
