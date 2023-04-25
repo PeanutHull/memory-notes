@@ -2,6 +2,7 @@
 1. 特点
    - 一切皆文件
    - 对后缀不敏感
+### 组成
 1. 环境变量
    - 认识：系统预定义的参数。window也有。作用：在程序里可以获得环境变量的值，根据值决定如何操作，运行，找路径，文件夹等等
      1. SHELL：当前用户使用的Shell
@@ -157,6 +158,287 @@
      1. 6  重启
    - logout、exit、q：退出
    - 整个桌面进程都拖死，因为linux运行着7个工作台的，切到第一个工作台，杀死那个进程，ctrl+alt+1
+#### 文件系统
+1. 文件系统
+   - 认识：启动时挂载根文件系统，之后可以挂载其他文件系统，要挂载到挂载点上，和虚拟文件系统、通用块设备层建立联系
+     1. 挂载点：是linux访问磁盘的入口，所以一个系统可有不同的文件系统
+   - 组成
+     1. 用户层：应用，用户空间文件系统(FUSE)
+     1. 内核层
+        - SCI：System Call Interface，系统调用接口
+        - VFS：Virtual File System，虚拟文件系统，是物理文件系统与服务应用之间的接口层，提供了mount等api
+          1. 数据结构
+             - superblock：Linux 用来标注具体已安装的文件系统的有关信息
+             - inode：inode文件，每个文件/目录都有一个，记录逻辑块位置、权限、修改时间
+               1. 间接索引：解决inode文件本身大小问题
+             - desty：目录项，是路径中的一部分，所有的目录项对象串起来就是一棵 Linux 下的目录树
+             - file：文件对象，用来和打开它的进程进行交互
+        - General Block Device Layer：通用块设备层，统一对外输出底层不同的io接口
+     1. 物理层：硬盘
+   - 原理：这三点是层层递进的
+     1. 把磁盘空间切成离散的、定长的block来管理
+     1. 通过inode能查找到所有离散的数据（保存了所有的索引）
+     1. 实现索引块和数据块空间的后分配
+   - 操作系统使用的分类
+     1. linux：ext3、ext4、xfs(建议)、zfs
+     1. windows：fat、ntfs(只有这个合适)
+     1. 移动/闪存
+     1. 索尼的ps
+     1. 操作系统中常用的文件系统
+1. 块
+   - 认识：操作系统的最小逻辑存储单位，一个或多个连续的扇区组成一个块，即逻辑块。NTFS叫簇，一般为4k
+     1. 因为扇区众多寻址困难，就将相邻扇区组合一起，进行整体操作
+     1. 分离对底层依赖：忽略对底层物理存储结构的设计
+     1. 文件：由一个或多个逻辑块组成，且逻辑块之间不连续分布。逻辑块大于或等于物理块整数倍，所以多个扇区一起读
+        - 文件拆块存储为了充分利用空间，不产生空洞
+   - 层次关系：扇区→物理块→逻辑块→文件系统
+   - 备份
+     1. 文件级备份：一层层向下至扇区全部备份，慢
+     1. 块级备份：指物理块复制，增量备份时只备份修改过的物理块
+     1. 快照原理：新数据写入，旧数据移除，同时记录数据变化位图。实现方式由各个厂商自行决定，但主要技术分为2类
+        - 写时拷贝：COW Copy On Write，创建快照时，仅复制原始卷的元数据。创建完成后，原始卷有写，快照会跟踪改变，将要改变的数据在改变之前复制到快照预留的空间里
+          1. 越来越多的共享页面被分离出来，内存就会持续增长
+          1. 读取是没有修改过的到原始卷上，修改过的到快照上
+          1. 创建快照时，占用非常小，非常快，之后修改多了就变大了
+        - 写重定向：ROW（Redirect On Write）
+1. 本地文件系统格式
+   - RAW：是一种磁盘未经处理或者未经格式化的文件系统。可能由于未格式化、格式化中途取消、硬盘出现坏道等
+   - Ext
+     1. 认识：只有linux支持
+        - 拥有最快的读写速度和最小的cpu占用率，中小文件更有优势，得利于簇快取层的优良设计
+        - 盘分区格式和其它操作系统完全不同，其C、D、E等分区的意义也和windows操作系统不一样
+     1. 分类
+        - Ext2：单一文件大小与文件系统本身的容量上限与文件系统本身的簇大小有关
+        - Ext3
+        - Ext4：最大支持1EB，单个文件最大16TB
+     1. 原理：由inode（包含有文件的所有信息）进行唯一标识
+   - XFS：centos7默认文件系统，最大支持18EB，单个文件最大8EB。用xfs/ext4不用ext3
+   - FAT
+     1.认识：File Allocation Table，是一种由微软发明并拥有部分专利的文件系统，一般指FAT32。Linux等都支持FAT
+        - 容易产生文件碎片：不会将文件整理成完整片段再写入，长期使用会使文件数据变得逐渐分散从而减慢了读写速度，碎片整理是一种解决方法
+        - 磁盘空间利用率低
+        - 安全性较差
+     1. 分类：指用xx位二进制数记录管理的磁盘文件管理方式
+        - FAT12：最多32M，最多几十个文件
+        - FAT16：最多2.1G
+        - FAT32：分区通常不超过32G，单文件最大4G，从1997年Windows 95开始用
+          1. 将文件数据与metadata一起存储，存储过程先将文件按照文件系统的最小块大小来打散（如4M的文件一个块4K打散成为1000个小块，过程中没有区分数据/metadata，每个块最后告知下一个要读取的块的地址
+   - ExFAT：扩展FAT，专为闪存和U盘设计，空间浪费小
+   - NTFS
+     1. 认识：New Technology File System，新技术文件系统。Windows NT以后开始普及
+        - 比FAT更新，处理速度更快，碎片更少
+        - 分区最大2T，支持分区、文件夹、文件的压缩
+        - FAT32分区能够在DOS下直接访问，NTFS不能
+   - VFAT：长文件名系统，一个与Windows系统兼容的Linux文件系统，支持长文件名，可以作为Windows与Linux交换文件的分区
+1. 网络文件系统
+   - 认识
+     1. 发展趋势：软件定义存储 SDS，软件定义网络 SDN
+     1. 基于文件的存储系统中，文件是通过文件目录进行寻址
+     1. 分布式文件系统和网络文件系统(对象存储系统)的区分要分清
+   - 网络存储协议
+     1. NFS：sun公司研制的unix表示层协议，unix常用，基于UDP/IP协议，主要采用RPC实现，因为nfs不同的功能都会使用不同的程序来启动，rpc沟通对应的网络端口来交互
+        - 权限需要搭配NIS，Network Information Services，以用户组和/etc/passwd来判断权限(和本地权限一样)
+     1. CIFS: Common Internet File System 通用网络文件系统，windows主机之间共享的协议，samba实现了这个协议
+        - SMB：Service Message Block，服务器消息块协议，在windows中被称为“Microsoft Windows 网络”，基于CIFS开发，被称为CIFS/SMB协议
+     1. AFP：运行macOS的apple设备的专有协议
+   - 分类
+     1. NFS：Network File System，网络文件系统，通过网络让不同的机器、不同的操作系统可以共享文件，让pc将网络中的NFS服务器共享的目录挂载到本地的文件系统中，使用非常便利。一般用来存储静态数据，工作在内核模式下
+     1. Samda：基于SMB协议的开源软件，linux上共享文件和打印机等资源，是cs型，client(linux)访问server(windows)的资源，两个系统文件共享
+     1. AFS：Andrew File System，分布式文件系统，用于管理分部在不同网络节点上的文件，采用安全认证和灵活的访问控制提供一种分布式文件系统，卡内基梅隆大学开发，结构与NFS相似，但有所增强
+     1. DFS：Distributed File System，分布式文件系统
+1. 分布式文件系统
+   - 认识：通过网络在多台主机上存储的文件系统。新手用fastdfs，淘宝tfs，七牛。阿里云nas用于存日志、小文件等，oss
+     1. 如同访问本地磁盘
+     1. 容错：部分节点损坏，数据不丢失，系统可继续运行
+     1. 海量存储
+     1. 扩展性强
+     1. 文件副本进行负载均衡
+     1. 进行特定索引文件计算
+   - 分类
+     1. 应用级：GFS、HDFS、Ceph、GridFS、mogileFS、TFS、FastDFS
+        - Lustre：存储量PB起步，万级节点
+        - HDFS：Hadoop内置，价格低廉，高可靠性，高容错性，小文件过多的情况HDFS不能很好的支持
+     1. 系统级
+   - 历史
+     1. 80年代：NFS(linux的文件共享服务)、AFS
+     1. 90年代：SFS、Tiger Shark
+     1. 2000年：GFS
+     1. 最近：Lustre
+   - 知识基础
+     1. 分布式数据排布算法，集群元数据管理
+     1. 分布式一致性算法，分布式层数据副本/分片一致性协议，选主等
+     1. 单盘存储引擎，文件系统
+   - wiki
+     1. san和das对于iops和存储性能有很强要求的可以使用，如mysql使用，因为假定存入的数据都不会丢
+     1. ceph等分布式系统通常假定任何设备都是不可靠的，算法都有冗余存储，
+1. ceph
+   - 认识：开源的分布式的统一存储系统，通过一系列管理和存储节点分开、副本读写、重新hash定位等方式实现高可用、高性能。openstack的默认后端，redhat也支持
+     1. 是以服务器的形式存在，管理1TB大约需要1GB的内存
+     1. 以我司踩坑的经历来看，没有深入ceph代码定制修改的能力，就不要给ceph太大压力。否则分分钟给你脸色看。ceph在元数据太多或者修复磁盘损坏的时候贼容易挂掉
+   - 特点
+     1. 低成本
+     1. 高性能
+        - 摒弃传统的集中式存储元数据寻址的方案，采用CRUSH算法，数据分布均衡，并行度高，基于计算的扁平寻址设计(可以直接和服务端任意节点通信)
+        - 考虑了容灾域的隔离，能够实现各类负载的副本放置规则，例如跨机房、机架感知等
+        - 能够支持上千个存储节点的规模，支持TB到PB级的数据
+     1. 高可用
+        - 副本数可以灵活控制
+        - 支持故障域分隔，数据强一致性
+        - 多种故障场景自动进行修复自愈
+        - 没有单点故障，自动管理
+     1. 高可扩展性
+        - 去中心化
+        - 扩展灵活，对象通过唯一的标识符进行寻址，并存储在扁平的寻址空间中，通过算法动态计算存储和获取某个对象的位置
+        - 随着节点增加而线性增长
+     1. 特性丰富
+        - 支持三种存储接口：块存储、文件存储、对象存储
+        - 支持自定义接口，支持多种语言驱动
+   - 接口
+     1. Block：支持精简配置、快照、克隆
+     1. File：Posix接口，支持快照
+     1. Object：有原生的API，而且也兼容Swift和S3的API
+   - 组件：：![avatar](../images/ceph_struct.png)
+     1. RADOS：ceph集群精华，用户实现数据分配、Failover等集群操作
+     1. Libradio：因为RADOS是协议很难直接访问，因此上层的RBD、RGW和CephFS通过librados访问，提供PHP、Java、Python、C和C++支持
+     1. Object：最底层的存储单元，每个Object包含元数据和原始数据
+     1. MDS：Ceph Metadata Server，是CephFS服务依赖的元数据服务
+     1. OSD：Object Storage Device，负责响应客户端请求返回具体数据的进程
+     1. CRUSH：数据分布算法，类似一致性哈希，让数据分配到预期的地方
+     1. PG：Placement Grouops，逻辑概念，一个PG包含多个OSD。引入PG这一层其实是为了更好的分配数据和定位数据
+     1. Monitor：需要多个Monitor组成的小集群，通过Paxos同步数据，用来保存OSD的元数据
+     1. RBD：对外提供的块设备服务
+     1. CephFS：对外提供的文件系统服务
+     1. RGW：对外提供的对象存储服务，接口与S3和Swift兼容
+   - 同类
+     1. FastDFS：开源国产的分布式文件存储系统，实现了冗余备份、负载均衡、线性扩容等机制，注重高可用、高性能，提供上传、下载功能。Tracker集群提供负载均衡等调度，Storage集群提供存储
+1. wiki
+   - 写文件流程，和读相反
+     1. 先写实际存储的数据，按照逻辑块的粒度存储
+     1. 再写inode元数据，存储逻辑块的位置等其他信息
+   - 多级索引寻址性能
+     1. 访问小文件中的任意数据理论只需要两次读盘，一次读 inode，一次读数据块
+     1. 访问大文件中的数据则需要最多五次读盘操作：inode、一级间接寻址块、二级间接寻址块、三级间接寻址块、数据块
+   - 文件大小和实际物理占用不同，实际物理空间占用则是要看用户数据放了多少个block
+   - 文件/目录存储原理
+     1. 分为元信息、实际数据
+        - 存储属性：找到空i-node，存储文件小大、所有者、创建时间，inode用于区分文件
+        - 存储实际数据：找到n个自由块，将数据依次写入
+        - 将磁盘序号写入i-node
+        - 文件名写入目录，将文件名和i-node连接起来
+#### 网路
+1. 认识
+   - 端口号1024以下是系统保留的，总共65526个
+1. 组成
+   - /etc/sysconfig/network-scripts/ifcfg-eth0
+   - hostname
+   - ifdown/ifup
+   - ethtool
+   - 防火墙：都是内核的netfilter在干活，以下2个作用都是维护规则
+     1. iptables
+        - 编辑：`vim /etc/sysconfig/iptables`
+        - 增加：`-A INPUT -m state --state NEW -m tcp -p tcp –-dport 80 -j ACCEPT`
+        - 状态/重启/关闭：`/etc/init.d/iptables status/restart/stop`
+     1. centos7防火墙配置
+        - 添加端口：firewall-cmd --zone=public --add-port=80/tcp --permanent
+        - 查看端口：firewall-cmd --zone=public --list-ports
+        - 开关：systemctl start/disable/restart firewalld
+1. 参数
+   - 查看
+     1. 查看进程连接、排队状况：`netstat -lntup`
+     1. 查看各个tcp状态的数量：`netstat -an | awk '/^tcp/ {++S[$NF]}  END {for (a in S) print a,S[a]}'`
+   - 连接队列设置
+     1. SYN queue：`/proc/sys/net/ipv4/tcp_max_syn_backlog`
+        - 查看SYN queue溢出：`netstat -s | grep LISTEN`
+     1. Accept queue：`/proc/sys/net/core/somaxconn`或/etc/sysctl.conf的`net.core.somaxconn=128`
+        - 查看Accept queue溢出：`netstat -s | grep TCPBacklogDrop`
+     1. 重传SYN+ACK次数：`net.ipv4.tcp_synack_retries`：默认为5，表示重发5次，每次等待30~40秒，即半连接默认时间大约为180秒
+     1. keepalive相关
+        - tcp_keepalive_time：从连接开始到发送探测数据包之间的空闲时间
+        - tcp_keepalive_probes：发送探测数据包的最大数量，之后关闭连接
+        - tcp_keepalive_intvl：发送两个探测数据包的间隔时间
+   - 路由设置
+     1. 子网通信：两个子网想要通信，需要连接两个网络的路由器，或者同时位于两个网络的网关
+     1. 永久保存路由
+        - `/etc/rc.local`添加
+        - `/etc/sysconfig/network`添加到末尾
+        - `/etc/sysconfig/static-router`：`any net x.x.x.x/24 gw y.y.y.y`
+1. tcp连接
+   - 四元组：源ip、源port、目标ip、目标port，都相同了才是一条相同的tcp连接
+   - 资源耗费：寻找最近的资源瓶颈
+     1. 端口：操作系统自动分配可用的
+        - 可用端口范围
+          1. 查看：`cat /proc/sys/net/ipv4/ip_local_port_range`
+          1. 设置：`vim /etc/sysctl.conf：net.ipv4.ip_local_port_range`
+          1. 生效：`sysctl -p /etc/sysctl.conf`
+     1. 文件描述符：每一个tcp链接就要一个fd，就是数字
+        - 查看可打开的最大数量
+          1. 整个系统：`cat /proc/sys/fs/file-max`
+          1. 指定用户：`cat /etc/security/limits.conf `
+          1. 单个进程：`cat /proc/sys/fs/nr_open`
+        - 修改：`echo 10000 > /proc/sys/fs/nr_open`
+     1. 线程：默认一个tcp占用一个线程，用io多路复用
+     1. 内存：tcp本身和其缓冲区，都要占用内存
+     1. cpu：上下文切换成本
+1. 问题定位
+   - network
+     1. ping：有些可能禁止检测
+     1. telnet：检测端口是否正常
+     1. strace：跟踪系统调用的执行
+        - 查看统计：`strace -p xx -c`
+        - 查看实时：`strace -p xx -T -s 4094`
+     1. netstat：
+        - `netstat -s | grep LISTEN`
+        - `netstat -s | grep TCPBacklogDrop`
+     1. ss -l
+     1. tcpdump
+   - log
+     1. dmesg：查看系统日志
+        - /var/log/message
+   - pstack
+   - gdb
+   - ltrace
+#### 软件安装
+1. 软件安装
+   - RedHat
+     1. rpm：以.rpm结尾的软件包名称，方便安装/升级/卸载，不能处理包依赖
+        - -q：查询
+        - -q afilcdR：查询已安装的，文件名绝对路径，安装包信息，安装目录，配置文件，文档位置，所依赖的文件
+        - -qpi：查询未安装的，版本信息
+        - –requires：显示依赖信息
+        - -i：安装
+        - -ivh：安装，显示文件信息，显示安装进度
+        - -U：升级
+        - -Uvh：升级，显示文件信息，显示安装进度
+        - -e：卸载，先用-q查询名称
+        - --import：签名导入
+     1. yum：Yellow dog Updater Modified，包管理工具，基于rpm，epel是yum的扩展源
+        - 参数
+          1. search/info
+          1. install/update/remove
+          1. list/info installed/updates
+        - 查看安装的服务：`rpm -qa | grep xx`
+        - 查看安装的位置：`rpm -ql xx`
+        - 配置yum源：配置分两部分，全局配置项为/etc/yum.conf，定义每个源/服务器的具体配置在/etc/yum.repo.d的rep文件
+   - Debian
+     1. deb/dpkg：软件包名称，比rpm晚，`dpkg -l`
+     1. apt-get：包管理工具，基于deb。`install/remove/purge`
+   - ArchLinux
+     1. pacman：软件包管理器，将二进制包格式和易用的构建系统结合，软件都能很方便管理。是Arch Linux的一大亮点，如安装sublime `pacman -S sublime-text`
+1. VirtualBox安装虚拟机、连接网络
+   - 安装：blog.csdn.net/risingsun001/article/details/37934975
+   - 调通网络
+     1. vi /etc/sysconfig/network-scripts/ifcfg-eth0
+        ```
+        NM_CONTROLLED=no
+        ONBOOT=yes  #自动启动
+        BOOTPROTO=dhcp  #动态IP
+        ```
+     1. service network start
+   - 调通ssh：blog.csdn.net/risingsun001/article/details/38040451
+1. ssh省去输入密码
+   - ssh -kengen
+   - cd ~/.ssh
+   - ssh -copy-id peter@happypeter.net       // 把公钥复制到服务器上
 ### 基本操作
 1. 查看状态
    - 系统信息
@@ -492,42 +774,6 @@
    - 显示e或a：`grep 'w[ea]ll' a.log`
    - 匹配以非2、1、0开头的行：`grep ^[^210] file`
 #### 网络
-1. 认识
-   - 端口号1024以下是系统保留的，总共65526个
-1. 组成
-   - /etc/sysconfig/network-scripts/ifcfg-eth0
-   - hostname
-   - ifdown/ifup
-   - ethtool
-   - 防火墙：都是内核的netfilter在干活，以下2个作用都是维护规则
-     1. iptables
-        - 编辑：`vim /etc/sysconfig/iptables`
-        - 增加：`-A INPUT -m state --state NEW -m tcp -p tcp –-dport 80 -j ACCEPT`
-        - 状态/重启/关闭：`/etc/init.d/iptables status/restart/stop`
-     1. centos7防火墙配置
-        - 添加端口：firewall-cmd --zone=public --add-port=80/tcp --permanent
-        - 查看端口：firewall-cmd --zone=public --list-ports
-        - 开关：systemctl start/disable/restart firewalld
-1. 参数
-   - 查看
-     1. 查看进程连接、排队状况：`netstat -lntup`
-     1. 查看各个tcp状态的数量：`netstat -an | awk '/^tcp/ {++S[$NF]}  END {for (a in S) print a,S[a]}'`
-   - 连接队列设置
-     1. SYN queue：`/proc/sys/net/ipv4/tcp_max_syn_backlog`
-        - 查看SYN queue溢出：`netstat -s | grep LISTEN`
-     1. Accept queue：`/proc/sys/net/core/somaxconn`或/etc/sysctl.conf的`net.core.somaxconn=128`
-        - 查看Accept queue溢出：`netstat -s | grep TCPBacklogDrop`
-     1. 重传SYN+ACK次数：`net.ipv4.tcp_synack_retries`：默认为5，表示重发5次，每次等待30~40秒，即半连接默认时间大约为180秒
-     1. keepalive相关
-        - tcp_keepalive_time：从连接开始到发送探测数据包之间的空闲时间
-        - tcp_keepalive_probes：发送探测数据包的最大数量，之后关闭连接
-        - tcp_keepalive_intvl：发送两个探测数据包的间隔时间
-   - 路由设置
-     1. 子网通信：两个子网想要通信，需要连接两个网络的路由器，或者同时位于两个网络的网关
-     1. 永久保存路由
-        - `/etc/rc.local`添加
-        - `/etc/sysconfig/network`添加到末尾
-        - `/etc/sysconfig/static-router`：`any net x.x.x.x/24 gw y.y.y.y`
 1. 查看
    - ifconfig：显示、设置网络
      1. -a：inet addr，ip addr

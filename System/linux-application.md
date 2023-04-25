@@ -1,137 +1,4 @@
-### 解决方案
-#### 安全
-1. SELinux：Security Enhanced Linux，安全强化Linux，是强制访问控制系统的一种实现，用于指明进程可以访问的资源，增强系统抵御0-Day的攻击
-   - 特点：可查看、热更改、进程初始化/继承/执行三方面进行策略控制、控制范围包括文件系统/目录/文件/文件启动描述符/端口/消息接口/网络接口
-   - 使用
-     1. getenforce、/usr/sbin/sestatus -v：运行状态，Enforcing/Permissive/Disabled，记录警告并阻止/记录警告不阻止/禁用
-     1. setenforce：Enforcing|Permissive|1|0，切换状态保持至关机，从Disabled切出时，要重启并重新创建安全标签(touch /.autorelabel && reboot)
-     1. /etc/sysconfig/selinux、/etc/selinux/config：永久修改，修改后重启
-#### 进程守护
-1. 工具：supervisor、systemd、monit(还能性能监控)
-1. supervisor：进程管理器，用于保证进程的自动重启等。通过fork/exec的方式将这些被管理的进程当作supervisor的子进程来启动，配置进程命令即可，python写的
-   - 启动
-    ```sh
-    supervisord -c supervisor.conf                                            // 通过配置文件启动supervisor
-    supervisorctl -c supervisor.conf start/stop [all]|[zzg_worker]            // 启动停止所有/一个
-    ```
-   - 操作
-     1. `supervisorctl start/stop/restart all/xx`
-     1. `supervisorctl status`        //查看所有进程的状态
-     1. `supervisorctl update`        //配置文件修改后使用该命令加载新的配置
-     1. `supervisorctl reload`        //重新启动配置中的所有程序
-   - supervisor的配置文件：supervisor.conf
-    ```conf
-    [unix_http_server]
-    file=/tmp/supervisor_zzg.sock                   ; UNIX socket 文件，supervisorctl 会使用
-    chmod=0770                                      ; socket 文件的 mode，默认是 0700
-    chown=zhaozhigang:www                           ; socket 文件的 owner，格式： uid:gid
-
-    [inet_http_server]                              ; HTTP 服务器，提供 web 管理界面
-    port=0.0.0.1:9568                               ; Web 管理后台运行的 IP 和端口，如果开放到公网，需要注意安全性
-    username=resource                               ; 登录管理后台的用户名
-    password=1a2s3dqwe                              ; 登录管理后台的密码
-
-    [supervisord]
-    logfile=/tmp/supervisord_zzg.log                ; 日志文件，默认是 $CWD/supervisord.log
-    logfile_maxbytes=50MB                           ; 日志文件大小，超出会 rotate，默认 50MB
-    logfile_backups=10                              ; 日志文件保留备份数量默认 10
-    loglevel=info                                   ; 日志级别，默认 info，其它: debug,warn,trace
-    pidfile=/tmp/supervisord_zzg.pid                ; pid 文件
-    nodaemon=false                                  ; 是否在前台启动，默认是 false，即以 daemon 的方式启动
-    minfds=655350                                   ; 可以打开的文件描述符的最小值，默认 1024
-    minprocs=65535                                  ; 可以打开的进程数的最小值，默认 200
-
-    [rpcinterface:supervisor]
-    supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
-
-    [supervisorctl]
-    serverurl=unix:///tmp/supervisor_zzg.sock       ; 通过 UNIX socket 连接 supervisord，路径与 unix_http_server 部分的 file 一致
-    ;serverurl=http://127.0.0.1:9001                ; 通过 HTTP 的方式连接 supervisord
-
-    [include]                                       ; 包含其他配置文件
-    files = /xdfapp/_zzg/*.conf
-    ```
-   - 子进程配置文件
-    ```conf
-    ; /etc/supervisor.d/*.ini
-    [program:zzg_worker]
-    process_name=%(program_name)s_%(process_num)02d
-    command=php /xdfapp/develop/okayAdmin/artisan queue:work redis --daemon --sleep=1 --tries=1 --env=_lj
-    autostart=true
-    autorestart=true
-    user=zhaozhigang
-    numprocs=1
-    redirect_stderr=true
-    stdout_logfile=/tmp/zzg_worker.log
-
-
-    ; xes的tw配置
-    [program:confd-tw]
-    command=/usr/local/bin/confd -config-file /home/www/confd-tw/etc/confd-tw.toml
-    autostar=true
-    autorestart=true
-    redirect_stderr=true                            ; redirect proc stderr to stdout
-    stdout_logfile =/dev/stdout
-    stderr_logfile=/dev/stdout
-    loglevel=info
-    startretries=3000                               ; 启动重试次数
-    stopwaitsecs=300                                ; 搞死子进程，等待操作系统将SIGCHLD返回给supervisor的秒数，超过了就直接SIGKILL
-    startsecs=10                                    ; 确认是否启动成功的等待秒数
-    ```
-1. Systemd
-   - 背景：linux采用init进程启动服务，如`/etc/init.d/apache2 start`或`service apache2 start`，缺点为只能串行启动，只启动脚本，不管其他事情，如session信号通知
-   - 理解：linux系统自带，是操作系统一部分，直接与内核交互，性能出色、功能强大、面向目标，体系庞大复杂。给出目标及依赖条件即可执行。即将程序交给系统管理了，d是daemon的缩写，systemd取代initd，成为系统的第一个进程（PID等于1），其他进程都是它的子进程，EL7才能用
-     1. 处理进程和服务
-     1. 挂载文件系统
-     1. 监控网络套接字(如动态开关进程)
-     1. 运行时系统
-   - 使用：systemctl，systemd的管理命令
-     1. `systemctl xx start`：兼容service启停
-     1. `systemctl enable xx`：开机启动
-   - 功能：处理时称之为单元，有单元类型
-     1. 服务单元：.service文件，控制unix上的传统服务守护进程，编写.service文件，通过设置参数决定某一命令的守护
-     1. 挂载单元：.mount文件，控制文件系统的挂载，类似mount命令
-     1. 目标单元：.target文件，控制其余的单元，通常是通过将他们分组的方式
-     1. 文件单元：.wants文件，定义要执行的文件集合
-#### DNS
-1. DNS
-   - 组成
-     1. bind服务
-        - 理解：加州大学开发的开源、稳定、应用广泛的dns服务
-          1. 组成：域名解析服务、权威域名解析服务(级级查询中最终提供ip的服务)、dns工具
-        - 安装：`yum install bind bind-chroot`，`apt-get install bind9`
-        - 配置：options、logging、zone dns域解析
-          1. 配置域名
-            ```shell
-            // named.conf
-            zone "imooc.com" {                                                      // 一个域名一个 
-                type master;                                                        // 主从配置
-                file "imooc.com.zone";
-            }
-            // imooc.com.zone，@是保留字，表示当前域名
-            $TTL 7200
-            imooc.com. IN SOA imooc.com. jeson.imooc.com. (222 1H 15M 1W 1D)        // 解析域的开始
-            imooc.com. IN NS dns1.imooc.com.
-            dns1.imooc.com. IN A 10.10.10.135
-            www.imooc.com IN A 2.2.2.2                                              // 解析了一个ip
-            // 查询命令
-            dig @ 10.10.10.135 www.imooc.com
-            nslookup www.imooc.com
-            ```
-        - 应用场景
-     1. bind负载均衡
-        - dns转发：子域授权
-        - dns主从模式：主从传输、主从同步、数据加密、事务签名
-        - dns传输限制
-#### 其他
-1. tumx：多个界面，断网保存用户操作的界面
-1. 数据恢复工具：ext3grep
-1. 文件、目录的变动监控
-   - linux、android：inotify
-   - macOS、iOS、BSD：kqueue、FSEvents(比kqueue更高效、先进)
-   - windows：ReadDirectoryChangesW
-   - Solaris 11：FEN
-### 性能监控
+### 性能观察方法
 1. 集成方案
    - cacti
 1. cpu工具
@@ -540,257 +407,147 @@
    - 使用
      1. 用perf生成报告
      1. 将报告转为图片
-### 文件系统
-1. 块
-   - 认识：操作系统的最小逻辑存储单位，一个或多个连续的扇区组成一个块，即逻辑块。NTFS叫簇，一般为4k
-     1. 因为扇区众多寻址困难，就将相邻扇区组合一起，进行整体操作
-     1. 分离对底层依赖：忽略对底层物理存储结构的设计
-     1. 文件：由一个或多个逻辑块组成，且逻辑块之间不连续分布。逻辑块大于或等于物理块整数倍，所以多个扇区一起读
-        - 文件拆块存储为了充分利用空间，不产生空洞
-   - 层次关系：扇区→物理块→逻辑块→文件系统
-   - 备份
-     1. 文件级备份：一层层向下至扇区全部备份，慢
-     1. 块级备份：指物理块复制，增量备份时只备份修改过的物理块
-     1. 快照原理：新数据写入，旧数据移除，同时记录数据变化位图。实现方式由各个厂商自行决定，但主要技术分为2类
-        - 写时拷贝：COW Copy On Write，创建快照时，仅复制原始卷的元数据。创建完成后，原始卷有写，快照会跟踪改变，将要改变的数据在改变之前复制到快照预留的空间里
-          1. 越来越多的共享页面被分离出来，内存就会持续增长
-          1. 读取是没有修改过的到原始卷上，修改过的到快照上
-          1. 创建快照时，占用非常小，非常快，之后修改多了就变大了
-        - 写重定向：ROW（Redirect On Write）
-1. Linux
-   - 认识：启动时挂载根文件系统，之后可以挂载其他文件系统，要挂载到挂载点上，和虚拟文件系统、通用块设备层建立联系
-     1. 挂载点：是linux访问磁盘的入口，所以一个系统可有不同的文件系统
+### 应用场景
+1. 安全：SELinux，Security Enhanced Linux，安全强化Linux，是强制访问控制系统的一种实现，用于指明进程可以访问的资源，增强系统抵御0-Day的攻击
+   - 特点：可查看、热更改、进程初始化/继承/执行三方面进行策略控制、控制范围包括文件系统/目录/文件/文件启动描述符/端口/消息接口/网络接口
+   - 使用
+     1. getenforce、/usr/sbin/sestatus -v：运行状态，Enforcing/Permissive/Disabled，记录警告并阻止/记录警告不阻止/禁用
+     1. setenforce：Enforcing|Permissive|1|0，切换状态保持至关机，从Disabled切出时，要重启并重新创建安全标签(touch /.autorelabel && reboot)
+     1. /etc/sysconfig/selinux、/etc/selinux/config：永久修改，修改后重启
+1. 其他
+   - tumx：多个界面，断网保存用户操作的界面
+   - 数据恢复工具：ext3grep
+   - 文件、目录的变动监控
+     1. linux、android：inotify
+     1. macOS、iOS、BSD：kqueue、FSEvents(比kqueue更高效、先进)
+     1. windows：ReadDirectoryChangesW
+     1. Solaris 11：FEN
+   - inotify
+     1. 认识：通过inode绑定和epoll通知链，实现高效、异步的监控
+     1. 配置：`/proc/sys/fs/inotify`
+        - max_user_watches
+        - max_user_instances
+        - max_queued_events
+     1. 衍生工具：inotify-tools，提供命令行、api等
+   - irqbalance
+#### 进程守护
+1. 工具：supervisor、systemd、monit(还能性能监控)
+1. supervisor：进程管理器，用于保证进程的自动重启等。通过fork/exec的方式将这些被管理的进程当作supervisor的子进程来启动，配置进程命令即可，python写的
+   - 启动
+    ```sh
+    supervisord -c supervisor.conf                                            // 通过配置文件启动supervisor
+    supervisorctl -c supervisor.conf start/stop [all]|[zzg_worker]            // 启动停止所有/一个
+    ```
+   - 操作
+     1. `supervisorctl start/stop/restart all/xx`
+     1. `supervisorctl status`        //查看所有进程的状态
+     1. `supervisorctl update`        //配置文件修改后使用该命令加载新的配置
+     1. `supervisorctl reload`        //重新启动配置中的所有程序
+   - supervisor的配置文件：supervisor.conf
+    ```conf
+    [unix_http_server]
+    file=/tmp/supervisor_zzg.sock                   ; UNIX socket 文件，supervisorctl 会使用
+    chmod=0770                                      ; socket 文件的 mode，默认是 0700
+    chown=zhaozhigang:www                           ; socket 文件的 owner，格式： uid:gid
+
+    [inet_http_server]                              ; HTTP 服务器，提供 web 管理界面
+    port=0.0.0.1:9568                               ; Web 管理后台运行的 IP 和端口，如果开放到公网，需要注意安全性
+    username=resource                               ; 登录管理后台的用户名
+    password=1a2s3dqwe                              ; 登录管理后台的密码
+
+    [supervisord]
+    logfile=/tmp/supervisord_zzg.log                ; 日志文件，默认是 $CWD/supervisord.log
+    logfile_maxbytes=50MB                           ; 日志文件大小，超出会 rotate，默认 50MB
+    logfile_backups=10                              ; 日志文件保留备份数量默认 10
+    loglevel=info                                   ; 日志级别，默认 info，其它: debug,warn,trace
+    pidfile=/tmp/supervisord_zzg.pid                ; pid 文件
+    nodaemon=false                                  ; 是否在前台启动，默认是 false，即以 daemon 的方式启动
+    minfds=655350                                   ; 可以打开的文件描述符的最小值，默认 1024
+    minprocs=65535                                  ; 可以打开的进程数的最小值，默认 200
+
+    [rpcinterface:supervisor]
+    supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
+
+    [supervisorctl]
+    serverurl=unix:///tmp/supervisor_zzg.sock       ; 通过 UNIX socket 连接 supervisord，路径与 unix_http_server 部分的 file 一致
+    ;serverurl=http://127.0.0.1:9001                ; 通过 HTTP 的方式连接 supervisord
+
+    [include]                                       ; 包含其他配置文件
+    files = /xdfapp/_zzg/*.conf
+    ```
+   - 子进程配置文件
+    ```conf
+    ; /etc/supervisor.d/*.ini
+    [program:zzg_worker]
+    process_name=%(program_name)s_%(process_num)02d
+    command=php /xdfapp/develop/okayAdmin/artisan queue:work redis --daemon --sleep=1 --tries=1 --env=_lj
+    autostart=true
+    autorestart=true
+    user=zhaozhigang
+    numprocs=1
+    redirect_stderr=true
+    stdout_logfile=/tmp/zzg_worker.log
+
+
+    ; xes的tw配置
+    [program:confd-tw]
+    command=/usr/local/bin/confd -config-file /home/www/confd-tw/etc/confd-tw.toml
+    autostar=true
+    autorestart=true
+    redirect_stderr=true                            ; redirect proc stderr to stdout
+    stdout_logfile =/dev/stdout
+    stderr_logfile=/dev/stdout
+    loglevel=info
+    startretries=3000                               ; 启动重试次数
+    stopwaitsecs=300                                ; 搞死子进程，等待操作系统将SIGCHLD返回给supervisor的秒数，超过了就直接SIGKILL
+    startsecs=10                                    ; 确认是否启动成功的等待秒数
+    ```
+1. Systemd
+   - 背景：linux采用init进程启动服务，如`/etc/init.d/apache2 start`或`service apache2 start`，缺点为只能串行启动，只启动脚本，不管其他事情，如session信号通知
+   - 理解：linux系统自带，是操作系统一部分，直接与内核交互，性能出色、功能强大、面向目标，体系庞大复杂。给出目标及依赖条件即可执行。即将程序交给系统管理了，d是daemon的缩写，systemd取代initd，成为系统的第一个进程（PID等于1），其他进程都是它的子进程，EL7才能用
+     1. 处理进程和服务
+     1. 挂载文件系统
+     1. 监控网络套接字(如动态开关进程)
+     1. 运行时系统
+   - 使用：systemctl，systemd的管理命令
+     1. `systemctl xx start`：兼容service启停
+     1. `systemctl enable xx`：开机启动
+   - 功能：处理时称之为单元，有单元类型
+     1. 服务单元：.service文件，控制unix上的传统服务守护进程，编写.service文件，通过设置参数决定某一命令的守护
+     1. 挂载单元：.mount文件，控制文件系统的挂载，类似mount命令
+     1. 目标单元：.target文件，控制其余的单元，通常是通过将他们分组的方式
+     1. 文件单元：.wants文件，定义要执行的文件集合
+#### DNS
+1. DNS
    - 组成
-     1. 用户层：应用，用户空间文件系统(FUSE)
-     1. 内核层
-        - SCI：System Call Interface，系统调用接口
-        - VFS：Virtual File System，虚拟文件系统，是物理文件系统与服务应用之间的接口层，提供了mount等api
-          1. 数据结构
-             - superblock：Linux 用来标注具体已安装的文件系统的有关信息
-             - inode：inode文件，每个文件/目录都有一个，记录逻辑块位置、权限、修改时间
-               1. 间接索引：解决inode文件本身大小问题
-             - desty：目录项，是路径中的一部分，所有的目录项对象串起来就是一棵 Linux 下的目录树
-             - file：文件对象，用来和打开它的进程进行交互
-        - General Block Device Layer：通用块设备层，统一对外输出底层不同的io接口
-     1. 物理层：硬盘
-   - 原理：这三点是层层递进的
-     1. 把磁盘空间切成离散的、定长的block来管理
-     1. 通过inode能查找到所有离散的数据（保存了所有的索引）
-     1. 实现索引块和数据块空间的后分配
-   - 操作系统使用的分类
-     1. linux：ext、xfs、zfs
-     1. windows：fat、ntfs
-     1. 移动/闪存
-     1. 索尼的ps
-1. wiki
-   - 写文件流程，和读相反
-     1. 先写实际存储的数据，按照逻辑块的粒度存储
-     1. 再写inode元数据，存储逻辑块的位置等其他信息
-   - 多级索引寻址性能
-     1. 访问小文件中的任意数据理论只需要两次读盘，一次读 inode，一次读数据块
-     1. 访问大文件中的数据则需要最多五次读盘操作：inode、一级间接寻址块、二级间接寻址块、三级间接寻址块、数据块
-   - 文件大小和实际物理占用不同，实际物理空间占用则是要看用户数据放了多少个block
-1. 本地文件系统格式
-   - RAW：是一种磁盘未经处理或者未经格式化的文件系统。可能由于未格式化、格式化中途取消、硬盘出现坏道等
-   - Ext
-     1. 认识：只有linux支持
-        - 拥有最快的读写速度和最小的cpu占用率，中小文件更有优势，得利于簇快取层的优良设计
-        - 盘分区格式和其它操作系统完全不同，其C、D、E等分区的意义也和windows操作系统不一样
-     1. 分类
-        - Ext2：单一文件大小与文件系统本身的容量上限与文件系统本身的簇大小有关
-        - Ext3
-        - Ext4：最大支持1EB，单个文件最大16TB
-     1. 原理：由inode（包含有文件的所有信息）进行唯一标识
-   - XFS：centos7默认文件系统，最大支持18EB，单个文件最大8EB。用xfs/ext4不用ext3
-   - FAT
-     1.认识：File Allocation Table，是一种由微软发明并拥有部分专利的文件系统，一般指FAT32。Linux等都支持FAT
-        - 容易产生文件碎片：不会将文件整理成完整片段再写入，长期使用会使文件数据变得逐渐分散从而减慢了读写速度，碎片整理是一种解决方法
-        - 磁盘空间利用率低
-        - 安全性较差
-     1. 分类：指用xx位二进制数记录管理的磁盘文件管理方式
-        - FAT12：最多32M，最多几十个文件
-        - FAT16：最多2.1G
-        - FAT32：分区通常不超过32G，单文件最大4G，从1997年Windows 95开始用
-          1. 将文件数据与metadata一起存储，存储过程先将文件按照文件系统的最小块大小来打散（如4M的文件一个块4K打散成为1000个小块，过程中没有区分数据/metadata，每个块最后告知下一个要读取的块的地址
-   - ExFAT：扩展FAT，专为闪存和U盘设计，空间浪费小
-   - NTFS
-     1. 认识：New Technology File System，新技术文件系统。Windows NT以后开始普及
-        - 比FAT更新，处理速度更快，碎片更少
-        - 分区最大2T，支持分区、文件夹、文件的压缩
-        - FAT32分区能够在DOS下直接访问，NTFS不能
-   - VFAT：长文件名系统，一个与Windows系统兼容的Linux文件系统，支持长文件名，可以作为Windows与Linux交换文件的分区
-1. 操作系统中常用的文件系统
-   - window：FAT、NTFS(只有这个合适)
-   - linux：EXT3、EXT4、XFS(建议)
-1. 网络文件系统
-   - 认识
-     1. 发展趋势：软件定义存储 SDS，软件定义网络 SDN
-     1. 基于文件的存储系统中，文件是通过文件目录进行寻址
-     1. 分布式文件系统和网络文件系统(对象存储系统)的区分要分清
-   - 网络存储协议
-     1. NFS：sun公司研制的unix表示层协议，unix常用，基于UDP/IP协议，主要采用RPC实现，因为nfs不同的功能都会使用不同的程序来启动，rpc沟通对应的网络端口来交互
-        - 权限需要搭配NIS，Network Information Services，以用户组和/etc/passwd来判断权限(和本地权限一样)
-     1. CIFS: Common Internet File System 通用网络文件系统，windows主机之间共享的协议，samba实现了这个协议
-        - SMB：Service Message Block，服务器消息块协议，在windows中被称为“Microsoft Windows 网络”，基于CIFS开发，被称为CIFS/SMB协议
-     1. AFP：运行macOS的apple设备的专有协议
-   - 分类
-     1. NFS：Network File System，网络文件系统，通过网络让不同的机器、不同的操作系统可以共享文件，让pc将网络中的NFS服务器共享的目录挂载到本地的文件系统中，使用非常便利。一般用来存储静态数据，工作在内核模式下
-     1. Samda：基于SMB协议的开源软件，linux上共享文件和打印机等资源，是cs型，client(linux)访问server(windows)的资源，两个系统文件共享
-     1. AFS：Andrew File System，分布式文件系统，用于管理分部在不同网络节点上的文件，采用安全认证和灵活的访问控制提供一种分布式文件系统，卡内基梅隆大学开发，结构与NFS相似，但有所增强
-     1. DFS：Distributed File System，分布式文件系统
-1. 分布式文件系统
-   - 认识：通过网络在多台主机上存储的文件系统。新手用fastdfs，淘宝tfs，七牛。阿里云nas用于存日志、小文件等，oss
-     1. 如同访问本地磁盘
-     1. 容错：部分节点损坏，数据不丢失，系统可继续运行
-     1. 海量存储
-     1. 扩展性强
-     1. 文件副本进行负载均衡
-     1. 进行特定索引文件计算
-   - 分类
-     1. 应用级：GFS、HDFS、Ceph、GridFS、mogileFS、TFS、FastDFS
-        - Lustre：存储量PB起步，万级节点
-        - HDFS：Hadoop内置，价格低廉，高可靠性，高容错性，小文件过多的情况HDFS不能很好的支持
-     1. 系统级
-   - 历史
-     1. 80年代：NFS(linux的文件共享服务)、AFS
-     1. 90年代：SFS、Tiger Shark
-     1. 2000年：GFS
-     1. 最近：Lustre
-   - 知识基础
-     1. 分布式数据排布算法，集群元数据管理
-     1. 分布式一致性算法，分布式层数据副本/分片一致性协议，选主等
-     1. 单盘存储引擎，文件系统
-   - wiki
-     1. san和das对于iops和存储性能有很强要求的可以使用，如mysql使用，因为假定存入的数据都不会丢
-     1. ceph等分布式系统通常假定任何设备都是不可靠的，算法都有冗余存储，
-1. ceph
-   - 认识：开源的分布式的统一存储系统，通过一系列管理和存储节点分开、副本读写、重新hash定位等方式实现高可用、高性能。openstack的默认后端，redhat也支持
-     1. 是以服务器的形式存在，管理1TB大约需要1GB的内存
-     1. 以我司踩坑的经历来看，没有深入ceph代码定制修改的能力，就不要给ceph太大压力。否则分分钟给你脸色看。ceph在元数据太多或者修复磁盘损坏的时候贼容易挂掉
-   - 特点
-     1. 低成本
-     1. 高性能
-        - 摒弃传统的集中式存储元数据寻址的方案，采用CRUSH算法，数据分布均衡，并行度高，基于计算的扁平寻址设计(可以直接和服务端任意节点通信)
-        - 考虑了容灾域的隔离，能够实现各类负载的副本放置规则，例如跨机房、机架感知等
-        - 能够支持上千个存储节点的规模，支持TB到PB级的数据
-     1. 高可用
-        - 副本数可以灵活控制
-        - 支持故障域分隔，数据强一致性
-        - 多种故障场景自动进行修复自愈
-        - 没有单点故障，自动管理
-     1. 高可扩展性
-        - 去中心化
-        - 扩展灵活，对象通过唯一的标识符进行寻址，并存储在扁平的寻址空间中，通过算法动态计算存储和获取某个对象的位置
-        - 随着节点增加而线性增长
-     1. 特性丰富
-        - 支持三种存储接口：块存储、文件存储、对象存储
-        - 支持自定义接口，支持多种语言驱动
-   - 接口
-     1. Block：支持精简配置、快照、克隆
-     1. File：Posix接口，支持快照
-     1. Object：有原生的API，而且也兼容Swift和S3的API
-   - 组件：：![avatar](../images/ceph_struct.png)
-     1. RADOS：ceph集群精华，用户实现数据分配、Failover等集群操作
-     1. Libradio：因为RADOS是协议很难直接访问，因此上层的RBD、RGW和CephFS通过librados访问，提供PHP、Java、Python、C和C++支持
-     1. Object：最底层的存储单元，每个Object包含元数据和原始数据
-     1. MDS：Ceph Metadata Server，是CephFS服务依赖的元数据服务
-     1. OSD：Object Storage Device，负责响应客户端请求返回具体数据的进程
-     1. CRUSH：数据分布算法，类似一致性哈希，让数据分配到预期的地方
-     1. PG：Placement Grouops，逻辑概念，一个PG包含多个OSD。引入PG这一层其实是为了更好的分配数据和定位数据
-     1. Monitor：需要多个Monitor组成的小集群，通过Paxos同步数据，用来保存OSD的元数据
-     1. RBD：对外提供的块设备服务
-     1. CephFS：对外提供的文件系统服务
-     1. RGW：对外提供的对象存储服务，接口与S3和Swift兼容
-1. FastDFS：开源国产的分布式文件存储系统，实现了冗余备份、负载均衡、线性扩容等机制，注重高可用、高性能，提供上传、下载功能。Tracker集群提供负载均衡等调度，Storage集群提供存储
-1. deep
-   - 文件/目录存储原理
-     1. 分为元信息、实际数据
-        - 存储属性：找到空i-node，存储文件小大、所有者、创建时间，inode用于区分文件
-        - 存储实际数据：找到n个自由块，将数据依次写入
-        - 将磁盘序号写入i-node
-        - 文件名写入目录，将文件名和i-node连接起来
-### 优化
-1. 问题定位
-   - network
-     1. ping：有些可能禁止检测
-     1. telnet：检测端口是否正常
-     1. strace：跟踪系统调用的执行
-        - 查看统计：`strace -p xx -c`
-        - 查看实时：`strace -p xx -T -s 4094`
-     1. netstat：
-        - `netstat -s | grep LISTEN`
-        - `netstat -s | grep TCPBacklogDrop`
-     1. ss -l
-     1. tcpdump
-   - log
-     1. dmesg：查看系统日志
-        - /var/log/message
-   - pstack
-   - gdb
-   - ltrace
-1. 问题解决
-1. irqbalance
-### 软件安装
-1. 软件安装
-   - RedHat
-     1. rpm：以.rpm结尾的软件包名称，方便安装/升级/卸载，不能处理包依赖
-        - -q：查询
-        - -q afilcdR：查询已安装的，文件名绝对路径，安装包信息，安装目录，配置文件，文档位置，所依赖的文件
-        - -qpi：查询未安装的，版本信息
-        - –requires：显示依赖信息
-        - -i：安装
-        - -ivh：安装，显示文件信息，显示安装进度
-        - -U：升级
-        - -Uvh：升级，显示文件信息，显示安装进度
-        - -e：卸载，先用-q查询名称
-        - --import：签名导入
-     1. yum：Yellow dog Updater Modified，包管理工具，基于rpm，epel是yum的扩展源
-        - 参数
-          1. search/info
-          1. install/update/remove
-          1. list/info installed/updates
-        - 查看安装的服务：`rpm -qa | grep xx`
-        - 查看安装的位置：`rpm -ql xx`
-        - 配置yum源：配置分两部分，全局配置项为/etc/yum.conf，定义每个源/服务器的具体配置在/etc/yum.repo.d的rep文件
-   - Debian
-     1. deb/dpkg：软件包名称，比rpm晚，`dpkg -l`
-     1. apt-get：包管理工具，基于deb。`install/remove/purge`
-   - ArchLinux
-     1. pacman：软件包管理器，将二进制包格式和易用的构建系统结合，软件都能很方便管理。是Arch Linux的一大亮点，如安装sublime `pacman -S sublime-text`
-1. VirtualBox安装虚拟机、连接网络
-   - 安装：blog.csdn.net/risingsun001/article/details/37934975
-   - 调通网络
-     1. vi /etc/sysconfig/network-scripts/ifcfg-eth0
-        ```
-        NM_CONTROLLED=no
-        ONBOOT=yes  #自动启动
-        BOOTPROTO=dhcp  #动态IP
-        ```
-     1. service network start
-   - 调通ssh：blog.csdn.net/risingsun001/article/details/38040451
-1. ssh省去输入密码
-   - ssh -kengen
-   - cd ~/.ssh
-   - ssh -copy-id peter@happypeter.net       // 把公钥复制到服务器上
-### 网络
-1. tcp连接
-   - 四元组：源ip、源port、目标ip、目标port，都相同了才是一条相同的tcp连接
-   - 资源耗费：寻找最近的资源瓶颈
-     1. 端口：操作系统自动分配可用的
-        - 可用端口范围
-          1. 查看：`cat /proc/sys/net/ipv4/ip_local_port_range`
-          1. 设置：`vim /etc/sysctl.conf：net.ipv4.ip_local_port_range`
-          1. 生效：`sysctl -p /etc/sysctl.conf`
-     1. 文件描述符：每一个tcp链接就要一个fd，就是数字
-        - 查看可打开的最大数量
-          1. 整个系统：`cat /proc/sys/fs/file-max`
-          1. 指定用户：`cat /etc/security/limits.conf `
-          1. 单个进程：`cat /proc/sys/fs/nr_open`
-        - 修改：`echo 10000 > /proc/sys/fs/nr_open`
-     1. 线程：默认一个tcp占用一个线程，用io多路复用
-     1. 内存：tcp本身和其缓冲区，都要占用内存
-     1. cpu：上下文切换成本
-### 运维相关
+     1. bind服务
+        - 理解：加州大学开发的开源、稳定、应用广泛的dns服务
+          1. 组成：域名解析服务、权威域名解析服务(级级查询中最终提供ip的服务)、dns工具
+        - 安装：`yum install bind bind-chroot`，`apt-get install bind9`
+        - 配置：options、logging、zone dns域解析
+          1. 配置域名
+            ```shell
+            // named.conf
+            zone "imooc.com" {                                                      // 一个域名一个 
+                type master;                                                        // 主从配置
+                file "imooc.com.zone";
+            }
+            // imooc.com.zone，@是保留字，表示当前域名
+            $TTL 7200
+            imooc.com. IN SOA imooc.com. jeson.imooc.com. (222 1H 15M 1W 1D)        // 解析域的开始
+            imooc.com. IN NS dns1.imooc.com.
+            dns1.imooc.com. IN A 10.10.10.135
+            www.imooc.com IN A 2.2.2.2                                              // 解析了一个ip
+            // 查询命令
+            dig @ 10.10.10.135 www.imooc.com
+            nslookup www.imooc.com
+            ```
+        - 应用场景
+     1. bind负载均衡
+        - dns转发：子域授权
+        - dns主从模式：主从传输、主从同步、数据加密、事务签名
+        - dns传输限制
+### 运维内容
 1. 组成
    - 基础：配机器
    - 私有云：openstack等
@@ -868,22 +625,5 @@
 1. 安全
    - ossec：开源的入侵检测系统
    - clamav：linux杀毒软件
-### api
-1. io相关
-   - inotify
-     1. 认识：通过inode绑定和epoll通知链，实现高效、异步的监控
-     1. 配置：`/proc/sys/fs/inotify`
-        - max_user_watches
-        - max_user_instances
-        - max_queued_events
-     1. 衍生工具：inotify-tools，提供命令行、api等
 ### 最佳实践
 1. 生产环境ulimit配置：![avatar](../images/ulimit.png)
-### wiki
-1. 快捷键
-   - ctrl+s     暂停该终端，ctrl+q恢复
-   - ctrl+z     把当前进程转到后台运行，使用 fg 命令恢复
-   - ctrl+u     清除光标前至行首间的内容
-   - ctrl+k     清除光标后至行尾的内容
-   - ctrl+y     粘贴或者恢复上次的删除
-   - ctrl+l     清屏，相当于clear

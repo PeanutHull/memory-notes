@@ -205,10 +205,16 @@
    - 位置：/usr/local/Cellar
 ### iTerm2
 1. iTerm快捷键设置：Profiles->Keys
-   - ctrl + a/e：移动到行首尾
-   - ctrl + ←/→：单词移动，需设置`Send Escape Sequence + d/f`
-   - shift + ←/→：单词选择，需设置`Move Start of Selection Left By Word`，`Move End of Selection Right By Word`
-   - ctrl + w：单词删除
+   - ctrl + a/e    移动到行首尾
+   - ctrl + ←/→    单词移动，需设置`Send Escape Sequence + d/f`
+   - shift + ←/→   单词选择，需设置`Move Start of Selection Left By Word`，`Move End of Selection Right By Word`
+   - ctrl + w      单词删除
+   - ctrl+u        清除光标前至行首间的内容
+   - ctrl+k        清除光标后至行尾的内容
+   - ctrl+l        清屏，相当于clear
+   - ctrl+y        粘贴或者恢复上次的删除
+   - ctrl+z        把当前进程转到后台运行，使用 fg 命令恢复
+   - ctrl+s        暂停该终端，ctrl+q恢复
 1. 插件
    - 已安装：参考https://www.zhihu.com/question/511866354
      1. bat：cat的升级版
