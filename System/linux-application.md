@@ -877,6 +877,8 @@
         - max_user_instances
         - max_queued_events
      1. 衍生工具：inotify-tools，提供命令行、api等
+### 最佳实践
+1. 生产环境ulimit配置：![avatar](../images/ulimit.png)
 ### wiki
 1. 快捷键
    - ctrl+s     暂停该终端，ctrl+q恢复
