@@ -192,7 +192,7 @@
      1. 硬件：F5、Netscaler
      1. 软件
         - LVS
-        - HAProxy：不是web服务器，可基于tcp和http
+        - HAProxy：不是web服务器，可基于tcp和http进行负载均衡代理
         - Nginx：upstream
         - varnish：高性能、开源的反向代理服务器和缓存服务器，比squid先进
         - squid：代理缓存服务器
