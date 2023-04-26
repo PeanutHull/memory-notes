@@ -14,8 +14,9 @@
    - 原则
      1. 通过通信共享内存，不要通过共享内存来通信
      1. 复制一点总比依赖一点好：A little copying is better than a little dependency
-        - 只要核心：去掉多余无用代码
-        - 依赖最小版本选择：避免复杂依赖
+        - 依赖的原则
+          1. 只要核心：去掉多余无用代码
+          1. 依赖最小版本选择：避免复杂依赖
    - 编程范式
      1. 面向接口
      1. 函数式编程
@@ -99,10 +100,10 @@
         - nil和空不同，nil不会指向底层地址，空会
         - 设计思想：能不分配的内存就先不分配，nil pointer其实是一切nil值的根本形态，制定很多固定的特殊用法，目的使得nil的使用是非常自然的，这样是好是坏？
      1. 特点
+        - nil有类型，(*int)(nil)和(interface{})(nil)就是两个不同的变量，即不相等
         - nil是不能比较的`nil==nil`
         - 不同类型nil的指针是一样的，地址都是0x0。不同类型的nil值占用的内存大小可能是不一样的
         - 不是关键字只是变量名(在buildin/buildin.go中)，如可以定义一个名为nil的变量`var nil = errors.New("11")`不推荐
-        - nil也是有类型的，(*int)(nil)和(interface{})(nil)就是两个不同的变量，即不相等
         - untyped nil：没有类型的nil，直接写一个nil就是untyped nil
           1. 不能直接赋值给变量
           1. 可以与一些特定类型的变量进行比较，会根据不同的变量，就会有不同的逻辑
@@ -740,8 +741,8 @@
         // defer模拟
         x, y := 1,2
         defer func(a int){
-            fmt.Println("defer x, y = ", a, y)  //y为闭包引用
-        }(x)                                        //x值拷贝 调用时传入参数
+            fmt.Println("defer x, y = ", a, y)      // y为闭包引用
+        }(x)                                        // x值拷贝 调用时传入参数
         x += 100
         y += 200
         fmt.Println(x, y)

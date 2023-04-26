@@ -637,75 +637,6 @@
         return c, func() { c.cancel(true, Canceled) }
     }
     ```
-### 应用
-1. http
-   - 核心组成
-     1. 创建一个路由表，http.NewServeMux()
-     1. 向路由表注册路由，并绑定处理器Handler{}
-     1. 调用 http.ListenAndServe(":9090", mutex)提供服务
-   - 路由表结构体解析
-    ```go
-    type ServeMux struct {
-        mu sync.RWMutex             // 锁，由于请求涉及到并发处理，因此这里需要一个锁机制
-        m map[string]muxEntry       // 路由规则，一个 string 对应一个 mux 实体，这里的 string 就是注册的路由表达式
-        es []muxEntry               // 路由表达式切片，按路由从最⻓到最短排序，用来实现最⻓前缀匹配
-        hosts bool                  // 是否在任意的规则中带有 host 信息
-    }
-    ```
-   - 流程
-     1. 实例化 Server
-     1. 调用 Server 的 ListenAndServe ()
-     1. 调用 net.Listen ("tcp", addr) 监听端口
-     1. 启动一个 for 循环，在循环体中 Accept 请求
-     1. 对每个请求实例化一个 Conn，并且开启一个 goroutine 为这个请求进行服务 go c.serve () 6 读取每个请求的内容，把请求分配到路由表处理
-     1. 判断 handler 是否为空，如果没有设置 handler，handler 就设置为 DefaultServeMux 8 调用 handler 的 ServeHttp
-     1. 根据 request 选择 handler，并且进入到这个 handler 的 ServeHTTP
-     1. 选择 handler:
-        - map精确匹配
-        - 切片最⻓前缀匹配，`strings.HasPrefix`
-        - 如果没有路由满足，调用 NotFoundHandler 的 ServeHTTP
-   - 连接管理
-    ```go
-    res, err := client.Do(req)
-    func (c *Client) Do(req *Request) (*Response, error) {
-        return c.do(req)
-    }
-
-    func (c *Client) do(req *Request) {
-        // ...
-        if resp, didTimeout, err = c.send(req, deadline); err != nil {
-            // ...
-        }
-        // ...
-    }
-    func send(ireq *Request, rt RoundTripper, deadline time.Time) {
-        // ...
-        resp, err = rt.RoundTrip(req)
-        // ...
-    }
-
-    // 从这里进入 RoundTrip 逻辑   /src/net/http/roundtrip.go: 16
-    func (t *Transport) RoundTrip(req *Request) (*Response, error) {
-        return t.roundTrip(req)
-    }
-
-    func (t *Transport) roundTrip(req *Request) (*Response, error) {
-        // 尝试去获取一个空闲连接，用于发起 http 连接
-        pconn, err := t.getConn(treq, cm)
-        // ...
-    }
-
-    // 重点关注这个函数，返回是一个长连接
-    func (t *Transport) getConn(treq *transportRequest, cm connectMethod) (*persistConn, error) {
-        // 省略了大量逻辑，只关注下面两点
-        // 有空闲连接就返回
-        pc := <-t.getIdleConnCh(cm)
-
-        // 没有创建连接
-        pc, err := t.dialConn(ctx, cm)
-
-    }
-    ```
 ### 内存管理
 1. GC
    - 发展
@@ -897,6 +828,75 @@
    - 虚拟内存
      1. 认识：进程运行在虚拟内存上的、连续的，和物理内存通过MMU(Memory Manage Unit)映射
         - 安全：隔绝篡改
+### 应用
+1. http
+   - 核心组成
+     1. 创建一个路由表，http.NewServeMux()
+     1. 向路由表注册路由，并绑定处理器Handler{}
+     1. 调用 http.ListenAndServe(":9090", mutex)提供服务
+   - 路由表结构体解析
+    ```go
+    type ServeMux struct {
+        mu sync.RWMutex             // 锁，由于请求涉及到并发处理，因此这里需要一个锁机制
+        m map[string]muxEntry       // 路由规则，一个 string 对应一个 mux 实体，这里的 string 就是注册的路由表达式
+        es []muxEntry               // 路由表达式切片，按路由从最⻓到最短排序，用来实现最⻓前缀匹配
+        hosts bool                  // 是否在任意的规则中带有 host 信息
+    }
+    ```
+   - 流程
+     1. 实例化 Server
+     1. 调用 Server 的 ListenAndServe ()
+     1. 调用 net.Listen ("tcp", addr) 监听端口
+     1. 启动一个 for 循环，在循环体中 Accept 请求
+     1. 对每个请求实例化一个 Conn，并且开启一个 goroutine 为这个请求进行服务 go c.serve () 6 读取每个请求的内容，把请求分配到路由表处理
+     1. 判断 handler 是否为空，如果没有设置 handler，handler 就设置为 DefaultServeMux 8 调用 handler 的 ServeHttp
+     1. 根据 request 选择 handler，并且进入到这个 handler 的 ServeHTTP
+     1. 选择 handler:
+        - map精确匹配
+        - 切片最⻓前缀匹配，`strings.HasPrefix`
+        - 如果没有路由满足，调用 NotFoundHandler 的 ServeHTTP
+   - 连接管理
+    ```go
+    res, err := client.Do(req)
+    func (c *Client) Do(req *Request) (*Response, error) {
+        return c.do(req)
+    }
+
+    func (c *Client) do(req *Request) {
+        // ...
+        if resp, didTimeout, err = c.send(req, deadline); err != nil {
+            // ...
+        }
+        // ...
+    }
+    func send(ireq *Request, rt RoundTripper, deadline time.Time) {
+        // ...
+        resp, err = rt.RoundTrip(req)
+        // ...
+    }
+
+    // 从这里进入 RoundTrip 逻辑   /src/net/http/roundtrip.go: 16
+    func (t *Transport) RoundTrip(req *Request) (*Response, error) {
+        return t.roundTrip(req)
+    }
+
+    func (t *Transport) roundTrip(req *Request) (*Response, error) {
+        // 尝试去获取一个空闲连接，用于发起 http 连接
+        pconn, err := t.getConn(treq, cm)
+        // ...
+    }
+
+    // 重点关注这个函数，返回是一个长连接
+    func (t *Transport) getConn(treq *transportRequest, cm connectMethod) (*persistConn, error) {
+        // 省略了大量逻辑，只关注下面两点
+        // 有空闲连接就返回
+        pc := <-t.getIdleConnCh(cm)
+
+        // 没有创建连接
+        pc, err := t.dialConn(ctx, cm)
+
+    }
+    ```
 ### wiki
 1. 认识
    - 通过这样复杂的检查、判断和设置，实现一些目的。了解了设计思想，看实现是一个证实的过程
