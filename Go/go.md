@@ -1253,12 +1253,14 @@
      1. 去掉了冗余的协程生命周期管理
      1. 降低额外延迟和开销：来源是协程间的频繁交互
      1. 降低加解锁的频率
+     1. 管道和协程为并发编程提供了优雅的、便利的、与传统并发控制不同的方案，并演化出很多并发模式
+        - 传统并发编程问题是共享数据(内存)如何加锁、同步
    - 实践
      1. 多协程对于全部变量的操作不是可预估的，需要有锁或者once保证只运行一次
-     1. go的func的参数，如果不使用闭包参数，则go在运行到时才去拿for中的那个参数，可能导致不准，go闭包会暂存状态
      1. 没有必要阻塞主流程的，并且有完整日志、报警可用的情况下，可以用协程完成
-     1. 每个协程一定要有defer里的recover保护，防止因单一协程引起所有程序全部停止
      1. channel 同步比其他同步原语方法慢
+     1. 每个协程一定要有defer里的recover保护，防止因单一协程引起所有程序全部停止
+     1. go的func的参数，如果不使用闭包参数，则go在运行到时才去拿for中的那个参数，可能导致不准，go闭包会暂存状态，也可用局部变量、协程参数
    - demo
     ```go
     go say("hello")
@@ -1307,7 +1309,7 @@
      1. 方式
         - 锁：原子函数、互斥锁
         - channel
-        - CopyOnWrite：写的时候复制一份出来，然后再替换
+        - copyOnWrite：写哪个就单门复制一份出来，节省内存，快
    - 任务编排
      1. chan：原始的同步方式，每多一级就需要多一个chan
      1. waitGroup：限制多个的同步
@@ -1360,8 +1362,6 @@
         }
         ```
 1. wiki
-   - 管道和协程为并发编程提供了优雅的、便利的、与传统并发控制不同的方案，并演化出很多并发模式
-     1. 传统并发编程问题是共享数据(内存)如何加锁、同步
    - csp：描述两个独立的并发实体通过共享的通讯channel(管道)进行通信的并发模型，go没有全部都实现
      1. 概念：实体 process，通道 channel
      1. 允许使用进程组件来描述系统，它们独立运行，并且只通过消息传递的方式通信
@@ -2495,7 +2495,7 @@
         }
         ```
 1. `sync/singleflight`
-   - 认识：重复函数调用抑制
+   - 认识：抑制重复的函数调用
    - demo：缓存等穿透时减少请求数
     ```go
     func TestDemo_Singleflight(t *testing.T) {
@@ -2578,7 +2578,7 @@
      1. `SwapInt32(&addr,newaddr)`：直接交换，不管旧值，可以返回旧值
      1. `CompareAndSwapInt32(&addr,old,new)`：比较并交换，Compare And Swap 即CAS，判断相等才替换，比较当前addr地址的值是不是old，如果不等于old，就返回false；如果等于old，就把此地址的值为new
 1. 实践
-   - 无符号整数和uinptr类型实现减去一个值：利用计算机补码的规则
+   - 无符号整数和uintptr类型实现减去一个值：利用计算机补码的规则
     ```go
     AddUint32(&x, ^uint32(c-1))
     // 减1简化为
@@ -3324,7 +3324,7 @@
     // 调用处
     <-ratelimiter
     ```
-   - 简单的多协程的并存数limiter：常见于限制外部
+   - 简单的多协程的并存数limiter：计数法限流，常见于限制外部
     ```go
     type ConnLimiter struct {
         concurrentConn int
@@ -3376,8 +3376,8 @@
         for {
             var acticeWorker chan<- int
             var acticeValue int
-            if len(values) > 0 {                                // 利用切片实现，生产者比消费者快的积压效果，不丢数据
-                acticeWorker = worker                           // 由于chan类型的c是一个指针，返回了一个指针，这样go worker(id, c)这个协程就能跑起来
+            if len(values) > 0 {                          // 利用切片实现，生产者比消费者快的积压效果，不丢数据
+                acticeWorker = worker                     // 由于chan类型的c是一个指针，返回了一个指针，这样go worker(id, c)这个协程就能跑起来
                 acticeValue = values[0]
             }
 
@@ -3386,13 +3386,13 @@
                 values = append(values, n)
             case n := <-c2:
                 values = append(values, n)
-            case acticeWorker <- acticeValue:                   // 利用var出来的为nil的channel，实现没有值时阻塞
+            case acticeWorker <- acticeValue:             // 利用var出来的为nil的channel，实现没有值时阻塞
                 values = values[1:]
-            case <-time.After(800 * time.Millisecond):          // 超时时间，和总时长原理相同
+            case <-time.After(800 * time.Millisecond):    // 超时时间，和总时长原理相同
                 fmt.Print("timeout")
-            case <-tick:                                        // 定时报告channel的状态
+            case <-tick:                                  // 定时报告channel的状态
                 fmt.Print("queue len = ", len(values))
-            case <-tm:                                          // 总运行时长，time.After控制
+            case <-tm:                                    // 总运行时长，time.After控制
                 fmt.Print("bye")
                 return
             }

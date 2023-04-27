@@ -183,6 +183,7 @@
    - scheduler
      1. 认识：调度器，基于M:N的G-P-M线程调度模型，![avatar](../images/goroutine_base_schedule.png)
         - 协程调度：模仿linux的进程调度，在其之上自己实现一套。m是machine相当于cpu，g相当于进程，g在m上运行，p按照规则自己给自己做调度，调度室代码+数据
+        - M:N：内核线程和用户线程多对多的关系
      1. GMP
         - g：goroutine，执行的go代码片段/用户态协程
         - m：machine，内核线程
@@ -645,11 +646,11 @@
      1. v 1.5 ——2015/8—— 三⾊标记法, 并发标记清除 -10ms级别
      1. v 1.8 ——2017/2—— hybrid write barrier ————sub ms
    - 一些说法
-     1. STW 是垃圾收集器中的两个“停止世界”阶段。 在这两个阶段中，goroutine 会停止。
-     1. GC（idle）是在没有工作时标记内存的 goroutine。
-     1. MARK ASSIST 是在分配过程中帮助标记内存的 goroutine。
-     1. 一旦垃圾收集器完成，GXX runtime.bgsweep 是内存扫描阶段。
-     1. GXX runtime.gcBgMarkWorker 是帮助标记内存的专用后台 goroutine。
+     1. STW 是垃圾收集器中的两个“停止世界”阶段。 在这两个阶段中，goroutine 会停止
+     1. GC（idle）是在没有工作时标记内存的 goroutine
+     1. MARK ASSIST 是在分配过程中帮助标记内存的 goroutine
+     1. 一旦垃圾收集器完成，GXX runtime.bgsweep 是内存扫描阶段
+     1. GXX runtime.gcBgMarkWorker 是帮助标记内存的专用后台 goroutine
    - 认识
      1. 自动垃圾回收：使用 Go 语言创建对象的时候，我们没有回收 / 释放的心理负担，想用就用，想创建就创建
      1. 如果你想使用 Go 开发一个高性能的应用程序的话，就必须考虑垃圾回收给性能带来的影响
