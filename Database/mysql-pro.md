@@ -165,7 +165,7 @@
      1. 并发读任务可以继续读取旧版本的数据，不至于阻塞
         - 确定读的顺序：使用逻辑时间戳确定读写顺序，保证时间先后顺序即可，不是真正意义时间的描述，对应物理时间戳
           1. SCN(oracle)
-          1. Trx_id(innodb)
+          1. Trx_id(innodb)：事务id
    - 读的分类
      1. 快照读：一致性读，读可见/历史版本，基本不加锁，如读事务开始时之前的版本，可以确保是已经保存的，或者事务自身修改的
         - 每个查询都通过版本检查，只获得自己需要的数据版本，从而大大提高了系统的并发度
@@ -477,6 +477,7 @@
           1. --start/stop-datetime、--start/stop-position
 1. 组成
    - LSN：Log Sequence Number 日志序号，版本标记的计数，单调递增的值，写多少日志，就加多少
+   - trx_id：事务id
    - GTID
      1. 认识：Global Transaction ID 全局事务id，已提交事务的唯一的编号，v5.6。格式：source_id:transaction_id
         - 全局唯一性
