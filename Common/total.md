@@ -350,6 +350,8 @@
           1. spanContext：上下文对象
           1. reference：span间关系
    - 项目应用原理：![avatar](../images/jaeger_in_project.jpg)
+##### 分布式
+1. 架构图：![avatar](../images/common/distribution_struct.png)
 ### 服务治理
 #### 接口
 1. 指标

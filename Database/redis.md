@@ -649,7 +649,7 @@
      1. `cluster addslots {0...5461}`：分配槽位
      1. `cluster replicate xx`：分配为某节点的从
      1. `redis-cli -cluster`：连接集群，c是集群模式
-1. 普通tw架构：tw + sentinel + haproxy + keepalived
+1. 普通tw架构：tw + redis + sentinel + keepalived
    - haproxy：负载均衡
    - keepalived：高可用
 1. 网校tw架构
@@ -862,9 +862,15 @@
      1. 缓存过期时间区间随机
      1. 如果缓存通过代理访问，调整hash算法，确保热KEY均匀分布在不同分片上
    - 热KEY：单机被集中大量访问
-     1. 收集数据（代理层，后台，客户端），提前准备预案
-     1. 数据冗余加编号存多份，通过随机数将key-value分散到不同分片中
-     1. 二级缓存，缓存到内存中
+     1. 探测方式
+        - 业务主动提出，提前准备预案
+        - 监控每个集群solt的qps发现：粒度有点粗
+        - proxy基于时间滑动窗口对每个key做计数发现
+        - redis4.0基于LFU的热点key发现机制
+     1. 解决方案
+        - 数据冗余加编号存多份，通过随机数将key-value分散到不同分片中
+        - 添加二级缓存，缓存到内存中、或者提前载入配置中
+        - 京东的hotkey工具
    - 大key：拆，导致网卡撑爆、慢查询等
      1. 加随机数前缀放到不同分片上
      1. 用hash的hget方法只取精确的
