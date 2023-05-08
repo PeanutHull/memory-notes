@@ -381,6 +381,7 @@
         ```
 1. 布隆过滤器
    - 认识：Bloom Filter，可理解为不怎么精确的set结构，v4.0
+     1. 不存在时肯定不存在
    - 操作
      1. bf.reserve：参数设置，initial_size估计的过大浪费存储空间，过小影响准确率
      1. bf.add/bf.madd
