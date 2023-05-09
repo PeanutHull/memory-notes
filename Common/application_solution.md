@@ -337,7 +337,7 @@
    - 日志：访问日志
 1. 问题
    - 微信为什么要用具有2小时过期的access_token？这个设计思路是：每次验证的时候将（accesskey+accessA+curTimestamp(当前时间戳)+randomNum(随机数)）这个加密，产生一个api_code,发送验证串的时候将api_code和里面的参数带到proxy验证，产生一个access_token和expire_time(token过期时间)。为了校验的时候快速？
-1， 方案
+1. 方案
    - 设计：产品设计、技术实现
    - accessId、accessKey：一般是把所有的请求参数排序后和apisecretkey做hash生成一个签名sign参数，服务器后台只需要按照规则做一次签名计算，然后和请求的签名做比较，如果相等验证通过，不相等就不通过。此排序严格大小写敏感排序。不包括sign本身
    - 参数：两个部分，公共请求参数，业务参数
