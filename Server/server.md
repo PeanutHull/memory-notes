@@ -51,40 +51,28 @@
 ### 服务组件
 #### etcd + confd 分布式配置管理、也可热备监控器
 1. etcd
-   - 认识：分布式高可用强一致性的键值对的开源的数据存储系统，被用来作共享配置、服务注册和发现，依赖其作为分布式协调服务。web程序、kubernetes、openstack都在用，go编写
-     1. 可靠：利用raft算法在集群中同步kv，数据持久化
+   - 认识：分布式高可用强一致性的键值对的开源的数据存储系统，被用来作共享配置、服务注册和发现，依赖其作为分布式协调服务。web、k8s、openstack都在用，go编写
+     1. 可靠：利用raft算法在集群中同步kv、数据持久化，能容忍单点故障，能应对网络分区
      1. 快速：单实例支持每秒2k+读操作、1k写操作
      1. 简单、安全：部署简单、支持ssl验证
    - 应用场景
-     1. 服务发现：集群监控与Leader竞选，本质还是抢锁
-        - 高可用强一致性的服务存储目录
+     1. 服务发现：集群监控与Leader竞选，本质是抢锁和心跳续期。可代替zookeeper，可做配置存储
+        - 高可用强一致性的服务存储目录机制
         - 心跳：注册服务的健康状况机制，如设置key ttl，保持服务心跳
+          1. 使用心跳检测：保证服务稳定，通过etcd的目录关联，而不是直接关联，极大减少耦合性
         - 查找和连接服务：集群中互相连接，如集群中每个机器部署proxy模式的etcd
      1. 分布式锁：etcd提供的API
      1. 分布式队列：在保证队列达到某个条件时再统一按顺序执行，监听不同的目录节点，协调运行
-   - 特性
-     1. 能容忍单点故障，能应对网络分区
    - 功能
-     1. 存储在集群的高可用kv
-     1. 提交版本revision单调递增
-     1. key的底层存储是有序排列的，可以顺序遍历，天然支持用seek和scan实现类似目录的高效遍历
-     1. 同一个key维护多个历史版本，用于实现watch机制，可以用compact删除
-     1. 支持watch机制监听key变化，或某个目录(key前缀)的连续变化，可用于分布式系统的配置分发，状态同步
-     1. 支持复杂事务，如if...then...else...的能力
-     1. 支持lease租约机制实现key的自动过期，会返回租约id，etcd帮忙挂上关系，到期了去删除，可以续租
-   - 最佳实践
-     1. 使用心跳检测：保证服务稳定，通过etcd的目录关联，而不是直接关联，极大减少耦合性
-     1. 可代替zookeeper，可做配置存储
+     1. key
+        - 高可用：存储在集群的高可用kv
+        - 有序排列可顺序遍历：key的底层存储是有序排列的，可以顺序遍历，天然支持用seek和scan实现类似目录的高效遍历
+        - 过期机制：支持lease租约机制实现key的自动过期，会返回租约id，etcd帮忙挂上关系，到期了去删除，可以续租
+        - 单调递增的历史版本：同一个key维护多个历史版本，用于实现watch机制，可以用compact删除，提交版本revision单调递增
+        - watch机制：支持watch机制监听key变化，或某个目录(key前缀)的连续变化，可用于分布式系统的配置分发，状态同步
+        - 复杂事务支持复杂事务，如if...then...else...的能力
    - 使用
-     1. 连接
-        - http+json
-        - grpc：更高效
-     1. 数据操作：`etcdctl set/get/update/rm/mk/ [/xx/xx] xx`，`etcdctl mkdir/setdir/updatedir/rmdir/ls`
-     1. watch：`etcdctl watch/exec-watch`，值一旦变化则输出/执行命令
-     1. txn：事务，`cli.Txn(context.TODO()).If().Then(xx, xx).Commit()`
-        - Txn()：创建
-        - If()/Then()/Else()：条件判断
-        - Commit()：提交
+     1. curd：`etcdctl set/get/update/rm/mk/ [/xx/xx] xx`，`etcdctl mkdir/setdir/updatedir/rmdir/ls`
      1. lease：续约
         - Grant()：创建一个TTL的Lease，Lessor会将Lease信息持久化存储在boltdb中，`put a=1 with lease=5`
         - Revoke()：撤销Lease并删除其关联的数据
@@ -93,6 +81,14 @@
         - KeepAliveOnce()
         - Leases()
         - Close()
+     1. watch：`etcdctl watch/exec-watch`，值一旦变化则输出/执行命令
+     1. txn：事务，`cli.Txn(context.TODO()).If().Then(xx, xx).Commit()`
+        - Txn()：创建
+        - If()/Then()/Else()：条件判断
+        - Commit()：提交
+     1. 连接
+        - http+json
+        - grpc：更高效
    - 运维
      1. 基本
         - etcd 服务端，etcdctl 客户端
@@ -102,13 +98,7 @@
      1. 安装最少3个节点
      1. 集群操作：`etcdctl member list/remove/add`，节点管理
      1. 备份数据：`etcdctl backup`
-   - 比较：![avatar](../images/serviceSupport.png)
-     1. Consul：内置服务注册与发现框架、分布一致性协议实现、健康检查、KV存储、多数据中心方案，go编写
-     1. Zookeeper：ZooKeeper是一个分布式的，开放源码的分布式应用程序协调服务，是Google的Chubby一个开源的实现，是Hadoop和Hbase的重要组件。它是一个为分布式应用提供一致性服务的软件，提供的功能包括：配置维护、域名服务、分布式同步、组服务等。现在都用下边俩了，zk out了
-     1. Nacos ：是构建以“服务”为中心的现代应用架构 (例如微服务范式、云原生范式) 的服务基础设施致力于发现、配置和管理微服务。并且提供了一组简单易用的特性集，能够快速实现动态服务发现、服务配置、服务元数据及流量管理。帮助开发人员更敏捷和容易地构建、交付和管理微服务平台。
-     1. Apollo
-     1. Eureka：netflix的服务发现框架，基于REST服务，定位运行在AWS域中的中间层服务，负载均衡和中间层服务故障转移目的。SpringCloud将它集成在其子项目spring-cloud-netflix中，以实现服务发现功能。主要是包含两个组件，Eureka Server和Eureka Client
-   - 分布式锁
+   - 分布式锁demo
     ```go
     // 特性使用：事务txn、lease租约、watch监听
     // 建立连接
@@ -177,6 +167,40 @@
 	fmt.Println("处理任务")
 	time.Sleep(5 * time.Second)
     ```
+1. 服务注册中心的比较
+   - 认识：![avatar](../images/serviceSupport.png)
+   - 分类
+     1. Consul：内置服务注册与发现框架、分布一致性协议实现、健康检查、KV存储、多数据中心方案，go编写
+     1. Zookeeper：ZooKeeper是一个分布式的，开放源码的分布式应用程序协调服务，是Google的Chubby一个开源的实现，是Hadoop和Hbase的重要组件。它是一个为分布式应用提供一致性服务的软件，提供的功能包括：配置维护、域名服务、分布式同步、组服务等。现在都用下边俩了，zk out了
+     1. Nacos ：是构建以“服务”为中心的现代应用架构 (例如微服务范式、云原生范式) 的服务基础设施致力于发现、配置和管理微服务。并且提供了一组简单易用的特性集，能够快速实现动态服务发现、服务配置、服务元数据及流量管理。帮助开发人员更敏捷和容易地构建、交付和管理微服务平台。
+     1. Apollo
+     1. Eureka：netflix的服务发现框架，基于REST服务，定位运行在AWS域中的中间层服务，负载均衡和中间层服务故障转移目的。SpringCloud将它集成在其子项目spring-cloud-netflix中，以实现服务发现功能。主要是包含两个组件，Eureka Server和Eureka Client
+1. etcd实现解读
+   - 整体
+     1. 流程：startEtcd————NewServer————bootstrap
+     1. 组成
+        - etcd server
+        - applierV3
+        - raft
+        - WAL
+        - raftLog
+   - raft
+     1. 认识
+        - 单独剥离出来，使用户可快速接入raft能力
+        - 其设计屏蔽了网络、存储等模块，只提供接口交由上层应用者来实现：使其具有很高的可定制性和可测试性
+        - 有wal机制确保正确持久化、使用逻辑时钟而不是真实时间
+        - raftexample是示例程序
+     1. 组成：startRaft、serveRaft、serveChannels
+        - kvstore：持久化模块
+        - raftnode：核心raft组件
+          1. campaign：选举
+          1. MsgVote、MsgPreVote：用于发起投票
+          1. heartbeatElapsed、electionElapsed：两个计时器作心跳
+        - httpKVAPI：http对外服务
+     1. 主要的3个交互通道
+        - commitC：用于将 entries 提交到持久化模块中
+        - proposeC：用于日志更新
+        - confChangeC：提交配置变更信息
 1. confd
    - 认识：是一个轻量级的配置管理工具，应用非常广泛的是etcd+confd，后端支持的数据类型有：etcd、consul、vault、environment variables、redis、zookeeper、dynamodb、stackengine、rancher
      1. 可通过查询etcd，结合配置模板引擎，用于保持本地配置最新
