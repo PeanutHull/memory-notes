@@ -10,9 +10,6 @@
         - 添加路由：`Engine.addRoute()`
         - 路由匹配：使用julienschmidt/httprouter
      1. context
-     1. 
-     1. 
-     1. 
    - validator
      1. 功能
         - 自定义约束
@@ -53,6 +50,11 @@
         - 唯一性：`unqiue|unqiue=field`，可约束数组/切片的元素、map的值、struct的字段
         - 邮件：`email`
      1. 其他：ASCII/UNICODE字母、数字、十六进制、十六进制颜色值、大小写、RBG颜色值，HSL颜色值、HSLA颜色值、JSON 格式、文件路径、URL、base64编码串、ip地址、ipv4、ipv6、UUID、经纬度等
+   - 实现
+     1. httprouter：基于基数树
+        - radix tree：更节省空间的字典树，该节点是唯一的子树的话，就和父节点合并
+          1. root tree 用slice而不是用map并不是为了内存考虑，在短长度的情况下，slice的速度会比map快很多
+     1. middleware：基于HandlersChain []HandlerFunc来确认事件内容
 1. beego
    - 用于开发api、web的http框架，自带orm，大而全，最后一次更新20年12月
      1. 简单：RESTFul、mvc，支持热编译，自动化打包
@@ -1672,6 +1674,12 @@
      1. go-playground/validator
      1. golang-jwt/jwt
      1. logker日志库 
+   - 实现
+     1. 命令行的交互
+        - survey/v2：交互式命令行工具库
+        - spf13/cobra：眼镜蛇，命令行工具
+     1. 框架整体：使用exec函数，借助git拷贝，然后删除.git文件夹
+     1. 动态生成mysql：使用text/template包，提前写好模板字符串，一个个写入到文件中
 1. 目标
    - 编码能力和质量
    - 并发编程实践、设计模式实践

@@ -209,7 +209,7 @@
      1. 既满足了快速的插入删除性能，又不会出现太大的空间冗余
      1. 普通链表linkedlist附加空间相对太高，prev和next指针就要占16byte，浪费空间；另外每个节点的内存都是单独分配，会加剧内存的碎片化，影响内存管理效率
    - 结构
-     1. quicklist 是 ziplist 和 linkedlist 的混合体，它将 linkedlist 按段切分，每一段使用 ziplist 来紧凑存储，多个 ziplist 之间使用双向指针串接起来。
+     1. 是ziplist和linkedlist的混合体，将linkedlist按段切分，每一段使用ziplist来紧凑存储，多个 ziplist 之间使用双向指针串接起来
      1. 快速push/pop操作，默认首尾两个ziplist不压缩，配置决定
    - 配置
      1. ziplist长度默认8kb，配置参数list-max-ziplist-size
