@@ -53,7 +53,7 @@
    - 实现
      1. httprouter：基于基数树
         - radix tree：更节省空间的字典树，该节点是唯一的子树的话，就和父节点合并
-          1. root tree 用slice而不是用map并不是为了内存考虑，在短长度的情况下，slice的速度会比map快很多
+          1. root tree，存储http方法的映射，用slice而不是用map并不是为了内存考虑，在短长度的情况下，slice的速度会比map快很多
      1. middleware：基于HandlersChain []HandlerFunc来确认事件内容
 1. beego
    - 用于开发api、web的http框架，自带orm，大而全，最后一次更新20年12月
@@ -126,6 +126,14 @@
 #### db相关
 1. ORM
    - gorm
+     1. 组成
+        - StructField 结构体：字段配置
+        - Relationship 结构体：预定义链表的配置，根据配置相应操作
+        - Scope：解析模型，拼接sql。比字段解析
+     1. 实现
+        - 钩子函数：各种before、after的注入
+        - sql执行：`scope.SQLDB().QueryRow(scope.SQL, scope.SQLVars...).Scan(primaryField.Field.Addr().Interface())`
+        - 各种反射的应用：判断类型、情况
    - xorm
    - ent
    - Gaea：小米基于mysql协议的数据库中间件，支持分库分表、sql路由、读写分离等基本特性

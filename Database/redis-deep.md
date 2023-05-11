@@ -319,10 +319,12 @@
 #### set
 1. set
    - 实现
-     1. 有序数组，满足即优先使用
-        - 数据都是整数
-        - 元素个数要小于512
-     1. hashtable
+     1. intset：有序数组，满足元素都是整数且个数小于512优先使用
+     1. hashtable：没有拉链即可，预先分配一个固定大小的数组来存储键值对，使用散列函数生产数组索引
+     1. listpack：v7.2新增，sds优先使用listpack，为提高内存利用率和操作效率，因为hashtable的空间开销和碰撞概率都比较高
+        - 阈值条件
+          1. set-max-listpack-entries：最大元素个数，默认128
+          1. set_max_listpack_value：最大元素大小，默认64
 1. sortedset
    - 认识：有序集合，存储附带一个得分的一组数据，用skiplist支持快速按照得分值、得分区间获取数据
    - 实现：skiplist + hashtable
