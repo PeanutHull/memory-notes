@@ -326,7 +326,7 @@
           1. set-max-listpack-entries：最大元素个数，默认128
           1. set_max_listpack_value：最大元素大小，默认64
 1. sortedset
-   - 认识：有序集合，存储附带一个得分的一组数据，用skiplist支持快速按照得分值、得分区间获取数据
+   - 认识：有序集合，存储附带一个得分的一组数据，用skiplist，支持快速按照得分值、得分区间获取数据
    - 实现：skiplist + hashtable
      1. ziplist，满足即优先使用
         - 所有数据的大小都小于64byte

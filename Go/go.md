@@ -83,9 +83,9 @@
             ```
         - `delete(m map[T]T1, key T)`：map
      1. 资源操作
-        - make：只用于slice、map、chan的内存分配，返回有初始值非零的T类型，帮忙将数据初始化好
+        - make：只用于slice、map、chan三种类型的内存分配，返回有初始值非零的T类型，帮忙将数据初始化好，参数是类型
           1. 因为这三种类型就是引用类型，就没有必要返回他们的指针
-        - new：用于任意类型的内存分配，返回传入类型的零值的指针，会将分配出来的内存置零
+        - new：用于任意类型的内存分配，返回传入类型的零值的指针，会将分配出来的内存置零，参数是类型
         - close：`func close(c chan<- Type)`，关闭
      1. 其他
         - 异常
@@ -2210,7 +2210,7 @@
      1. 场景：在一个goroutine等待一组goroutine执行完成的通知时
      1. 原理：拥有一个内部计数器。当计数器等于0时，则Wait()方法会立即返回。否则一直阻塞执行Wait()方法的goroutine
      1. 特点：WaitGroup 是可以重用的
-     1. 替代实现：低级的用轮询实现，初级的可以多用一个done的channel阻塞实现等待某个goroutine结束的通知，每次循环进出这个channel；多个可以使用通道切片来分别存储，使用waitGroup更加高效优雅
+     1. 替代实现：低级的用轮询+锁实现，初级的可以多用一个done的channel阻塞实现等待某个goroutine结束的通知，每次循环进出这个channel；多个可以使用通道切片来分别存储，使用waitGroup更加高效优雅
      1. 类似
         - linux中的barrier
         - pthread(POSIX 线程)中的barrier
@@ -2255,7 +2255,7 @@
      1. 不期望的Add时机：add和done写在了一起，wait不起作用，可以提前add好
      1. 前一个Wait还没结束就重用WaitGroup：因为可重用，如果没有恢复到零值就重用会panic
 1. 条件变量/发送信号
-   - 认识：`sync.Cond`，为等待/通知场景下的并发问题提供支持，通常应用于等待某个条件的一组goroutine，等条件变为true时其中一个或所有的goroutine都会被唤醒执行。用于发出信号（一对一）或广播信号（一对多）到goroutine，特定场景
+   - 认识：`sync.Cond`，为等待/广播场景下的并发问题提供支持，通常应用于等待某个条件的一组goroutine，等条件变为true时其中一个或所有的goroutine都会被唤醒执行。用于发出信号（一对一）或广播信号（一对多）到goroutine，特定场景
      1. caller和waiter的数量对应是不确定的，如N:M
      1. 原理：关联的Locker实例可以通过c.L访问，它内部维护着一个先入先出的等待队列，操作是移除并唤醒
      1. 违反go的基本原则：不要通过共享进行通信；而是通过通信共享
@@ -2268,7 +2268,7 @@
         - 和一个Locker关联，可以利用这个 Locker 对相关的依赖条件更改提供保护
         - 可以同时支持signal和broadcast方法，channel只能同时支持一种
         - Broadcast 方法可以被重复调用。等待条件再次变成不满足的状态后，我们又可以调用 Broadcast 再次唤醒等待的 goroutine。这也是 Channel 不能支持的，适用于每次改变了就通知
-   - 方法：是计算机科学中条件变量的通用方法名
+   - 方法：是计算机科学中条件变量的通用方法名。每个Cond都会关联一个Lock（*sync.Mutex or *sync.RWMutex），当修改条件或调用Wait方法时，必须加锁保护condition
      1. `NewCond()`：创建，需要关联一个Locker接口的实例
      1. `Signal`：唤醒一个，从等待队列中移除第一个goroutine并唤醒
      1. `Broadcast`：唤醒所有
@@ -4536,8 +4536,10 @@
         }
     }
     ```
-   - 测试框架
+   - 单元测试框架
      1. GoConvey
+        - 自动监控文件修改并启动测试，并可以将测试结果实时输出 到 Web 界面
+        - 提供了丰富的断言简化测试用例的编写
      1. GoStub
      1. GoMock
      1. Monkey

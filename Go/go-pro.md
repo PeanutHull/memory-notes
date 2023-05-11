@@ -163,6 +163,8 @@
      1. 高效的调度执行
      1. 公平的调度策略
      1. 无大小限制的goroutine栈
+     1. 协作式的抢占式调度
+        - v1.14之前程序只能依靠Goroutine 主动让出 CPU 资源才能触发调度。这种方式存在问题有：某些 Goroutine 可以长时间占用线程，造成其它 Goroutine 的饥饿 · 垃圾回收需要暂停整个程序（Stop-the-world，STW），最长可能需要几分 钟的时间，导致整个程序无法工作。
    - 认识
      1. goroutine stack大小默认设置2k，可轻易创建几十万goroutine不用担心内存耗尽等问题
      1. 遇到阻塞就换出
@@ -195,7 +197,8 @@
           1. 维护了一个可执行G的队列，分自己/全局
      1. 组成
         - g0是特殊的协程，负责创建
-        - sysmon：用于监控的线程，改变goroutine的抢占标志位，goroutine下一次调用时runtime可以将其抢占
+        - sysmon：监控协程，变动的周期性检查
+          1. 改变goroutine的抢占标志位，goroutine下一次调用时runtime可以将其抢占
           1. 释放闲置超过5分钟的span物理内存
           1. 如果超过2分钟没有垃圾回收，强制执行
           1. 将长时间未处理的netpoll结果添加到任务队列
@@ -639,7 +642,25 @@
     }
     ```
 ### 内存管理
+1. TCMalloc
+   - 认识：Thread Cache Memory alloc 线程缓存内存分配器，基于FreeList实现，并引入了线程级别的缓存，性能更加优异。google开源
+     1. 给线程添加内存缓存，减少竞争从而提高性能，当线程内存不足时才会加锁去共享的内存中获取内存
+   - 逻辑架构
+     1. ThreadCache：线程缓存
+     1. CentralFreeList(CentralCache)：中央缓存
+     1. PageHeap：堆内存
+   - 概念
+     1. Page
+     1. Span
+        - SpanList
+     1. Object
+        - SizeClass
 1. GC
+   - GC触发时机
+     1. 主动触发：调用runtime.GC
+     1. 被动触发
+        - 系统监控由runtime.forcegcperiod变量控制的触发条件，默认周期2分钟
+        - 使用步调算法Pacing，核心思想是控制内存增长的比例
    - 发展
      1. v 1.1 ——2013/5 ——STW ——————————百ms-⼏百ms级别
      1. v 1.3 ——2014/6 ——Mark STW, Sweep 并⾏ — 百ms级别
@@ -656,6 +677,7 @@
      1. 如果你想使用 Go 开发一个高性能的应用程序的话，就必须考虑垃圾回收给性能带来的影响
         - GC STW(Stop the World) 的存在大的哈希表是非常要命的
           1. 堆上有4千万个对象，GC的扫描过程就超过了4秒钟
+     1. 是一种比例GC, GC结束时的堆大小和上一次GC存活堆大小成比例
    - local cache的优化思路
      1. offheap（堆外内存），GC 只会扫描堆上的对象，那就把对象都搞到栈上去，但是这样这个缓存库就高度依赖 offheap 的 malloc 和 free 操作了
      1. 参考 freecache 的思路，用 ringbuffer 存 entry，绕过了 map 里存指针
@@ -803,19 +825,6 @@
           1. Go 内存模型的官方文档并没有明确给出atomic的保证，相关研究太复杂，现阶段还是不要使用atomic来保证顺序性，
 1. wiki
    - 指针大小：8字节，64位系统的寻址范围
-   - TCMalloc
-     1. 认识：Thread Cache Memory alloc 线程缓存内存分配器，基于FreeList实现，并引入了线程级别的缓存，性能更加优异。google开源
-        - 给线程添加内存缓存，减少竞争从而提高性能，当线程内存不足时才会加锁去共享的内存中获取内存
-     1. 逻辑架构
-        - ThreadCache：线程缓存
-        - CentralFreeList(CentralCache)：中央缓存
-        - PageHeap：堆内存
-     1. 概念
-        - Page
-        - Span
-          1. SpanList
-        - Object
-          1. SizeClass
    - go的内存对齐和unsafe包的关系和特点
      1. go可以设置内存对齐的字节数，默认为8字节
      1. 内存对齐为什么可以做到原子性？
