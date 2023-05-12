@@ -210,7 +210,7 @@
      1. 重分配：partition reassign：发生在分区数变化，或分区更改到其他broker
    - 多副本同步
      1. 认识：处理follower批量拉取数据同步leader
-     1. 具体的可靠性由生产者来决定的：`request.required.acks`
+     1. 消息生产可靠性：`request.required.acks`
         - 0，发过去就完事了，不关心broker是否处理成功，可能丢数据
         - 1，当写Leader成功后就返回,其他的replica都是通过fetcher去同步的,所以kafka是异步写，主备切换可能丢数据
         - -1，要等到ISR里大于min.insync.replicas同步成功，才能返回成功，延时取决于最慢的机器。强一致，不会丢数据
