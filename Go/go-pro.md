@@ -4,7 +4,7 @@
 1. array
    - 认识
      1. 是一个在栈上分配的连续内存
-     1. 编译期间的类型检查时会检测下标是否越界，因此使用起来比C语言的数组安全
+     1. 编译期的类型检查会检测下标是否越界，因此使用起来比C语言的数组安全
    - 组成
      1. 编译期间
         ```go
@@ -30,7 +30,7 @@
         }
         ```
 1. slice
-   - 认识：内部通过指针引用底层数组，设定相关属性将数据读写操作限定在指定的区域内。组成有
+   - 认识：内部通过指针引用底层数组，设定相关属性将数据读写操作限定在指定的区域内
      1. 会判断越界
      1. 旧底层数组仍然会被旧slice引用，新slice和旧slice不再共享同一个底层数组
    - 组成
@@ -53,7 +53,8 @@
      1. copy是深拷贝
 1. map
    - 认识
-     1. 解决hash冲突：主要用两个数组分别存储键和值(数组是内存上的连续空间)，同时正常桶的bmap关联溢出桶的bmap实际构成了链表关系
+     1. 解决hash冲突：用两个数组分别存储键和值
+        - 正常桶的bmap关联溢出桶的bmap，实际构成了链表关系
      1. 写数据时并没有单独维护键值对的顺序，php5通过一个全局链表维护了map里元素的顺序
    - 组成
      1. 结构
@@ -70,7 +71,7 @@
 
           1. flags：状态标识，比如正在被写、buckets和oldbuckets在被遍历、等量扩容(Map扩容相关字段)
         - bmap：包含两个数组分别存放key和value
-          1. topbits：长度为8的数组，[]uint8，元素为：key获取的hash的高8位，遍历时对比使用，提高性能
+          1. topbits：长度为8的数组，[]uint8，元素为：key的hash的高8位，遍历时对比使用，提高性能
           1. keys：长度为8的数组，[]keytype，元素为：具体的key值
           1. elems：长度为8的数组，[]elemtype，元素为：键值对的key对应的值
           1. overflow：指向的hmap.extra.overflow溢出桶里的bmap
@@ -158,172 +159,158 @@
    - 遍历当前 goroutine 所注册的 defered 函数并通过 reflectcall 调用遍历到的函数，如果某个 defered 函数调用了recover（对应到runtime的gorecover函数）则使用 mcall(recovery)  恢复程序的正常流程，否则执行完所有的 defered 函数之后打印出 panic 的栈信息然后退出程序
 ### 协程
 1. goroutine
-   - 特点、设计目标
-     1. 需要协程时方便使用
-     1. 高效的调度执行
-     1. 公平的调度策略
-     1. 无大小限制的goroutine栈
-     1. 协作式的抢占式调度
-        - v1.14之前程序只能依靠Goroutine 主动让出 CPU 资源才能触发调度。这种方式存在问题有：某些 Goroutine 可以长时间占用线程，造成其它 Goroutine 的饥饿 · 垃圾回收需要暂停整个程序（Stop-the-world，STW），最长可能需要几分 钟的时间，导致整个程序无法工作。
    - 认识
-     1. goroutine stack大小默认设置2k，可轻易创建几十万goroutine不用担心内存耗尽等问题
-     1. 遇到阻塞就换出
-     1. M结束系统调用会被放进闲置M链表
-     1. 由于当前栈可能还有很多其他操作，栈会继续增长，切换的时候会切到systemstack
-     1. 公平性和抢占
+     1. 高效、公平的调度执行
+        - 协作式：遇到阻塞就换出
+        - 抢占式：资源调度
+     1. 方便使用
+        - 无大小限制的goroutine栈：goroutine stack默认2k，可轻易创建几十万goroutine不用担心内存耗尽等问题
+1. scheduler
+   - 认识：调度器，基于M:N的G-P-M线程调度模型，![avatar](../images/goroutine_base_schedule.png)
+     1. 协程调度：模仿linux的进程调度，在其之上自己实现一套
+     1. M:N：内核线程和用户线程多对多的关系
+   - 设计
+     1. 资源池、资源池分离：对有一定规模约束的资源进行池化管理，如内存池、机器池、协程池、线程池等
+     1. 计算存储分离，分别从逻辑、数据结构两个角度进行设计，规划二者的耦合关系
+   - GMP
+     1. g：goroutine，执行的go代码片段/用户态协程，g在m上运行
+        - g的栈采用Growable stack方案，在函数入口有栈检查的指令，如需扩容栈，会拷贝到新申请的更大的栈
+        - g0是特殊的协程，负责创建
+        - runtime用后台线程来运行一些相对特别的G，如Network Poller、Timer
+          1. sysmon：监控协程，变动的周期性检查
+             - 改变goroutine的抢占标志位，goroutine下一次调用时runtime可以将其抢占
+             - 释放闲置超过5分钟的span物理内存
+             - 如果超过2分钟没有垃圾回收，强制执行
+             - 将长时间未处理的netpoll结果添加到任务队列
+             - 向长时间运行的G任务发出抢占调度
+             - 收回因syscall长时间阻塞的P
+     1. m：machine，内核线程，和一个p互相绑定，负责执行当前m绑定的p的g队列及全局g队列，所以g可被并发执行
+        - m结束系统调用会被放进闲置m链表
+     1. p：processor，对处理器的抽象，通常和逻辑cpu数量相同，p按照规则自己给自己做调度，调度室代码+数据，和一个m互相绑定
+        - 维护了一个可执行G的队列，分为自己/全局
+   - 组成
+     1. 调度算法：依据有优先级、时间片
         - 认识
           1. 长时间霸占cpu的必然引起不公平，需要进行抢占
-          1. go对于轮询更加合适：有runtime、golang编译器控制代码、正好有检测是否扩栈的指令
-          1. 有个理论缺陷：若有一个死循环，里面的所有代码都不包含check指令，依然会无法抢占，基本不存在情况
+          1. go对于轮询更加合适：有runtime、golang编译器控制代码、正好搭上检测是否扩栈的指令一起
+          1. 理论缺陷：若有一个死循环，里面的所有代码都不包含check指令，依然会无法抢占，基本不存在情况
           1. 系统调用问题：线程一旦进入系统调用会脱离runtime的控制无法抢占，是否会一直阻塞？解决方案是不抢占，由其主动让出
              - 线程A在系统调用之前handoff让出Processor的执行权，唤醒一个空闲线程B做交接。当线程A从系统调用返回时，不会继续执行，而是将G放到run queue，然后进入idle状态等待唤醒，这样一来便能确保活跃线程数依然与Processor数量相同
+        - 调度时机
+          1. 创建新协程
+          1. io、select
+          1. timer：定时器
+          1. channel
+          1. netPoll：网络轮询器
+          1. syscall：函数调用(有时)
+          1. 等待锁：G和M锁定
+          1. runtime.Gosched()
+          1. 抢占
         - 抢占常见方式
           1. 中断：通过信号，系统依赖
           1. 轮询：效率低一些
-     1. G的栈采用的是Growable stack方案，在函数入口会有栈检查的指令，如需扩容栈，会拷贝到新申请的更大的栈
-     1. Go runtime还会用Background thread来运行一些相对特别的G（如 Network Poller、Timer）
-   - scheduler
-     1. 认识：调度器，基于M:N的G-P-M线程调度模型，![avatar](../images/goroutine_base_schedule.png)
-        - 协程调度：模仿linux的进程调度，在其之上自己实现一套。m是machine相当于cpu，g相当于进程，g在m上运行，p按照规则自己给自己做调度，调度室代码+数据
-        - M:N：内核线程和用户线程多对多的关系
-     1. GMP
-        - g：goroutine，执行的go代码片段/用户态协程
-        - m：machine，内核线程
-          1. 和一个P互相绑定
-          1. 负责执行G的调度，通过调度当前M绑定的P的G队列、以及全局G队列，达到G可被并发执行的目的
-          1. 负责执行P调度过来的当前G
-        - p：processor，对处理器的抽象，通常和逻辑cpu数量相同
-          1. 和一个M互相绑定
-          1. 维护了一个可执行G的队列，分自己/全局
-     1. 组成
-        - g0是特殊的协程，负责创建
-        - sysmon：监控协程，变动的周期性检查
-          1. 改变goroutine的抢占标志位，goroutine下一次调用时runtime可以将其抢占
-          1. 释放闲置超过5分钟的span物理内存
-          1. 如果超过2分钟没有垃圾回收，强制执行
-          1. 将长时间未处理的netpoll结果添加到任务队列
-          1. 向长时间运行的G任务发出抢占调度
-          1. 收回因syscall长时间阻塞的P
-   - 调度算法：优先级、时间片相关，
-     1. 创建新协程
-     1. io、select
-     1. timer：定时器
-     1. channel
-     1. netPoll：网络轮询器
-     1. syscall：函数调用(有时)
-     1. 等待锁：G和M锁定
-     1. runtime.Gosched()
-     1. 抢占
-   - 特性
      1. 逃逸分析
-   - 思想
-     1. 资源池、资源池分离：对有一定规模约束的资源进行池化管理，如内存池、机器池、协程池、线程池等
-     1. 计算存储分离，分别从逻辑、数据结构两个角度进行设计，规划二者的耦合关系
-#### Channel
-1. 数据类型：runtime.hchan
-1. 方法
-   - makechan：目标生成hchan对象，makechan64只做了size检查，底层都是makechan
-   - chansend：chansend1调用chansend
-   - chanrecv1、chanrecv2：一个参数、两个参数，会调用chanrecv
-   - closechan
-#### Sync
-1. sync.Map
-   - 实现
-     1. 空间换时间。通过冗余的两个数据结构（只读的 read 字段、可写的 dirty），来减少加锁对性能的影响
-     1. 优先从read字段读取、更新、删除，因为对 read 字段的读取不需要锁
-     1. 动态调整：miss 次数多了之后，将 dirty 数据提升为 read，避免总是从 dirty 中加锁读取
-     1. double-checking：加锁之后先还要再检查 read 字段，确定真的不存在才操作 dirty 字段
-     1. 延迟删除：删除一个键值只是打标记，只有在提升 dirty 字段为 read 字段的时候才清理删除的数据
-   - 认识：通过空间换时间的方式，内部使用键固定的read和包含所有键值对的dirty两个map来进行读写分离，降低锁时间来提高效率
-     1. 所有对read上已有的键值对的增删改查都是无锁实现（read中标记删除的例外），基于使用场景“写特别少几乎固定”也就是说基本用不上锁，从而大大提高性能
-     1. read和dirty存储的都是值的地址，是共享地址的，就是说所有对read的无锁增删改查都会同步反馈在dirty上
-     1. 通过读写分离，降低锁时间来提高效率，写dirty，读read
-     1. dirty始终反映着最新值，从而为快速切换做准备
-   - 特性
-     1. 新写入的 key 会保存到 dirty 中，如果这时 dirty 为 nil，就会先新创建一个 dirty，并将 read 中未被删除的元素拷贝到 dirty。当 dirty 为 nil 的时候，read 就代表 map 所有的数据；当 dirty 不为 nil 的时候，dirty 才代表 map 所有的数据
-     1. 调用 Load 或 LoadOrStore 函数时，如果在 read 中没有找到 key，则会将 misses 值原子地增加 1，当 misses 增加到和 dirty 的长度相等时，会将 dirty 提升为 read。以期减少“读 miss”
-   - 关于range：如果发现read表和dirty表不一致，那么会提前触发一次表替换（因为Range本身时间复杂度为O(N)所以可以分摊部分消耗。Range可以通过返回false提前中断，不过考虑到中间可能涉及到的替换表，时间复杂度不会有太多的变化
-   - 关于kv类型：尽量避免使用函数、切片、map作为key，因为他们不可比较
-#### Mutex
-1. 组成
+1. Channel
+   - 数据类型：runtime.hchan
+     1. sudog
+   - 方法
+     1. makechan：目标生成hchan对象，makechan64只做了size检查，底层都是makechan
+     1. chansend：chansend1调用chansend
+     1. chanrecv1、chanrecv2：一个参数、两个参数，会调用chanrecv
+     1. closechan
+1. Context
+   - 认识：是个接口，没有属性的哦
+   - 方法
+     1. WithTimeout
+        ```go
+        func WithTimeout(parent Context, timeout time.Duration) (Context, CancelFunc) {
+            // 当前时间+timeout就是deadline
+            return WithDeadline(parent, time.Now().Add(timeout))
+        }
+        ```
+     1. WithDeadline
+        ```go
+        func WithDeadline(parent Context, d time.Time) (Context, CancelFunc) {
+            // 如果parent的截止时间更早，直接返回一个cancelCtx即可
+            if cur, ok := parent.Deadline(); ok && cur.Before(d) {
+                return WithCancel(parent)
+            }
+            c := &timerCtx{
+                cancelCtx: newCancelCtx(parent),
+                deadline:  d,
+            }
+            // 同cancelCtx的处理逻辑
+            propagateCancel(parent, c)
+            dur := time.Until(d)
+            if dur <= 0 {
+                // 当前时间已经超过了截止时间，直接cancel
+                c.cancel(true, DeadlineExceeded)
+                return c, func() {
+                    c.cancel(false, Canceled)
+                }
+            }
+            c.mu.Lock()
+            defer c.mu.Unlock()
+            if c.err == nil {
+                // 设置一个定时器，到截止时间后取消
+                c.timer = time.AfterFunc(dur, func() {
+                    c.cancel(true, DeadlineExceeded)
+                })
+            }
+            return c, func() { c.cancel(true, Canceled) }
+        }
+        ```
+1. Cond
+   - 认识：Cond 的实现非常简单，或者说复杂的逻辑已经被 Locker 或者 runtime 的等待队列实现了
+   - 结构
     ```go
-    type Mutex struct {
-        state   int32           // 通过state字段，可以知道锁是否已经被某个 goroutine 持有、当前是否处于饥饿状态、是否有等待的 goroutine 被唤醒、等待者的数量等信息
-        sema    uint32
-    }
-    ```
-1. 设计历程
-   - 第一版：会排队等待获取互斥锁
-   - 第二版：排队的唤醒之后要和正在请求锁的 goroutine 进行竞争。这会让 CPU 中正在执行的 goroutine 有更多的机会获取到锁，在一定程度上提高了程序的性能，还能优化
-   - 第三版：获取不到锁会通过自旋一定次数后，再执行原来的逻辑，更加公平
-     1. 因为一般抢锁临界区都很小，节约了休眠唤醒的成本
-   - 1.9：增加饥饿模式，进入饥饿状态，优先让等待者先获取到锁。不公平的等待时间限制在1ms，新来的同学主动谦让一下，给老同志一些机会
-   - 2019：对于 Mutex 唤醒后持有锁的那个 waiter，调度器可以有更高的优先级去执行，这已经是很细致的性能优化了
-1. 使用
-    ```go
-    const (
-        mutexLocked      = 1 << iota // 加锁标识位置
-        mutexWoken                   // 唤醒标识位置
-        mutexStarving                // 锁饥饿标识位置
-        mutexWaiterShift = iota      // 标识 waiter的起始bit位置
-    )
+    type Cond struct {
+        noCopy noCopy
 
-    // 扩展一个 Mutex 结构
-    type Mutex struct {
-        sync.Mutex
+        // 当观察或者修改等待条件的时候需要加锁
+        L Locker
+
+        // 等待队列
+        notify  notifyList
+        checker copyChecker                                                 // nocpoy是静态检查，copyChecker是运行时检查
     }
 
-    // 没有加锁，这个看的都是调用的那一时刻的锁的状态
-    // 获取等待者的数量
-    func (m *Mutex) Count() int {
-        // 获取 state 字段的值
-        v := atomic.LoadInt32((*int32)(unsafe.Pointer(&m.Mutex)))
-        v = v >> mutexWaiterShift
-        // 得到等待者的数值
-        v = v + (v & mutexLocked)
-        // 再加上锁持有者的数量， 0 或者 1
-        return int(v)
+    func NewCond(l Locker) *Cond {
+        return &Cond{L: l}
     }
-    // 锁是否被持有
-    func (m *Mutex) IsLocked() bool {
-        state := atomic.LoadInt32((*int32)(unsafe.Pointer(&m.Mutex)))
-        return state&mutexLocked == mutexLocked
+
+    func (c *Cond) Wait() {
+        c.checker.check()
+        // 增加到等待队列中
+        t := runtime_notifyListAdd(&c.notify)                               // 运行时实现的方法
+        c.L.Unlock()
+        // 阻塞休眠直到被唤醒
+        runtime_notifyListWait(&c.notify, t)
+        c.L.Lock()
     }
-    // 是否有等待者被唤醒
-    func (m *Mutex) IsWoken() bool {
-        state := atomic.LoadInt32((*int32)(unsafe.Pointer(&m.Mutex)))
-        return state&mutexWoken == mutexWoken
+
+    // Signal wakes one goroutine waiting on c, if there is any.
+    //
+    // It is allowed but not required for the caller to hold c.L
+    // during the call.
+    func (c *Cond) Signal() {
+        c.checker.check()
+        runtime_notifyListNotifyOne(&c.notify)
     }
-    // 锁是否处于饥饿状态
-    func (m *Mutex) IsStarving() bool {
-        state := atomic.LoadInt32((*int32)(unsafe.Pointer(&m.Mutex)))
-        return state&mutexStarving == mutexStarving
-    }
-    ```
-#### RWMutex
-1. 实现：一般都是基于互斥锁、条件变量或信号量等并发原语来实现，go基于Mutex实现
-1. 设计方式：readers-writers问题一般有三类，基于对读和写操作的优先级区分
-   - Read-preferring：读优先，提供很高并发性，竞争激烈写饥饿(因为读完了才能写)
-   - Write-preferring：写优先，有写会阻止新来的读，避免了写饥饿，可能读饥饿
-   - 不指定优先级：解决了两种饥饿问题
-1. go的实现
-   - Write-preferring方式
-   - 既有的锁和后续来的锁有关系
-   - 组成
-    ```go
-    type RWMutex struct {
-        // 互斥锁解决多个writer的竞争
-        w Mutex
-        // writer信号量
-        writerSem uint32
-        // reader信号量
-        readerSem uint32
-        // reader的数量，以及是否有 writer 竞争锁，通过正负反转实现表示
-        readerCount int32
-        // writer等待完成的 reader的数量
-        readerWait int32
+
+    // Broadcast wakes all goroutines waiting on c.
+    //
+    // It is allowed but not required for the caller to hold c.L
+    // during the call.
+    func (c *Cond) Broadcast() {
+        c.checker.check()
+        runtime_notifyListNotifyAll(&c.notify)
     }
     ```
+1. wiki
+   - v1.14之前没有抢占，只能依靠程序goroutine主动让出cpu才能触发调度，问题有
+     1. 某些goroutine长时间占用线程，造成其它goroutine饥饿
+     1. 垃圾回收需要暂停整个程序（Stop-the-world，STW），最长可能几分钟，导致整个程序无法工作
 #### WaitGroup
 1. 结构
     ```go
@@ -402,53 +389,186 @@
         }
     }
     ```
-#### Cond
-1. 认识：Cond 的实现非常简单，或者说复杂的逻辑已经被 Locker 或者 runtime 的等待队列实现了
-1. 结构
-    ```go
-    type Cond struct {
-        noCopy noCopy
+### 内存管理
+1. 认识
+   - 内存分配
+   - 内存回收
+   - 内存整理
+     1. go的内存对齐和unsafe包的关系和特点：go可以设置内存对齐的字节数，默认为8字节
+1. 实现
+   - 认识：go使用内存分配器，采用了和TCMalloc一样的三层架构，提前申请好，不够了一级级去拿
+     1. m的cache被p持有
+   - 逻辑结构
+     1. mcache：线程缓存
+     1. mcentral：中央缓存，136个mcentral类型元素的数组构成
+     1. mheap：堆内存
+   - 内存对象分类
+     1. 微对象：0 < Micro Object < 16B
+     1. 小对象：16B =< Small Object <= 32KB
+     1. 大对象：32KB < Large Object
+   - 内存线性分配：用到哪标识到哪，释放的使用FreeList链表标识
+     1. 没有Next属性，使用前8字节存放下一个节点的指针
+     1. 分配出去的节点，节点整块内存空间可以被复写
+1. TCMalloc
+   - 认识：Thread Cache Memory alloc 线程缓存内存分配器，基于FreeList实现，添加线程的内存缓存，性能更加优异。google开源
+     1. 给线程添加内存缓存，减少竞争从而提高性能，当线程内存不足时才会加锁去共享的内存中获取内存
+        - 背景：多线程申请内存时由于并行问题会产生竞争不安全，加锁又会影响性能
+   - 逻辑架构
+     1. ThreadCache：线程缓存
+     1. CentralFreeList(CentralCache)：中央缓存
+     1. PageHeap：堆内存
+   - 概念
+     1. Page
+     1. Span
+        - SpanList
+     1. Object
+        - SizeClass
+1. GC
+   - 认识：自动垃圾回收，独立进程运行
+     1. 是一种比例GC, GC结束时堆大小和上一次GC存活堆大小成比例
+     1. 贪婪占用不返还是带GC程序的通病：程序不断执行，Heapidle memory会被重用但很少归还到操作系统
+   - 发展
+     1. v1.1：2013/5，STW，几百ms级别
+     1. v1.3：2014/6，Mark STW, Sweep 并⾏，百ms级别
+     1. v1.5：2015/8，三⾊标记法, 并发标记清除，10ms级别
+     1. v1.8：2017/2，hybrid write barrier，小于1ms
+   - 实现
+     1. 三色并发标记清扫算法
+        - 无分代：对象没有代际之分
+        - 不整理：回收过程中不对对象进行移动与整理
+        - 并发：与用户代码并发执行
+   - 组成
+     1. GC(idle)是在没有工作时标记内存的goroutine
+     1. MARK ASSIST是在分配过程中帮助标记内存的goroutine
+     1. GXX runtime.gcBgMarkWorker 是帮助标记内存的专用后台 goroutine
+     1. 一旦垃圾收集器完成，GXX runtime.bgsweep 是内存扫描阶段
+   - 使用
+     1. 主动触发：`runtime.GC()`，释放内存，性能短时间下降
+     1. 被动触发
+        - 系统监控由runtime.forcegcperiod变量控制的触发条件，默认周期2分钟
+        - 使用步调算法Pacing，核心思想是控制内存增长的比例
+     1. 析构方法：`runtime.SetFinalizer()`
+        - 内存中对象被GC前触发：由于可能任意时间被触发，因此一般只用于长期运行的程序中释放非内存资源
+        - 会按依赖顺序执行
+   - GC的实现方式：二者可以混合运用
+     1. 追踪式
+        - 认识：从根对象出发，根据对象之间的引用信息，一步步推进直到扫描完毕整个堆并确定可回收的对象。Go、Java、V8、JS的实现都是
+        - 步骤
+          1. 标记清扫：从根对象出发，将确定存活的对象进行标记，并清扫可以回收的对象。
+          1. 标记整理：为了解决内存碎片问题而提出，在标记过程中，将对象尽可能整理到一块连续的内存上。
+          1. 增量式：将标记与清扫的过程分批执行，每次执行很小的部分，从而增量的推进垃圾回收，达到近似实时、几乎无停顿的目的。
+          1. 增量整理：在增量式的基础上，增加对对象的整理过程。
+          1. 分代式：将对象根据存活时间的长短进行分类，存活时间小于某值为年轻代，否则为老年代，永远不会参与回收的对象为永久代。并根据分代假设对对象进行回收
+             - 如果一个对象存活时间不长则倾向于被回收，如果一个对象已经存活很长时间则倾向于存活更长时间
+        - 根对象：gc在标记过程时最先检查的对象
+          1. 全局变量：程序在编译期就能确定的那些存在于程序整个生命周期的变量
+          1. 执行栈：每个goroutine都包含自己的执行栈，这些执行栈上包含栈上的变量及指向分配的堆内存区块的指针
+          1. 寄存器：寄存器的值可能表示一个指针，参与计算的这些指针可能指向某些赋值器分配的堆内存区块
+     1. 引用计数式：每个对象自身包含一个被引用的计数器，当计数器归零时自动得到回收。因为此方法缺陷较多，在追求高性能时通常不被应用。Python、OC的实现都是
+     1. STW：Stop the World，对大哈希表非常要命，如4千万堆上对象，GC的扫描过程超过4秒
+        - 垃圾收集器中的两个“停止世界”阶段，其中goroutine会停止
+1. 并发读写的顺序
+   - 认识：编程语言有自己的内存模型，提供上层对内存访问的控制，并允许编译器开发者和硬件对程序做一些优化
+     1. 由于cpu和编译器优化的指令重排和多级cache的存在，保证多核访问同一个变量变得非常复杂
+     1. 重排、可见性：看不到其他协程对数据的操作，可能导致程序一直被hang住，甚至出现半初始化的情况
+        ```go
+        var a string
+        var done bool
 
-        // 当观察或者修改等待条件的时候需要加锁
-        L Locker
-
-        // 等待队列
-        notify  notifyList
-        checker copyChecker                                                 // nocpoy是静态检查，copyChecker是运行时检查
-    }
-
-    func NewCond(l Locker) *Cond {
-        return &Cond{L: l}
-    }
-
-    func (c *Cond) Wait() {
-        c.checker.check()
-        // 增加到等待队列中
-        t := runtime_notifyListAdd(&c.notify)                               // 运行时实现的方法
-        c.L.Unlock()
-        // 阻塞休眠直到被唤醒
-        runtime_notifyListWait(&c.notify, t)
-        c.L.Lock()
-    }
-
-    // Signal wakes one goroutine waiting on c, if there is any.
-    //
-    // It is allowed but not required for the caller to hold c.L
-    // during the call.
-    func (c *Cond) Signal() {
-        c.checker.check()
-        runtime_notifyListNotifyOne(&c.notify)
-    }
-
-    // Broadcast wakes all goroutines waiting on c.
-    //
-    // It is allowed but not required for the caller to hold c.L
-    // during the call.
-    func (c *Cond) Broadcast() {
-        c.checker.check()
-        runtime_notifyListNotifyAll(&c.notify)
-    }
-    ```
+        func setup() {
+            a = "hello, world"
+            done = true
+        }
+        func main() {
+            go setup()
+            for !done {                 // 即使观察到done变成true了，读取到的a仍然可能为空
+            }
+            print(a)
+        }
+        ```
+   - happens-before
+     1. 认识：描述两个时间的顺序关系
+        - 在一个goroutine内部，程序的执行顺序和它们的代码指定的顺序是一样的，即使编译器或者 CPU 重排了读写顺序，从行为上来看，也和代码指定的顺序一样。
+            ```go
+            // 一个goroutine里，打印结果依然能保证是 1、2、3
+            var a = 1
+            var b = 2
+            var c = 3
+            println(a)
+            println(b)
+            println(c)
+            ```
+     1. 保证方式
+        - init函数：main函数一定在导入的包的init函数之后执行
+        - goroutine：启动goroutine的go语句的执行，一定happens-before此goroutine内的代码执行，如go语句传入的参数是一个函数执行的结果，那么这个函数一定先于goroutine内部的代码被执行
+          1. goroutine退出的时候没有保证
+        - channel
+          1. 给chan发送happens-before从该chann接收相应数据的动作完成之前：发送早于接收
+          1. close操作happens-before从关闭的chan中读取出一个零值
+          1. unbuffered的即容量为0的chan，读取happens-before发送，因为读取会阻塞
+          1. 容量为m的chan，第n个receive一定happens-before第n+m个send的完成
+        - Mutex/RWMutex
+          1. 第n次的m.Unlock一定happens before第n+1的m.Lock方法的返回
+          1. 读写锁RWMutex如果它的第n个m.Lock方法的调用已返回，那么它的第n个m.Unlock的方法调用一定happens before任何一个m.RLock方法调用的返回，只要这些m.RLock方法调用happens after第n次m.Lock的调用的返回。这就可以保证只有释放了持有的写锁，那些等待的读请求才能请求到读锁
+          1. 读写锁RWMutex如果它的第n个m.RLock方法的调用已返回，那么它的第k（k<=n）个成功的m.RUnlock方法的返回一定happens before任意的m.RUnlockLock方法调用，只要这些m.Lock方法调用happens after第n次m.RLock
+        - WaitGroup
+          1. Wait 方法等到计数值归零之后才返回
+        - Once
+          1. 对于once.Do(f)调用，f函数的那个单次调用一定happens before任何once.Do(f)调用的返回
+        - atomic
+          1. go内存模型的官方文档并没有明确给出atomic的保证，相关研究太复杂，现阶段还是不要使用atomic来保证顺序性
+1. 最佳实践
+   - 内存使用
+     1. 认识：将变量的内存分配在合适的地方，确保变量整个生命周期运行时完全可知，就可以在栈上分配，否则就是逃逸到堆上分配了
+        - 模糊堆栈，编译器自动优化放堆还是放栈
+        - 能在编译期确定作用域的，就会到堆上
+        - 堆上分配开销大很多
+        - 逃逸分析：基本原则是如果函数返回了变量的引用，那么这个变量就会逃逸。编译器通过分析代码决定变量分配的地方
+          1. 如何进行逃逸分析普通使用者不用关心，这是语言编译该考虑的，但是使用上可避免
+     1. 引发内存逃逸的情况
+        - 在方法内把局部变量指针返回：局部变量逃逸。局部变量原本应在栈中分配、栈中回收。但由于返回时被外部引用，因此其生命周期大于栈，则溢出
+        - 发送指针或带有指针的值到channel中：指针的值逃逸。编译时没有办法知道哪个goroutine会在channel上接收数据，所以编译器无法知道变量什么时候被释放
+        - 在一个切片上存储指针或带指针的值：切片的值逃逸。其底层数组可能在栈上分配，但其引用的值一定在堆上，如`[]*string`
+        - slice的底层数组重新分配，因为append时可能会超出其容量cap：slice逃逸，slice编译时在栈上，基于运行时扩充则会在堆上
+        - 在interface上调用方法：方法都是动态调度的因为方法的真正实现只能在运行时知道，如变量r io.Reader, 调用r.Read(b)会使r的值和切片b的背后存储都逃逸
+     1. 最佳实践
+        - 不要盲目使用指针作为函数参数，虽然会减少复制操作。当参数为变量自身时，复制是在栈上完成，开销远比变量逃逸到堆上开销小
+     1. 操作
+        - 观察逃逸情况：`go build -gcflags=-m main.go`，提示`xx escapes to heap`
+        - 避免逃逸检测
+            ```go
+            // 作用是遮蔽输入和输出的依赖关系。使编译器不认为p会通过x逃逸， 因为uintptr()产生的引用是编译器无法理解的
+            // 用于清楚被unsafe.Pointer引用的数据肯定不会被逃逸但编译器却不知道的情况，要小心使用
+            func noescape(p unsafe.Pointer) unsafe.Pointer {
+                x := uintptr(p)
+                return unsafe.Pointer(x ^ 0)
+            }
+            // 使用示例
+            func NewA(s string) A {                                 // NewA会逃逸
+            return A{S: &s}
+            }
+            func NewATrick(s string) ATrick {
+                return ATrick{S: noescape(unsafe.Pointer(&s))}
+            }
+            ```
+   - local cache的优化思路
+     1. 使用offheap(堆外内存)：GC只会扫描堆上的对象，那就把对象都放到栈上，缓存库就高度依赖malloc和free操作了
+     1. 利用v1.5+特性：当map中的key和value都是基础类型时，GC就不会扫到map里的key和value
+     1. 参考freecache的思路，用ringbuffer存entry，绕过了map里存指针
+   - 拷贝场景
+     1. 投射到 interface
+     1. chan的接收和发送
+     1. 替换map中的元素
+     1. 向slice添加元素
+     1. 迭代（range）
+   - 不会内联的场景
+     1. recovery
+     1. select 块
+     1. 类型声明
+     1. defer
+     1. goroutine
+     1. for-range
+### 其他机制
 #### Once
 1. 要求
    - 保证并发的goroutine会等待 f 完成，而且还不会多次执行f
@@ -601,243 +721,104 @@
         }
     }
     ```
-#### Context
-1. WithTimeout
+#### Mutex
+1. 组成
     ```go
-    func WithTimeout(parent Context, timeout time.Duration) (Context, CancelFunc) {
-        // 当前时间+timeout就是deadline
-        return WithDeadline(parent, time.Now().Add(timeout))
+    type Mutex struct {
+        state   int32           // 通过state字段，可以知道锁是否已经被某个 goroutine 持有、当前是否处于饥饿状态、是否有等待的 goroutine 被唤醒、等待者的数量等信息
+        sema    uint32
     }
     ```
-1. WithDeadline
+1. 设计历程
+   - 第一版：会排队等待获取互斥锁
+   - 第二版：排队的唤醒之后要和正在请求锁的 goroutine 进行竞争。这会让 CPU 中正在执行的 goroutine 有更多的机会获取到锁，在一定程度上提高了程序的性能，还能优化
+   - 第三版：获取不到锁会通过自旋一定次数后，再执行原来的逻辑，更加公平
+     1. 因为一般抢锁临界区都很小，节约了休眠唤醒的成本
+   - 1.9：增加饥饿模式，进入饥饿状态，优先让等待者先获取到锁。不公平的等待时间限制在1ms，新来的同学主动谦让一下，给老同志一些机会
+   - 2019：对于 Mutex 唤醒后持有锁的那个 waiter，调度器可以有更高的优先级去执行，这已经是很细致的性能优化了
+1. 使用
     ```go
-    func WithDeadline(parent Context, d time.Time) (Context, CancelFunc) {
-        // 如果parent的截止时间更早，直接返回一个cancelCtx即可
-        if cur, ok := parent.Deadline(); ok && cur.Before(d) {
-            return WithCancel(parent)
-        }
-        c := &timerCtx{
-            cancelCtx: newCancelCtx(parent),
-            deadline:  d,
-        }
-        // 同cancelCtx的处理逻辑
-        propagateCancel(parent, c)
-        dur := time.Until(d)
-        if dur <= 0 {
-            // 当前时间已经超过了截止时间，直接cancel
-            c.cancel(true, DeadlineExceeded)
-            return c, func() {
-                c.cancel(false, Canceled)
-            }
-        }
-        c.mu.Lock()
-        defer c.mu.Unlock()
-        if c.err == nil {
-            // 设置一个定时器，到截止时间后取消
-            c.timer = time.AfterFunc(dur, func() {
-                c.cancel(true, DeadlineExceeded)
-            })
-        }
-        return c, func() { c.cancel(true, Canceled) }
-    }
-    ```
-### 内存管理
-1. TCMalloc
-   - 认识：Thread Cache Memory alloc 线程缓存内存分配器，基于FreeList实现，并引入了线程级别的缓存，性能更加优异。google开源
-     1. 给线程添加内存缓存，减少竞争从而提高性能，当线程内存不足时才会加锁去共享的内存中获取内存
-   - 逻辑架构
-     1. ThreadCache：线程缓存
-     1. CentralFreeList(CentralCache)：中央缓存
-     1. PageHeap：堆内存
-   - 概念
-     1. Page
-     1. Span
-        - SpanList
-     1. Object
-        - SizeClass
-1. GC
-   - GC触发时机
-     1. 主动触发：调用runtime.GC
-     1. 被动触发
-        - 系统监控由runtime.forcegcperiod变量控制的触发条件，默认周期2分钟
-        - 使用步调算法Pacing，核心思想是控制内存增长的比例
-   - 发展
-     1. v 1.1 ——2013/5 ——STW ——————————百ms-⼏百ms级别
-     1. v 1.3 ——2014/6 ——Mark STW, Sweep 并⾏ — 百ms级别
-     1. v 1.5 ——2015/8—— 三⾊标记法, 并发标记清除 -10ms级别
-     1. v 1.8 ——2017/2—— hybrid write barrier ————sub ms
-   - 一些说法
-     1. STW 是垃圾收集器中的两个“停止世界”阶段。 在这两个阶段中，goroutine 会停止
-     1. GC（idle）是在没有工作时标记内存的 goroutine
-     1. MARK ASSIST 是在分配过程中帮助标记内存的 goroutine
-     1. 一旦垃圾收集器完成，GXX runtime.bgsweep 是内存扫描阶段
-     1. GXX runtime.gcBgMarkWorker 是帮助标记内存的专用后台 goroutine
-   - 认识
-     1. 自动垃圾回收：使用 Go 语言创建对象的时候，我们没有回收 / 释放的心理负担，想用就用，想创建就创建
-     1. 如果你想使用 Go 开发一个高性能的应用程序的话，就必须考虑垃圾回收给性能带来的影响
-        - GC STW(Stop the World) 的存在大的哈希表是非常要命的
-          1. 堆上有4千万个对象，GC的扫描过程就超过了4秒钟
-     1. 是一种比例GC, GC结束时的堆大小和上一次GC存活堆大小成比例
-   - local cache的优化思路
-     1. offheap（堆外内存），GC 只会扫描堆上的对象，那就把对象都搞到栈上去，但是这样这个缓存库就高度依赖 offheap 的 malloc 和 free 操作了
-     1. 参考 freecache 的思路，用 ringbuffer 存 entry，绕过了 map 里存指针
-     1. 利用Go 1.5+的特性：当map中的key和value都是基础类型时，GC就不会扫到map里的key和value
-   - 拷贝场景
-     1. 投射到 interface
-     1. chan的接收和发送
-     1. 替换map中的元素
-     1. 向slice添加元素
-     1. 迭代（range）
-   - 不会内联的场景
-     1. recovery
-     1. select 块
-     1. 类型声明
-     1. defer
-     1. goroutine
-     1. for-range
-1. 背景
-   - 多线程的今天之前共享内存，线程之前在申请内存(虚拟内存)时，由于并行问题会产生竞争不安全，加锁又会影响性能
-   - 内存分配、内存回收、内存整理
-1. 认识：使用内存分配器，采用了和TCMalloc一样的三层架构，不够了一级级去拿，提前申请好
-   - mcache被逻辑处理器p持有，而不是系统线程m
-   - 申请的内存对象按大小分为了三类
-     1. 微对象：0 < Micro Object < 16B
-     1. 小对象：16B =< Small Object <= 32KB
-     1. 大对象：32KB < Large Object
-1. 逻辑结构
-   - mcache：线程缓存
-   - mcentral：中央缓存，136个mcentral类型元素的数组构成
-   - mheap：堆内存
-1. 内存/内存逃逸
-   - 认识：变量通过能证明整个生命周期运行时完全可知的校验，就可以在栈上分配，否则就是逃逸了，要在堆上分配
-     1. 能在编译期确定作用域的，就会到堆上
-     1. 堆上分配开销大很多
-     1. 如何进行逃逸分析普通使用者不用关心，这是语言编译该考虑的，但是使用上可避免
-   - 引发逃逸的情况
-     1. 在方法内把局部变量指针返回：局部变量逃逸。局部变量原本应在栈中分配、栈中回收。但由于返回时被外部引用，因此其生命周期大于栈，则溢出
-     1. 发送指针或带有指针的值到channel中：指针的值逃逸。编译时没有办法知道哪个goroutine会在channel上接收数据，所以编译器无法知道变量什么时候被释放
-     1. 在一个切片上存储指针或带指针的值：切片的值逃逸。其底层数组可能在栈上分配，但其引用的值一定在堆上，如`[]*string`
-     1. slice的底层数组重新分配：slice逃逸，slice编译时在栈上，基于运行时扩充则会在堆上
-     1. 在interface类型上调用方法：方法都是动态调度的因为方法的真正实现只能在运行时知道， 如io.Reader类型的变量r, 调用r.Read(b)会使r的值和切片b的背后存储都逃逸
-   - 最佳实践
-     1. 不要盲目使用指针作为函数参数，虽然会减少复制操作。当参数为变量自身时，复制是在栈上完成，开销远比变量逃逸到堆上开销小
-     1. 尽量少写逃逸代码，提高运行效率
-   - 操作
-     1. 观察逃逸情况：`go build -gcflags=-m main.go`，提示`xx escapes to heap`
-     1. 避免逃逸检测
-        ```go
-        // 作用是遮蔽输入和输出的依赖关系。使编译器不认为p会通过x逃逸， 因为uintptr()产生的引用是编译器无法理解的
-        // 用于清楚被unsafe.Pointer引用的数据肯定不会被逃逸但编译器却不知道的情况，要小心使用
-        func noescape(p unsafe.Pointer) unsafe.Pointer {
-            x := uintptr(p)
-            return unsafe.Pointer(x ^ 0)
-        }
-        // 使用示例
-        func NewA(s string) A {                                 // NewA会逃逸
-           return A{S: &s}
-        }
-        func NewATrick(s string) ATrick {
-            return ATrick{S: noescape(unsafe.Pointer(&s))}
-        }
-        ```
-1. 内存逃逸
-   - 认识：将变量的内存分配在合适的地方，要不然就找不到了。判断整个生命周期是否在运行时完全可知，如果变量通过了这些校验就可以在栈上分配。https://zhuanlan.zhihu.com/p/145468000
-   - 逃逸分析：基本原则是如果函数返回了变量的引用，那么这个变量就会逃逸。编译器通过分析代码决定变量分配的地方
-   - 变量逃逸到堆上的典型情况
-     1. 在方法内把局部变量指针返回
-     1. 发送指针或带有指针的值到 channel 中
-     1. 在一个切片上存储指针或带指针的值
-     1. slice 的背后数组被重新分配了，因为 append 时可能会超出其容量(cap)
-     1. 在 interface 类型上调用方法
-1. GC
-   - 认识：独立进程运行
-     1. 三色并发标记清扫算法
-        - 无分代：对象没有代际之分
-        - 不整理：回收过程中不对对象进行移动与整理
-        - 并发：与用户代码并发执行
-   - 使用
-     1. 手动触发：`runtime.GC()`，释放内存，但是性能短时间下降
-     1. 析构方法：`runtime.SetFinalizer()`
-        - 被GC时触发，由于可能任意时间被触发，因此一般只用于长期运行的程序中释放非内存资源
-        - 会按依赖顺序执行
-   - GC
-     1. 根对象：gc在标记过程时最先检查的对象
-        - 全局变量：程序在编译期就能确定的那些存在于程序整个生命周期的变量
-        - 执行栈：每个 goroutine 都包含自己的执行栈，这些执行栈上包含栈上的变量及指向分配的堆内存区块的指针
-        - 寄存器：寄存器的值可能表示一个指针，参与计算的这些指针可能指向某些赋值器分配的堆内存区块
-     1. 实现方式：二者混合运用
-        - 追踪式：从根对象出发，根据对象之间的引用信息，一步步推进直到扫描完毕整个堆并确定需要保留的对象，从而回收所有可回收的对象。Go、 Java、V8 对 JavaScript 的实现等均为追踪式 GC
-          1. 标记清扫：从根对象出发，将确定存活的对象进行标记，并清扫可以回收的对象。
-          1. 标记整理：为了解决内存碎片问题而提出，在标记过程中，将对象尽可能整理到一块连续的内存上。
-          1. 增量式：将标记与清扫的过程分批执行，每次执行很小的部分，从而增量的推进垃圾回收，达到近似实时、几乎无停顿的目的。
-          1. 增量整理：在增量式的基础上，增加对对象的整理过程。
-          1. 分代式：将对象根据存活时间的长短进行分类，存活时间小于某个值的为年轻代，存活时间大于某个值的为老年代，永远不会参与回收的对象为永久代。并根据分代假设(如果一个对象存活时间不长则倾向于被回收，如果一个对象已经存活很长时间则倾向于存活更长时间)对对象进行回收。
-        - 引用计数式：每个对象自身包含一个被引用的计数器，当计数器归零时自动得到回收。因为此方法缺陷较多，在追求高性能时通常不被应用。Python、Objective-C 等均为引用计数式 GC
-1. 并发读写的顺序
-   - 认识：编程语言有自己的内存模型，提供上层对内存访问的控制，并允许编译器开发者和硬件对程序做一些优化
-     1. 由于cpu和编译器优化的指令重排和多级cache的存在，保证多核访问同一个变量变得非常复杂
-     1. 重排、可见性：看不到其他协程对数据的操作，可能导致程序一直被hang住，甚至出现半初始化的情况
-        ```go
-        var a string
-        var done bool
+    const (
+        mutexLocked      = 1 << iota // 加锁标识位置
+        mutexWoken                   // 唤醒标识位置
+        mutexStarving                // 锁饥饿标识位置
+        mutexWaiterShift = iota      // 标识 waiter的起始bit位置
+    )
 
-        func setup() {
-            a = "hello, world"
-            done = true
-        }
-        func main() {
-            go setup()
-            for !done {                 // 即使观察到done变成true了，读取到的a仍然可能为空
-            }
-            print(a)
-        }
-        ```
-   - happens-before
-     1. 认识：描述两个时间的顺序关系
-        - 在一个goroutine内部，程序的执行顺序和它们的代码指定的顺序是一样的，即使编译器或者 CPU 重排了读写顺序，从行为上来看，也和代码指定的顺序一样。
-            ```go
-            // 一个goroutine里，打印结果依然能保证是 1、2、3
-            var a = 1
-            var b = 2
-            var c = 3
-            println(a)
-            println(b)
-            println(c)
-            ```
-     1. 保证方式
-        - init函数：main函数一定在导入的包的init函数之后执行
-        - goroutine：启动goroutine的go语句的执行，一定happens-before此goroutine内的代码执行，如go语句传入的参数是一个函数执行的结果，那么这个函数一定先于goroutine内部的代码被执行
-          1. goroutine退出的时候没有保证
-        - channel
-          1. 给chan发送happens-before从该chann接收相应数据的动作完成之前：发送早于接收
-          1. close操作happens-before从关闭的chan中读取出一个零值
-          1. unbuffered的即容量为0的chan，读取happens-before发送，因为读取会阻塞
-          1. 容量为m的chan，第n个receive一定happens-before第n+m个send的完成
-        - Mutex/RWMutex
-          1. 第n次的m.Unlock一定happens before第n+1的m.Lock方法的返回
-          1. 读写锁RWMutex如果它的第n个m.Lock方法的调用已返回，那么它的第n个m.Unlock的方法调用一定happens before任何一个m.RLock方法调用的返回，只要这些m.RLock方法调用happens after第n次m.Lock的调用的返回。这就可以保证只有释放了持有的写锁，那些等待的读请求才能请求到读锁
-          1. 读写锁RWMutex如果它的第n个m.RLock方法的调用已返回，那么它的第k（k<=n）个成功的m.RUnlock方法的返回一定happens before任意的m.RUnlockLock方法调用，只要这些m.Lock方法调用happens after第n次m.RLock
-        - WaitGroup
-          1. Wait 方法等到计数值归零之后才返回
-        - Once
-          1. 对于once.Do(f)调用，f函数的那个单次调用一定happens before任何once.Do(f)调用的返回
-        - atomic
-          1. Go 内存模型的官方文档并没有明确给出atomic的保证，相关研究太复杂，现阶段还是不要使用atomic来保证顺序性，
-1. wiki
-   - 指针大小：8字节，64位系统的寻址范围
-   - go的内存对齐和unsafe包的关系和特点
-     1. go可以设置内存对齐的字节数，默认为8字节
-     1. 内存对齐为什么可以做到原子性？
-   - 模糊堆栈，编译器自动优化放堆还是放栈
-   - 贪婪占用不返还，是带GC程序的通病。程序不断执行，idle memory（即HeapIdle）会被重用，但很少归还到操作系统。
-   - GC成本很高25%
-   - 内存线性分配
-     1. 认识：用到哪了标识到哪，释放的使用FreeList形式的链表标识
-        - 没有Next属性，使用前8字节存放下一个节点的指针(一个节点最小为8字节)
-        - 分配出去的节点，节点整块内存空间可以被复写
-   - 虚拟内存
-     1. 认识：进程运行在虚拟内存上的、连续的，和物理内存通过MMU(Memory Manage Unit)映射
-        - 安全：隔绝篡改
+    // 扩展一个 Mutex 结构
+    type Mutex struct {
+        sync.Mutex
+    }
+
+    // 没有加锁，这个看的都是调用的那一时刻的锁的状态
+    // 获取等待者的数量
+    func (m *Mutex) Count() int {
+        // 获取 state 字段的值
+        v := atomic.LoadInt32((*int32)(unsafe.Pointer(&m.Mutex)))
+        v = v >> mutexWaiterShift
+        // 得到等待者的数值
+        v = v + (v & mutexLocked)
+        // 再加上锁持有者的数量， 0 或者 1
+        return int(v)
+    }
+    // 锁是否被持有
+    func (m *Mutex) IsLocked() bool {
+        state := atomic.LoadInt32((*int32)(unsafe.Pointer(&m.Mutex)))
+        return state&mutexLocked == mutexLocked
+    }
+    // 是否有等待者被唤醒
+    func (m *Mutex) IsWoken() bool {
+        state := atomic.LoadInt32((*int32)(unsafe.Pointer(&m.Mutex)))
+        return state&mutexWoken == mutexWoken
+    }
+    // 锁是否处于饥饿状态
+    func (m *Mutex) IsStarving() bool {
+        state := atomic.LoadInt32((*int32)(unsafe.Pointer(&m.Mutex)))
+        return state&mutexStarving == mutexStarving
+    }
+    ```
+#### RWMutex
+1. 实现：一般都是基于互斥锁、条件变量或信号量等并发原语来实现，go基于Mutex实现
+1. 设计方式：readers-writers问题一般有三类，基于对读和写操作的优先级区分
+   - Read-preferring：读优先，提供很高并发性，竞争激烈写饥饿(因为读完了才能写)
+   - Write-preferring：写优先，有写会阻止新来的读，避免了写饥饿，可能读饥饿
+   - 不指定优先级：解决了两种饥饿问题
+1. go的实现
+   - Write-preferring方式
+   - 既有的锁和后续来的锁有关系
+   - 组成
+    ```go
+    type RWMutex struct {
+        // 互斥锁解决多个writer的竞争
+        w Mutex
+        // writer信号量
+        writerSem uint32
+        // reader信号量
+        readerSem uint32
+        // reader的数量，以及是否有 writer 竞争锁，通过正负反转实现表示
+        readerCount int32
+        // writer等待完成的 reader的数量
+        readerWait int32
+    }
+    ```
+#### Sync
+1. sync.Map
+   - 实现
+     1. 空间换时间。通过冗余的两个数据结构（只读的 read 字段、可写的 dirty），来减少加锁对性能的影响
+     1. 优先从read字段读取、更新、删除，因为对 read 字段的读取不需要锁
+     1. 动态调整：miss 次数多了之后，将 dirty 数据提升为 read，避免总是从 dirty 中加锁读取
+     1. double-checking：加锁之后先还要再检查 read 字段，确定真的不存在才操作 dirty 字段
+     1. 延迟删除：删除一个键值只是打标记，只有在提升 dirty 字段为 read 字段的时候才清理删除的数据
+   - 认识：通过空间换时间的方式，内部使用键固定的read和包含所有键值对的dirty两个map来进行读写分离，降低锁时间来提高效率
+     1. 所有对read上已有的键值对的增删改查都是无锁实现（read中标记删除的例外），基于使用场景“写特别少几乎固定”也就是说基本用不上锁，从而大大提高性能
+     1. read和dirty存储的都是值的地址，是共享地址的，就是说所有对read的无锁增删改查都会同步反馈在dirty上
+     1. 通过读写分离，降低锁时间来提高效率，写dirty，读read
+     1. dirty始终反映着最新值，从而为快速切换做准备
+   - 特性
+     1. 新写入的 key 会保存到 dirty 中，如果这时 dirty 为 nil，就会先新创建一个 dirty，并将 read 中未被删除的元素拷贝到 dirty。当 dirty 为 nil 的时候，read 就代表 map 所有的数据；当 dirty 不为 nil 的时候，dirty 才代表 map 所有的数据
+     1. 调用 Load 或 LoadOrStore 函数时，如果在 read 中没有找到 key，则会将 misses 值原子地增加 1，当 misses 增加到和 dirty 的长度相等时，会将 dirty 提升为 read。以期减少“读 miss”
+   - 关于range：如果发现read表和dirty表不一致，那么会提前触发一次表替换（因为Range本身时间复杂度为O(N)所以可以分摊部分消耗。Range可以通过返回false提前中断，不过考虑到中间可能涉及到的替换表，时间复杂度不会有太多的变化
+   - 关于kv类型：尽量避免使用函数、切片、map作为key，因为他们不可比较
 ### 应用
 1. http
    - 核心组成

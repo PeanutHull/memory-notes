@@ -116,7 +116,7 @@
    - 上下文切换快：不经过内核
 1. php7：迭代器，可以有一个最终返回值，也可以通过yield from的新语法进入一个另外一个生成器中。生成器的两个新特性（return 和 yield from）可以组合
 1. 实现：v5.5加入，使用迭代生成器和yield关键字
-    ```
+    ```php
     function gen(){
         echo "hello gen".PHP_EOL;
         $ret = (yield "gen1");
@@ -241,7 +241,7 @@
    - 1.6.2：异步支持，像node
    - 2.0：内置协程+通道，代替异步回调
    - 4.0：重构协程内核
-###PHPUnit
+### PHPUnit
 1. 认识：xUnit的体系结构的面向php的php开发的单元测试框架，源于SUnit
    - 特点
      1. 命令可以操控测试脚本
