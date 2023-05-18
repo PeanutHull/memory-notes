@@ -265,7 +265,7 @@
      1. 支持 JSON/TOML/YAML/HCL/envfile/Java properties 等多种格式的配置文件
      1. 可以设置监听配置文件的修改，修改时自动加载新的配置
      1. 从环境变量、命令行选项和io.Reader中读取配置
-     1. 从远程配置系统中读取和监听修改，如 etcd/Consul
+     1. 从远程配置系统中读取和监听修改，如etcd、consul
      1. 代码逻辑中显示设置键值
    - demo
     ```go

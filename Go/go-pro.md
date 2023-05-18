@@ -126,6 +126,9 @@
 1. 结构体
    - 内存对齐
 ### 语法
+1. goyacc：和yacc的功能一样，根据输入的语法规则文件，生成该语法规则的golang版的yacc
+   - Lex & Yacc：用来生成词法分析器和语法分析器的工具，yacc用c写的
+     1. Flex&Bison：Flex是由Vern Paxon实现的一个Lex，Bison则是GNU版本的YACC
 1. defer
    - 数据结构：defer有栈地址
     ```go
@@ -571,7 +574,7 @@
 ### 其他机制
 #### Once
 1. 要求
-   - 保证并发的goroutine会等待 f 完成，而且还不会多次执行f
+   - 保证并发的goroutine会等待f完成，而且还不会多次执行f
 1. 原理
    - 使用atomic原子操作flag标记是否初始化过
    - 一个正确的 Once 实现要使用一个互斥锁，这样初始化的时候如果有并发的goroutine，就会进入doSlow 方法
@@ -722,6 +725,8 @@
     }
     ```
 #### Mutex
+1. 认识
+   - 现在的 Mutex 代码已经复杂得接近不可读的状态了，而且代码也非常长，删减后占了几乎三页纸。但是，作为第一个要详细介绍的同步原语，我还是希望能更清楚地剖析 Mutex 的实现，向你展示它的演化和为了一个貌似很小的 feature 不得不将代码变得非常复杂的原因
 1. 组成
     ```go
     type Mutex struct {
@@ -820,33 +825,43 @@
    - 关于range：如果发现read表和dirty表不一致，那么会提前触发一次表替换（因为Range本身时间复杂度为O(N)所以可以分摊部分消耗。Range可以通过返回false提前中断，不过考虑到中间可能涉及到的替换表，时间复杂度不会有太多的变化
    - 关于kv类型：尽量避免使用函数、切片、map作为key，因为他们不可比较
 ### 应用
+1. tcp/udp实现
+   - 认识
+     1. 用主协程监听Listener，每个Conn使用一个新协程处理
+     1. 对上层封装多路复用抽象层
+   - 组成：Network Poller为主体
+     1. pollcache：一个带锁的链表头
+     1. pollDesc：链表的成员，是runtime包对socket的详细描述
+   - 实现
+     1. runtime循环调用netpoll发现socket是否可读写
 1. http
-   - 核心组成
-     1. 创建一个路由表，http.NewServeMux()
-     1. 向路由表注册路由，并绑定处理器Handler{}
-     1. 调用 http.ListenAndServe(":9090", mutex)提供服务
-   - 路由表结构体解析
-    ```go
-    type ServeMux struct {
-        mu sync.RWMutex             // 锁，由于请求涉及到并发处理，因此这里需要一个锁机制
-        m map[string]muxEntry       // 路由规则，一个 string 对应一个 mux 实体，这里的 string 就是注册的路由表达式
-        es []muxEntry               // 路由表达式切片，按路由从最⻓到最短排序，用来实现最⻓前缀匹配
-        hosts bool                  // 是否在任意的规则中带有 host 信息
-    }
-    ```
-   - 流程
-     1. 实例化 Server
-     1. 调用 Server 的 ListenAndServe ()
-     1. 调用 net.Listen ("tcp", addr) 监听端口
-     1. 启动一个 for 循环，在循环体中 Accept 请求
-     1. 对每个请求实例化一个 Conn，并且开启一个 goroutine 为这个请求进行服务 go c.serve () 6 读取每个请求的内容，把请求分配到路由表处理
-     1. 判断 handler 是否为空，如果没有设置 handler，handler 就设置为 DefaultServeMux 8 调用 handler 的 ServeHttp
-     1. 根据 request 选择 handler，并且进入到这个 handler 的 ServeHTTP
-     1. 选择 handler:
-        - map精确匹配
-        - 切片最⻓前缀匹配，`strings.HasPrefix`
-        - 如果没有路由满足，调用 NotFoundHandler 的 ServeHTTP
-   - 连接管理
+   - http server服务度实现
+     1. 核心组成
+        - 创建一个路由表，http.NewServeMux()
+        - 向路由表注册路由，并绑定处理器Handler{}
+        - 调用 http.ListenAndServe(":9090", mutex)提供服务
+     1. 路由表结构体解析
+        ```go
+        type ServeMux struct {
+            mu sync.RWMutex             // 锁，由于请求涉及到并发处理，因此这里需要一个锁机制
+            m map[string]muxEntry       // 路由规则，一个 string 对应一个 mux 实体，这里的 string 就是注册的路由表达式
+            es []muxEntry               // 路由表达式切片，按路由从最⻓到最短排序，用来实现最⻓前缀匹配
+            hosts bool                  // 是否在任意的规则中带有 host 信息
+        }
+        ```
+     1. 流程
+        - 实例化 Server
+        - 调用 Server 的ListenAndServe()
+        - 调用 net.Listen ("tcp", addr) 监听端口
+        - 启动一个 for 循环，在循环体中 Accept 请求
+        - 对每个请求实例化一个 Conn，并且开启一个 goroutine 为这个请求进行服务 go c.serve () 6 读取每个请求的内容，把请求分配到路由表处理
+        - 判断 handler 是否为空，如果没有设置 handler，handler 就设置为 DefaultServeMux 8 调用 handler 的 ServeHttp
+        - 根据 request 选择 handler，并且进入到这个 handler 的 ServeHTTP
+        - 选择 handler:
+          1. map精确匹配
+          1. 切片最⻓前缀匹配，`strings.HasPrefix`
+          1. 如果没有路由满足，调用 NotFoundHandler 的 ServeHTTP
+   - http client客户度实现
     ```go
     res, err := client.Do(req)
     func (c *Client) Do(req *Request) (*Response, error) {
@@ -888,18 +903,7 @@
 
     }
     ```
-### wiki
-1. 认识
-   - 通过这样复杂的检查、判断和设置，实现一些目的。了解了设计思想，看实现是一个证实的过程
-   - 现在的 Mutex 代码已经复杂得接近不可读的状态了，而且代码也非常长，删减后占了几乎三页纸。但是，作为第一个要详细介绍的同步原语，我还是希望能更清楚地剖析 Mutex 的实现，向你展示它的演化和为了一个貌似很小的 feature 不得不将代码变得非常复杂的原因
-1. 重难点
-   - 并发模型GPM
-   - goroutine、channel调度
-   - 内存管理、GC
-1. goyacc：和yacc的功能一样，根据输入的语法规则文件，生成该语法规则的golang版的yacc
-   - Lex & Yacc：用来生成词法分析器和语法分析器的工具，yacc用c写的
-     1. Flex&Bison：Flex是由Vern Paxon实现的一个Lex，Bison则是GNU版本的YACC
-#### 源码阅读
+### 源码阅读
 1. 方法
    - 如果你阅读的是syscall包，恭喜你，感觉正常：再简洁的语言，遇到环境相关，仍然会有很多 tricks，甚至用到 Cgo
    - 如果你阅读的是os一类的包，恭喜你，感觉也挺正常：涉及到与其他层面的调用， 正常
@@ -908,6 +912,7 @@
    - 如果你阅读了math等包，那么很有可能是你相关算法、细节知识不足（对于并发有关的包也是如此），这不是语言的原因，是素养的问题，可以选择相应的进行适当的知识扩充。- 可以先从strings，bufio，io/ioutils这一类不大需要背景知识的包开始，感受 Golang 标准库的魅力
    - 借助注释，英文不理解的可以借助机器翻译
 1. 实践
+   - 了解设计思想，看实现是一个证实的过程
    - 先通览，再找感兴趣的，语言相关的肯定难
    - 先会用，才知道这么设计的目的
    - 先理解流程+设计思想，通过画图来辅助
