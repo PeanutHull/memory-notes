@@ -94,11 +94,12 @@
 3 git push XXX
 ```
 ### merge
+1. 认识：commit history会多出来一条merge记录
 1. git merge < branch_name >        将此分支合并到当前分支
 1. git merge origin/master --no-ff     不要fast-forward合并，可生成merge提交
 1. git merge --no-ff 本地两个分支合并，是会显示成一条直线的，强迫git保留分支历史，可以有合并分支树
 ### rebase————衍合
-1. 认识：是对commit history的改写
+1. 认识：会基于两个分支共同基座之后修改的部分和自己分支的修改进行冲突合并，然后修改commit history，禁止使用，看不清谁合并了谁
    - 多人开发下嫁接，merge会产生交叉的合并记录，而rebase只保留一条线，用于log树上的更好体现
 1. 风险：本地分支中的对象被提交到远程后，不能对此分支进行rebase，因为你rebase过程中抛弃了现存的提交对象而创造了一些类似但不同的新的提交对象，其他人在你之前的提交对象开发的话就需要重新合并代码。你的rebase会对其他人造成困惑
 1. 多人rebase流程

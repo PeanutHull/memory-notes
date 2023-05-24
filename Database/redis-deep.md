@@ -26,7 +26,6 @@
      1. 最快要执行的任务排在堆的最上方
      1. 在每个循环周期，Redis 都会将最小堆里面已经到点的任务立即进行处理
      1. 处理完毕后，将最快要执行的任务还需要的时间记录下来，知道可以安心睡觉了
-#### 其他组成
 1. 连接
    - 监听socket：或者监听端口来接收来自客户端的连接
      1. 客户端socket会被设置为非阻塞模式，因为Redis在网络事件处理上采用的是非阻塞多路复用模型
@@ -45,14 +44,17 @@
      1. 采用高位进位加法遍历，考虑到字典的扩容和缩容时避免槽位的遍历重复和遗漏
         - 普通加法/高位进位加法：高位进位法从左边加，进位往右边移动，同普通加法相反。但是最终它们都会遍历所有的槽位并且没有重复
 ### 数据类型
-1. 分类
+1. 实现
    - string：sds
-   - list：快速链表的结构，不是数组，意味着插入和删除操作非常快，时间复杂度为O(1)，索引定位很慢，时间复杂度为O(n)
-   - hash：无序字典，数组 + 链表二维结构。第一维hash的数组位置碰撞时，将碰撞元素使用链表串接起来，类似java的HashMap
-   - set：相当于特殊的字典，字典中所有value都是null，其它的特性和字典一模一样
-   - zset：hash + skiplist
-     1. 用hash记录value和score的关系
-     1. 需要按照score排序，并且可以获取指定范围的value，需要使用跳跃列表的数据结构，结构特殊、复杂
+   - list：quicklist，早期版本list元素少时用ziplist，多时用linkedlist双向循环链表
+     1. ziplist：满足优先使用
+        - 列表中单个数据小于64byte
+        - 列表中数据个数少于512
+   - hash：ziplist + hashtable，数组+链表。第一维hash的数组位置碰撞时，将碰撞元素使用链表串接起来，类似java的HashMap
+   - set：intset + hashtable + listpack，字典中所有value都是null，其它的特性和字典一样
+   - zset：ziplist+ sortedset + hashtable + skiplist
+     1. 用hashtable记录value和score的关系
+     1. 用skiplist提供范围查找
 1. string
    - 认识：SDS Simple Dynamic String，是动态字符串
      1. c的字符串以 NULL 作为结束符，需要遍历，算法复杂度O(n)，单线程承受不起
@@ -84,7 +86,7 @@
     ```
 1. dict
    - 认识：字典，最常见的复合数据结构
-     1. 使用MurmurHash2这种运行速度快、随机性好的哈希算法作为哈希函数，哈希冲突使用链表法解决
+     1. 使用MurmurHash2哈希算法作为哈希函数，运行速度快、随机性好的，哈希冲突使用链表法解决
      1. 支持hashtable的动态扩容、缩容
    - 使用范围
      1. hash
@@ -137,6 +139,21 @@
       dictEntry* next;    // 链接下一个 entry
     }
     ```
+1. set
+   - 实现
+     1. intset：有序数组，满足元素都是整数且个数小于512优先使用
+     1. hashtable：没有拉链即可，预先分配一个固定大小的数组来存储键值对，使用散列函数生产数组索引
+     1. listpack：v7.2新增，sds优先使用listpack，为提高内存利用率和操作效率，因为hashtable的空间开销和碰撞概率都比较高
+        - 阈值条件
+          1. set-max-listpack-entries：最大元素个数，默认128
+          1. set_max_listpack_value：最大元素大小，默认64
+1. sortedset
+   - 认识：有序集合，存储附带一个得分的一组数据，用skiplist，支持快速按照得分值、得分区间获取数据
+   - 实现：skiplist + hashtable
+     1. ziplist，满足即优先使用
+        - 所有数据的大小都小于64byte
+        - 元素个数要小于128
+     1. sortedset
 1. rax
    - 认识：rax 有序字典树、基数树，按照key的字典序排列，支持快速地定位、插入和删除操作
      1. 易于理解，实现非常复杂
@@ -145,13 +162,6 @@
      1. 根节点、叶节点、中间节点，有些中间节点有value，有些中间节点是结构性需要没有value
      1. rax是一棵比较特殊的radix tree，它在结构上不是标准的radix tree。如果一个中间节点有多个子节点，那么路由键就只是一个字符。如果只有一个子节点，那么路由键就是一个字符串。后者就是所谓的压缩形式，多个字符压在一起的字符串
 #### list
-1. list
-   - 认识：列表
-   - 实现方式
-     1. ziplist，满足即优先使用
-        - 列表中单个数据小于64byte
-        - 列表中数据个数少于512
-     1. 双向循环链表
 1. ziplist
    - 认识：压缩列表，是一块连续内存空间的自己设计的数据存储结构，元素之间紧挨着存储
    - 特点
@@ -204,10 +214,11 @@
     } list;
     ```
 1. quicklist
-   - 背景：快速列表，早期版本list元素少时用ziplist，多时用linkedlist
+   - 认识：快速列表
      1. 使用 quicklist 代替了 ziplist 和 linkedlist
      1. 既满足了快速的插入删除性能，又不会出现太大的空间冗余
      1. 普通链表linkedlist附加空间相对太高，prev和next指针就要占16byte，浪费空间；另外每个节点的内存都是单独分配，会加剧内存的碎片化，影响内存管理效率
+     1. 插入删除非常快，时间复杂度O(1)，索引定位慢时间复杂度为O(n)
    - 结构
      1. 是ziplist和linkedlist的混合体，将linkedlist按段切分，每一段使用ziplist来紧凑存储，多个 ziplist 之间使用双向指针串接起来
      1. 快速push/pop操作，默认首尾两个ziplist不压缩，配置决定
@@ -316,19 +327,3 @@
    - 使用范围
      1. 数据都是整数
      1. 数据个数不超512
-#### set
-1. set
-   - 实现
-     1. intset：有序数组，满足元素都是整数且个数小于512优先使用
-     1. hashtable：没有拉链即可，预先分配一个固定大小的数组来存储键值对，使用散列函数生产数组索引
-     1. listpack：v7.2新增，sds优先使用listpack，为提高内存利用率和操作效率，因为hashtable的空间开销和碰撞概率都比较高
-        - 阈值条件
-          1. set-max-listpack-entries：最大元素个数，默认128
-          1. set_max_listpack_value：最大元素大小，默认64
-1. sortedset
-   - 认识：有序集合，存储附带一个得分的一组数据，用skiplist，支持快速按照得分值、得分区间获取数据
-   - 实现：skiplist + hashtable
-     1. ziplist，满足即优先使用
-        - 所有数据的大小都小于64byte
-        - 元素个数要小于128
-     1. sortedset

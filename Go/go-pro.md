@@ -53,6 +53,7 @@
      1. copy是深拷贝
 1. map
    - 认识
+     1. 拉链法：hmap的buckets关联多个bmap即bucket，每个bmap最多存储8个元素，超过后用overflow指向溢出桶继续存储
      1. 解决hash冲突：用两个数组分别存储键和值
         - 正常桶的bmap关联溢出桶的bmap，实际构成了链表关系
      1. 写数据时并没有单独维护键值对的顺序，php5通过一个全局链表维护了map里元素的顺序
@@ -70,7 +71,7 @@
           1. nevacuate：分流次数，成倍扩容分流操作计数的字段(Map扩容相关字段)
 
           1. flags：状态标识，比如正在被写、buckets和oldbuckets在被遍历、等量扩容(Map扩容相关字段)
-        - bmap：包含两个数组分别存放key和value
+        - bmap：包含两个分别存放key和value的数组
           1. topbits：长度为8的数组，[]uint8，元素为：key的hash的高8位，遍历时对比使用，提高性能
           1. keys：长度为8的数组，[]keytype，元素为：具体的key值
           1. elems：长度为8的数组，[]elemtype，元素为：键值对的key对应的值
@@ -84,9 +85,8 @@
           1. topbits、keys、elems长度为8，每个bmap结构最多存放8组键值对，
           1. bmap.overflow是个存放了对应使用的溢出桶hmap.extra.overflow里的bmap的地址的指针类型，某个bmap存满了就往指向的这个bmap里存
      1. 流程
-        - 读
-          1. 获取bmap数组的索引位置：key进行hash和位操作
-          1. 通过高8位topbits加速查找
+        - 读：先找到对应的bucket，然后遍历这里面的元素，如果此bucket没有找到就会检查是否有溢出桶，如果有则会遍历溢出桶
+          1. 获取bmap数组的索引位置：key进行hash和位操作，通过高8位topbits加速查找
           1. 遍历bmap里的键，和目标key对比获取key的索引
           1. 根据key的索引通过计算偏移量，获取到对应value
           1. 查找溢出桶获取值，即如果当前“正常桶的bmap”中的overflow值不为nil(说明“正常桶的bmap”关联了“溢出桶的bmap”)，则遍历当前指向的“溢出桶的bmap”继续上边的bmap遍历
@@ -94,7 +94,7 @@
         - 写：为什么遍历索引起点是随机的，因为map本质上是“无序的”
           1. 正常写入：写入无法确认hash到具体哪个bucket上，不是按buckets顺序写入
           1. 哈希冲突写入：会写到同一个bucket上，但是bucket上的位置不确定，甚至也许写到溢出桶上
-        - 扩容
+        - 扩容：就是把hmap中的buckets数组进行扩容，并且迁移bucket
           1. 成倍扩容：迫使元素顺序变化
              - 条件
                1. map写操作
@@ -166,8 +166,9 @@
      1. 高效、公平的调度执行
         - 协作式：遇到阻塞就换出
         - 抢占式：资源调度
-     1. 方便使用
+     1. 轻量
         - 无大小限制的goroutine栈：goroutine stack默认2k，可轻易创建几十万goroutine不用担心内存耗尽等问题
+     1. 方便使用
 1. scheduler
    - 认识：调度器，基于M:N的G-P-M线程调度模型，![avatar](../images/goroutine_base_schedule.png)
      1. 协程调度：模仿linux的进程调度，在其之上自己实现一套
@@ -827,10 +828,11 @@
 ### 应用
 1. tcp/udp实现
    - 认识
-     1. 用主协程监听Listener，每个Conn使用一个新协程处理
+     1. net包定义连接接口，包括Read、Write等方法，runtime包实现
      1. 对上层封装多路复用抽象层
+     1. 用主协程监听Listener，每个Conn使用一个新协程处理
    - 组成：Network Poller为主体
-     1. pollcache：一个带锁的链表头
+     1. pollCache：一个带锁的链表头
      1. pollDesc：链表的成员，是runtime包对socket的详细描述
    - 实现
      1. runtime循环调用netpoll发现socket是否可读写
