@@ -677,7 +677,7 @@
    - 扩容：找新机器，用工具同步存量+增量的旧数据，然后挂到tw上
 #### 中间件
 1. TwemProxy
-   - 认识：twitter开源的redis/memcache的快速、轻量级的单线程代理服务器，可对多台redis/memcache进行管理和分配。就是分片、分布式方案
+   - 认识：twitter开源的redis/memcache的快速、轻量级的单线程代理服务器，可对多台redis/memcache进行管理和分配。就是分片、分布式方案，c写的
      1. 支持失败节点自动删除
      1. 支持设置HashTag：将两个key哈希到同一个实例
      1. 和redis、客户端采用长链接，减少连接数

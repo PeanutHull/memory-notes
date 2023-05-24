@@ -242,8 +242,4 @@
    - aiofile
      1. 认识：线程池模拟实现的异步文件io库
    - tornado
-     1. 认识：高性能异步的开源web框架，最早的python2的时候实现第三方协程的框架，python3也提供官方的协程实现
-        - 自己写的协程调度，基本原理和这个框架是一样的
-          1. @tornado/tornado/gen.py
-          1. @tornado/tornado/platform/asyncio.py：官方协程
    - gevent

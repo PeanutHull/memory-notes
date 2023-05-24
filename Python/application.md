@@ -26,7 +26,11 @@
 1. bottle：类似flask
 1. web.py：小巧
 1. falcon，高性能api
-1. Tornado：Facebook的开源异步web框架
+1. Tornado：Facebook的开源异步web框架，非阻塞io
+   - 认识：高性能异步的开源web框架，最早的python2的时候实现第三方协程的框架，python3也提供官方的协程实现
+     1. 自己写的协程调度，基本原理和这个框架是一样的
+        - @tornado/tornado/gen.py
+        - @tornado/tornado/platform/asyncio.py：官方协程
 1. 模板
    - jinja2：flask默认模板
    - Mako
