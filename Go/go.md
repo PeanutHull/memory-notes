@@ -3604,25 +3604,125 @@
      1. gvt
 #### 标准库包
 1. 数据类型、变量
-   - bytes：实现操作[]byte的常用函数
-   - sort：常见数据类型的排序操作
-     1. sort.Ints()/sort.Float64s()
-     1. sort.Strings()
-     1. sort.Slice()/sort.SliceStable()/sort.SliceIsSorted()
-     1. sort.Search()/sort.SearchStrings()：使用二分搜索来查找并返回[0, n)中f(i)为真的最小索引i
-   - expvar：提供公共变量的标准接口
-1. 文本相关
-   - text
-   - strings：处理utf-8编码的字符串，包含分割、连接、转换、取索引、前后缀检测等
-     1. `strings.Index/Contains/HasPrefix/HasSuffix(src))`：查找，索引、是否包含
-     1. `strings.Trim/TrimSpace/Fields/Repeat/Replace/Join/Split(src))/ToLower/ToUpper`：修改
-   - strconv：基本数据类型和其字符串表示的相互转换
-     1. `strconv.FormatBool/FormatInt/FormatUint/FormatFloat/Itoa()`：转为字符串，Itoa/Atoi针对int，FormatInt/ParseInt针对int64，支持进制
+   - strconv：基本数据类型和其字符串表示的相互转换，Itoa/Atoi针对int，FormatInt/ParseInt针对int64，支持进制(大多为第二参数)
+     1. `strconv.FormatBool/FormatInt/FormatUint/FormatFloat/Itoa()`：转为字符串
      1. `strconv.ParseBool/ParseInt/ParseUint/ParseFloat/Atoi()`：字符串转换为其他类型
      1. `strconv.AppendInt/AppendBool/AppendQuote/AppendQuoteRune()`：转换为字符串后添加到字节数组中
-     1. `strconv.Quote("xx")`：输出双引号
+     1. `strconv.Quote(s string)/Unquote(s string)`：转义/反转义输出，转义输出时两侧带双引号，中间特殊字符添加转义符\，反之去除
+   - sort：对切片和用户定义集合的排序操作
+     1. 函数
+        - `sort.Ints(x []int)/sort.Float64s()/IntsAreSorted()/Float64sAreSorted()`：升序、是否升序
+        - `sort.Strings()`：升序
+        - `sort.Reverse()`：降序
+            ```go
+            s := []int{5, 2, 6, 3, 1, 4}
+            sort.Sort(sort.Reverse(sort.IntSlice(s)))
+            ```
+        - `sort.Slice(x any, less func(i, j int) bool)/sort.SliceStable()/sort.SliceIsSorted()`：用户自定义排序
+            ```go
+            people := []struct {
+                Name string
+                Age  int
+            }{
+                {"Gopher", 7},
+                {"Alice", 55},
+                {"Vera", 24},
+                {"Bob", 75},
+            }
+            sort.Slice(people, func(i, j int) bool { return people[i].Name < people[j].Name })
+            fmt.Println("By name:", people)
+
+            sort.Slice(people, func(i, j int) bool { return people[i].Age < people[j].Age })
+            fmt.Println("By age:", people)
+
+            // 结果
+            By name: [{Alice 55} {Bob 75} {Gopher 7} {Vera 24}]
+            By age: [{Gopher 7} {Vera 24} {Alice 55} {Bob 75}]
+            ```
+        - `sort.Find(n int, cmp func(int) int) (i int, found bool)/Search(n int, f func(int) bool) int/SearchInts/SearchStrings()`：使用二分搜索来查找并返回[0, n)中f(i)为真的最小索引i，n为查找的数量范围
+            ```go
+            a := []int{1, 3, 6, 10, 15, 21, 28, 36, 45, 55}
+            x := 6
+
+	        i := sort.Search(len(a), func(i int) bool { return a[i] >= x })
+            ```
+     1. 认识：该包实现了四种基本排序算法：插入、归并、堆、快速，只被用于sort包内部使用。只要实现了`sort.Interface`定义的Len()、比较两个元素大小的Less()方法、交换两个元素位置的Swap()三个方法，就可调用该包的Sort()方法对数据集合进行排序，sort包会根据实际数据自动选择高效的排序算法
+        - sort包提供了Reverse()方法，可以允许将数据按Less()定义的排序方式逆序排序，而不必修改Less()代码
+        - 为方便使用提前定义好了常用3种类型：`type IntSlice []int`、`type StringSlice []string`、`type Float64Slice []float64`、
+     1. demo
+        - 自定义排序类型
+            ```go
+            // 举例
+            
+            type StuScore struct {                          // 学生成绩结构体
+                name  string
+                score int
+            }
+
+            type StuScores []StuScore
+
+            func (s StuScores) Len() int {
+                return len(s)
+            }
+
+            func (s StuScores) Less(i, j int) bool {
+                return s[i].score < s[j].score              // 升序
+            }
+
+            func (s StuScores) Swap(i, j int) {
+                s[i], s[j] = s[j], s[i]
+            }
+
+            // 使用
+            stus := StuScores{{"alan", 95},{"hikerell", 91},{"acmfly", 96},{"leao", 90}}
+            // StuScores已实现了sort.Interface接口，可以用Sort方法排序了
+            sort.Sort(stus)
+            // 是否已排序
+            sort.IsSorted(stus)
+            ```
+        - 用sort.IntSlice建堆：sort.IntSlice已经实现了Less、Swap、Len方法
+            ```go
+            // hheap继承自sort.IntSlice
+            type hheap struct {
+                sort.IntSlice
+            }
+
+            func (s hheap) Less(i, j int) bool {                        // 根据需要重写Less, 变成大根堆
+                if s.IntSlice[i] > s.IntSlice[j] {
+                    return true
+                }
+                return false
+
+                // 简便写法就一行：return s.IntSlice[i] > s.IntSlice[j]
+            }
+
+            func (s *hheap) Push(v interface{}) {                       // 堆的插入方法,实现了Less方法之后会自动排序
+                s.IntSlice = append(s.IntSlice, v.(int))
+            }
+
+            func (s *hheap) Pop() interface{} {                         // 弹出当前最大的元素
+                v := s.IntSlice[s.IntSlice.Len()-1]
+                s.IntSlice = s.IntSlice[:s.IntSlice.Len()-1]
+                return v
+            }
+
+            // 使用
+            heap := &hheap{sort.IntSlice{3, 6, 4, 1}}
+            heap.Sort()                                                 // 可以排序后pop，但就不是堆的排序了，变成线性排序了
+            n := heap.Len()
+            for i := 0; i < n; i++ {
+                fmt.Println(heap.Pop().(int))                           // 输出6431
+            }
+            ```
+   - expvar：提供公共变量的标准接口
+1. 文本相关
+   - bytes：处理字节切片[]byte，类似strings包，就是处理单个字符的嘛，strings处理多个的
+   - strings：处理utf-8编码的字符串，包含分割、连接、转换、取索引、前后缀检测等
+     1. `strings.Index/Contains/HasPrefix/HasSuffix(src))`：位置索引、是否包含
+     1. `strings.Trim/TrimSpace/Fields/Repeat/Replace/Join/Split(src))/ToLower/ToUpper`：修改
    - index
      1. suffixarray：suffixarrayb包通过使用内存中的后缀树实现了对数级时间消耗的子字符串搜索
+   - text
    - regexp：正则
      1. syntax
      1. 认识：regexp包，实现RE2标准，实现搜索、替换、解析，strings包优先
