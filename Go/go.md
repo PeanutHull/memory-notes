@@ -3488,9 +3488,9 @@
         - 相对导入：从当前目录中搜索包，使用./和../的相对路径，不利于依赖关系的表现
           1. 项目不要放在$GOPATH/src下，否则会报错
      1. 路径优先级
+        - 有vendor目录时，不管有没有域名只会在vendor目录中找
         - 如果有域名，先在$GOPATH/pkg/mod下查找，没有就连网下载
         - 没有域名到$GOROOT查找
-        - 有vendor目录时，不管有没有域名只会在vendor目录中找
      1. 导入的初始化顺序：导入时会依次执行包中的常量申明、变量定义、init方法
         - 常量申明
         - 变量定义
@@ -3602,8 +3602,8 @@
      1. glide：glide.yaml、glide.lock，官方建议迁移到dep
      1. govendor
      1. gvt
-### 标准库包
-1. 基础类型和变量
+#### 标准库包
+1. 数据类型、变量
    - bytes：实现操作[]byte的常用函数
    - sort：常见数据类型的排序操作
      1. sort.Ints()/sort.Float64s()
@@ -3613,19 +3613,128 @@
    - expvar：提供公共变量的标准接口
 1. 文本相关
    - text
-   - strings：操作字符
+   - strings：处理utf-8编码的字符串，包含分割、连接、转换、取索引、前后缀检测等
+     1. `strings.Index/Contains/HasPrefix/HasSuffix(src))`：查找，索引、是否包含
+     1. `strings.Trim/TrimSpace/Fields/Repeat/Replace/Join/Split(src))/ToLower/ToUpper`：修改
    - strconv：基本数据类型和其字符串表示的相互转换
-     1. `strconv.Quote("xx")`：可以输出双引号
+     1. `strconv.FormatBool/FormatInt/FormatUint/FormatFloat/Itoa()`：转为字符串，Itoa/Atoi针对int，FormatInt/ParseInt针对int64，支持进制
+     1. `strconv.ParseBool/ParseInt/ParseUint/ParseFloat/Atoi()`：字符串转换为其他类型
+     1. `strconv.AppendInt/AppendBool/AppendQuote/AppendQuoteRune()`：转换为字符串后添加到字节数组中
+     1. `strconv.Quote("xx")`：输出双引号
    - index
      1. suffixarray：suffixarrayb包通过使用内存中的后缀树实现了对数级时间消耗的子字符串搜索
    - regexp：正则
      1. syntax
-
-   - encoding：编码
-     1. json
+     1. 认识：regexp包，实现RE2标准，实现搜索、替换、解析，strings包优先
+        - 正则预编译，可以加快速度：`regexp.MustCompile()`
+     1. 实例
+        ```go
+        regexp.Compile("\\<script[\\S\\s]+?\\</script\\>")                          // 判断是否能解析，并返回用于匹配的对象
+        regexp.MustCompile("\\<script[\\S\\s]+?\\</script\\>")                      // 不能解析就panic
+        regexp.MatchString("^[0-9]+$", os.Args[1])：是否包含，用于快速判断
+        ```
+1. 编码相关
+   - xml：encoding/xml包，读取Unmarshal，生成Marshal/MarshalIndent
+   - json：encoding/json包
+     1. 认识
         - 默认将数值当做float64
-     1. xml
+        - 共性
+          1. 只有可导出成员(首字母大写)才可和json互转，加了tag也不行
+          1. 当变量实现了Marshaler或者Unmarshaler，会调用其MarshalJSON或者UnmarshalJSON方法来生成json编码
+        - 编码时
+          1. 添加的tag作用
+             - 为_的不输出
+             - "xx,string"的转换类型
+             - "xx,omitempty"的该字段值为0值或者空值时不会输出到json中
+          1. 指针变量编码时自动转换为所指向的值
+        - 解码
+          1. 从json中确认字段的查找顺序：tag注明的->首字母大写其他小写的字段名->首字母之外其他大小写随意的导出字段(如NAME/NAmE)
+          1. 空字段默认给出类型默认值，指定默认值的一个方法是：定义一个带需要的默认值的结构体变量给到Unmarshal
+          1. 使用空接口可实现任意类型的成员赋值和转换
+          1. map结构是采用map[string]interface{}和[]interface{}结构来存储任意的JSON对象和数组
+     1. Marshal：序列化为json，用于map和struct
+        ```go
+        type Server struct {
+            ServerName string `json:"name"`     // 这是tag，生成json时替换key，做个映射，反过来也会用到
+            ServerIP   string `json:"ip"`
+        }
+
+        server := new(Server)
+        server.ServerName = "1"
+
+        a, _ := json.Marshal(server)
+
+        fmt.Println(string(a))
+        ```
+     1. Unmarshal：反序列化json
+        - struct
+            ```go
+            // 已知结构的
+            type Server struct {
+                ServerName string `json:"name"`
+                ServerIP   string `json:"ip"`
+            }
+            type Serverslice struct {
+                Servers []Server
+            }
+
+            var s Serverslice
+            str := `{"servers":[{"name":"1","ip":"127"},{"name":"2","ip":"127"},{"name":"2"}]}`
+            err := json.Unmarshal([]byte(str), &s)     // 强行转为数组
+            fmt.Println(s)
+            ```
+        - map
+            ```go
+            // 未知结构，interface和type assert配合
+            str := []byte(`{"name":"tom","age":6,"servers":[{"name":"1","ip":"127"},{"name":"2","ip":"127"}]}`)
+            var f interface{}
+            _ = json.Unmarshal(str, &f)
+            m := f.(map[string]interface{})             // 断言形式来访问
+            for k, v := range m {
+                switch vv := v.(type) {
+                case string:
+                    fmt.Println(k, "is string", vv)
+                case int:
+                    fmt.Println(k, "is int", vv)
+                case float64:
+                    fmt.Println(k,"is float64",vv)
+                case []interface{}:
+                    fmt.Println(k, "is an array:")
+                    for i, u := range vv {
+                        fmt.Println(i, u)
+                    }
+                default:
+                    fmt.Println(k, "is of a type I don't know how to handle")
+                }
+            }
+            fmt.Println(m["servers"])
+            // f的形式为
+            f = map[string]interface{}{
+                "Name": "tom",
+                "Age":  6,
+                "Parents": []interface{}{
+                    "1",
+                    "127",
+                },{
+                    "2",
+                    "127",
+                },
+            }
+
+
+            // 第三方simplejson包
+            js, err := NewJson([]byte(`{"servers":[{"name":"1","ip":"127"},{"name":"2","ip":"127"}]}`))
+            arr, _ := js.Get("servers").Get("name").Array()
+            i, _ := js.Get("servers").Get("name").Int()
+            ms := js.Get("servers").Get("name").MustString()
+            ```
      1. base64
+        - 普通
+          1. `base64.StdEncoding.EncodeToString(src)`
+          1. `base64.StdEncoding.DecodeString(string(src))`
+        - 兼容url
+          1. `base64.URLEncoding.EncodeToString(src)`
+          1. `base64.URLEncoding.DecodeString(string(src))`
      1. base32
      1. csv：csv读写逗号分隔值（csv）的文件.
      1. hex：hex包实现了16进制字符表示的编解码.
@@ -3638,30 +3747,18 @@
    - unicode：提供测试Unicode码点属性的数据和函数
      1. utf16
      1. utf8
-   - html：转义和解转义HTML文本的函数
-     1. template：实现数据驱动模板，用于生成可对抗代码注入的安全html输出
-     1. charset
-        - charset.DetermineEncoding()
-   - mime：实现了MIME的部分规定
-     1. multipart：实现MIME的multipart解析
-     1. quotedprintable
-1. 编码相关
-   - compress：解压缩
-     1. zlib
-     1. gzip
-     1. bzip2
-     1. flate：deflate压缩数据格式
-     1. lzw：Lempel-Ziv-Welch数据压缩格式
    - crypto：加解密
      1. rand：实现用于加解密的更安全的随机数生成器
 
      1. md5
+       - md5：`h := md5.New()`，crypto/md5
      1. sha1
      1. sha256：实现SHA224和SHA256哈希算法
+        - `h := sha256.New()`，crypto/sha256/sha1
      1. sha512：实现SHA384和SHA512哈希算法
 
      1. des：实现DES标准和TDEA算法
-     1. aes
+     1. aes：`aes.NewCipher`，crypto.des/aes、crypto/cipher
 
      1. rsa：RSA加密算法
      1. dsa：DSA算法
@@ -3681,6 +3778,19 @@
      1. crc32
      1. crc64
      1. fnv：实现了FNV-1和FNV-1a（非加密hash函数）
+   - compress：解压缩
+     1. zlib
+     1. gzip
+     1. bzip2
+     1. flate：deflate压缩数据格式
+     1. lzw：Lempel-Ziv-Welch数据压缩格式
+   - html：转义和解转义HTML文本的函数
+     1. template：实现数据驱动模板，用于生成可对抗代码注入的安全html输出
+     1. charset
+        - charset.DetermineEncoding()
+   - mime：实现了MIME的部分规定
+     1. multipart：实现MIME的multipart解析
+     1. quotedprintable
 1. io相关
    - io：提供i/o原语的基础接口
      1. `io.Reader`：作为流存在，不支持多次读取
@@ -3723,6 +3833,17 @@
                     break
                 }
             }
+            ```
+     1. 命令行
+        - 简单：`os.Args/os.Args[1]`
+        - 复杂：`flag`
+            ```go
+            // 格式化定义
+            ptr := flag.String/Int("name", "default", "demo")
+            // 解析
+            flag.Parse()
+            // 使用
+            *ptr
             ```
    - syscall
    - log
@@ -3923,279 +4044,7 @@
         m.Bounds()
         m.At(0, 0).RGBA()
         ```
-#### net
-1. net
-   - 类型
-     1. Conn：使用goroutines保证请求独立、非阻塞
-        - 连接控制
-          1. 方法
-             - DialTimeout
-             - SetDeadline/SetReadDeadline/SetWriteDeadline：超时失败，只是一个超时抛异常机制，不会断开连接。可以重新调用SetDeadline，实现不断的刷新状态，否则状态不变
-          1. 最佳实践
-             - 所有timeout操作都是通过设置Deadline实现的
-             - 明确设置ReadTimeout和WriteTimeout，并使用相应的方法来使server更完善
-             - Contexts一个优点是树形的一个取消，关闭所有子context
-     1. ServeMux：多路复用器，用作请求的路由分发
-     1. ip
-        - `addr := net.ParseIP()`
-   - 子包
-     1. http
-     1. url
-     1. rpc
-     1. mail：解析邮件消息
-     1. smtp：简单邮件传输协议
-     1. textproto：实现对基于文本的请求/回复协议的一般性支持
-1. http
-   - 认识：提供http客户端和服务端的实现
-   - 特点
-     1. serve方法中对panic作了保护，防止服务停止
-   - 类型
-     1. http.Client
-        - 实现连接池的代码在Transport类型中，使用idleConn保存持久化的可重用的长连接
-     1. http.Handler
-     1. http.Request
-     1. http.Response
-   - 方法
-     1. ServeContent()：根据请求头range的ReadSeeker方法
-        ```go
-        // 可拖拽播放的mp4文件输出
-        video, err := os.Open(vl)
-        if err != nil {
-            log.Printf("Error when try to open file: %v", err)
-            sendErrorResponse(w, http.StatusInternalServerError, "Internal Error")
-            return
-        }
-
-        w.Header().Set("Content-Type", "video/mp4")
-        http.ServeContent(w, r, "", time.Now(), video)
-
-        defer video.Close()
-        ```
-   - 子包
-     1. cookiejar：实现保管在内存中的符合RFC 6265标准的httpCookieJar接口
-     1. httputil：提供http公用函数，是http的函数补充
-        - ReverseProxy()：设置反向代理
-        - DumpResponse()：打印响应体
-     1. cgi：实现RFC3875协议描述的CGI（公共网关接口）
-     1. fcgi：实现FastCGI协议
-     1. httptest：http测试的单元工具
-     1. pprof：返回runtime的统计数据，返回pprof可视化工具规定的格式
-     1. httptrace
-   - demo
-    ```go
-    // 一个简单的http服务
-    func handler(w http.ResponseWriter, r *http.Request) {
-        video, err := os.Open("/Users/peanut/Documents/资料/测试资源/016ea36d3ffa47529f086eb1ec149163.mp4")
-        if err != nil {
-            log.Printf("Error when try to open file: %v", err)
-            return
-        }
-
-        data, _ := ioutil.ReadAll(video)
-        w.Header().Set("Content-Type", "video/mp4")
-
-        i, _ := w.Write(data)
-        defer video.Close()
-    }
-
-    func main() {
-        http.HandleFunc("/", handler)
-        log.Fatal(http.ListenAndServe(":8080", nil))
-    }
-    ```
-1. rpc
-   - 认识：支持三个级别：TCP、HTTP、JSONRPC，使用Gob编码的只能go内部
-     1. SOAP RPC：不支持
-   - 访问条件：`func (t *T) MethodName(argType T1, replyType *T2) error`，T/T1/T2必须能被encoding/gob包编解码
-     1. 函数必须是导出的
-     1. 必须有两个导出类型的参数，第一个参数是接收的参数，第二个参数是返回给客户端的参数，第二个参数必须是指针类型的
-     1. 函数要有一个返回值error
-   - tcp协议
-    ```go
-    // client
-    client, err := rpc.Dial("tcp", "127.0.0.1")
-    // Synchronous call
-    var reply int
-    err = client.Call("Xxx.Multiply", args, &reply)
-
-    // server
-    xxx := new(Xxx)
-    rpc.Register(xxx)
-    tcpAddr := net.ResolveTCPAddr("tcp", ":1234")
-    listener := net.ListenTCP("tcp", tcpAddr)
-    for {
-        conn := listener.Accept()                       // 需要自己控制连接
-        rpc.ServeConn(conn)                             // 有连接后，把连接交给rpc来处理
-    }
-    ```
-   - json rpc：使用json编码，不是gob，支持跨语言调用
-    ```go
-    // client
-    client, err := jsonrpc.Dial("tcp", service)
-    // synchronous call
-    args := Args{17, 8}
-    var reply int
-    err = client.Call("Xxx.Multiply", args, &reply)
-
-    // server
-    xxx := new(Xxx)
-    rpc.Register(xxx)
-    tcpAddr := net.ResolveTCPAddr("tcp", ":1234")
-    listener := net.ListenTCP("tcp", tcpAddr)
-    for {
-        conn, _ := listener.Accept()
-        go jsonrpc.ServeConn(conn)                      // 要异步，只能接收一个就阻塞了
-    }
-    ```
-   - http协议
-    ```go
-    // client
-    client := rpc.DialHTTP("tcp", "127.0.0.1:1234")
-    // synchronous call
-    var reply int
-    err = client.Call("Xxx.func", args, &reply)
-
-    // server
-    type Xxx int
-    xxx := new(Xxx)
-    rpc.Register(xxx)
-    rpc.HandleHTTP()                                    // 注册到HTTP协议上
-    err := http.ListenAndServe(":1234", nil)
-    ```
-### 应用方面
-1. 文本处理
-   - string：分割、连接、转换、取索引、前后缀检测等
-     1. strings包
-        - 查找：`strings.Index/Contains/HasPrefix/HasSuffix(src))`：索引、是否包含
-        - 修改：`strings.Trim/TrimSpace/Fields/Repeat/Replace/Join/Split(src))/ToLower/ToUpper`
-     1. strconv包
-        - 转换为字符串：`strconv.FormatBool/FormatInt/FormatUint/FormatFloat/Itoa()`：Itoa/Atoi针对int，FormatInt/ParseInt针对int64，可支持进制
-        - 字符串转换为其他类型：`strconv.ParseBool/ParseInt/ParseUint/ParseFloat/Atoi()`
-        - 转换为字符串后添加到字节数组中：`strconv.AppendInt/AppendBool/AppendQuote/AppendQuoteRune()`
-   - reg
-     1. 认识：regexp包，实现RE2标准，实现搜索、替换、解析，strings包优先
-        - 正则预编译，可以加快速度：`regexp.MustCompile()`
-     1. 实例
-        ```go
-        regexp.Compile("\\<script[\\S\\s]+?\\</script\\>")                          // 判断是否能解析，并返回用于匹配的对象
-        regexp.MustCompile("\\<script[\\S\\s]+?\\</script\\>")                      // 不能解析就panic
-        regexp.MatchString("^[0-9]+$", os.Args[1])：是否包含，用于快速判断
-        ```
-   - xml：encoding/xml包，读取Unmarshal，生成Marshal/MarshalIndent
-   - json：encoding/json包
-     1. 认识
-        - 共性
-          1. 只有可导出成员(首字母大写)才可和json互转，加了tag也不行
-          1. 当变量实现了Marshaler或者Unmarshaler，会调用其MarshalJSON或者UnmarshalJSON方法来生成json编码
-        - 编码时
-          1. 添加的tag作用
-             - 为_的不输出
-             - "xx,string"的转换类型
-             - "xx,omitempty"的该字段值为0值或者空值时不会输出到json中
-          1. 指针变量编码时自动转换为所指向的值
-        - 解码
-          1. 从json中确认字段的查找顺序：tag注明的->首字母大写其他小写的字段名->首字母之外其他大小写随意的导出字段(如NAME/NAmE)
-          1. 空字段默认给出类型默认值，指定默认值的一个方法是：定义一个带需要的默认值的结构体变量给到Unmarshal
-          1. 使用空接口可实现任意类型的成员赋值和转换
-          1. map结构是采用map[string]interface{}和[]interface{}结构来存储任意的JSON对象和数组
-     1. Marshal：序列化为json，用于map和struct
-        ```go
-        type Server struct {
-            ServerName string `json:"name"`     // 这是tag，生成json时替换key，做个映射，反过来也会用到
-            ServerIP   string `json:"ip"`
-        }
-
-        server := new(Server)
-        server.ServerName = "1"
-
-        a, _ := json.Marshal(server)
-
-        fmt.Println(string(a))
-        ```
-     1. Unmarshal：反序列化json
-        - struct
-            ```go
-            // 已知结构的
-            type Server struct {
-                ServerName string `json:"name"`
-                ServerIP   string `json:"ip"`
-            }
-            type Serverslice struct {
-                Servers []Server
-            }
-
-            var s Serverslice
-            str := `{"servers":[{"name":"1","ip":"127"},{"name":"2","ip":"127"},{"name":"2"}]}`
-            err := json.Unmarshal([]byte(str), &s)     // 强行转为数组
-            fmt.Println(s)
-            ```
-        - map
-            ```go
-            // 未知结构，interface和type assert配合
-            str := []byte(`{"name":"tom","age":6,"servers":[{"name":"1","ip":"127"},{"name":"2","ip":"127"}]}`)
-            var f interface{}
-            _ = json.Unmarshal(str, &f)
-            m := f.(map[string]interface{})             // 断言形式来访问
-            for k, v := range m {
-                switch vv := v.(type) {
-                case string:
-                    fmt.Println(k, "is string", vv)
-                case int:
-                    fmt.Println(k, "is int", vv)
-                case float64:
-                    fmt.Println(k,"is float64",vv)
-                case []interface{}:
-                    fmt.Println(k, "is an array:")
-                    for i, u := range vv {
-                        fmt.Println(i, u)
-                    }
-                default:
-                    fmt.Println(k, "is of a type I don't know how to handle")
-                }
-            }
-            fmt.Println(m["servers"])
-            // f的形式为
-            f = map[string]interface{}{
-                "Name": "tom",
-                "Age":  6,
-                "Parents": []interface{}{
-                    "1",
-                    "127",
-                },{
-                    "2",
-                    "127",
-                },
-            }
-
-
-            // 第三方simplejson包
-            js, err := NewJson([]byte(`{"servers":[{"name":"1","ip":"127"},{"name":"2","ip":"127"}]}`))
-            arr, _ := js.Get("servers").Get("name").Array()
-            i, _ := js.Get("servers").Get("name").Int()
-            ms := js.Get("servers").Get("name").MustString()
-            ```
-   - 命令行
-     1. 简单：`os.Args/os.Args[1]`
-     1. 复杂：`flag`
-        ```go
-        // 格式化定义
-        ptr := flag.String/Int("name", "default", "demo")
-        // 解析
-        flag.Parse()
-        // 使用
-        *ptr
-        ```
-1. 加解密
-   - base64
-     1. 普通
-        - `base64.StdEncoding.EncodeToString(src)`
-        - `base64.StdEncoding.DecodeString(string(src))`
-     1. 兼容url
-        - `base64.URLEncoding.EncodeToString(src)`
-        - `base64.URLEncoding.DecodeString(string(src))`
-   - aes：`aes.NewCipher`，crypto.des/aes、crypto/cipher
-   - sha：`h := sha256.New()`，crypto/sha256/sha1
-   - md5：`h := md5.New()`，crypto/md5
+#### 应用
 1. 数据库
    - database/sql：接口，数据库驱动的官方标准、通用接口
      1. 类型
@@ -4209,193 +4058,6 @@
         - driver.Conn：是到数据库的连接，多个goroutine不会同时使用
    - MySQL：github的go-sql-driver/mysql
    - NOSQL：github的garyburd/redigo
-1. web服务
-   - 发起http请求
-    ```go
-    resp, err := http.Get("http://")
-    defer resp.Body.Close()
-
-    s, err := httputil.DumpResponse(resp, true)
-    fmt.Printf("%s\n", s)
-    ```
-   - web服务器
-    ```go
-    type Hello struct{}
-    var h Hello
-    func (h Hello) ServeHTTP(w http.ResponseWriter,r *http.Request) {
-        r.ParseForm()                           // 解析参数
-        // form
-        r.Form
-        r.Form["id"]
-        // url
-        r.URL.Path
-        r.URL.Scheme
-        // cookis
-        cookie := r.Cookie("id")
-        for _, cookie := range r.Cookies() {
-            fmt.Fprint(w, cookie.Name)
-        }
-        // echo
-        fmt.Fprintf(w, "Hello!")
-    }
-
-    // cookis
-    expiration := time.Now()
-    expiration = expiration.AddDate(1, 0, 0)
-    cookie := http.Cookie{Name: "id", Value: "astaxie", Expires: expiration}
-    http.SetCookie(w, &cookie)
-
-    err := http.ListenAndServe("localhost:4000", h)                             // 启动服务器
-    if err != nil {
-        log.Fatal(err)
-    }
-    ```
-   - 服务端cookie操作
-     1. 直接操作http头部
-        ```go
-        // 获取cookie，r *http.Request
-        r.Header.Get("Cookie")
-
-        // 设置Set-Cookie字段，w http.ResponseWriter
-        c2 := http.Cookie{
-            Name:     "second_cookie",
-            Value:    "Go Web Programming",
-            HttpOnly: true,
-        }
-        w.Header().Set("Set-Cookie", c2.String())
-        w.Header().Add("Set-Cookie", c2.String())
-        ```
-     1. 使用http方法
-        ```go
-        // 获取
-        http.Request.Cookie(key string)         // 单个
-        http.Request.Cookies()                  // 所有
-        // 设置
-        http.SetCookie(w, &c2)
-        ```
-   - socket：Socket数据传输是Unix特殊的I/O，分为流式Socket(SOCK_STREAM，面向连接，TCP)、数据报式Socket(SOCK_DGRAM，无连接，UDP)
-     1. tcp
-        ```go
-        // client
-        tcpAddr := net.ResolveTCPAddr("tcp4", service)
-        conn := net.DialTCP("tcp", nil, tcpAddr)
-        result := ioutil.ReadAll(conn)
-        // server，单任务
-        tcpAddr := net.ResolveTCPAddr("tcp4", service)
-        listener := net.ListenTCP("tcp", tcpAddr)
-        for {
-            conn := listener.Accept()
-            conn.Write()
-            conn.Close()
-        }
-        // server，多任务
-        tcpAddr := net.ResolveTCPAddr("tcp4", service)
-        listener := net.ListenTCP("tcp", tcpAddr)
-        for {
-            conn := listener.Accept()
-            go handleClient(conn)
-        }
-
-        func handleClient(conn net.Conn) {
-            defer conn.Close()
-            conn.SetReadDeadline(time.Now().Add(2 * time.Minute))
-            conn.Write()
-        }
-        ```
-     1. udp
-        ```go
-        // client
-        udpAddr := net.ResolveUDPAddr("udp4", service)
-        conn := net.DialUDP("udp", nil, udpAddr)
-        conn.Write()
-        var buf [512]byte
-        n := conn.Read(buf[0:])
-        // server，多任务
-        udpAddr := net.ResolveUDPAddr("udp4", ":1200")
-        conn := net.ListenUDP("udp", udpAddr)
-        for {
-            var buf [512]byte
-            _, addr, err := conn.ReadFromUDP(buf[0:])
-            conn.WriteToUDP([]byte(), addr)
-        }
-        ```
-   - webSocket：go.net子包有，`golang.org/x/net/websocket`
-1. gRPC
-   - 认识：基于http2.0的基于protoBuf的cs型的高性能、开源的rpc框架，比webSocket高效，google主导开发，包 `google.golang.org/grpc`
-     1. 支持多语音，默认采用protocol buffers数据序列化协议
-     1. 可实现多路复用，就是并发的请求和接收
-   - 模式
-     1. 简单模式：单调的顺序请求、响应
-     1. 双向数据流模式：请求、响应并行起来
-   - 实例
-     1. proto rpc
-        - 编写proto文件，生成.pb.go代码：`protoc --go_out= plugin= protorpc=. arith.proto`，包含了rpc方法定义和服务注册的代码
-        - 使用
-          1. 服务端：`pb.ListenAndServeArithService("tcp", "127.0.0.1:8097", new(Arith))`
-          1. 客户端
-            ```go
-            conn, err := pb.DialArithService("tcp", "127.0.0.1:8097")
-            if err != nil {
-                log.Fatalln("dailing error: ", err)
-            }
-            defer conn.Close()
-
-            req := &pb.ArithRequest{9, 2}
-
-            res, err := conn.Multiply(req)
-            if err != nil {
-                log.Fatalln("arith error: ", err)
-            }
-            ```
-     1. grpc
-        - 使用
-          1. 编写proto或protoc(有service)文件，
-          1. 实现pb.go的RegisterXXServiceServer接口
-          1. 服务端
-            ```go
-            // 1. new一个grpc的server
-            rpcServer := grpc.NewServer()
-
-            // 2. 将刚刚我们新建的ProdService注册进去
-            service.RegisterProdServiceServer(rpcServer, new(service.ProdService))
-
-            // 3. 新建一个listener，以tcp方式监听8082端口
-            listener, err := net.Listen("tcp", ":8082")
-            if err != nil {
-                log.Fatal("服务监听端口失败", err)
-            }
-
-            // 4. 运行rpcServer，传入listener
-            _ = rpcServer.Serve(listener)
-            ```
-          1. 客户端
-            ```go
-            conn, err := grpc.Dial(":8082", grpc.WithInsecure())
-            if err != nil {
-                log.Fatal(err)
-            }
-
-            // 退出时关闭链接
-            defer conn.Close()
-
-            // 2. 调用Product.pb.go中的NewProdServiceClient方法
-            productServiceClient := service.NewProdServiceClient(conn)
-
-            // 3. 直接像调用本地方法一样调用GetProductStock方法
-            resp, err := productServiceClient.GetProductStock(context.Background(), &service.ProductRequest{ProdId: 233})
-            if err != nil {
-                log.Fatal("调用gRPC方法错误: ", err)
-            }
-
-            fmt.Println("调用gRPC方法成功，ProdStock = ", resp.ProdStock)
-            ```
-   - 其他
-     1. rpcx：RPC服务治理框架
-        - 高性能：gRPC性能的两倍
-        - 交叉语言：各种编程语言的调用
-        - 服务发现：支持直连、Zookeeper、Etcd、Consul、mDNS等注册中心
-        - 服务治理：支持Failover、Failfast、Failtry、Backup等失败模式，支持随机、轮询、权重、网络质量、一致性哈希、地理位置等路由算法
-     1. SPRC：搜狗基于Sogou C++ Workflow的企业级RPC系统，qps几十万，支持Protobuf、Thrift
 1. 国际化
    - 地区：`i18n.SetLocale("zh-CN")`
    - 资源：展示
@@ -4467,6 +4129,256 @@
      1. 组成
         - 基于Pathfinder的高效矢量渲染器
         - 基于piet-gpu的实验渲染器，两种渲染器都支持Vulkan、Metal、Direct3D 11和OpenGL ES
+##### net
+1. net
+   - 类型
+     1. Conn：使用goroutines保证请求独立、非阻塞
+        - 连接控制
+          1. 方法
+             - DialTimeout
+             - SetDeadline/SetReadDeadline/SetWriteDeadline：超时失败，只是一个超时抛异常机制，不会断开连接。可以重新调用SetDeadline，实现不断的刷新状态，否则状态不变
+          1. 最佳实践
+             - 所有timeout操作都是通过设置Deadline实现的
+             - 明确设置ReadTimeout和WriteTimeout，并使用相应的方法来使server更完善
+             - Contexts一个优点是树形的一个取消，关闭所有子context
+     1. ServeMux：多路复用器，用作请求的路由分发
+     1. ip
+        - `addr := net.ParseIP()`
+   - 子包
+     1. http
+     1. url
+     1. rpc
+     1. mail：解析邮件消息
+     1. smtp：简单邮件传输协议
+     1. textproto：实现对基于文本的请求/回复协议的一般性支持
+1. socket：Socket数据传输是Unix特殊的I/O，分为流式Socket(SOCK_STREAM，面向连接，TCP)、数据报式Socket(SOCK_DGRAM，无连接，UDP)
+     1. tcp
+        ```go
+        // client
+        tcpAddr := net.ResolveTCPAddr("tcp4", service)
+        conn := net.DialTCP("tcp", nil, tcpAddr)
+        result := ioutil.ReadAll(conn)
+        // server，单任务
+        tcpAddr := net.ResolveTCPAddr("tcp4", service)
+        listener := net.ListenTCP("tcp", tcpAddr)
+        for {
+            conn := listener.Accept()
+            conn.Write()
+            conn.Close()
+        }
+        // server，多任务
+        tcpAddr := net.ResolveTCPAddr("tcp4", service)
+        listener := net.ListenTCP("tcp", tcpAddr)
+        for {
+            conn := listener.Accept()
+            go handleClient(conn)
+        }
+
+        func handleClient(conn net.Conn) {
+            defer conn.Close()
+            conn.SetReadDeadline(time.Now().Add(2 * time.Minute))
+            conn.Write()
+        }
+        ```
+     1. udp
+        ```go
+        // client
+        udpAddr := net.ResolveUDPAddr("udp4", service)
+        conn := net.DialUDP("udp", nil, udpAddr)
+        conn.Write()
+        var buf [512]byte
+        n := conn.Read(buf[0:])
+        // server，多任务
+        udpAddr := net.ResolveUDPAddr("udp4", ":1200")
+        conn := net.ListenUDP("udp", udpAddr)
+        for {
+            var buf [512]byte
+            _, addr, err := conn.ReadFromUDP(buf[0:])
+            conn.WriteToUDP([]byte(), addr)
+        }
+        ```
+1. http
+   - 认识：提供http客户端和服务端的实现
+   - 特点
+     1. serve方法中对panic作了保护，防止服务停止
+   - 类型
+     1. http.Client
+        - 实现连接池的代码在Transport类型中，使用idleConn保存持久化的可重用的长连接
+     1. http.Handler
+     1. http.Request
+     1. http.Response
+   - 方法
+     1. ServeContent()：根据请求头range的ReadSeeker方法
+        ```go
+        // 可拖拽播放的mp4文件输出
+        video, err := os.Open(vl)
+        if err != nil {
+            log.Printf("Error when try to open file: %v", err)
+            sendErrorResponse(w, http.StatusInternalServerError, "Internal Error")
+            return
+        }
+
+        w.Header().Set("Content-Type", "video/mp4")
+        http.ServeContent(w, r, "", time.Now(), video)
+
+        defer video.Close()
+        ```
+   - 子包
+     1. cookiejar：实现保管在内存中的符合RFC 6265标准的httpCookieJar接口
+     1. httputil：提供http公用函数，是http的函数补充
+        - ReverseProxy()：设置反向代理
+        - DumpResponse()：打印响应体
+     1. cgi：实现RFC3875协议描述的CGI（公共网关接口）
+     1. fcgi：实现FastCGI协议
+     1. httptest：http测试的单元工具
+     1. pprof：返回runtime的统计数据，返回pprof可视化工具规定的格式
+     1. httptrace
+   - demo
+     1. 发起http请求
+        ```go
+        resp, err := http.Get("http://")
+        defer resp.Body.Close()
+
+        s, err := httputil.DumpResponse(resp, true)
+        fmt.Printf("%s\n", s)
+        ```
+     1. 一个简单的http服务
+        ```go
+        func handler(w http.ResponseWriter, r *http.Request) {
+            video, err := os.Open("/Users/peanut/Documents/资料/测试资源/016ea36d3ffa47529f086eb1ec149163.mp4")
+            if err != nil {
+                log.Printf("Error when try to open file: %v", err)
+                return
+            }
+
+            data, _ := ioutil.ReadAll(video)
+            w.Header().Set("Content-Type", "video/mp4")
+
+            i, _ := w.Write(data)
+            defer video.Close()
+        }
+
+        func main() {
+            http.HandleFunc("/", handler)
+            log.Fatal(http.ListenAndServe(":8080", nil))
+        }
+        ```
+     1. web服务器
+        ```go
+        type Hello struct{}
+        var h Hello
+        func (h Hello) ServeHTTP(w http.ResponseWriter,r *http.Request) {
+            r.ParseForm()                           // 解析参数
+            // form
+            r.Form
+            r.Form["id"]
+            // url
+            r.URL.Path
+            r.URL.Scheme
+            // cookis
+            cookie := r.Cookie("id")
+            for _, cookie := range r.Cookies() {
+                fmt.Fprint(w, cookie.Name)
+            }
+            // echo
+            fmt.Fprintf(w, "Hello!")
+        }
+
+        // cookis
+        expiration := time.Now()
+        expiration = expiration.AddDate(1, 0, 0)
+        cookie := http.Cookie{Name: "id", Value: "astaxie", Expires: expiration}
+        http.SetCookie(w, &cookie)
+
+        err := http.ListenAndServe("localhost:4000", h)                             // 启动服务器
+        if err != nil {
+            log.Fatal(err)
+        }
+        ```
+     1. 服务端cookie操作
+        - 直接操作http头部
+            ```go
+            // 获取cookie，r *http.Request
+            r.Header.Get("Cookie")
+
+            // 设置Set-Cookie字段，w http.ResponseWriter
+            c2 := http.Cookie{
+                Name:     "second_cookie",
+                Value:    "Go Web Programming",
+                HttpOnly: true,
+            }
+            w.Header().Set("Set-Cookie", c2.String())
+            w.Header().Add("Set-Cookie", c2.String())
+            ```
+        - 使用http方法
+            ```go
+            // 获取
+            http.Request.Cookie(key string)         // 单个
+            http.Request.Cookies()                  // 所有
+            // 设置
+            http.SetCookie(w, &c2)
+            ```
+1. webSocket
+   - 认识：go.net子包有，`golang.org/x/net/websocket`
+1. rpc
+   - 认识：支持三个级别：TCP、HTTP、JSONRPC，使用Gob编码的只能go内部
+     1. SOAP RPC：不支持
+   - 访问条件：`func (t *T) MethodName(argType T1, replyType *T2) error`，T/T1/T2必须能被encoding/gob包编解码
+     1. 函数必须是导出的
+     1. 必须有两个导出类型的参数，第一个参数是接收的参数，第二个参数是返回给客户端的参数，第二个参数必须是指针类型的
+     1. 函数要有一个返回值error
+   - tcp协议
+    ```go
+    // client
+    client, err := rpc.Dial("tcp", "127.0.0.1")
+    // Synchronous call
+    var reply int
+    err = client.Call("Xxx.Multiply", args, &reply)
+
+    // server
+    xxx := new(Xxx)
+    rpc.Register(xxx)
+    tcpAddr := net.ResolveTCPAddr("tcp", ":1234")
+    listener := net.ListenTCP("tcp", tcpAddr)
+    for {
+        conn := listener.Accept()                       // 需要自己控制连接
+        rpc.ServeConn(conn)                             // 有连接后，把连接交给rpc来处理
+    }
+    ```
+   - json rpc：使用json编码，不是gob，支持跨语言调用
+    ```go
+    // client
+    client, err := jsonrpc.Dial("tcp", service)
+    // synchronous call
+    args := Args{17, 8}
+    var reply int
+    err = client.Call("Xxx.Multiply", args, &reply)
+
+    // server
+    xxx := new(Xxx)
+    rpc.Register(xxx)
+    tcpAddr := net.ResolveTCPAddr("tcp", ":1234")
+    listener := net.ListenTCP("tcp", tcpAddr)
+    for {
+        conn, _ := listener.Accept()
+        go jsonrpc.ServeConn(conn)                      // 要异步，只能接收一个就阻塞了
+    }
+    ```
+   - http协议
+    ```go
+    // client
+    client := rpc.DialHTTP("tcp", "127.0.0.1:1234")
+    // synchronous call
+    var reply int
+    err = client.Call("Xxx.func", args, &reply)
+
+    // server
+    type Xxx int
+    xxx := new(Xxx)
+    rpc.Register(xxx)
+    rpc.HandleHTTP()                                    // 注册到HTTP协议上
+    err := http.ListenAndServe(":1234", nil)
+    ```
 ### 测试与性能
 1. 单元测试
    - 认识

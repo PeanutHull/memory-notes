@@ -93,6 +93,82 @@
      1. Buffalo：快速构建web
      1. Revel：高效、全栈
      1. Martini：轻巧、功能强大、模块化web，不再维护
+1. gRPC
+   - 认识：基于http2.0的基于protoBuf的cs型的高性能、开源的rpc框架，比webSocket高效，google主导开发，包 `google.golang.org/grpc`
+     1. 支持多语音，默认采用protocol buffers数据序列化协议
+     1. 可实现多路复用，就是并发的请求和接收
+   - 模式
+     1. 简单模式：单调的顺序请求、响应
+     1. 双向数据流模式：请求、响应并行起来
+   - 实例
+     1. proto rpc
+        - 编写proto文件，生成.pb.go代码：`protoc --go_out= plugin= protorpc=. arith.proto`，包含了rpc方法定义和服务注册的代码
+        - 使用
+          1. 服务端：`pb.ListenAndServeArithService("tcp", "127.0.0.1:8097", new(Arith))`
+          1. 客户端
+            ```go
+            conn, err := pb.DialArithService("tcp", "127.0.0.1:8097")
+            if err != nil {
+                log.Fatalln("dailing error: ", err)
+            }
+            defer conn.Close()
+
+            req := &pb.ArithRequest{9, 2}
+
+            res, err := conn.Multiply(req)
+            if err != nil {
+                log.Fatalln("arith error: ", err)
+            }
+            ```
+     1. grpc
+        - 使用
+          1. 编写proto或protoc(有service)文件，
+          1. 实现pb.go的RegisterXXServiceServer接口
+          1. 服务端
+            ```go
+            // 1. new一个grpc的server
+            rpcServer := grpc.NewServer()
+
+            // 2. 将刚刚我们新建的ProdService注册进去
+            service.RegisterProdServiceServer(rpcServer, new(service.ProdService))
+
+            // 3. 新建一个listener，以tcp方式监听8082端口
+            listener, err := net.Listen("tcp", ":8082")
+            if err != nil {
+                log.Fatal("服务监听端口失败", err)
+            }
+
+            // 4. 运行rpcServer，传入listener
+            _ = rpcServer.Serve(listener)
+            ```
+          1. 客户端
+            ```go
+            conn, err := grpc.Dial(":8082", grpc.WithInsecure())
+            if err != nil {
+                log.Fatal(err)
+            }
+
+            // 退出时关闭链接
+            defer conn.Close()
+
+            // 2. 调用Product.pb.go中的NewProdServiceClient方法
+            productServiceClient := service.NewProdServiceClient(conn)
+
+            // 3. 直接像调用本地方法一样调用GetProductStock方法
+            resp, err := productServiceClient.GetProductStock(context.Background(), &service.ProductRequest{ProdId: 233})
+            if err != nil {
+                log.Fatal("调用gRPC方法错误: ", err)
+            }
+
+            fmt.Println("调用gRPC方法成功，ProdStock = ", resp.ProdStock)
+            ```
+   - 其他
+     1. rpcx：RPC服务治理框架
+        - 高性能：gRPC性能的两倍
+        - 交叉语言：各种编程语言的调用
+        - 服务发现：支持直连、Zookeeper、Etcd、Consul、mDNS等注册中心
+        - 服务治理：支持Failover、Failfast、Failtry、Backup等失败模式，支持随机、轮询、权重、网络质量、一致性哈希、地理位置等路由算法
+     1. SPRC：搜狗基于Sogou C++ Workflow的企业级RPC系统，qps几十万，支持Protobuf、Thrift
 1. wiki
    - xes框架解析
     ```go
