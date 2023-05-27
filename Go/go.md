@@ -141,7 +141,7 @@
      1. 双引号：表示字符串
      1. ``：表示多行文本
    - 算术：++、--、+-*/%
-   - 关系：==、!=、>、<、>=、<=
+   - 关系：==、!=、>、<、>=、<=，可以直接运算字符串的大小，如`fmt.Println("b"<"a")`
    - 逻辑：&&、||、!
    - 按位：&、|、^、<<、>>
    - 赋值：=、+=等
@@ -3718,8 +3718,43 @@
 1. 文本相关
    - bytes：处理字节切片[]byte，类似strings包，就是处理单个字符的嘛，strings处理多个的
    - strings：处理utf-8编码的字符串，包含分割、连接、转换、取索引、前后缀检测等
-     1. `strings.Index/Contains/HasPrefix/HasSuffix(src))`：位置索引、是否包含
-     1. `strings.Trim/TrimSpace/Fields/Repeat/Replace/Join/Split(src))/ToLower/ToUpper`：修改
+     1. `strings.Contains(s, substr string) bool/ContainsAny/ContainsRune(s string, r rune) bool/Count(s, substr string) int/HasPrefix(s, prefix string) bool/HasSuffix())`：是否包含相关。返回布尔值、是否包含任何字符的二参、数数包含几个(二参为空要+1)、前缀后缀
+        ```go
+        fmt.Println(strings.ContainsRune("aardvark", 97))   // true
+        ```
+     1. `strings.Index(s, substr string) int/LastIndex/IndexAny/LastIndexAny/IndexByte/IndexRune/IndexFunc`：位置索引相关。获取位置索引(返回int，不存在-1)、最后匹配到的索引，不存在-1、包含任何字符的二参、自定义
+        ```go
+        f := func(c rune) bool {
+            return unicode.Is(unicode.Han, c)
+        }
+        fmt.Println(strings.IndexFunc("Hello, 世界", f))
+        ```
+     1. `strings.Trim(s, cutset string) string/TrimLeft/TrimPrefix/TrimSpace/TrimFunc/Fields(s string) []string/FieldsFunc`：空白字符相关，去除、TrimLeft只要包含一个字符就去除，TrimPrefix需要全相等才去除，TrimSpace去除空白字符，Fields根据n个空白字符切分为字符串切片
+        ```go
+        f := func(c rune) bool {
+            return !unicode.IsLetter(c) && !unicode.IsNumber(c)
+        }
+        strings.FieldsFunc("  foo1;bar2,baz3...", f)
+
+        // 结果：Fields are: ["foo1" "bar2" "baz3"]
+        ```
+     1. `strings.Split(s, sep string) []string/SplitAfter/SplitAfterN/SplitN/Cut(s, sep string) (before, after string, found bool)/CutPrefix/CutSuffix`：切字符串相关，返回字符串切片，返回前后内容、是否找到
+     1. `strings.Join(elems []string, sep string) string`：连接相关，根据给定字符串将字符串切片连接为字符串
+     1. `strings.Replace(s, old, new string, n int) string/ReplaceAll/Map(mapping func(rune) rune, s string) string/Repeat(s string, count int) string`：替换n次字符串、映射替换、重复n次字符串
+        ```go
+        rot13 := func(r rune) rune {
+            switch {
+            case r >= 'A' && r <= 'Z':
+                return 'A' + (r-'A'+13)%26
+            case r >= 'a' && r <= 'z':
+                return 'a' + (r-'a'+13)%26
+            }
+            return r
+        }
+        fmt.Println(strings.Map(rot13, "'Twas brillig and the slithy gopher..."))
+        ```
+     1. `strings.ToLower(s string) string/ToUpper/EqualFold(s, t string) bool/ToTitle`：大小写相关，忽略大小写比较
+     1. `strings.Clone()`：克隆，新的内存分配，用于用小串代替大串节省内存用，空的话不会分配空间
    - index
      1. suffixarray：suffixarrayb包通过使用内存中的后缀树实现了对数级时间消耗的子字符串搜索
    - text
@@ -3847,6 +3882,8 @@
    - unicode：提供测试Unicode码点属性的数据和函数
      1. utf16
      1. utf8
+     1. unicode.Is(unicode.Han, r)：是否汉字，r为rune类型
+     1. 方法：IsLetter、IsNumber
    - crypto：加解密
      1. rand：实现用于加解密的更安全的随机数生成器
 
