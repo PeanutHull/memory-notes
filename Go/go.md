@@ -3718,27 +3718,34 @@
 1. 文本相关
    - bytes：处理字节切片[]byte，类似strings包，就是处理单个字符的嘛，strings处理多个的
    - strings：处理utf-8编码的字符串，包含分割、连接、转换、取索引、前后缀检测等
-     1. `strings.Contains(s, substr string) bool/ContainsAny/ContainsRune(s string, r rune) bool/Count(s, substr string) int/HasPrefix(s, prefix string) bool/HasSuffix())`：是否包含相关。返回布尔值、是否包含任何字符的二参、数数包含几个(二参为空要+1)、前缀后缀
-        ```go
-        fmt.Println(strings.ContainsRune("aardvark", 97))   // true
-        ```
-     1. `strings.Index(s, substr string) int/LastIndex/IndexAny/LastIndexAny/IndexByte/IndexRune/IndexFunc`：位置索引相关。获取位置索引(返回int，不存在-1)、最后匹配到的索引，不存在-1、包含任何字符的二参、自定义
-        ```go
-        f := func(c rune) bool {
-            return unicode.Is(unicode.Han, c)
-        }
-        fmt.Println(strings.IndexFunc("Hello, 世界", f))
-        ```
-     1. `strings.Trim(s, cutset string) string/TrimLeft/TrimPrefix/TrimSpace/TrimFunc/Fields(s string) []string/FieldsFunc`：空白字符相关，去除、TrimLeft只要包含一个字符就去除，TrimPrefix需要全相等才去除，TrimSpace去除空白字符，Fields根据n个空白字符切分为字符串切片
-        ```go
-        f := func(c rune) bool {
-            return !unicode.IsLetter(c) && !unicode.IsNumber(c)
-        }
-        strings.FieldsFunc("  foo1;bar2,baz3...", f)
-
-        // 结果：Fields are: ["foo1" "bar2" "baz3"]
-        ```
-     1. `strings.Split(s, sep string) []string/SplitAfter/SplitAfterN/SplitN/Cut(s, sep string) (before, after string, found bool)/CutPrefix/CutSuffix`：切字符串相关，返回字符串切片，返回前后内容、是否找到
+     1. 是否包含相关
+        - `strings.Contains(s, substr string) bool/ContainsAny/ContainsRune(s string, r rune) bool`：返回布尔值，是否包含任何字符的二参
+            ```go
+            fmt.Println(strings.ContainsRune("aardvark", 97))   // true
+            ```
+        - `strings.Count(s, substr string) int`：数数包含几个(二参为空要+1)
+        - `HasPrefix(s, prefix string) bool/HasSuffix())`：前缀后缀
+     1. 位置索引相关
+        - `strings.Index(s, substr string) int/IndexAny/IndexByte/IndexRune/IndexFunc`：获取位置索引(返回int，不存在-1)，包含任何字符的二参，自定义
+            ```go
+            f := func(c rune) bool {
+                return unicode.Is(unicode.Han, c)
+            }
+            fmt.Println(strings.IndexFunc("Hello, 世界", f))
+            ```
+        - `strings.LastIndex/LastIndexAny/LastIndexFunc`：最后匹配到的索引，不存在-1
+     1. 空白字符相关
+        - `strings.Trim(s, cutset string) string/TrimLeft/TrimPrefix/TrimSpace/TrimFunc`：去除、TrimLeft只要包含一个字符就去除，TrimPrefix需要全相等才去除，TrimSpace去除空白字符
+            ```go
+            f := func(c rune) bool {
+                return !unicode.IsLetter(c) && !unicode.IsNumber(c)
+            }
+            strings.FieldsFunc("  foo1;bar2,baz3...", f)                // 结果：Fields are: ["foo1" "bar2" "baz3"]
+            ```
+        - `Fields(s string) []string/FieldsFunc`：根据n个空白字符切分为字符串切片
+     1. 切字符串相关
+        - `strings.Split(s, sep string) []string/SplitAfter/SplitAfterN/SplitN`：返回字符串切片，返回前后内容、是否找到
+        - `Cut(s, sep string) (before, after string, found bool)/CutPrefix/CutSuffix`
      1. `strings.Join(elems []string, sep string) string`：连接相关，根据给定字符串将字符串切片连接为字符串
      1. `strings.Replace(s, old, new string, n int) string/ReplaceAll/Map(mapping func(rune) rune, s string) string/Repeat(s string, count int) string`：替换n次字符串、映射替换、重复n次字符串
         ```go
