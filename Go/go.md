@@ -3151,6 +3151,7 @@
    - 底层依赖channel实现
    - v1.7加入标准库
    - 问题：Context在函数里满天飞，还支持了超时、截止时间方法等“额外”方法
+   - Contexts一个优点是树形的一个取消，关闭所有子context
 1. 应用场景
    - 上下文信息传递：如http的链路信息传递
    - 控制子goroutine的运行、取消、超时
@@ -3639,7 +3640,7 @@
             By name: [{Alice 55} {Bob 75} {Gopher 7} {Vera 24}]
             By age: [{Gopher 7} {Vera 24} {Alice 55} {Bob 75}]
             ```
-        - `sort.Find(n int, cmp func(int) int) (i int, found bool)/Search(n int, f func(int) bool) int/SearchInts/SearchStrings()`：使用二分搜索来查找并返回[0, n)中f(i)为真的最小索引i，n为查找的数量范围
+        - `sort.Find(n int, cmp func(int) int) (i int, found bool)/Search(n int, f func(int) bool) int/SearchInts/SearchStrings()`：使用二分搜索来查找并返回[0, n)中f(i)为真的最小索引i，n为查找的数量范围，不会先排序，是直接搜
             ```go
             a := []int{1, 3, 6, 10, 15, 21, 28, 36, 45, 55}
             x := 6
@@ -3745,71 +3746,98 @@
         - `Fields(s string) []string/FieldsFunc`：根据n个空白字符切分为字符串切片
      1. 切字符串相关
         - `strings.Split(s, sep string) []string/SplitAfter/SplitAfterN/SplitN`：返回字符串切片，返回前后内容、是否找到
-        - `Cut(s, sep string) (before, after string, found bool)/CutPrefix/CutSuffix`
-     1. `strings.Join(elems []string, sep string) string`：连接相关，根据给定字符串将字符串切片连接为字符串
-     1. `strings.Replace(s, old, new string, n int) string/ReplaceAll/Map(mapping func(rune) rune, s string) string/Repeat(s string, count int) string`：替换n次字符串、映射替换、重复n次字符串
-        ```go
-        rot13 := func(r rune) rune {
-            switch {
-            case r >= 'A' && r <= 'Z':
-                return 'A' + (r-'A'+13)%26
-            case r >= 'a' && r <= 'z':
-                return 'a' + (r-'a'+13)%26
+        - `strings.Cut(s, sep string) (before, after string, found bool)/CutPrefix/CutSuffix`
+     1. 连接相关，根据给定字符串将字符串切片连接为字符串
+        - `strings.Join(elems []string, sep string) string`
+     1. 替换相关
+        - `strings.Replace(s, old, new string, n int) string/ReplaceAll`：替换n次字符串
+        - `strings.Map(mapping func(rune) rune, s string) string`：映射替换
+            ```go
+            rot13 := func(r rune) rune {
+                switch {
+                case r >= 'A' && r <= 'Z':
+                    return 'A' + (r-'A'+13)%26
+                case r >= 'a' && r <= 'z':
+                    return 'a' + (r-'a'+13)%26
+                }
+                return r
             }
-            return r
-        }
-        fmt.Println(strings.Map(rot13, "'Twas brillig and the slithy gopher..."))
-        ```
-     1. `strings.ToLower(s string) string/ToUpper/EqualFold(s, t string) bool/ToTitle`：大小写相关，忽略大小写比较
-     1. `strings.Clone()`：克隆，新的内存分配，用于用小串代替大串节省内存用，空的话不会分配空间
-   - index
-     1. suffixarray：suffixarrayb包通过使用内存中的后缀树实现了对数级时间消耗的子字符串搜索
-   - text
+            fmt.Println(strings.Map(rot13, "'Twas brillig and the slithy gopher..."))
+            ```
+        - `strings.Repeat(s string, count int) string`：重复n次字符串
+     1. 大小写相关
+        - `strings.ToLower(s string) string/ToUpper/ToTitle`：全变大写
+        - `strings.EqualFold(s, t string) bool`：忽略大小写比较
+     1. 克隆
+        - `strings.Clone()`：新的内存分配，用于用小串代替大串节省内存用，空的话不会分配空间
    - regexp：正则
-     1. syntax
-     1. 认识：regexp包，实现RE2标准，实现搜索、替换、解析，strings包优先
-        - 正则预编译，可以加快速度：`regexp.MustCompile()`
-     1. 实例
+     1. 认识：实现RE2标准，实现搜索、替换、解析，strings包优先
+        - `regexp.syntax`：正则表达式解析为解析树，并将解析树编译为程序，一般用regexp不用这个
+     1. 方法
+        - `func Compile(expr string) (*Regexp, error)/func MustCompile(str string) *Regexp`：解析正则表达式，如果成功返回可用于与文本匹配的Regexp对象，MustCompile正则预编译，可以加快速度，解析不了就panic
+            ```go
+            regexp.Compile("\\<script[\\S\\s]+?\\</script\\>")
+            re.MatchString(os.Args[1])
+            ```
+        - `func (re *Regexp) Find(b []byte) []byte/func (re *Regexp) FindIndex(b []byte) (loc []int)/func (re *Regexp) FindString(s string) string`
+            ```go
+            	re := regexp.MustCompile(`foo.?`)
+	            re.Find([]byte(`seafood fool`))         // 返回"food"
+            ```
+        - `FindAll/FindAllIndex/FindAllString/FindAllStringIndex/FindAllStringSubmatch`：返回所有结果，数据类型升级为slice
+        - `func (re *Regexp) Match(b []byte) bool/func (re *Regexp) MatchString(s string) bool`：是否包含
+        - `func (re *Regexp) ReplaceAll(src, repl []byte) []byte/ReplaceAllFunc`：
+        - `func (re *Regexp) Split(s string, n int) []string`：
+   - index/suffixarray
+     1. 认识：循环查多个子串，通过使用内存中的后缀树实现了对数级时间消耗的子字符串搜索
+     1. 方法
+        - `suffixarray.New()`
+        - `func (x *Index) Lookup(s []byte, n int) (result []int)`
+        - `func (x *Index) FindAllIndex(r *regexp.Regexp, n int) (result [][]int)`
+     1. 示例
         ```go
-        regexp.Compile("\\<script[\\S\\s]+?\\</script\\>")                          // 判断是否能解析，并返回用于匹配的对象
-        regexp.MustCompile("\\<script[\\S\\s]+?\\</script\\>")                      // 不能解析就panic
-        regexp.MatchString("^[0-9]+$", os.Args[1])：是否包含，用于快速判断
+        index := suffixarray.New([]byte("banana"))
+    	offsets := index.Lookup([]byte("ana"), -1)      // 返回[]int{1,3}
         ```
+   - text
+     1. 组成
+        - `text.template`：输出模板文本
+        - `text.scanner`：扫描字符串然后输出编程语言的位置和语法token的语法扫描器，为utf-8编码的文本提供了一个扫描程序和标记器
+        - `text.tabwriter`：实现了一个用于将输入中的选项卡列转换为正确对齐的文本的写过滤器，使用Elastic Tabstop算法，已冻结不接受新功能
 1. 编码相关
-   - xml：encoding/xml包，读取Unmarshal，生成Marshal/MarshalIndent
-   - json：encoding/json包
-     1. 认识
-        - 默认将数值当做float64
-        - 共性
-          1. 只有可导出成员(首字母大写)才可和json互转，加了tag也不行
-          1. 当变量实现了Marshaler或者Unmarshaler，会调用其MarshalJSON或者UnmarshalJSON方法来生成json编码
-        - 编码时
-          1. 添加的tag作用
-             - 为_的不输出
-             - "xx,string"的转换类型
-             - "xx,omitempty"的该字段值为0值或者空值时不会输出到json中
-          1. 指针变量编码时自动转换为所指向的值
-        - 解码
-          1. 从json中确认字段的查找顺序：tag注明的->首字母大写其他小写的字段名->首字母之外其他大小写随意的导出字段(如NAME/NAmE)
-          1. 空字段默认给出类型默认值，指定默认值的一个方法是：定义一个带需要的默认值的结构体变量给到Unmarshal
-          1. 使用空接口可实现任意类型的成员赋值和转换
-          1. map结构是采用map[string]interface{}和[]interface{}结构来存储任意的JSON对象和数组
-     1. Marshal：序列化为json，用于map和struct
-        ```go
-        type Server struct {
-            ServerName string `json:"name"`     // 这是tag，生成json时替换key，做个映射，反过来也会用到
-            ServerIP   string `json:"ip"`
-        }
+   - encoding
+     1. json：`encoding/json`
+        - 认识
+          1. 共性
+             - 只有可导出成员(首字母大写)才可和json互转，加了tag也不行
+             - 当变量实现了Marshaler或者Unmarshaler，会调用其MarshalJSON或者UnmarshalJSON方法来生成json编码
+             - 默认将数值当做float64
+          1. 编码时
+             - tag：生成json时替换key，做个映射，反过来也会用到
+               1. 为_的不输出
+               1. "xx,string"的转换类型
+               1. "xx,omitempty"的该字段值为0值或者空值时不会输出到json中
+             - 指针变量编码时自动转换为所指向的值
+          1. 解码时
+             - 从json中确认字段的查找顺序：tag注明的->首字母大写其他小写的字段名->首字母之外其他大小写随意的导出字段(如NAME/NAmE)
+             - 空字段默认给出类型默认值，指定默认值的一个方法是：定义一个带需要的默认值的结构体变量给到Unmarshal
+             - 使用空接口可实现任意类型的成员赋值和转换
+             - map结构是采用map[string]interface{}和[]interface{}结构来存储任意的JSON对象和数组
+        - Marshal：序列化为json，用于map和struct
+            ```go
+            type Server struct {
+                ServerName string `json:"name"`
+                ServerIP   string `json:"ip"`
+            }
 
-        server := new(Server)
-        server.ServerName = "1"
+            server := new(Server)
+            server.ServerName = "1"
 
-        a, _ := json.Marshal(server)
-
-        fmt.Println(string(a))
-        ```
-     1. Unmarshal：反序列化json
-        - struct
+            a, _ := json.Marshal(server)
+            fmt.Println(string(a))
+            ```
+        - Unmarshal：反序列化json
+          1. struct
             ```go
             // 已知结构的
             type Server struct {
@@ -3822,10 +3850,10 @@
 
             var s Serverslice
             str := `{"servers":[{"name":"1","ip":"127"},{"name":"2","ip":"127"},{"name":"2"}]}`
-            err := json.Unmarshal([]byte(str), &s)     // 强行转为数组
+            err := json.Unmarshal([]byte(str), &s)
             fmt.Println(s)
             ```
-        - map
+          1. map
             ```go
             // 未知结构，interface和type assert配合
             str := []byte(`{"name":"tom","age":6,"servers":[{"name":"1","ip":"127"},{"name":"2","ip":"127"}]}`)
@@ -3870,101 +3898,109 @@
             i, _ := js.Get("servers").Get("name").Int()
             ms := js.Get("servers").Get("name").MustString()
             ```
-     1. base64
+     1. base64：`encoding/base64`，string和[]byte之间的来回转换
         - 普通
           1. `base64.StdEncoding.EncodeToString(src)`
           1. `base64.StdEncoding.DecodeString(string(src))`
         - 兼容url
           1. `base64.URLEncoding.EncodeToString(src)`
           1. `base64.URLEncoding.DecodeString(string(src))`
+     1. csv：csv读写逗号分隔值（csv）的文件
+     1. xml：`encoding/xml`，读取Unmarshal，生成Marshal/MarshalIndent
      1. base32
-     1. csv：csv读写逗号分隔值（csv）的文件.
-     1. hex：hex包实现了16进制字符表示的编解码.
+     1. hex：hex包实现了16进制字符表示的编解码
      1. binary：实现数字与字节序列的转换、变长值的编解码
-
      1. ascii85：ascii85数据编码
      1. asn1：DER编码的ASN.1数据结构
      1. gob：gob流——在编码器（发送器）和解码器（接受器）之间交换的binary值.
      1. pem：PEM数据编码
-   - unicode：提供测试Unicode码点属性的数据和函数
-     1. utf16
-     1. utf8
-     1. unicode.Is(unicode.Han, r)：是否汉字，r为rune类型
-     1. 方法：IsLetter、IsNumber
    - crypto：加解密
-     1. rand：实现用于加解密的更安全的随机数生成器
-
-     1. md5
-       - md5：`h := md5.New()`，crypto/md5
-     1. sha1
-     1. sha256：实现SHA224和SHA256哈希算法
-        - `h := sha256.New()`，crypto/sha256/sha1
+     1. rand：`crypto/rand`，实现用于加解密的更安全的随机数生成器，每次都是不同的随机数，性能肯定比`math/rand`低啦
+        - `func Int(rand io.Reader, max *big.Int) (n *big.Int, err error)`：生成一个范围随机数
+        - `func Prime(rand io.Reader, bits int) (*big.Int, error)`：返回一个给定比特长度的数字，该数字高概率是素数
+        - `func Read(b []byte) (n int, err error)`：给定的字节切片塞满随机数
+     1. md5：`crypto/md5`
+        - 方法
+          1. `func New() hash.Hash`
+          1. `func Sum(data []byte) [Size]byte`：直接返回md5，数据类型不好转，Size是md5包的常量
+        - 示例
+            ```go
+            h := md5.New()
+            h.Write([]byte(str))                 // 写入要加密的字符串
+            hex.EncodeToString(h.Sum(nil))
+            ```
+     1. sha256：`crypto/sha256`，实现SHA224和SHA256哈希算法
+        - 方法
+          1. `func New() hash.Hash`
+          1. `func Sum256(data []byte) [Size]byte`：直接返回md5，数据类型不好转，Size是sha256包的常量
+        - 示例
+            ```go
+            h := sha256.New()
+            h.Write([]byte(str))
+            return hex.EncodeToString(h.Sum(nil))
+            ```
      1. sha512：实现SHA384和SHA512哈希算法
+     1. sha1
 
-     1. des：实现DES标准和TDEA算法
-     1. aes：`aes.NewCipher`，crypto.des/aes、crypto/cipher
+     1. des：`crypto.des`，实现DES标准和TDEA算法
+     1. aes：`crypto.aes`，
+        - `aes.NewCipher`
 
-     1. rsa：RSA加密算法
-     1. dsa：DSA算法
-     1. ecdsa：实现椭圆曲线数字签名算法
+     1. rsa
+     1. dsa
 
      1. hmac
      1. tls
-
-     1. cipher：实现多个标准的用于包装底层块加密算法的加密算法实现
+     1. ecdsa：实现椭圆曲线数字签名算法
+     1. cipher：`crypto/cipher`，实现多个标准的用于包装底层块加密算法的加密算法实现
      1. elliptic：实现几条覆盖素数有限域的标准椭圆曲线
      1. rc4：RC4加密算法
      1. subtle
      1. x509：x509包解析X.509编码的证书和密钥.
      1. pkix：pkix包提供了共享的、低层次的结构体，用于ASN.1解析和X.509证书、CRL、OCSP的序列化.
-   - hash：哈希函数
-     1. adler32
-     1. crc32
-     1. crc64
-     1. fnv：实现了FNV-1和FNV-1a（非加密hash函数）
-   - compress：解压缩
-     1. zlib
-     1. gzip
-     1. bzip2
-     1. flate：deflate压缩数据格式
-     1. lzw：Lempel-Ziv-Welch数据压缩格式
+   - unicode：提供测试Unicode码点属性的数据和函数，参数和返回值基本都是围绕rune类型
+     1. `unicode.Is(unicode.Han, r)`：是否汉字，r为rune类型
+     1. `unicode.IsSpace(r rune) bool`：是否空白字符，包括`'\t', '\n', '\v', '\f', '\r', ' ', U+0085 (NEL), U+00A0 (NBSP)`
+     1. `unicode.IsLetter(r rune) bool/IsNumber(r rune) bool`
+   - hash
+     1. 认识：描述hash加密的总包
+        ```go
+        type Hash interface {
+            io.Writer
+            Sum(b []byte) []byte
+            Reset()
+            Size() int
+            BlockSize() int
+        }
+
+        type Hash32 interface {
+            Hash
+            Sum32() uint32
+        }
+
+        type Hash64 interface {
+            Hash
+            Sum64() uint64
+        }
+        ```
+     1. 子包
+        - crc32：`hash/crc32`
+        - crc64
+        - adler32
+        - maphash
+        - fnv：实现了FNV-1和FNV-1a（非加密hash函数）
    - html：转义和解转义HTML文本的函数
-     1. template：实现数据驱动模板，用于生成可对抗代码注入的安全html输出
-     1. charset
-        - charset.DetermineEncoding()
+     1. template：`html/template`，实现数据驱动模板，用于生成可对抗代码注入的安全html输出
+     1. charset：`html/charset`，`charset.DetermineEncoding()`
    - mime：实现了MIME的部分规定
      1. multipart：实现MIME的multipart解析
      1. quotedprintable
 1. io相关
    - io：提供i/o原语的基础接口
-     1. `io.Reader`：作为流存在，不支持多次读取
-     1. `io.TeeReader`：支持多次读取
-   - bufio：带缓存增强版，比io写的快多了，一口气flush到硬盘
-     1. 可读取一行
-     1. 会缓存下来，遇到flush才输出`bufio.NewWriter.Flush()`
-   - io/ioutil：实现一些io实用功能，v1.16后逐步放到了io、os中
-   - path：路径
-     1. filepath：兼容各操作系统文件路径的实用操作函数
-   - archive：文件解压缩
-     1. `archive.tar`
-     1. `archive.zip`
-1. 系统相关
-   - os
-     1. 子包
-        - exec：执行外部命令
-          1. exec.Command()
-          1. exec.ExitError
-        - signal：对输入信号的访问
-        - user：查询用户帐户
-     1. 目录：Mkdir/MkdirAll/Remove/RemoveAll：`os.Mkdir("a", 0777)`
-     1. 文件
-        - Create/NewFile
-        - Open/OpenFile
-          1. seek()：设置文件相对于当前/首/尾的偏移量
-        - Read/ReadAt
-        - Write/WriteString
-        - Remove
-     1. Reader接口：`func (T) Read(b []byte) (n int, err error)`，数据填充指定字节的slice，数据流结尾返回io.EOF错误
+     1. 方法
+        - `io.TeeReader()`：支持多次读取
+     1. 类型
+        - Reader接口：`func (T) Read(b []byte) (n int, err error)`，数据填充指定字节切片，数据流结尾返回io.EOF错误，作为流存在，不支持多次读取
             ```go
             // 以每次8字节的速度读取
             r := strings.NewReader("Hello, Reader!")
@@ -3978,9 +4014,38 @@
                 }
             }
             ```
-     1. 命令行
-        - 简单：`os.Args/os.Args[1]`
-        - 复杂：`flag`
+   - bufio：带缓存增强版，比io写的快多了，一口气flush到硬盘
+     1. 可读取一行
+     1. 会缓存下来，遇到flush才输出`bufio.NewWriter.Flush()`
+   - ioutil：实现一些io实用功能，v1.16后逐步放到了io、os中
+   - path：路径
+     1. filepath：兼容各操作系统文件路径的实用操作函数
+   - archive
+     1. 认识：文件解压缩
+     1. 子包
+        - `archive.tar`
+        - `archive.zip`
+   - compress
+     1. 认识：解压缩
+     1. 子包
+        - zlib
+        - gzip
+        - bzip2
+        - flate：deflate压缩数据格式
+        - lzw：Lempel-Ziv-Welch数据压缩格式
+1. 系统相关
+   - os
+     1. 方法
+        - 目录：`Mkdir/MkdirAll/Remove/RemoveAll`
+          1. `os.Mkdir("a", 0777)`
+        - 文件
+          1. `Create()/NewFile()/Remove()`
+          1. `Open()/OpenFile`
+          1. `Read()/ReadAt()/Seek()`：设置文件相对于当前/首/尾的偏移量
+          1. `Write()/WriteString()`
+        - 命令行
+          1. 简单：`os.Args/os.Args[1]`
+          1. 复杂：`flag`：用于命令行的标签解析
             ```go
             // 格式化定义
             ptr := flag.String/Int("name", "default", "demo")
@@ -3989,7 +4054,12 @@
             // 使用
             *ptr
             ```
-   - syscall
+     1. 子包
+        - exec：执行外部命令
+          1. `exec.Command()`
+          1. `exec.ExitError`
+        - signal：对输入信号的访问
+        - user：查询用户帐户
    - log
      1. 认识：写入stderr并打印每条记录消息的日期和时间，每条都在单独的行上输出
         - fmt属于stdout输出
@@ -4025,7 +4095,8 @@
         - log.New()：返回新的Logger类型，并定义一些特性
      1. 子包
         - syslog：使用域套接字、udp、tcp时可向syslog守护进程发送日志，可以Dial远端也可以本地，不再更新，有替代产品
-   - flag：用于命令行的标签解析
+   - syscall
+     1. 认识：包含到低级操作系统基元的接口，详细信息因底层系统而异，有关此软件包中的功能和数据类型的详细信息，请参阅相应操作系统的手册。syscall的主要用途是应用在os、time、net等包中，不建议直接使用这个包
 1. 语法相关
    - container：数据结构
      1. heap：任意类型的堆操作
@@ -4120,7 +4191,7 @@
      1. 认识：类似c的printf、scanf的格式化输入输出，scann扫描格式化文本以生成值
         - 格式化动作源自c但更简单
      1. 方法
-        - print：都是输出到标准输出流，支持多个参数输出
+        - Print：都是输出到标准输出流，支持多个参数输出
           1. 后边加f：根据format参数，`fmt.Printf("%3d", val)表示3位对齐`
           1. 前边加F：写入给定源，默认写入标准输出
           1. 后边加Ln：总是用空格分隔并且加换行符，采用默认格式
@@ -4167,13 +4238,15 @@
           1. 获取时间戳/时间转时间戳：`time.Now().Unix()`
           1. 时间戳转时间，并且格式化：`time.Unix(sr, 0).Format("2006-01-02 15:04:05")`
    - math
+     1. 方法
+        - `math.Nextafter(2, 3)`
      1. 子包
         - big：大数的高精度运算
         - cmplx：为复数提供基本常量和数学函数
-        - rand：伪随机数生成器
-          1. `rand.Intn(10)`："math/rand"
-     1. 组成
-        - `math.Nextafter(2, 3)`
+        - rand：`math/rand`，伪随机数生成器
+          1. `rand.Seed(time.Now().Unix())/rand.New(rand.NewSource(time.Now().UnixNano()))`：使用种子生成
+          1. `rand.Intn(n int) int/Float64`：生成区间随机数
+          1. `rand.Int63n()`：指定位数随机数
    - image
      1. 子包
         - color：基本的颜色库
@@ -4277,26 +4350,26 @@
 1. net
    - 类型
      1. Conn：使用goroutines保证请求独立、非阻塞
-        - 连接控制
-          1. 方法
-             - DialTimeout
-             - SetDeadline/SetReadDeadline/SetWriteDeadline：超时失败，只是一个超时抛异常机制，不会断开连接。可以重新调用SetDeadline，实现不断的刷新状态，否则状态不变
-          1. 最佳实践
-             - 所有timeout操作都是通过设置Deadline实现的
-             - 明确设置ReadTimeout和WriteTimeout，并使用相应的方法来使server更完善
-             - Contexts一个优点是树形的一个取消，关闭所有子context
+        - 方法
+          1. `SetDeadline/SetReadDeadline/SetWriteDeadline`：超时异常抛出机制，不会断开连接。可重新调用SetDeadline实现不断刷新状态，否则状态不变
+          1. `DialTimeout`
+        - 最佳实践
+          1. 所有timeout操作都是通过设置Deadline实现的
+          1. 明确设置ReadTimeout和WriteTimeout，并使用相应的方法来使server更完善
      1. ServeMux：多路复用器，用作请求的路由分发
-     1. ip
-        - `addr := net.ParseIP()`
+     1. IP
+        - 方法
+          1. `addr := net.ParseIP()`
    - 子包
      1. http
-     1. url
      1. rpc
+     1. url
+     1. netip
      1. mail：解析邮件消息
      1. smtp：简单邮件传输协议
      1. textproto：实现对基于文本的请求/回复协议的一般性支持
-1. socket：Socket数据传输是Unix特殊的I/O，分为流式Socket(SOCK_STREAM，面向连接，TCP)、数据报式Socket(SOCK_DGRAM，无连接，UDP)
-     1. tcp
+   - 示例
+     1. tcp连接
         ```go
         // client
         tcpAddr := net.ResolveTCPAddr("tcp4", service)
@@ -4324,7 +4397,7 @@
             conn.Write()
         }
         ```
-     1. udp
+     1. udp连接
         ```go
         // client
         udpAddr := net.ResolveUDPAddr("udp4", service)
@@ -4342,15 +4415,13 @@
         }
         ```
 1. http
-   - 认识：提供http客户端和服务端的实现
-   - 特点
+   - 认识：`net/http`，提供http客户端和服务端的实现
      1. serve方法中对panic作了保护，防止服务停止
    - 类型
-     1. http.Client
-        - 实现连接池的代码在Transport类型中，使用idleConn保存持久化的可重用的长连接
-     1. http.Handler
-     1. http.Request
-     1. http.Response
+     1. `Client`：实现连接池的代码在Transport类型中，使用idleConn保存持久化的可重用的长连接
+     1. `Handler`
+     1. `Request`
+     1. `Response`
    - 方法
      1. ServeContent()：根据请求头range的ReadSeeker方法
         ```go
@@ -4463,7 +4534,7 @@
             http.SetCookie(w, &c2)
             ```
 1. webSocket
-   - 认识：go.net子包有，`golang.org/x/net/websocket`
+   - 认识：`golang.org/x/net/websocket`支持
 1. rpc
    - 认识：支持三个级别：TCP、HTTP、JSONRPC，使用Gob编码的只能go内部
      1. SOAP RPC：不支持

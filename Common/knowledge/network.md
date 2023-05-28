@@ -192,6 +192,7 @@
    - WINS服务：将NetBIOS名转解析ip地址，实现ip和计算机名映射，作用范围是某个内部网络
    - Gopher：比Internet早几年的只支持文本的信息索引程序，是一种传输协议
 ### 网络协议
+1. socket数据传输是unix特殊的i/o，分为流式(SOCK_STREAM，面向连接，TCP)、数据报式(SOCK_DGRAM，无连接，UDP)
 #### HTTP
 1. 认识：HyperText Transfer Protocol，超文本传输协议，通信开销小，简单快速
 1. 发展
