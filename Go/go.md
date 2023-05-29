@@ -582,6 +582,16 @@
         // 无限循环
         for {}
         for true{}
+
+        // 链表遍历
+        type ListNode struct {
+            Val int
+            Next *ListNode
+        }
+        s := []int{}
+        for it := head; it != nil; it = it.Next {
+            s = append(s, it.Val)
+        }
         ```
      1. range：后边跟一个可循环的，自动类型推断，可针对string、array、slice、map
         - 特点
@@ -4103,6 +4113,28 @@
    - container：数据结构
      1. heap：任意类型的堆操作
      1. list：双向链表
+        - 认识
+          1. 用上下来想象队列
+          1. 方法基本都是返回*Element类型，可以继续使用如挪动位置
+        - 方法
+          1. `func New() *List`：创建List类型
+          1. `func (l *List) Back() *Element/Front()/Len()`：查看前后、长度
+          1. `PushBack()/PushFront()/PushBackList()/PushFrontList()/Remove()/Init()`：
+          1. `InsertAfter(v any, mark *Element) *Element/InsertBefore()/MoveAfter()/MoveBefore()/MoveToBack()/MoveToFront()`：在mark之前之后插入
+          1. ``：
+        - 示例
+            ```go
+            l := list.New()
+            e4 := l.PushBack(4)
+            e1 := l.PushFront(1)
+            l.InsertBefore(3, e4)
+            l.InsertAfter(2, e1)
+
+            // Iterate through list and print its contents.
+            for e := l.Front(); e != nil; e = e.Next() {
+                fmt.Println(e.Value)
+            }
+            ```
      1. ring：环形链表
    - unsafe
      1. 认识：不安全的直接操作内存，避免使用，只有两个类型，三个函数
