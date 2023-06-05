@@ -229,15 +229,15 @@
      1. 通过工具支持热备份
      1. 支持崩溃后安全恢复
    - 特性
-     1. wal
-     1. insert buffer：插入缓存，性能提升
-     1. double write：二次写
      1. adaptive hash index：主动式hash索引，读取数据时自动在内存构建hash索引
      1. read ahead：预读
+     1. insert buffer：插入缓存，性能提升
+     1. wal
+     1. double write：二次写
      1. mvcc
      1. next-key locking：避免幻读phantom
    - 数据
-     1. 存储大小限制：共享表空间页大小16k就64TB、64k就256TB，独立表空间单表受文件系统限制
+     1. 存储大小限制：共享表空间的页的大小16k就64TB、64k就256TB，独立表空间单表受文件系统限制
      1. 单表
         - 最多1017个列
         - 最多64个二级索引
@@ -285,19 +285,34 @@
      1. 记录格式
         - Redundant：稀疏，最早
           1. 没有NULL标志位
-        - Compact：紧凑，5.0.3以后默认
+        - Compact：紧凑，5.0.3以后默认，有null标志位
           1. NULL值列不占用任何存储空间
         - Dynamic：动态，Compact的升级版，完全的行溢出方式
         - Compressed：压缩，Compact的升级版，行数据会以zlib算法进行压缩
 1. innoDB数据更新机制
-   - 背景
-     1. 磁盘的最小单元是扇区，默认512byte
-     1. 文件系统的最小单元是块，默认4k
-     1. InnoDB引擎的最小单元是页，默认16k
-     1. 数据行都存储在页中，一页可以存储多条数据
-   - 认识：wal一致，![avatar](../images/mysql-update.jpeg)、![avatar](../images/db/innoDB_struct.jpeg)
+   - 认识：即WAL Write-Ahead Logging，日志先行机制，![avatar](../images/mysql-update.jpeg)、![avatar](../images/db/innoDB_struct.jpeg)
      1. 主线程每秒将脏页写入文件，不论事务是否提交
      1. 通过写前日志和两阶段提交，实现不丢失数据
+   - 认识：先写日志再持久化数据文件，利用日志的高效率的顺序写实现灵活控制的可靠持久化的一种机制，兼顾了提高性能和可靠持久化。崩溃时即使数据没有持久化也可以通过日志文件恢复，类似两阶段提交
+     1. 写入文件系统缓存page cache，并没有持久化，非常快，和写内存差不多(本质就是写内存)。fsync才占用iops，耗时才非常大
+     1. 参与的对象有：内存脏页、redolog、binlog、数据文件
+     1. 整个过程没有完整结束，需要用redolog和binlog配合恢复
+   - 步骤
+     1. 执行器：通知innoDB进行数据更新
+     1. innoDB：将新数据更新到内存脏页中
+     1. innoDB：之后开始写入redolog，并将该记录置为prepare状态
+     1. 执行器：写入binlog，完成持久化
+     1. innoDB：提交事务，并更新redolog中对应数据为commit状态
+        - redolog提交后才能进行事务的commit，因为保证持久性，即Force Log at Commit
+     1. mySQL空闲时，会将内存中的数据落盘
+   - 解释
+     1. 步骤
+        - 账本记录卖一瓶可乐（redolog 处于 prepare）
+        - 收钱放入抽屉（binlog）
+        - 收完钱，在账本该记录上打对勾，代表抵账（redolog 置为 commit）
+     1. 纠错
+        - 若收钱过程被打断，则整理交易时，发现只是记账了却没收钱，则删除该账本记录（回滚）
+        - 若收了钱，有事情耽误了抵账，对账时将账本该记录打勾即可（即commit）
    - 场景
      1. 重启
         - 做完清理工作再关闭，如各种刷盘
@@ -327,29 +342,13 @@
           1. 作用
              - 支持多实例分布式事务(外部xa事务)，分布式数据库环境
              - 支持内部xa事务，即确保binlog与redolog之间数据一致性
-1. WAL
-   - 认识：Write-Ahead Logging，日志先行机制，先写日志再持久化数据文件，利用日志的高效率的顺序写实现灵活控制的可靠持久化的一种机制，兼顾了提高性能和可靠持久化。崩溃时即使数据没有持久化也可以通过日志文件恢复，类似两阶段提交
-     1. 写入文件系统缓存page cache，并没有持久化，非常快，和写内存差不多(本质就是写内存)。fsync才占用iops，耗时才非常大
-     1. 参与的对象有：内存脏页、redolog、binlog、数据文件
-     1. 整个过程没有完整结束，需要用redolog和binlog配合恢复
-   - 步骤
-     1. 执行器：通知innoDB进行数据更新
-     1. innoDB：将新数据更新到内存脏页中
-     1. innoDB：之后开始写入redolog，并将该记录置为prepare状态
-     1. 执行器：写入binlog，完成持久化
-     1. innoDB：提交事务，并更新redolog中对应数据为commit状态
-        - redolog提交后才能进行事务的commit，因为保证持久性，即Force Log at Commit
-     1. mySQL空闲时，会将内存中的数据落盘
-   - 解释
-     1. 步骤
-        - 账本记录卖一瓶可乐（redolog 处于 prepare）
-        - 收钱放入抽屉（binlog）
-        - 收完钱，在账本该记录上打对勾，代表抵账（redolog 置为 commit）
-     1. 纠错
-        - 若收钱过程被打断，则整理交易时，发现只是记账了却没收钱，则删除该账本记录（回滚）
-        - 若收了钱，有事情耽误了抵账，对账时将账本该记录打勾即可（即commit）
    - wiki
      1. 内存脏页：即脏页，内存页中缓存的数据发生变更，刷脏页就是持久化
+     1. 背景
+        - 磁盘的最小单元是扇区，默认512byte
+        - 文件系统的最小单元是块，默认4k
+        - InnoDB引擎的最小单元是页，默认16k
+        - 数据行都存储在页中，一页可以存储多条数据
 1. 日志
    - 认识：undo是回滚，记录之前的数据，redo是重做，记录将要执行的操作
    - undolog
