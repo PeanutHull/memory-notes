@@ -263,6 +263,7 @@
         - 复杂度最差退化为链表为O(n)，复杂度和树的高度成正比
         - 在动态更新中可能出现树高度远大于logn导致效率下降，所以使用类似平衡二叉查找树的高度接近log2^n，复杂度也比较稳定是O(logn)
         - 可实现快速的插入、删除、查找
+        - 既有链表的快速插入与删除操作的特点，又有数组快速查找的优势
      1. 操作
         - 查找：可以二分查找了，小的往左，大的往右
         - 插入：要插入数据比节点大，并且右子树为空就插到右子树，如果不为空，就再递归遍历右子树，查找插入位置。左边同理
@@ -1316,8 +1317,143 @@
 1. 分块查找
 1. 斐波那契查找
 #### 树
-1. 算法
+1. 二叉查找树
+     1. 二叉搜索树：中序遍历得到一个递增的有序序列
+   - 结构
+    ```go
+    type TreeNode struct {
+        Val int
+        Left *TreeNode
+        Right *TreeNode
+    }
+    ```
    - 前中后序二叉树遍历
+    ```go
+    // 前序遍历
+    func (it *BSTIterator) inorder(node *TreeNode) {
+        if node == nil {
+            return
+        }
+        it.inorder(node.Left)
+        it.arr = append(it.arr, node.Val)
+        it.inorder(node.Right)
+    }
+    // 或者这么写
+    func (b *BST) frontItem(slice []compare) []compare {
+            if b.data == nil {
+                return nil
+            }
+            slice = append(slice, b.data)
+            if b.LeftNode != nil {
+                slice = b.LeftNode.frontItem(slice)
+            }
+            if b.RightNode != nil {
+                slice = b.RightNode.frontItem(slice)
+            }
+            return slice
+    }
+    ```
+   - 搜索
+    ```go
+    // 递归法
+    func searchBST(root *TreeNode, val int) *TreeNode {
+        if root == nil {
+            return nil
+        }
+        if val == root.Val {
+            return root
+        }
+        if val < root.Val {
+            return searchBST(root.Left, val)
+        }
+        return searchBST(root.Right, val)
+    }
+
+    // 迭代法
+    func searchBST(root *TreeNode, val int) *TreeNode {
+        for root != nil {
+            if val == root.Val {
+                return root
+            }
+            if val < root.Val {
+                root = root.Left
+            } else {
+                root = root.Right
+            }
+        }
+        return nil
+    }
+    ```
+   - 插入
+    ```go
+    func insertIntoBST(root *TreeNode, val int) *TreeNode {
+        if root == nil {
+            return &TreeNode{Val: val}
+        }
+        p := root
+        for p != nil {
+            if val < p.Val {
+                if p.Left == nil {
+                    p.Left = &TreeNode{Val: val}
+                    break
+                }
+                p = p.Left
+            } else {
+                if p.Right == nil {
+                    p.Right = &TreeNode{Val: val}
+                    break
+                }
+                p = p.Right
+            }
+        }
+        return root
+    }
+    ```
+   - 删除？？？没全懂
+    ```go
+    func deleteNode(root *TreeNode, key int) *TreeNode {
+        switch {
+        case root == nil:
+            return nil
+        case root.Val > key:
+            root.Left = deleteNode(root.Left, key)
+        case root.Val < key:
+            root.Right = deleteNode(root.Right, key)
+        case root.Left == nil || root.Right == nil:
+            if root.Left != nil {
+                return root.Left
+            }
+            return root.Right
+        default:
+            successor := root.Right
+            for successor.Left != nil {
+                successor = successor.Left
+            }
+            successor.Right = deleteNode(root.Right, successor.Val)
+            successor.Left = root.Left
+            return successor
+        }
+        return root
+    }
+    ```
+   - 验证是否正确的二叉查找树
+    ```go
+    func isValidBST(root *TreeNode) bool {
+        return helper(root, math.MinInt64, math.MaxInt64)
+    }
+
+    func helper(root *TreeNode, lower,upper int) bool {
+        if root == nil {
+            return true
+        }
+
+        if root.Val <= lower || root.Val >= upper {
+            return false
+        }
+
+        return helper(root.Left, lower, root.Val) && helper(root.Right, root.Val, upper)
+    }
+    ```
 #### 图
 1. 图的搜索
    - 认识：针对无权图
@@ -1373,7 +1509,7 @@
      1. 链表的实现思路：维护一个有序单链表，越靠近链表尾部的节点是越早之前访问的。当有新数据被访问时，从链表头开始顺序遍历链表，复杂度是O(n)
         - 如果此数据之前已经被缓存在链表中，我们遍历得到这个数据对应的节点，并将其从原来的位置删除，然后再插入到链表的头部
         - 如果此数据没有在缓存链表中，缓存未满将此节点插入到链表头；缓存已满将链表尾节点删除，将新的数据节点插入链表的头部
-     1. 工业级实现：结合哈希表和双向链表记录每个数据的位置，将增删改查的时间复杂度都降到O(1)。![avatar](../../images/common/lru_struct.webp)
+     1. 工业级实现：增加哈希表记录双向链表中位置，将增删改查都降到O(1)。![avatar](../../images/common/lru_struct.webp)
         - 每个节点会在两条链中，双向链表和哈希表中的拉链，前驱和后继指针是为了将节点串在双向链表中(会跨不同槽位的链表哦，指明在链表中的位置)，hnext指针是为了将节点串在哈希表的拉链中(指明是哪个槽位的链表)，即改造hash_table的链表结构，数据data只存一份，但是指针各有用处
         - 查找：O(1)，然后移动到链表尾
         - 删除：O(1)找到，双向链表删除也是O(1)
@@ -1381,10 +1517,15 @@
    - 改进
      1. 认识：mySQL和linux都这么干，加了缓冲池
         - linux结构：内存中的page cache
-        - mySQL结构：数据中的redolog buffer pool
-     1. 问题
-        - 预读失效：导致缓存命中率下降
-        - 缓存污染：导致缓存命中率下降
+        - mySQL结构：数据中的redolog buffer pool，Innodb在LRU链表划分前半部分的young区域和后半部分old区域
+     1. 问题：都会导致缓存命中率下降
+        - 预读失效：被提前加载进来的数据页，并没有被访问，好处是根据预读性原理，节省了io次数
+          1. 方案：区分冷热数据，添加活跃链表和非活跃链表
+            - 存放的是最近被访问过、存放的是很少被访问
+            - 预读页只加入到非活跃区域的头部，被真正访问时
+            - 活跃区域数据先降级到非活跃
+        - 缓存污染：大量数据很久不会被访问整个活跃LRU链表就被污染，会产生性能的急剧波动
+          1. 方案：提高进入到活跃LRU链表的门槛，如判断访问次数、两次访问的时间长了才进入
 ##### 其他
 1. 雪花算法：参见"唯一id"分类
 1. MurmurHash算法：短网址生成
