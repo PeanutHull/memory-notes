@@ -175,7 +175,7 @@
      1. 脑裂问题：集群断开后会形成两个独立集群，之后无法恢复正常状态
         - 解决：多半数人参与才能选举。参与选举节点数大于等于quorum才能进行选举，quorum=eligible/2+1
      1. 惊群问题
-### Restful Api
+### 使用的api
 1. 认识
    - 使用方式
      1. Restful Api：http方法、url、json串，`http://ip/index/type/doc，get/post/put/delete`
@@ -1303,6 +1303,9 @@
      1. 算分问题：因为分片间数据独立，一个term的IDF值在不同shard而不同，文档数不多时会导致严重不准
         - 设置分片数为1：根本上排除，适合文档数不多，但是千万级太慢
         - DFS Query-then-Fetch：拿到所有文档后重算一次，耗费更多cpu和内存，不建议。`http://xx?search_type=dfs_query_then_fetch`
+     1. 算分的算法：es5之前TF-IDF算法，一排除无实际意义词如'的'干扰，每个文档都有则IDF趋近于0，二关键词次数越少IDF值越高。后改为BM25
+        - TF = count(词频数) / count(总词数)
+        - IDF = log(count(所有文章) / count(关键词出现的文章))
    - 搜索实时性
      1. lucene特性：新文档生成新的倒排索引文件segment，查的时候同时查然后汇总计算。这样开销小，实时性高
      1. refresh：每1秒执行一次，所以文档实时性为1秒、es被称为近实时。即lucene的segment写入依然耗时，先将segment写入缓存并开放查询进一步提升实时性。refresh之前文档存储在buffer中，refresh时buffer清空并生成segment，都是在内存中操作

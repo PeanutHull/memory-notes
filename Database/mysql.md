@@ -257,8 +257,8 @@
         - 基本形式：`constraint foreignKeyName foreign key(selfId) references foreignTable(foreignTableId)`
         - 级联限制：`constraint foreignKeyName foreign key(selfId) references foreignTable(foreignTableId) on delete/update cascade;`，删除被连接数据自己也被删除，连带删除
    - 改变结构
-     1. 支持在线DDL
-     1. 字段类型、字段宽度都会锁表
+     1. 5.6.7后支持online DDL：某些操作会记录binlog，不会锁表，之前禁止写，不禁止读
+        - 修改字段类型、字段宽度都会锁表
 #### sql
 1. sql
    - 分类

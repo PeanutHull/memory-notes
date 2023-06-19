@@ -1334,8 +1334,8 @@
         if node == nil {
             return
         }
-        it.inorder(node.Left)
         it.arr = append(it.arr, node.Val)
+        it.inorder(node.Left)
         it.inorder(node.Right)
     }
     // 或者这么写
