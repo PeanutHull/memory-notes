@@ -323,18 +323,20 @@
    - 基于web体系的 Progressive Web App
 1. 网校架构：![avatar](../../images/wx_flutter_app_framework.jpeg)
 ### WebAssembly
-1. 认识：wasm，是抽象虚拟机的字节码规范(二进制指令格式)。为可移植而设计，可使用非js如c/c++/go/rust等编写代码并且能在浏览器上运行的技术方案
-   - 让web执行低级二进制语法：其二进制代码可在对应的符合该抽象虚拟机规范的具体平台相关的虚拟机实现上来解析执行
-   - 可称为低层次的编程语言，是编译器的编译目标，专门为编译而设计的语言
-   - 设计立足点为快速，内存安全和开放
-   - 这意味着很多之前写的工具和算法，都可以使用现成的代码，不用重新写一遍
-1. 特点
-   - 安全性：运行在JS虚拟机的沙盒环境中，具有与js相同的安全策略，浏览器确保相同的源和权限策略
-   - 高性能：执行效率远远高于js，适合高性能的web产品，如音视频、图像编解码、ai深度学习、渲染，理论上达到与c等本机编译语言同等的性能
-1. 用途
-   - asm.js：让浏览器运行3D游戏、服务器软件如Lua/Ruby/SQLite。计算密集型的操作用c/c++实现，再在js中调用它们
-   - figma：基于React构建，主要功能部分是webAssembly图形编辑器，由c++应用编写并转译为webAssembly，使用webGL在canvas中呈现
-   - autoCAD使用WebAssembly呈现其复杂的编辑器，该编辑器是使用c++构建的，从桌面客户端代码库迁移
+1. 认识：缩写 wasm，是基于堆栈的js抽象虚拟机的二进制指令格式字节码规范。为编程语言的可移植而设计，即使用非js如c/c++/go/rust/swift等编写代码并且能在浏览器上运行的技术方案
+   - 理解
+     1. wasm是一种可移植的格式（如Java或.Net），你可以在任何有支持它的主机的地方执行它。最初主要的主机是带有浏览器的JavaScript，以及nodeJS
+        - 让web执行低级二进制语法：其二进制代码可在对应的符合该抽象虚拟机规范的具体平台相关的虚拟机实现上来解析执行
+        - 意味着很多之前写的工具和算法都可直接复用
+     1. 一个wasm文件就像一个容器镜像，但更小，没有操作系统
+     1. 特定的语言如AssemblyScript、Grain，专门为编译而设计的语言
+   - 特点：设计为高性能，内存安全、开放
+     1. 高性能：执行效率远高于js，适合高性能的web产品，如音视频、图像编解码、ai深度学习、渲染，理论上达到与c等本机编译语言同等的性能
+     1. 安全性：运行在JS虚拟机的沙盒环境中，具有与js相同的安全策略，浏览器确保相同的源和权限策略
+   - 使用举例
+     1. 让浏览器运行3D游戏、或服务器软件如Lua/Ruby/SQLite。实现上是计算密集型的操作用c/c++实现，再在js中调用它们
+     1. figma：基于React构建，主要功能是wasm图形编辑器，由c++应用编写并转译为wasm，使用webGL在canvas中呈现
+     1. autoCAD使用wasm呈现其复杂的编辑器，该编辑器是使用c++构建的，从桌面客户端代码库迁移
 1. 组成
    - wat：wasm的字节码可读文本格式
 1. 应用
@@ -342,29 +344,91 @@
      1. 编译器前端：将c、c++、Rust编译为LLVM IR 码
      1. 编译器后端：将LLVM IR编译成各架构（x86，AMD64，ARM）对应的机器码
    - 转换流程
-     1. c/c++            使用emscripten编译，即构建工具链
-     1. wasm文件、html    胶接代码，就是WebAssembly，用支持的浏览器访问html
-1. 工具链：将代码库迁移到wasm中
-   - v8引擎的：turboFan、liftoff，可在node中无缝嵌入
-   - wavm
-   - emscripten
-   - llvm
-1. 历史
-   - Emscripten：可以将C/C++代码编译成JS代码，但不是普通的JS，而是一种叫做asm.js的JavaScript变体，性能差不多是原生代码的50%
-     1. asm.js：变量都是静态类型，取消垃圾回收机制。除了这两点与JavaScript无差异。也就是说是JavaScript的一个严格的子集，只能使用后者的一部分语法
-     1. emscripten：底层是LLVM编译器，理论上任何可以生成LLVM IR（Intermediate Representation）的语言，都可以编译生成asm.js
-   - Portable Native Client：也是一种能让浏览器运行C/C++代码的技术
-   - WebAssembly：Google, Microsoft, Mozilla, Apple等合作开发。asm.js是文本，WebAssembly是二进制字节码，因此运行速度更快、体积更小
-   - cheerp：将c++交叉编译成js的解决方案，后来直到wasm的原型和草案通过，17年底cheerp技术才开始支持到wasm，wast的交叉编译。cheerp原有代码基本上不需要更改就能直接生成wasm字节码。cheerp最新版本是2.0，有win版本。后来搞了一套cheerpj给java开发人员用于移植java的老富客户端应用
-   - flascc：adobe公司的 flash as3 交叉编译方案，是通过gcc生成优化过的AS3代码，搞得不是很彻底（没有生成字节码），编译速度很慢。最早是可以支持c开发， 后来全部到flascc 改成了c++ sdk ，体积暴增。随着flash技术没落而完结
-   - ane：adobe的air拓展方案之一，所谓拓展其实在平台上就是dll/so，通过代理技术（类似jni）使用。目前还存在于tv端，移动游戏端。
-   - swig 号称将c++/c 转化成多种语言的拓展，包括不限于（js,tcl,python,lua,java,php,perl)等等等。其实也是类似上面的技术， 公开C函数和符号， 上层加上各种语言的数据包装调用。你如果选用了这个技术，就要忍受他的一些智能的傻逼的行为， 有时候转会造成内存泄漏，比如拷贝大块内存来做包装
-   - 其他：alchemy
-   - 支持语言：C，C++和Rust，预计会推出的语言有Go，Java和C#
-   - 使用WebAssembly对浏览器API进行任何调用时，目前还需要JS进行交互，用JS作为入口。未来WebAssembly可能被浏览器内置支持，并使其能够直接调用DOM，Web Workers或其他浏览器API等
-   - wasi场景
+     1. c/c++            使用emscripten工具链编译
+     1. wasm文件、html    胶接代码就是wasm，用支持的浏览器访问html
+   - 工具链：将代码库迁移到wasm中
+     1. v8引擎的：turboFan、liftoff，可在node中无缝嵌入
+     1. wavm
+     1. emscripten
+     1. llvm
+1. 实例
+   - hello-world的demo
+     1. go部分代码
+        ```go
+        func main() {
+        fmt.Println("Hello World")
+            // 阻止函数返回，这是wasm模块中所必需的
+            <-make(chan bool)
+        }
+        ```
+     1. go构建
+        ```sh
+        cp "$(go env GOROOT)/misc/wasm/wasm_exec.js" .
+        $ GOOS=js GOARCH=wasm go build -o main.wasm
+        ```
+     1. js部分
+        ```html
+        <html>
+            <head>
+                <meta charset="utf-8"/>
+                <script src="wasm_exec.js"></script>                                                // 加载进来
+
+            </head>
+            <body>
+                <h1>WASM Experiments</h1>
+                <script>
+                    // This is a polyfill for FireFox and Safari
+                    if (!WebAssembly.instantiateStreaming) {                                        // 允许加载 wasm 文件的 JavaScript API
+                        WebAssembly.instantiateStreaming = async (resp, importObject) => {
+                            const source = await (await resp).arrayBuffer()
+                            return await WebAssembly.instantiate(source, importObject)
+                        }
+                    }
+
+                // Promise to load the wasm file
+                function loadWasm(path) {
+                    const go = new Go()
+
+                    return new Promise((resolve, reject) => {
+                    WebAssembly.instantiateStreaming(fetch(path), go.importObject)
+                    .then(result => {
+                        go.run(result.instance)
+                        resolve(result.instance)
+                    })
+                    .catch(error => {
+                        reject(error)
+                    })
+                    })
+                }
+
+                // Load the wasm file
+                loadWasm("main.wasm").then(wasm => {
+                    console.log("main.wasm is loaded 👋")
+                }).catch(error => {
+                    console.log("ouch", error)
+                }) 
+
+                </script>
+            </body>
+        </html>
+        ```
 1. wiki
-   - 当年javafx，微软的银光号都称 flash杀手，终结者，要取代flash，结果自己先死了。 flash之死是被时代和它自己杀死的，绝非是这些后来的小弟们。无论是js，flash，还是h5，他们都是不同时期的王者。当前dart要杀js，ts要杀js，历史的车轮总是惊人的相似。可以预见最后js肯定是被自己搞死而非这些小弟们，当然wasm连小弟都不是，它只是路人
+   - 认识
+     1. 当年javafx、微软的银光都号称flash终结者要取代flash，结果自己先死了。flash之死是被时代和自己杀死的，绝非这些后来的小弟们。无论flash、js、h5都是不同时期的王者。当前dart要杀js，ts要杀js，历史的车轮总是惊人的相似。可以预见最后js肯定是被自己搞死而非这些小弟们，当然wasm连小弟都不是，它只是路人
+   - 相关发展
+     1. Emscripten：可以将C/C++代码编译成JS代码，但不是普通的JS，而是一种叫做asm.js的JavaScript变体，性能差不多是原生代码的50%
+        - asm.js：变量都是静态类型，取消垃圾回收机制。除了这两点与JavaScript无差异。也就是说是JavaScript的一个严格的子集，只能使用后者的一部分语法
+        - emscripten：底层是LLVM编译器，理论上任何可以生成LLVM IR（Intermediate Representation）的语言，都可以编译生成asm.js
+     1. WebAssembly：Google, Microsoft, Mozilla, Apple等合作开发。asm.js是文本，WebAssembly是二进制字节码，因此运行速度更快、体积更小
+     1. Portable Native Client：一种让浏览器运行C/C++代码的技术
+     1. cheerp：将c++交叉编译成js的解决方案，后来直到wasm的原型和草案通过，17年底cheerp技术才开始支持到wasm，wast的交叉编译。cheerp原有代码基本上不需要更改就能直接生成wasm字节码。cheerp最新版本是2.0，有win版本。后来搞了一套cheerpj给java开发人员用于移植java的老富客户端应用
+     1. flascc：adobe公司的flash as3交叉编译方案，通过gcc生成优化过的AS3代码，搞得不是很彻底（没有生成字节码），编译速度很慢。最早支持c开发，后来到flascc改成了c++ sdk，体积暴增。随flash技术没落而完结
+     1. ane：adobe的air拓展方案之一，所谓拓展其实在平台上就是dll/so，通过代理技术（类似jni）使用。目前还存在于tv端、移动游戏端
+     1. swig 号称将c++/c 转化成多种语言的拓展，包括不限于（js,tcl,python,lua,java,php,perl)等等等。其实也是类似上面的技术， 公开C函数和符号， 上层加上各种语言的数据包装调用。你如果选用了这个技术，就要忍受他的一些智能的傻逼的行为， 有时候转会造成内存泄漏，比如拷贝大块内存来做包装
+     1. 其他：alchemy
+     1. 支持语言：C，C++和Rust，预计会推出的语言有Go，Java和C#
+     1. 使用WebAssembly对浏览器API进行任何调用时，目前还需要JS进行交互，用JS作为入口。未来WebAssembly可能被浏览器内置支持，并使其能够直接调用DOM，Web Workers或其他浏览器API等
+     1. wasi场景
 ### PWA
 1. 认识：Progressive Web App，渐进式web应用程序，渐进式的跳出浏览器的范围，跟原生应用做更深层次的结合，是20年前ajax和10年前的响应式布局的又一场革命，web应用的又一个全新时代
    - 诞生场景：web应用体验不佳

@@ -2192,6 +2192,8 @@
         - ICL：Intel C/C++ Compiler
         - VectorC
         - windows的gcc移植版
+          1. TMD-GCC：适用于windows的编译器套件
+             - 结合了最新稳定版本的gcc编译器、一些windows友好性补丁及免费和开源的MinGW.org或MinGW-w64运行时API，以创建一个更轻量级的开源替代Microsoft编译器和平台SDK
           1. MinGW：Minimalist GNU on Windows，开源，包含几乎所有win32API。主要方向是能使用win32API来编程，最接近win32，更像是vc的替代品
           1. Cygwin：在windows平台上提供一个类UNIX模拟环境，当然包括gcc了，目标是让unix程序在windows下直接被编译。是cygnus solutions公司开发的自由软件
           1. Djgpp：应用于dos系统

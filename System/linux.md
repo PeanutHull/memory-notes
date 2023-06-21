@@ -1095,6 +1095,8 @@
    - Debian
      1. Debian：免费版本
      1. Ubuntu：类似Debian的免费版本
+   - alpine：基于musl libc和busybox的面向安全的轻量级linux发行版，最常用成docker容器的系统底包，系统镜像体积小，消耗内存少，安装迅速
+     1. 磁盘占用：一个容器不超过8MB。磁盘中最小安装大约130MB
    - openEuler：华为欧拉，数字基础设施的开源操作系统
 1. 其他
    - mac环境变量默认地址

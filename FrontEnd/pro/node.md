@@ -220,6 +220,7 @@
     });
     console.log('sys started');
     ```
+1. fastify：框架，快速低开销的web框架
 1. PM2
    - node的进程控制器，可以管理多个
    - 安装：`npm install pm2 -g`

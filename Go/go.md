@@ -5061,7 +5061,6 @@
 1. 开发配置
    - 配置GOROOT、GOPATH
    - 配置代理：`GOPROXY=https://goproxy.cn;GOPRIVATE=*.100tal.com`
-   - 配置注释空格：设置 Preferences > Editor(编辑器) > Code Style(代码样式) > Go > Other 勾选上 Add leading space to comments
    - 配置goimports、gofmt，在Tools > File Watcher
    - 运行
      1. go工具实参：`-gcflags="all=-N -l"`
@@ -5072,6 +5071,7 @@
      1. govet：代码格式错误检查，关注正确性
      1. golint：代码规范检查，关注编码风格，打印出代码规范的错误
      1. gometalinter：代码静态分析并规范化其输出的linter工具集
+   - 配置注释空格：设置 Preferences > Editor(编辑器) > Code Style(代码样式) > Go > Other 勾选上 Add leading space to comments
 1. rpc
    - 认识：Remote Procedure Call Protocol，远程过程调用协议，打通了应用层和传输层，不需要关注通信细节直接调用远程方法，实现函数调用模式的网络化
      1. 包含了传输协议、编码协议

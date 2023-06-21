@@ -332,38 +332,43 @@
      1. 更好的二进制支持
      1. 较少的控制开销：数据交换的数据头部较小
      1. 支持扩展
-   - 步骤
-     1. 建立连接：先期使用http建立连接，之后转换为websocket
-        ```c
-        // 表示发起websocket请求
-        Upgrade: websocket
-        Connection: Upgrade
-        ```
-     1. 交换数据
-     1. 数据帧格式：消息被切分为多个frame帧传输
-     1. 维持连接：鉴于传输中多次路由转发等的不稳定，会发送ping/pong心跳包检测连接活性
-   - 头信息
-     1. Sec-WebSocket-Key 校验key，校验原理是什么？？？
-     1. Sec-WebSocket-Protocol 需要的服务名称
-     1. Sec-WebSocket-Version 版本号
-   - 协议细节
-     1. 握手
-        ```php
-        // 发起请求
-        GET /chat HTTP/1.1
-        Host: example.com
-        Upgrade: websocket
-        Connection: Upgrade
-        Sec-WebSocket-Key:dGhIIHNhbXBsZSBub25jZQ==..
+   - 组成
+     1. 头信息
+        - Sec-WebSocket-Key 校验key，校验原理是什么？？？
+        - Sec-WebSocket-Protocol 需要的服务名称
+        - Sec-WebSocket-Version 版本号
+     1. 协议描述
+        - ws://
+        - wss:// 加了tls
+   - 实现
+     1. 步骤
+        - 建立连接：先期使用http建立连接，之后转换为websocket
+            ```c
+            // 表示发起websocket请求
+            Upgrade: websocket
+            Connection: Upgrade
+            ```
+        - 交换数据
+        - 数据帧格式：消息被切分为多个frame帧传输
+        - 维持连接：鉴于传输中多次路由转发等的不稳定，会发送ping/pong心跳包检测连接活性
+     1. 协议细节
+        - 握手
+            ```php
+            // 发起请求
+            GET /chat HTTP/1.1
+            Host: example.com
+            Upgrade: websocket
+            Connection: Upgrade
+            Sec-WebSocket-Key:dGhIIHNhbXBsZSBub25jZQ==..
 
-        // 响应请求
-        HTTP/1.1 101 Switching Protocols
-        Upgrade: websocket
-        Connection: Upgrade
-        Sec-WebSocket-Accept:s3pPLMBiTxaQ9kYGzzhZRbK+x00=
-        Sec-WebSocket-Protocol: chat
-        ```
-     1. 数据传输：![avatar](../../images/common/websocket_data.jpg)
+            // 响应请求
+            HTTP/1.1 101 Switching Protocols
+            Upgrade: websocket
+            Connection: Upgrade
+            Sec-WebSocket-Accept:s3pPLMBiTxaQ9kYGzzhZRbK+x00=
+            Sec-WebSocket-Protocol: chat
+            ```
+        - 数据传输：![avatar](../../images/common/websocket_data.jpg)
 1. 应用
    - 连接控制
      1. 认识：keepalive，复用tcp连接，要和tcp的keepalive区别

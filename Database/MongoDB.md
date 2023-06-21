@@ -336,6 +336,7 @@
      1. 关闭：`db.shutdownServer()`
      1. 重启：`mongo restart`
    - 连接：`mongo`
+   - mongod是守护进程,mongo是客户端
    - 注意事项
      1. mongod进程收到SIGINT信号或者SIGTERM信号，会关闭打开连接、内存数据强制刷到磁盘、等待当前操作执行完毕、安全停止。不能kill -9，会数据丢失、数据文件损坏
 1. 数据导出导入
@@ -386,7 +387,7 @@
         - rs.status()
    - Sharding：分片，用于数据大量增长，v3.4
      1. 组成
-        - mongos：代理服务，多副本作高可用
+        - mongos：代理服务，多副本作高可用，是MongoDB分片配置的路由服务,它处理来自应用程序层的查询,并确定分片集群中此数据的位置。用于分片集群的控制器和查询路由器.分片将数据集分区为不连续的部分
         - configServer：配置服务器，存储整个ClusterMetadata，其中包括chunk数据。多副本作高可用
         - shardN：数据节点，用副本集作高可用
      1. 协议：MongoDB协议、DynamoDB协议

@@ -941,6 +941,9 @@
      1. `discovery.zen.ping.unicast.hosts: ["ip"]`：主节点ip
 1. 调试
    - 查看基础信息：`curl http://ip:9200`
+   - 工具
+     1. cerebro
+     1. elasticsearch-head
 ### 最佳实践
 1. 调优
     ```json
@@ -1170,6 +1173,11 @@
         - http服务
         - 网络数据
    - Graylog：开源的日志聚合、分析、审计、展现和预警工具。功能和ELK类似，但又比ELK要简单，依靠着更加简洁，高效，部署使用简单的优势很快受到许多人的青睐
+1. 其他
+   - 推荐三款Go开发的全文搜索引擎
+     1. Zinc：https://github.com/zincsearch/zincsearch （老牌，兼容es接口，15k star）
+     1. Bleve：https://github.com/blevesearch/bleve （高性能磁盘检索的go语言组件库， 9k star）
+     1. GoFound：https://github.com/sea-team/gofound (算法好，支持中文分词，1.5k star)
 1. 问题
    - conflicts=proceed？
 ### deep
