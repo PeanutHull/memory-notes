@@ -919,7 +919,7 @@
                 gcc b.c
         ```
    - cmake
-     1. 认识：开源的跨平台的能够管理大型项目的项目构建工具，简化构建和编译过程，效率高可扩展，其他还有autotools
+     1. 认识：开源的跨平台的能够管理大型项目的项目构建工具，简化构建和编译过程，效率高可扩展，其他还有autotools，支持编译C、C++、Java、Python等
         - 描述编译过程，将多个源代码文件组合构建为工程的语言
         - linux生成makefile，苹果生成xcode，windows生成MSVC工程文件
         - 工具链：cmake+make

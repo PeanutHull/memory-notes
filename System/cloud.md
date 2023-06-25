@@ -592,6 +592,7 @@
    - k8s支持其他容器运行时
      1. k8s移除dockershim进而移除docker运行时，因为除了docker的containerd，其他功能二者有重叠
 1. 运维
+   - helm：k8s的包管理工具，作用类似apt/yum/homebrew
    - 操作命令行：kibeadm，kubelet，kubectl
    - 安装：单机安装、集群安装
    - 应用部署

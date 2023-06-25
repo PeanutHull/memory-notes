@@ -332,3 +332,12 @@
 ### 其他
 1. Ant Design 是一套企业级前端设计语言和基于 React 的前端框架实现
 1. lamejs：js重写的mp3编码器
+1. MEAN
+   - 认识：全栈javascript开发架构，即MongoDB、ExpressJS，AngularJS、Node.js
+     1. MongoDB是一个使用JSON风格存储的数据库，非常适合javascript。(JSON是JS数据格式)
+     1. ExpressJS是一个Web应用框架，提供有帮助的组件和模块帮助建立一个网站应用
+     1. AngularJS是一个前端MVC框架
+     1. Node.js是一个并发 异步 事件驱动的Javascript服务器后端开发平台
+   - 特点
+     1. 数据格式前后端无缝通用JSON数据格式
+     1. 数据库对象即前后端对象，方便，前后端语法相同，还是方便
