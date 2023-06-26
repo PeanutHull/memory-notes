@@ -11,7 +11,8 @@
    - PRIM：不用了
 1. 文件
    - apk
-   - jar
+   - jar：Java Archive，Java归档文件，平台无关的允许将多文件组合成一个压缩文件的文件格式，只包含源码，不包含资源文件
+   - arr：Android Archive Android归档文件，包含源码和资源文件
    - dex
      1. 认识：能够被DVM识别、加载并执行的文件格式，每个apk安装包里都有。包含应用程序的全部操作指令以及运行时数据
         - 相对于PC上的java虚拟机能运行.class；android上的Davlik虚拟机能运行.dex

@@ -3950,7 +3950,7 @@
      1. binary：实现数字与字节序列的转换、变长值的编解码
      1. ascii85：ascii85数据编码
      1. asn1：DER编码的ASN.1数据结构
-     1. gob：gob流——在编码器（发送器）和解码器（接受器）之间交换的binary值.
+     1. gob：gob流——在编码器（发送器）和解码器（接受器）之间交换的binary值
      1. pem：PEM数据编码
    - crypto：加解密
      1. rand：`crypto/rand`，实现用于加解密的更安全的随机数生成器，每次都是不同的随机数，性能肯定比`math/rand`低啦
@@ -4409,6 +4409,18 @@
      1. 组成
         - 基于Pathfinder的高效矢量渲染器
         - 基于piet-gpu的实验渲染器，两种渲染器都支持Vulkan、Metal、Direct3D 11和OpenGL ES
+1. gomobile
+   - 认识：编译生成arr包和jar包没有main函数入口，然后在android中通过包名调用方法
+   - 使用
+     1. `gomobile init`：初始化环境，自动下载安装依赖
+     1. `gomobile bind [path]`：编译当前目录下所有go文件
+        - -v -trimpath
+        - -ldflags "-s -w"
+        - -o build/OpenIMCore.aar
+        - -target=android ./open_im_sdk/ ./open_im_sdk_callback/
+     1. `gomobile clean`
+   - 运维
+     1. 安装：`go install golang.org/x/mobile/cmd/gomobile`
 ##### net
 1. net
    - 类型
@@ -4920,7 +4932,7 @@
         - `GOPRIVATE=*.100tal.com`：设置不走代理的，GOPRIVATE会作为下边俩的默认值
         - `GONOPROXY=*.100tal.com`
         - `GONOSUMDB=*.100tal.com`
-   - CGO_ENABLED
+   - CGO_ENABLED：设置是否开启cgo编译，0关闭1开启
 1. 编译
    - 运行
      1. `go run hello.go`：进行高速编译，用作脚本语言
@@ -4952,7 +4964,7 @@
              - 关闭内联优化：`go build -gcflags "-N -l" *.go`
              - 逃逸分析：`go build -gcflags "-m -l" *.go`
           1. 跨平台
-             - GOOS=linux
+             - GOOS=linux|windows|darwin
              - GOARCH=amd64 
      1. `go clean`：移除当前源码包里面编译生成的文件，如_obj/、_test/、test.out
 1. 部署
