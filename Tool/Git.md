@@ -178,6 +178,41 @@
  git show <tagname>
  git show <hash>
  ```
+### submodule
+1. 认识：支持子模块的需求，可将多个独立仓库包含到同一个主工程中
+   - 通过子模块既可以各自独立的修改和提交代码，又可以将改动作用到依赖它的父工程
+   - 主工程并不直接跟踪子模块的代码，而仅仅只跟踪子模块的commit id的改动
+   - 支持嵌套添加子模块
+1. 使用
+   - 添加
+    ```sh
+    // .gitmodules文件
+    [submodule "cmd/Open-IM-SDK-Core"]
+        path = cmd/Open-IM-SDK-Core
+        url = git@xxxx:Mind/Service/IM/Mind-IM-SDK-Core.git
+    ```
+   - 拉取
+     1. `git clone <repository> --recursive`：递归的方式克隆整个项目
+     1. `git submodule add <repository> <path>`：添加子模块
+     1. `git submodule init`：初始化子模块
+     1. `git submodule update --remote`：更新子模块
+     1. `git submodule foreach git pull`：拉取所有子模块
+   - 删除
+     1. rm -rf 子模块目录 删除子模块目录及源码
+     1. vi .gitmodules 删除项目目录下.gitmodules文件中子模块相关条目
+     1. vi .git/config 删除配置项中子模块相关条目
+     1. rm .git/module/* 删除模块下的子模块目录，每个子模块对应一个目录，注意只删除对应的子模块目录即可
+     1. git rm --cached 子模块名称
+1. 最佳实践
+    ```sh
+    // 子模块, 初始化
+    git submodule deinit -f cmd/Open-IM-SDK-Core
+    git submodule init
+    // 更新子模块代码为远程最新代码
+    git submodule update --remote
+
+    rm -rf .git/modules/cmd/Open-IM-SDK-Core/modules/internal/sdk_advanced_function
+    ```
 ### 使用
 1. 建立ssh连接，省略每次输密码
 1. 修改clone时的端口

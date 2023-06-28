@@ -707,6 +707,8 @@
    - 数据在硬盘上是压缩的，迁移到redis需要将当前的容量乘以5
 1. Cluster：太复杂，是去中心化的。没有tw的简单，用的稳定
 ### 运维
+1. 服务端：`redis-server`
+   - 设置密码：修改conf文件的requirepass
 1. 客户端：发起连接，`redis-cli -h host -p port -a password`
 1. 命令
    - 操作

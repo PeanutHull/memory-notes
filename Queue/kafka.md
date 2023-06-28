@@ -329,16 +329,19 @@
           1. 优点：充分考虑kafka读写特性，实时消费全在SSD保证低时延，HDD读取不会会刷到SSD防止缓存污染；日志段有明确唯一状态，查询路径最短，不存在CacheMiss的开销
           1. 缺点：需要server端改进，开发、测试工作量大，需要随社区大版本升级，但可以代码贡献社区解决迭代问题
 ### 运维
-1. 安装
-   - 下载解压
-   - 安装java，启动zk
-   - `kafka-server-start.sh config/server.properties`
+1. mac启动
+   - `zookeeper-server-start /usr/local/etc/kafka/zookeeper.properties`
+   - `kafka-server-start /usr/local/etc/kafka/server.properties`
 1. 命令行使用
-   - 创建topic：`kakfa-topics.sh --create --zookeeper localhost:2181 --topic xx --partition 1 --replication-factor 1`
-     1. replication factor：复制系数，一个分区的副本数量
-   - 查看topic：`kakfa-topics.sh --describe --zookeeper localhost:2181 --topic xx`
-   - 发送消息：`kafka-console-producer.sh --broker-list localhost:9092 --topic xx`：不间断，回车发送
-   - 消费消息：`kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic xx --form-beginning`
+   - topic
+     1. 查看列表：`kafka-topics --list --bootstrap-server localhost:9092`
+     1. 查看某个：`kakfa-topics --describe --zookeeper localhost:2181 --topic xx`
+     1. 创建：`kakfa-topics --create --zookeeper localhost:2181 --topic xx --partition 1 --replication-factor 1`
+        - replication factor：复制系数，一个分区的副本数量
+     1. 删除：`kafka-topics --delete --zookeeper localhost:2181 --topic`
+   - 消息
+     1. 发送：`kafka-console-producer --broker-list localhost:9092 --topic xx`：不间断，回车发送
+     1. 消费：`kafka-console-consumer --bootstrap-server localhost:9092 --topic xx --form-beginning`
 1. 创建
    - 参数
      1. 节点选取

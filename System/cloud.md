@@ -308,16 +308,22 @@
 1. Swarm
    - 认识：是原生的Docker集群服务工具，将一群扩散到多台主机上的Docker主机集成为单一的虚拟Docker主机
 1. docker-compose
-   - 认识：用于定义、运行多容器的工具，yml文件配置服务，命令控制
-   - 使用
+   - 认识：用于定义、运行多容器配合工作的工具，使用yml文件作配置服务，通过docker-compose命令控制
+     1. 背景
+        - 多次使用Dockerfile、Build、Image命令或DockerHub拉取Image
+        - 需要创建多个Container，多次编写启动命令
+        - 对互相依赖的容器进行管理和编排
+     1. 版本：v2、v3
+   - 使用步骤
      1. dockerfile定义应用环境
      1. docker-compose.yml定义构成的服务
      1. docker-compose up启动
    - 命令
-     1. up -d：后台运行
-     1. ps：列出所有容器
-     1. down：停止、删除容器和网络
-   - 配置
+     1. `docker compose version`：查看版本
+     1. `docker compose up -d`：后台运行
+     1. `docker compose ps`：列出所有容器
+     1. `docker compose down`：停止、删除容器和网络
+   - 配置demo
     ```yml
     #声明版本
     version: "3"
@@ -490,44 +496,32 @@
      1. cpu缓存绑定：提高ln缓存亲和力从而提升性能
      1. 内存：以前VMM通过影子页表决解内存转换，coreI7系列处理器上集成了EPT技术，以硬件辅助的方式完成客户物理内存到机器物理内存的转换，完成内存虚拟化
 ### kubernetes
-1. 认识：k8s，google开源的一个容器管理、编排、调度的引擎和平台。用于管理云平台中多个主机上的容器化的应用，让部署容器化的应用简单并且高效
-   - 提供资源分配管理、健康检查、自愈、伸缩、滚动升级
-   - 提供域名、负载均衡、纠错、回滚等管理
-   - 以pod为基本的编排和调度单元，声明式的对象配置模型(控制器、configMap、secret)
-1. 意义
-   - 是微服务的支撑平台，是可移植的云平台
-   - 颁布了云原生的标准，已经成为容器管理领域的标准，支持跨云迁移
-   - 生态圈：是google最成熟的管理经验输出，是战胜Docker Swarm和Apache Mesoc唯一值得绑定的平台
-1. 组成
-   - Master：通过etcd的List-Watch方式通信（事件发送与监听）
-     1. APIServer
-     1. Controller Manager：管理，调整资源状态、执行宕机修复流程等，是运维自动化的核心，分为8个Controller
-     1. Scheduler：调度，关注待调度的Pod、可用的Node，调度算法和策略
-        - 将待调度的Pod按照算法和策略绑定到Node上，同时将信息保存在etcd中
-        - kubelet通过APIServer监听到Scheduler产生的Pod绑定事件，然后通过Pod的描述装载镜像文件，并且启动容器
-   - Node：子节点
-     1. kube-proxy：即Service
-        - 定义服务访问入口地址：IP+Port
-        - Service与后端Pod副本集群通过组(Label Selector)实现连接
-        - Service的type=NodePort改为type=LoadBalancer，Kubernetes就会自动创建一个对应的Load Balancer实例并返回它的IP地址供外部客户端使用
-     1. Pod
-        - cAdvisor：监控资源
-        - container：容器
-1. 概念
+1. 认识：k8s，google开源的容器管理、编排、调度的引擎和平台。用于管理云平台中多个主机上的容器化的应用，让部署容器化的应用简单并且高效
+   - 组成
+     1. 以pod为基本的编排和调度单元，声明式的对象配置模型(控制器、configMap、secret)
+   - 功能
+     1. 提供资源分配管理、健康检查、自愈、伸缩、滚动升级
+     1. 提供域名、负载均衡、纠错、回滚等管理
+   - 意义
+     1. 是微服务的支撑平台，是可移植的云平台
+     1. 颁布了云原生的标准，已经成为容器管理领域事实上的标准，支持跨云迁移
+     1. 生态圈：是google最成熟的管理经验输出，是战胜Docker Swarm和Apache Mesoc唯一值得绑定的平台
+1. 基本概念
    - 实体
-     1. ConfigMap：配置映射，实际是环境变量键值列表
-     1. Secret：机密配置，类似ConfigMap，只是会进行加密
-     1. Pods：是共享命名空间和文件系统的容器组，一个pod具有一个ip，该ip在其容器间共享
+     1. Pods：共享命名空间和文件系统的容器组
+        - 一个pod有一个ip，该ip在其容器间共享
         - sidecar就是利用pod多个容器实现的
         - pod在node上，会销毁
           1. 生命周期：挂起、运行、成功、失败、未知，和调度、创建、停止相关
-     1. Job：任务
-     1. Ingress：路由
      1. Storage：存储，volume
-     1. ingress：相当于7层负载均衡器，工作原理类似nginx
-     1. service：主要解决的是Pod ip短生命周期带来的问题，kube-proxy是service的一部分，有四种类型，可以实现接受外边的访问
+     1. Service：为一组Pod提供负载均衡，对外提供统一访问入口。主要解决pod ip短生命周期带来的问题，kube-proxy是Service的一部分，有四种类型，可以实现接受外边的访问
+     1. Ingress：路由，相当于7层负载均衡器，工作原理类似nginx
+     1. Job：任务
+     1. ConfigMap：配置映射，实际是环境变量键值列表
+     1. Secret：机密配置，类似ConfigMap，只是会进行加密
    - 描述
-     1. Label：标签，过滤系统中相似资源的方式
+     1. Namespace：命名空间，s将资源对象逻辑上隔离，从而形成多个虚拟集群，也利于权限控制
+     1. Label：标签，过滤系统中资源的方式
      1. Annotation：注解，用于以自由的字符串形式保存不同对象的元数据
      1. 集合
         - ReplicaSet：副本集
@@ -536,11 +530,28 @@
           1. 代理需要运行在所有节点上
         - StatefulSet：有状态集
    - 操作
-     1. Service Discovery：服务发现
-        - 所有Pod使用自定义的DNS服务器
-     1. Deployment：部署
+     1. Deployment：部署、发布，最常见的控制器，用于高级别部署和管理Pod，可以包含多个pod
         - 替换
         - 滚动升级
+     1. Service Discovery：服务发现
+        - 所有Pod使用自定义的DNS服务器
+1. 组成
+   - Master：通过etcd的List-Watch方式通信（事件发送与监听）
+     1. APIServer：负责鉴权等处理
+     1. Controller Manager：管理，调整资源状态、执行宕机修复流程等，是运维自动化的核心，分为8个Controller
+     1. Scheduler：调度，根据调度算法负责选择node执行pod
+        - 将待调度的Pod按照算法和策略绑定到Node上，同时将信息保存在etcd中
+        - kubelet通过APIServer监听到Scheduler产生的Pod绑定事件，然后通过Pod的描述装载镜像文件，并且启动容器
+     1. Etcd：提供一致性存储能力，作为数据库，存master节点信息，多master作高可用
+   - Node：子节点
+     1. kube-proxy：即Service
+        - 定义服务访问入口地址：IP+Port
+        - Service与后端Pod副本集群通过组(Label Selector)实现连接
+        - Service的type=NodePort改为type=LoadBalancer，Kubernetes就会自动创建一个对应的Load Balancer实例并返回它的IP地址供外部客户端使用
+     1. Pod：被操作的对象
+        - cAdvisor：监控资源
+        - container：容器
+     1. kubelet：负责执行 
 1. 卷
    - 认识
      1. 背景
@@ -561,16 +572,6 @@
      1. cephfs
      1. nfs
      1. ceph
-1. 架构
-   - 操作入口：kubectl、restful api、dashboard
-   - master
-     1. api server：负责鉴权等处理总处
-     1. etcd：提供一致性存储能力
-     1. controller：api server调用其完成不同功能
-     1. scheduler：根据调度算法负责选择节点执行pod
-   - node
-     1. kubelet：负责执行 
-     1. pod：被操作的对象
 1. 网络
    - service实现：Service clutserIP就是node side Loadbalancer
      1. Iptables
@@ -587,30 +588,79 @@
    - 大型容器网络
      1. 最经典方式是用VxLAN构建大型overlay网络，从google到阿里云底层都使用这种方式构建数据中心网络，使用MAC in UDP的方法进行封装，对端进行解封
      1. BGP Router模式
-1. 生态
-   - etcd作为数据库，存master节点信息，多master作高可用
-   - k8s支持其他容器运行时
-     1. k8s移除dockershim进而移除docker运行时，因为除了docker的containerd，其他功能二者有重叠
 1. 运维
-   - helm：k8s的包管理工具，作用类似apt/yum/homebrew
-   - 操作命令行：kibeadm，kubelet，kubectl
    - 安装：单机安装、集群安装
+   - 操作
+     1. kubeadm：用来初始化集群
+     1. kubelet：在集群中的每个节点上用来启动 Pod 和容器
+     1. kubectl
+     1. restful api
+     1. dashboard
    - 应用部署
      1. 形式：使用manifests文件，即yaml配置形式，其他工具都是这个的封装
      1. 工具
-        - helm：类似apt get
+        - helm
         - kustomize：回归manifests
         - operator: Controller + CRD
+1. kubectl
+   - 认识：用来与集群通信的命令行工具
+   - 部署流程
+     1. 制作镜像
+     1. 使用控制器部署镜像：kubectl create deployment [name] --image=xx
+     1. 对外暴露应用：kubectl expose deployment [name] --port=80 --target-port=8080 --type=NodePort
+        - –port：service端口，内部使用，用于集群内其它pod访问的端口
+        - –target-port：容器中运行的应用的端口，如nginx 80、tomcat 8080、mysql 3306
+        - NodePort：外界访问的端口，如果不指定端口随机生成，通过kubectl get svc查看
+     1. 日志、监控
+     1. 运维
+   - 命令
+     1. kubectl create namespace xxx：创建namespace
+     1. kubectl config：生成config指令、kubeconfig文件
+     1. kubectl get svc：查看service
+     1. kubectl get endpoints：查看service关联的容器
+     1. kubectl get pod [--show-labels]
+1. helm
+   - 认识：k8s的包管理工具，使用helm可以使用更简化、系统化的方式对k8s应用进行部署、升级。作用类似apt/yum/homebrew
+     1. chart开发者和使用者的界限，正是由于在跨越这个界限的时候，从需要理解大量的配置到只需要理解少量的配置，使得ops的工作变得简便，这也是helm核心的设计哲学
+   - 概念
+     1. chart：即helm package，包含了k8s app运行起来的所有要素，如service、deployment、configmap、serviceaccount、rbac。这些要素是以template文件的形式存在，再结合values文件最终渲染出能够被k8s执行的yaml文件
+     1. repository：charts的集合，仓库有
+        - 官网：https://artifacthub.io/
+        - 阿里：https://developer.aliyun.com/hub
+     1. release：是helm chart在kubernetes的一个运行实例，可以用不同的release name多次安装同一个chart，如安装多个redis
+   - 运行流程
+     1. 从chart仓库中获取chart
+     1. 使用者配置自己的values文件，根据自己的运行环境对values进行修改
+        - 默认values文件和使用者values文件会进行一个merge，形成最终的values文件
+     1. 使用最终的values文件，渲染chart的template，形成可以被kubernetes执行的yaml
+     1. 调用kube apply提交yaml到kubernetes
+   - 操作
+     1. chart
+        - helm show chart [name]：查看详情
+        - helm show values [name]：查看values，即配置文件
+     1. 仓库
+        - helm repo list/add [name] [url]/update：新增/更新仓库列表到本地
+        - helm search repo xx：搜索
+        - helm pull [repoName]：将包拉到当前目录
+     1. relase
+        - helm install [releaseName] [repoName] -f [xx.values] [--dry-run] --set service.type=NodePort --set persistence.enabled=false
+          1. .values本地配置文件
+          1. --dry-run：仅检查，不安装
+          1. service.type：对外暴露端口的方式NodePort，缺省为LoadBalancer
+          1. persistence.enabled：是否启用持久化存储卷
+        - helm history
 1. wiki
-   - 用8代替8个字符“ubernete”而成的缩写
-   - CRI：k8s的容器运行时，定义了k8s和容器运行时的接口规范，只要实现了该规范的容器运行时都能被k8s所采用，k8s通过CRI操作容器，扩展了对容器的支持范围
+   - 运行时
+     1. 认识：k8s支持其他容器运行时，k8s移除dockershim进而移除docker运行时，因为除了docker的containerd，其他功能二者有重叠
+     1. CRI：k8s的容器运行时，定义了k8s和容器运行时的接口规范，只要实现了该规范的容器运行时都能被k8s所采用，k8s通过CRI操作容器，扩展了对容器的支持范围
+     1. OCI：容器运行规范，定义了镜像和容器的运行规范并定义了接口
+        - runC：OCI的一种方式
      1. 流行的CRI
         - containerd：docker自带，通过cri plugin适配CRI
         - CRI-O：为CRI量身订造，来自redhat
-   - OCI：容器运行规范，定义了镜像和容器的运行规范并定义了接口
-     1. runC：OCI的一种方式
    - 和docker：![avatar](../images/server/k8s_docker.jpg)
      1. kubelet之前通过gRPC控制dockershim，进而控制docker，现在换成了CRI
+   - 名称来源：用8代替8个字符“ubernete”而成的缩写
    - k3s
      1. 认识：轻量级kubernetes发行版，小型，部署快，CNCF完全认证的kubernetes产品
         - 二进制程序不足50MB，只需要512MB内存即可运行

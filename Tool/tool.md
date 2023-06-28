@@ -200,7 +200,11 @@
    - brew unlink go：将当前软链移除
    - brew link go@1.12：指定新的软链
 
-   - brew cleanup go：清理旧的升级包
+   - brew cleanup [go]：清理旧的升级包
+
+   - brew services start etcd：启动某个应用
+   - brew services stop etcd：停止某个应用
+   - brew services list：查看当前应用列表
 1. 信息
    - 位置：/usr/local/Cellar
 ### iTerm2

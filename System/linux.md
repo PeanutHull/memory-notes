@@ -4,13 +4,23 @@
    - 对后缀不敏感
 ### 组成
 1. 环境变量
-   - 认识：系统预定义的参数。window也有。作用：在程序里可以获得环境变量的值，根据值决定如何操作，运行，找路径，文件夹等等
+   - 认识：系统预定义的参数，window也有。作用：在程序里可以获得环境变量的值，根据值决定如何操作，运行，找路径，文件夹等等
+     1. 用冒号连接多个path，用$PATH表示之前的path
+   - 组成
      1. SHELL：当前用户使用的Shell
      1. HOSTNAME：主机名
      1. LANG：系统所用语言，`echo $LANG`
-   - 组成
-     1. `/etc/bashrc或/etc/profile或/etc/environment`：全局
-     1. `~/.bashrc或~/.bash_profile或~/.bash_login`：个人
+   - 配置文件
+     1. 全局：系统启动时加载，针对所有用户生效
+        - /etc/profile
+        - /etc/paths
+        - /etc/bashrc
+        - /etc/environment
+     1. 个人：按顺序依次加载，存在则终止
+        - ~/.bash_profile
+        - ~/.bash_login
+        - ~/.profile
+        - ~/.bashrc或~/.zshrc：shell打开时候加载，对应的shell分别为bash或zsh
    - 操作
      1. 查看
         - `echo $SHELL`：查看单个
@@ -18,7 +28,7 @@
         - `export`：系统定义所有
         - `set`：显示所有本地定义的shell变量，也可以用作修改
      1. 设置
-        - `export PATH=/php/bin:$PATH`：临时修改PATH，用:连接，用$PATH防止覆盖。仅对当前用户立即生效，关闭窗口后无效，
+        - `export PATH=/php/bin:$PATH`：临时修改PATH，用:连接，用$PATH防止覆盖。仅对当前用户立即生效，关闭窗口后无效
         - `source .bash_profile`：使生效，修改后要么重新登录要么用source
 1. 命令
    - 执行
@@ -383,6 +393,7 @@
    - network
      1. ping：有些可能禁止检测
      1. telnet：检测端口是否正常
+        - `telnet 10.2.4.100 17778`
      1. strace：跟踪系统调用的执行
         - 查看统计：`strace -p xx -c`
         - 查看实时：`strace -p xx -T -s 4094`
@@ -794,11 +805,15 @@
      1. peak：流量峰值
      1. rates：分别表示过去 2s 10s 40s 的平均流量
    - netstat：显示网络连接/运行端口/路由表等，太慢淘汰
-     1. -i：网卡列表
-     1. -g：组播组关系
-     1. -s：网络详细统计
-     1. –e：网络统计
-     1. -r：路由信息
+     1. 实例
+        - `netstat -antl | grep 30000`：查看某个端口的使用情况
+        - `ps aux | grep 30000`：查看端口占用的进程
+     1. 参数：和ss的相同
+        - -i：网卡列表
+        - -g：组播组关系
+        - -s：网络详细统计
+        - –e：网络统计
+        - -r：路由信息
    - ss：Socket Statistics，用来获取socket统计信息，显示和netstat类似，优势在于能显示更详细的TCP和连接状态的信息，比netstat更快速更高效
      1. 实例
         - ss -ant：查看本机所有tcp连接
@@ -858,6 +873,8 @@
         - 找出发包最多的ip：`tcpdump -nnn -t -c 200 | cut -f 1,2,3,4 -d '.' | sort | uniq -c | sort -nr | head -n 20`
 1. 检测
    - ping：连通性
+   - lsof：list open files，列出打开文件。linux环境下任何事物都以文件的形式存在
+     1. `lsof -i:80`：查看端口号，root用户查看
    - telnet ip port：检测端口是否打开
    - dig：域名检测，从DNS域名服务器查询主机地址信息
    - nslookup：域名检测
@@ -894,8 +911,6 @@
    - traceroute：显示网络数据包传输到指定主机的路径信息，追踪数据传输路由状况
    - openssl：查看网站证书链`openssl s_client -connect github.com:443 -showcerts`
      1. 网站检测：myssl.com
-   - lsof：list open files，列出打开文件。linux环境下任何事物都以文件的形式存在
-     1. i:80：查看端口号，root用户查看
 1. 应用
    - wget
    - curl
@@ -1278,6 +1293,7 @@
    - 指定解释器：#!，如#!/bin/sh
    - 主要语法类型，彼此不兼容
      1. Bourne：包括标准的Bash、sh、ksh、psh、zsh
+        - zsh是比bash更强大的shell
      1. C：包括csh、tcsh。C shell主要在Unix中使用，语法有较大区别
    - 指定解析器：#!/bin/bash #!/usr/bin/env bash/python/ruby
    - 语句即命令，命令就是语句

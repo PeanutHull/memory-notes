@@ -78,32 +78,26 @@
         - watch机制：支持watch机制监听key变化，或某个目录(key前缀)的连续变化，可用于分布式系统的配置分发，状态同步
         - 复杂事务支持复杂事务，如if...then...else...的能力
    - 使用
-     1. curd：`etcdctl set/get/update/rm/mk/ [/xx/xx] xx`，`etcdctl mkdir/setdir/updatedir/rmdir/ls`
-     1. lease：续约
-        - Grant()：创建一个TTL的Lease，Lessor会将Lease信息持久化存储在boltdb中，`put a=1 with lease=5`
-        - Revoke()：撤销Lease并删除其关联的数据
-        - TimeToLive()：获取一个Lease的剩余时间
-        - KeepAlive()：续期
-        - KeepAliveOnce()
-        - Leases()
-        - Close()
-     1. watch：`etcdctl watch/exec-watch`，值一旦变化则输出/执行命令
-     1. txn：事务，`cli.Txn(context.TODO()).If().Then(xx, xx).Commit()`
-        - Txn()：创建
-        - If()/Then()/Else()：条件判断
-        - Commit()：提交
+     1. 命令行
+        - curd：`etcdctl put/get/update/rm/mk/ [/xx/xx] xx`
+        - dir：`etcdctl mkdir/setdir/updatedir/rmdir/ls`
+        - watch：`etcdctl watch/exec-watch`，值一旦变化则输出/执行命令
+     1. 方法
+        - lease：续约
+          1. Grant()：创建一个TTL的Lease，Lessor会将Lease信息持久化存储在boltdb中，`put a=1 with lease=5`
+          1. Revoke()：撤销Lease并删除其关联的数据
+          1. TimeToLive()：获取一个Lease的剩余时间
+          1. KeepAlive()：续期
+          1. KeepAliveOnce()
+          1. Leases()
+          1. Close()
+        - txn：事务，`cli.Txn(context.TODO()).If().Then(xx, xx).Commit()`
+          1. Txn()：创建
+          1. If()/Then()/Else()：条件判断
+          1. Commit()：提交
      1. 连接
         - http+json
         - grpc：更高效
-   - 运维
-     1. 基本
-        - etcd 服务端，etcdctl 客户端
-        - 端口
-          1. 2379：http api
-          1. 2380：peer通信
-     1. 安装最少3个节点
-     1. 集群操作：`etcdctl member list/remove/add`，节点管理
-     1. 备份数据：`etcdctl backup`
    - 分布式锁demo
     ```go
     // 特性使用：事务txn、lease租约、watch监听
@@ -173,14 +167,17 @@
 	fmt.Println("处理任务")
 	time.Sleep(5 * time.Second)
     ```
-1. 服务注册中心的比较
-   - 认识：![avatar](../images/serviceSupport.png)
-   - 分类
-     1. Consul：内置服务注册与发现框架、分布一致性协议实现、健康检查、KV存储、多数据中心方案，go编写
-     1. Zookeeper：ZooKeeper是一个分布式的，开放源码的分布式应用程序协调服务，是Google的Chubby一个开源的实现，是Hadoop和Hbase的重要组件。它是一个为分布式应用提供一致性服务的软件，提供的功能包括：配置维护、域名服务、分布式同步、组服务等。现在都用下边俩了，zk out了
-     1. Nacos ：是构建以“服务”为中心的现代应用架构 (例如微服务范式、云原生范式) 的服务基础设施致力于发现、配置和管理微服务。并且提供了一组简单易用的特性集，能够快速实现动态服务发现、服务配置、服务元数据及流量管理。帮助开发人员更敏捷和容易地构建、交付和管理微服务平台。
-     1. Apollo
-     1. Eureka：netflix的服务发现框架，基于REST服务，定位运行在AWS域中的中间层服务，负载均衡和中间层服务故障转移目的。SpringCloud将它集成在其子项目spring-cloud-netflix中，以实现服务发现功能。主要是包含两个组件，Eureka Server和Eureka Client
+   - 运维
+     1. etcd：服务端，安装最少3个节点，
+        - 操作
+          1. 启动：`etcd`
+        - 端口
+          1. 2379：http api
+          1. 2380：peer通信
+     1. etcdctl：客户端
+        - 健康检查：`etcdctl endpoint health`
+        - 集群操作：`etcdctl member list/remove/add`，节点管理
+        - 备份数据：`etcdctl backup`
 1. etcd实现解读
    - 整体
      1. 流程：startEtcd————NewServer————bootstrap
@@ -207,6 +204,14 @@
         - commitC：用于将 entries 提交到持久化模块中
         - proposeC：用于日志更新
         - confChangeC：提交配置变更信息
+1. 服务注册中心的比较
+   - 认识：![avatar](../images/serviceSupport.png)
+   - 分类
+     1. Consul：内置服务注册与发现框架、分布一致性协议实现、健康检查、KV存储、多数据中心方案，go编写
+     1. Zookeeper：ZooKeeper是一个分布式的，开放源码的分布式应用程序协调服务，是Google的Chubby一个开源的实现，是Hadoop和Hbase的重要组件。它是一个为分布式应用提供一致性服务的软件，提供的功能包括：配置维护、域名服务、分布式同步、组服务等。现在都用下边俩了，zk out了
+     1. Nacos ：是构建以“服务”为中心的现代应用架构 (例如微服务范式、云原生范式) 的服务基础设施致力于发现、配置和管理微服务。并且提供了一组简单易用的特性集，能够快速实现动态服务发现、服务配置、服务元数据及流量管理。帮助开发人员更敏捷和容易地构建、交付和管理微服务平台。
+     1. Apollo
+     1. Eureka：netflix的服务发现框架，基于REST服务，定位运行在AWS域中的中间层服务，负载均衡和中间层服务故障转移目的。SpringCloud将它集成在其子项目spring-cloud-netflix中，以实现服务发现功能。主要是包含两个组件，Eureka Server和Eureka Client
 1. confd
    - 认识：是一个轻量级的配置管理工具，应用非常广泛的是etcd+confd，后端支持的数据类型有：etcd、consul、vault、environment variables、redis、zookeeper、dynamodb、stackengine、rancher
      1. 可通过查询etcd，结合配置模板引擎，用于保持本地配置最新
