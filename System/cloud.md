@@ -319,10 +319,10 @@
      1. docker-compose.yml定义构成的服务
      1. docker-compose up启动
    - 命令
-     1. `docker compose version`：查看版本
      1. `docker compose up -d`：后台运行
      1. `docker compose ps`：列出所有容器
      1. `docker compose down`：停止、删除容器和网络
+     1. `docker compose version`：查看docker compose版本
    - 配置demo
     ```yml
     #声明版本
@@ -614,11 +614,23 @@
      1. 日志、监控
      1. 运维
    - 命令
-     1. kubectl create namespace xxx：创建namespace
+     1. create
+        - kubectl create namespace xxx：创建namespace
+     1. delete
+        - kubectl delete namespace test
+     1. get
+        - kubectl get nodes
+        - kubectl get svc：查看service
+        - kubectl get endpoints：查看service关联的容器
+        - kubectl get namespaces
+        - kubectl get pod [--show-labels]
+        - kubectl get pods -n [命名空间名称]
+     1. label
+        - kubectl label node
+     1. 集群和节点
+        - kubectl cluster-info
+        - kubectl describe node [name]：查看节点详细信息
      1. kubectl config：生成config指令、kubeconfig文件
-     1. kubectl get svc：查看service
-     1. kubectl get endpoints：查看service关联的容器
-     1. kubectl get pod [--show-labels]
 1. helm
    - 认识：k8s的包管理工具，使用helm可以使用更简化、系统化的方式对k8s应用进行部署、升级。作用类似apt/yum/homebrew
      1. chart开发者和使用者的界限，正是由于在跨越这个界限的时候，从需要理解大量的配置到只需要理解少量的配置，使得ops的工作变得简便，这也是helm核心的设计哲学
@@ -660,6 +672,8 @@
         - CRI-O：为CRI量身订造，来自redhat
    - 和docker：![avatar](../images/server/k8s_docker.jpg)
      1. kubelet之前通过gRPC控制dockershim，进而控制docker，现在换成了CRI
+   - 开发
+     1. Ambassador Telepresence：开发工具，可以将集群流量重定向到你的IDE，免去开发完再部署的步骤
    - 名称来源：用8代替8个字符“ubernete”而成的缩写
    - k3s
      1. 认识：轻量级kubernetes发行版，小型，部署快，CNCF完全认证的kubernetes产品

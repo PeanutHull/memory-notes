@@ -329,9 +329,15 @@
           1. 优点：充分考虑kafka读写特性，实时消费全在SSD保证低时延，HDD读取不会会刷到SSD防止缓存污染；日志段有明确唯一状态，查询路径最短，不存在CacheMiss的开销
           1. 缺点：需要server端改进，开发、测试工作量大，需要随社区大版本升级，但可以代码贡献社区解决迭代问题
 ### 运维
-1. mac启动
-   - `zookeeper-server-start /usr/local/etc/kafka/zookeeper.properties`
-   - `kafka-server-start /usr/local/etc/kafka/server.properties`
+1. 启动
+   - mac启动
+     1. `zookeeper-server-start /usr/local/etc/kafka/zookeeper.properties`
+     1. `kafka-server-start /usr/local/etc/kafka/server.properties`
+   - EFAK启动
+     1. 启动zk和kafka
+     1. 启动docker中的mysql
+     1. export KE_HOME=
+     1. ./ke.sh start/stop
 1. 命令行使用
    - topic
      1. 查看列表：`kafka-topics --list --bootstrap-server localhost:9092`
