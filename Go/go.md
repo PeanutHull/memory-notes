@@ -4362,8 +4362,12 @@
         loc,_ := time.LoadLocation(msg(lang,"time_zone"))
         ```
 1. 配合其他语言
+   - gopherjs：目的是将Go代码编译为纯JavaScript代码
+     1. 不支持CGO
+   - rust
+     1. Goscript：通过WASM实现，Go语言规范的非官方实现，用于Rust项目的内嵌或封装。像Lua之于Redis/WoW，或者Python之于NumPy
    - python
-   - c
+   - cgo
      1. 认识：cgo，允许go程序与c语言库相互操作
         - 非常有用，内部用到其他底层语言会使用它来做胶水，是在Android和iOS上运行Go程序的关键
         - 是两个世界的交叉点，而不是结合点，互相对对方一无所知
@@ -4410,14 +4414,24 @@
         - 基于Pathfinder的高效矢量渲染器
         - 基于piet-gpu的实验渲染器，两种渲染器都支持Vulkan、Metal、Direct3D 11和OpenGL ES
 1. gomobile
-   - 认识：编译生成arr包和jar包没有main函数入口，然后在android中通过包名调用方法
+   - 认识：可编译成移动端应用或者移动端SDK，可以没有main函数入口，然后在android中通过包名调用方法
+     1. 平台
+        - 安卓
+          1. 编译生成arr包和jar包，android studio导入aar包即可调用
+          1. 工具：Android Studio的NDK和CMake
+        - ios
+          1. 生成xxx.FrameWork目录，目录拷贝到IOS目录下，然后添加到项目的依赖，即可调用
+          1. 工具：XCode和Command Line Tools
+   - 步骤
+     1. bind生成对应平台的包
+     1. 
    - 使用
      1. `gomobile init`：初始化环境，自动下载安装依赖
      1. `gomobile bind [path]`：编译当前目录下所有go文件
         - -v -trimpath
         - -ldflags "-s -w"
         - -o build/OpenIMCore.aar
-        - -target=android ./open_im_sdk/ ./open_im_sdk_callback/
+        - -target=android/ios
      1. `gomobile clean`
    - 运维
      1. 安装：`go install golang.org/x/mobile/cmd/gomobile`
@@ -5068,8 +5082,6 @@
    - 设计架构，命名组件，（文档）记录细节
    - 文档是供用户使用的
    - 不要（在生产环境）使用 panic()
-1. 周边
-   - Goscript：通过WASM实现，Go语言规范的非官方实现，用于Rust项目的内嵌或封装。像Lua之于Redis/WoW，或者Python之于NumPy
 1. 开发配置
    - 配置GOROOT、GOPATH
    - 配置代理：`GOPROXY=https://goproxy.cn;GOPRIVATE=*.100tal.com`

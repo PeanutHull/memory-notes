@@ -129,10 +129,18 @@
      1. 函数、约束、视图、触发器：同mysql
         - 约束：主键约束、唯一约束、检查约束
    - 运维
-     1. sqlite3：连接
-     1. sqlite3 test.db .dump > test.sql：导出
+     1. 文件
+        - xx.db
+        - xx.shm：共享内存文件，用于在wal模式中给多个访问相同数据库的进程提供一块共享内存，这种情况必须全部更新同一存储位置（用作WAL文件的索引），以防止发生冲突
+        - xx.wal：预写日志表
+        - journal：用来实现原子提交和回滚功能
+     1. 操作
+        - sqlite3：连接
+        - sqlite3 test.db .dump > test.sql：导出
    - wiki
-     1. 历史：2000年 Alpha版本，新版本SQLite 3
+     1. 版本
+        - 2000：Alpha版本，新版本SQLite 3
+        - v3.7：支持wal
 1. IndexedDB
    - 认识：一种kv型的在浏览器存取数据的数据库，丰富了客户端的查询方式
    - 特性

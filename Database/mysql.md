@@ -257,8 +257,16 @@
         - 基本形式：`constraint foreignKeyName foreign key(selfId) references foreignTable(foreignTableId)`
         - 级联限制：`constraint foreignKeyName foreign key(selfId) references foreignTable(foreignTableId) on delete/update cascade;`，删除被连接数据自己也被删除，连带删除
    - 改变结构
-     1. 5.6.7后支持online DDL：某些操作会记录binlog，不会锁表，之前禁止写，不禁止读
+     1. v5.6.7后支持online DDL：某些操作会记录binlog，不会锁表，之前禁止写，不禁止读
         - 修改字段类型、字段宽度都会锁表
+     1. 算法
+        - copy：对原始表的副本执行操作，并将表数据从原始表逐行复制到新表。不允许并发DML
+        - inplace：操作可避免复制表数据，但可以在适当位置重建表。在操作的准备和执行阶段可以简短地获取表上的独占元数据锁定，支持并发DML。通常使用
+          1. `ALTER TABLE `test`.`book` DROP COLUMN `gg` ,algorithm=inplace;`显式指定algorithm=inplace
+        - instant：v8.0.12后InnoDB秒级别快速增加列，之前几十几百秒，algorithm=instant，限制有
+          1. Instant Add Column只能将新字段添加到表的尾巴上，不能添加到中间
+          1. 不支持压缩表，即该表行格式不能是COMPRESSED
+          1. 不支持包含全文索引的表；不支持临时表；不支持那些在数据字典表空间中创建的表
 #### sql
 1. sql
    - 分类

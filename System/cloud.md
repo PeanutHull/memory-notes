@@ -678,6 +678,7 @@
    - k3s
      1. 认识：轻量级kubernetes发行版，小型，部署快，CNCF完全认证的kubernetes产品
         - 二进制程序不足50MB，只需要512MB内存即可运行
+   - 开源云原生平台：KubeSphere、Rainbond、kubeVela
 ### other
 1. MinIO
    - 认识：软件定义的高性能的企业级开源对象存储系统，能够构建自己的云储存服务

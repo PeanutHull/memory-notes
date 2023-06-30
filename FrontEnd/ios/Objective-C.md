@@ -101,6 +101,9 @@
     ```
    - sizeof：返回对象/类型的字节为单位的存储大小，`sizeof(int)`
 1. 打印：`NSLog(@"Storage size for int : %d", sizeof(int));`
+1. XCFramework
+   - 认识：更方便的分发二进制包格式，其中包含一个框架或库的变体使得可在多个平台上使用(MacOS/tvOS)
+     1. 可以是静态或动态的，并且可以包含标头
 ### 面向对象
 1. 类
    - 定义和实现
@@ -144,5 +147,10 @@
    - NSObject，NSInteger，NSNumber，CGFloat
    - property，nonatomic;，retain，strong
    - weak，unsafe_unretained;，readwrite，readonly
+1. CocoaPods
+   - 认识：是Swift和Objective-C Cocoa项目的依赖管理器
+   - 使用
+     1. pod install
+     1. pod update
 ### swift
 1. 变量 var，常量 let
