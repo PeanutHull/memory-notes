@@ -5020,16 +5020,72 @@
    - 断点调试：dlv
 ### wiki
 1. 历史
-   - 07年开发
-   - 09年开源
-   - 12年1.0稳定版本
-   - 14年1.4版本
+   - 1.0：稳定版本，12年发布，09年开源，07年开发
+   - 1.4：14年
    - 1.8
      1. 移除yacc工具，使用goyacc
-   - 1.11
-     1. 库文件管理模块go module
+   - 1.11：里程碑式版本，2018年
+     1. module支持、webAssembly支持、grpc支持
+     1. 依赖改进
+   - 1.12
+     1. 改善GC和大堆内存操作的性能
+     1. 支持TLS1.3
+     1. 支持匿名导入
+   - 1.13
+     1. 优化sync.Pool，其中的资源不会在垃圾回收时被清除(通过新机制里引入的缓存，两次垃圾回收之间没有被使用过的实例才会被清除)
+     1. 逃逸分析减少了堆上的分配次数
+   - 1.14
+     1. 改进defer性能
+     1. goroutines异步可抢占
+     1. 内部定时器更高效
+   - 1.15
+     1. 链接器的重大改进
+     1. 改进了对具有大量内核的小对象的分配，并弃用X.509 CommonName
+     1. 编译器/汇编器/链接器的优化，二进制大小减少约5%，减少了链接器资源的使用（时间和内存）并提高了代码的稳健性/可维护性。
+   - 1.16
+     1. GO111MODULE 默认为 on
+     1. 支持编译阶段将静态资源文件打包进编译好的程序中，并提供访问这些文件的能力：//go:embed
+   - 1.17
+     1. []T可转换为数组指针类型 *[N]T
+     1. 编译器额外改进：即一种传递函数参数和结果的新方法，程序性能提高了约5%
+     1. modules支持“修剪模块图”（Pruned module graphs）：go mod tidy -go=1.17
+     1. net包改进
    - 1.18
+     1. 泛型支持
+     1. sync包新增Mutex.TryLock、RWMutex.TryLock和RWMutex.TryRLock
+     1. workspaces工作区
+     1. strings包和bytes包新增Cut函数
+     1. go get不再执行编译和安装工作
+     1. 使用256作为threshold，切片的扩容算法
+     1. 支持go fuzzing test单元测试，函数名样式：FuzzXxx
+     1. runtime/pprof精确性提升
+     1. AMD64平台上引入architectural level带来20%cpu性能改进
+     1. 1.18明确了能修改go.mod、go.sum的命令只有三个：go get、go mod tidy和go mod download
      1. net/netip包：之前ip包设计不合理。定义了ip地址类型Addr，占用更少内存（24 byte），不可变（immutable），具有可比性（支持==并作为map键）
+   - 1.19：2022.05
+     1. Go程序空闲时GC进入到周期性的GC循环的情况下(2分钟一次)，Go运行时现在会在idle的操作系统线程上安排更少的GC worker goroutine，减少空闲时Go应用对os资源的占用
+     1. Go行时将根据goroutine的历史平均栈使用率来分配初始goroutine栈，避免了一些goroutine的最多2倍的goroutine栈空间浪费
+     1. Go编译器使用jump table重新实现了针对大整型数和string类型的switch语句，平均性能提升20%左右
+     1. sync/atomic包增加新的高级原子类型Bool, Int32, Int64, Uint32, Uint64, Uintptr, Pointer
+     1. 修订Go memory model、go doc comment
+     1. 启动时默认提高打开文件的限值，导入os包的go程序到hard limit
+     1. race detector将升级到v3版thread sanitizer：race detector性能相对于上一版将提升1.5倍-2倍，内存开销减半，并且没有对goroutine的数量的上限限制
+     1. 新增runtime.SetMemoryLimit和GOMEMLIMIT环境变量：避免Go程序因分配heap过多超出系统内存资源限制被kill，默认memory limit是math.MaxInt64，limit限制的是go runtime掌控的内存总量，手动不算
+     1. 正式支持64位龙芯cpu架构 (GOOS=linux, GOARCH=loong64)
+   - 1.20：2023.02
+     1. 支持将slice直接转为数组
+     1. 标准库加强
+        - 新增了几个时间转换格式常量
+        - 新包 crypto/ecdh 支持通过 NIST 曲线和 Curve25519 椭圆曲线 Diffie-Hellman 密钥交换
+        - os/exec.Cmd 结构体中的新字段 Cancel 和 WaitDelay, 指定 Cmd 在其关联的 Context 被取消或其进程退出时的回调
+     1. 性能提升
+        - 编译器和GC的优化减少了内存开销，并将cpu性能整体提高了2%
+        - 编译时间优化提升10%
+     1. Comparable类型可比较
+     1. unsafe包添加Slice，SliceData，String，StringData 4个函数
+     1. 支持macOS 10.13 High Sierra和10.14 Mojave的最后一个版本
+     1. PGO引入
+   - 2.0：下一个主要版本
 1. 特点
    - 语法糖
      1. ...：可变参数
