@@ -210,6 +210,42 @@
         - 钩子函数：各种before、after的注入
         - sql执行：`scope.SQLDB().QueryRow(scope.SQL, scope.SQLVars...).Scan(primaryField.Field.Addr().Interface())`
         - 各种反射的应用：判断类型、情况
+     1. 优雅返回时间格式
+        - 使用
+            ```go
+            type TestTimes tructt{
+                CreatedTime utils.LocalTime "json: "created_time"
+            }
+            ```
+        - 定义utils.time
+            ```go
+            const (  
+                LocalDateTimeFormat string = "2006-01-02 15:04:05"  
+            )  
+            type LocalTime time.Time  
+            
+            func (l *LocalTime) Scan(v interface{}) error {  
+                value, ok := v.(time.Time)  
+                if ok {  
+                    *l = LocalTime(value)  
+                    return nil  
+                }
+
+                return fmt.Errorf("can not convert %v to timestamp", v)  
+            }  
+            
+            func (l LocalTime) MarshalText() (text []byte, err error) {  
+                b := make([]byte, 0, len(LocalDateTimeFormat))
+
+                b = time.Time(l).AppendFormat(b, LocalDateTimeFormat)
+                
+                if string(b) == `0001-01-01 00:00:00` {
+                    b = []byte(``)  
+                }
+
+                return b, nil  
+            }
+            ```
    - xorm
    - ent
    - Gaea：小米基于mysql协议的数据库中间件，支持分库分表、sql路由、读写分离等基本特性
@@ -278,7 +314,7 @@
    - 不支持多个日志级别
    - 不支持日志格式化
    - 大量使用interface{}和反射，内存分配次数多，性能低
-1. logrus：最活跃的日志库
+1. logrus：go的结构化、可插入的日志记录器，结构化就是方便用了
    - 特点
      1. 完全兼容标准日志库，拥有七种日志级别：Trace, Debug, Info, Warning, Error, Fataland Panic
      1. 可扩展的Hook机制，允许使用者通过Hook的方式将日志分发到任意地方，如本地文件系统，logstash，elasticsearch或者mq等，或者通过Hook定义日志内容和格式等

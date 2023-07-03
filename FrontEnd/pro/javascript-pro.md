@@ -429,6 +429,8 @@
      1. 支持语言：C，C++和Rust，预计会推出的语言有Go，Java和C#
      1. 使用WebAssembly对浏览器API进行任何调用时，目前还需要JS进行交互，用JS作为入口。未来WebAssembly可能被浏览器内置支持，并使其能够直接调用DOM，Web Workers或其他浏览器API等
      1. wasi：在任意平台上运行任意的代码，就像 Docker 所做的一样，但是不需要受限于操作系统
+   - Bytecode Alliance：字节码联盟，是推动WebAssembly标准化的组织，该联盟旨在通过协作实施标准和提出新标准，以完善WebAssembly在浏览器之外的生态
+     1. WASI：WebAssembly System Interface，使WebAssembly能够安全地访问文件、网络和内存等系统资源
 ### PWA
 1. 认识：Progressive Web App，渐进式web应用程序，渐进式的跳出浏览器的范围，跟原生应用做更深层次的结合，是20年前ajax和10年前的响应式布局的又一场革命，web应用的又一个全新时代
    - 诞生场景：web应用体验不佳

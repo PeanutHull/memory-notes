@@ -46,6 +46,7 @@
         - DWB：data warehouse base 基础数据层，存储的是客观数据，一般用作中间层，可以认为是大量指标的数据层
         - DWD：data warehouse detail 细节数据层、ODS层，是业务层与数据仓库的隔离层
      1. ODS：Operational Data Store，数据源中的数据经过ETL后装入本层，
+   - Apache Kafka是和Apache Storm、Apache Spark和Apache Flink同等级的实时流处理平台
 1. tools
    - Camus：把Kafka上的Binlog数据写入到HDFS
    - presto：分布式的大数据SQL查询引擎

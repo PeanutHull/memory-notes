@@ -33,17 +33,15 @@
      1. blob：二进制形式的长文本数据，0~65535字节，tiny/medium/longblob，可变长度，避免使用，会用到临时表，性能开销
      1. binary：二进制形式的字符串，即包含字节字符串，不包含字符字符串，没有字符集，避免使用，会用到临时表，性能开销
    - 日期和时间
-     1. datetime
-        - 最通用
-        - 时区无关
-        - 形式：`YYYY-MM-DD HH:MM:SS`
+     1. datetime：最通用、时区无关，可有长度，为毫秒位数，最多6位默认0
+        - 形式：`YYYY-MM-DD HH:MM:SS`，支持DEFAULT CURRENT_TIMESTAMP和ON UPDATE CURRENT_TIMESTAMP
         - 范围：`1000-01-01 00:00:00 ~ 9999-12-31 23:59:59`
         - 大小：v5.6.4之前固定8byte，之后支持微秒，根据毫秒位数确定
         - 最佳实践
           1. 默认可以设置为`1970-01-01 00:00:00`，全是0可能有问题，还会破坏索引
-     1. timestamp
-        - 表示时间戳的范围
-        - 自带时区属性，处理不同时区方便，值会随着服务器时区的变化而变化
+        - 历史
+          1. v5.7默认记录毫秒值，v8.0不会
+     1. timestamp：表示时间戳范围，自带时区属性，处理不同时区方便，值会随着服务器时区的变化而变化，可有长度，为毫秒位数，最多6位默认0 
         - 形式：`YYYY-MM-DD HH:MM:SS`
         - 范围：`1970-01-01 00:00:01 UTC ~ 2038-01-19 03:14:07 UTC`
         - 大小：v5.6.4之前固定4byte，之后支持微秒，根据毫秒位数确定
@@ -133,7 +131,9 @@
      1. locate(xx, 'x,x,x')：搜索字符串，逗号分隔
    - Find_IN_SET：查找通过,分隔的某一个数据
    - 时间
-     1. year()
+     1. year()、month()、day()、dayname() 星期n
+     1. now()、curtime()、localtime()、unix_timestamp() 时间转换为时间戳
+     1. extract()、datediff()、timestampdiff()
    - 数据处理
      1. distinct去重可能要全表扫描
      1. concat字符串连接
@@ -142,7 +142,6 @@
      1. ISNULL(expr)：如expr 为null，那么返回1，否则返回0
      1. NULLIF(expr1,expr2)：如果expr1=expr2返回NULL，否则返回expr1
    - password
-   - UNIX_TIMESTAMP：时间转换为时间戳
    - match：全文搜索
    - uuid()：aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
    - 修饰符

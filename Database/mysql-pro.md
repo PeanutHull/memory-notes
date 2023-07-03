@@ -102,8 +102,8 @@
      1. InnoDB
         - 认识：InnoDB页中行是数据的就是叶子节点，是健值和指针的就是非叶子节点
         - 分类
-          1. 聚集索引：即主键索引，叶子节点中存储完整的整行数据，InnoDB表数据文件本身就是主键索引，使用索引组织表，索引和记录一起存储在表空间，![avatar](../images/mysql_index_primary_key.webp)
-          1. 二级索引：保存的是索引列值以及指向主键的指针，需要先查到主键id，再去主键索引获取整行的数据。如高度3的树，需要3+3=6次io：![avatar](../images/mysql_index_second_key.webp)
+          1. 聚集索引：即主键索引，叶子节点中存储完整的整行数据，InnoDB表数据文件本身就是主键索引，使用索引组织表，索引和记录一起存储在表空间，![avatar](../images/db/mysql_index_primary_key.jpg)
+          1. 二级索引：保存的是索引列值以及指向主键的指针，需要先查到主键id，再去主键索引获取整行的数据。如高度3的树，需要3+3=6次io
    - 认识
      1. 区间查找：用区间起始值在树中查找直到叶子节点，然后顺着叶子链表往后遍历直到结束值即可
      1. 普通索引和唯一索引在检索效率上基本没有差别，因为只是加了约束，整页在内存中判断时cpu的时间可以忽略不记
@@ -241,7 +241,7 @@
      1. 单表
         - 最多1017个列
         - 最多64个二级索引
-1. 逻辑存储结构
+1. 逻辑存储结构：![avatar](../images/db/mysql_on_disk_structure.jpg)/
    - tablespace：表空间，包含所有数据，即ibd文件
      1. 认识
         - 共享表空间文件名称ibdate1，为默认的
@@ -290,7 +290,7 @@
         - Dynamic：动态，Compact的升级版，完全的行溢出方式
         - Compressed：压缩，Compact的升级版，行数据会以zlib算法进行压缩
 1. innoDB数据更新机制
-   - 认识：即WAL Write-Ahead Logging，日志先行机制，![avatar](../images/mysql-update.jpeg)、![avatar](../images/db/innoDB_struct.jpeg)
+   - 认识：即WAL Write-Ahead Logging，日志先行机制，![avatar](../images/mysql-update.jpeg)、![avatar](../images/db/innoDB_struct.jpeg)、![avatar](../images/db/changeBuffer.jpg)/
      1. 主线程每秒将脏页写入文件，不论事务是否提交
      1. 通过写前日志和两阶段提交，实现不丢失数据
    - 认识：先写日志再持久化数据文件，利用日志的高效率的顺序写实现灵活控制的可靠持久化的一种机制，兼顾了提高性能和可靠持久化。崩溃时即使数据没有持久化也可以通过日志文件恢复，类似两阶段提交

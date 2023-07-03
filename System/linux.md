@@ -11,6 +11,9 @@
      1. HOSTNAME：主机名
      1. LANG：系统所用语言，`echo $LANG`
    - 配置文件
+     1. mac默认地址
+        - /bin、/sbin：系统命令目录
+        - /usr/bin、/usr/sbin：用户程序命令目录
      1. 全局：系统启动时加载，针对所有用户生效
         - /etc/profile
         - /etc/paths
@@ -1114,9 +1117,7 @@
      1. 磁盘占用：一个容器不超过8MB。磁盘中最小安装大约130MB
    - openEuler：华为欧拉，数字基础设施的开源操作系统
 1. 其他
-   - mac环境变量默认地址
-     1. /bin、/sbin：系统命令目录
-     1. /usr/bin、/usr/sbin：用户程序命令目录，如php、php-config、phpize、php-fpm
+   - linux比windows的io模型和网络传输的零拷贝都厉害
 #### shell
 1. 理解：壳，命令行解释器，利用ASCII码表转换将命令传给内核，敲命令的界面就是shell。支持命令执行、条件判断、循环控制
 1. 运算符：expr、let
