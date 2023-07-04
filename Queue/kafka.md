@@ -39,7 +39,7 @@
      1. 消费者位移：Consumer Offset。表征消费者消费进度，每个消费者都有自己的消费者位移
    - 消费者组：Consumer Group。多个消费者实例共同组成的一个组，同时消费多个分区 以实现高吞吐
      1. 重平衡：Rebalance。消费者组内某个消费者实例挂掉后，其他消费者实例自动重新分配订阅主题分区的过程。Rebalance 是 Kafka 消费者端实现高可用的重要手段
-1. 设计：topic --> partition --> replica --> segment
+1. 设计：topic --> partition --> replica --> segment --> message
    - 多分区、多副本，消息自动平衡，快速持久化、容错性
    - 支持同步和异步复制：副本模式
      1. 同步：生产者从zk找到leader，发布消息后存入leader的log中，follow使用一个channel来pull消息，写入自己log后发送确认消息，收到所有follow的确认消息才给生产者发送ack
@@ -93,6 +93,8 @@
           1. 断掉所有访问：使用域名访问，切断解析，保证一定无流量进入
           1. 进行删除
 1. message
+   - 认识
+     1. 可设置自动删除时间
    - 组成
      1. key：消息键，决定放到哪个partition
         - 有key：按照key进行哈希，相同key去一个partition
@@ -104,10 +106,10 @@
      1. 最大重试次数：重新投递给业务方的最大重试次数，业务方消费消息的时间超过"消费超时时间"时，消息会判断消费失败，
      1. QOS：并发回调个数
 1. partition
-   - 认识：分区，有序的数据存储基本单元，一个topic分为n个有序号的partition
+   - 认识：分区，有序的数据存储基本单元，一个topic分为n个有序号的partition，提供负载均衡的高伸缩性能力
      1. 只能追加写，避免了缓慢的随机io操作
      1. 使用日志段Log Segment机制，总是写最新的segment，每个消息有一个位移，单partition消息有序，全局不是
-     1. 是分布式的，保证了伸缩性，可用于负载均衡
+     1. kafka中叫分区，在mongodb和elasticsearch中叫分片shard，hbase中叫region，cassandra中叫vnode
    - 组成：TopicName + Num是日志目录
      1. active segment list：追加、读取、删除，用于确认具体的索引文件
         - 是一个offset区间，有了offset就可确认哪个segment
@@ -152,12 +154,16 @@
    - offset保存
      1. 保存在__consumer offsets的topic中，消息的key由groupid、topic、partition组成
      1. value是偏移量offset，清理策略compact，缓存在内存中，第一次遍历partition建立缓存
-   - 分配
-     1. 步骤
+   - 分区策略
+     1. 轮询：round-robin
         - 将n个broker和待分配的partition排序
         - 将第i个partition分配到第(i mod n)个leader broker上
         - 将第i个partition的第j个replica分配到第((i+j) mode n)个broker上
-     1. 重分配：partition reassign：发生在分区数变化，或分区更改到其他broker
+     1. 随机：如果追求数据均匀分布使用轮询策略比随机好
+     1. 自定义消息键：对标志位设定专门的分区策略，保证同一标志位的所有消息都发送到同一分区，可实现顺序发送
+        - 更加合适的做法是把标志位数据提取出来统一放到key中，这样更加符合kafka的设计思想
+     1. 其他：如根据ip地址
+     1. 自定义
    - 多副本同步
      1. 认识：处理follower批量拉取数据同步leader
      1. 消息生产可靠性：`request.required.acks`
@@ -165,6 +171,7 @@
         - 1，当写Leader成功后就返回,其他的replica都是通过fetcher去同步的,所以kafka是异步写，主备切换可能丢数据
         - -1，要等到ISR里大于min.insync.replicas同步成功，才能返回成功，延时取决于最慢的机器。强一致，不会丢数据
      1. epoch机制
+   - 重分配：partition reassign：发生在分区数变化，或分区更改到其他broker
 1. replica
    - 认识：副本，partition的复制，防止数据丢失
      1. 一个partition可多个replica，每个都可能成为leader
@@ -245,11 +252,12 @@
      1. sendOffsets
      1. commitTransaction
      1. abortTransaction
-   - 客户端原理：![avatar](../images/kafka_producer_client.png)
-   - thread safe：线程安全，生产者时线程安全，消费者不是线程安全的
    - 生产幂等性
      1. 为每个producer分配一个唯一标识pid，producer为每一个partition维护一个单调递增的seq
      1. 当req_seq == broker_seq+1时，broker才会接受该消息，大了还没写入，小了已经写入了
+   - 压缩算法：时间换空间的trade-off思想，producer端压缩、broker端保持、consumer端解压缩
+   - thread safe：线程安全，生产者时线程安全，消费者不是线程安全的
+   - 客户端原理：![avatar](../images/kafka_producer_client.png)
 1. consumer group
    - 认识：指多个消费者实例共同组成一个组来消费一组主题，为了多个消费者实例同时消费提升消费者端的吞吐量
      1. 一个partition只能由组中某一个消费者消费
@@ -293,12 +301,18 @@
         - consume变成非阻塞消费数据，后边线程池处理业务逻辑，但consume不知道后边是否成功可以commit，特点是减少consume消耗实现快速消费，适合非业务系统，如流处理，gps打点，机器监控，丢一些无所谓
    - Rebalance：重平衡
 ### 流式计算
+1. connect
+   - 认识：是流式计算的一部分，可高效连接其他中间件建立流式通道将数据输入到kafka中，如mysql、hadoop、es等。支持流式和批处理集成
+     1. 连接一端数据转换后输出到另一端
+     1. 连接器，直连db数据交互，从源系统中拉取数据到kafka
+     1. 大家都用的少，logstace比他强
+   - 模式
+     1. standalone
+     1. distributed
 1. stream
-   - 认识：流式数据处理，通过state store实现高效状态操作，支持原语processor和高层抽象DSL
+   - 认识：流式数据处理，通过state store实现高效状态操作，支持原语processor和高层抽象DSL，会涉及stream开发
      1. stream流处理流程
         - 有inputTopic和outputTopic，处理完自动输出，state store记录每个task的状态
-     1. stream高层架构
-     1. stream开发
    - 组成
      1. 流、流处理器
      1. 流处理拓扑
@@ -306,16 +320,24 @@
    - 思考
      1. 更容易实现端到端的正确性：因为所有的数据流转和计算都在Kafka内部完成，故Kafka可以实现端到端的精确一次处理语义。Spark 或 Flink因为只能保证内部精确一次处理语义，外部不行如灌入重复消息
      1. 明确自己对于流式计算的定位：Kafka Streams是一个用于搭建实时流处理的客户端库而非是一个完整的功能系统，你不能期望着Kafka提供类似于集群调度、弹性部署等开箱即用的运维特性。瞄准了小公司，这是其用武之地，哈哈
-1. connect
-   - 认识：是流式计算的一部分，用来和其他中间件建立流式通道，支持流式和批处理集成，高效的连接了多个组件，成为其功能强大的一部分
-     1. 作用、背景
-        - 连接一端数据转换后输出到另一端
-        - 连接器，直连db数据交互，从源系统中拉取数据到kafka
-        - 大家都用的少，logstace比他强
-   - 可以对接：mysql、hadoop、es等
-   - 模式
-     1. standalone
-     1. distributed
+   - demo
+    ```java
+    final Gson gson = new Gson();
+    final StreamsBuilder builder = new StreamsBuilder();
+
+    KStream<String, String> source = builder.stream("access_log");
+    source.mapValues(value -> gson.fromJson(value, LogLine.class)).mapValues(LogLine
+        .groupBy((key, value) -> value.contains("ios") ? "ios" : "android")
+        .windowedBy(TimeWindows.of(Duration.ofSeconds(2L)))                             // 每2秒计算一次ios端和android端请求的总数，并把这些数据写入到os-check主题中
+        .count()
+        .toStream()
+        .to("os-check", Produced.with(WindowedSerdes.timeWindowedSerdeFrom(Strin
+
+    final Topology topology = builder.build();
+
+    final KafkaStreams streams = new KafkaStreams(topology, props);
+    final CountDownLatch latch = new CountDownLatch(1);
+    ```
 ### 运维
 1. 启动
    - mac启动
@@ -336,15 +358,25 @@
    - 消息
      1. 发送：`kafka-console-producer --broker-list localhost:9092 --topic xx`：不间断，回车发送
      1. 消费：`kafka-console-consumer --bootstrap-server localhost:9092 --topic xx --form-beginning`
+1. 部署需要考虑的点
+   - 不同操作系统区别
+     1. linux：epoll模型，零拷贝技术，
+     1. windows：select模型，Java 8的60+版本才有，window上bug口头依然保证尽力解决，一般不会修复
+   - 带宽：直接传输的消息带宽 + 2倍的集群内副本复制所需带宽
 1. 配置
-   - broker
-     1. unclean.leader.election.enable：不严格的leader选举，助于集群健壮，但有丢失数据风险
+   - broker：提供了近200个参数
+     1. log.dirs：配置多个路径，最好这些目录挂载到不同的物理磁盘上(提升读写性能/能够实现故障转移)
+     1. auto.leader.rebalance.enable：bool，是否允许定期进行leader选举
      1. min.insync.replicas：最小的同步状态的副本，否则不接受写入请求
      1. cleanup.policy：生命周期结束的数据处理，默认删除
      1. flush.messages：强制刷新写入的最大缓存消息数
      1. flush.ms：强制刷新写入的最大等待时长
-   - 消息大小：最大2G
+   - zk相关
+     1. chroot：别名，用于多个kafka集群使用同一套ZooKeeper集群，`zookeeper.connect————zk1:2181,zk2:2181,zk3:2181/kafka1`
+     1. zookeeper.connect
+   - message：大小最大2G
      1. broker
+        - retention.ms:规定了该topic消息被保存的时长
         - message.max.bytes :524288000B(500M)，单消息最大值
         - replica.fetch.max.bytes :536870912B(512M)，可复制的单消息最大值，比上边小了复制不了
      1. producer
@@ -353,19 +385,19 @@
         - fetch.message.max.bytes：524288000B(500M) 消费者能读取的消息最大值，大于或等于message.max.bytes
      1. jvm
         - 堆内存：kafka-server-start.sh文件的`export KAFKA_HEAP_OPTS="-Xmx6G -Xms6G"`
-   - 生产者
+   - producer
      1. ack
      1. 压缩
      1. 生产方式：同步、异步
-   - 消费者：设置不合理会频繁发生rebalance，造成消费不可用
+   - consumer：设置不合理会频繁发生rebalance，造成消费不可用
      1. session.timeout.ms：超时时间
      1. heartbeat.interval.ms：心跳时间间隔，需要有心跳线程
      1. max.poll.interval.ms：每次消费的处理时间
      1. max.poll.records：每次消费的消息数
    - 服务器
-     1. 文件描述符：10万以上
+     1. ulimit：文件描述符，10万以上
      1. pagecache：和大多数的激活日志段大小相同
-     1. 禁用swap
+     1. swap：建议调小点给调休排查留时间，禁用改为0
      1. 分区：单broker数量不超2000，大小不超25G
 1. 监控
    - web管理界面：cmak，即Kafka-Manager
@@ -379,9 +411,9 @@
      1. 最好为broker的倍数，一般为3的倍数，这样分区可以均匀分布在所有broker上
      1. key hash的业务，需要在最初就定义好分区数，因为如果添加分区，原来的数据是不会自动重新hash的
 1. 实现顺序消费
-   - 业务自己封装基于分区的顺序消费，即不同分区，放到不同线程，另外提高并发度之一就是降低锁的粒度，可以基于业务key的放到不同线程中处理，如不同用户的账户增减可以并行
-   - 要保证消息顺序，可将partition设为1，一个partation只能有一个consume，性能太低，不如天生有序的rabbiemq呢
+   - 对此标志位设定专门的分区策略，保证同一标志位的所有消息都发送到同一分区
    - 可以使用key + offset做到业务有序，一个key确定同一类型，offset作为顺序的判断，如先存了es，时序数据库中，攒够了一起处理
+   - 要保证消息顺序，可将partition设为1，一个partation只能有一个consume，性能太低，不如天生有序的rabbiemq呢
 1. out-of-range
    - 认识：一般是消费速度不够快，服务端已经删除了消息。要么增大kafka的保留策略，要么提高消费能力
 ### 架构
