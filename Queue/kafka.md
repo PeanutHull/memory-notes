@@ -51,6 +51,8 @@
      1. 紧凑的二进制字节数组，避免了java繁重的堆上内存分配
    - 组成
      1. serializer：序列化器，对象、字节相互转换的编解码器
+     1. __consumer_offsets：位移主题，储存offset，之前放到了zk中高强度写不合适，也是普通topic，存的也是普通message，保存了group id，主题名，分区号
+        - 删除位移主题的过期消息：Compact策略，即key值相同只保留最新；Log Cleaner异步定义执行
    - 参数
      1. 节点选取
      1. topic名称
@@ -165,11 +167,8 @@
      1. 其他：如根据ip地址
      1. 自定义
    - 多副本同步
-     1. 认识：处理follower批量拉取数据同步leader
-     1. 消息生产可靠性：`request.required.acks`
-        - 0，发过去就完事了，不关心broker是否处理成功，可能丢数据
-        - 1，当写Leader成功后就返回,其他的replica都是通过fetcher去同步的,所以kafka是异步写，主备切换可能丢数据
-        - -1，要等到ISR里大于min.insync.replicas同步成功，才能返回成功，延时取决于最慢的机器。强一致，不会丢数据
+     1. 认识
+        - follower同步leader拉取数据，replica通过fetcher去同步
      1. epoch机制
    - 重分配：partition reassign：发生在分区数变化，或分区更改到其他broker
 1. replica
@@ -235,71 +234,121 @@
    - client
      1. metadata request：元数据请求，客户端可向任意broker获取topic的分区/副本/leader。客户端会缓存信息并定时刷新，客户端会直接发送请求到leader
 1. producer
-   - 认识
-     1. 批量发送，会积攒一批，然后一起发送
+   - 认识：![avatar](../images/kafka_producer_client.png)
+     1. thread safe：线程安全，生产者是线程安全，消费者不是线程安全的
    - 生产请求：produce request
      1. 先验证是否有权限写入
-     1. 其次看返回值ack=0、1、all，以便消息成功接收
+     1. 其次看返回值acks=0、1、all，以便消息成功接收
+   - 压缩消息
+     1. 认识：时间换空间的trade-off思想，producer端压缩、broker端保持、consumer端解压缩
+   - 幂等生产
+     1. 认识：根据一些额外的字段自动做消息去重，只支持单分区幂等、不支持跨会话。`props.put(“enable.idempotence”, ture)`
+     1. 原理
+        - 为每个producer分配一个唯一标识pid，producer为每一个partition维护一个单调递增的seq
+        - 当req_seq == broker_seq+1时，broker才会接受该消息，大了还没写入，小了已经写入了
+   - 事务生产
+     1. 认识：跨多分区的原子性写入，同时保证consumer只能看到事务成功提交的和非事务型的消息，不怕kafka重启，隔离级别为read_committed
+     1. 方法
+        - initTransactions
+        - beginTransaction
+        - sendOffsets
+        - commitTransaction
+        - abortTransaction
+     1. demo
+        ```java
+        producer.initTransactions();
+        try {
+            producer.beginTransaction();
+            producer.send(record1);
+            producer.send(record2);
+            producer.commitTransaction();
+        } catch (KafkaException e) {
+            producer.abortTransaction();
+        }
+        ```
+     1. 开启
+        - `enable.idempotence = true`
+        - `transctional.id = xxx`：可以设置个有意义的值
    - 发送方式
-     1. 同步发送：等待返回发送后的结果
-     1. 异步发送：不关心是否成功，速度最快
-     1. 异步回调发送：使用回调函数保证消息一定收到
+     1. 异步发送：不关心是否成功，速度最快，fire and forget，`producer.send(msg)`
+        - 到没到kafka都不一定
+     1. 异步回调发送：使用回调函数保证消息一定收到，` producer.send(msg, callback)`
      1. 异步阻塞发送
-     1. 自定义分区负载均衡
-   - 事务方法：跨多分区的原子性写入
-     1. initTransactions
-     1. beginTransaction
-     1. sendOffsets
-     1. commitTransaction
-     1. abortTransaction
-   - 生产幂等性
-     1. 为每个producer分配一个唯一标识pid，producer为每一个partition维护一个单调递增的seq
-     1. 当req_seq == broker_seq+1时，broker才会接受该消息，大了还没写入，小了已经写入了
-   - 压缩算法：时间换空间的trade-off思想，producer端压缩、broker端保持、consumer端解压缩
-   - thread safe：线程安全，生产者时线程安全，消费者不是线程安全的
-   - 客户端原理：![avatar](../images/kafka_producer_client.png)
+     1. 同步发送：等待返回发送后的结果
+     1. 批量发送：积攒一批然后一起发送
 1. consumer group
-   - 认识：指多个消费者实例共同组成一个组来消费一组主题，为了多个消费者实例同时消费提升消费者端的吞吐量
-     1. 一个partition只能由组中某一个消费者消费
-        - 设计上考虑否则需要加锁会影响性能
+   - 认识：多个消费者共同组成组来消费一组主题，可扩展且具有容错性的消费者机制，同时可控制读写等权限，![avatar](../images/mult_consumer_one_handle.png)
+     1. 传统队列点对点多个消费者会抢，造成性能浪费；传统发布订阅方式伸缩性不足(要订阅所有分区)，二者提取各自优点就是消费者组
+   - 特性
+     1. 一个partition只能由组中某一个消费者消费：设计上考虑否则需要加锁会影响性能
      1. 单个消费者可以消费多个partition
-     1. 最佳实践：消费者数量和partation相等或者是其2倍，多了没活干歇着浪费，少了性能不行
-   - 组成
-     1. group coordinator：群组协调器，也是某个broker，负责接收消费者的心跳，传递由群主发来的分区分配信息到其他消费者，总之就是协调消费者的中间角色
-     1. group manager：群主，消费者要加入群组时，会向群组协调器发送joinGroup请求。第一个加入群组的消费者将成为群主。群主从协调器拿到消费者列表，并为其他消费者分配分区，之后传递给协调器，协调器在发送所有权关系到相应的消费者，所以只有群主知道所有消费者的分区分配信息。再均衡时这个过程会重复发生
-     1. rebalance listener：再均衡监听器，在再均衡发生时，可以让某些消费者失去分区的所有权之前，做一些提交或者清理工作。分别有两个钩子，发生在再均衡之前重分配之后
-   - 概念
-     1. 规则：控制读写等权限
-     1. partition ownership：消费者拥有哪个分区的所有权
-     1. consumer heartbeat：消费者心跳，用于维持与群组的关系和分区的所有权。心跳也是在poll或者commit offset时发送的
-        - 消费者异常时，群组协调器会等待几秒确认他死亡才触发再均衡，所以正常情况下消费者在主动离开时会告诉协调器，协调器立即触发再均衡，减少停顿，非正常离开可能会导致整个群组在一段时间内无法读取消息
-     1. consumer reblance：消费者再均衡，组内发生分区所有权转移
-        - 认识
-          1. 带来了消费者的高可用性和可伸缩性
-          1. 期间消费者无法读取消息，造成群组一小段时间的不可用。另外分区重新分配给消费者时，消费者当前读取状态会丢失，可能需要刷新缓存
-          1. 只会在poll操作中发生
-        - 发生条件
-          1. 消费者加入/崩溃/离组/提交位移
-          1. topic数变化
-          1. partition数变化
-     1. lag：消费者延迟，消费者位置与最新的offset之间的距离
+     1. 最佳实践
+        - consume数量和partation数量相同，性能最好，否则存在分配的开销
+        - 消费者数量和partation相等或者是其2倍，多了没活干歇着浪费，少了性能不行
    - 功能
-     1. consume request：消费请求，broker会缓冲一些消息，直到达到数量或时间，再返回给消费者。以此提高性能
-     1. poll：消费者请求数据的行为。但不只是请求数据，例如心跳的发送，再均衡也是在poll中进行的。所以要确保在poll中任何处理工作尽快完成
-     1. commit：更新分区的当前位置，即手动控制offset位置，可提交偏移量到内部主题_consumeroffset
-        - auto commit：每过一定周期自动提交poll下来的最大偏移量
+     1. group id
+     1. consume request：消费请求，broker会缓冲一些消息直到达到数量或时间，以此提高性能
+     1. poll：轮询，消费者请求数据、心跳发送、rebalance的行为
+     1. consume限流，怕把consume流量高打死，用令牌桶方式
+     1. commit：手动控制offset位置
+        - 分类
+          1. commitSync：同步提交
+          1. commitAsync：异步提交，不会阻塞立即返回，不能重试
         - 应用场景
           1. 指定开始位置
           1. 消费失败，需要重复消费
-     1. consume限流，怕把consume流量高打死，用令牌桶方式
-     1. 消息投递语义：明确一次的语义需要使用kafka事务，让消费者的offset存储和消费者的输出存储之间实现一个两段式的提交
-   - 形式
-     1. 多个consumer：![avatar](../images/mult_consumer_one_handle.png)
-        - consume数量和partation数量相同，性能最好，否则存在分配的开销
-        - consume处于阻塞状态，适合普通业务场景，可以有好的管控，如消费3次不成功就报警
-     1. ![avatar](../images/one_consumer_mult_handle.png)
-        - consume变成非阻塞消费数据，后边线程池处理业务逻辑，但consume不知道后边是否成功可以commit，特点是减少consume消耗实现快速消费，适合非业务系统，如流处理，gps打点，机器监控，丢一些无所谓
-   - Rebalance：重平衡
+        - 最佳实践
+            ```java
+            try{
+                while (true) {
+                    ConsumerRecords<String, String> records = consumer.poll(Duration.ofSeconds(1));
+                    process(records);                                                                   // 处理消息
+                    commitAysnc();                                                                      // 使用异步提交规避阻塞
+                }
+            } catch (Exception e) {
+                handle(e); // 处理异常
+            } finally {
+                try {
+                    consumer.commitSync();                                                              // 最后一次提交使用同步阻塞式提交
+                } finally {
+                    consumer.close();
+                }
+            }
+            ```
+     1. auto commit：每过一定周期自动提交poll下来的最大偏移量
+   - 实现
+     1. 概念
+        - partition ownership：拥有分区所有权的消费者
+        - consumer heartbeat：消费者心跳，用于维持与群组的关系和分区的所有权
+          1. 心跳也会在poll或者commit offset时发送的
+        - consumer reblance
+          1. 认识：消费者再均衡，组内发生分区所有权转移，规定消费者如何达成一致，臭名昭著，造成很多bug
+             - 带来了消费者的高可用性和可伸缩性
+             - 发生时所有消费者都参与、且停止消费
+             - 发生后消费者当前读取状态会丢失，可能需要刷新缓存
+             - 只会在poll操作中发生
+          1. 分配策略：3种
+          1. 发生条件
+             - 组员数变更：消费者加入/离组/崩溃/提交位移
+             - topic数量变化
+             - partition数量变化
+          1. 配置
+             - max.poll.interval.ms：设置稍长的消费时间
+             -  session.timeout.ms = 6s、heartbeat.interval.ms = 2s：心跳快一些
+        - lag：消费者延迟，消费者位置与最新的offset之间的距离
+     1. 组成
+        - group coordinator：群组协调器，也是某个broker，负责接收消费者的心跳，传递由群主发来的分区分配信息到其他消费者
+        - group manager：群主
+          1. 消费者要加入群组时，会向群组协调器发送joinGroup请求，第一个加入的成为群主
+          1. 群主从协调器拿到消费者列表并为其他消费者分配分区，之后传递给协调器，协调器再发送所有权关系到相应的消费者，所以只有群主知道所有消费者的分区分配信息。rebalance时这个过程会重复发生
+        - rebalance listener：再均衡监听器，发生时可让某些消费者失去分区的所有权之前，做一些提交或清理工作
+          1. 有两个钩子，再均衡之前、重分配之后
+1. client
+   - 拦截器
+     1. 认识：支持链的方式，类似gin的middleware
+     1. 分类
+        - 生产者拦截器：发送消息前 onSend、消息提交成功后 onAcknowledgement
+        - 消费者拦截器：消费消息前、提交位移后
 ### 流式计算
 1. connect
    - 认识：是流式计算的一部分，可高效连接其他中间件建立流式通道将数据输入到kafka中，如mysql、hadoop、es等。支持流式和批处理集成
@@ -338,7 +387,56 @@
     final KafkaStreams streams = new KafkaStreams(topology, props);
     final CountDownLatch latch = new CountDownLatch(1);
     ```
+### 使用
+1. 如何实现顺序消费
+   - 对此标志位设定专门的分区策略，保证同一标志位的所有消息都发送到同一分区
+   - 可以使用key + offset做到业务有序，一个key确定同一类型，offset作为顺序的判断，如先存了es，时序数据库中，攒够了一起处理
+   - 要保证消息顺序，可将partition设为1，一个partation只能有一个consume，性能太低，不如天生有序的rabbiemq呢
+1. 如何实现不丢数据
+   - kafka的策略
+     1. produce设置
+        - `request.required.acks`的策略
+          1. 0：不关心broker是否处理成功，可能丢数据
+          1. 1：写Leader成功就返回，主备切换可能丢数据
+          1. all：等到ISR里大于`min.insync.replicas`同步成功，才返回，延时取决于最慢的机器。强一致，kafka本身不会丢数据
+        - retries大一些，自动重试消息发送
+     1. consumer
+        - enable.auto.commit = false：自动提交位移改为手动提交位移
+     1. broker设置
+        - replication.factor >= 3：消息副本数
+        - min.insync.replicas > 1：消息算已提交状态，至少写入的副本数，目的是限制下限
+   - client使用producer.send(msg, callback)，不使用producer.send(msg)
+1. 如何实现精确处理一次
+   - 认识：默认最少一次，允许重试
+     1. produce幂等
+   - 步骤
+     1. 最少一次
+        - 生产者：消息是否成功写入不确定，重做写入重复消息
+        - 消费者：业务处理成功后commit offset，更新offset失败，会重复消费
+     1. 最多一次
+        - 生产者生产消息异常，不管
+        - 消费者：先commit offset，最后进行业务处理
+     1. 正好一次
+        - 下游系统保证幂等性
+          1. 把commit offset和业务处理绑定成一个事务
+          1. 唯一id识别
+        - consumer先消费消息，再更新位移的原子性：反过来就是重复消费，让消费者的offset存储和消费者的输出存储之间实现一个两段式的提交
+          1. 多个topic下，把commit offset和输出到其他的topic绑定成一个事务
+        - 事务严重影响队列性能，用数据库代替队列的事务保障，记录消息状态，即先提交数据库事务，然后消息失败就定时去补偿
+1. 如何快速消费
+   - consume改为非阻塞消费，后边线程池处理业务逻辑，不关心处理结果实现快速消费，适合非业务系统，如流处理/gps打点/机器监控，丢一些无所谓。![avatar](../images/one_consumer_mult_handle.png)
+1. topic分区数如何确定：根据实际需要设置数量，实现性能最大化
+   - 特点
+     1. kafka集群非常喜欢顺序读写，过多的分区会使得集群退化为随机读写
+   - 原则
+     1. 最好为broker的倍数，一般为3的倍数，这样分区可以均匀分布在所有broker上
+     1. key hash的业务，需要在最初就定义好分区数，因为如果添加分区，原来的数据是不会自动重新hash的
+1. out-of-range
+   - 认识：一般是消费速度不够快，服务端已经删除了消息。要么增大kafka的保留策略，要么提高消费能力
 ### 运维
+1. 端口
+   - kafka：9092
+   - zk：2181
 1. 启动
    - mac启动
      1. `zookeeper-server-start /usr/local/etc/kafka/zookeeper.properties`
@@ -354,26 +452,21 @@
      1. 查看某个：`kakfa-topics --describe --zookeeper localhost:2181 --topic xx`
      1. 创建：`kakfa-topics --create --zookeeper localhost:2181 --topic xx --partition 1 --replication-factor 1`
         - replication factor：复制系数，一个分区的副本数量
-     1. 删除：`kafka-topics --delete --zookeeper localhost:2181 --topic`
-   - 消息
+     1. 修改：`kafka-topics --bootstrap-server broker_host:port --alter --topic <topic_name> --partitions < 新分区数 >`
+        - 修改主题级别参数：`kafka-configs.sh --zookeeper zookeeper_host:port --entity-type topics --entity-name <topic_name> --alter --add-config max.message.bytes=10485760`
+     1. 删除：`kafka-topics --delete --zookeeper localhost:2181 --topic <topic_name>`
+   - message
      1. 发送：`kafka-console-producer --broker-list localhost:9092 --topic xx`：不间断，回车发送
      1. 消费：`kafka-console-consumer --bootstrap-server localhost:9092 --topic xx --form-beginning`
+   - kafka
+     1. 动态配置、静态配置：动态就是命令行直接改的参数，存了zk，静态就是配置文件的
 1. 部署需要考虑的点
    - 不同操作系统区别
      1. linux：epoll模型，零拷贝技术，
      1. windows：select模型，Java 8的60+版本才有，window上bug口头依然保证尽力解决，一般不会修复
    - 带宽：直接传输的消息带宽 + 2倍的集群内副本复制所需带宽
+   - 监控：消息量监控(生产、消费、堆积)
 1. 配置
-   - broker：提供了近200个参数
-     1. log.dirs：配置多个路径，最好这些目录挂载到不同的物理磁盘上(提升读写性能/能够实现故障转移)
-     1. auto.leader.rebalance.enable：bool，是否允许定期进行leader选举
-     1. min.insync.replicas：最小的同步状态的副本，否则不接受写入请求
-     1. cleanup.policy：生命周期结束的数据处理，默认删除
-     1. flush.messages：强制刷新写入的最大缓存消息数
-     1. flush.ms：强制刷新写入的最大等待时长
-   - zk相关
-     1. chroot：别名，用于多个kafka集群使用同一套ZooKeeper集群，`zookeeper.connect————zk1:2181,zk2:2181,zk3:2181/kafka1`
-     1. zookeeper.connect
    - message：大小最大2G
      1. broker
         - retention.ms:规定了该topic消息被保存的时长
@@ -394,6 +487,18 @@
      1. heartbeat.interval.ms：心跳时间间隔，需要有心跳线程
      1. max.poll.interval.ms：每次消费的处理时间
      1. max.poll.records：每次消费的消息数
+   - broker：提供了近200个参数
+     1. log.dirs：配置多个路径，最好这些目录挂载到不同的物理磁盘上(提升读写性能/能够实现故障转移)
+     1. auto.leader.rebalance.enable：bool，是否允许定期进行leader选举
+     1. min.insync.replicas：最小的同步状态的副本，否则不接受写入请求
+     1. cleanup.policy：生命周期结束的数据处理，默认删除
+     1. flush.messages：强制刷新写入的最大缓存消息数
+     1. flush.ms：强制刷新写入的最大等待时长
+     1. replication.factor = min.insync.replicas + 1：如果两者相等只要一个副本挂机整个分区无法工作
+     1. unclean.leader.election.enable = false：落后原先的leader太多一旦成为新leader必然造成消息丢失，所以不允许
+   - zk相关
+     1. chroot：别名，用于多个kafka集群使用同一套ZooKeeper集群，`zookeeper.connect————zk1:2181,zk2:2181,zk3:2181/kafka1`
+     1. zookeeper.connect
    - 服务器
      1. ulimit：文件描述符，10万以上
      1. pagecache：和大多数的激活日志段大小相同
@@ -403,20 +508,24 @@
    - web管理界面：cmak，即Kafka-Manager
    - 管理工具：kafka-run-class.sh
    - 脑裂问题：检测、自动恢复？
-### 最佳实践
-1. topic分区数如何确定：根据实际需要设置数量，实现性能最大化
-   - 特点
-     1. kafka集群非常喜欢顺序读写，过多的分区会使得集群退化为随机读写
-   - 原则
-     1. 最好为broker的倍数，一般为3的倍数，这样分区可以均匀分布在所有broker上
-     1. key hash的业务，需要在最初就定义好分区数，因为如果添加分区，原来的数据是不会自动重新hash的
-1. 实现顺序消费
-   - 对此标志位设定专门的分区策略，保证同一标志位的所有消息都发送到同一分区
-   - 可以使用key + offset做到业务有序，一个key确定同一类型，offset作为顺序的判断，如先存了es，时序数据库中，攒够了一起处理
-   - 要保证消息顺序，可将partition设为1，一个partation只能有一个consume，性能太低，不如天生有序的rabbiemq呢
-1. out-of-range
-   - 认识：一般是消费速度不够快，服务端已经删除了消息。要么增大kafka的保留策略，要么提高消费能力
 ### 架构
+1. Kafka Vs Rabbitmq
+   - 图：![avatar](../images/kafkaVsRabbitmq.png)
+   - 特性对比：![avatar](../images/queue_characterk_vs_r.png)
+   - RabbitMQ的优势在于灵活的路由和丰富的特性，可以让编码迭代很舒服。Kafka的优势在于重复消费和流（这对流式计算很重要），以及它的性能
+   - kafka的优势
+     1. Kafka的吞吐量比RabbitMQ高出至少一个数量级，消息体为1KB的情况下，RabbitMQ单Queue性能在55000msg/s - 60000msg/s之间，Kafka的性能在240000records/sec ～ 250000records/sec之间，kafka集群性能比rabbit高
+     1. 高负载的情况下，Kafka比RabbitMQ更稳定，占用的机器资源更少，且不会有类似于RabbitMQ的流控限制、高CPU和内存占用等情况发生
+     1. Kafka消息存储在磁盘上，比RabbitMQ能存储的消息更多，而RabbitMQ需要借助Lazy Queue使用磁盘
+     1. 天然的广播消费与重复消费，RabbitMQ在消费者ack之后便会删除服务端消息，无法进行重复消费，除非有多份完整消息，占用多份存储
+     1. Kafka比RabbitMQ有更好的顺序性支持
+   - kafka的劣势
+     1. Kafka官方支持Java客户端，PHP、Go等语言是第三方开发，而RabbitMQ为AMQP的实现，本身对多语言支持稍好
+     1. Kafka消费模式为pull，RabbitMQ通常为push。所以Kafka消费进度由客户端控制，RabbitMQ由服务端控制，从而导致Kafka消费者在提交offset方面较为复杂，RabbitMQ只需要ack就好
+     1. Kafka在优先级队列、延时队列等方面支持不如RabbitMQ好
+1. 认识
+   - Replication：备份、副本
+   - Scalability：伸缩性
 1. 中间件
    - MQProxy
      1. 认识：让用户更便捷的使用kafka，用户无需对kafka有过多的了解，无需过多关心kafka的健康状况，专注业务编码
@@ -482,9 +591,6 @@
           1. 优点：充分考虑kafka读写特性，实时消费全在SSD保证低时延，HDD读取不会会刷到SSD防止缓存污染；日志段有明确唯一状态，查询路径最短，不存在CacheMiss的开销
           1. 缺点：需要server端改进，开发、测试工作量大，需要随社区大版本升级，但可以代码贡献社区解决迭代问题
 ### wiki
-1. 端口
-   - kafka：9092
-   - zk：2181
 1. 历史
    - 2010：开源，一开始Scala编写，后来Java，Linkedin开发
    - 2011：贡献给apache基金会并成为顶级开源项目
@@ -512,9 +618,7 @@
      1. Databus：分布式数据同步系统
      1. Cubert：高性能计算引擎
      1. ParSeq：java异步处理框架
-### Pro
-1. 认识
-   - 底层实现知道原理，来龙去脉，不变应万变
+   - Pro：底层实现知道原理，来龙去脉，不变应万变
 1. 设计原理
    - 消息偏移量
    - 日志存储机制
