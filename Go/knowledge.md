@@ -842,6 +842,7 @@
      1. 使用协程开启调度器：设置超时基准时钟，设置worker队列，转发任务
      1. 使用协程执行worker
    - 推荐库
+     1. panjf2000/ants
      1. gammazero/workerpool：提供了更便利的Submit、SubmitWait、Pause方法，提供当前的worker数、task数、关闭Pool
         ```go
         // 关键代码
@@ -880,8 +881,6 @@
             wg.Done()
         }
         ```
-     1. ivpusic/grpool
-     1. dpaks/goworkers
    - 简易demo
     ```go
     var (
