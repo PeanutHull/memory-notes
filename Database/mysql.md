@@ -1083,10 +1083,11 @@
      1. 认识：定位轻量级, 高性能，小米开源
    - cetus
    - DataX：阿里巴巴开源的离线数据同步工具
-   - PMM：percona公司提供的MySQL和MongoDB的监控和管理平台
    - amoeba
    - atlas：360开源
    - kingshard：个人的go开发，读写分离、分库分表、sql黑名单
+1. 平台
+   - PMM：Percona Monitoring and Management，percona公司提供的MySQL和MongoDB的开源监控和管理平台，主要监控特别好，自身cs架构，组成有supervisor/nginx/grafana上报指标
 ### 最佳实践
 1. 认识
    - 认识

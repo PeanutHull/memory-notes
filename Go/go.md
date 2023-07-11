@@ -1622,6 +1622,29 @@
             }
         }
         ```
+   - 广播，如聊天室消息广播给所有客户端
+    ```go
+    for {
+      select {
+      case client := <-h.register:                              // 登录
+         h.clients[client] = true
+      case client := <-h.unregister:                            // 退出登录
+         if _, ok := h.clients[client]; ok {
+            delete(h.clients, client)
+            close(client.send)
+         }
+      case message := <-h.broadcast:                            // 接收广播消息
+         for client := range h.clients {                        // ***进行广播
+            select {                                            // 防止send chan关闭的写法
+            case client.send <- message:
+            default:
+               close(client.send)
+               delete(h.clients, client)
+            }
+         }
+      }
+   }
+    ```
    - 锁：模拟为锁
      1. 方式
         - 容量为1的chan，谁接收到谁有锁，放回去就是释放锁
@@ -2080,10 +2103,29 @@
     }()
     ```
    - 易错场景
+     1. 和协程结合时，没有彻底保证逻辑是原子执行的
+        ```go
+        for {
+            select {
+            case client := <-h.register:
+                h.clients[client] = true
+                mutex.Unlock()                                      // 这才解锁，但是下边可能先执行(因为for+select)。下边执行完整个goroutine就阻塞了，43行代码永远没机会执行
+                                                                    // 我觉得很扯淡，究竟对不对
+            case client := <-h.unregister:
+                mutex.Lock()
+                if _, ok := h.clients[client]; ok {
+                    delete(h.clients, client)
+                    close(client.send)
+                    if len(h.clients) == 0 {
+                        delete(house, h.roomId)
+                        mutex.Unlock()
+                        break
+                    }
+                }
+                mutex.Unlock()
+        }
+        ```
      1. Lock/Unlock 不是成对出现：保证Lock/Unlock成对出现，尽可能采用 defer mutex.Unlock 的方式，把它们成对、紧凑地写在一起
-        - 代码中有太多的 if-else 分支，可能在某个分支中漏写了 Unlock
-        - 在重构的时候把 Unlock 给删除了
-        - Unlock 误写成了 Lock
      1. Copy已使用的Mutex
      1. 重入：不是可重入的，同一个goroutine重复加锁不对
      1. 死锁

@@ -913,6 +913,41 @@
 
     }
     ```
+1. tcp
+   - 认识：
+     1. Blocking IO和Non-blocking IO
+        - 认识
+          1. BIO: 线程被阻塞直到读到数据或写入完成
+          1. NIO: 线程不被阻塞，可以去做其他事情，但是有数据到来或者写入完成时，线程会接收到通知
+        - net/http 里BIO体现在两个地方
+          1. case 1: listener 在for循环里等待接收新的tcp conn
+          1. case 2: conn 等待读取新的 request
+        - 示例
+        ```go
+        // case 1
+        for {
+        rw, err := l.Accept()
+        // ... 省略一部分代码
+        c := srv.newConn(rw)
+        c.setState(c.rwc, StateNew, runHooks) // before Serve can return
+        go c.serve(connCtx)
+        }
+
+        // case 2
+        for {
+        w, err := c.readRequest(ctx)
+        // ... 省略部分代码
+        serverHandler{c.server}.ServeHTTP(w, w.req)
+        // ... 省略一部分代码
+        w.finishRequest()
+        // ... 省略一部分代码
+        }
+        ```
+   - 实现
+     1. per goroutine per connection 模型，是对unix socket的一层包装
+        - net.Listen("tcp", addr) 方法通过系统调用socket、bind、listen生成net.Listener对象
+        - 在后面的for循环中，通过系统调用 accept 等待新的tcp conn，将其包装成一个 conn 对象，在新的 goroutine 中对这个conn进行处理
+        - 创建socket时设置了syscall.SOCK_NONBLOCK
 ### 源码阅读
 1. 方法
    - 如果你阅读的是syscall包，恭喜你，感觉正常：再简洁的语言，遇到环境相关，仍然会有很多 tricks，甚至用到 Cgo

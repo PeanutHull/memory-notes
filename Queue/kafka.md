@@ -166,10 +166,6 @@
         - 更加合适的做法是把标志位数据提取出来统一放到key中，这样更加符合kafka的设计思想
      1. 其他：如根据ip地址
      1. 自定义
-   - 多副本同步
-     1. 认识
-        - follower同步leader拉取数据，replica通过fetcher去同步
-     1. epoch机制
    - 重分配：partition reassign：发生在分区数变化，或分区更改到其他broker
 1. replica
    - 认识：副本，partition的复制，防止数据丢失
@@ -191,6 +187,33 @@
         - kafka的信息交付承诺：在ISR存活的条件下已提交信息不会丢失
      1. 配置
         - min insync replicas：最少同步replica
+   - 多副本同步
+     1. 认识
+        - follower同步leader拉取数据，replica通过fetcher去同步
+        - high/low watermark高水位机制：高水位以下消息被认为是已提交消息，反之未提交。依托于高水位既界定了消息的对外可见性，又实现了异步的副本同步机制
+          1. 认识
+             - 分区的高水位就是其leader副本的高水位
+             - 事务机制还依靠LSO(Log Stable Offset)的位移值来判断事务型消费者的可见性
+          1. 作用
+             - 定义消息可见性，用来标识分区下的哪些消息是可以被消费者消费的
+             - 帮助完成副本同步
+        - LEO：Log End Offset 日志末端位移，下一个offset值
+             - leader副本所在的broker上还保存了其他follower副本的leo值
+        - leader epoch机制：为了弥补高水位机制的一些缺陷，v0.11
+     1. leader副本处理生产者请求的逻辑
+        - 写入消息到本地磁盘
+        - 更新分区高水位值
+          1. 获取 leader 副本所在 broker 端保存的所有远程副本leo值{leo-1，leo-2， ......，leo-n}
+          1. 获取 leader 副本高水位值:currenthw
+          1. 更新 currenthw = min(currenthw, leo-1，leo-2，......，leo-n)
+     1. leader处理 follower 副本拉取消息的逻辑
+        - 读取磁盘(或页缓存)中的消息数据
+        - 使用 follower 副本发送请求中的位移值更新远程副本 leo 值 
+        - 更新分区高水位值(具体步骤与处理生产者请求的步骤相同)
+     1. follower副本从leader拉取消息的处理逻辑
+   - 
+     1. 认识
+     1. 作用
 1. api
    - admin
      1. 查看topic列表、属性等

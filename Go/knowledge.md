@@ -350,6 +350,9 @@
      1. 可用于需要js解析后形成dom树的场景
      1. 可实现点击，提交，上传，截图等操作
      1. 结合go并发可用于爬虫
+1. Netpoll
+   - 认识：字节开发的高性能NIO网络库，专注于RPC场景，推荐在RPC设计中替代net。基于Netpoll开发的RPC框架Kitex和HTTP框架Hertz，性能均业界领先
+     1. 认为一个goroutine一个连接在高并发低效，也没有提供检查连接活性的api，因此RPC框架很难设计出高效的连接池，池中的失效连接无法及时清理
 #### 架构组件
 1. 进程管理：![avatar](../images/go/go_process_manage.png)
 1. sentinel
@@ -371,6 +374,8 @@
      1. 启动新协程，接管各chan信号
      1. 在新协程中正式启动服务
 1. go-callvis：函数调用关系图，用来快速分析调用关系
+#### 字符串
+1. hbollon/go-edlib：字符串比较和编辑距离算法库，包含Levenshtein、LCS、Hamming等
 #### 文件和配置
 1. viper
    - 认识：配置信息处理框架，各种文件格式、环境变量、ETCD等，检测文件变动
