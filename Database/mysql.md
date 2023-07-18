@@ -59,6 +59,12 @@
         - 范围：`1901/2155`
      1. int
      1. string：不推荐，无法使用时间函数
+     1. 比较：不考虑存储空间优化的情况下，DATETIME是最优的时间存储类型，考虑存储空间的情况下，TIMESTAMP是最优的时间存储类型
+        - 从存储时间范围看 DATETIME > TIMESTAMP = INT
+        - 从使用方便上看 带有自动更新 DATETIME,TIMESTAMP > INT
+        - 从时间精度看 DATETIME > TIMESTAMP > INT
+        - 从存储空间上看,同一精度下DATETIME > TIMESTAMP = INT
+        - 从查询速度上看，底层都是整型存储，所以 DATETIME = TIMESTAMP = INT
    - 其他
      1. enum：枚举，0~65535，如`enum('','')`
      1. set：集合，0~64，可以存一个集合，如`set('','')`
@@ -256,16 +262,21 @@
         - 基本形式：`constraint foreignKeyName foreign key(selfId) references foreignTable(foreignTableId)`
         - 级联限制：`constraint foreignKeyName foreign key(selfId) references foreignTable(foreignTableId) on delete/update cascade;`，删除被连接数据自己也被删除，连带删除
    - 改变结构
-     1. v5.6.7后支持online DDL：某些操作会记录binlog，不会锁表，之前禁止写，不禁止读
-        - 修改字段类型、字段宽度都会锁表
-     1. 算法
-        - copy：对原始表的副本执行操作，并将表数据从原始表逐行复制到新表。不允许并发DML
-        - inplace：操作可避免复制表数据，但可以在适当位置重建表。在操作的准备和执行阶段可以简短地获取表上的独占元数据锁定，支持并发DML。通常使用
+     1. v5.6.7之前：copy算法，过程中禁止读写，操作慢。过程是建立临时表，把数据写入临时表，在此期间无法进行写操作，再用临时表替换原表
+     1. v5.6.7：inplace算法，过程中只有短暂的禁止读写，但是只支持部分DDL语句的online DDL
+        - 步骤
+          1. 准备阶段：根据DDL判断是否需要重建表或在原表操作，持有MDL锁，此时禁止读写
+          1. 执行阶段：降级MDL锁，允许进行读写
+          1. 提交阶段：升级MDL锁，禁止读写，提交事务，最后释放MDL锁
+        - 支持情况
+          1. 可并发：设置列默认值、修改列名、扩展varchar长度
+          1. 不可并发：添加列、删除列、创建索引
+        - 操作
           1. `ALTER TABLE `test`.`book` DROP COLUMN `gg` ,algorithm=inplace;`显式指定algorithm=inplace
-        - instant：v8.0.12后InnoDB秒级别快速增加列，之前几十几百秒，algorithm=instant，限制有
-          1. Instant Add Column只能将新字段添加到表的尾巴上，不能添加到中间
+     1. v8.0.12：instant算法，InnoDB秒级别快速增加列，限制有
+          1. 只能将新字段添加到表的尾巴上，不能添加到中间
           1. 不支持压缩表，即该表行格式不能是COMPRESSED
-          1. 不支持包含全文索引的表；不支持临时表；不支持那些在数据字典表空间中创建的表
+          1. 不支持包含全文索引的表；不支持临时表；不支持在数据字典表空间中创建的表
 #### sql
 1. sql
    - 分类
@@ -1785,9 +1796,8 @@
      1. xtrabackup：录binlog位置后copy文件，速度比逻辑备份快上百倍
         - innobackupex：一个工具，同时支持InnoDB引擎以及MyISAM引擎
    - 恢复方式
-     1. 基于时间点恢复：`mysqlbinlog --start-position=1 --stop-position=2 --database xx.000011 < xx.sql`
-        - 具有时间点之前的mysqldump全备：通过时间点确认LSN
-        - 具有全备到指定时间点的mysql二进制日志：用LSN恢复
+     1. 恢复到指定时间点：需要具备时间点之前的全量备份和之后的增量备份，先恢复全量备份，然后在此基础上回放增加的binlog直至指定的时间点，也就确定了对应的LSN
+        - `mysqlbinlog --start-position=1 --stop-position=2 --database xx.000011 < xx.sql`
 #### 基准测试
 1. 基准测试
    - 认识：进行可复现的某时刻的性能基准测试，以便当系统发生软硬件变化时重新进行测试以评估变化对性能的影响

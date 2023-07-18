@@ -68,7 +68,8 @@
         - 越到底层，越接近硬件
         - OSI中协议没有普及其模型常被使用，TCP/IP是先有协议后建立模型，不适用非TCP/IP模型
 1. 数据包
-   - ip中是mtu包，tcp中mss包：一般情况下，MSS=MTU-40Byte，这两个超过大小都会进行分包
+   - tcp是mss包：一般情况下，MSS=MTU-40Byte，这两个超过大小都会进行分包
+   - ip中是mtu包
 1. 网络接口层
    - STP：Spanning Tree Protocol，生成树协议，用于建立树形拓扑结构，在提供链路冗余消除单点故障的同时防止网络产生环路，属于数据链路层
      1. 数据帧中没有类似TTL每次转发减一为零时丢弃包的字段,如果二层网络出现环路,数据帧会一直在网络中转发
@@ -491,6 +492,39 @@
    - 优势
      1. 改进的拥塞控制
      1. 前向冗余纠错
+   - 原理
+     1. 数据包格式
+        - header：明文
+          1. flags：1byte
+          1. connection ID：8byte
+          1. QUIC Version：4byte
+          1. Packet Number：1~6byte
+        - data：密文
+          1. Frame1
+             - Frame Type：1byte，Stream/ACK/Padding/Window_Update/Blocked等，Stream业务数据data length 2byte，即最大包多大？
+             - payload
+          1. FrameN
+     1. 0-RTT握手步骤
+        - 是否缓存ServerConfig，下次建连直接使用缓存数据计算通信密钥
+        - 客户端
+          1. 认识
+             - 第一步直接就发送应用数据了，ServerConfig是服务器静态配置可以长期使用，客户端通过ServerConfig实现0-RTT握手
+             - 每次会话都创建一个新的通信密钥sessionKey，来保证前向安全性：一旦服务器的随机数b（私钥）泄漏之前通信的所有数据就都可以破解
+          1. 步骤
+             - 生成随机数c，选择公开的大数G和P，发送Client Hello消息
+             - 使用缓存的ServerConfig计算通信密钥KEY，加密发送应用数据
+        - 服务器：根据Client Hello消息计算通信密钥KEY
+     1. 多路复用
+     1. 连接迁移：客户端切换网络时和服务器的连接不会断开，用唯一id判断，TCP的4元组就肯定需要
+     1. 可靠传输
+        - 数据包号是单调递增：解决TCP重传歧义问题
+     1. 流量控制
+        - 包括拥塞控制、慢启动、拥塞避免、拥塞发生、快速恢复
+        - 也是滑动窗口机制
+        - 单数据包、单个请求可插拔配置的拥塞控制算法
+          1. New Reno：基于丢包检测
+          1. CUBIC：基于丢包检测
+          1. BBR：基于网络带宽
 1. http头
    - 通用
      1. Cache-Control：控制缓存的行为，如`Cache-Control: private, max-age=0, no-cache`，
@@ -665,6 +699,19 @@
         - 超时重传：超时计算
           1. 接收方会丢弃收到的重复数据包，但是仍然回复确认
           1. 发送方会丢弃收到的重复确认包
+   - keepalive
+     1. 认识：保活机制，通过设置空闲一定时间后发送空的探测包，多次尝试不行就断开
+        - http协议的长连接和短连接，实质上是tcp协议的长连接和短连接，用的人家的嘛
+        - keepalive不是tcp协议规范的一部分，但几乎所有的TCP/IP协议栈如linux、windows都实现了
+     1. 参数
+        - KeepAlive：开关，默认关
+        - tcp_keepalive_time：空闲时长，或心跳周期，默认值7200s
+        - tcp_keepalive_intvl：探测包的发送间隔，默认值75s
+        - tcp_keepalive_probes：探测次数，默认值9
+   - 分段机制
+     1. MSS：Maximum Segment Size，传输层
+     1. MTU：Maximum Transmit Unit，网络层
+   - 乱序重排机制：后发的数据包先到就先放到乱序队列中，等数据到齐后重新整理好乱序队列的数据包顺序后再给到用户
    - 拥塞控制
      1. 认识：基于整个网络来考虑去调节网络负载，个体角度主动减少发送量
         - 因为一直重传可能给整个网络带来网络风暴
@@ -679,15 +726,6 @@
         - 快速重传：即接收方在收到一个失序的报文段后立即主动发出重复确认让发送方知道，降低网络抖动对速率的影响
         - 快速恢复：3ACK，跳过慢开始，直接进入拥塞避免。当发送方连续收到三个重复ack时将ssthresh门限减半，然后进入拥塞避免
           1. 不认为网络拥塞因为不会收到好几个重复ack
-   - keepalive
-     1. 认识：保活机制，通过设置空闲一定时间后发送空的探测包，多次尝试不行就断开
-        - http协议的长连接和短连接，实质上是tcp协议的长连接和短连接，用的人家的嘛
-        - keepalive不是tcp协议规范的一部分，但几乎所有的TCP/IP协议栈如linux、windows都实现了
-     1. 参数
-        - KeepAlive：开关，默认关
-        - tcp_keepalive_time：空闲时长，或心跳周期，默认值7200s
-        - tcp_keepalive_intvl：探测包的发送间隔，默认值75s
-        - tcp_keepalive_probes：探测次数，默认值9
    - 粘包/拆包
      1. 认识：tcp基于流的传输是无保护消息边界的，tcp内部处理拆包和重组，对于上层应用需要处理这个带来的问题
         - tcp并不了解上层业务数据的具体含义，它会根据TCP缓冲区的实际情况进行包的划分，所以大小可能都不一样

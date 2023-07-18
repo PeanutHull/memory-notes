@@ -2972,10 +2972,11 @@
         - error向上传播，可以把子任务的错误传递给Wait的调用者
         - 只能返回子任务的第一个错误，后续的抛弃，可以用全局变量slice保存
      1. 方法
-        - WithContext
-        - Go：开协程进行子任务处理
-        - Wait：阻塞，等待所有子任务并返回错误
-     1. 用法
+        - `WithContext(ctx context.Context) (*Group, context.Context)`：初始化
+        - `Go(f func() error)`：开协程进行子任务处理
+        - `SetLimit(n int)`：限制该组中活动goroutine的数量最多为n
+        - `TryGo(f func() error) bool`：试着能不能执行，即是否小于limit限制了，返回是否已启动
+        - `Wait()`：阻塞，等待所有子任务并返回其中第一个如果有的非零错误
      1. 扩展库
         - bilibili/errgroup
           1. 功能
@@ -5023,8 +5024,8 @@
              - 关闭内联优化：`go build -gcflags "-N -l" *.go`
              - 逃逸分析：`go build -gcflags "-m -l" *.go`
           1. 跨平台
-             - GOOS=linux|windows|darwin
-             - GOARCH=amd64 
+             - GOOS=linux|windows|darwin(mac)|freebsd|plan9，代表操作系统
+             - GOARCH=386|amd64|arm|wasm|mips|ppc64，代表编译的处理器体系架构
      1. `go clean`：移除当前源码包里面编译生成的文件，如_obj/、_test/、test.out
 1. 部署
    - supervisor来管理go程序，go自己用异常捕捉来处理

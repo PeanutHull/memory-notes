@@ -102,7 +102,7 @@
      1. 双向数据流模式：请求、响应并行起来
    - 实例
      1. proto rpc
-        - 编写proto文件，生成.pb.go代码：`protoc --go_out= plugin= protorpc=. arith.proto`，包含了rpc方法定义和服务注册的代码
+        - 编写proto文件，生成.pb.go代码：`protoc --proto_path=. --go_out=. plugin= protorpc=. arith.proto`，包含了rpc方法定义和服务注册的代码
         - 使用
           1. 服务端：`pb.ListenAndServeArithService("tcp", "127.0.0.1:8097", new(Arith))`
           1. 客户端
@@ -353,6 +353,21 @@
 1. Netpoll
    - 认识：字节开发的高性能NIO网络库，专注于RPC场景，推荐在RPC设计中替代net。基于Netpoll开发的RPC框架Kitex和HTTP框架Hertz，性能均业界领先
      1. 认为一个goroutine一个连接在高并发低效，也没有提供检查连接活性的api，因此RPC框架很难设计出高效的连接池，池中的失效连接无法及时清理
+1. cenkalti/backoff
+   - 指数退避算法：用于重试，不用自己写for循环了
+     1. 其他如jpillora/backoff
+   - demo
+    ```go
+    // 至少会执行1次，最多会重试3次
+	err := backoff.RetryNotify(
+        operation,
+        backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 3),
+        func(err error, duration time.Duration) {
+		log.Printf("failed err:%s,and it will be executed again in %v", err.Error(), duration)
+	})
+
+    err = backoff.Retry(operation, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 3))
+    ```
 #### 架构组件
 1. 进程管理：![avatar](../images/go/go_process_manage.png)
 1. sentinel
@@ -422,6 +437,12 @@
      1. cacheShard由hashmap和entries组成
           1. `hashmap map[uint64]uint32`：key为hash值，value为BytesQueue中的偏移量
           1. `entries queue.BytesQueue`：类似ringbuffer的FIFO的BytesQueue结构即[]byte，如果空间不足则进行内存分配，符合按照时序淘汰的需求
+1. groupcache
+   - 认识：memcache作者开源的memcached的节点池替代品
+     1. 数据不支持更新和删除，载入数据通过GetterFunc函数来操作
+     1. 适合有高性能要求，数据无更新的场景
+   - 组成
+     1. singleflight：解决缓存击穿
 1. localcache
 1. fastcache
 1. freecache
