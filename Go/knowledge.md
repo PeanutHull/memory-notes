@@ -187,6 +187,7 @@
 1. 任务调度
    - libi/dcron：基于一致性哈希的分布式定时任务库
    - gorhill/cronexpr：cron表达式解析库，支持到秒，年配置，计算下次调度时间
+   - ouqiang/gocron：轻量级定时任务集中调度和管理系统，用于替代linux-crontab
 1. mq
    - NSQ：实时分布式mq
 1. 图像
@@ -314,20 +315,31 @@
    - 不支持多个日志级别
    - 不支持日志格式化
    - 大量使用interface{}和反射，内存分配次数多，性能低
-1. logrus：go的结构化、可插入的日志记录器，结构化就是方便用了
+1. logrus：go的结构化、可插拔的日志记录器
    - 特点
-     1. 完全兼容标准日志库，拥有七种日志级别：Trace, Debug, Info, Warning, Error, Fataland Panic
+     1. 完全兼容标准日志库，拥有七种日志级别：Trace, Debug, Info, Warning, Error, Fataland, Panic
      1. 可扩展的Hook机制，允许使用者通过Hook的方式将日志分发到任意地方，如本地文件系统，logstash，elasticsearch或者mq等，或者通过Hook定义日志内容和格式等
      1. 可选的日志输出格式，内置了两种日志格式JSONFormater和TextFormatter，还可以自定义日志格式
      1. Field机制，通过Filed机制进行结构化的日志记录
      1. 线程安全
-1. zap：uber开源的高性能日志库，结构化的多日志级别的日志格式，性能比logrus好，更少的内存分配次数
+   - 搭配使用
+     1. rifflock/lfshook：logrus的钩子
+     1. lestrrat-go/file-rotatelogs：支持指定时间和文件数的循环写、文件分割
+1. zap
+   - 认识：uber开源的高性能日志库，支持结构化的多日志级别的日志格式
+     1. 使用体验不如logrus，因为需要更多明确的指定
+     1. 性能比logrus好：zap的写日志性能是logrus的4倍
+        - 使用sync.Pool减少堆内存分配
+        - 避免使用interface{}带来的开销（拆装箱、对象逃逸到堆上）
+        - 坚决不用反射，每个要输出的字段（field）在传入时都携带类型信息
    - 组成
      1. Sugared Logger
      1. Logger：比SugaredLogger更快，只支持强类型的结构化日志记录
    - 使用
      1. 日志切割：搭配lumberjack
      1. 全局Logger：`zap.S()`，`zap.L()`
+     1. NewTee：写入多log文件
+     1. 自动rotate（轮转）：原生不支持，提供了WriteSyncer接口方便加入rotate功能
    - demo
     ```go
     logger, _ = zap.NewProduction()
@@ -379,8 +391,13 @@
    - 举例
      1. uber/limit
      1. didip/tollbooth
-1. grace
-   - 认识：零停机部署的开源库，facebook开发
+1. facebookarchive/grace
+   - 认识：优雅重启和零停机部署的开源库，facebook开发
+     1. 不丢失任何连接
+        - 在服务器关闭之前会正常地服务活动连接
+        - 在某一时刻，新服务器和旧服务器同时运行
+     1. 使用了和systemd相同的api实现
+   - 操作
      1. 优雅重启：SIGUSR2
      1. 优雅结束：SIGTERM
    - 过程
@@ -388,6 +405,9 @@
      1. 设置ConnState，监听各连接的状态变化
      1. 启动新协程，接管各chan信号
      1. 在新协程中正式启动服务
+1. fvbock/endless
+   - 认识：go服务器零停机重启，替代http.ListenAndServe和http.ListenAndServeTLS
+     1. 和信号挂钩，在信号之前或之后执行您自己的代码（SIGHUP、SIGUSR1、SIGUSR2、SIGINT、SIGTERM、SIGTSTP）
 1. go-callvis：函数调用关系图，用来快速分析调用关系
 #### 字符串
 1. hbollon/go-edlib：字符串比较和编辑距离算法库，包含Levenshtein、LCS、Hamming等

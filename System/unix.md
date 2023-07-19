@@ -161,6 +161,11 @@
         - posixaio
      1. 存储映射
         - mmap
+1. 文件系统
+   - 认识：有基于磁盘的，有基于内存的
+     1. sockfs：基于内存的文件系统
+   - 原理
+     1. ext4：在内存中有自己的保存了很多对当前文件系统的操作方法及属性的inode数据结构。然后用户态在使用的时候，大概就是在线程的task_struct结构体上找到files属性中的fd_array或fd_table，然后通过fd找到对应的file结构体，之后通过file结构体，就能找到对应的inode然后做一些文件相关的操作
 #### 高级IO
 1. 概念：cpu对n内存以外的设备进行读取，如硬盘和网卡。调用recv作为例子从套接字上接收一个消息，因为是一个系统调用，所以调用时会从用户进程空间切换到内核空间运行一段时间再切换回来，网络数据到达并且复制到用户进程空间或者发生错误时返回
 1. 认识：io模型的演进，其实就是时代的变化，倒逼着操作系统将更多的功能加到自己的内核而已，![avatar](../images/io_compare.png)
@@ -198,7 +203,13 @@
      1. 理解：链表保存文件描述符，没有文件数量限制，其他缺点存在。直到设备就绪或主动超时，poll被唤醒后又要再次遍历fd，这个过程经历了多次无谓的遍历
    - epoll：epoll模型是Linux2.6以上内核高性能网络I/O模型，只支持pipe/网络产生的fd，不支持文件系统产生的，即Reactor模式，红黑树管理，log(n)
      1. 认识：即eventpoll，事件机制，linux自带，没有描述符限制，不会因为fd数量而效率下降，利用mmap()文件映射内存加速与内核的消息传递，利用回调激活描述符，并在调用wait时得到通知
-     1. 过程：在内核申请简易文件系统(B+树)，然后
+        - 可以用它托管 socket
+     1. 组成
+        - eventpoll结构体
+          1. wq：一个存放等待事件的队列
+          1. rdllist：一个存放就绪事件的队列
+          1. rbr：一颗红黑树
+     1. 过程：epoll是基于内存的文件系统，在内核申请简易文件系统(B+树)，然后
         - 调用epoll_create()建立一个epoll对象(在epoll文件系统中为这个句柄对象分配资源)。此调用返回一个句柄，之后所有都依靠这个句柄来标识
         - 调用epoll_ctl向epoll对象中添加这100万个连接的套接字(即通过此调用向epoll对象中添加、删除、修改感兴趣的事件)
         - 调用epoll_wait收集已经发生的事件的连接
@@ -214,7 +225,80 @@
           1. 如可读/可写、数据到达/发送、应用进程对相应的描述符进行EPOLL_CTL_MOD修改EPOLLIN/EPOLLOUT事件时
           1. 一定要循环读取数据，直到缓冲区中的数据全部读取完成，一次性将数据取出
      1. 方法
-        - epoll_wait()：阻塞调用epoll_wait获取就绪的fd
+        - epoll_create()：创建一个 epoll 对象
+        - epoll_ctl()：把要管理的对象添加到 epoll 中
+        - epoll_wait()：hang 住当前线程等待被托管的东西里有 IO 发生
+     1. demo
+        - 啥都不用型
+            ```c
+            // 创建一个 socket
+            socket_fd = socket(AF_INET,SOCK_STREAM,0);
+
+            // 给 socket 绑定本地端口和地址
+            local_addr.sin_port = htons(PORT);
+            local_addr.sin_addr.s_addr = INADDR_ANY;
+            ret = bind(socket_fd,(struct  sockaddr*)&local_addr,sizeof(struct sockaddr_in));
+
+            // 监听客户端发来的链接
+            ret = listen(socket_fd,backlog);
+            // 死循环
+            for(;;){
+            // 当用户调用了 connect 后服务端会触发 accept
+            accept_fd = accept( socket_fd, (struct sockaddr *)&remote_addr, &addr_len );
+            for(;;){
+                // 从线程池里捞一条线程然后把这个 accept 交给这条线程
+                // 然后线程中去做 recv()
+                get_thread_from_pool(accept_fd)
+            }
+            }
+            ```
+        - 使用epoll
+            ```c
+            int main() {
+            // 创建 socket
+            sockfd = socket(AF_INET, SOCK_STREAM, 0);
+            // 给 socket 绑定地址和 port 并监听
+            myaddr.sin_port = htons(PORT);
+            myaddr.sin_addr.s_addr = INADDR_ANY;
+            bind(sockfd, (const struct sockaddr *)&myaddr, sizeof(myaddr))
+            listen(sockfd)
+
+            // 创建 epoll
+            int efd = epoll_create(1);
+            // 创建 epoll 的事件
+            struct epoll_event evt = {
+                .events = EPOLLIN,
+                .data.fd = sockfd,
+            };
+            
+            // 把 socket 交给 epoll 做托管
+            epoll_ctl(efd, EPOLL_CTL_ADD, sockfd, &evt)
+
+            struct epoll_event events[MAX];
+            while (1) {
+                // 触发 epoll 的阻塞等待, 等用户的 connect 以及 send
+                int num = epoll_wait(efd, events);
+                for (i = 0; i < num; i++) {
+                if (events[i].events & EPOLLIN) {
+                    // 如果是 socketfd 收到了 connect
+                    if (sockfd == events[i].data.fd) {
+                    // 就把这条链接的 fd 也放到 epoll 中
+                    int cn_fd = accept(sockfd, NULL, NULL);
+                    struct epoll_event ac_evt = {
+                        .events = EPOLLIN,
+                        .data.fd = cn_fd,
+                    };
+                    epoll_ctl(efd, EPOLL_CTL_ADD, cn_fd, &ac_evt);
+                    } else {
+                    // 如果是收到了用户的 send, 那就从线程池里捞出一条线程
+                    // 然后里头再去做 read 之类的操作
+                    get_thread_from_pool(events[i].data.fd);
+                    }
+                }
+                }
+            }
+            }
+            ```
    - kqueue：macos、FreeBSD上epoll的替代品
    - iocp：window上异步方案
    - 比较

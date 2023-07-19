@@ -593,16 +593,33 @@
           1. `proxy_next_upstream_tries number;`：
         - `proxy_intercept_errors on | off;`：
    - 实例
-    ```conf
-    location / {
-        proxy_pass http://localhost:99;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_redirect off;             # 当上游服务器返回的响应是重定向或刷新请求时，是否重设http头部的location或refresh字段
-        proxy_next_upstream off;        # 当请求服务器发生错误或超时时，转发到下一台服务器，默认off
-    }
-    ```
+     1. http
+        ```conf
+        location / {
+            proxy_pass http://localhost:99;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_redirect off;             # 当上游服务器返回的响应是重定向或刷新请求时，是否重设http头部的location或refresh字段
+            proxy_next_upstream off;        # 当请求服务器发生错误或超时时，转发到下一台服务器，默认off
+        }
+        ```
+     1. websocket
+        ```conf
+        location ^~/ws {
+            proxy_pass http://xxx:30000/;
+            proxy_http_version 1.1;
+            proxy_set_header Host $host;
+            
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "Upgrade";
+        }
+
+        map $http_upgrade $connection_upgrade {
+            default upgrade;
+            '' close;
+        }
+        ```
 1. 负载均衡
    - 特点：实现了四七层负载均衡，功能多、性能好、运行稳定，自动剔除不正常服务器，上传文件使用异步模式，有权重等多种分配策略
    - 指令
