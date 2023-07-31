@@ -4,8 +4,11 @@
    - 对后缀不敏感
 ### 组成
 1. 环境变量
-   - 认识：系统预定义的参数，window也有。作用：在程序里可以获得环境变量的值，根据值决定如何操作，运行，找路径，文件夹等等
+   - 认识：系统预定义的参数，window也有
      1. 用冒号连接多个path，用$PATH表示之前的path
+   - 作用
+     1. 定义每个用户的操作环境。如PATH、ps1。有环境变量的配置文件
+     1. 在程序里可以获得环境变量的值，根据值决定如何操作，运行，找路径，文件夹等等
    - 组成
      1. SHELL：当前用户使用的Shell
      1. HOSTNAME：主机名
@@ -1120,24 +1123,58 @@
    - linux比windows的io模型和网络传输的零拷贝都厉害
 #### shell
 1. 理解：壳，命令行解释器，利用ASCII码表转换将命令传给内核，敲命令的界面就是shell。支持命令执行、条件判断、循环控制
-1. 运算符：expr、let
+1. 语法
+   - 等号左右无空格表示赋值，有空格表示判断
+   - 
+1. 符号
+   - 运算符：expr、let
+   - 单引号中$a保持原样输出。而双引号中的$a会替换成其变量值
+1. 数据类型
+   - 字符串(string) - 字符串是由一组字符组成的序列。
+   - integer：整型
+   - float：浮点型
+   - boolean：布尔型，只能是true或false
+   - array：数组，存储一组值
+     1. 定义
+        - `xx=(x x)`，元素用空格换换行隔开
+        - `declare -a xx='([n]="xx")'`：
+     1. 访问
+        - `${xx[n]}`：下标访问，0开始
+        - `${xx[*]}`、`${xx[@]}`：输出所有元素
+        - `${#xx[@]}`、`${#xx[*]}`：获取长度
+     1. 添加
+        - `xx[n]="xx"`：添加
+        - `xx+=(value1…valueN)`：添加多个
+        - `xx[${#xx[@]}]=xx`：追加
+   - dictionary、map：字典，键值对类型
+     1. 定义：`declare -A m=(["a"]="1" ["b"]="2")`
+     1. 访问
+        - `${m["a"]}`：查看单个
+        - `m["c"]="3"`：定义
+        - `${!m[@]}`、`${m[@]}`：查看所有
+        - `${#m[@]}`：查看数量
+   - command：命令
 1. 变量
    - 声明
-     1. declare————声明变量类型
-     1. declare +/-X 变量名
-   - 选项
-     1. -    给变量设定类型属性
-     1. +    取消变量类型属性
-     1. -a   声明为数组型
-     1. -i   整数型int
-     1. -x   环境变量
-     1. -r   只读变量
-     1. -p   显示被声明的类型，不加变量参数的话查询所有的
+     1. declare +/-X 变量名：声明变量类型
+        - -    给变量设定类型属性
+          1. -a   声明为数组
+          1. -i   声明为int
+        - +    取消变量类型属性
+        - -x   环境变量
+        - -r   只读变量
+        - -p   显示被声明的类型，不加变量参数的话查询所有的
    - 分类
-     1. 环境变量：作用———定义每个用户的操作环境。如PATH、ps1。有环境变量的配置文件
+     1. 用户自定义变量(本地变量)
+     1. 环境变量
+     1. 默认变量
+        - $n    命令行的组成，0是命令本身，1是第一个参数，以此类推
+        - $#	脚本接收的所有参数个数
+        - $@	脚本接收的所有参数
+        - $*	脚本接收的所有参数
+        - $?	前一行命令的执行状态
      1. 预定义变量
      1. 位置参数变量
-     1. 用户自定义变量(本地变量)
    - 实例
     ```bash
     aa=11                    # 整型
@@ -1145,10 +1182,15 @@
     cc=$aa+$bb
     echo cc                  # 结果为11+22
     declare -i cc=$aa+$bb    # 为33
+
     # 数组型
     movie[0] = cl
     echo ${movie[0]}
-    echo ${movie}
+    echo ${movie[*]}
+
+    # 判断是否为空
+    if [ "$pid" = "" ]; then
+    if
     ```
 1. 流程控制
    - 判断
@@ -1195,6 +1237,37 @@
             do
                 命令
             done
+        ```
+     1. 控制
+        - break n
+        - continue n
+   - 实例
+     1. 遍历数组
+        ```sh
+        for i in ${singleServiceArray[*]}; do
+            chmod +x $i                                 # 添加执行权限
+            ./$i                                        # 执行
+                if [ $? -ne 0 ]; then                   # 判断返回结果
+                    exit -1
+            fi
+        done
+        ```
+     1. 遍历用|分隔的字符串并添加到数组中
+        ```sh
+        singleServiceArray=()
+        for s in ${1//|/ }
+        do
+        case $s in
+            "push")
+            singleServiceArray[${#singleServiceArray[@]}]=push_start.sh
+            ;;
+            "msg_gateway")
+            singleServiceArray[${#singleServiceArray[@]}]=msg_gateway_start.sh
+            ;;
+        esac
+        done
+
+        echo ${singleServiceArray[*]}
         ```
 1. 判断
    - 文件判断
@@ -1286,6 +1359,41 @@
         echo $str
         This hostname is WEBServer
         ```
+1. 应用
+   - 获取命令行参数
+     1. 方法一：简单，$n，0为命令本身，1为第一个参数
+     1. 方法二：明确
+        ```sh
+        while getopts ":a:p:n:" opt
+        do
+            case $opt in
+                n)
+                    echo "$OPTARG"
+                ;;
+                a)
+                    echo "$OPTARG"
+                ;;
+                p)
+                    echo "$OPTARG"
+                ;;
+                *)
+                    echo "未知参数$opt"
+                    echo "参数值$OPTARG"
+                ;;
+                ?)
+                    echo "未知参数$opt"
+                    echo "参数值$OPTARG"
+                ;;
+            esac
+        done
+        ```
+   - 获取操作系统名称
+    ```sh
+    system=`uname`
+    if [ "$system" == "Darwin" ]; then      # 还有Linux
+    else
+    fi
+    ```
 1. 知识
    - 查看shell版本：`echo $SHELL`
    - 注释：#

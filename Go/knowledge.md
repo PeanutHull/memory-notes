@@ -214,7 +214,7 @@
      1. 优雅返回时间格式
         - 使用
             ```go
-            type TestTimes tructt{
+            type TestTimes truct{
                 CreatedTime utils.LocalTime "json: "created_time"
             }
             ```
@@ -315,13 +315,14 @@
    - 不支持多个日志级别
    - 不支持日志格式化
    - 大量使用interface{}和反射，内存分配次数多，性能低
-1. logrus：go的结构化、可插拔的日志记录器
+1. logrus
+   - 认识：go的结构化、可插拔的日志记录器
    - 特点
-     1. 完全兼容标准日志库，拥有七种日志级别：Trace, Debug, Info, Warning, Error, Fataland, Panic
-     1. 可扩展的Hook机制，允许使用者通过Hook的方式将日志分发到任意地方，如本地文件系统，logstash，elasticsearch或者mq等，或者通过Hook定义日志内容和格式等
+     1. 完全兼容标准日志库，七种日志级别：Trace, Debug, Info, Warning, Error, Fataland, Panic
+     1. Field机制定义输出字段，进行结构化的日志记录
      1. 可选的日志输出格式，内置了两种日志格式JSONFormater和TextFormatter，还可以自定义日志格式
-     1. Field机制，通过Filed机制进行结构化的日志记录
-     1. 线程安全
+     1. 可扩展的Hook机制，允许使用者通过Hook的方式将日志分发到任意地方，如本地文件系统，logstash，elasticsearch或者mq等，或者通过Hook定义日志内容和格式等
+     1. 线程安全的
    - 搭配使用
      1. rifflock/lfshook：logrus的钩子
      1. lestrrat-go/file-rotatelogs：支持指定时间和文件数的循环写、文件分割
@@ -347,10 +348,14 @@
     logger.Error("Error fetching url..", zap.String("url", url), zap.Error(err))
     logger.Info("Success..", zap.String("statusCode", resp.Status), zap.String("url", url))
     ```
+1. Zerolog
+1. Apex
 #### 网络相关
 1. go-resty/resty/v2：http请求库
    - 简单、功能丰富，链式调用
    - 自动Unmarshal
+1. parnurzeal/gorequest：http请求库
+   - 简单、功能丰富，链式调用
 1. goreplay
    - 认识：开源网络监控工具，可以实时记录TCP/HTTP流量，支持把流量记录到文件或es实时分析，也支持流量的放大、缩小，还支持频率限制
      1. 不是代理，无需任何代码入侵，只需要在服务相同的机器上运行goreplay守护程序，其会在后台侦听网络接口上的流量
@@ -391,26 +396,42 @@
    - 举例
      1. uber/limit
      1. didip/tollbooth
-1. facebookarchive/grace
-   - 认识：优雅重启和零停机部署的开源库，facebook开发
-     1. 不丢失任何连接
-        - 在服务器关闭之前会正常地服务活动连接
-        - 在某一时刻，新服务器和旧服务器同时运行
-     1. 使用了和systemd相同的api实现
-   - 操作
-     1. 优雅重启：SIGUSR2
-     1. 优雅结束：SIGTERM
-   - 过程
-     1. 构造server
-     1. 设置ConnState，监听各连接的状态变化
-     1. 启动新协程，接管各chan信号
-     1. 在新协程中正式启动服务
-1. fvbock/endless
-   - 认识：go服务器零停机重启，替代http.ListenAndServe和http.ListenAndServeTLS
-     1. 和信号挂钩，在信号之前或之后执行您自己的代码（SIGHUP、SIGUSR1、SIGUSR2、SIGINT、SIGTERM、SIGTSTP）
 1. go-callvis：函数调用关系图，用来快速分析调用关系
+1. 平滑重启或升级
+   - facebookarchive/grace
+     1. 认识：优雅重启和零停机部署的开源库，facebook开发
+        - 不丢失任何连接
+          1. 在服务器关闭之前会正常地服务活动连接
+          1. 在某一时刻，新服务器和旧服务器同时运行
+        - 使用了和systemd相同的api实现
+     1. 操作
+        - 优雅重启：SIGUSR2
+        - 优雅结束：SIGTERM
+     1. 过程
+        - 构造server
+        - 设置ConnState，监听各连接的状态变化
+        - 启动新协程，接管各chan信号
+        - 在新协程中正式启动服务
+   - fvbock/endless
+     1. 认识：go服务器零停机重启，替代http.ListenAndServe和http.ListenAndServeTLS
+        - 和信号挂钩，在信号之前或之后执行您自己的代码（SIGHUP、SIGUSR1、SIGUSR2、SIGINT、SIGTERM、SIGTSTP）
+   - overseer：实现了master-worker的方式，使得在和supervisor配合使用的时候，父子进程交替时不会引起supervisor的误解导致子进程被1号进程接管、supervisor认为服务挂掉重启服务
+     1. 不能用supervisor restart，需要使用supervisor signal sigusr2 api的命令
+   - 比较
+     1. grace与endless原理比较像，不支持supervisor管理，都是以下平滑重启或升级的实现原理
+        - 发布新的bin文件覆盖老的bin文件
+        - 发送一个信号量(USR2)，告诉正在运行的进程，进行重启
+        - 正在运行的进程接受到信号后，以子进程的方式启动新的bin文件
+        - 新进程接收并处理新的请求
+        - 老进程不再接收新请求，等待所有正在处理的请求处理完成后自动退出
+        - 新进程在老进程退出后，继续提供服务
+     1. overseer不同于
+        - 添加了fetcher：用来支持自动升级bin文件，fetcher运行在一个goroutine中，通过预先设置好的间隔时间来检查bin文件；支持File、Github、S3的方式
+        - 添加了主进程管理平滑重启：子进程处理链接，能够保持主进程pid不变
 #### 字符串
 1. hbollon/go-edlib：字符串比较和编辑距离算法库，包含Levenshtein、LCS、Hamming等
+#### 结构体
+1. fatih/structs：struct的工具包，包括map和struct的互转、对struct封装的各种简便反射方法，基本上是一个基于反射包中的原语的高级包
 #### 文件和配置
 1. viper
    - 认识：配置信息处理框架，各种文件格式、环境变量、ETCD等，检测文件变动

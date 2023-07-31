@@ -265,7 +265,7 @@
                             "type": "text",                                 // 字段类型
                             "analyzer": "xx",                               // 指定分词器
                             "copy_to": "xxx",                               // 复制内容
-                            "ignore_above": n,                              // 只存储特定长度字符
+                            "ignore_above": n,                              // 索引或存储的最大字符长度，比字段长度小了只存不索引不能搜索，es即Lucene的最大字节长度为32766
                             "ignore_malformed": true,                       // 是否将格式错误的字段不编制索引，同时不影响其他字段
                             "fields": {                                     // 子字段
                                 "xx": {

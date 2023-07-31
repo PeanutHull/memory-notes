@@ -614,6 +614,9 @@
      1. 日志、监控
      1. 运维
    - 命令
+     1. config：生成config指令、kubeconfig文件
+        - kubectl config get-contexts --kubeconfig=xx
+        - kubectl config use-context --kubeconfig=xx xx
      1. create
         - kubectl create namespace xxx：创建namespace
      1. delete
@@ -625,12 +628,13 @@
         - kubectl get namespaces
         - kubectl get pod [--show-labels]
         - kubectl get pods -n [命名空间名称]
+     1. set
+        - kubectl set images xx xx
      1. label
         - kubectl label node
      1. 集群和节点
         - kubectl cluster-info
         - kubectl describe node [name]：查看节点详细信息
-     1. kubectl config：生成config指令、kubeconfig文件
 1. helm
    - 认识：k8s的包管理工具，使用helm可以使用更简化、系统化的方式对k8s应用进行部署、升级。作用类似apt/yum/homebrew
      1. chart开发者和使用者的界限，正是由于在跨越这个界限的时候，从需要理解大量的配置到只需要理解少量的配置，使得ops的工作变得简便，这也是helm核心的设计哲学
@@ -713,8 +717,3 @@
      1. Graylog日志
    - vagrant：基于Ruby的工具，用于创建和部署虚拟化开发环境。使用Oracle的开源VirtualBox，使用Chef创建自动化虚拟环境
 1. 和虚拟机比较：![avatar](../images/compareWithHypervisor.jpg)
-1. DevOps
-   - CICD
-     1. 持续集成：CI，将各个开发人员的工作集合到一个代码仓库中
-     1. 持续交付：CD，将构建部署的每个步骤自动化
-     1. 持续部署：代码如何改变都会自动进行构建/部署

@@ -351,7 +351,11 @@
         gitlab-ctl reconfigure 
         gitlab-rake cache:clear RAILS_ENV=production
         ```
-### CI/CD
+### DevOps、CI/CD
+1. 认识
+   - 持续集成：CI，将各个开发人员的工作集合到一个代码仓库中
+   - 持续交付：CD，将构建部署的每个步骤自动化
+   - 持续部署：代码如何改变都会自动进行构建/部署
 1. Jenkins
    - 认识：开源的自动化测试、持续集成工具
      1. pipeline as code，构建code工作流，包含阶段、节点、步骤
@@ -361,6 +365,58 @@
         - 添加用户、权限控制
      1. 任务：创建jenkins自动化部署任务：使用groovy或者shell脚本
    - 启动：java jenkins.war
+1. 实例
+   - 微服务的腾讯云k8s发布脚本
+    ```sh
+    #子模块, 初始化
+    git submodule deinit -f cmd/Open-IM-SDK-Core
+    git submodule init
+    #更新子模块代码为远程最新代码
+    git submodule update --remote
+    #拉取sdk-core的子模块
+    cd cmd/Open-IM-SDK-Core
+    git reset --hard origin/$branchType
+    cd ../../
+    cd ./script;./build_jenkins_all_service.sh
+
+    echo "code build success"
+
+    cd ../deploy_k8s
+
+    for s in ${serverName//|/ }
+    do
+    mv ../bin/open_im_${s} ./${s}/
+    done
+
+    echo "move success"
+
+    echo "start to build images"
+
+    curDate=`date '+%Y%m%d'`
+    curTime=`date '+%Y-%m-%d %H:%M:%S'`
+    REV=$BUILD_NUMBER
+    TENCENT_REPO_MIND_PRE=ccr.ccs.tencentyun.com/mind_release/
+
+    kubectl config use-context cls-ewr0i52r-100023200878-context-default
+
+    for s in ${serverName//|/ }
+    do
+        echo "start to build images" $s
+        cd $s
+        pod=${s/_/-}
+        image="${TENCENT_REPO_MIND_PRE}""$pod"":""$curDate-$BUILD_NUMBER"
+        docker build --no-cache -f ./${s}.Dockerfile . -t "$image"
+        echo "build ${dockerfile} success"
+        docker push $image
+        echo "push ${image} success"
+        
+        kubectl set image deployments/"mind-im-"$pod"-server" "mind-im-"$pod"-server"="$image"
+        
+        cd ..    
+    done  
+
+    echo "Build Successfull"
+    ```
 ### SVN
 1. 获取：svn checkout address localDir --username 用户名 --password 密码
 1. 更新：svn update
