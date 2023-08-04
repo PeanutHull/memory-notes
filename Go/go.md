@@ -4067,6 +4067,7 @@
         ```
      1. 子包
         - crc32：`hash/crc32`
+          1. `crc32.ChecksumIEEE([]byte(s)) uint32`：返回纯整型的使用IEEE表达式的crc32值
         - crc64
         - adler32
         - maphash

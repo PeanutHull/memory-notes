@@ -41,6 +41,8 @@
    - 框架级
      1. spring task：不支持集群方式部署，不能做数据存储型定时任务
      1. spring quartz：多线程异步执行，需要手动配置QuartzJobBean、JobDetail和Trigger等，需引入quartz包
+1. node实现
+   - whyour/qinglong：支持多脚本语言(python3/js/shell/ts)的在线管理脚本/环境变量/配置文件的调度管理平台
 ##### 分布式实现
 1. xxl-job
    - 认识：开发迅速、学习简单、轻量级、易扩展、开箱即用。对quartz进行了扩展，使用mysql数据库存储数据，并且内置jetty作为RPC服务调用，java开发

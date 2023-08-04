@@ -36,6 +36,7 @@
         - 存储消耗高于字符串
      1. 命令
         - hset/hmset/hsetnx：设置
+          1. hmset：v4.0弃用，hset支持多值
         - hget/hmget/hgetall：获取
         - hkeys/hvals/hlen/hscan：键值对数量、迭代键值对
         - hincrby/hincrbyfloat：单个key可以计数，加一

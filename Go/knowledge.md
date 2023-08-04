@@ -1,4 +1,24 @@
 ### 框架
+1. 分类
+   - 大型：功能大而全
+     1. tars
+     1. Kratos
+   - rpc
+     1. tars：性能强
+   - web
+     1. Echo：简约、高性能，2万star
+     1. Iris：最快，完善的mvc
+     1. Buffalo：快速构建web
+     1. Revel：高效、全栈
+     1. Martini：轻巧、功能强大、模块化web，不再维护
+1. wiki
+   - xes框架解析
+    ```go
+    // main函数中
+    testing.Init()      // 注册测试标志，用于不使用go test的情况下，进行如基准测试的函数调用
+    err = gracehttp.Serve(&http.Server{Addr: ":" + configs.GetServer().Server.Port, Handler: g})        // grace承接http服务
+    ```
+#### http框架
 1. Gin：以更好的性能实现类似Martini的API框架，5万star
    - 特点
      1. 简洁：只专注于对http handler的web处理，用了随之配合的一些组件
@@ -81,18 +101,10 @@
         - 独立部署：`nohup ./beepkg &`
         - supervisor部署
         - nginx反向代理
-1. 分类
-   - 大型：功能大而全
-     1. tars
-     1. Kratos
-   - rpc
-     1. tars：性能强
-   - web
-     1. Echo：简约、高性能，2万star
-     1. Iris：最快，完善的mvc
-     1. Buffalo：快速构建web
-     1. Revel：高效、全栈
-     1. Martini：轻巧、功能强大、模块化web，不再维护
+#### tcp框架
+1. zinx
+   - 认识：基于tcp的轻量级的带工作池的服务器框架，类似ws的读写分开处理的架构
+#### gRPC
 1. gRPC
    - 认识：基于http2.0的基于protoBuf的cs型的高性能、开源的rpc框架，比webSocket高效，google主导开发，包 `google.golang.org/grpc`
      1. 支持多语音，默认采用protocol buffers数据序列化协议
@@ -169,13 +181,6 @@
         - 服务发现：支持直连、Zookeeper、Etcd、Consul、mDNS等注册中心
         - 服务治理：支持Failover、Failfast、Failtry、Backup等失败模式，支持随机、轮询、权重、网络质量、一致性哈希、地理位置等路由算法
      1. SPRC：搜狗基于Sogou C++ Workflow的企业级RPC系统，qps几十万，支持Protobuf、Thrift
-1. wiki
-   - xes框架解析
-    ```go
-    // main函数中
-    testing.Init()      // 注册测试标志，用于不使用go test的情况下，进行如基准测试的函数调用
-    err = gracehttp.Serve(&http.Server{Addr: ":" + configs.GetServer().Server.Port, Handler: g})        // grace承接http服务
-    ```
 ### 库
 1. 业务相关
    - casbin/casbin：访问控制库，支持ACL/RBAC/ABAC
@@ -202,55 +207,119 @@
    - go-ole：通过使用动态库绑定Windows COM来代替cgo
 #### db相关
 1. ORM
-   - gorm
-     1. 组成
-        - StructField 结构体：字段配置
-        - Relationship 结构体：预定义链表的配置，根据配置相应操作
-        - Scope：解析模型，拼接sql。比字段解析
-     1. 实现
-        - 钩子函数：各种before、after的注入
-        - sql执行：`scope.SQLDB().QueryRow(scope.SQL, scope.SQLVars...).Scan(primaryField.Field.Addr().Interface())`
-        - 各种反射的应用：判断类型、情况
-     1. 优雅返回时间格式
-        - 使用
-            ```go
-            type TestTimes truct{
-                CreatedTime utils.LocalTime "json: "created_time"
-            }
-            ```
-        - 定义utils.time
-            ```go
-            const (  
-                LocalDateTimeFormat string = "2006-01-02 15:04:05"  
-            )  
-            type LocalTime time.Time  
-            
-            func (l *LocalTime) Scan(v interface{}) error {  
-                value, ok := v.(time.Time)  
-                if ok {  
-                    *l = LocalTime(value)  
-                    return nil  
-                }
-
-                return fmt.Errorf("can not convert %v to timestamp", v)  
-            }  
-            
-            func (l LocalTime) MarshalText() (text []byte, err error) {  
-                b := make([]byte, 0, len(LocalDateTimeFormat))
-
-                b = time.Time(l).AppendFormat(b, LocalDateTimeFormat)
-                
-                if string(b) == `0001-01-01 00:00:00` {
-                    b = []byte(``)  
-                }
-
-                return b, nil  
-            }
-            ```
    - xorm
    - ent
    - Gaea：小米基于mysql协议的数据库中间件，支持分库分表、sql路由、读写分离等基本特性
    - vitessio/vitess：youtube通过通用分片对mysql进行水平扩展
+1. gorm
+   - 组成
+     1. StructField 结构体：字段配置
+     1. Relationship 结构体：预定义链表的配置，根据配置相应操作
+     1. Scope：解析模型，拼接sql。比字段解析
+   - 实现
+     1. sql执行：每次使用Find、First这些写方法时，都会生成一个Statement对象，后面就是对Statement中的Clauses属性进行添加、修改和执行，执行过程中调用Expression接口的表达式生成器，生成最终的sql语句，`scope.SQLDB().QueryRow(scope.SQL, scope.SQLVars...).Scan(primaryField.Field.Addr().Interface())`
+     1. 钩子函数：各种before、after的注入
+     1. 各种反射的应用：判断类型、情况
+   - 使用
+     1. Clause：子句生成器，父级到子集的实现排列为DB --> Statement --> Clause --> Expression
+        - 冲突
+            ```go
+            // 有冲突时什么都不做
+            db.Clauses(clause.OnConflict{
+                DoNothing: true
+            }).Create(&user)
+
+            // 当 `id` 有冲突时，更新指定列为默认值
+            db.Clauses(clause.OnConflict{
+                Columns:   []clause.Column{{Name: "id"}},
+                DoUpdates: clause.Assignments(map[string]interface{}{"role": "user"}),
+            }).Create(&users)
+            // MERGE INTO "users" USING *** WHEN NOT MATCHED THEN INSERT *** WHEN MATCHED THEN UPDATE SET ***; SQL Server
+            // INSERT INTO `users` *** ON DUPLICATE KEY UPDATE ***; MySQL
+
+            // 当 `id` 有冲突时，更新指定列为新值
+            db.Clauses(clause.OnConflict{
+                Columns:   []clause.Column{{Name: "id"}},
+                DoUpdates: clause.AssignmentColumns([]string{"name", "age"}),
+            }).Create(&users)
+
+            // 当 `id` 有冲突时，更新其他所有列
+            db.Clauses(clause.OnConflict{
+                UpdateAll: true
+            }).Create(&users)
+            ```
+        - 锁
+            ```go
+            // SELECT * FROM `users` FOR UPDATE
+            db.Clauses(clause.Locking{
+                Strength: "UPDATE"
+            }).Find(&users)
+
+            // SELECT * FROM `users` FOR SHARE OF `users`
+            db.Clauses(clause.Locking{
+                Strength: "SHARE",
+                Table: clause.Table{Name: clause.CurrentTable},
+            }).Find(&users)
+
+            // SELECT * FROM `users` FOR UPDATE NOWAIT
+            db.Clauses(clause.Locking{
+                Strength: "UPDATE",
+                Options: "NOWAIT",
+            }).Find(&users)
+            ```
+        - 优化器、索引提示
+            ```go
+            // SELECT * /*+ MAX_EXECUTION_TIME(10000) */ FROM `users`
+            db.Clauses(hints.New("MAX_EXECUTION_TIME(10000)")).Find(&User{})
+
+            // SELECT * FROM `users` USE INDEX (`idx_user_name`)
+            db.Clauses(hints.UseIndex("idx_user_name")).Find(&User{})
+
+            // SELECT * FROM `users` FORCE INDEX FOR JOIN (`idx_user_name`,`idx_user_id`)"
+            db.Clauses(hints.ForceIndex("idx_user_name", "idx_user_id").ForJoin()).Find(&User{})
+            ```
+     1. Gen: gorm官方代码生成器
+        - 自动生成CRUD和DIY方法
+        - 多种生成代码模式
+        - 自动根据表结构生成model
+        - 完全兼容GORM
+        - 更安全、更友好
+   - 优雅返回时间格式
+     1. 使用
+        ```go
+        type TestTimes truct{
+            CreatedTime utils.LocalTime "json: "created_time"
+        }
+        ```
+     1. 定义utils.time
+        ```go
+        const (  
+            LocalDateTimeFormat string = "2006-01-02 15:04:05"  
+        )  
+        type LocalTime time.Time  
+        
+        func (l *LocalTime) Scan(v interface{}) error {  
+            value, ok := v.(time.Time)  
+            if ok {  
+                *l = LocalTime(value)  
+                return nil  
+            }
+
+            return fmt.Errorf("can not convert %v to timestamp", v)  
+        }  
+        
+        func (l LocalTime) MarshalText() (text []byte, err error) {  
+            b := make([]byte, 0, len(LocalDateTimeFormat))
+
+            b = time.Time(l).AppendFormat(b, LocalDateTimeFormat)
+            
+            if string(b) == `0001-01-01 00:00:00` {
+                b = []byte(``)  
+            }
+
+            return b, nil  
+        }
+        ```
 1. redis
    - go-redis
      1. 认识：官方推荐第一个
