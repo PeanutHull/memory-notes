@@ -46,17 +46,14 @@
      1. 异步：写入log后立即发送确认信息，无法保证broker故障时的消息分发
    - 基于zk调度，进行服务协调管理
 ### 组成
+#### 结构
 1. topic
    - 认识：主题，逻辑概念，用于存储、区分消息，在broker上
      1. 紧凑的二进制字节数组，避免了java繁重的堆上内存分配
-   - 组成
-     1. serializer：序列化器，对象、字节相互转换的编解码器
-     1. __consumer_offsets：位移主题，储存offset，之前放到了zk中高强度写不合适，也是普通topic，存的也是普通message，保存了group id，主题名，分区号
-        - 删除位移主题的过期消息：Compact策略，即key值相同只保留最新；Log Cleaner异步定义执行
    - 参数
-     1. 节点选取
-     1. topic名称
+     1. topic名
      1. 分区数
+        - 认识：建议为3，数据分布更均衡
         - 压缩类型：zstd、lz4、snappy、gzip、生产者决定
         - 清理策略
           1. 方式
@@ -68,16 +65,23 @@
           1. 单分区数据保留字节数
           1. 单分区数据保留天数
      1. 副本
-        - 数量：2副本、3副本
+        - 认识：选择n个副本时，最多允许有(n-1)台broker宕机
         - 不完全副本选举
           1. 开启：可用性优先
           1. 不开启：可靠性优先
-     1. 最大消息字节数：最大10MB
+     1. 消息
+        - 最大字节数：最大10MB
+        - topic维度的消息保留时间
      1. 消息版本号：0.11之前不推荐使用
      1. 最少ISR
         - 1：可用性优先
         - 2：可靠性优先
-   - topic删除：需要考虑生产者生产，消费者消费，broker损坏怎么办
+     1. 节点选取
+   - 组成
+     1. serializer：序列化器，对象、字节相互转换的编解码器
+     1. __consumer_offsets：位移主题，储存offset，之前放到了zk中高强度写不合适，也是普通topic，存的也是普通message，保存了group id，主题名，分区号
+        - 删除位移主题的过期消息：Compact策略，即key值相同只保留最新；Log Cleaner异步定义执行
+   - 删除：需要考虑生产者生产，消费者消费，broker损坏怎么办
      1. 设置
         - auto.create.topics.enable = false：要不然删不掉
         - delete.topic.enable = true：最好打开，不然有问题
@@ -211,9 +215,6 @@
         - 使用 follower 副本发送请求中的位移值更新远程副本 leo 值 
         - 更新分区高水位值(具体步骤与处理生产者请求的步骤相同)
      1. follower副本从leader拉取消息的处理逻辑
-   - 
-     1. 认识
-     1. 作用
 1. api
    - admin
      1. 查看topic列表、属性等
@@ -223,7 +224,7 @@
    - consumer
    - stream processor：高效将输入流转换到输出流
    - connector
-### 角色
+#### 角色
 1. 角色：![avatar](../images/kafka_struct.jpeg)
    - cluster
      1. 认识：集群，很多台机器组成
@@ -300,18 +301,20 @@
      1. 同步发送：等待返回发送后的结果
      1. 批量发送：积攒一批然后一起发送
 1. consumer group
-   - 认识：多个消费者共同组成组来消费一组主题，可扩展且具有容错性的消费者机制，同时可控制读写等权限，![avatar](../images/mult_consumer_one_handle.png)
+   - 认识：多消费者组成组来消费一组主题，可扩展且具有容错性的消费者机制，同时可控制读写等权限，![avatar](../images/mult_consumer_one_handle.png)
      1. 传统队列点对点多个消费者会抢，造成性能浪费；传统发布订阅方式伸缩性不足(要订阅所有分区)，二者提取各自优点就是消费者组
+     1. 规定一个partition只能由组中某一个消费者消费，因为否则需加锁影响性能
    - 特性
-     1. 一个partition只能由组中某一个消费者消费：设计上考虑否则需要加锁会影响性能
-     1. 单个消费者可以消费多个partition
-     1. 最佳实践
-        - consume数量和partation数量相同，性能最好，否则存在分配的开销
-        - 消费者数量和partation相等或者是其2倍，多了没活干歇着浪费，少了性能不行
+     1. 可以绑定多个topic，某memberID绑定有对应partition的最大的、未消费的offset位置
+     1. 一个partition只能由组中某一个消费者消费，单个消费者可以消费多个partition
    - 功能
      1. group id
      1. consume request：消费请求，broker会缓冲一些消息直到达到数量或时间，以此提高性能
      1. poll：轮询，消费者请求数据、心跳发送、rebalance的行为
+     1. 均衡算法
+        - sticky
+        - roundrobin
+        - range
      1. consume限流，怕把consume流量高打死，用令牌桶方式
      1. commit：手动控制offset位置
         - 分类
@@ -366,13 +369,34 @@
           1. 群主从协调器拿到消费者列表并为其他消费者分配分区，之后传递给协调器，协调器再发送所有权关系到相应的消费者，所以只有群主知道所有消费者的分区分配信息。rebalance时这个过程会重复发生
         - rebalance listener：再均衡监听器，发生时可让某些消费者失去分区的所有权之前，做一些提交或清理工作
           1. 有两个钩子，再均衡之前、重分配之后
+   - 最佳实践
+     1. consume数量和partation数量相同，性能最好，否则存在分配的开销
+     1. 消费者数量和partation相等或者是其2倍，多了没活干歇着浪费，少了性能不行
 1. client
    - 拦截器
      1. 认识：支持链的方式，类似gin的middleware
      1. 分类
         - 生产者拦截器：发送消息前 onSend、消息提交成功后 onAcknowledgement
         - 消费者拦截器：消费消息前、提交位移后
-### 流式计算
+#### 特性
+1. 消息交付可靠性保障
+   - 认识：默认提供至少一次
+     1. Producer禁止重试肯定不会重复发送，但是可能会丢失消息
+1. 精确处理一次
+   - 认识：通过幂等性 Idempotence和事务 Transaction实现
+   - 幂等性：Producer默认不是幂等性的，v0.11.0.0。enable.idempotence设置成true后，自动升级成幂等性Producer，其他所有的代码逻辑都不需改变。Kafka自动做消息的重复去重
+     1. 底层原理大致这么理解，就是经典的用空间去换时间的优化思路，即在 Broker 端多保存一些字段。当 Producer 发送了具有相同字段值的消息后，Broker 能够自动知晓这些消息已经重复了，于是可以在后台默默地把它们“丢弃”掉
+     1. 引入ProducerID和SequenceNumber：Producer初始化时像向 Broker 申请一个 ProducerID，为每条消息绑定一个 SequenceNumber
+        - Kafka Broker 收到消息后会以 ProducerID 为单位存储 SequenceNumber，也就是说即时 Producer 重复发送了， Broker 端也会将其过滤掉。
+     1. 只能保证单分区上的幂等性，因为 SequenceNumber 是以 Topic + Partition 为单位单调递增的
+     1. 只能实现单会话上的幂等性
+   - 事务：使用事务API，可包括多条消息。开启 enable.idempotence = true，设置 Producer 端参数 transactional. id。最好为其设置一个有意义的名字。
+     1. 事务型 Producer 也不惧进程的重启
+     1. read_uncommitted：这是默认值，表明 Consumer 能够读取到 Kafka 写入的任何消息，不论事务型 Producer 提交事务还是终止事务，其写入的消息都可以读取。
+        - 很显然，如果你用了事务型 Producer，那么对应的 Consumer 就不要使用这个值。
+     1. read_committed：表明 Consumer 只会读取事务型 Producer 成功提交事务写入的消息。
+        - 当然了，它也能看到非事务型 Producer 写入的所有消息
+#### 流式计算
 1. 认识
    - 流处理平台：对比批处理，即处理源源不断数据，由于精确一次处理语义(Exactly Once Semantics，EOS)的状态流转和控制不好把握(如状态回滚、消息重复)，造成结果精确性不足，而批处理能实现精确结果
      1. 结合二者，利用流处理快速地给出不那么精确的结果，另一方面批处理最终实现数据一致性
@@ -432,7 +456,7 @@
     final KafkaStreams streams = new KafkaStreams(topology, props);
     final CountDownLatch latch = new CountDownLatch(1);
     ```
-### 使用
+### 最佳实践
 1. 如何实现顺序消费
    - 对此标志位设定专门的分区策略，保证同一标志位的所有消息都发送到同一分区
    - 可以使用key + offset做到业务有序，一个key确定同一类型，offset作为顺序的判断，如先存了es，时序数据库中，攒够了一起处理

@@ -375,6 +375,31 @@
 
         defer gClient.Close()
         ```
+#### 队列相关
+1. kafka
+   - 消费者组进行消费：使用Shopify/sarama库，初始化sarama.NewConsumerGroup，然后阻塞调用Consume消费，注入实现了ConsumeClaim等3个回调方法的sarama.ConsumerGroupHandler，在回调中接收消息
+   - 事务生产：参考https://github.com/IBM/sarama/blob/v1.40.1/examples/txn_producer/main.go，主要涉及方法有
+    ```go
+    sarama.NewAsyncProducer(brokers, config)
+    producersLock.Lock()/Unlock()                           // 保护一些变量
+
+    producer.BeginTxn()                                     // 事务方法
+    producer.CommitTxn()
+    if producer.TxnStatus()&sarama.ProducerTxnFlagFatalError/ProducerTxnFlagAbortableError != 0 {}          // 判断事务异常类型
+    ```
+   - 确保消息正好一次：参考https://github.com/IBM/sarama/blob/v1.40.1/examples/exactly_once/main.go
+    ```go
+    // 配置
+    producerConfig.Net.MaxOpenRequests = 1
+    producerConfig.Producer.RequiredAcks = sarama.WaitForAll
+    producerConfig.Producer.Idempotent = true                   // 幂等性
+    producerConfig.Producer.Transaction.ID = "sarama"
+
+    config.Consumer.IsolationLevel = sarama.ReadCommitted
+	config.Consumer.Offsets.AutoCommit.Enable = false
+
+    // 为什么生产要放在ConsumeClaim里？
+    ```
 #### 日志相关
 1. log标准库的缺陷
    - 不支持日志切割
@@ -499,6 +524,10 @@
         - 添加了主进程管理平滑重启：子进程处理链接，能够保持主进程pid不变
 #### 字符串
 1. hbollon/go-edlib：字符串比较和编辑距离算法库，包含Levenshtein、LCS、Hamming等
+1. bwmarrin/snowflake
+   - 认识
+     1. 使用默认设置允许每个节点ID每毫秒生成4096个唯一ID，每次操作大约需要243-244纳秒。是单线程的，取决于单核的处理速度
+     1. 考虑到虽然有时钟同步，但是单个计算机存在时钟漂移，有微小的差别
 #### 结构体
 1. fatih/structs：struct的工具包，包括map和struct的互转、对struct封装的各种简便反射方法，基本上是一个基于反射包中的原语的高级包
 #### 文件和配置
@@ -558,6 +587,8 @@
 1. freecache
 1. caffeine
    - 认识：基础存储没有采用复杂数据结构采用的是ConcurrentHashMap，所有的管理操作异步化、数据驱逐（淘汰）算法采用 W-TinyLFU，以及部分情况 LRF+LFU结合的方式，各种优秀的队列设计，冲突严重hash情况下链表降级采用红黑树来处理 等等优化处理
+#### 锁
+1. go-redsync/redsync：使用redis的分布式互斥锁
 ### 技术方案
 #### 池
 1. 认识

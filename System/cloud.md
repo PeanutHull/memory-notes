@@ -309,6 +309,7 @@
    - 使用
      1. docker run -v /usr/download imageName                                  # 给容器指定本地路径，通过inspect查看mounts的路径
      1. docker run -v $PWD/locationPosition:/usr/download imageName            # 指定本地和容器目录的挂接
+1. 容器编排器：Docker Compose、Swarm
 1. Swarm
    - 认识：是原生的Docker集群服务工具，将一群扩散到多台主机上的Docker主机集成为单一的虚拟Docker主机
 1. docker-compose
