@@ -1,4 +1,4 @@
-### MongoDB
+### 认识
 1. 认识：基于文档的非关系型分布式开源数据库，是可扩展性的表结构。C++编写，文档按照BSON存储，增删改查等命令和js语法很像
    - 灵活的文档模型，强大查询语言，支持查询联接
    - 具有快照隔离的分布式多文档ACID事务
@@ -18,9 +18,18 @@
    - 100%时间可写入：mongo切换主节点不可写
 1. 缺点
    - 多表关联：仅支持Left Outer Join
-   - 16mb文档大小限制，不支持中文排序 ，服务端js性能欠佳
-### 认识
-1. 概述
+   - 16mb文档大小限制，不支持中文排序，服务端js性能欠佳
+1. 应用场景
+   - 二级索引
+   - 地理位置索引
+   - 全文搜索
+   - 动态查询
+   - 聚合框架
+   - MapReduce
+   - GridFS：基于mongoDB的分布式文件存储系统，解决大文件(超16M)存储。采用分片存储
+   - journal：硬关闭时帮助数据库恢复的日志，可配置日志在特定用例的性能和可靠性之间取得平衡
+### 组成
+1. 认识
    - 组成：数据库、集合、文档
      1. db：数据库实例
      1. collection：集合，表，一个集合里的文档可有不同结构
@@ -78,10 +87,12 @@
      1. 不要求文档有相同模式，v3.2在新增、更新时可强制执行规则验证
      1. 不能有重复键，键不能有\0(用于表示键结尾)，.和$只在特定环境使用，_开头的是保留的(不严格要求)
      1. 值可以是多种数据类型，甚至可以是整个嵌入的文档
+### 操作
 1. 运算符
    - 符号
      1. $：顶级字段名称不能以$开头
      1. .：点表示法，表示更深一层的字段
+     1. 匹配所有写法：{}
    - 查询
      1. 比较
         - $in/$nin：(不)匹配数组中指定的任何值
@@ -157,8 +168,6 @@
      1. 列表
      1. 布尔
      1. 累加器等等
-### 操作
-1. 操作方式：mongo shell
 1. 查询
    - 方法
      1. coll.find(query, projection).limit(n).skip(n).sort({KEY:1}).pretty()
@@ -228,15 +237,17 @@
         - db.collection.remove(<query>, {justOne: <boolean>, writeConcern: <document>, collation: <document>})
         - db.collection.deleteMany()
         - db.collection.deleteOne()
+### 功能
 1. 索引
+   - 认识：包括类型、属性
    - 特性
      1. 建索引过程会阻塞其它数据库操作
      1. ttl索引：独立线程清除。默认60s扫描一次，删除也不一定是立即删除成功
      1. 不分大小写
      1. 部分
-   - 分类
+   - 属性
      1. 单字段
-     1. 复合
+     1. 复合：compound，`db.users.createIndex({name: 1, age: 1})`
      1. 多键
      1. 文本
      1. 通配符
@@ -261,33 +272,6 @@
    - 查看
      1. coll.getIndexes()
      1. coll.totalIndexSize()
-1. 聚合
-   - 分类
-     1. 聚合管道
-     1. map-reduce
-     1. 单一目的聚合方法
-   - 聚合管道：aggregate，以数据处理管道的概念为蓝本的。文档进入多阶段管道，将文档转换为聚合结果，用于处理、计算数据，并返回处理结果
-     1. 实例
-        - `db.mycol.aggregate([{$group : {_id : "$by_user", num_tutorial : {$sum : 1}}}])`
-        - 类似：`select by_user, count(*) from mycol group by by_user`
-        - 先match再group管道实例：`db.coll.aggregate( [{ $match : { score : { $gt : 70} } },{ $group: { _id: null, count: { $sum: 1}}}]);`
-1. 事务
-   - session.start_transaction()
-   - session.commit_transaction()
-1. 视图
-   - 认识
-     1. 是只读的，不能重命名
-     1. 使用其上游集合的索引
-     1. 不能指定$natural排序
-   - 操作
-     1. `db.createView(<view>, <source>, <pipeline>, <collation>)`
-     1. `db.collection.find()/findOne()/aggregate()/count()/distinct()`
-1. GeoJSON
-   - 认识：存储地理空间数据，可以提供查询范围内的东西的能力
-     1. 有效的经度值在-180 180
-     1. 有效的纬度值在-90 90
-1. 操作特性
-   - 验证规则
    - 可重试写入、读取
      1. 认识：在遇到网络错误或在副本集或分片群集中找不到正常的主操作时自动重试一次。不适用单节点，需要支持文档级锁定的存储引擎，v3.6
    - 读写关注
@@ -300,23 +284,33 @@
         - snapshot：仅用于多文档事务
      1. 写关注认识：写操作的确认级别
         - 多文档事务可以在事务级别设置写关注
-   - wiki
-     1. 匹配所有写法：{}
-1. 变更流
-   - 认识：可订阅collection、db、sh、rs的数据变更
-1. mongoDB驱动程序
-1. 存储引擎：WiredTiger、内存
-1. oplog.rs：mongoDB的操作日志文件
-1. 应用
-   - 二级索引
-   - 地理位置索引
-   - 全文搜索
-   - 动态查询
-   - 聚合框架
-   - MapReduce
-   - GridFS：基于mongoDB的分布式文件存储系统，解决大文件(超16M)存储。采用分片存储
-   - journal：硬关闭时帮助数据库恢复的日志，可配置日志在特定用例的性能和可靠性之间取得平衡
+1. 事务
+   - session.start_transaction()
+   - session.commit_transaction()
+1. 聚合
+   - 分类
+     1. aggregate：聚合管道，以数据处理管道的概念为蓝本的。文档进入多阶段管道，将文档转换为聚合结果，用于处理、计算数据，并返回处理结果
+        - `db.mycol.aggregate([{$group : {_id : "$by_user", num_tutorial : {$sum : 1}}}])`
+        - 类似：`select by_user, count(*) from mycol group by by_user`
+        - 先match再group管道实例：`db.coll.aggregate( [{ $match : { score : { $gt : 70} } },{ $group: { _id: null, count: { $sum: 1}}}]);`
+     1. map-reduce
+     1. 单一目的聚合方法
+1. 视图
+   - 认识
+     1. 是只读的，不能重命名
+     1. 使用其上游集合的索引
+     1. 不能指定$natural排序
+   - 操作
+     1. `db.createView(<view>, <source>, <pipeline>, <collation>)`
+     1. `db.collection.find()/findOne()/aggregate()/count()/distinct()`
+1. GeoJSON
+   - 认识：存储地理空间数据，可以提供查询范围内的东西的能力
+     1. 有效的经度值在-180 180
+     1. 有效的纬度值在-90 90
 ### 运维
+1. 认识
+   - mongod是守护进程，mongo是客户端
+   - mongod进程收到SIGINT信号或者SIGTERM信号，会关闭打开连接、内存数据强制刷到磁盘、等待当前操作执行完毕、安全停止。不能kill -9，会数据丢失、数据文件损坏
 1. 基础操作
    - 开关
      1. 命令行方式：`mongod --dbpath= --logpath=/xx.log --logappend --port=27017 --fork --bind_ip_all`
@@ -335,13 +329,14 @@
         ```
      1. 关闭：`db.shutdownServer()`
      1. 重启：`mongo restart`
-   - 连接：`mongo`
-   - mongod是守护进程,mongo是客户端
-   - 注意事项
-     1. mongod进程收到SIGINT信号或者SIGTERM信号，会关闭打开连接、内存数据强制刷到磁盘、等待当前操作执行完毕、安全停止。不能kill -9，会数据丢失、数据文件损坏
+   - 连接：`mongo`、mongo shell
 1. 数据导出导入
    - 导出：`mongodump -h dbhost -d dbname -o dbdirectory`
    - 导入：`mongorestore -h <hostname><:port> -d dbname <path>`
+1. 监控
+   - 数据库
+     1. totalSize：集合中索引+数据压缩存储之后的大小
+     1. storageSize：集合中数据压缩存储的大小
 1. 安全
    - 认识：权限管理，默认没有权限
    - 权限分类
@@ -358,12 +353,11 @@
      1. `db.dropUser("xx")`：删除
      1. `db.auth("name","secret")`：验证用户
    - 启用权限：在conf中`authorization: enabled`，然后重启
-1. 监控
-1. 调优
-   - 数据库
-     1. totalSize：集合中索引+数据压缩存储之后的大小
-     1. storageSize：集合中数据压缩存储的大小
-### 企业级
+### 设计
+1. 变更流：可订阅collection、db、sh、rs的数据变更
+1. 存储引擎：WiredTiger、内存
+1. oplog.rs：mongoDB的操作日志文件
+### 架构
 1. 架构
    - ReplicaSet：副本集，将数据同步在多个节点中。一主n从架构，一般为三节点架构，oplog用于同步。只能通过主节点将Mongo服务添加到副本集中
      1. 特点
@@ -395,7 +389,6 @@
         - addshard
         - enablesharding：设置分片存储的数据库
 ### wiki
-1. aggregation & mapreduce：数据分析，用户可以自己写查询语句或脚本，将请求都分发到MongoDB上完成
 1. bson：json的轻量化二进制格式，BSON文件大小限制16M
    - 数据类型
      1. Null：用于创建空值

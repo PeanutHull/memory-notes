@@ -3,6 +3,14 @@
    - 单进程单线程，命令是串行执行
      1. 处理所有的客户端连接、命令并发读写、内存数据结构逻辑读写的请求
      1. 遇到阻塞，所有人等待
+1. 架构组成
+   - 访问框架
+   - 网络访问框架：socket server、请求解析
+   - 基于不同value类型的操作模块
+   - 索引模块
+   - 存储模块：内存分配器、持久化(aof/rdb)
+   - 高可用集群模块：主从复制、哨兵机制
+   - 可扩展集群支撑模块：分片机制
 1. 内存
    - 认识
      1. 复杂的数据结构在内存中操作非常简单，redis可以做很复杂的操作
@@ -43,20 +51,25 @@
    - scan
      1. 采用高位进位加法遍历，考虑到字典的扩容和缩容时避免槽位的遍历重复和遗漏
         - 普通加法/高位进位加法：高位进位法从左边加，进位往右边移动，同普通加法相反。但是最终它们都会遍历所有的槽位并且没有重复
-### 数据类型
-1. 实现
-   - string：sds
-   - list：quicklist，早期版本list元素少时用ziplist，多时用linkedlist双向循环链表
-     1. ziplist：满足优先使用
-        - 列表中单个数据小于64byte
-        - 列表中数据个数少于512
-   - hash：ziplist + hashtable，数组+链表。第一维hash的数组位置碰撞时，将碰撞元素使用链表串接起来，类似java的HashMap
-   - set：intset + hashtable + listpack，字典中所有value都是null，其它的特性和字典一样
-   - zset：ziplist+ sortedset + hashtable + skiplist
-     1. 用hashtable记录value和score的关系
-     1. 用skiplist提供范围查找
-1. string
-   - 认识：SDS Simple Dynamic String，是动态字符串
+### 底层数据结构
+1. 认识
+   - 一些value类型，一个键对应了一个集合的数据
+   - 操作常识
+     1. 单元素操作是基础
+     1. 范围操作非常耗时
+        - scan作渐进式遍历，每次只返回有限数量的数据，节省资源
+     1. 统计操作通常高效：结构体中已经记录
+     1. 例外情况只有几个
+        - 如压缩列表和双向链表都记录表头和表尾的偏移量。因此对于List类型的LPOP/RPOP/LPUSH/RPUSH四个操作是在列表的头尾增删元素，可通过偏移量直接定位，复杂度只有O(1)，快速操作
+1. 底层数据结构
+   - 简单动态字符串：sds
+   - 整数数组：顺序读写
+   - 双向链表：linkedlist，是双向循环链表吗？？？。顺序读写
+   - 压缩列表：ziplist
+   - 哈希表：hashtable
+   - 跳表：skiplist
+1. SDS
+   - 认识：Simple Dynamic String 简单动态字符串
      1. c的字符串以 NULL 作为结束符，需要遍历，算法复杂度O(n)，单线程承受不起
    - 结构：是一个带长度信息的字节数组
      1. 使用泛型T，根据字符串长度使用不同数据类型，内存极致优化
@@ -84,76 +97,17 @@
       void *ptr;          // 8bytes，64-bit system，存储位置指针
     } robj;
     ```
-1. dict
-   - 认识：字典，最常见的复合数据结构
-     1. 使用MurmurHash2哈希算法作为哈希函数，运行速度快、随机性好的，哈希冲突使用链表法解决
-     1. 支持hashtable的动态扩容、缩容
-   - 使用范围
-     1. hash
-     1. zset的value和score的映射关系
-     1. 所有key和value组成全局字典
-     1. 所有带过期时间的key
-   - 实现
-     1. ziplist，满足即优先使用
-        - 列表中单个数据小于64byte
-        - 列表中数据个数少于512
-     1. hashtable
-   - 结构
-     1. hashtable：包含两个，通常只有一个有值，扩容缩容时进行渐进式搬迁
-        - 分桶的方式解决 hash 冲突，第一维是数组，第二维是链表。数组中存储的是第二维链表的第一个元素的指针
-        - 元素在第二维链表上，使用siphash的hash函数平均的将元素放到第一维的某个数组位置，hashtable才能是平衡的
-          1. hash攻击：利用hash函数存在偏向性，让第二维链表长度极不均匀，导致查找效率急剧下降，从 O(1)退化到 O(n)，拖垮服务器
-   - 设计
-     1. 渐进式rehash：保留新旧两个hash结构并同时查询，在后续的定时任务中及hash的子指令中渐进的迁移
-        - 大字典扩容比较耗时间，需要重新申请新数组，将旧字典所有链表中的元素重新挂接到新的数组下面，O(n)操作太耗时，redis一点点的搬
-        - 触发：定时，相关指令执行
-     1. 扩容
-        - 数据增加hashtable的装载因子不停变大大于1时。为避免性能下降触发扩容为2倍左右，小于0.1时缩容到0.5倍
-        - 使用渐进式扩容缩容策略
-        - 元素的个数等于第一维数组的长度，扩为2倍
-        - bgsave时，为了减少内存页的过多分离 (Copy On Write)，不会扩，元素个数到5倍时强制扩容
-     1. 缩容：元素个数低于数组长度的 10%，不会考虑bgsave条件
-   - 代码
-    ```c++
-    struct zset {
-      dict *dict;         // all values value=>score
-      zskiplist *zsl;
-    }
-
-
-    struct dict {
-      ...
-      dictht ht[2];
-    }
-
-    struct dictht {
-      dictEntry** table;  // 二维数组
-      long size;          // 第一维数组的长度
-      long used;          // hash 表中的元素个数
-      ...
-    }
-
-    struct dictEntry {
-      void* key;
-      void* val;
-      dictEntry* next;    // 链接下一个 entry
-    }
-    ```
-1. set
-   - 实现
-     1. intset：有序数组，满足元素都是整数且个数小于512优先使用
-     1. hashtable：没有拉链即可，预先分配一个固定大小的数组来存储键值对，使用散列函数生产数组索引
-     1. listpack：v7.2新增，sds优先使用listpack，为提高内存利用率和操作效率，因为hashtable的空间开销和碰撞概率都比较高
-        - 阈值条件
-          1. set-max-listpack-entries：最大元素个数，默认128
-          1. set_max_listpack_value：最大元素大小，默认64
-1. sortedset
-   - 认识：有序集合，存储附带一个得分的一组数据，用skiplist，支持快速按照得分值、得分区间获取数据
-   - 实现：skiplist + hashtable
-     1. ziplist，满足即优先使用
-        - 所有数据的大小都小于64byte
-        - 元素个数要小于128
-     1. sortedset
+1. hashtable
+   - 认识：哈希表，一个哈希表其实就是一个数组，数组的每个元素称为一个哈希桶，每个哈希桶中保存了键值对的指针，![avatar](../images/db/redis_hashtable_struct.webp)
+     1. 一个桶会存储多对键值指针对
+   - 操作
+     1. 哈希冲突：使用拉链法解决，通过指针逐一查找
+        - 哈希的数组位置碰撞时，将碰撞元素使用链表串接起来，类似java的HashMap
+     1. rehash
+        - 增加现有的哈希桶数量，缩短链表长度，降低冲突，防止性能下降太多
+        - 渐进式rehash
+   - 全局哈希表：保存了所有的键值对信息，从key找到value由全局哈希表索引完成
+     1. 利用两个全局哈希表，互相渐进式搬迁，一步一步往上增长
 1. rax
    - 认识：rax 有序字典树、基数树，按照key的字典序排列，支持快速地定位、插入和删除操作
      1. 易于理解，实现非常复杂
@@ -163,39 +117,40 @@
      1. rax是一棵比较特殊的radix tree，它在结构上不是标准的radix tree。如果一个中间节点有多个子节点，那么路由键就只是一个字符。如果只有一个子节点，那么路由键就是一个字符串。后者就是所谓的压缩形式，多个字符压在一起的字符串
 #### list
 1. ziplist
-   - 认识：压缩列表，是一块连续内存空间的自己设计的数据存储结构，元素之间紧挨着存储
-   - 特点
+   - 认识：压缩列表，连续内存空间的自定义的数据存储结构，元素紧挨着存储
      1. 比较节省内存，读取效率高
      1. 支持不同类型数据存储
-   - 使用范围：zset、hash元素个数较少时，多了用双向循环链表
-   - 结构：![avatar](../images/db/redis_ziplist.jpg)
-     1. 支持双向遍历，ztail_offset字段用来快速定位到最后一个元素，然后倒着遍历
-     1. entry的prevlen
-        - 是一个变长的整数，当字符串长度小于254(0xFE) 时，使用一个字节表示；如果达到或超出 254(0xFE) 那就使用 5 个字节来表示。第一个字节是 0xFE(254)，剩余四个字节表示字符串长度
-        - 倒着遍历时，需要通过这个字段来快速定位到下一个元素的位置
-     1. entry的encoding
-        - 使用前缀位识别存储的content的数据形式，采用相当复杂的设计，如00xxxxxx，最大长度位 63 的短字符串，后面的 6 个位存储字符串的位数，剩余的字节就是字符串的内容
-     1. entry的content：可选的，因为很小的整数内联到encoding字段的尾部了
-   - 设计
-     1. 增加元素：因为紧凑存储，没有冗余空间，需要用 realloc 扩展内存，需要一次性拷贝或者扩展原地址
-     1. 级联更新
-     1. IntSet小整数集合
-   - 代码
-    ```c++
-    struct ziplist<T> {
-      int32 zlbytes;              // 整个压缩列表占用字节数
-      int32 zltail_offset;        // 最后一个元素距离压缩列表起始位置的偏移量，用于快速定位到最后一个节点
-      int16 zllength;             // 元素个数
-      T[] entries;                // 元素内容列表，挨个挨个紧凑存储
-      int8 zlend;                 // 标志压缩列表的结束，值恒为 0xFF
-    }
+   - 结构
+     1. 结构体代码：![avatar](../images/db/redis_ziplist.jpg)
+        ```c++
+        struct ziplist<T> {
+            int32 zlbytes;              // 整个压缩列表占用字节数
+            int32 zltail_offset;        // 最后一个元素距离压缩列表起始位置的偏移量，用于快速定位到最后一个节点
+            int16 zllength;             // 元素个数
+            T[] entries;                // 元素内容列表，挨个挨个紧凑存储
+            int8 zlend;                 // 标志压缩列表的结束，值恒为 0xFF
+        }
 
-    struct entry {                // 容纳的元素类型不同，也会有不一样的结构
-      int<var> prevlen;           // 前一个 entry 的字节长度
-      int<var> encoding;          // 元素类型编码
-      optional byte[] content;    // 元素内容
-    }
-    ```
+        struct entry {                  // 容纳的元素类型不同，也会有不一样的结构
+            int<var> prevlen;           // 前一个 entry 的字节长度
+            int<var> encoding;          // 元素类型编码
+            optional byte[] content;    // 元素内容
+        }
+        ```
+     1. 特点
+        - 一个压缩列表表头以三个字段zlbytes、zltail和zllen为开头
+        - 查找
+          1. 要查找定位第一个元素和最后一个元素，可以通过表头三个字段的长度直接定位，复杂度是O(1)，查找其他是O(N)
+          1. 支持双向遍历，ztail_offset字段用来快速定位到最后一个元素，然后倒着遍历
+        - 增加元素：因为紧凑存储，没有冗余空间，需要用realloc扩展内存，需要一次性拷贝或者扩展原地址
+        - 更新需要级联更新
+     1. entry解析
+        - prevlen
+          1. 是一个变长的整数，当字符串长度小于254(0xFE)时，使用一个字节表示；如果达到或超出254(0xFE) 那就使用5个字节来表示。第一个字节是0xFE(254)，剩余四个字节表示字符串长度
+          1. 倒着遍历时，需要通过这个字段来快速定位到下一个元素的位置
+        - encoding
+          1. 使用前缀位识别存储的content的数据形式，采用相当复杂的设计，如00xxxxxx，最大长度位63的短字符串，后面的6个位存储字符串的位数，剩余的字节就是字符串的内容
+        - content：是可选的，如果是很小的整数就内联到encoding字段的尾部了
 1. linkedlist
    - 认识：双向链表
    - 实现代码
@@ -259,9 +214,10 @@
    - 背景
      1. 因为要支持随机插入和删除，链表操作就要二分查找，平层太慢，所以设计为多层元素，元素可以在不同层次之间进行「跳跃」，定位时一层层下潜，越往下元素越密集
      1. 随机策略来决定新元素可以兼职写入到第几层，最顶层L31层，L2层25%的概率(0开始)，
-   - 认识：跳跃列表，算法复杂度O(log(n))
+   - 认识：跳跃列表，跳表在链表的基础上，增加了多级索引，越高级的间隙跨度越大，通过索引位置的几个跳转，实现数据的快速定位，复杂度O(log(n))
      1. 和红黑树：插入、删除、查找、迭代输出复杂度相同；区间查找跳表更高O(logn)，代码更容易实现少出错，可通过改变索引构建策略有效平衡执行效率和内存消耗
-   - 结构：![avatar](../images/redis_skiplist.png)
+   - 结构：![avatar](../images/db/redis_skiplist.webp)
+     1. 查找过程就是在多级索引上跳来跳去
      1. 一共64层
      1. 每个kv块是zslnode，kv header也是，但是value为null
         - 每一层元素的遍历从kv header出发
@@ -327,3 +283,85 @@
    - 使用范围
      1. 数据都是整数
      1. 数据个数不超512
+### 数据类型
+1. 数据类型的底层实现
+   - string：sds
+   - list：quicklist，早期版本元素少时用ziplist，多时用linkedlist
+   - hash：hashtable + ziplist
+   - set：intset + hashtable + listpack，字典中所有value都是null，其它的特性和字典一样
+   - zset：ziplist + skiplist
+1. list
+   - ziplist：满足优先使用
+     1. 列表中单个数据小于64byte
+     1. 列表中数据个数少于512
+1. dict
+   - 认识：字典，最常见的复合数据结构
+     1. 使用MurmurHash2哈希算法作为哈希函数，运行速度快、随机性好的，哈希冲突使用链表法解决
+     1. 支持hashtable的动态扩容、缩容
+   - 使用范围
+     1. hash
+     1. zset的value和score的映射关系
+     1. 所有key和value组成全局字典
+     1. 所有带过期时间的key
+   - 实现
+     1. ziplist，满足即优先使用
+        - 列表中单个数据小于64byte
+        - 列表中数据个数少于512
+     1. hashtable
+   - 结构
+     1. hashtable：包含两个，通常只有一个有值，扩容缩容时进行渐进式搬迁
+        - 分桶的方式解决 hash 冲突，第一维是数组，第二维是链表。数组中存储的是第二维链表的第一个元素的指针
+        - 元素在第二维链表上，使用siphash的hash函数平均的将元素放到第一维的某个数组位置，hashtable才能是平衡的
+          1. hash攻击：利用hash函数存在偏向性，让第二维链表长度极不均匀，导致查找效率急剧下降，从 O(1)退化到 O(n)，拖垮服务器
+   - 设计
+     1. 渐进式rehash：保留新旧两个hash结构并同时查询，在后续的定时任务中及hash的子指令中渐进的迁移
+        - 大字典扩容比较耗时间，需要重新申请新数组，将旧字典所有链表中的元素重新挂接到新的数组下面，O(n)操作太耗时，redis一点点的搬
+        - 触发：定时，相关指令执行
+     1. 扩容
+        - 数据增加hashtable的装载因子不停变大大于1时。为避免性能下降触发扩容为2倍左右，小于0.1时缩容到0.5倍
+        - 使用渐进式扩容缩容策略
+        - 元素的个数等于第一维数组的长度，扩为2倍
+        - bgsave时，为了减少内存页的过多分离 (Copy On Write)，不会扩，元素个数到5倍时强制扩容
+     1. 缩容：元素个数低于数组长度的 10%，不会考虑bgsave条件
+   - 代码
+    ```c++
+    struct zset {
+      dict *dict;         // all values value=>score
+      zskiplist *zsl;
+    }
+
+
+    struct dict {
+      ...
+      dictht ht[2];
+    }
+
+    struct dictht {
+      dictEntry** table;  // 二维数组
+      long size;          // 第一维数组的长度
+      long used;          // hash 表中的元素个数
+      ...
+    }
+
+    struct dictEntry {
+      void* key;
+      void* val;
+      dictEntry* next;    // 链接下一个 entry
+    }
+    ```
+1. set
+   - 实现
+     1. intset：有序数组，小整数集合，满足元素都是整数且个数小于512优先使用
+     1. hashtable：没有拉链即可，预先分配一个固定大小的数组来存储键值对，使用散列函数生产数组索引
+     1. listpack：v7.2新增，sds优先使用listpack，为提高内存利用率和操作效率，因为hashtable的空间开销和碰撞概率都比较高
+        - 阈值条件
+          1. set-max-listpack-entries：最大元素个数，默认128
+          1. set_max_listpack_value：最大元素大小，默认64
+1. sortedset
+   - 认识：存储附带得分的一组数据
+     1. 用ziplist记录value和score的关系
+     1. 用skiplist提供范围查找，支持快速按照得分值、得分区间获取数据
+   - 实现：skiplist + ziplist
+     1. ziplist，满足即优先使用
+        - 所有数据的大小都小于64byte
+        - 元素个数要小于128
