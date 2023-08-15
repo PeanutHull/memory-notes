@@ -3689,7 +3689,9 @@
 1. 数据类型、变量
    - strconv：基本数据类型和其字符串表示的相互转换，Itoa/Atoi针对int，FormatInt/ParseInt针对int64，支持进制(大多为第二参数)
      1. `strconv.FormatBool/FormatInt/FormatUint/FormatFloat/Itoa()`：转为字符串
-     1. `strconv.ParseBool/ParseInt/ParseUint/ParseFloat/Atoi()`：字符串转换为其他类型
+     1. `strconv.ParseBool/ParseInt/ParseUint/ParseFloat/Atoi(s string, base int, bitSize int)`：字符串转换为其他类型
+        - base 基数：0、2到36，即进制，2表示“0b”，8表示“0”或“0o”，16表示“0x”，否则为10
+        - bitSize 位大小：0到64，即整数类型，0/8/16/32/64对应int/int8/int16/int32/int64
      1. `strconv.AppendInt/AppendBool/AppendQuote/AppendQuoteRune()`：转换为字符串后添加到字节数组中
      1. `strconv.Quote(s string)/Unquote(s string)`：转义/反转义输出，转义输出时两侧带双引号，中间特殊字符添加转义符\，反之去除
    - sort：对切片和用户定义集合的排序操作

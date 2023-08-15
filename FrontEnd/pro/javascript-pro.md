@@ -313,6 +313,12 @@
 1. 特点：![avatar](../../images/flutter_framework.jpeg)
    - 基于底层Engine中的Skia库搭建起一套自渲染引擎，不需要在基于web内容的渲染，在性能上做到了媲美原生
 1. Dart：可用于全平台、web、脚本、服务端开发，google的开源的面向对象语言，立志成为下一代web开发语言，目前2.x版本
+   - 组件
+     1. Dart SDK：提供了开发 Dart 命令行、服务器和非flutter web 应用所需的库和命令行工具。Dart SDK 包含一个lib用于存放Dart 库的目录和一个bin 包含以下命令行工具的目录
+        - dart：用于创建、格式化、分析、测试、记录、编译和运行 Dart 代码的命令行界面
+        - dartaotruntime：AOT 编译快照的 Dart 运行时
+   - 命令行
+     1. dart --version
 1. Fuchsia：google的操作系统
 1. Hybrid App开发
    - 集成组件和打包的：flutter、appcan、Dcloud(组件库mui)、WeX5、APICloud
@@ -321,6 +327,8 @@
    - 安卓模拟器：genymotion、海马玩
    - weex、quasar、nativeScript
    - 基于web体系的 Progressive Web App
+1. 命令行
+   - flutter --no-color pub upgrade：更新依赖
 1. 网校架构：![avatar](../../images/wx_flutter_app_framework.jpeg)
 ### WebAssembly
 1. 认识：缩写 wasm，是基于堆栈的js抽象虚拟机的二进制指令格式字节码规范。为编程语言的可移植而设计，即使用非js如c/c++/go/rust/swift等编写代码并且能在浏览器上运行的技术方案
