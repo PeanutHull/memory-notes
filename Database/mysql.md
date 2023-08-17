@@ -643,7 +643,7 @@
           1. 锁级别：有主键或索引行级别，无则表级别
           1. 仅适用于InnoDB，必须在事务中执行
         - 分类
-          1. Shared  Lock：共享锁，读锁，s，其他人读可以并行，锁拥有者不能修改，保证了拥有者释放锁时其他人读取的是对的，`lock in share mode`
+          1. Shared Lock：共享锁，读锁，s，其他人读可以并行，锁拥有者不能修改，保证了拥有者释放锁时其他人读取的是对的，`lock in share mode`
           1. Exclusive Locks：排他锁，写锁，x，其他人读写都不能并行，`for update`，update/delete/insert自动加，select任何锁不加
      1. Intention Lock
         - 认识：意向锁，表锁，为了允许行锁和表锁共存，实现多粒度锁机制。申请表锁时为了快速知道是否可锁，否则需要一行行去看是否有锁
@@ -658,18 +658,20 @@
           1. 如果插入位置冲突，多个事务会阻塞，以保证数据一致性
           1. innodb_autoinc_lock_mode：调节该锁的模式与行为，3种配置，0加自增锁，1回滚自增列不连续，2批量插入自增列可能不连续，主从同步可能出问题
    - 行锁
-     1. Record Lock
-        - 认识：记录锁，索引记录上加锁
-     1. Gap Lock
-        - 认识：间隙锁，锁定索引范围查找中这个区间内所有行，不可以被其他事务读取/修改，防止幻读
-        - 分类
-          1. Insert Intention Lock
-             - 认识：插入意向锁，插入操作时使用，多个事务在同一个索引、同一个范围区间插入记录时，如果插入的位置冲突会阻塞
-             - 实际是gap锁上加一个LOCK_INSERT_INTENTION标记
+     1. Record Lock：记录锁，索引记录上加锁
+     1. Gap Lock：间隙锁，锁定索引范围查找中这个区间内所有行，不可以被其他事务读取/修改，防止幻读
+     1. Insert Intention Lock
+        - 认识：LOCK_INSERT_INTENTION 插入意向锁，插入操作时使用，多个事务在同一个索引、同一个范围区间插入记录时，如果插入的位置冲突会阻塞
+        - 实际是gap锁上加一个LOCK_INSERT_INTENTION标记，是特殊的GAP锁
      1. Next-key Lock
-        - 认识：Ordinary Lock 临键锁，同时锁住索引的记录和间隙，Record Lock + Gap Lock
+        - 认识：LOCK_ORDINARY/Ordinary Lock 临键锁，同时锁住索引的记录和间隙，Record Lock + Gap Lock
           1. 在RR下有效，防止幻读
           1. 两种锁可能只成功一个，所以next-key是半开半闭区间，且是下界开，上界闭
+   - 常规锁模式
+     1. LOCK_S：读锁，共享锁
+     1. LOCK_X：写锁，排它锁
+   - 锁的属性可以与锁模式任意组合，如
+     1. waiting                       表示锁等待：lock->type_mode & LOCK_WAIT
 1. 死锁
    - 认识：互相持有对方的锁都不放开，没有外力就一直僵持
      1. 产生的条件：破坏以下4个条件的n个即可

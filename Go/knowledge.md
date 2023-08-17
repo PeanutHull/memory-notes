@@ -221,6 +221,8 @@
      1. 钩子函数：各种before、after的注入
      1. 各种反射的应用：判断类型、情况
    - 使用
+     1. 会抛出ErrRecordNotFound的方法
+        - Take()
      1. Clause：子句生成器，父级到子集的实现排列为DB --> Statement --> Clause --> Expression
         - 冲突
             ```go

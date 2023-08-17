@@ -432,6 +432,9 @@
         - SpanList
      1. Object
         - SizeClass
+   - 其他
+     1. libc
+     1. jemalloc
 1. GC
    - 认识：自动垃圾回收，独立进程运行
      1. 是一种比例GC, GC结束时堆大小和上一次GC存活堆大小成比例
