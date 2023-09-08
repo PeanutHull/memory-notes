@@ -22,6 +22,7 @@
     python manage.py shell      # 进入shell
     Article.objects.all()       # 查询数据
     ```
+1. FastAPI
 1. flask：流行的微框架
 1. bottle：类似flask
 1. web.py：小巧

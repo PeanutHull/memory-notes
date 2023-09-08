@@ -448,7 +448,7 @@
      1. nil：slice/map/channel/point/func/interface，只有这6个
    - 分类
      1. 值类型：声明默认分配内存
-     1. 引用类型
+     1. 引用类型：map
         - 认识：声明 + 分配内存用于存放值
    - 最佳实践
      1. 若变量类型为 bool 类型，则名称应以 Has, Is, Can 或 Allow 开头
@@ -640,6 +640,8 @@
      1. 应用
         - 简化资源回收的同时，安全回收资源
         - 捕获panic异常
+     1. 最佳实践
+        - defer在return下边不会执行，实践中如果defer放最下边，中间加了return，会导致永远不会defer
      1. 实例
         ```go
         // 安全回收资源
@@ -717,37 +719,15 @@
    - 认识：go里函数是一等公民：参数、变量、返回值都可以是函数。c++只有函数指针，java函数只是一个名字无法传给别人
      1. 灵活性大大加强，原来写死的，都可以注入进去改变功能
      1. 方法是一种特殊的函数，可以为函数实现一些方法，从而实现一些接口
-   - wiki
-     1. 正统函数式编程：数学味道非常浓
-        - 不可变性：不能有状态，只有常量和函数
-        - 函数只能有一个参数
-     1. 高阶函数：函数的参数也是函数
      1. go对函数式编程的支持体现在闭包上面
    - 闭包
-     1. 认识：定义在一个函数内部的函数，闭包会保留局部变量的引用所以不释放值。闭包是将函数内外部连接起来的桥梁
+     1. 认识：定义在一个函数内部的函数，闭包内部的局部变量会保留其引用所以不释放值。闭包是将函数内外部连接起来的桥梁
         - 更为自然，不需要更多的修饰
         - 语法层面：没有lambda表达式，但是有匿名函数
-     1. 斐波那契数列
-        ```go
-        func fibonacci() func() int {
-            a, b := 0, 1
-            return func() int {
-                a, b = b, a + b
-                return a
-            }
-        }
-
-        func main() {
-            f := fibonacci()
-            fmt.Println(f())    // 1
-            fmt.Println(f())    // 1
-            fmt.Println(f())    // 2
-            fmt.Println(f())    // 3
-            fmt.Println(f())    // 5
-            fmt.Println(f())    // 8
-        }
-        ```
-     1. 实例
+     1. 特性
+        - 在调用时对函数参数进行求值，会固定给闭包的参数数值
+     1. 示例
+        - 用法
         ```go
         // 上边的普通型，参数和返回值中间加个func()
         // 定义
@@ -776,8 +756,27 @@
 
         // goroutine模拟：闭包 + goroutine的死锁，goroutine未启动前，变量已经改变
         ```
-   - demo
-     1. 为函数实现接口，将斐波那契函数包装成文件进行读取
+        - 斐波那契数列
+        ```go
+        func fibonacci() func() int {
+            a, b := 0, 1
+            return func() int {
+                a, b = b, a + b
+                return a
+            }
+        }
+
+        func main() {
+            f := fibonacci()
+            fmt.Println(f())    // 1
+            fmt.Println(f())    // 1
+            fmt.Println(f())    // 2
+            fmt.Println(f())    // 3
+            fmt.Println(f())    // 5
+            fmt.Println(f())    // 8
+        }
+        ```
+        - 为函数实现接口，将斐波那契函数包装成文件进行读取
         ```go
         // 利用闭包实现的斐波那契
         func fibonacci() intGen {                               // 这里可以将func() int替换为intGen
@@ -819,6 +818,11 @@
             printFileContents(f)
         }
         ```
+   - wiki
+     1. 正统函数式编程：数学味道非常浓
+        - 不可变性：不能有状态，只有常量和函数
+        - 函数只能有一个参数
+     1. 高阶函数：函数的参数也是函数
 1. * 指针
    - 认识：`var ptr_name *T`，保存变量的内存地址，即间接引用。别人的地址存的是确切的数，指针的地址存的是别的变量的地址，指针类型*T是指向类型T的值的指针，零值是nil
      1. &a：取指针，获取指针
@@ -887,8 +891,9 @@
           1. panic无法跨协程, 当前协程产生的异常, 必须由当前协程处理，如果当前协程不处理，整个进程所有协程退出
           1. panic可以嵌套
         - recover：可以捕获到panic的输入值，让进入panic流程中的goroutine恢复正常执行
-          1. 只能在defer语句中使用，直接使用返回nil没有任何效果
+          1. 只能在defer语句中使用，直接使用返回nil没有任何效果，因为只要panic后面的不会被执行
           1. recover后, 当前函数panic后面没执行的代码也不会再继续执行
+          1. recover函数只有在方法内部发生panic时，返回值才不会为nil，没有panic的情况下返回值为nil
           1. 如果无法处理，可以重新panic
      1. 定义
         ```go
@@ -897,8 +902,16 @@
         ```
      1. 实例
         ```go
-        defer func() {                  // 直接执行的匿名方法
-            msg := recover()            // 捕获，判断类型
+        // 简单版
+        defer func() {                              // 直接执行的匿名方法
+            if err := recover(); err != nil {
+                fmt.Println("恢复", err)
+            }
+        }()
+
+        // 复杂版
+        defer func() {                  
+            msg := recover()                        // 捕获，判断类型
             switch msg.(type) {
                 case string:
                     fmt.Print("string", msg)
@@ -1267,19 +1280,130 @@
      1. 内部调度器在合适点自动切换，可认为调度顺序不确定
      1. 无锁，无callback(写程序不用，底层有)
      1. 协程间的通信和同步基于csp模型
-     1. golang中主goroutine退出程序即结束，系统自动回收运行时资源，所以子goroutine也会释放。应尽量避免泄露，常驻服务中执行会越来越不稳，和java不一样
+     1. golang中主goroutine退出程序即结束，系统自动回收运行时资源，所以子goroutine也会释放。应尽量避免泄露
    - 优势
+     1. 降低加解锁的需要
      1. 去掉了冗余的协程生命周期管理
-     1. 降低额外延迟和开销：来源是协程间的频繁交互
-     1. 降低加解锁的频率
+     1. 降低了延迟和开销：来源是协程间的频繁交互
      1. 管道和协程为并发编程提供了优雅的、便利的、与传统并发控制不同的方案，并演化出很多并发模式
         - 传统并发编程问题是共享数据(内存)如何加锁、同步
-   - 实践
-     1. 多协程对于全部变量的操作不是可预估的，需要有锁或者once保证只运行一次
-     1. 没有必要阻塞主流程的，并且有完整日志、报警可用的情况下，可以用协程完成
-     1. channel同步比其他同步原语方法慢
-     1. 每个协程一定要有defer里的recover保护，防止因单一协程引起所有程序全部停止
-     1. go的func的参数，如果不使用闭包参数，则go在运行到时才去拿for中的那个参数，可能导致不准，go闭包会暂存状态，也可用局部变量、协程参数
+   - 操作
+     1. 使用和控制
+        - go：启动一个协程
+        - waitGroup
+            ```go
+            func main() {
+                var wg sync.WaitGroup
+                wg.Add(1)
+            
+                go func(i int) {
+                    defer wg.Done()
+                    A(i)
+                }(1)
+
+                wg.Wait()
+
+                fmt.Println("end")
+            }
+            ```
+        - channel
+            ```go
+            func main() {
+                ch := make(chan bool, 1)
+                go func(i int, chp chan<- bool) {
+                    defer close(chp)
+                    fmt.Println("finish")
+                    chp <- true
+
+                }(1, ch)
+                
+                <-ch
+                fmt.Println("end")
+            }
+            ```
+        - Cond
+            ```go
+            func main() {
+                var locker = new(sync.Mutex)
+                var cond = sync.NewCond(locker)
+                var done bool = false
+                fmt.Println("我是main")
+                cond.L.Lock()
+
+                go func(i int) {
+                    A(i)
+                    fmt.Println("finish")
+                    done = true
+                    cond.Signal()
+
+                }(1)
+                fmt.Println("wait")
+                if !done {
+                    cond.Wait()
+                    cond.L.Unlock()
+                }
+                fmt.Println("end")
+            }
+            ```
+     1. 崩溃处理
+        ```go
+        func main() {
+            var wg sync.WaitGroup
+            wg.Add(1)
+
+            go func() {
+                defer func() {                              //在panic前声明defer recover能捕获异常
+                    if err := recover(); err != nil {
+                        fmt.Println("恢复", err)
+                    }
+                    wg.Done()
+                }()
+
+                panic("崩溃")
+            }()
+
+            wg.Wait()
+
+            fmt.Println("end")
+        }
+        ```
+     1. 协程超时控制
+        ```go
+        func Do(ctx context.Context, wg *sync.WaitGroup) {
+            ctx, cancle := context.WithTimeout(ctx, time.Second*2)
+            defer func() {
+                cancle()
+                wg.Done()
+            }()
+
+            done := make(chan struct{}, 1) //执行成功的channel
+            go func(ctx context.Context) {
+                fmt.Println("go goroutine")
+                time.Sleep(time.Second * 10)
+                done <- struct{}{} //发送完成的信号
+            }(ctx)
+
+            select {
+            case <-ctx.Done(): //超时
+                fmt.Printf("timeout,err:%v\n", ctx.Err())
+            case <-time.After(3 * time.Second): //超时第二种方法
+                fmt.Printf("after 1 sec.")
+            case <-done: //程序正常结束
+                fmt.Println("done")
+            }
+        }
+
+        func main() {
+            fmt.Println("main")
+            ctx := context.Background()
+            var wg sync.WaitGroup
+            wg.Add(1)
+            Do(ctx, &wg)
+            wg.Wait()
+            fmt.Println("finish")
+        }
+        ```
+     1. 
    - demo
     ```go
     go say("hello")
@@ -1306,6 +1430,13 @@
     v1 := v
     // 解决方案2：将k、v以协程参数的形式传过去
     ```
+1. 最佳实践
+   - 多协程对于全局变量的操作是不可预估的，需要有锁或者用once来保证只运行一次
+   - channel同步比其他同步原语方法慢
+   - 每个协程一定要有defer里的recover保护，防止因单一协程引起所有程序全部停止
+   - go的func的参数，如果不使用闭包参数，则go在运行到时才去拿for中的那个参数，可能导致不准，go闭包会暂存状态，也可用局部变量、协程参数
+   - 因为协程并行执行，协程的闭包内部可能并发修改外部的变量和指针对应的值，会导致互相影响。所以调用协程要通过传入闭包参数的形式来固定值
+   - 使用time.Ticker或time.After等方式来代替time.Sleep，防止降低程序性能
 1. 并发编程场景
    - 并发安全
      1. 认识
@@ -2056,7 +2187,7 @@
      1. Mutex的零值是还没有 goroutine 等待的未加锁的状态，所以不需要额外的初始化，直接声明变量即可
      1. 会导致额外开销，因为需要维护等待队列、协程切换等
    - 特点
-     1. 因为Mutex的实现中没有记录哪个 goroutine 拥有这把锁，所以mutex不是可重入的锁，Unlock方法也可以被任意的 goroutine 调用释放锁，所以一定要遵循谁申请、谁释放的原则，尤其注意加解锁不在一个方法里
+     1. 因为Mutex的实现中没有记录哪个 goroutine 拥有这把锁，所以mutex不是可重入的锁，Unlock方法也可以被任意的 goroutine 调用释放锁，所以一定要遵循谁申请、谁释放的原则，尤其注意加解锁不在一个方法里的情况
      1. 模式：正常、饥饿
         - 正常模式：非公平锁，即G1持有锁，G2会自旋尝试获取这个锁，自旋超过4次会被加入到获取锁的等待队列，并阻塞等待唤醒
           1. 队列为FIFO(先进先出)顺序等待
@@ -2126,7 +2257,7 @@
         }
         ```
      1. Lock/Unlock 不是成对出现：保证Lock/Unlock成对出现，尽可能采用 defer mutex.Unlock 的方式，把它们成对、紧凑地写在一起
-     1. Copy已使用的Mutex
+     1. 复制已使用的Mutex，在拷贝锁时会同时拷贝它的状态
      1. 重入：不是可重入的，同一个goroutine重复加锁不对
      1. 死锁
         - 如RWMutex：有活跃reader的时候，writer会等待，如果在reader时调writer（它会调用Lock方法），那么这个reader和writer会形成互相依赖的死锁
@@ -3989,6 +4120,9 @@
         - 兼容url
           1. `base64.URLEncoding.EncodeToString(src)`
           1. `base64.URLEncoding.DecodeString(string(src))`
+     1. url：`net/url`
+        - `url.QueryEscape(s string) string`：编码
+        - `url.QueryUnescape(s string) (string, error)`：解码
      1. csv：csv读写逗号分隔值（csv）的文件
      1. xml：`encoding/xml`，读取Unmarshal，生成Marshal/MarshalIndent
      1. base32

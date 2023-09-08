@@ -105,6 +105,21 @@
 1. zinx
    - 认识：基于tcp的轻量级的带工作池的服务器框架，类似ws的读写分开处理的架构
 #### gRPC
+1. protobuf
+   - 认识：Protocol Buffers，google开发的一种数据序列化协议，二进制格式，与xml、json类似
+     1. 效率高：二进制格式，比文本格式更紧凑，序列化/反序列化速度也很快
+     1. 跨语言支持，包括c++、java、python
+     1. 清晰的结构定义、向后兼容性
+   - 实例
+    ```conf
+    package test;
+    option go_package="test";           // 指定go的包名
+
+    // 定义RPC服务接口
+    service SearchService {
+        rpc Search (SearchRequest) returns (SearchResponse) {}
+    }
+    ```
 1. gRPC
    - 认识：基于http2.0的基于protoBuf的cs型的高性能、开源的rpc框架，比webSocket高效，google主导开发，包 `google.golang.org/grpc`
      1. 支持多语音，默认采用protocol buffers数据序列化协议
@@ -113,8 +128,13 @@
      1. 简单模式：单调的顺序请求、响应
      1. 双向数据流模式：请求、响应并行起来
    - 实例
-     1. proto rpc
-        - 编写proto文件，生成.pb.go代码：`protoc --proto_path=. --go_out=. plugin= protorpc=. arith.proto`，包含了rpc方法定义和服务注册的代码
+     1. proto生成go代码
+        - 编写proto文件，生成.pb.go代码
+          1. `protoc --proto_path=. --go_out=. plugin= protorpc=. arith.proto`，包含了rpc方法定义和服务注册的代码，即有service
+          1. `protoc --proto_path=. --go_out=./ --go-grpc_out=./ ./mind-im-server/pkg/proto/auth/auth.proto`：插件新用法
+        - 插件
+          1. protoc-gen-go
+          1. protoc-gen-go-grpc
         - 使用
           1. 服务端：`pb.ListenAndServeArithService("tcp", "127.0.0.1:8097", new(Arith))`
           1. 客户端
@@ -134,7 +154,6 @@
             ```
      1. grpc
         - 使用
-          1. 编写proto或protoc(有service)文件，
           1. 实现pb.go的RegisterXXServiceServer接口
           1. 服务端
             ```go
@@ -221,8 +240,12 @@
      1. 钩子函数：各种before、after的注入
      1. 各种反射的应用：判断类型、情况
    - 使用
+     1. Query
+        - First、Last：加了ORDER BY
+        - Take
+        - Find
      1. 会抛出ErrRecordNotFound的方法
-        - Take()
+        - Take/First/Last()：find不会
      1. Clause：子句生成器，父级到子集的实现排列为DB --> Statement --> Clause --> Expression
         - 冲突
             ```go

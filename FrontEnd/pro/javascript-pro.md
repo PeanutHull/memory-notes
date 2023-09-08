@@ -330,6 +330,10 @@
 1. 命令行
    - flutter --no-color pub upgrade：更新依赖
 1. 网校架构：![avatar](../../images/wx_flutter_app_framework.jpeg)
+1. 开发
+   - 依赖：`pubspec.yaml`文件
+   - 组件
+     1. bugly：
 ### WebAssembly
 1. 认识：缩写 wasm，是基于堆栈的js抽象虚拟机的二进制指令格式字节码规范。为编程语言的可移植而设计，即使用非js如c/c++/go/rust/swift等编写代码并且能在浏览器上运行的技术方案
    - 理解
