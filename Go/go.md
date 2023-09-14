@@ -1166,13 +1166,13 @@
      1. 函数也是一种类型，也可以实现接口`type funcTypeName func() int`
      1. 类型断言：语法`x.(T)`，形式点+括号+类型，即接口类型向普通类型的转换，运行期确定，通过断言实现类型转换，同时加上判断，防止断言失败导致运行错误。x是类型为interface{}的变量。如：`item.(model.id)`
         ```go
-        func printArray(arr interface{}){
-            a,ok := arr.([]int)                 // 返回转换后的变量、是否成功
-            if ok {}
+        // 返回转换后的变量、是否成功
+        type intS []int
+        a,ok := arr.(intS)
+        if ok {}
 
-            // 简写形式
-            if _, ok := arr.([]int); ok {}
-        }
+        // 简写形式
+        if _, ok := arr.(intS); ok {}
         ```
    - 接口组合：继承，和struct一样，支持组合
     ```go
@@ -2759,6 +2759,7 @@
      1. 普通map并发操作会panic，对sync.Map的读写，不需要加锁
    - 使用场景
      1. 只会增长的缓存系统中，读多写少
+        - 写多的场景会导致read map缓存失效，失效次数增多容易触发dirty map提升为read map，会进一步降低性能
      1. 多个goroutine为不相交的键集读、写、重写键值对
    - 特性
      1. 和普通map相比，仅遍历的方式略有区别

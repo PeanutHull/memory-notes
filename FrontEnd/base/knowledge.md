@@ -49,7 +49,7 @@
             // 发送请求
         }, 3000);
         ```
-   - 长连接：即Comet，基于HTTP长连接的"服务器推"技术。服务端收到请求hold住，有新消息时返回数据，此时客户端再次发起请求，循环下去。即阻塞模型(一直打电话，没收到就不挂电话)，和上边的都体现了http的被动性，服务端不能主动联系客户端。实现方式有ajax、iframe、script脚本
+   - 长连接：即Comet，基于HTTP长连接的"服务器推"技术。服务端收到请求hold住，有新消息时返回数据，此时客户端再次发起请求，循环下去。即阻塞模型(一直打电话，没收到就不挂电话)，服务端不能主动联系客户端。实现方式有ajax、iframe、script脚本
      1. 特点：消息即时送达，无无效请求。对服务端是个考验，需要维护很多长连接，要有高并发的能力
      1. 实例
         ```
@@ -77,6 +77,59 @@
             $ws->push();
         });
         ```
+   - SSE
+     1. 认识：Server-Sent Events，基于http的允许服务端主动推送的技术，客户端不能向上发数据，是单向通讯，是html5标准的一部分，比websocket更简单轻量
+        - 自动重连机制：一旦连接断开，靠的是浏览器自动重连，每个浏览器的重连策略和措施可能不同
+        - content-type：text/event-stream
+     1. 作用
+        - 可实现长耗时的异步处理后通知
+        - 消息通知
+     1. 实现流程
+        - client：发起open event steam请求
+        - server：通过这个连接，推送event
+     1. demo
+        - client
+            ```js
+            const numberElement = document.getElementById("sse");
+            const source = new EventSource('http://localhost:8080/sse');
+
+            source.onmessage = (event) => {
+                numberElement.innerText = event.data;
+            };
+            source.onerror = (error) => {
+                console.error("SSE error:", error);
+            };
+            ```
+        - server：Spring4.2支持
+            ```js
+            var express = require('express')
+            var fs = require('fs')
+            var app = express()
+
+            app.get('/stream', (req, res) => {
+            res.writeHead(200, {
+                "Content-Type": "text/event-stream",
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive"
+            });
+
+            var interval = setInterval(function () {
+                res.write("data: " + (new Date()) + "\n\n");
+            }, 1000);
+
+            req.connection.addListener("close", function () {
+                clearInterval(interval);
+            }, false);
+            })
+
+            app.listen(9999, (err) => {
+            if (err) {
+                console.log(err)
+                return
+            }
+            console.log('listening on port 9999')
+            })
+            ```
 ### 写法和技巧
 1. XMLHttpRequest
   - 组成

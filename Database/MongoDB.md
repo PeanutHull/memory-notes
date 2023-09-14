@@ -356,7 +356,7 @@
 ### 设计
 1. 变更流：可订阅collection、db、sh、rs的数据变更
 1. 存储引擎：WiredTiger、内存
-1. oplog.rs：mongoDB的操作日志文件
+1. oplog.rs：mongoDB的操作日志文件，如记录了文档更新日志，记录了要同步给从的数据，如果从追不上oplog，就得重新初始化
 ### 架构
 1. 架构
    - ReplicaSet：副本集，将数据同步在多个节点中。一主n从架构，一般为三节点架构，oplog用于同步。只能通过主节点将Mongo服务添加到副本集中

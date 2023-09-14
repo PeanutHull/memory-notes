@@ -1,6 +1,6 @@
 ### 认识
 1. 特点
-   - 一切皆文件
+   - 一切皆文件：linux环境下任何事物都以文件的形式存在
    - 对后缀不敏感
 ### 组成
 1. 环境变量
@@ -358,6 +358,34 @@
         - 添加端口：firewall-cmd --zone=public --add-port=80/tcp --permanent
         - 查看端口：firewall-cmd --zone=public --list-ports
         - 开关：systemctl start/disable/restart firewalld
+   - route
+        - 认识：可显示、操作ip路由表，可设置网关来访问Internet
+        - 操作
+          1. 查看
+             - -n：不显示主机名，直接显示ip、port
+          1. 操作：`route add/del [-net|-host] [网域或主机] netmask [mask] [gw|dev]`
+             - -net    ：表示后面接的路由为一个网域
+             - -host   ：表示后面接的为连接到单部主机的路由
+             - netmask ：与网域有关，可以设定netmask决定网域的大小
+             - gw      ：指定网关ip
+             - dev     ：指定发送网卡，如eth0
+        - 实操：`route add -net 192.168.62.0 netmask 255.255.255.0 gw 192.168.1.1`
+        - 结果解析
+          1. Destination：目标网络或目标主机
+          1. Gateway：网关地址，没有显示星号
+          1. Genmask：网络掩码
+          1. Flags：总共有多个旗标，代表的意义如下：                        
+             - U：该路由是启动的                      
+             - H：目标是主机而非网域                      
+             - G：需要透过外部的主机来转递封包                      
+             - R：使用动态路由时，恢复路由资讯的旗标                      
+             - D：已经由服务或转port功能设定为动态路由                       
+             - M：路由已经被修改了                      
+             - !：这个路由将不会被接受
+          1. Metric 距离、跳数。暂无用
+          1. Ref：恒为0，Number of references to this route. (Not used in the Linux  ker-nel.)
+          1. Use：该路由被使用的次数，可以粗略估计通向指定网络地址的网络流量。
+          1. Iface：网络接口名
 1. 参数
    - 查看
      1. 查看进程连接、排队状况：`netstat -lntup`
@@ -397,9 +425,10 @@
      1. cpu：上下文切换成本
 1. 问题定位
    - network
-     1. ping：有些可能禁止检测
      1. telnet：检测端口是否正常
         - `telnet 10.2.4.100 17778`
+     1. ping：有些可能禁止检测
+     1. mtr -rzn ip
      1. strace：跟踪系统调用的执行
         - 查看统计：`strace -p xx -c`
         - 查看实时：`strace -p xx -T -s 4094`
@@ -794,7 +823,10 @@
    - 显示e或a：`grep 'w[ea]ll' a.log`
    - 匹配以非2、1、0开头的行：`grep ^[^210] file`
 #### 网络
-1. 查看
+1. 认识
+   - OpenSSL：是用于TLS和SSL的工具包和加密库，可用来进行安全通信，包含了SSL协议库、应用程序、密码算法库
+   - Socket：应用层与各种网络协议通信的中间软件抽象层，是一组调用接口/API/封装。用socket组织数据，兼容多网络协议，负责程序通信，以符合指定的协议
+1. 常用
    - ifconfig：显示、设置网络
      1. -a：inet addr，ip addr
      1. 设置
@@ -805,15 +837,29 @@
         - `ifconfig eth0 hw ether 00:AA:BB:CC:DD:EE`：修改MAC地址
         - `ifconfig eth0 arp/-arp`：开关arp
         - `ifconfig eth0 mtu xx`：设置最大数据包，字节
-   - nethogs：实时将进程按网络流量列表显示
-   - iftop：实时流量监控工具
-     1. TX：发送流量
-     1. RX：接收流量
-     1. TOTAL：总流量
-     1. Cumm：运行iftop到目前时间的总流量
-     1. peak：流量峰值
-     1. rates：分别表示过去 2s 10s 40s 的平均流量
-   - netstat：显示网络连接/运行端口/路由表等，太慢淘汰
+   - curl
+     1. -X POST：
+     1. -x '127.0.0.1：80'
+     1. -H 'CONTENT-TYPE:application/json' -H 'traceid:123abc'：多个就写多个-H
+     1. -d '{"id":xx}'：http post data
+     1. -i 查看返回头
+     1. -v：查看请求详细信息
+     1. -w "\n dnslookup: %{time_namelookup} | connect: %{time_connect} | appconnect: %{time_appconnect} | pretransfer: %{time_pretransfer} | starttransfer: %{time_starttransfer} | total: %{time_total}\n"：建立TCP连接所用时间、请求发出后服务器返回数据的第一个字节所用的时间、总时间
+        - time_namelookup：dns解析总共消耗的时间
+        - time_connect：从开始dns解析到tcp建联成功之间总共消耗的时间
+        - time_appconnect：从开始dns解析到ssl握手成功之间总共消耗的时间，以收到Finished包为准。
+        - time_pretransfer：从开始dns解析到发起http请求之间总共消耗的时间
+        - time_starttransfer：从开始dns请求到服务器响应首个字节之间总共消耗的时间
+        - time_total：整个请求所消耗的时间，包含dns解析、tcp握手和ssl握手的时间
+     1. –http2 / --http1.1 / --http1.0：指定协议
+     1. `curl ipinfo.io/curl cip.cc`：查看出口ip
+     1. `curl -Lvo /dev/null -s -w 'DNS解析时长：%{time_namelookup}\n建立tcp时长：%{time_connect}\n客户端到服务器时长：%{time_starttransfer}\n从开始到结束时长：%{time_total}\n下载速度：%{speed_download}\nSSL建联时间%{time_appconnect}\n请求总耗时%{time_total}\n' https://xxx`：查看耗时
+1. 和进程相关
+   - lsof
+     1. 认识：list open files，列出打开的文件
+     1. `lsof -i:80`：查看端口号对应的进程
+   - netstat
+     1. 认识：显示网络连接/运行端口/路由表等，太慢淘汰了
      1. 实例
         - `netstat -antl | grep 30000`：查看某个端口的使用情况
         - `ps aux | grep 30000`：查看端口占用的进程
@@ -823,7 +869,8 @@
         - -s：网络详细统计
         - –e：网络统计
         - -r：路由信息
-   - ss：Socket Statistics，用来获取socket统计信息，显示和netstat类似，优势在于能显示更详细的TCP和连接状态的信息，比netstat更快速更高效
+   - ss
+     1. 认识：socket statistics，用来获取socket统计信息，显示和netstat类似，优势在于能显示更详细的tcp和连接状态的信息，比netstat更快速更高效
      1. 实例
         - ss -ant：查看本机所有tcp连接
         - ss -ntpl：每个进程具体打开的tcp
@@ -837,6 +884,64 @@
         - -u -a：所有udp Socekt
         - src/dst xx.xx.xx.xx：显示本地/远端某ip的连接
         - dport OP port：显示和端口的连接，OP为运算符，<=、==、!=、<
+1. 检测相关
+   - 网络链路
+     1. telnet ip port：检测端口是否打开
+     1. ping：查看总的延时和丢包率，ping对于ssl的建联时间判定有100ms左右的误差
+     1. mtr
+        - 认识：my traceroute，查看每个节点延时和丢包率，把ping和traceroute合并到一个程序的网络诊断工具
+          1. 显示数据包通过节点或者路由器来达到目的主机的一系列跳数
+          1. 默认使用ICMP包，有点节点会限制ICMP包导致不能正常显示，ICMP在某些路由节点的优先级要比其他数据包低，所以测试得到的数据可能低于实际情况
+        - 使用
+          1. -u看udp包，二者结合看节点；看最后一行，才是最终正确的
+          1. -r：会发10个ICMP包并打印报告，否则一直动态运行，
+          1. -s：指定数据包大小
+          1. -c：指定数据包数量
+          1. -n：不对主机host name进行解释
+          1. -4、-6：只使用IPv4、6协议
+        - 输出参数
+          1. Loss：丢包率
+          1. Snt：已发送的包数
+          1. Last：最后一个包的延时
+          1. Avg：平均延时
+          1. Best：最低延时
+          1. Wrst：最差延时
+          1. StDev：方差（稳定性）
+        - 实例
+          1. `mtr ip`：交互式界面，持续进行
+          1. `mtr -rzn ip`：进入监测状态
+     1. tracepath：端对端路由检测
+     1. traceroute：显示网络数据包传输到指定主机的路径信息，追踪数据传输路由状况，默认使用udp数据包探测
+     1. strace
+   - 域名
+     1. nslookup：域名检测
+     1. dig：域名检测，从DNS域名服务器查询主机地址信息
+     1. host
+     1. openssl：查看网站证书链`openssl s_client -connect github.com:443 -showcerts`
+        - 网站检测：myssl.com
+1. 文件相关
+   - wget
+   - ftp/sftp
+   - sz/rz
+   - scp
+     1. 上传：`scp [-r] local addr@ip:/addr`
+     1. 下载：`scp [-r] addr@ip:/addr local`
+   - rcp
+     1. 认识：remote file copy 远程文件拷贝，把远程的文件拿过来
+     1. 例子：`rcp root@127.0.0.1:/xxx xxx`
+   - rsync
+     1. 认识：linux的文件备份、同步工具
+        - 计算源文件和目标文件的差异，仅同步差异（因为全量成本高）
+        - 压缩、解压数据以进一步提高速度
+     1. 参数
+        - --address=
+        - --port=10873
+        - --daemon
+        - -r：同步
+        - -av：同步文件，删除--delete
+   - samba
+     1. 运维：`yum install samba`，配置：`/etc/samba/smb.conf`，即可开始共享文件
+1. 抓包相关
    - tcpdump
      1. 认识：网络数据包分析器，是网络分析和问题排查的首选工具。支持针对网络层/协议/主机/端口的过滤，并提供and/or/not等逻辑语句去掉无用信息
         - 使用tcpdump抓到包后，往往需要再借助其他的工具进行分析，比如常见的wireshark
@@ -880,84 +985,21 @@
         - 抓get的包：`tcpdump -s 0 -A -vv 'tcp[((tcp[12:1] & 0xf0) >> 2):4] = 0x47455420'# or$ tcpdump -vvAls0 | grep 'GET'`
         - 提取请求头：` tcpdump -nn -A -s1500 -l | grep "User-Agent:"`
         - 找出发包最多的ip：`tcpdump -nnn -t -c 200 | cut -f 1,2,3,4 -d '.' | sort | uniq -c | sort -nr | head -n 20`
-1. 检测
-   - ping：连通性
-   - lsof：list open files，列出打开文件。linux环境下任何事物都以文件的形式存在
-     1. `lsof -i:80`：查看端口号，root用户查看
-   - telnet ip port：检测端口是否打开
-   - dig：域名检测，从DNS域名服务器查询主机地址信息
-   - nslookup：域名检测
-   - host
-   - tracepath：端对端路由检测
-   - route
-     1. 认识：可显示、操作ip路由表，可设置网关来访问Internet
-     1. 操作
-        - 查看
-          1. -n：不显示主机名，直接显示ip、port
-        - 操作：`route add/del [-net|-host] [网域或主机] netmask [mask] [gw|dev]`
-          1. -net    ：表示后面接的路由为一个网域
-          1. -host   ：表示后面接的为连接到单部主机的路由
-          1. netmask ：与网域有关，可以设定netmask决定网域的大小
-          1. gw      ：指定网关ip
-          1. dev     ：指定发送网卡，如eth0
-     1. 实操：`route add -net 192.168.62.0 netmask 255.255.255.0 gw 192.168.1.1`
-     1. 结果解析
-        - Destination：目标网络或目标主机
-        - Gateway：网关地址，没有显示星号
-        - Genmask：网络掩码
-        - Flags：总共有多个旗标，代表的意义如下：                        
-          1. U：该路由是启动的                      
-          1. H：目标是主机而非网域                      
-          1. G：需要透过外部的主机来转递封包                      
-          1. R：使用动态路由时，恢复路由资讯的旗标                      
-          1. D：已经由服务或转port功能设定为动态路由                       
-          1. M：路由已经被修改了                      
-          1. !：这个路由将不会被接受
-        - Metric 距离、跳数。暂无用。
-        - Ref：恒为0，Number of references to this route. (Not used in the Linux  ker-nel.)
-        - Use：该路由被使用的次数，可以粗略估计通向指定网络地址的网络流量。
-        - Iface：网络接口名
-   - traceroute：显示网络数据包传输到指定主机的路径信息，追踪数据传输路由状况
-   - openssl：查看网站证书链`openssl s_client -connect github.com:443 -showcerts`
-     1. 网站检测：myssl.com
-1. 应用
-   - wget
-   - curl
-     1. -X POST：
-     1. -x '127.0.0.1：80'
-     1. -H 'CONTENT-TYPE:application/json' -H 'traceid:123abc'：多个就写多个-H
-     1. -d '{"id":xx}'：http post data
-     1. -i 查看返回头
-     1. -v：查看请求详细信息
-     1. –http2 / --http1.1 / --http1.0：指定协议
-     1. `curl ipinfo.io/curl cip.cc`：查看出口ip
-   - rsync
-     1. 认识：linux的文件备份、同步工具
-        - 计算源文件和目标文件的差异，仅同步差异（因为全量成本高）
-        - 压缩、解压数据以进一步提高速度
-     1. 参数
-        - --address=
-        - --port=10873
-        - --daemon
-        - -r：同步
-        - -av：同步文件，删除--delete
-   - samba
-     1. 运维：`yum install samba`，配置：`/etc/samba/smb.conf`，即可开始共享文件
-   - scp
-     1. 上传：`scp [-r] local addr@ip:/addr`
-     1. 下载：`scp [-r] addr@ip:/addr local`
-   - rcp
-     1. 认识：remote file copy 远程文件拷贝，把远程的文件拿过来
-     1. 例子：`rcp root@127.0.0.1:/xxx xxx`
-   - sz/rz
-   - ftp/sftp
+        - 抓ip是xx的包并写入pcap文件：`tcpdump -iany host 125.39.223.xx -w xx.pcap`
+1. 登录
    - ssh
    - telnet：用于远程登录，基于TCP/IP协议族一员的telnet协议，采用明文传送报文安全性不好，都用ssh
-   - nc
-1. wiki
-   - OpenSSL：是用于TLS和SSL的工具包和加密库，可用来进行安全通信，包含了SSL协议库、应用程序、密码算法库
-   - Socket：应用层与各种网络协议通信的中间软件抽象层，是一组调用接口/API/封装。用socket组织数据，兼容多网络协议，负责程序通信，以符合指定的协议
-   - netcat：tcp/ip的瑞士军刀，体积小，功能灵活
+1. 其他
+   - bestTrace：查看AS等网络包跳转路由，命令行和客户端形式
+   - netcat：即nc，tcp/ip的瑞士军刀，体积小，功能灵活
+   - nethogs：实时将进程按网络流量列表显示
+   - iftop：实时流量监控工具
+     1. TX：发送流量
+     1. RX：接收流量
+     1. TOTAL：总流量
+     1. Cumm：运行iftop到目前时间的总流量
+     1. peak：流量峰值
+     1. rates：分别表示过去 2s 10s 40s 的平均流量
 #### 磁盘
 1. 认识
    - linux规定，硬盘用sda/sdb/sdc依次命名，一块硬盘只能存在4个主分区，为sda1/sda2/sda3/sda4，逻辑分区不限制数量，从5开始

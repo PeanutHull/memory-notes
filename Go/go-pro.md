@@ -125,6 +125,46 @@
           1. 通过索引找到对应的链表
           1. 遍历链表对比key和目标key
           1. 相等则返回value
+1. sync.Map
+   - 结构
+    ```go
+    type Map struct {
+        mu Mutex                            // 在read中查不到key时，加锁，继续在dirty中查找，mu就是那把锁
+        read atomic.Pointer[readOnly]       // read map：查询缓存，具有原子性，可以做到避免加锁就能查找数据。正是这一点，在读多写少的场景下，sync.Map比map+锁的形式 查询效率更高
+        dirty map[any]*entry                // dirty map：新增的k-v
+        misses int                          // 每次在read中查询失效，都会在misses中+1，如果misses值>dirty的长度，就会将dirty中的数据都添加到read中
+    }
+
+    type readOnly struct {
+        m       map[any]*entry              // 保存k-v的map
+        amended bool                        // 表示dirty中是否有数据
+    }
+
+    type entry struct {
+        p atomic.Pointer[any]
+    }
+    ```
+   - 解析
+     1. 利用机制保障read map的原子性去提高性能，利用misses数量保障dirty map的刷新
+     1. 两个map中相同的key指向同一个entry，每个entry的p指针都有3种状态
+        - nil：表示这个k-v已经删除，并且dirty为nil或者dirty[k]指向这个entry
+        - expunged：表示这个k-v已经被删除，但是dirty!=nil，m.dirty中没有这个key
+        - 正常状态：如果p存的是正常的数据，read和dirty会指向同一个entry
+     1. 加锁：使用了doubleCheck确保无误
+   - 实现
+     1. Store的过程
+        - 如果在read中能够key，且对应的entry中的p是正常的数据，表示key没有被删除，就直接更新entry
+        - 否则，read中没有这个key，或者这个key被标记为删除，这时就加锁mu
+        - 再次确认read中是否有这个可以，这里就是为了重新确认一下
+        - 如果存在，但是entry中的p为expunged，表示k-v被删除。这时将p的状态改为nil，在dirty map中插入key，更新对应的entry
+        - 如果read中不存在key，就看dirty中是否有key，如果有，直接更新entry
+        - 如果read、dirty中都没有key。如果dirty为空，就创建dirty，并将未被删除的元素复制到dirty中；更新amended字段，表示dirty中有新k-v了，将新的k-v添加到dirty中
+     1. Load的过程
+        - 直接在read中查找key，存在就返回对应的entry；
+        - read中不存在，amended为false，表示dirty中为空，就直接返回
+        - 否则，加锁，在read中重新确认。read中没有，就在dirty中查找
+        - 加锁后，无论是否找到都会将misses+1
+        - 如果misses>=len(dirty)，表示在read中查询失效次数过多，就将dirty晋升为read，并清空dirty和misses
 1. 结构体
    - 内存对齐
 ### 语法
