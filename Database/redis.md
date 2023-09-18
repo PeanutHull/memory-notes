@@ -1084,3 +1084,5 @@
         - 对随机数和随机结果进行了特殊处理，可以生成了当参数传递进去
         - 脚本执行是原子的，单线程的，lua-time-limit限制脚本最长执行时间，之后接受其他指令不执行返回busy，只执行两个指令：script kill和shutdown nosave。kill还是等到脚本执行完毕，因为要原子性，nosave可以立即终止，但是丢数据
         - 不应该在脚本中执行耗时的操作，因为redis单线程，程序却是多进/线程
+   - wiki
+     1. 速查表：https://github.com/skywind3000/awesome-cheatsheets/blob/master/languages/lua.lua

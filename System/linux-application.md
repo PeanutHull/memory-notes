@@ -606,6 +606,7 @@
    - dns：智能dns，DNS view，可根据用户ip返回不同的ip，解决了同域名不同解析地址问题，使用bind 9
    - 标准化、自动化、平台化、服务化
    - DevOps：Developers+Operators
+     1. DevSecOps：强调安全是端到端集成的共同责任，一开始就考虑应用程序和基础设施的安全性，以防止DevOps工作流程变慢
    - SRE：Site Reliability Engineer，网站可靠性工程师
    - SLA：Service-Level Agreement，服务等级协议，保证要提供的服务协议，包括正常运行时间占比，如运营商承诺的带宽、时延、抖动、丢包率
 1. 实操

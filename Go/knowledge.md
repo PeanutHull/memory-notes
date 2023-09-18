@@ -201,12 +201,37 @@
         - 服务治理：支持Failover、Failfast、Failtry、Backup等失败模式，支持随机、轮询、权重、网络质量、一致性哈希、地理位置等路由算法
      1. SPRC：搜狗基于Sogou C++ Workflow的企业级RPC系统，qps几十万，支持Protobuf、Thrift
 ### 库
+1. 执行相关
+   - brahma-adshonor/gohook：在运行时动态挂钩go函数，从而实现动态语言修补等功能。
+     1. 总体思路是gohook会找出go函数的地址，然后插入一些跳转指令将执行流程重定向到新函数
+        - 找出函数的地址，这可以通过标准反射库来完成
+        - 使用精心设计的二进制指令将跳转代码注入目标函数
+        - 实现trampoline函数以允许回调到原始函数
 1. 业务相关
    - casbin/casbin：访问控制库，支持ACL/RBAC/ABAC
 1. json
-   - json-iterator/go：几倍性能于标准库`encoding/json`的100%兼容的json库
+   - json-iterator/go：几倍性能的100%兼容的标准库`encoding/json`的json库
      1. 只有使用struct才能获得显著的性能提升，因为struct只需一次反射，map每次都要
      1. 1.10后性能和标准库差不多了，意义不大了
+   - sonic
+     1. 背景
+        - 平时业务里json操作cpu占用基本10%，甚至40%
+        - json-iterator在泛型编解码、大数据量级场景下的性能也会下降
+     1. 认识：字节开源的基于JIT、向量化编程、lazy-load设计思想，大幅提升go的json编解码性能，在网关、转发和入口服务等计算密集型提升较大性能
+        - 核心技术点是使用c语言编写热点操作，使用clang的深度优化编译选项编译后供golang调用
+        - 不使用cgo
+          1. 实现简便、调用方便、cgo也可以对c代码进行o3级别的优化
+          1. cgo在调用c代码的时候引入了调度、切换线程栈等开销，会造成较大（有的场景中高达20多倍）的性能损耗
+     1. 实现
+        - 热点操作编译成汇编
+          1. 代码级优化
+             - SIMD：根据预设条件（字符串长度、float精度），动态选择使用向量化编程或标量编程
+             - loop unrolling，为什么要在编码阶段做？
+               1. 若编译器在编译阶段即可知道循环次数，会自动做loop unrolling。因为此处因为字符串的长度不可知，编译器不知如何优化，因此在编码阶段实现
+               1. 编译器可以做到直接优化到直接返回运算结果
+          1. sonic当前支持avx、avx2和sse三个向量指令集来编译：clang编译出来的是x86，golang是plan9。为在golang中调用clang编译出来的汇编，字节开发工具(tools/asm2asm)转换为plan9
+          
+   - tango
    - simpleJson：json快速处理器，关键部分c实现
 1. 任务调度
    - libi/dcron：基于一致性哈希的分布式定时任务库
