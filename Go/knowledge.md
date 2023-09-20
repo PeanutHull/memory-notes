@@ -105,25 +105,12 @@
 1. zinx
    - 认识：基于tcp的轻量级的带工作池的服务器框架，类似ws的读写分开处理的架构
 #### gRPC
-1. protobuf
-   - 认识：Protocol Buffers，google开发的一种数据序列化协议，二进制格式，与xml、json类似
-     1. 效率高：二进制格式，比文本格式更紧凑，序列化/反序列化速度也很快
-     1. 跨语言支持，包括c++、java、python
-     1. 清晰的结构定义、向后兼容性
-   - 实例
-    ```conf
-    package test;
-    option go_package="test";           // 指定go的包名
-
-    // 定义RPC服务接口
-    service SearchService {
-        rpc Search (SearchRequest) returns (SearchResponse) {}
-    }
-    ```
 1. gRPC
-   - 认识：基于http2.0的基于protoBuf的cs型的高性能、开源的rpc框架，比webSocket高效，google主导开发，包 `google.golang.org/grpc`
-     1. 支持多语音，默认采用protocol buffers数据序列化协议
-     1. 可实现多路复用，就是并发的请求和接收
+   - 认识：基于http2.0 + protocol buffer的cs型的高性能的开源的通用的rpc框架，比webSocket高效，google主导开发，包 `google.golang.org/grpc`
+     1. 语言中立，支持多语音，默认采用protocol buffers数据序列化协议，支持c(c++、node.js、c#)、java、go
+     1. 基于IDL文件定义服务，通过proto3工具生成指定语言的数据结构、服务端接口以及客户端Stub
+     1. 支持双向数据流、消息头压缩、单tcp多路复用、服务端推送等，gRPC在移动端设备上更加省电和节省网络流量
+     1. 序列化支持protocol buffer和json
    - 模式
      1. 简单模式：单调的顺序请求、响应
      1. 双向数据流模式：请求、响应并行起来
@@ -209,7 +196,7 @@
         - phprpc、yar、swoole、hprose
      1. 跨语言：没有服务发现、负载均衡等相关机制
         - grpc
-        - thrift(接口描述语言和二进制通讯协议，apache的)
+        - thrift：接口描述语言和二进制通讯协议，结构和grpc很像，facebook捐赠给apache
      1. 支持服务治理等服务化特性的分布式服务框架：dubbo、spring cloud
         - go的rpcx
           1. 高性能：gRPC性能的两倍
@@ -255,6 +242,25 @@
         - 日志：应用级相关日志，对访问、超时、内部异常等需要有日志覆盖
      1. 微服务管理后台：查看、控制等
      1. 运维体系集成：CI\CD、CMDB、发布系统、k8s、监控系统等
+1. Protocol Buffers
+   - 认识：protobuf，google开发的一种数据序列化协议，二进制格式，和xml/json都是编码方式
+     1. 效率高：二进制格式，比文本格式更紧凑，序列化/反序列化速度也很快
+     1. 跨语言支持，包括c++、java、python
+     1. 清晰的结构定义、向后兼容性
+   - 实例
+    ```conf
+    package test;
+    option go_package="test";           // 指定go的包名
+
+    // 定义RPC服务接口
+    service SearchService {
+        rpc Search (SearchRequest) returns (SearchResponse) {}
+    }
+    ```
+   - 其他
+     1. MessagePack：高效的二进制的跨语言的序列化框架
+     1. thrift：高性能、跨语言
+     1. java默认：java.io.Serializable，字节数组，无法跨语言、体积大、效率低
 ### 库
 1. 执行相关
    - brahma-adshonor/gohook：在运行时动态挂钩go函数，从而实现动态语言修补等功能。
