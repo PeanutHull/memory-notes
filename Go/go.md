@@ -900,6 +900,53 @@
         func panic(interface{})         // 接受任意类型参数 无返回值 
         func recover() interface{}      // 可以返回任意类型 无参数
         ```
+     1. 常见panic情况
+        - slice越界：判断长度
+        - map没有初始化就直接使用、多个groutine读写map
+        - 空指针异常
+          1. 结构体连续取值中间的为nil：req.UserInfo.Signature：改为使用方法获取
+            ```go
+            var p *Person
+            fmt.Println(p)
+            fmt.Println(p.Name)
+
+            // panic: runtime error: invalid memory address or nil pointer dereference
+            ```
+          1. 方法连续调用中间的为nil：req.GetUserInfo().GetSignature()：逻辑增加先判断是否为nil
+        - 类型断言失败：判断断言是否成功
+            ```go
+            func main() {
+                add(20, 18)
+                add(1, "hello")
+            }
+            func add(a, b interface{}) {
+                i := a.(int)
+                j := b.(int)
+                fmt.Println(i+j)
+            }
+            // panic: interface conversion: interface {} is string, not int
+            ```
+        - 写为空的、已关闭的通道，重复关闭chan
+            ```go
+            func main() {
+                var ch chan int
+                ch = make(chan int,0)
+                close(ch)
+                ch <- 108
+            }
+            // panic: close of nil channel
+            ```
+        - 使得所有线程睡眠造成死锁、goroutine竞争资源
+            ```go
+            func main() {
+                var ch chan int
+                ch = make(chan int)
+                ch <- 108
+            }
+            // fatal error: all goroutines are asleep - deadlock!
+            ```
+        - 除数为0
+        - 递归死循环或者超出栈空间造成内存溢出
      1. 实例
         ```go
         // 简单版
@@ -5338,57 +5385,3 @@
      1. golint：代码规范检查，关注编码风格，打印出代码规范的错误
      1. gometalinter：代码静态分析并规范化其输出的linter工具集
    - 配置注释空格：设置 Preferences > Editor(编辑器) > Code Style(代码样式) > Go > Other 勾选上 Add leading space to comments
-1. rpc
-   - 认识：Remote Procedure Call Protocol，远程过程调用协议，打通了应用层和传输层，不需要关注通信细节直接调用远程方法，实现函数调用模式的网络化
-     1. 包含了传输协议、编码协议
-     1. 内含多种实现方案(socket/管道)，linux的固定端口111
-   - 意义
-     1. 不用关心连接的网络细节
-     1. 支持了分布式部署
-     1. 程序内连接，解耦
-     1. 面向过程，restful面向资源
-   - 分类
-     1. java：古老的RMI、dobbu、motan、spring cloud
-        - 如dobbu是产品级的rpc框架
-     1. go：rpcx
-     1. 跨语言：grpc、thrift(接口描述语言和二进制通讯协议，apache的)
-        - 没有服务发现、负载均衡等相关机制
-     1. 其他：phprpc、yar、swoole、hprose
-   - 跨语言rpc
-     1. 实现基础：通用数据结构
-     1. 实现方式
-        - 文件方式：web service
-          1. 实现原理：将被调用的方法名、参数封装到WSDL的xml文件中，然后解析xml进行调用
-          1. 弊端：xml的数据传输低效性，网络传输的路径长(基于http协议)
-        - 二进制方式：新一代rpc实现原理
-          1. 编写描述文件
-          1. 转换描述文件为相应语言的数据结构(结构体、类等)，使用Protobuf
-          1. 翻译：将数据结构转为二进制数据、字节数组
-          1. 传输：通过socket传给另一个编程语言
-          1. 再次翻译：翻译为本语言的数据结构
-          1. 调用执行
-   - 最佳实践：![avatar](../images/go/rpc_struct.png)
-     1. 基础能力
-        - 核心通信能力：请求构建封装、序列化、网络传输、反序列化、服务端处理等多个环节
-          1. 调用方式：oneway、async（异步）、sync(同步)、stream 
-        - 高性能：框架级别通讯耗时p99 1～2ms左右，单POD如4核 2GJVM进程能支持10w～15w以上qps
-        - 高可用：关键依赖如注册中心的可用性
-          1. 强AP: 对数据的可用性要求很高，对节点数据不一致性要求不太高，甚至异常情况可允许部分节点错误
-        - 服务注册发现
-        - 容错：FailFast（快速失败）、FailOver（重试）、FailBack（后台自动调用恢复）
-     1. 服务治理能力
-        - 限流：限流粒度可以基于IP、上游服务标识、调用接口、参数等
-        - 熔断降级：返回特定的降级逻辑从而不影响核心业务；常见判断指标有线程数、信号量、错误率、超时数等
-        - 其他：务内调用强弱依赖度分析、客户端自适应容错等
-     1. 流量管控
-        - 流量路由：支持请求按条件、标签、脚本等自动路由能力，实现类似服务分组、版本分组调用，实例tag分组，按机房、地域等流量分配能力，基于以上路由能力可以构建相关服务治理场景如流量分组、机房调度、灰度、泳道能力等
-        - 负载均衡：在流量路由的基础上完成对该组内节点的流量分配，常见的LB算法有随机、随机+权重，一致性Hash、roundrobin、最小连接等
-        - 其它
-          1. 优雅上下线
-          1. 服务预热：循环更新
-     1. 应用可观测性
-        - 监控：应用核心metric，例如每秒请求数、错误数、超时数、异常数等等（可覆盖应用、接口、方法等统计维度）
-        - trace：全链路追踪系统，把请求从API 网关、服务层各层调用节点进行串联， 可用来分析请求过程中服务、资源相关调用情况、调用瓶颈，强弱依赖等
-        - 日志：应用级相关日志，对访问、超时、内部异常等需要有日志覆盖
-     1. 微服务管理后台：查看、控制等
-     1. 运维体系集成：CI\CD、CMDB、发布系统、k8s、监控系统等
