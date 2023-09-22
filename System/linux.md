@@ -915,7 +915,7 @@
      1. strace
      1. time curl xxxx：输出花费的时间
    - 域名
-     1. nslookup：域名检测
+     1. nslookup：查看域名会被解析出来的多个ip
      1. dig：域名检测，从DNS域名服务器查询主机地址信息
      1. host
      1. openssl：查看网站证书链`openssl s_client -connect github.com:443 -showcerts`

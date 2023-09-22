@@ -13,6 +13,8 @@
    - 反向代理：负载均衡、缓存
    - 虚拟主机：实现一台服务器虚拟出多个网站
    - 静态资源服务器：如js、images，本地文件系统
+1. nginx controller
+   - 可视化管理多个nginx实例的配置，如location、upstream等
 ### 组成
 #### 指令
 1. 指令
@@ -366,6 +368,13 @@
      1. 全部w进程，生效开始阶段：preaccess
      1. limit_conn依赖有效性取决于key的设计，依赖postread阶段的realip模块的真实ip
      1. limit_req是漏桶算法
+   - 速率控制：在nginx11个处理阶段的content阶段，通过过滤模块ngx_http_write_filter_module完成
+   - 带宽控制：针对单个连接进行带宽限制
+     1. 指令：limit_rate
+        - 格式：limit_rate rate;
+        - 默认：limit_rate 0;
+        - 生效的上下文：http, server, location, if in location
+     1. 第三方指令：ngx_limit_speed_module，通过定义共享内存区域可以让多个worker进程共享带宽数据从而方便地进行客户端总带宽的限制
    - 组成
      1. limit_conn：限制同时存在的连接数
      1. limit_req：限制每秒请求处理数
@@ -380,14 +389,38 @@
      1. `limit_req`：限制数量
      1. `limit_req_log_level`：限制发生时的日志级别
      1. `limit_req_status`：限制发生时的返回码
-1. cache：缓存
-   - proxy_cache
-    ```conf
-    proxy_cache cacheName;
-    proxy_cache_key $host$uri$is_args$args;     // 设置缓存的key
-    proxy_cache_valid 200 304 302 1d;           // 为不同响应码设置缓存时间      
-    proxy_pass http://xx;                       // 缓存的是这个结果
-    ```
+1. cache
+   - 认识：缓存，ngx_http_proxy_module模块。缓存原理、缓存配置、缓存管理、常见问题解决方案
+   - 实现方式
+     1. proxy_cache：通过作为反向代理服务器来实现，将缓存结果存在nginx上
+        ```conf
+        proxy_pass http://xx;                                                                           // 要缓存这个结果
+
+        proxy_cache                         cacheName;                                                  // 缓存名
+        proxy_cache_path                    /var/cache/nginx levels=1:2 keys_zone=my_cache:10m;         // 缓存文件的存储路径
+        proxy_cache_key                     $host$uri$is_args$args;                                     // 设置缓存的key
+        proxy_cache_key                     "$scheme$request_method$host$request_uri";
+        proxy_cache_methods                 GET;
+        proxy_cache_valid                   200 304 302 1d;                                             // 为不同响应码设置缓存有效期
+        proxy_cache_valid                   any 1m;                                                     // 其它的保存一分钟
+        proxy_cache_bypass                  $cookie_nocache $arg_nocache$arg_comment;                   // 配置不走缓存响应的条件，作用域：http, server, location
+        proxy_no_cache                      $cookie_nocache $arg_nocache$arg_comment;                   // 和上边配合使用
+        proxy_cache_min_uses                1;                                                          // 设置某个请求达到指定次数后才对其进行缓存,作用域：http, server, location，默认值：proxy_cache_min_uses 1;
+        ```
+     1. proxy_store：会将文件保存到目录
+        ```conf
+        proxy_store on;
+        proxy_temp_path /home/tmp;
+        ```
+     1. fastcgi_cache：通过FastCGI协议实现
+     1. memcache等其他三方插件
+        ```conf
+        set $memcached_key "$1";
+    　　memcached_pass     x.x.x.x:11211;
+        ```
+   - 操作
+   1. 清除缓存：删除缓存目录或重启nginx
+   1. 强制刷新缓存：使用Pragma、Cache-Control头
 1. subFilter：请求过滤
    - sub模块：将响应中指定字符串替换为新字符串
      1. sub_filter
@@ -903,7 +936,7 @@
         }
 
         location /error502grpc {
-            internal;                   # ???
+            internal;                   # 指明这个目录不能在外部直接访问到
             
             return 204;
         }

@@ -520,7 +520,14 @@
           1. 生命周期：挂起、运行、成功、失败、未知，和调度、创建、停止相关
      1. Storage：存储，volume
      1. Service：为一组Pod提供负载均衡，对外提供统一访问入口。主要解决pod ip短生命周期带来的问题，kube-proxy是Service的一部分，有四种类型，可以实现接受外边的访问
-     1. Ingress：路由，相当于7层负载均衡器，工作原理类似nginx
+     1. Ingress：路由，作用是定义请求如何转发到service的规则。相当于7层负载均衡器
+        - ingress-controiler：ingress依靠其来实现具体功能，有不同的ingress-controller实现，官方有google云的GCE与ingress-nginx两个
+          1. 原理：其形式都是一个pod，里面跑着demon程序和反向代理程序。daemon负责不断监控集群的变化，根据ingress对象生成配置并应用新配置到反向代理
+          1. 步骤
+             - ingress-controller通过和kubernetes APIServer交互，动态的去感知集群中ingress规则变化
+             - 然后读取它，按照自定义的规则，规则就是写明了哪个域名对应哪个service，生成一段nginx配置
+             - 再写到nginx-ingress-controller的pod里，这个ingres-controller的pod里运行着一个Nginx服务，控制器会把生成的nginx置写入/etc/nginx.conf文件中
+             - 然后reload一下使配置生效。以此达到域名区分配置和动态更新的作用
      1. Job：任务
      1. ConfigMap：配置映射，实际是环境变量键值列表
      1. Secret：机密配置，类似ConfigMap，只是会进行加密
