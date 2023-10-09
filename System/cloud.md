@@ -587,15 +587,23 @@
 1. 网络
    - 认识：CNI定义容器网络规范
    - service实现：Service clutserIP就是node side Loadbalancer
-     1. Iptables
-     1. IPVS
-     1. BPF
+     1. 认识：LoadBalancer类型的Service默认实现是基于NodePort：CLB会绑定各节点的NodePort作为后端RS（Real Server），将流量转发到节点的NodePort，节点再通过Iptables或IPVS将请求路由到Service对应的后端Pod（即 Nginx Ingress Controller 的 Pod）。后续如有节点的增删，CLB 也会自动更新节点NodePort的绑定
+     1. 转发方式
+        - Iptables
+        - IPVS
+        - BPF
    - 模式分类
      1. 隧道封包模式: 静态路由/ebpf/VxLan/IPIP/GRE/IPVlan/MACVlan，通过tunnel隧道封包建立overlay网络，实现Pod到Pod的通信
      1. 路由模式：通过映射目标容器网段和主机IP的关系，Pod之间的通信数据包通过路由表转发到相应节点上
    - 大型容器网络
      1. 经典：用VxLAN构建大型overlay网络，从google到阿里云底层都使用这种方式构建数据中心网络，使用MAC in UDP的方法进行封装，对端进行解封
      1. BGP Router模式
+   - 容器网络与集群网络
+     1. 集群网络：为集群内主机分配在节点网络地址范围内的ip地址，如使用腾讯云的VPC
+     1. 容器网络：为集群内容器分配在容器网络地址范围内的 IP 地址
+        - GlobalRouter模式：可以自定义三大私有网段作为容器网络，根据选择的集群内服务数量的上限，自动分配适当大小的CIDR段用于 Kubernetes service。也可根据选择的每个节点的Pod数量上限，自动为集群内每台云服务器分配一个适当大小的网段用于该主机分配Pod的IP地址。此模式基于底层私有网络VPC的全局路由能力，实现了容器网络和VPC互访的路由策略
+        - VPC-CNI模式
+        - Cilium-Overlay模式：基于Cilium VXLan实现的容器网络插件，可设置Overlay容器网段
 1. 运维
    - 安装：单机安装、集群安装
    - 操作

@@ -4311,16 +4311,46 @@
           1. `Read()/ReadAt()/Seek()`：设置文件相对于当前/首/尾的偏移量
           1. `Write()/WriteString()`
         - 命令行
-          1. 简单：`os.Args/os.Args[1]`
-          1. 复杂：`flag`：用于命令行的标签解析
-            ```go
-            // 格式化定义
-            ptr := flag.String/Int("name", "default", "demo")
-            // 解析
-            flag.Parse()
-            // 使用
-            *ptr
-            ```
+          1. 简单：`os.Args/os.Args[0]`：0是命令本身
+          1. 复杂：`flag`：用于命令行的标签解析，支持Int/Uint/Bool/Float64/String/Duration类型
+             - 选项格式
+               1. -flag
+               1. -flag=x
+               1. -flag x
+             - 方式
+               1. flag.TypeVar
+               1. flag.Type
+             - 高级用法
+               1. 定义短选项：即一个变量共享两个值
+               1. 自定义选项类型
+             - 最佳实践库
+               1. spf13/cobra：k8s在用，强大
+               1. urfave/cli：简单、快速、有趣
+             - 实例
+                ```go
+                // 格式化定义
+                var intflag int
+                var boolflag bool
+                var stringflag string
+
+                flag.IntVar(&intflag, "intflag", 0, "int flag value")
+                flag.BoolVar(&boolflag, "boolflag", false, "bool flag value")
+                flag.StringVar(&stringflag, "stringflag", "default", "string flag value")
+
+                // 另一种方式
+                var intflag *int
+                var boolflag *bool
+                var stringflag *string
+
+                intflag = flag.Int("intflag", 0, "int flag value")
+                boolflag = flag.Bool("boolflag", false, "bool flag value")
+                stringflag = flag.String("stringflag", "default", "string flag value")
+
+                // 解析，必须在所有选项都定义之后调用，且调用之后不能再定义选项
+                flag.Parse()
+                // 使用
+                *ptr
+                ```
      1. 子包
         - exec：执行外部命令
           1. `exec.Command()`

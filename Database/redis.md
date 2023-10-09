@@ -1,29 +1,25 @@
-### 认识
-1. 理解：开源、基于内存、可持久化的日志型的Key-Value非关系型数据库，对关系型数据库起到补充作用。常用作缓存、数据库、消息中间件，使用ANSI C编写
-   - 速度快，性能高：读11万次/秒，写8万次/秒；能以微秒级别的速度找到数据，并快速完成操作
-   - 数据结构丰富
-   - 功能多，key过期，发布/订阅模式，事务、Lua脚本
-   - 所有操作都是原子的
-   - 数据持久化、LRU回收
-   - 主从同步、Sentinel提供高可用，Cluster提供自动分区
-1. 认识
-   - redis是一个非常优秀的系统，在cpu使用、内存组织、存储持久化和网络通信这四大方面的设计非常经典
-   - 快的原因
-     1. 基于内存操作、高效的数据结构
-     1. 单线程做io和读写操作，同时使用多路复用机制
+### 构成
+1. 认识：基于内存的开源的非常优秀的非关系型数据库，对关系型数据库起到补充作用。常用作缓存、消息中间件、数据库，在cpu使用、内存组织、存储持久化和网络通信这四大方面的设计非常经典，用ANSI C编写
+   - 速度快，性能高：读11万次/秒，写8万次/秒；能以微秒级别速度找到数据，并快速完成操作
+     1. 基于内存操作，并且有高效的数据结构
+     1. 单线程做io和读写操作，同时搭配io多路复用机制。可以做到所有单个操作都是原子的
+   - 提供的数据类型丰富
+   - 提供的功能多，key过期、发布/订阅、事务、lua脚本
+   - 支持LRU回收、数据持久化、日志记录
+   - 支持主从同步、哨兵、集群模式
 #### 基本
 1. 数据类型
    - string
-     1. 认识：字符串，键值对类型、二进制安全的字符串，意味着可包含任意对象(如一个图片)，最大512MB
+     1. 认识：字符串，二进制安全的键值对类型的字符串，可包含任意对象如图片，最大512MB
         - 自动扩展大小、数据类型自动转换
      1. 命令
-        - set/get、mset/mget、setbit/getbit：单个、多个、位操作，按照偏移量设置位(可做Bloom过滤器)
+        - set/get、mset/mget、setrange/getrange、setbit/getbit：单个、多个、按照偏移量覆盖、位操作，按照偏移量设置位(可做Bloom过滤器)。都是默认不存在就创建
           1. set
              - EX：过期时间秒
              - PX：过期时间毫秒
              - NX：不存在才设置
              - XX：存在才设置
-        - setex/psetex、setnx/msetnx、setrange/getrange：设置过期时间、存在才设置、按照偏移量设置
+        - setex/psetex、setnx/msetnx：设置过期时间、存在才设置
         - incr/incrby/incrbyfloat、decr/decrby：加/减、一/N，可当原子计数器
         - getset、strlen、append：设置并返回旧值、长度、追加到末尾
    - list
@@ -88,55 +84,15 @@
      1. 对比
         - Kafka支持动态增加分区数量的能力，但这种调整能力蹩脚，不会把已存在的内容进行rehash。这种简单的动态调整的能力通过增加新的stream就可以做到
 1. 数据类型的适用场景
-   - string：可持久化的缓存，如session_id为key的session，二进制安全，图片、文件什么的，原子计数器做粉丝数、关注数、ip封锁次数啥的
-     1. incr
-        - 锁、原子计数器
-        - 限流
-        - 幂等：如MQ防止重复消费，订单防重，订单5分钟之内只能被消费一次，订单号作为key
+   - string
+     1. 键值对的存储，如session_id为key的session
+     1. incr原子计数器做粉丝数、关注数、ip封锁次数、锁、限流等
+     1. 作幂等对比：如MQ防止重复消费，订单防重，订单5分钟之内只能被消费一次，订单号作为key
+     1. 二进制安全图片、文件等
    - list：消息排行，消息队列，日志收集器，配合发布订阅
    - hash：存对象数据，如用户基本信息，直接更新即可
    - set：做不重复的集合，存不重复用户名啦、每日投票一次啦
    - zset：有序的不重复集合，如排行榜、热门内容的排序，只需修改score
-1. 操作
-   - 库
-     1. select index：切换库，更像命名空间，隔离key名冲突。索引号只能是数字不能自定义，可设置数量，开始和默认是0
-     1. move：移动key到某个库中
-   - 查看
-     1. dbsize：key的数量
-     1. keys：查找符合给定模式的key，支持模式匹配，会阻塞单线程的redis
-     1. exists：是否存在
-     1. type：查看类型
-     1. scan：基于游标支持模式匹配遍历key，会使过期的key删除，带来内存占用的下降
-        - 不会阻塞线程，提供limit参数
-        - 返回结果可能重复，需要客户端去重
-        - 遍历的过程中的数据修改，改动后的数据能不能遍历到不确定
-        - 单次返回的结果是空的并不意味着遍历结束，而要看返回的游标值是否为零
-     1. sort by xx*->xx desc get xx*->xx get # store xx：对队列、集合按照某些规则排序，by可用通配符，get用于获取指定键值，store结果存储
-   - 过期时间
-     1. 认识
-        - string在set后会清除过期时间
-     1. 命令
-        - expire/pexpire：[用毫秒]设置过期时间
-        - expireat/pexpireat：用[毫秒]时间戳设置过期时间
-        - ttl/pttl：用[毫]秒返回剩余时间，time to live
-        - persist：移除过期时间
-     1. 删除机制
-        - 定时：内部定时任务，默认10秒
-          1. 不扫描所有key，简单的贪心策略，随机选20个过期超过四分之一就继续重复扫描
-          1. 设置扫描时间上限，默认25ms
-        - 惰性：用时判断
-        - 主动：达到最大内存占用的时候触发，使用近似的lru算法，lru本身太费内存，每个key增加24bit时间戳，随机拿5个淘汰最旧的
-          1. v3.0增加淘汰池，淘汰掉最旧的一个key之后，保留剩余较旧的key列表放入淘汰池中留待下一个循环
-   - 修改
-     1. rename/renamenx：[key不存在时]重命名
-     1. del
-     1. unlink：v4.0，异步删除，防止大key卡顿
-        - key小了就直接删除
-        - 先删除引用，将key的内存回收操作包装成任务塞进异步任务队列
-   - 其他
-     1. randomkey：随机返回
-     1. dump：序列化
-     1. echo string：打印字符串
 1. 模块
    - bitmaps
      1. 认识：位图，即位的数组，用位可以表示两种情况，节省存储，如员工全年签到数据
@@ -173,110 +129,117 @@
         - 经纬度
           1. 经度范围(-180, 180]，经度正负以本初子午线 (英国格林尼治天文台) 为界，东正西负
           1. 纬度范围(-90,90]，纬度正负以赤道为界，北正南负
+1. 基本操作
+   - 库
+     1. select index：切换库，更像命名空间，隔离key名冲突。索引号只能是数字不能自定义，可设置数量，开始和默认是0
+     1. move：移动key到某个库中
+   - 查看
+     1. dbsize：key的数量
+     1. keys：查找符合给定模式的key，支持模式匹配，会阻塞单线程的redis
+     1. exists：是否存在
+     1. type：查看类型
+     1. scan：基于游标支持模式匹配遍历key，会使过期的key删除，带来内存占用的下降
+        - 不会阻塞线程，提供limit参数
+        - 返回结果可能重复，需要客户端去重
+        - 遍历的过程中的数据修改，改动后的数据能不能遍历到不确定
+        - 单次返回的结果是空的并不意味着遍历结束，而要看返回的游标值是否为零
+     1. sort by xx*->xx desc get xx*->xx get # store xx：对队列、集合按照某些规则排序，by可用通配符，get用于获取指定键值，store结果存储
+   - 修改
+     1. rename/renamenx：[key不存在时]重命名
+     1. del
+     1. unlink：v4.0，异步删除，防止大key卡顿
+        - key小了就直接删除
+        - 先删除引用，将key的内存回收操作包装成任务塞进异步任务队列
+   - 其他
+     1. randomkey：随机返回
+     1. dump：序列化
+     1. echo string：打印字符串
 #### 功能
-1. 功能
-   - 管道
-     1. 认识：pipeline，不直接响应，一次性发送多条命令，一次性返回所有响应。减少了多次数据往返时间，提高服务端利用率
-        - 本质由客户端改变指令的先后顺序，先一次性顺序发出去，再一次性顺序接收，真正只花费一个周期的等待实现多个周期等待的重叠，越多效率越高
-          1. 写的真正耗时：等待发送缓冲空出空闲空间
-          1. 读的真正耗时：等待空的接收缓冲有数据
-     1. 使用
-        ```php
-        $redis->pipeline();
-        $redis->exec();
-        ```
-   - 超时
-     1. 认识：expire，设置超时时间，超时后不删除，只有对值进行改变才会删除，过期是不可靠的
-        ```lua
-        SET mykey "Hello"
-        EXPIRE mykey 10
-        ```
-     1. 删除策略
-        - 被动删除：读写时触发
-        - 主动周期删除：贪婪策略，默认100ms：抽取过期的比例超过四分之一就继续执行
-        - 内存超限时触发
-     1. 设置
+1. 超时
+   - 认识：expire，设置超时时间，有超时清除策略，过期是不可靠的
+     1. string在set后会清除过期时间
+   - 命令
+     1. expire/pexpire：[用毫秒]设置过期时间
+     1. expireat/pexpireat：用[毫秒]时间戳设置过期时间
+     1. ttl/pttl：用[毫]秒返回剩余时间，time to live
+     1. persist：移除过期时间
+   - 删除策略
+     1. 整体策略配置
         - noeviction：不淘汰，数据满了写请求返回错误
-        - volatile：针对过期的，先后、随机、LRU、LFU四种方式
-        - allkeys：针对所有的，三种方式，没有根据过期时间先后
-   - 发布订阅
-     1. 认识：pub/sub，可以实现多播的消息通信模式，发送订阅模型，是原子的
-        - 挂掉的消费者重新连上期间的消息会被丢弃，重启消息不会持久化，因为相当于一个消费者都没有
-     1. 使用
-        - subscribe/unsubscribe/psubscribe/punsubscribe：订阅/退订n个，[指定模式(通配符*等)]
-        - publish：发布
-        - pubsub：查看订阅和发布系统状态
-   - 事务
-     1. 认识：exec之前不执行缓存在一个事务队列中，执行完毕后一次性返回所有指令的运行结果
-        - 原子性：2个命令组合起来才算是完成一个业务，但是2个命令组合起来就不具备原子性，所有在两个命令之间其他客户端会出现读写脏数据的情况
-        - 事务中不能获取同一事务其他命令执行的结果
-        - 语法错误所有命令不执行，运行错误不影响其他命令执行，不满足原子性，只满足隔离性(当前事务不被其它事务打断)
-          1. 单线程特性保证能得到原子执行
-        - 事务模型很不严格，不能原子执行，无回滚机制
-          1. 无回滚机制，需要自己收拾烂摊子
-     1. 使用
-        - multi：标记开始
-        - watch：监视n个key，exec前值被改变则取消事务，即提供了CAS(check-and-set)行为，即乐观锁
-          1. 在multi之前watch
-        - unwatch：取消所有key的监视
-        - exec：执行事务
-        - discard：取消
-   - 脚本
-      - 认识：支持lua脚本，内嵌lua解释器
-      - 命令
-        1. `eval script numkeys key`：执行，会缓存sha1以便下次用evalsha调用
-           - 如`eval "return {KEYS[1],KEYS[2],ARGV[1],ARGV[2]}" 2 key1 key2 first second`
-        1. `evalsha sha1 numkeys key`：指定sha1码执行，可以第一次eval，之后省传输用evalsha
-        1. `script load script`：加载，不执行
-        1. `script exists script`：是否已加载
-        1. `script kill`：杀死脚本
-        1. `script flush`：移除
+        - volatile：针对过期的key，先后、随机、LRU、LFU四种方式
+        - allkeys：针对所有的key，没有根据过期时间先后的三种方式
+     1. 具体策略
+        - 被动/惰性：读写时触发，即用的时候判断
+        - 主动
+          1. 超限：达到配置的内存占用阈值时触发，使用近似lru算法，lru本身太费内存，每个key增加24bit时间戳，随机拿5个淘汰最旧的
+            - v3.0增加淘汰池，淘汰掉最旧的一个key之后，保留剩余较旧的key列表放入淘汰池中留待下一个循环
+          1. 定时：内部有定时任务，默认10秒、默认100ms
+            - 简单贪婪策略，不会扫描所有的key，随机选20个过期超过四分之一就继续重复扫描
+            - 默认25ms扫描时间上限
+   - demo
+    ```lua
+    SET mykey "Hello"
+    EXPIRE mykey 10
+    ```
+1. 管道
+   - 认识：pipeline，不直接响应，一次性发送多条命令，一次性返回所有响应。减少了多次数据往返时间，提高服务端利用率
+     1. 本质由客户端改变指令的先后顺序，先一次性顺序发出去，再一次性顺序接收，真正只花费一个周期的等待实现多个周期等待的重叠，越多效率越高
+        - 写的真正耗时：等待发送缓冲空出空闲空间
+        - 读的真正耗时：等待空的接收缓冲有数据
+   - 使用
+    ```php
+    $redis->pipeline();
+    $redis->exec();
+    ```
+1. 发布订阅
+   - 认识：pub/sub，可以实现多播的消息通信模式，发送订阅模型，是原子的
+     1. 挂掉的消费者重新连上期间的消息会被丢弃，重启消息不会持久化，因为相当于一个消费者都没有
+   - 使用
+     1. subscribe/unsubscribe/psubscribe/punsubscribe：订阅/退订n个，[指定模式(通配符*等)]
+     1. publish：发布
+     1. pubsub：查看订阅和发布系统状态
+1. 事务
+   - 认识：exec之前不执行缓存在一个事务队列中，执行完毕后一次性返回所有指令的运行结果
+     1. 原子性：2个命令组合起来才算是完成一个业务，但是2个命令组合起来就不具备原子性，所有在两个命令之间其他客户端会出现读写脏数据的情况
+     1. 事务中不能获取同一事务其他命令执行的结果
+     1. 语法错误所有命令不执行，运行错误不影响其他命令执行，不满足原子性，只满足隔离性(当前事务不被其它事务打断)
+        - 单线程特性保证能得到原子执行
+     1. 事务模型很不严格，不能原子执行，无回滚机制
+        - 无回滚机制，需要自己收拾烂摊子
+   - 使用
+     1. multi：标记开始
+     1. watch：监视n个key，exec前值被改变则取消事务，即提供了CAS(check-and-set)行为，即乐观锁
+        - 在multi之前watch
+     1. unwatch：取消所有key的监视
+     1. exec：执行事务
+     1. discard：取消
+1. 脚本
+   - 认识：支持lua脚本，内嵌lua解释器
+   - 命令
+     1. `eval script numkeys key`：执行，会缓存sha1以便下次用evalsha调用
+        - 如`eval "return {KEYS[1],KEYS[2],ARGV[1],ARGV[2]}" 2 key1 key2 first second`
+     1. `evalsha sha1 numkeys key`：指定sha1码执行，可以第一次eval，之后省传输用evalsha
+     1. `script load script`：加载，不执行
+     1. `script exists script`：是否已加载
+     1. `script kill`：杀死脚本
+     1. `script flush`：移除
+   - 使用
+     1. lua脚本使用redis
+        - call：`redis.call('get', 'a')`，直接返回错误不继续
+        - pcall：记录错误并继续执行
+     1. 特点
+        - 禁用全局变量，保证脚本隔离
+        - 禁止使用lua标准库中和文件、系统调用相关的函数，一是防止拉低性能，二是防止依赖外部条件(系统时间、文件内容等)，因为日志和持久化只能记录脚本内容，内容和参数都一样才能保证执行结果一样
+        - 对随机数和随机结果进行了特殊处理，可以生成了当参数传递进去
+        - 脚本执行是单线程原子的，lua-time-limit限制最长执行时间，之后接受其他指令不执行返回busy，只执行两个指令：script kill和shutdown nosave。kill还是等到脚本执行完毕，因为要原子性，nosave可立即终止但丢数据
+        - 不该在脚本中执行耗时的操作，因为redis单线程，程序却是多进/线程
+     1. 数据类型转换：redis->lua，可反转转换
+        - 整数 => 数字、字符串 => 字符串
+        - 多行字符串 => 表(数组形式)
+        - 状态/错误 => 表(ok/err)
+        - 空 => false
 #### 应用
-1. 队列
-   - 即时队列
-     1. 措施
-        - 模拟ack：单个队列一旦pop出去客户端崩溃，消息丢失，利用rpoplpush弄个备份队列，用lrem删除消息作ack，同时搭配监视程序超时重试、报警等
-        - 轮询不延迟：使用blpop/brpop阻塞读，空队列轮询时进行睡眠的消息延迟问题
-        - 闲置连接主动断开重试的处理
-        - 无法实现多播，否则就要使用pub/sub
-     1. 代码
-        ```php
-        ini_set('default_socket_timeout', -1);                          // socket不超时
-
-        $redis = new Redis();
-
-        $redis->connect('127.0.0.1',6379);
-
-        while($message = $redis->brpop('queue_list_test',0)) {
-            var_dump($message);
-        }
-        ```
-   - 延时队列
-     1. 使用zset实现，消息到期时间为score
-        - 多线程作高可用轮询zset
-        - zrem决定多线程唯一的属主，zrangebyscore和zrem进行lua脚本原子化操作，多线程之间争抢任务不会浪费白取一次任务
-     1. 实例
-        ```py
-        # 消费消息
-        def loop():
-            while True:
-                values = redis.zrangebyscore("delay-queue", 0, time.time(), start=0, num=1)         # 最多取 1 条
-                if not values: 
-                    time.sleep(1)                                               # 延时队列空的，休息 1s
-                    continue
-                value = values[0]                                               # 拿第一条，也只有一条
-                success = redis.zrem("delay-queue", value)                      # 从消息队列中移除该消息
-                if success:                                                     # 因为有多进程并发的可能，最终只会有一个进程可以抢到消息
-                    msg = json.loads(value)
-                    handle_msg(msg) 
-        # 添加消息
-        def delay(msg):
-            msg.id = str(uuid.uuid4()) # 保证 value 值唯一
-            value = json.dumps(msg)
-            retry_ts = time.time() + 5 # 5 秒后重试
-            redis.zadd("delay-queue", retry_ts, value) 
-        ```
-1. 锁：锁的性能也是很高
+1. 锁：锁的性能很高
    - 使用incr的原子计数特性实现库存扣减，防止超卖
    - 单实例分布式锁
      1. 实现
@@ -391,6 +354,50 @@
             return $luaScript;
         }
         ```
+1. 队列
+   - 即时队列
+     1. 措施
+        - 模拟ack：单个队列一旦pop出去客户端崩溃，消息丢失，利用rpoplpush弄个备份队列，用lrem删除消息作ack，同时搭配监视程序超时重试、报警等
+        - 轮询不延迟：使用blpop/brpop阻塞读，空队列轮询时进行睡眠的消息延迟问题
+        - 闲置连接主动断开重试的处理
+        - 无法实现多播，否则就要使用pub/sub
+     1. 代码
+        ```php
+        ini_set('default_socket_timeout', -1);                          // socket不超时
+
+        $redis = new Redis();
+
+        $redis->connect('127.0.0.1',6379);
+
+        while($message = $redis->brpop('queue_list_test',0)) {
+            var_dump($message);
+        }
+        ```
+   - 延时队列
+     1. 使用zset实现，消息到期时间为score
+        - 多线程作高可用轮询zset
+        - zrem决定多线程唯一的属主，zrangebyscore和zrem进行lua脚本原子化操作，多线程之间争抢任务不会浪费白取一次任务
+     1. 实例
+        ```py
+        # 消费消息
+        def loop():
+            while True:
+                values = redis.zrangebyscore("delay-queue", 0, time.time(), start=0, num=1)         # 最多取 1 条
+                if not values: 
+                    time.sleep(1)                                               # 延时队列空的，休息 1s
+                    continue
+                value = values[0]                                               # 拿第一条，也只有一条
+                success = redis.zrem("delay-queue", value)                      # 从消息队列中移除该消息
+                if success:                                                     # 因为有多进程并发的可能，最终只会有一个进程可以抢到消息
+                    msg = json.loads(value)
+                    handle_msg(msg) 
+        # 添加消息
+        def delay(msg):
+            msg.id = str(uuid.uuid4()) # 保证 value 值唯一
+            value = json.dumps(msg)
+            retry_ts = time.time() + 5 # 5 秒后重试
+            redis.zadd("delay-queue", retry_ts, value) 
+        ```
 1. 布隆过滤器
    - 认识：Bloom Filter，可理解为不怎么精确的set结构，v4.0
      1. 不存在时肯定不存在
@@ -399,7 +406,93 @@
      1. bf.add/bf.madd
      1. bf.exists/bf.mexists
 1. 时间序列数据库读写
-### 系统设计
+### 架构
+1. 认识
+   - 哨兵Sentinel提供高可用，集群Cluster提供自动分区
+1. TwemProxy架构实践
+   - 普通：tw + redis + sentinel + haproxy + keepalived
+     1. haproxy：负载均衡
+     1. keepalived：高可用
+   - 网校
+     1. hash分片数据到redis上
+     1. 高可用：confd + etcd + tw + redis一从热备 + sentinel
+        - tw本身高可用
+          1. etcd集群做保活，设置10秒过期，tw每2秒续期，一旦tw发生变化，etcd切换tw，通知confd
+             - etcd：go编写，支持watch并且主动通知
+          1. confd收到etcd的通知后，完成客户端ip配置文件的更新
+        - 高可用
+          1. 每个业务最少提供两个 TwemProxy 供业务方连接
+          1. redis 发生主从切换，TwemProxy 会实时生成新的配置文件，并自动重启
+        - 客户端sdk负责负载均衡
+        - 一从热备：假如从库一直提供服务，从库一旦重连导致从库数据不对
+        - 哨兵监控：完成主从切换后，通知etcd，然后confd更新客户端ip配置文件
+     1. 架构图：![avatar](../images/redis_wx_framework.png)
+     1. 扩容：找新机器，用工具同步存量+增量的旧数据，然后挂到tw上
+#### 持久化
+1. 认识
+   - rdb是全量快照，aof是增量日志
+   - 都可恢复数据，rdb搭配aof使用可极大降低数据丢失可能性，启动时恢复数据aof比rdb方式慢
+   - 混合持久化：v4.0，aof不再是全量的日志，而是rdb之后的增量日志，即rdb完成后清空aof文件。或者说在两次快照之间，使用aof记录这期间的所有命令操作
+     1. 既有rdb快速恢复的好处，又有aof只记录操作命令的高性能
+     1. rdb快照不用很频繁地执行，避免了频繁fork对主线程的影响，以及快照时对机器的性能占用
+     1. 不会出现aof文件过大的情况了，也可以避免重写开销
+1. RDB
+   - 认识：redis database，内存快照，在指定的时间间隔内生成数据集的时间点快照，可快速恢复全部数据(直接把数据读入内存即可)，适用于灾备
+     1. 是内存数据的二进制序列化形式，紧凑存储，可以设置为压缩形式
+     1. 是一个非常重的操作，不适合做实时持久化
+     1. redis崩溃会丢失最后一次rdb操作之后的数据
+     1. 内存数据在进程产生的一瞬间就固定了，接下来子进程就可安心遍历数据进行序列化写磁盘
+   - 设计：basave + 写时复制
+   - 步骤
+     1. 设置是否fork子进程进行操作，可以共享主线程的所有内存数据
+     1. 使用unix写时复制功能，fork之后到快照进程结束前的修改/新增不会被记录
+     1. 快照结束后替换rdb文件
+   - 最佳实践
+     1. 如果修改/新增较多较大时，占用内存可能显著增大，因为写时复制会增加内存占用，需要设置linux的应用申请内存超过可用内存
+     1. rdb文件是默认设置被压缩的，1000万键值对，大小1G的rdb，载入内存花费20多秒
+   - 触发条件
+     1. 手动触发：save/bgsave、flushall
+     1. 配置触发：save，满足其中一条就触发，如xx时间内xx修改数
+     1. 主从复制：复制初始化会自动快照
+   - 配置
+     1. dbfilename：默认dump.rdb
+     1. save <seconds> <changes>：n时间内，n次更新操作，就将数据同步到数据文件，可存在多条，或的关系
+     1. dir：目录
+     1. rdbcompression：是否压缩，关闭节约cpu，但是文件变的巨大
+1. AOF
+   - 认识：append only file，增量日志，以redis协议的格式只保存修改数据的命令，新命令会被追加到文件的末尾，后台可进行重写压缩大小
+     1. 采用写后日志的方式，只有命令能执行成功，才会被记录到日志中，避免出现记录错误命令的情况。区别于WAL
+     1. 写aof在主线程中执行，不会阻塞当前的写操作，会阻塞后边的读写。所以aof默认30秒刷盘，如果操作系统异常则数据丢失，可设置append fsync同步硬盘的时机
+   - 重写机制
+     1. 认识：在重写时根据数据库现状创建一个新的aof文件，合并压缩相同key操作。由后台子进程bgrewriteaof完成
+     1. 操作
+        - 重写时主线程fork出后台的bgrewriteaof子进程。给其拷贝主线程的一份内存，就包含了数据库的最新数据，写入重写日志
+        - 修改操作在两个日志都进行，完成重写后替换旧aof文件
+   - 实现
+     1. aof_buf：aof重写缓冲区，内存中的记录要写入aof文件的缓冲区，为解决fork重写开始后不记录新来的命令导致的数据不一致，方案为将后边的命令也复制一份放到重写缓冲区
+     1. 重写：用于压缩aof文件，手动触发，开辟子进程进行aof优化重写到新aof文件中，如三条合一条，序列化完毕后再追加增量的，然后立即替代
+     1. 为什么aof重写不复用原aof日志？
+        - 父子进程写同一个文件会产生竞争问题，影响父进程的性能
+        - 如果aof重写过程中失败了，相当于污染了原本的aof文件，无法做恢复数据使用
+     1. 在重写日志整个过程时，主线程有哪些地方会被阻塞？
+        - fork子进程时，需要拷贝虚拟页表，会对主线程阻塞
+        - 主进程有bigkey写入时，操作系统会创建页面的副本，并拷贝原有的数据，会对主线程阻塞
+        - 子进程重写日志完成后，主进程追加aof重写缓冲区时可能会对主线程阻塞
+   - 配置：默认不开启，和rdb文件位置相同
+     1. `appendonly`：开关
+     1. `appendfilename`：名称，默认appendonly.aof
+     1. `appendfsync`：三种记录方式
+        - no：等待系统将数据同步到磁盘(快)
+        - always：更新后立即将数据写到磁盘(慢，安全)
+        - everysec：每秒一次(折衷)
+     1. `auto-aof-rewrite-percentage`：aof重写触发机制，当前aof大小超过上一次重写时大小的百分比时，进行重写
+     1. `auto-aof-rewrite-min-size`：aof重写的最小文件大小
+   - 最佳实践
+     1. aof长期运行会变的超级大，为防止重启漫长，需要定期aof重写瘦身
+1. 日志文件
+   - redis.log：人可读
+   - sentinel.log：人可读
+#### 分布式
 1. 主从
    - 知识网络提炼：rdb和buffer作全量同步，一个循环写的圆环作增量同步预备
    - 认识：利用复制实现数据在不同库的同步，实现读写分离、冗余备份，可继续向下配置树状从
@@ -530,7 +623,7 @@
    - 切片集群方案：基于客户端分区的ShardedJedis，基于代理的Codis、Twemproxy等，官方的cluster
    - 认识：cluster，本质就是切片，用于解决容量和并发性能，无中心结构、分布式、自动故障转移、高可用、可扩展。![avatar](../images/redis_cluster.png)
      1. 高可用性：通过增加slave做热备数据副本，能够实现故障自动转移
-     1. 官方亲儿子，去中心化，内部非常复杂，为了实现非中心化，混合使用raft和gossip协议，有大量调优参数，不好上手，v3.0
+     1. 官方亲儿子，去中心化，内部非常复杂，为了实现去中心化，混合使用raft和gossip协议，有大量调优参数，不好上手，没有tw简单/稳定，v3.0
    - 特点
      1. 优点
         - 客户端直连，免去了代理损耗
@@ -561,86 +654,6 @@
      1. `cluster nodes`：查看节点
      1. `cluster meet 127.0.0.1 6380`：连接节点
      1. `cluster replicate xx`：分配为某节点的从
-### 持久化
-1. 认识
-   - rdb是全量快照，aof是增量日志
-   - 都可恢复数据，rdb搭配aof使用可极大降低数据丢失可能性，启动时恢复数据aof比rdb方式慢
-   - 混合持久化：v4.0，aof不再是全量的日志，而是rdb之后的增量日志，即rdb完成后清空aof文件。或者说在两次快照之间，使用aof记录这期间的所有命令操作
-     1. 既有rdb快速恢复的好处，又有aof只记录操作命令的高性能
-     1. rdb快照不用很频繁地执行，避免了频繁fork对主线程的影响，以及快照时对机器的性能占用
-     1. 不会出现aof文件过大的情况了，也可以避免重写开销
-1. RDB
-   - 认识：redis database，内存快照，在指定的时间间隔内生成数据集的时间点快照，可快速恢复全部数据(直接把数据读入内存即可)，适用于灾备
-     1. 是内存数据的二进制序列化形式，紧凑存储，可以设置为压缩形式
-     1. 是一个非常重的操作，不适合做实时持久化
-     1. redis崩溃会丢失最后一次rdb操作之后的数据
-     1. 内存数据在进程产生的一瞬间就固定了，接下来子进程就可安心遍历数据进行序列化写磁盘
-   - 设计：basave + 写时复制
-   - 步骤
-     1. 设置是否fork子进程进行操作，可以共享主线程的所有内存数据
-     1. 使用unix写时复制功能，fork之后到快照进程结束前的修改/新增不会被记录
-     1. 快照结束后替换rdb文件
-   - 最佳实践
-     1. 如果修改/新增较多较大时，占用内存可能显著增大，因为写时复制会增加内存占用，需要设置linux的应用申请内存超过可用内存
-     1. rdb文件是默认设置被压缩的，1000万键值对，大小1G的rdb，载入内存花费20多秒
-   - 触发条件
-     1. 手动触发：save/bgsave、flushall
-     1. 配置触发：save，满足其中一条就触发，如xx时间内xx修改数
-     1. 主从复制：复制初始化会自动快照
-   - 配置
-     1. dbfilename：默认dump.rdb
-     1. save <seconds> <changes>：n时间内，n次更新操作，就将数据同步到数据文件，可存在多条，或的关系
-     1. dir：目录
-     1. rdbcompression：是否压缩，关闭节约cpu，但是文件变的巨大
-1. AOF
-   - 认识：append only file，增量日志，以redis协议的格式只保存修改数据的命令，新命令会被追加到文件的末尾，后台可进行重写压缩大小
-     1. 采用写后日志的方式，只有命令能执行成功，才会被记录到日志中，避免出现记录错误命令的情况。区别于WAL
-     1. 写aof在主线程中执行，不会阻塞当前的写操作，会阻塞后边的读写。所以aof默认30秒刷盘，如果操作系统异常则数据丢失，可设置append fsync同步硬盘的时机
-   - 重写机制
-     1. 认识：在重写时根据数据库现状创建一个新的aof文件，合并压缩相同key操作。由后台子进程bgrewriteaof完成
-     1. 操作
-        - 重写时主线程fork出后台的bgrewriteaof子进程。给其拷贝主线程的一份内存，就包含了数据库的最新数据，写入重写日志
-        - 修改操作在两个日志都进行，完成重写后替换旧aof文件
-   - 实现
-     1. aof_buf：aof重写缓冲区，内存中的记录要写入aof文件的缓冲区，为解决fork重写开始后不记录新来的命令导致的数据不一致，方案为将后边的命令也复制一份放到重写缓冲区
-     1. 重写：用于压缩aof文件，手动触发，开辟子进程进行aof优化重写到新aof文件中，如三条合一条，序列化完毕后再追加增量的，然后立即替代
-     1. 为什么aof重写不复用原aof日志？
-        - 父子进程写同一个文件会产生竞争问题，影响父进程的性能
-        - 如果aof重写过程中失败了，相当于污染了原本的aof文件，无法做恢复数据使用
-     1. 在重写日志整个过程时，主线程有哪些地方会被阻塞？
-        - fork子进程时，需要拷贝虚拟页表，会对主线程阻塞
-        - 主进程有bigkey写入时，操作系统会创建页面的副本，并拷贝原有的数据，会对主线程阻塞
-        - 子进程重写日志完成后，主进程追加aof重写缓冲区时可能会对主线程阻塞
-   - 配置：默认不开启，和rdb文件位置相同
-     1. `appendonly`：开关
-     1. `appendfilename`：名称，默认appendonly.aof
-     1. `appendfsync`：三种记录方式
-        - no：等待系统将数据同步到磁盘(快)
-        - always：更新后立即将数据写到磁盘(慢，安全)
-        - everysec：每秒一次(折衷)
-     1. `auto-aof-rewrite-percentage`：aof重写触发机制，当前aof大小超过上一次重写时大小的百分比时，进行重写
-     1. `auto-aof-rewrite-min-size`：aof重写的最小文件大小
-   - 最佳实践
-     1. aof长期运行会变的超级大，为防止重启漫长，需要定期aof重写瘦身
-### 架构
-1. 普通tw架构：tw + redis + sentinel + keepalived
-   - haproxy：负载均衡
-   - keepalived：高可用
-1. 网校tw架构
-   - hash分片数据到redis上
-   - 高可用：confd + etcd + tw + redis一从热备 + sentinel
-     1. tw本身高可用
-        - etcd集群做保活，设置10秒过期，tw每2秒续期，一旦tw发生变化，etcd切换tw，通知confd
-          1. etcd：go编写，支持watch并且主动通知
-        - confd收到etcd的通知后，完成客户端ip配置文件的更新
-     1. 高可用
-        - 每个业务最少提供两个 TwemProxy 供业务方连接
-        - redis 发生主从切换，TwemProxy 会实时生成新的配置文件，并自动重启
-     1. 客户端sdk负责负载均衡
-     1. 一从热备：假如从库一直提供服务，从库一旦重连导致从库数据不对
-     1. 哨兵监控：完成主从切换后，通知etcd，然后confd更新客户端ip配置文件
-   - 架构图：![avatar](../images/redis_wx_framework.png)
-   - 扩容：找新机器，用工具同步存量+增量的旧数据，然后挂到tw上
 #### 中间件
 1. TwemProxy
    - 认识：twitter开源的redis/memcache的快速、轻量级的单线程代理服务器，可对多台redis/memcache进行管理和分配。就是分片、分布式方案，c写的
@@ -676,8 +689,8 @@
    - 用硬盘存储，速度慢
    - 支持redis协议，不是100%兼容
    - 数据在硬盘上是压缩的，迁移到redis需要将当前的容量乘以5
-1. Cluster：太复杂，是去中心化的。没有tw的简单，用的稳定
 ### 最佳实践
+#### 使用
 1. 认识
    - 掌握方法：问题 --> 主线 --> 技术点的方式梳理出来，积累越来越多，画像也会越来越丰富。以后在遇到问题的时候，就很容易解决了
    - 梳理一些方法论，做成Checklist，就像一个个锦囊，当遇到问题时就可以随时拿出自己的“锦囊妙计”解决问题了
@@ -771,6 +784,71 @@
      1. 【强制】：新上线或者迁移的redis服务强制使用密码，应用层要进行配置
      1. 【强制】：只允许读取本部门redis， 需要使用其他部门数据则将数据服务化
      1. 【建议】：应用层自行处理长连接断开问题，db组只负责维护redis服务域名的存活，应用层要考虑dns切換之后原来的连接无法使用的状况
+1. 主库重启 checklist 
+   - 世纪互联主从库节点 zabbix 关闭报警
+   - 世纪互联主从库节点 注释脉搏脚本
+   - 切换Master到从库，修改参数并重启
+    ```sh
+    redis-cli -h 10.20.52.245 -p 8379 sentinel failover jy-courseware-redis
+    redis-cli -h 10.20.52.245 -p 9379 sentinel failover jy-tnt-redis
+
+    vim /boot/grub/grub.conf
+    isolcpus=10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29 
+    for i in {1..9}; do /etc/init.d/${i}379redis stop; done 
+    init 6
+    ```
+   - 重启完成后sysbench验证,重启redis服务
+    ```sh
+    /bin/rm -rf /root/scripts/sysbench.sh
+    cd /root/scripts && wget -N --http-user=XueRs --http-passwd=xxx http://soft.xesv5.com:88/dell/sysbench.sh
+    ./sysbench.sh --test=cpu --num-threads=${v_cpu_num} --max-requests=600000 run
+    for i in {1..9}; do /etc/init.d/${i}379redis start;sleep 60; done 
+    for i in {1..9};do sed -i '/slaveof/d' /data/${i}379redis/etc/redis.conf;done
+    for i in {1..9};do cat /data/${i}379redis/etc/redis.conf |grep slaveof;done
+    ```
+   - 同步完成后，切回原主
+    ```sh
+    redis-cli -h 10.20.52.245 -p 8379 sentinel failover jy-courseware-redis
+    redis-cli -h 10.20.52.245 -p 9379 sentinel failover jy-tnt-redis
+    ```
+   - 开启zabbix报警和脉搏，sentinel reset 
+   - yf的同步节点挂到sjhl从库
+    ```sh
+    /etc/init.d/irqbalance restart
+    chkconfig irqbalance on
+    ```
+#### 性能和服务治理
+1. 性能监控
+   - 连接数
+   - 慢查询：超过10ms会被认为是慢查询
+   - qps、峰值
+   - kv大小、命中率、占用空间大小
+   - cpu、内存、流量出入
+   - 置换策略
+1. 服务治理
+   - 主从延迟
+   - 复制
+     1. 增大复制缓冲区
+     1. 规避复制风暴
+        - 主重启，多从同时复制：提供故障转移机制，或者改为树状复制结构，因为同时发送多个RDB费带宽
+   - 机制设置
+     1. 自动内存碎片清理：activedefrag
+     1. 定期aof重写
+1. 阿里云指标
+   - 认识：百万QPS，最好性能512G内存、最大连载数320000、最大吞吐1536M
+   - 功能
+     1. 负载均衡
+     1. 多个proxy，负责故障转移
+     1. 分片服务器，单节点，不需同步数据，不提供数据持久化和备份策略，节点故障会丢失数据。集群版是双节点
+     1. 配置服务器，即Configserver，存储集群配置信息及分区策略，采用双副本的高可用架构
+1. 基准测试
+   - redis-benchmark
+     1. -h/-p：地址端口
+     1. -s：指定socket
+     1. -c：并发连接数
+     1. -n：请求数
+     1. -d：字节形式指定set/get大小
+     1. -k：1=keep alive 0=reconnect
 ### 运维
 1. 客户端：发起连接，`redis-cli -h host -p port -a password`
 1. 服务端：`redis-server`
@@ -868,83 +946,13 @@
         min-slaves-to-write                                         // 主可写的最少的从数量，即设置乐观复制的尺度
         min-slaves-max-lag                                          // 从最大的延迟
         ```
-1. 日志
-   - 目录：配置，数据，日志
-   - 分类
-     1. redis.log：人可读
-     1. sentinel.log：人可读
-1. 安全
-   - 命令改写：rename-command
-   - Lua脚本安全
-   - ssl连接：spiped，两边都安装，进行加密通信
 1. 备份恢复
    - 备份：save/bgsave
    - 恢复：将dump.rdb和aof文件放到redis目录并启动即可，即重放，优先使用aof文件
-1. 主库重启 checklist 
-   - 世纪互联主从库节点 zabbix 关闭报警
-   - 世纪互联主从库节点 注释脉搏脚本
-   - 切换Master到从库，修改参数并重启
-    ```
-    redis-cli -h 10.20.52.245 -p 8379 sentinel failover jy-courseware-redis
-    redis-cli -h 10.20.52.245 -p 9379 sentinel failover jy-tnt-redis
-
-    vim /boot/grub/grub.conf
-    isolcpus=10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29 
-    for i in {1..9}; do /etc/init.d/${i}379redis stop; done 
-    init 6
-    ```
-   - 重启完成后sysbench验证,重启redis服务
-    ```
-    /bin/rm -rf /root/scripts/sysbench.sh
-    cd /root/scripts && wget -N --http-user=XueRs --http-passwd=xxx http://soft.xesv5.com:88/dell/sysbench.sh
-    ./sysbench.sh  --test=cpu --num-threads=${v_cpu_num} --max-requests=600000 run
-    for i in {1..9}; do /etc/init.d/${i}379redis start;sleep 60; done 
-    for i in {1..9};do sed -i '/slaveof/d' /data/${i}379redis/etc/redis.conf;done
-    for i in {1..9};do cat /data/${i}379redis/etc/redis.conf |grep slaveof;done
-    ```
-   - 同步完成后，切回原主
-    ```
-    redis-cli -h 10.20.52.245 -p 8379 sentinel failover jy-courseware-redis
-    redis-cli -h 10.20.52.245 -p 9379 sentinel failover jy-tnt-redis
-    ```
-   - 开启zabbix报警和脉搏，sentinel reset 
-   - yf的同步节点挂到sjhl从库
-    ```
-    /etc/init.d/irqbalance restart
-    chkconfig irqbalance on
-    ```
-#### 性能和服务治理
-1. 性能监控
-   - 连接数
-   - 慢查询：超过10ms会被认为是慢查询
-   - qps、峰值
-   - kv大小、命中率、占用空间大小
-   - cpu、内存、流量出入
-   - 置换策略
-1. 服务治理
-   - 主从延迟
-   - 复制
-     1. 增大复制缓冲区
-     1. 规避复制风暴
-        - 主重启，多从同时复制：提供故障转移机制，或者改为树状复制结构，因为同时发送多个RDB费带宽
-   - 机制设置
-     1. 自动内存碎片清理：activedefrag
-     1. 定期aof重写
-1. 阿里云指标
-   - 认识：百万QPS，最好性能512G内存、最大连载数320000、最大吞吐1536M
-   - 功能
-     1. 负载均衡
-     1. 多个proxy，负责故障转移
-     1. 分片服务器，单节点，不需同步数据，不提供数据持久化和备份策略，节点故障会丢失数据。集群版是双节点
-     1. 配置服务器，即Configserver，存储集群配置信息及分区策略，采用双副本的高可用架构
-1. 基准测试
-   - redis-benchmark
-     1. -h/-p：地址端口
-     1. -s：指定socket
-     1. -c：并发连接数
-     1. -n：请求数
-     1. -d：字节形式指定set/get大小
-     1. -k：1=keep alive 0=reconnect
+1. 安全
+   - 命令改写：rename-command
+   - lua脚本安全
+   - ssl连接：spiped，两边都安装，进行加密通信
 ### wiki
 1. 历史
    - 2009年，开源
@@ -995,94 +1003,3 @@
      1. 11章缓存设计，12.1，12.4大key
      1. 13简单看下
      1. 14可以当手册查
-#### lua
-1. lua
-   - 认识：高效的、简洁轻量的、动态类型的、可扩展的脚本语言，lua是葡萄牙语月亮的意思，是卫星语言，能够方便嵌入其他语言中
-     1. redis内嵌lua就是为了提供给用户无限可能，因为命令不可能无限提供
-   - 基础
-     1. 不要求缩进，结尾可以省略;
-     1. 注释：-- 单行，--[[]] 多行
-     1. 操作符
-        - + - * / % ^
-        - == ~=(不等于) > < >=
-        - not and or：支持短路，只要不是nil或false就是真，0和空字符串也是真
-        - ..：连接符
-        - #：字符串/表长度计算符
-   - 数据类型
-     1. 分类
-        - nil：空
-        - boolean：true、false
-        - number：整数和浮点数
-        - string：字符串，二进制安全，单双引号定义，支持换行符
-        - table：表，数组或者字典，唯一数据结构，索引为整数时和数组一样，数组从1开始
-        - function：是一等值，可存变量、作为返回值等
-     1. 操作
-        - 转换：tonumber、tostring
-     1. 详细
-        - table
-            ```lua
-            -- 表
-            a = []                          -- 定义
-            a = {                           -- 定义
-                k = 'v'
-            }
-
-            a['k'] = 'v'                    -- 赋值
-
-            a.k                             -- 访问
-            for k,v in pairs(a) do          -- 遍历，pairs类似迭代器，ipairs用于数组，前者遍历不为nil的，后者只会遍历整数
-            end
-            ```
-        - 函数
-            ```lua
-            local a = function (...)        -- 定义，可变参数
-            end
-            local function a ()             -- 语法糖
-            end
-            ```
-   - 变量
-     1. 全局变量：`a = 1`
-     1. 局部变量
-        ```lua
-        local a = 1
-        local e,f
-        ```
-   - 流程控制
-     1. if
-        ```lua
-        if xx then
-        elseif xx then
-        else
-        end
-        ```
-     1. 循环
-        ```lua
-        for 初值，终止，步长 do
-        end
-
-        while xx do
-        end
-
-        repeat 
-        until xx
-        ```
-   - 标准库
-     1. 分类：Base、String、Table、Math、Debug、cJson、cmsgpack
-     1. 使用：`string.len(str)`
-   - 和redis的交互
-     1. lua脚本使用redis
-        - call：`redis.call('get', 'a')`，直接返回错误不继续
-        - pcall：记录错误并继续执行
-     1. 类型转换：redis类型 ===> lua类型，反转即反过来
-        - 整数 => 数字、字符串 => 字符串
-        - 多行字符串 => 表(数组形式)
-        - 状态/错误 => 表(ok/err)
-        - 空 => false
-     1. 特点
-        - 禁用全局变量，保证脚本隔离
-        - 禁止使用lua标准库中和文件、系统调用相关的函数，一是防止拉低性能，二是防止依赖外部条件(系统时间、文件内容等)，因为日志和持久化只能记录脚本内容，内容和参数都一样才能保证执行结果一样
-        - 对随机数和随机结果进行了特殊处理，可以生成了当参数传递进去
-        - 脚本执行是原子的，单线程的，lua-time-limit限制脚本最长执行时间，之后接受其他指令不执行返回busy，只执行两个指令：script kill和shutdown nosave。kill还是等到脚本执行完毕，因为要原子性，nosave可以立即终止，但是丢数据
-        - 不应该在脚本中执行耗时的操作，因为redis单线程，程序却是多进/线程
-   - wiki
-     1. 速查表：https://github.com/skywind3000/awesome-cheatsheets/blob/master/languages/lua.lua
