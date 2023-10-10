@@ -173,6 +173,14 @@
    - 基于关系模型的ROLAP方案
    - MPP架构的列式存储数据库
    - 向量化引擎
+1. doris
+   - 认识：基于MPP架构的新一代开源实时数据仓库，为大数据分析提供更简单的使用和更高的性能
+     1. 高性能：利用列式存储引擎、现代MPP架构、矢量化查询引擎、预聚合物化视图和数据索引，为低延迟和高吞吐量查询提供极快的性能
+     1. 联合查询：支持Hive、Iceberg、Hudi等数据湖和MySQL、Elasticsearch等数据库的联合查询
+     1. 多种数据导入方式：支持从HDFS/S3批量导入和从MySQL Binlog/Kafka流式导入；支持通过HTTP接口进行微批量写入，支持通过JDBC中的Insert进行实时写入
+     1. 单一统一：单一系统可支持实时数据服务、交互式数据分析和离线数据处理场景
+     1. 便于使用：两个进程，没有其他依赖；在线集群扩展、自动副本恢复；兼容MySQL协议，使用标准SQL
+     1. 丰富生态：Spark使用Spark Doris Connector来读写Doris；Flink Doris Connector 使 Flink CDC 能够实现对 Doris 的 Exactly-once 数据写入；提供DBT Doris Adapter，用于通过DBT转换Doris中的数据
 ### 分布式
 1. CAP
    - 认识：对于一个分布式计算系统来说，不可能同时满足以下三点，又叫布鲁尔定理。网络分区发生时，一致性和可用性两难全

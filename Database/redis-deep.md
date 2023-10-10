@@ -16,6 +16,47 @@
      1. 存储模块：内存分配器、持久化(aof/rdb)
      1. 高可用集群模块：主从复制、哨兵机制
      1. 可扩展集群支撑模块：分片机制
+1. 数据类型
+   - 全局哈希表
+     1. 认识：保存了redis中所有的键值对信息，从key找到value由全局哈希表索引完成
+     1. 实现
+        - 利用两个全局哈希表，互相渐进式搬迁，一步一步往上增长
+        - 哈希表的每一项是一个dictEntry的结构体，用来指向一个键值对
+     1. 实例
+        ```c
+        struct dictEntry {
+            void *key;                      // 指向key
+            union {
+                void *val;
+                uint64_t u64;
+                int64_t s64;
+                double d;
+            } v;                            // 指向value
+            struct dictEntry *next;         // 指向下一个在相同hash bucket的dictEntry
+            void *metadata[];               // An arbitrary number of bytes (starting at a pointer-aligned address) of size as returned by dictType's  dictEntryMetadataBytes(). */
+        };
+        ```
+   - RedisObject：redis的基本对象结构，键值对中的每个值都是用RedisObject保存的，统一记录最后一次访问时间、被引用次数等元数据，同时指向实际数据
+     1. 组成
+        ```c
+        struct RedisObject {
+            unsigned type;          // 4bits，值的类型，即5大数据类型，string、list、hash、set、zset
+            unsigned encoding;      // 4bits，值的具体实现的编码方式，同一个类型的type会有不同的存储形式，如SDS、ziplist、hashtable、skiptable
+            unsigned lru;           // 24bits，记录最后一次被访问的时间，用于淘汰过期的键值对
+            int refcount;           // 4bytes，引用计数
+            void *ptr;              // 8bytes，64-bit system，存储位置指针，指向具体数据类型的实际数据所在
+        } robj;
+        ```
+     1. 实现
+        - redis对Long类型整数和SDS的内存布局做了专门的设计
+          1. 为Long时ptr就是Long，节省了指针的空间开销
+          1. embstr编码布局方式：为字符串且字符串小于等于44byte时，RedisObject和SDS是连续的内存区域，就可避免内存碎片，使用malloc方法一次分配
+          1. raw编码布局方式：超44时，地址不连续，需要两次malloc
+   - 新增数据类型
+     1. 定义新类型和底层结构
+     1. 在RedisOibect中增加新类型的定义
+     1. 开发新类型的创建和释放函数
+     1. 开发新类型的命令操作
 1. 内存
    - 认识
      1. 复杂的数据结构在内存中操作非常简单，redis可以做很复杂的操作
@@ -89,6 +130,10 @@
    - set：intset + hashtable + listpack，字典中所有value都是null，其它的特性和字典一样
    - zset：ziplist + skiplist
    - 双向链表：linkedlist，是双向循环链表吗？？？。顺序读写
+1. string
+   - 实现
+     1. int方式：用于64位及以下有符号整数时，采用8byte整数方式
+     1. SDS方式：包含字符时
 1. list
    - ziplist：满足优先使用
      1. 列表中单个数据小于64byte
@@ -96,16 +141,11 @@
 1. hash
    - 认识：哈希，最常见的复合数据结构
      1. 使用MurmurHash2哈希算法作为哈希函数，运行速度快、随机性好的，哈希冲突使用链表法解决
-     1. 支持hashtable的动态扩容、缩容
-   - 使用范围
-     1. hash
-     1. zset的value和score的映射关系
-     1. 所有key和value组成全局字典
-     1. 所有带过期时间的key
+     1. 支持hashtable的动态扩容缩容
    - 实现
-     1. ziplist，满足即优先使用
-        - 列表中单个数据小于64byte
-        - 列表中数据个数少于512
+     1. ziplist，全部满足才优先使用
+        - 最大元素长度：64byte，hash-max-ziplist-value
+        - 最大元素个数：512，hash-max-ziplist-entries
      1. hashtable
    - 结构
      1. hashtable：包含两个，通常只有一个有值，扩容缩容时进行渐进式搬迁
@@ -122,6 +162,11 @@
         - 元素的个数等于第一维数组的长度，扩为2倍
         - bgsave时，为了减少内存页的过多分离 (Copy On Write)，不会扩，元素个数到5倍时强制扩容
      1. 缩容：元素个数低于数组长度的 10%，不会考虑bgsave条件
+   - 使用范围
+     1. hash
+     1. zset的value和score的映射关系
+     1. 所有key和value组成全局字典
+     1. 所有带过期时间的key
    - 代码
     ```c++
     struct zset {
@@ -167,6 +212,7 @@
 ### 底层数据结构
 1. 认识
    - 一些value类型，一个键对应了一个集合的数据
+   - 哈希表没有压缩列表的内存使用高效
    - 操作常识
      1. 单元素操作是基础
      1. 范围操作非常耗时
@@ -176,34 +222,28 @@
         - 如压缩列表和双向链表都记录表头和表尾的偏移量。因此对于List类型的LPOP/RPOP/LPUSH/RPUSH四个操作是在列表的头尾增删元素，可通过偏移量直接定位，复杂度只有O(1)，快速操作
 1. SDS
    - 认识：Simple Dynamic String 简单动态字符串
-     1. c的字符串以 NULL 作为结束符，需要遍历，算法复杂度O(n)，单线程承受不起
-     1. 配套字段多，对内容利用率不高
-   - 结构：是一个带长度信息的字节数组
-     1. 使用泛型T，根据字符串长度使用不同数据类型，内存极致优化
-     1. 存储方式：因为分配对象和sds内存的差异，embstr 最大能容纳的字符串长度是44
-        - 长度不超44时，使用emb形式 (embeded)，RedisObject对象头和 SDS 对象连续存在一起，使用 malloc 方法一次分配
-        - 长度超44时，使用 raw 形式，两个对象头内存地址一般不连续，需要两次malloc
-   - 设计
-     1. 扩容策略：预分配冗余空间，减少内存频繁分配
-        - 长度小于1M加倍扩容，超过一次只会多扩1M
-     1. 会自动转换类型，遇到计算了就转为数值
+     1. c的字符串以NULL作为结束符，需要遍历，算法复杂度O(n)，单线程承受不起
+     1. 没有直接使用c语言的字符串，而是自己定义了默认的字符串数据结构SDS，我们设置的所有键值基本都是SDS
+     1. 其配套字段多(元数据多)，对内存利用率不高，如16byte的数据，需要占用64byte，1亿条数据占用6.4G内存，其中4.8G是没用的
+        - ziplist比RedisObject节省了非常多的指针数据
    - 结构
-    ```c++
-    struct SDS<T> {
-        T capacity;       // 数组容量，分配的长度，规定长度不得超过 512M 字节
-        T len;            // 数组长度，实际的长度
-        byte flags;       // 特殊标识位，不理睬它
-        byte[] content;   // 数组内容，以字节\0 结尾的字符串，方便使用glibc函数
-    }
-
-    struct RedisObject {
-      int4 type;          // 4bits，类型
-      int4 encoding;      // 4bits，存储形式，同一个类型的 type 会有不同的存储形式
-      int24 lru;          // 24bits
-      int32 refcount;     // 4bytes，引用计数
-      void *ptr;          // 8bytes，64-bit system，存储位置指针
-    } robj;
-    ```
+     1. 组成
+        ```c++
+        struct SDS<T> {             // 是sdshdr的结构
+            T alloc;                // 数组容量，分配的长度，规定长度不超过512MB
+            T len;                  // 数组实际长度
+            unsigned char flags;    // 特殊标识位
+            char buf[];             // 数组内容，以字节\0结尾的字符串，方便使用glibc函数，额外占用1byte
+        }
+        ```
+   - 特点
+     1. 是包含长度信息和字节数组的结构体
+     1. 使用泛型T，根据字符串长度使用不同数据类型，作了内存优化，包括unsigned/uint8_t/uint16_t/uint32_t/uint64_t
+     1. string类型的额外开销包括SDS和RedisObject结构体
+   - 特性
+     1. 扩容策略：预分配冗余空间，减少内存频繁分配
+        - 小于1M加倍扩容，超过每次只多扩1M
+     1. 会自动转换类型，遇到计算了就转为数值
 1. hashtable
    - 认识：哈希表，一个哈希表其实就是一个数组，数组的每个元素称为一个哈希桶，每个哈希桶中保存了键值对的指针，![avatar](../images/db/redis_hashtable_struct.webp)
      1. 一个桶会存储多对键值指针对
@@ -213,8 +253,6 @@
      1. rehash
         - 增加现有的哈希桶数量，缩短链表长度，降低冲突，防止性能下降太多
         - 渐进式rehash
-   - 全局哈希表：保存了所有的键值对信息，从key找到value由全局哈希表索引完成
-     1. 利用两个全局哈希表，互相渐进式搬迁，一步一步往上增长
 1. rax
    - 认识：rax 有序字典树、基数树，按照key的字典序排列，支持快速地定位、插入和删除操作
      1. 易于理解，实现非常复杂
@@ -231,9 +269,9 @@
      1. 结构体代码：![avatar](../images/db/redis_ziplist.jpg)
         ```c++
         struct ziplist<T> {
-            int32 zlbytes;              // 整个压缩列表占用字节数
-            int32 zltail_offset;        // 最后一个元素距离压缩列表起始位置的偏移量，用于快速定位到最后一个节点
-            int16 zllength;             // 元素个数
+            int32 zlbytes;              // 列表长度，整个压缩列表占用字节数
+            int32 zltail_offset;        // 列表尾巴的偏移量，最后一个元素距离压缩列表起始位置的偏移量，用于快速定位到最后一个节点
+            int16 zllength;             // 列表中的entry 元素个数
             T[] entries;                // 元素内容列表，挨个挨个紧凑存储
             int8 zlend;                 // 标志压缩列表的结束，值恒为 0xFF
         }
@@ -241,7 +279,8 @@
         struct entry {                  // 容纳的元素类型不同，也会有不一样的结构
             int<var> prevlen;           // 前一个 entry 的字节长度
             int<var> encoding;          // 元素类型编码
-            optional byte[] content;    // 元素内容
+            int len;                    // 自身长度
+            optional byte[] content;    // 保存的实际数据
         }
         ```
      1. 特点

@@ -2,7 +2,7 @@
 1. 分类
    - 大型：功能大而全
      1. tars
-     1. Kratos
+     1. kratos
    - rpc
      1. tars：性能强
    - web
@@ -104,6 +104,88 @@
 #### tcp框架
 1. zinx
    - 认识：基于tcp的轻量级的带工作池的服务器框架，类似ws的读写分开处理的架构
+#### 微服务框架
+1. 微服务
+   - 理解：微服务架构是一种更独立的架构模式，能够单独更新和发布。是分布式网状结构，它提倡将单一应用程序划分成一组小的服务，服务之间互相协调、互相配合，为用户提供最终价值。微服务架构 ≈ 模块化开发 + 分布式计算
+     1. 一组小的服务
+     1. 轻量级通信
+     1. 现在开发模式：端到端ownership理念，啥都管：设计、开发、评审、测试、发布、运行、支持
+   - 好处
+     1. 强模块化边界
+     1. 可独立部署
+     1. 支持技术多样性
+   - 坏处
+     1. 分布式复杂性
+     1. 最终一致性
+     1. 运维负责
+     1. 测试复杂
+   - 中台战略
+     1. 业务前台：各种应用
+     1. 业务中台：支付、用户
+     1. 技术中台：iaas云基础(计算、存储、网络、监控)、paas云平台(持续交付、服务框架)
+   - 服务
+     1. 开发框架
+     1. 持续交付流水线
+     1. 端到端工具链
+     1. 工程实践规范
+1. 微服务架构：![avatar](../images/micro_service_struct.png)
+   - 设计原则
+     1. 要领域驱动设计，不是数据驱动设计，也不是界面驱动设计
+     1. 边界清晰
+     1. 分层清晰
+1. kratos
+   - 特性
+     1. 不过度设计，代码简单
+     1. 强大的中间件：Tracing（OpenTelemetry）、Metrics（默认为Prometheus）、Recovery等
+1. go-micro
+   - 认识：构建、管理分布式程序的系统，微服务框架
+   - 组成
+     1. runtime：运行时，即micro工具，管理配置、认证、网络
+        - api网关
+        - broker：允许异步消息的代理
+        - network：通过微网络服务构建多云网络
+        - new：服务模板生成器
+        - proxy：透明服务代理
+        - registry：服务资源管理器
+        - store：简单的状态存储
+        - web：仪表盘浏览服务
+     1. framework：开发框架,![avatar](../images/go_micro_framework.png)
+        - server、client
+        - registry：提供服务发现机制
+        - selector：服务选择器
+        - transport：服务间的通信接口
+        - broker：异步的消息发布、订阅接口
+        - codec：消息的编解码
+     1. clients：多语言客户端
+   - 使用
+     1. 注册服务
+     1. micro工具new生成服务
+   - 历史：1.0、2.0、3.0的升级都不兼容，3.0改为了云原生的托管平台收费模式(就像阿里云卖硬件，它卖软件)。Licence改为了Polyform Shield，就是还是开源，但是防止AWS这样的云服务部署Micro服务，和Micro公司进行直接竞争
+   - 组件
+     1. 注册配置中心：consul
+     1. 链路追踪：jaeger
+     1. 监控：promethues
+     1. 熔断器：hystrix
+     1. 通信：grpc
+     1. 限流：ratelimit
+     1. 负载均衡：selector
+     1. 日志：zap + ELK
+     1. 协议：protobuf
+1. 熔断
+   - 认识：hystrix-go，记录成功调用、失败、超时、拒绝数量，在需要的地方加熔断，要根据业务设计一整套的熔断流程和处理逻辑
+     1. 熔断计数器：默认DefaultMetricCollector，保存熔断器的所有状态数量
+     1. 熔断器状态
+        - close：允许流量通过
+        - open：不允许
+        - half_open：允许一部分，如果出现异常，进入open，否则一点点放量
+     1. 字段
+        - timeout：超时时间
+        - maxConCurrentRequest：最大并发量
+        - sleepWindow：熔断后重启时间，默认5秒
+        - requestVolumeThreshold：单位时间请求量
+        - errorPercentThreshold：熔断百分比，超过自动熔断
+     1. hystrix-dashboard：web管理平台
+1. 负载均衡：selector
 #### gRPC
 1. gRPC
    - 认识：基于http2.0 + protocol buffer的cs型的高性能的开源的通用的rpc框架，比webSocket高效，google主导开发，包 `google.golang.org/grpc`
@@ -700,6 +782,199 @@
    - 认识：基础存储没有采用复杂数据结构采用的是ConcurrentHashMap，所有的管理操作异步化、数据驱逐（淘汰）算法采用 W-TinyLFU，以及部分情况 LRF+LFU结合的方式，各种优秀的队列设计，冲突严重hash情况下链表降级采用红黑树来处理 等等优化处理
 #### 锁
 1. go-redsync/redsync：使用redis的分布式互斥锁
+#### 延时队列
+1. 利用zset
+    ```go
+    type DelayQueue struct {
+        RedLockKey    string
+        Key           string
+        Interval      time.Duration
+        RetryInterval time.Duration
+        AutoRenewal   bool
+    }
+
+    var Queue = make(map[string]*DelayQueue)
+
+    func NewDelayQueue(redLockKey string, key string, interval time.Duration, retryInterval time.Duration, autoRenewal bool) {
+        Queue[redLockKey] = &DelayQueue{
+            RedLockKey:    redLockKey,
+            Key:           key,
+            Interval:      interval,
+            RetryInterval: retryInterval,
+            AutoRenewal:   autoRenewal,
+        }
+    }
+
+    func (d *DelayQueue) Set(operationID string, key string, members []*redis.Z) error {
+        t := time.Now()
+
+        if d == nil {
+            log.Error(operationID, "delay queue set d is nil")
+            return fmt.Errorf("delay queue set d is nil")
+        }
+
+        _, err := db.DB.RDB.ZAdd(context.Background(), key, members...).Result()
+        if err != nil {
+            log.Error(operationID, "delay queue set zadd key:", key, "member:", utils.StructToJsonString(members), "err:", err)
+            return fmt.Errorf("delay queue set zadd err:%v", err)
+        }
+
+        log.Info(operationID, "delay queue set time:", time.Since(t))
+        return nil
+    }
+
+    func (d *DelayQueue) Del(operationID string, key string, members []interface{}) error {
+        if d == nil {
+            log.Error(operationID, "delay queue del d is nil")
+            return fmt.Errorf("delay queue del d is nil")
+        }
+
+        _, err := db.DB.RDB.ZRem(context.Background(), key, members...).Result()
+        if err != nil {
+            log.Error(operationID, "delay queue del zrem key:", key, "member:", utils.StructToJsonString(members), "err:", err)
+            return fmt.Errorf("delay queue del zrem err:%v", err)
+        }
+        return nil
+    }
+
+    func (d *DelayQueue) Len(operationID string, key string) (int64, error) {
+        n, err := db.DB.RDB.ZCount(context.Background(), key, "-inf", "+inf").Result()
+        if err != nil {
+            log.Error(operationID, "delay queue len zcount key:", key, "err:", err)
+            return 0, fmt.Errorf("delay queue len zcount err:%v", err)
+        }
+
+        return n, nil
+    }
+
+    func (d *DelayQueue) Get(operationID string, key string) ([]redis.Z, error) {
+        if d == nil {
+            log.Error(operationID, "delay queue get d is nil")
+            return nil, fmt.Errorf("delay queue get d is nil")
+        }
+
+        mutex := db.DB.RedLock.NewMutex(d.RedLockKey)
+        if err := mutex.Lock(); err != nil {
+            log.Error(operationID, "delay queue get lock failed red lock key:", d.RedLockKey)
+            return nil, fmt.Errorf("delay queue lock failed err:%v", err)
+        }
+
+        defer func() {
+            if ok, err := mutex.Unlock(); !ok || err != nil {
+                log.Error(operationID, "delay queue get unlock failed red lock key:", d.RedLockKey)
+            }
+        }()
+
+        opt := &redis.ZRangeBy{
+            Min:    "0",
+            Max:    strconv.FormatInt(time.Now().Unix(), 10),
+            Offset: 0,
+            Count:  100,
+        }
+
+        members, err := db.DB.RDB.ZRangeByScoreWithScores(context.Background(), key, opt).Result()
+        if err != nil {
+            log.Error(operationID, "delay queue get zrange by score key:", key, "err:", err)
+            return nil, fmt.Errorf("delay queue get zrange by score err:%v", err)
+        }
+
+        if len(members) <= 0 {
+            return members, nil
+        }
+
+        if !d.AutoRenewal {
+            return members, nil
+        }
+
+        tempMembers := make([]*redis.Z, 0)
+        for i, _ := range members {
+            members[i].Score = float64(time.Now().Add(d.RetryInterval).Unix())
+            tempMembers = append(tempMembers, &members[i])
+        }
+
+        err = d.Set(operationID, key, tempMembers)
+        if err != nil {
+            log.Error(operationID, "delay queue get reset key:", key, "err:", err)
+            return nil, fmt.Errorf("delay queue get reset err:%v", err)
+        }
+
+        return members, nil
+    }
+
+    func (d *DelayQueue) Done(operationID string, key string, members []interface{}) error {
+        err := d.Del(operationID, key, members)
+        if err != nil {
+            log.Error(operationID, "delay queue done del key:", key, "err:", err)
+            return fmt.Errorf("delay queue done del err:%v", err)
+        }
+        return nil
+    }
+
+    func (d *DelayQueue) run(f func(string, interface{}) error) {
+        defer func() {
+            if err := recover(); err != nil {
+                log.NewError("", "delay queue run panic", err, string(debug.Stack()))
+            }
+        }()
+
+        t := time.NewTicker(d.Interval)
+        defer t.Stop()
+
+        for {
+            select {
+            case <-t.C:
+                operationID := utils.OperationIDGenerator()
+                startTime := time.Now()
+
+                length, err := d.Len(operationID, d.Key)
+                if err != nil {
+                    log.Error(operationID, "delay queue get len err:", err)
+                }
+
+                if length <= 0 {
+                    continue
+                }
+
+                log.Info(operationID, "delay queue start key:", d.Key, "queue len:", length)
+
+                members, err := d.Get(operationID, d.Key)
+                if err != nil {
+                    log.Error(operationID, "run delay queue err:", err)
+                    continue
+                }
+
+                if len(members) <= 0 {
+                    continue
+                }
+
+                val := make([]interface{}, 0)
+                for i, _ := range members {
+                    err = f(operationID, members[i].Member)
+                    if err != nil {
+                        log.Error(operationID, "delay queue handle func err:", err, "members:", members)
+                        continue
+                    }
+                    val = append(val, members[i].Member)
+                }
+
+                if len(val) <= 0 {
+                    continue
+                }
+
+                err = d.Done(operationID, d.Key, val)
+                if err != nil {
+                    log.Error(operationID, "run delay queue done err:", err)
+                    continue
+                }
+                log.Info(operationID, "delay queue end time", time.Since(startTime), "members:", members)
+            }
+        }
+    }
+
+    func (d *DelayQueue) Run(f func(string, interface{}) error) {
+        go d.run(f)
+    }
+    ```
 ### 技术方案
 #### 池
 1. 认识

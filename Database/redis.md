@@ -25,6 +25,7 @@
    - list
      1. 认识：双向链表，首尾插入的按照插入顺序排序的字符串列表，访问中间的时间复杂度为O(N)，最多40亿个(2^232-1)
         - 存储消耗要高于单个字符串，但是可以部分获取，不用像string整个取出来再解码
+        - brpop为代表的br命令添加阻塞特性避免轮询开销，lpoprpush添加数据备份特性保证数据不被丢失
      1. 命令
         - lpush/rpush/lpop/rpop/rpoplpush/lpoprpush/lpushx/rpushx：压入、弹出、存在时才压入
         - blpop/brpop/brpoplpush：支持指定最大秒数的阻塞式弹出数据，单位秒
@@ -46,17 +47,17 @@
      1. 认识：无序集合，string类型的成员唯一的无序集合。通过hash table实现，所有操作复杂度都是O(1)
      1. 命令
         - sadd/spop/smove/srem：移除某一随机元素、移到另一集合、移除n个
-        - sdiff/sdiffstone/sinter/sinterstone/sunion/sunionstone：求差集、求交集、求并集。[并储存到另一个集合]
+        - sdiff/sdiffstore/sinter/sinterstone/sunion/sunionstone：求差集、求交集、求并集。[并储存到另一个集合]
         - scard/sismember/smembers/sscan：成员数量、是否成员、返回所有成员、迭代元素
-   - zset
-     1. 认识：有序集合，string类型的成员唯一的有序集合，每个元素关联一个double类型的分数
+   - sorted set
+     1. 认识：有序集合 zset，string类型的成员唯一的有序集合，每个元素关联一个double类型的分数
         - 成员唯一，分数可重复
         - 可通过分数进行排序，通过哈希表实现，最多40亿个(2^232-1)
         - 适用于有序且不重复
      1. 命令
-        - zadd/zrem/zremrangebylex/zremrangebyscore/zremrangebyrank
+        - zadd/zrem/zremrangebylex/zremrangebyscore/zremrangebyrank：增加、删除
         - zcard/zcount/zlexcount/zscan：成员数、指定分数区间的成员数、指定字典区间的成员数
-        - zrange/zrangebylex/zrangebyscore：通过索引区间、字典区间、分数返回成员
+        - zrange/zrangebylex/zrangebyscore：通过索引区间、字典区间、分数区间返回成员
         - zrevrange/zrevrangebyscore/zrevrank：通过索引、分数返回指定区间成员、返回排名。分数都是从高到底
         - zscore/zrank：返回分数值、返回指定成员索引
         - zincrby：已存在的score值增量加increment，不存在则添加
@@ -65,16 +66,20 @@
      1. 认识：强大的支持多播的可持久化消息队列，代替PubSub未来消息队列的最佳方案，借鉴kafka，v5.0
         - 消息链表存储id和内容，是持久化的
         - 结构是时间唯一序列的数组队列
+     1. 概念
+        - 独立消费：不定义消费组进行消费，当成普通消息队列使用，没有新消息可以阻塞等待，xread
+        - 使用Streams数据类型，创建多个消费者组，就可以实现同时消费生产者的数据。每个消费者组内可以再挂多个消费者分担读
+        - 定长队列：xadd maxlen
+        - xread block支持阻塞读
+        - 自动生成全局唯一消息id
+        - xack消息确认机制
      1. 组成
-        - 消费组：每个消费组都有last_delivered_id，状态独立不相互影响
+        - 消费组：每个消费组都有last_delivered_id，状态独立消费组之间不相互影响
         - 消费者：消费组可以挂多个消费者，竞争关系，任一消费游标都往前
           1. 消费者内部状态变量pending_ids，记录被读取没有被ack的消息，用来确保客户端至少消费一次
         - 消息
           1. 消息id：timestampInMillis-sequence形式，该毫秒内产生的第n条消息，
           1. 消息内容：键值对，这没什么特别之处
-     1. 概念
-        - 独立消费：不定义消费组进行消费，当成普通消息队列使用，没有新消息可以阻塞等待，xread
-        - 定长队列：xadd maxlen
      1. 使用
         - del
         - xadd/xdel/xrange/xlen
@@ -82,6 +87,7 @@
         - xread：使用上一个消息id获取新的
         - xgroup create：消费组设置
      1. 对比
+        - 和list、subpub相比就是，茅草房、土房、平房
         - Kafka支持动态增加分区数量的能力，但这种调整能力蹩脚，不会把已存在的内容进行rehash。这种简单的动态调整的能力通过增加新的stream就可以做到
 1. 数据类型的适用场景
    - string
@@ -93,6 +99,9 @@
    - hash：存对象数据，如用户基本信息，直接更新即可
    - set：做不重复的集合，存不重复用户名啦、每日投票一次啦
    - zset：有序的不重复集合，如排行榜、热门内容的排序，只需修改score
+1. 数据类型的使用注意事项
+   - string作为字符串使用时的内存利用率不高
+   - 为充分使用ziplist的精简内存布局而不是hashtable，要控制保存在hash集合中的元素个数
 1. 模块
    - bitmaps
      1. 认识：位图，即位的数组，用位可以表示两种情况，节省存储，如员工全年签到数据
@@ -110,14 +119,23 @@
      1. 命令
         - pfadd/pfmerge：添加、合并
         - pfcount：返回估算值
+   - redisTimeSeries
+     1. 认识：专门面向时间序列数据提供了数据类型和访问接口，支持直接对数据进行按时间范围的聚合计算
+     1. 命令
+        - TS.CREATE：创建时间序列数据集合
+        - TS.ADD：插入数据
+        - TS.GET/TS.MGET
+        - TS.RANGE：支持聚合计算的范围查询
    - GeoHash
      1. 认识：geospatial，地理空间索引半径查找，如附近的人，v3.2
-        - 结构只是个zset，score是GeoHash的52位整数值
+        - 底层使用zset实现，score是GeoHash的52位整数值
      1. 操作
         - geoadd：没有删除
         - geopos/geohash：获取经纬度坐标、hash
         - georadiusbymember/georadius：附近的其他元素
         - geodist：计算两个元素之间的距离
+     1. 实现
+        - GEO类型是把经纬度所在的区间编码作为Sorted Set 中元素的权重分数，把和经纬度相关的车辆ID作为Sorted Set中元素本身的值保存下来，这样相邻经纬度的查询可通过编码值大小范围查询来实现
      1. wiki
         - 最佳实践
           1. 全部放在一个zset中，使用单独实例部署，不使用集群环境
@@ -129,6 +147,8 @@
         - 经纬度
           1. 经度范围(-180, 180]，经度正负以本初子午线 (英国格林尼治天文台) 为界，东正西负
           1. 纬度范围(-90,90]，纬度正负以赤道为界，北正南负
+        - LBS：Location-Based Service 基于位置信息服务
+        - GeoHash编码方法：业界广泛使用的经纬度比较方法，“二分区间，区间编码”
 1. 基本操作
    - 库
      1. select index：切换库，更像命名空间，隔离key名冲突。索引号只能是数字不能自定义，可设置数量，开始和默认是0
@@ -270,6 +290,36 @@
      1. zk：抢锁就是节点尝试创建临时znode，建锁失败则注册监听器，解锁就是删除znode，然后zk通知客户端抢锁，也可弄成顺序节点，多个抢锁就依次监听上个znode
      1. 比较：zk设计定位就是分布式协调，注册监听器即可，但大并发压力会较大，比redis的轮询性能开销小
      1. mysql：利用排它锁，性能和sql超时导致的锁超时，`select * from lock where lock_name=xxx for update;`
+1. 统计
+   - 聚合统计
+     1. 认识：指统计多个集合元素的聚合结果，如交集、差集、并集
+        - 统计会阻塞，可选择从库专门负责计算
+     1. 举例
+        - 统计App每天的新增用户数和第二天的留存用户数
+          1. 一个set记录所有登录过App的userId
+          1. 另一群set记录每一天登录过App的userId，key为每天的日期，value记录当天登录的userId
+          1. 比较二者差集即可
+   - 排序统计
+     1. 认识：用到list和sorted set，一个按照插入顺序排序，一个权重排序
+        - list有分页时无法确定起止点的问题，sorted set不会
+     1. 举例
+        - 展示评论列表，使用sorted set，用值作分页依据
+        - 使用Sorted Set统计一段时间内的在线用户数
+          1. zadd online_us ers $timestamp $user_id：添加用户
+          1. zcount online_users $start_ timestamp $end_timestamp：进行统计
+   - 二值状态统计
+     1. 认识：只有两种状态，使用bitmap或者string都可以，bitmap更专业些
+     1. 举例
+        - 员工签到问题
+   - 基数统计
+     1. 认识：不重复元素的统计，使用set的天然去重、hash的天然去重统计、HyperLogLog的专业统计
+1. 时间序列数据
+   - 特点
+     1. 写要快：通常是持续高并发写入的
+     1. 查询模式多：通常读的时候为单条或一段时间，且有统计需要
+   - 认识：可基于hash、sorted set、redisTimeSeries模块实现
+     1. hash不支持范围查询、sorted set不支持范围统计，redisTimeSeries都支持
+     1. 同时组合使用hash和sorted set时，可利用hash的高效单次查询，sorted set的范围查询
 1. 限流
    - 计数器：incr设置有效期内的大于某个数量，触发限流，有效期就是限流时间单位，数量就是最高请求量，不是平均限流
     ```java
@@ -398,6 +448,7 @@
             retry_ts = time.time() + 5 # 5 秒后重试
             redis.zadd("delay-queue", retry_ts, value) 
         ```
+   - Stream应对中等规模和较弱可靠机制的队列服务
 1. 布隆过滤器
    - 认识：Bloom Filter，可理解为不怎么精确的set结构，v4.0
      1. 不存在时肯定不存在
@@ -405,7 +456,6 @@
      1. bf.reserve：参数设置，initial_size估计的过大浪费存储空间，过小影响准确率
      1. bf.add/bf.madd
      1. bf.exists/bf.mexists
-1. 时间序列数据库读写
 ### 架构
 1. 认识
    - 哨兵Sentinel提供高可用，集群Cluster提供自动分区
@@ -784,39 +834,9 @@
      1. 【强制】：新上线或者迁移的redis服务强制使用密码，应用层要进行配置
      1. 【强制】：只允许读取本部门redis， 需要使用其他部门数据则将数据服务化
      1. 【建议】：应用层自行处理长连接断开问题，db组只负责维护redis服务域名的存活，应用层要考虑dns切換之后原来的连接无法使用的状况
-1. 主库重启 checklist 
-   - 世纪互联主从库节点 zabbix 关闭报警
-   - 世纪互联主从库节点 注释脉搏脚本
-   - 切换Master到从库，修改参数并重启
-    ```sh
-    redis-cli -h 10.20.52.245 -p 8379 sentinel failover jy-courseware-redis
-    redis-cli -h 10.20.52.245 -p 9379 sentinel failover jy-tnt-redis
-
-    vim /boot/grub/grub.conf
-    isolcpus=10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29 
-    for i in {1..9}; do /etc/init.d/${i}379redis stop; done 
-    init 6
-    ```
-   - 重启完成后sysbench验证,重启redis服务
-    ```sh
-    /bin/rm -rf /root/scripts/sysbench.sh
-    cd /root/scripts && wget -N --http-user=XueRs --http-passwd=xxx http://soft.xesv5.com:88/dell/sysbench.sh
-    ./sysbench.sh --test=cpu --num-threads=${v_cpu_num} --max-requests=600000 run
-    for i in {1..9}; do /etc/init.d/${i}379redis start;sleep 60; done 
-    for i in {1..9};do sed -i '/slaveof/d' /data/${i}379redis/etc/redis.conf;done
-    for i in {1..9};do cat /data/${i}379redis/etc/redis.conf |grep slaveof;done
-    ```
-   - 同步完成后，切回原主
-    ```sh
-    redis-cli -h 10.20.52.245 -p 8379 sentinel failover jy-courseware-redis
-    redis-cli -h 10.20.52.245 -p 9379 sentinel failover jy-tnt-redis
-    ```
-   - 开启zabbix报警和脉搏，sentinel reset 
-   - yf的同步节点挂到sjhl从库
-    ```sh
-    /etc/init.d/irqbalance restart
-    chkconfig irqbalance on
-    ```
+#### 应用场景
+1. string的内存利用率不高：存储1亿条长度分别为8byte的id键值对，6.4G占用有4.8G都是元数据，可以采用hash存储来节省内存。方法是把key的前7位作为Hash的键，把key的后3位和value分别作为hash类型值中的 key和value(这么做是为了尽量使用ziplist类型的hash，更加高效)，这样多一条id键值对，只多16byte，大大节省内存
+1. 有一亿个keys要统计
 #### 性能和服务治理
 1. 性能监控
    - 连接数
@@ -888,6 +908,9 @@
         - bgsave是fork新进程进行，fork过程中会造成阻塞，设计或使用不好同样阻塞很长时间，和save执行内容相同
         - 比较：![avatar](../images/save_vs_bgsave.png)
      1. flushdb/flushall：删除当前/所有数据库的所有key
+   - 模块操作
+     1. 先编译为动态库.so
+     1. 加载：loadmodule redistimeseries.so
    - 其他
      1. slowlog subcommand：管理慢日志
      1. sync：用于复制功能的内部
@@ -953,6 +976,39 @@
    - 命令改写：rename-command
    - lua脚本安全
    - ssl连接：spiped，两边都安装，进行加密通信
+1. 主库重启 checklist 
+   - 世纪互联主从库节点 zabbix 关闭报警
+   - 世纪互联主从库节点 注释脉搏脚本
+   - 切换Master到从库，修改参数并重启
+    ```sh
+    redis-cli -h 10.20.52.245 -p 8379 sentinel failover jy-courseware-redis
+    redis-cli -h 10.20.52.245 -p 9379 sentinel failover jy-tnt-redis
+
+    vim /boot/grub/grub.conf
+    isolcpus=10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29 
+    for i in {1..9}; do /etc/init.d/${i}379redis stop; done 
+    init 6
+    ```
+   - 重启完成后sysbench验证,重启redis服务
+    ```sh
+    /bin/rm -rf /root/scripts/sysbench.sh
+    cd /root/scripts && wget -N --http-user=XueRs --http-passwd=xxx http://soft.xesv5.com:88/dell/sysbench.sh
+    ./sysbench.sh --test=cpu --num-threads=${v_cpu_num} --max-requests=600000 run
+    for i in {1..9}; do /etc/init.d/${i}379redis start;sleep 60; done 
+    for i in {1..9};do sed -i '/slaveof/d' /data/${i}379redis/etc/redis.conf;done
+    for i in {1..9};do cat /data/${i}379redis/etc/redis.conf |grep slaveof;done
+    ```
+   - 同步完成后，切回原主
+    ```sh
+    redis-cli -h 10.20.52.245 -p 8379 sentinel failover jy-courseware-redis
+    redis-cli -h 10.20.52.245 -p 9379 sentinel failover jy-tnt-redis
+    ```
+   - 开启zabbix报警和脉搏，sentinel reset 
+   - yf的同步节点挂到sjhl从库
+    ```sh
+    /etc/init.d/irqbalance restart
+    chkconfig irqbalance on
+    ```
 ### wiki
 1. 历史
    - 2009年，开源
@@ -961,11 +1017,12 @@
    - 2.8.9：新增，HyperLogLog
    - 2.8.18：新增，无硬盘复制(避免硬盘性能瓶颈)
    - 3.0：2015年，新增，集群功能
+   - 5.0：新增了steam类型
    - 6.0
      1. 增加多线程模型：属于实验性新增，不建议生产环境使用
         - 只有读、和读取网络请求并进行解析是多线程，写还是单线程
      1. ACL安全策略
-   - 6.2：最新
+   - 7.2：最新
 1. 编程语言客户端
    - php：官方推荐两个
      1. Predis：php代码实现的原生客户端
