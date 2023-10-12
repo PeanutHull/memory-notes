@@ -639,8 +639,52 @@
 1. Apex
 #### 网络相关
 1. go-resty/resty/v2：http请求库
-   - 简单、功能丰富，链式调用
-   - 自动Unmarshal
+   - 认识
+     1. 简单、功能丰富，链式调用
+     1. 自动Unmarshal
+   - 采坑实录
+     1. 没使用连接池，导致无法复用长连接：每次使用都resty.New()，正确的应该是下面两种方法
+        ```go
+        // 方法一，复用http.Client
+        resty.NewWithClient(http.Client)
+
+        // 方法二，设置连接池参数
+        client := resty.New()
+        client.SetTransport(&http.Transport{
+            MaxIdleConnsPerHost: 10, // 对于每个主机，保持最大空闲连接数为 10
+            IdleConnTimeout: 30 * time.Second, // 空闲连接超时时间为 30 秒
+            TLSHandshakeTimeout: 10 * time.Second, // TLS 握手超时时间为 10 秒
+            ResponseHeaderTimeout: 20 * time.Second, // 等待响应头的超时时间为 20 秒
+        })
+        ```
+     1. 复用连接没有初始化cookie，造成cookie累加，最终超出nginx最大限制
+   - 最佳实践
+    ```go
+    // 设置http.Client
+    cookieJar, _ := cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
+    var a = http.Client{
+        Jar:       cookieJar,
+        Timeout:   6 * time.Second,
+        Transport: http.Transport{
+            TLSClientConfig:        &tls.Config{InsecureSkipVerify: true},     // 不校验https，加快速度
+            Proxy:                  http.ProxyFromEnvironment,
+            DialContext:            (&net.Dialer{
+                Timeout:   30 * time.Second,
+                KeepAlive: 30 * time.Second,
+            }).DialContext,
+            MaxIdleConns:           100,
+            IdleConnTimeout:        90 * time.Second,
+            ForceAttemptHTTP2:      true,
+            TLSHandshakeTimeout:    10 * time.Second,
+            ExpectContinueTimeout:  1 * time.Second,
+            MaxIdleConnsPerHost:    maxIdleConnsPerHost,
+        },
+    },
+
+    // 设置请求压缩
+    data, err = utils.GzipEncode(data)
+	client.SetHeader("x-Accept-Encoding", "gzip")
+    ```
 1. parnurzeal/gorequest：http请求库
    - 简单、功能丰富，链式调用
 1. goreplay

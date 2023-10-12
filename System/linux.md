@@ -920,6 +920,8 @@
      1. host
      1. openssl：查看网站证书链`openssl s_client -connect github.com:443 -showcerts`
         - 网站检测：myssl.com
+   - 网速
+     1. iPerf：测量最大带宽的工具
 1. 文件相关
    - wget
    - ftp/sftp

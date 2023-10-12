@@ -36,6 +36,14 @@
    - 确保消息幂等：业务保证
      1. 唯一id + 指纹码
      1. redis原子性实现
+1. 一种延迟队列的设计
+   - 架构图：![avatar](../images/queue/delay-queue.png)
+   - 流程
+     1. 用户对某个商品下单，系统创建订单成功，同时往延迟队列里put一个job。job结构为：{‘topic':'orderclose’, ‘id':'ordercloseorderNoXXX’, ‘delay’:1800 ,’TTR':60 , ‘body':’XXXXXXX’}
+     1. 延迟队列收到该job后，先往job pool中存入job信息，然后根据delay计算出绝对执行时间，并以轮询(round-robbin)的方式将job id放入某个bucket
+     1. timer每时每刻都在轮询各个bucket，当1800秒（30分钟）过后，检查到上面的job的执行时间到了，取得job id从job pool中获取元信息。如果这时该job处于deleted状态，则pass，继续做轮询；如果job处于非deleted状态，首先再次确认元信息中delay是否大于等于当前时间，如果满足则根据topic将job id放入对应的ready queue，然后从bucket中移除；如果不满足则重新计算delay时间，再次放入bucket，并将之前的job id从bucket中移除
+     1. 消费端轮询对应的topic的ready queue（这里仍然要判断该job的合理性），获取job后做自己的业务逻辑。与此同时，服务端将已经被消费端获取的job按照其设定的TTR，重新计算执行时间，并将其放入bucket
+     1. 消费端处理完业务后向服务端响应finish，服务端根据job id删除对应的元信息
 1. wiki
    - 商业的有微软的MSMQ、IBM的WebSphere
    - JMS试图通过公共Java API的方式，隐藏不同mq的实际接口，解决互通问题，但是使用单独接口胶合众多不同的接口也是存在很多问题。老牌ActiveMQ是JMS的一种实现
@@ -81,7 +89,7 @@
      1. 背景：最初目的是通过后台异步执行耗时任务来降低web系统的页面访问延迟，11年前项目就有了，最近更新是2年前
      1. 典型的类Memcached设计，协议和使用方式都是同样的风格
      1. 内部都是生产者-消费者模式
-     1. 有人说beanstalk之于rabbitmq，好比nginx之于apache。更简单、轻量级、高性能、易使用。但比kafka数据处理能力有差距
+     1. 有人说beanstalk之于rabbitmq，好比apache之于nginx。更简单、轻量级、高性能、易使用。但比kafka数据处理能力有差距
    - 组成
      1. job：任务
      1. tube：任务队列

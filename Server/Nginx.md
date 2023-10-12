@@ -463,6 +463,22 @@
      1. set_real_ip_from：设置对于什么样的地址才做转换，比如自己集群中的上游，自己的cdn
      1. real_ip_header：设置从哪个请求头字段取ip
      1. real_ip_recursive：环回地址
+1. http_image_filter_module
+   - 认识：集成图片处理模块，可以实现实时图片缩放、旋转、验证有效性、获取宽高类型信息等功能，v0.7.54
+   - 参数
+     1. `：image_filter off;`：关闭模块
+     1. `：image_filter test;`：确保图片是jpeg、gif、png、webp，否则返回415错误
+     1. `：image_filter size;`：输出有关图像的json 格式，例如`{"img":{ "width": 100, "height": 100, "type": "gif" }}`，如果出错显示{}
+     1. `：image_filter rotate 90|180|270;`：将图像旋转指定度数，参数可以包括变量。单独或一起与resize crop一起使用
+     1. `：image_filter resize width height;`：按比例减少图像到指定大小，要减少一个维度，可以将另一个维度指定为"-"来表示, 出错返回415错误。参数值可包含变量，可以与rotate一起使用
+     1. `：image_filter crop width height;`：按比例将图像缩小到较大的一侧，并在另一侧产生无关边缘。其它和 rotate 一样
+     1. `：image_filter_buffer 10M;`：设置读取图像缓冲的最大大小，超过则报 415 错误
+     1. `：image_filter_interlace on;`：如果启用，最终图像将交错。对于jpeg，最终图像将采用 "逐行jpeg" 格式
+     1. `：image_filter_jpeg_quality 95;`：设置转换的jpeg图像的质量。可接受的值是从1~100。较小的值通常意味着图像质量越低，以达到减少数据传输。推荐的最大值为 95，参数值可以包含变量
+     1. `：image_filter_sharpen 100;`：增加最终图像的清晰度，锐度百分比可以超过 100。零值将禁用锐化。参数值可以包含变量
+     1. `：image_filter_transparency on;`：定义在使用调色板指定的颜色转换 gif 图像或 png 图像时是否应保留透明度。透明度的降低会导致质量更好的图像，png 中 的 alpha 通道透明度始终保留
+   - 最佳实践
+     1. 给image_filter模块加入缓存机制：由于image_filter模块无法跟proxy cache同时处理，要实现这个功能必须要将请求拆成两个host来达成
 1. geo
    - 认识：匹配ip范围生成新变量
      1. geoip：基于maxMind数据库计算ip的地理位置，也是生成新变量
@@ -1283,6 +1299,163 @@
                 '"http_user_agent": "$http_user_agent" }';
 
         include vhost/*.conf;
+    }
+    ```
+1. nginx作为图片裁切服务器
+    ```conf
+    # 访问形式：https://mind-file.im30.net/mind-im-data/e4da3b7f318d5/qgfgdaem2/1697910.jpeg?process=image/resize&h=375&w=600&q=60
+
+    # 设置缓存方式
+    http {
+        include             /etc/nginx/mime.types;
+        default_type        application/octet-stream;
+
+        proxy_cache_path    /data/pic inactive 7d keys_zone=cache_zone:10m;                # 缩略图缓存路径并保存7天
+        sendfile            on;
+        keepalive_timeout   65;
+
+        access_log          /var/log/nginx/access.log  main;
+        log_format          main  '$remote_addr - $remote_user [$time_local] "$request" '
+                                    '$status $body_bytes_sent "$http_referer" '
+                                    '"$http_user_agent" "$http_x_forwarded_for"';
+        #tcp_nopush         on;
+        #gzip               on;
+    }
+
+    # 接收请求
+    server {
+        listen 80;
+        server_name mind-minio.im30.lan;
+        access_log /var/log/nginx/proxy.log main;
+        add_header X-Cache-status $upstream_cache_status;
+        client_header_buffer_size 128k;
+        client_body_buffer_size 1m;
+        proxy_buffer_size 32k;
+        proxy_buffers 64 32k;
+        proxy_busy_buffers_size 1m;
+        proxy_temp_file_write_size 512k;
+
+        location ~(.+)\.(png|jpg|jpeg|webp|bmp|gif) {                               # 入口
+            access_log  /var/log/nginx/test.log main;
+            proxy_set_header Host $http_host;
+            set $w "0"; 宽
+            set $h "0"; 高
+            set $q "0"; 质量
+            if ($arg_w){
+                set $w $arg_w;配置默认值
+            }
+            if ($arg_h){
+                set $h $arg_h;
+            }
+            if ($arg_q){
+                set $q $arg_q;
+            }
+
+            set $type $arg_process;
+            set $proxy_pass http://127.0.0.1:9000;                                  # minio服务地址
+
+            if ($type = "image/resize"){                                            # 裁剪
+                set $image_path $1.$2;
+                set $image_uri  $type$image_path?w=$w&h=$h&q=$q&r=$r;
+                set $proxy_pass http://127.0.0.1/$image_uri;
+                proxy_pass $proxy_pass;
+                break;
+            }
+
+            if ($type = "image/info"){                                              # 按json格式返回宽、高、类型
+                set $image_path $1.$2;
+                set $image_uri  $type$image_path;
+                set $proxy_pass http://127.0.0.1/$image_uri;
+                proxy_pass $proxy_pass;
+                break;
+            }
+            proxy_pass $proxy_pass;
+        }
+
+        location ~^/image/resize/(.+)\.(png|jpg|jpeg|webp|bmp|gif) {                # 缓存
+            set $width $arg_w;
+            set $height $arg_h;
+            set $q $arg_q;
+            set $path $1.$2;
+            rewrite ^ /$path break;
+            proxy_pass http://127.0.0.1:8888/$path/${width}/${height}/$q;           # 代理到真正执行缩略的url
+            proxy_cache cache_zone;
+            proxy_cache_valid 200 302 24h;
+            proxy_cache_valid 404 1m;
+            expires 7d;
+        }
+
+        location ~^/image/info/(.+)\.(png|jpg|jpeg|webp|bmp|gif) {
+            set $path $1.$2;
+            rewrite ^ /$path break;
+            proxy_pass http://localhost:9000;
+            image_filter size;                                                      # 按json格式返回宽、高、类型
+            image_filter_buffer 500M;
+        }
+
+        location / {
+            proxy_pass http://127.0.0.1:9000;                                       # 不加参数，返回原图
+        }
+    }
+
+    # 执行缩略图片的动作
+    server {
+        listen 8888;
+        access_log /var/log/nginx/resizer.log main;
+        client_header_buffer_size 128k;
+        client_body_buffer_size 1m;
+        proxy_buffer_size 32k;
+        proxy_buffers 64 32k;
+        proxy_busy_buffers_size 1m;
+        proxy_temp_file_write_size 512k;
+        proxy_hide_header "x-amz-id-2";
+        proxy_hide_header "x-amz-request-id";
+
+        proxy_set_header X-Cache $upstream_cache_status;
+
+        location ~ ^/(.+)/([0-9]+)/([0-9]+)/([0-9]+)/([0-9]+)$ {            # 带旋转参数
+            set $w $2;      # 宽
+            set $h $3;      # 高
+            set $q $4;      # 品质百分比
+            set $r $5;      # 旋转
+            if ($w = "0" ){
+                set $w "-";
+            }
+            if ($h = "0" ){
+                set $h "-";
+            }
+            if ($q = "0" ){
+                set $q "95";
+            }
+            set $path $1;
+            rewrite ^ /$path break;
+            proxy_pass http://localhost:9000;
+            image_filter resize $w $h;
+            image_filter rotate $r;
+            image_filter_buffer 500M;
+            image_filter_jpeg_quality $q;
+        }
+
+        location ~ ^/(.+)/([0-9]+)/([0-9]+)/([0-9]+)$ {                     # 不带旋转参数
+            set $w $2;
+            set $h $3;
+            set $q $4;
+            if ($w = "0" ){
+                set $w "-";                                                 # 支持-，不支持0，-代表原图
+            }
+            if ($h = "0" ){
+                set $h "-";
+            }
+            if ($q = "0" ){
+                set $q "95";
+            }
+            set $path $1;
+            rewrite ^ /$path break;
+            proxy_pass http://127.0.0.1:9000;                               # 后端minio服务器
+            image_filter resize $w $h;
+            image_filter_buffer 500M;
+            image_filter_jpeg_quality $q;
+        }
     }
     ```
 #### 调优

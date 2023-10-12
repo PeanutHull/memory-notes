@@ -429,7 +429,8 @@
         - max_user_instances
         - max_queued_events
      1. 衍生工具：inotify-tools，提供命令行、api等
-   - irqbalance
+   - irqbalance：帮助平衡所有cpu对中断的负载，优化中断分配，避免单cpu负载过重情况的出现
+     1. 启用irqbalance服务，既可以提升性能，又可以降低能耗
 #### 进程守护
 1. 工具：supervisor、systemd、monit(还能性能监控)
 1. supervisor：进程管理器，用于保证进程的自动重启等。通过fork/exec的方式将这些被管理的进程当作supervisor的子进程来启动，配置进程命令即可，python写的
