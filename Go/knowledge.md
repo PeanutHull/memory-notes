@@ -640,15 +640,58 @@
 #### 网络相关
 1. go-resty/resty/v2：http请求库
    - 认识
-     1. 简单、功能丰富，链式调用
+     1. 简单、功能丰富、链式调用
+     1. 重试控制，超时控制，cookie管理，链接池，代理，TLS管理，支持多种认证方式(base/OAuth2)，支持发送json/xml/url编码，文件上传和下载，支持发送大量请求并批量处理响应结果
      1. 自动Unmarshal
    - 采坑实录
-     1. 没使用连接池，导致无法复用长连接：每次使用都resty.New()，正确的应该是下面两种方法
+     1. 没使用连接池，导致无法复用长连接：每次使用都resty.New()
+     1. 复用http.Request连接没有初始化cookie，造成cookie累加，最终超出nginx最大限制
         ```go
-        // 方法一，复用http.Client
+        // 该方式创建的client会默认生成cookie管理器，不能使用
+        // c := resty.New().SetRetrycount(retryCnt)
+
+        // 方式一，直接使用http提供的 DefaultClient
+        hc := http.DefaultClient
+        c := resty.NewWithClient(hc).SetRetryCount(retryCnt)
+
+        // 方式二，自定构建 http.client
+        hc = &http.Client{
+            Transport: http.DefaultTransport,
+            Timeout: t，
+        }
+        c = resty.NewWithClient(hc).SetRetryCount(retryCnt)
+        ```
+   - 提供的api
+     1. Resty 对象方法：New()/NewWithClient()/SetHeaders()/SetBody()/SetResult()
+     1. Request 对象方法：SetHeaders()/SetResult()/ToJSON()
+     1. Response 对象方法：StatusCode()/Time()
+   - 最佳实践
+     1. 初始化resty
+        ```go
+        // 设置http.Client
+        cookieJar, _ := cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
+        var myClient = http.Client{
+            Jar:       cookieJar,                                                                   // 独立的cookie管理器
+            Timeout:   6 * time.Second,
+            Transport: http.Transport{
+                TLSClientConfig:        &tls.Config{InsecureSkipVerify: true},                      // 关闭证书校验，加快速度
+                Proxy:                  http.ProxyFromEnvironment,
+                DialContext:            (&net.Dialer{
+                    Timeout:   30 * time.Second,
+                    KeepAlive: 30 * time.Second,
+                }).DialContext,
+                MaxIdleConns:           100,
+                IdleConnTimeout:        90 * time.Second,
+                ForceAttemptHTTP2:      true,
+                TLSHandshakeTimeout:    10 * time.Second,
+                ExpectContinueTimeout:  1 * time.Second,
+                MaxIdleConnsPerHost:    maxIdleConnsPerHost,
+            },
+        },
+        // 方法一，使用http.Client初始化
         resty.NewWithClient(http.Client)
 
-        // 方法二，设置连接池参数
+        // 方法二，设置连接池参数，需要注意cookie管理
         client := resty.New()
         client.SetTransport(&http.Transport{
             MaxIdleConnsPerHost: 10, // 对于每个主机，保持最大空闲连接数为 10
@@ -657,34 +700,31 @@
             ResponseHeaderTimeout: 20 * time.Second, // 等待响应头的超时时间为 20 秒
         })
         ```
-     1. 复用连接没有初始化cookie，造成cookie累加，最终超出nginx最大限制
-   - 最佳实践
-    ```go
-    // 设置http.Client
-    cookieJar, _ := cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
-    var a = http.Client{
-        Jar:       cookieJar,
-        Timeout:   6 * time.Second,
-        Transport: http.Transport{
-            TLSClientConfig:        &tls.Config{InsecureSkipVerify: true},     // 不校验https，加快速度
-            Proxy:                  http.ProxyFromEnvironment,
-            DialContext:            (&net.Dialer{
-                Timeout:   30 * time.Second,
-                KeepAlive: 30 * time.Second,
-            }).DialContext,
-            MaxIdleConns:           100,
-            IdleConnTimeout:        90 * time.Second,
-            ForceAttemptHTTP2:      true,
-            TLSHandshakeTimeout:    10 * time.Second,
-            ExpectContinueTimeout:  1 * time.Second,
-            MaxIdleConnsPerHost:    maxIdleConnsPerHost,
-        },
-    },
-
-    // 设置请求压缩
-    data, err = utils.GzipEncode(data)
-	client.SetHeader("x-Accept-Encoding", "gzip")
-    ```
+     1. 其他
+        ```go
+        // 设置超时控制
+        resty.Client.SetTimeout(5 * time.Second)
+        // 设置自动重试：最大重试3次，重试间隔1秒
+	    client.SetRetryCount(3).SetRetryWaitTime(1 * time.Second)
+        // SetRetryCount() 用于 Resty 对象上的全局设置，所有使用该 Resty 对象发送的请求都会遵循这个重试次数
+        // RetryMax() 方法是应用于请求对象上的设置，即每次请求都可以根据具体需要独立地设置重试次数
+        // 关闭证书校验
+	    client.SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true})
+        // 设置请求压缩
+        data, err = utils.GzipEncode(data)
+        resty.Client.SetHeader("x-Accept-Encoding", "gzip")
+        // 获取各阶段耗时
+        resp, err := client.R().EnableTrace().SetHeader("user-agent", "im").SetHeader("token", p).SetBody(req).SetResult(&output).Post(url)
+        ti := resp.Request.TraceInfo()
+        ti.TLSHandshake等
+        // 设置连接池参数
+        client.SetTransport(&http.Transport{
+            MaxIdleConnsPerHost: 10, // 对于每个主机，保持最大空闲连接数为 10
+            IdleConnTimeout: 30 * time.Second, // 空闲连接超时时间为 30 秒
+            TLSHandshakeTimeout: 10 * time.Second, // TLS 握手超时时间为 10 秒
+            ResponseHeaderTimeout: 20 * time.Second, // 等待响应头的超时时间为 20 秒
+        })
+        ```
 1. parnurzeal/gorequest：http请求库
    - 简单、功能丰富，链式调用
 1. goreplay

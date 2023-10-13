@@ -1427,7 +1427,8 @@
             if ($q = "0" ){
                 set $q "95";
             }
-            set $path $1;
+            set_unescape_uri $path $1;                                      # 解决中文路径
+            <!-- set $path $1; -->
             rewrite ^ /$path break;
             proxy_pass http://localhost:9000;
             image_filter resize $w $h;
