@@ -181,6 +181,44 @@
      1. 单一统一：单一系统可支持实时数据服务、交互式数据分析和离线数据处理场景
      1. 便于使用：两个进程，没有其他依赖；在线集群扩展、自动副本恢复；兼容MySQL协议，使用标准SQL
      1. 丰富生态：Spark使用Spark Doris Connector来读写Doris；Flink Doris Connector 使 Flink CDC 能够实现对 Doris 的 Exactly-once 数据写入；提供DBT Doris Adapter，用于通过DBT转换Doris中的数据
+1. Cassandra
+   - 认识：Java写的
+1. ScyllaDB
+   - 认识：大规模并行数据库引擎，可支持万亿级数据，利用现代多核、多处理器NUMA服务器硬件，能够以亚毫秒级的平均延迟每秒运行数百万次操作，c++编写充分利用linux底层原语优势，号称下一代NoSQL数据库
+     1. API兼容Cassandra和DynamoDB
+     1. 支持和Cassandra一样的CQL查询语言和驱动，一样的SSTable存储格式
+     1. 支持和DynamoDB一样的JSON-style查询和驱动
+     1. 基于底层Seastar框架，采用高度异步、无共享设计。每个数据分片都分配有CPU、RAM、持久存储和网络资源，并尽可能高效使用。凭借其自己的用于CPU和I/O处理的自定义调度程序可最大效率运行
+   - 服务架构
+     1. Cluster集群
+     1. Node节点
+     1. Shard分片
+   - 数据架构
+     1. 数据模型：“宽列”数据库，即“key-key-value” 数据库反映其分区键和集群键
+     1. 组成
+        - Keyspace键空间
+        - Table表
+        - Partition分区
+        - Rows行
+        - Colums列
+   - 环架构
+     1. Ring环
+     1. vNode虚拟节点
+   - 存储5架构
+     1. Memtable
+     1. Commitlog
+     1. SSTables
+     1. Tombstones墓碑
+     1. Compactions
+     1. Compaction Strategy
+   - 高可用
+     1. peer-to-peer 架构：节点使用 gossip 协议来发现对等节点以建立集群，进行拓扑和模式更新
+     1. Automatic Data Replication
+   - 网络通信
+     1. 通信使用高效的Seastar RPC流，并使用暗示切换等反熵机制保持彼此同步
+   - 业界实践
+     1. Discord从mongoDB 15年换到Cassandra，然后又换到ScyllaDB
+        - 解决热分区问题：在ScyllaDB和业务服务之间增加rust写的中介服务来合并请求
 ### 分布式
 1. CAP
    - 认识：对于一个分布式计算系统来说，不可能同时满足以下三点，又叫布鲁尔定理。网络分区发生时，一致性和可用性两难全

@@ -1,4 +1,10 @@
 ### 应用实践
+1. 自己踩的坑
+   - map需要先make
+   - json需要先判断不为空再Unmarshal
+   - 开协程go一定要要有recover
+   - gorm的Take/First/Last方法要避免ErrRecordNotFound异常
+   - mysql加表了要想着加索引
 #### 思路思想
 1. 编写思路
    - 编程起势：首先通过划分结构体，定义不同的功能模块，然后分别实现，最终实现功能

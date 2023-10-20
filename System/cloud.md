@@ -163,6 +163,7 @@
      1. 即service mesh，如envoy、linkerd，istio作服务注册中心，还有流量治理、监控安全等功能
      1. k8s内置这个方案，nacos、consul也支持这种sidecar模式
      1. 性能好、语言栈无关，引入门槛高、运维部署复杂
+   - 第四代：使用eBPF技术将TCP/IP处理等服务功能直接挂到内核中运行
 1. 应用
    - Istio：就是gateway，istio像nginx作外部网关，envoy作为服务层的sidecar，可以识别内部调用走内部mesh集群调用
      1. 架构：control plane对envoy proxy提供发现、配置、证书管理，反之envoy proxy向其提供心跳，envoy proxy之前互通
@@ -190,11 +191,12 @@
    - LAMP(Linux + Apache + MySQL + PHP)、MVC(Spring + iBatis/Hibernate + Tomcat)
    - KVM -> 容器
 #### 无服务
-1. 认识：函数即服务
-   - 都是建立在k8s基础之上
+1. 认识：函数即服务，核心理念是让开发者只关注编写代码，而不需关注底层的服务器和网络，存储等基础设施，将应用程序以函数的形式部署到云平台上，由云平台负责根据请求自动扩展
+   - 无需管理服务器，自动扩展与缩减容量，都是建立在k8s基础之上
    - 主要适用场景，混合云
+   - 有事件才有服务，按使用量付费
+   - 更高的安全与可用性
    - 目前缺乏标准
-   - 有事件才有服务，更加节省
 1. 项目
    - knative
      1. 特点

@@ -733,6 +733,8 @@
      1. 可以做流量回放
    - 原理：底层使用cgo调用Libpcap
      1. Libpcap：数据包捕获函数库，c写的，tcpdump也是基于这个实现
+1. go-ping
+   - 使用icmp包探测得出时间的包，go-ping/ping
 1. chromedp
    - 认识：golang编写的基于Chrome DevTools Protocol协议的操作chrome headless和chrome devTools的程序
      1. 可用于需要js解析后形成dom树的场景

@@ -891,9 +891,9 @@
           1. panic无法跨协程, 当前协程产生的异常, 必须由当前协程处理，如果当前协程不处理，整个进程所有协程退出
           1. panic可以嵌套
         - recover：可以捕获到panic的输入值，让进入panic流程中的goroutine恢复正常执行
-          1. 只能在defer语句中使用，直接使用返回nil没有任何效果，因为只要panic后面的不会被执行
-          1. recover后, 当前函数panic后面没执行的代码也不会再继续执行
-          1. recover函数只有在方法内部发生panic时，返回值才不会为nil，没有panic的情况下返回值为nil
+          1. 只能在defer语句中使用，并且只能捕获当前协程的异常。如果发生了panic没用recover捕获那么该协程会终止并且会导致整个程序panic，所以在协程中一定要使用recover函数
+          1. 直接使用没有任何效果且返回nil，因为只要panic后面的不会被执行
+          1. 通过判断recover的返回值查看是否发生了panic
           1. 如果无法处理，可以重新panic
      1. 定义
         ```go
@@ -949,10 +949,16 @@
         - 递归死循环或者超出栈空间造成内存溢出
      1. 实例
         ```go
-        // 简单版
-        defer func() {                              // 直接执行的匿名方法
-            if err := recover(); err != nil {
-                fmt.Println("恢复", err)
+        // 最佳实践
+        defer func() {                                      // 直接执行的匿名方法
+            if err := recover(); err != nil {               // 发生panic才会返回非nil
+                fmt.Println("错误原因为：", err)
+
+                buf := make([]byte, 4096)                   // 打印堆栈
+				n := runtime.Stack(buf, false)
+				fmt.Printf("协程发生异常:\n%s\n", buf[:n])
+
+                // return                                   // 不需要写return
             }
         }()
 
@@ -4531,6 +4537,8 @@
    - time
      1. 类型
         - Time：时间
+          1. 默认值：0001-01-01 00:00:00 +0000 UTC
+          1. 判断是否为默认值：`time.Time.IsZero()`
         - Location：时区
         - Duration：int64纳秒计数的单调时钟
           1. ParseDuration()：解析持续时间字符串，`time.ParseDuration("1h10m10s")`
