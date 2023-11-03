@@ -221,10 +221,9 @@
                 log.Fatalln("arith error: ", err)
             }
             ```
-     1. grpc
-        - 使用
-          1. 实现pb.go的RegisterXXServiceServer接口
-          1. 服务端
+     1. 使用grpc
+        - 实现pb.go的RegisterXXServiceServer接口
+        - 服务端
             ```go
             // 1. new一个grpc的server
             rpcServer := grpc.NewServer()
@@ -241,7 +240,7 @@
             // 4. 运行rpcServer，传入listener
             _ = rpcServer.Serve(listener)
             ```
-          1. 客户端
+        - 客户端
             ```go
             conn, err := grpc.Dial(":8082", grpc.WithInsecure())
             if err != nil {
@@ -262,6 +261,27 @@
 
             fmt.Println("调用gRPC方法成功，ProdStock = ", resp.ProdStock)
             ```
+1. Protocol Buffers
+   - 认识：protobuf，google开发的一种数据序列化协议，二进制格式，和xml/json都是编码方式
+     1. 效率高：二进制格式，比文本格式更紧凑，序列化/反序列化速度也很快
+     1. 跨语言支持，包括c++、java、python
+     1. 清晰的结构定义、向后兼容性
+   - 最佳实践
+     1. proto跟顺序强相关，加字段要在下边加，不能在中间，会导致序号和字段名对不上导致丢失参数
+   - 实例
+    ```conf
+    package test;
+    option go_package="test";           // 指定go的包名
+
+    // 定义RPC服务接口
+    service SearchService {
+        rpc Search (SearchRequest) returns (SearchResponse) {}
+    }
+    ```
+   - 其他
+     1. MessagePack：高效的二进制的跨语言的序列化框架
+     1. thrift：高性能、跨语言
+     1. java默认：java.io.Serializable，字节数组，无法跨语言、体积大、效率低
 1. rpc
    - 认识：Remote Procedure Call Protocol 远程过程调用协议，调用远程方法像调用本地一样，不需要关注通信细节和调用过程，打通了应用层和传输层
      1. 支持了分布式部署、网络化
@@ -324,25 +344,6 @@
         - 日志：应用级相关日志，对访问、超时、内部异常等需要有日志覆盖
      1. 微服务管理后台：查看、控制等
      1. 运维体系集成：CI\CD、CMDB、发布系统、k8s、监控系统等
-1. Protocol Buffers
-   - 认识：protobuf，google开发的一种数据序列化协议，二进制格式，和xml/json都是编码方式
-     1. 效率高：二进制格式，比文本格式更紧凑，序列化/反序列化速度也很快
-     1. 跨语言支持，包括c++、java、python
-     1. 清晰的结构定义、向后兼容性
-   - 实例
-    ```conf
-    package test;
-    option go_package="test";           // 指定go的包名
-
-    // 定义RPC服务接口
-    service SearchService {
-        rpc Search (SearchRequest) returns (SearchResponse) {}
-    }
-    ```
-   - 其他
-     1. MessagePack：高效的二进制的跨语言的序列化框架
-     1. thrift：高性能、跨语言
-     1. java默认：java.io.Serializable，字节数组，无法跨语言、体积大、效率低
 ### 库
 1. 执行相关
    - brahma-adshonor/gohook：在运行时动态挂钩go函数，从而实现动态语言修补等功能。
@@ -593,6 +594,10 @@
 
     // 为什么生产要放在ConsumeClaim里？
     ```
+1. machinery
+   - 认识：分布式异步任务队列
+   - 使用
+     1. 任务类型：普通、并发(即多个任务)、回调、链式、延迟
 #### 日志相关
 1. log标准库的缺陷
    - 不支持日志切割
@@ -733,8 +738,9 @@
      1. 可以做流量回放
    - 原理：底层使用cgo调用Libpcap
      1. Libpcap：数据包捕获函数库，c写的，tcpdump也是基于这个实现
-1. go-ping
-   - 使用icmp包探测得出时间的包，go-ping/ping
+1. go-ping/ping
+   - 使用icmp包探测得出时间的包
+1. mssola/useragent：解析http用户代理的go库
 1. chromedp
    - 认识：golang编写的基于Chrome DevTools Protocol协议的操作chrome headless和chrome devTools的程序
      1. 可用于需要js解析后形成dom树的场景

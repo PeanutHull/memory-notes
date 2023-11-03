@@ -5347,7 +5347,7 @@
      1. 支持将slice直接转为数组
      1. 标准库加强
         - 新增了几个时间转换格式常量
-        - 新包 crypto/ecdh 支持通过 NIST 曲线和 Curve25519 椭圆曲线 Diffie-Hellman 密钥交换
+        - 新包 crypto/ecdh 支持通过NIST曲线和Curve25519椭圆曲线Diffie-Hellman密钥交换
         - os/exec.Cmd 结构体中的新字段 Cancel 和 WaitDelay, 指定 Cmd 在其关联的 Context 被取消或其进程退出时的回调
      1. 性能提升
         - 编译器和GC的优化减少了内存开销，并将cpu性能整体提高了2%

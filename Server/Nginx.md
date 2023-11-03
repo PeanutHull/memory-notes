@@ -793,7 +793,7 @@
     ```lua
     gzip on;
     gzip_static on;        
-    gzip_min_length 1k/1024;                            // 最小压缩文件大小
+    gzip_min_length 1k/1024;                            // 最小压缩文件大小，建议1k以上，小于可能越压越大
     gzip_http_version 1.1;                              // 压缩版本，默认1.1
     gzip_buffers 16 8k;                                 // 压缩缓冲区
     gzip_comp_level 6;                                  // 压缩等级

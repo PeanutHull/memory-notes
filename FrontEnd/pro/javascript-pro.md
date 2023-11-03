@@ -305,6 +305,9 @@
     ```
    - 常识
      1. data-main：所指js将在加载完reuqire.js后处理，并且将此作为默认为根路径baseUrl，可省去.js后缀
+### 并行运行
+1. web worker：为js实现多线程环境，允许后台运行，受到同源限制等
+1. sharedworker：为js实现多页面通信，有复用机制，代替localStorage的共享
 ### Flutter
 1. 认识：google的开源移动ui框架，快速在ios、android构建原生用户界面。渲染技术使用GDI，gpu渲染，比rn快很多。使用Dart语言
    - 跨平台：Linux、Android、IOS、Fuchsia
@@ -333,7 +336,7 @@
 1. 开发
    - 依赖：`pubspec.yaml`文件
    - 组件
-     1. bugly：
+     1. bugly：腾讯的崩溃收集组件
 ### WebAssembly
 1. 认识：缩写 wasm，是基于堆栈的js抽象虚拟机的二进制指令格式字节码规范。为编程语言的可移植而设计，即使用非js如c/c++/go/rust/swift等编写代码并且能在浏览器上运行的技术方案
    - 理解
