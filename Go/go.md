@@ -4775,6 +4775,8 @@
      1. serve方法中对panic作了保护，防止服务停止
    - 类型
      1. `Client`：实现连接池的代码在Transport类型中，使用idleConn保存持久化的可重用的长连接
+     1. `Transports`
+        - 超时时间配置：![](../images/go/htto_config.jpg)
      1. `Handler`
      1. `Request`
      1. `Response`
@@ -4807,6 +4809,23 @@
    - demo
      1. 发起http请求
         ```go
+        // 创建连接池
+        transport := &http.Transport{
+            DialContext: (&net.Dialer{
+                Timeout:   30 * time.Second, // 等待连接完成的超时时间，默认无，操作系统可能施加自己较早的超时
+                KeepAlive: 30 * time.Second, // 活动探测之间的时间间隔，为负则禁用
+            }).DialContext,
+            MaxIdleConns:          100,              // 最大空闲连接
+            IdleConnTimeout:       90 * time.Second, // 空闲连接关闭的超时时间
+            TLSHandshakeTimeout:   10 * time.Second, // tls握手超时
+            ExpectContinueTimeout: 1 * time.Second,  // 100-continue状态码超时时间
+        }
+        // 创建客户端
+        client := &http.Client{
+            Timeout:   time.Second * 30, // 请求超时时间
+            Transport: transport,
+        }
+        //请求数据
         resp, err := http.Get("http://")
         defer resp.Body.Close()
 
@@ -4888,6 +4907,28 @@
             http.Request.Cookies()                  // 所有
             // 设置
             http.SetCookie(w, &c2)
+            ```
+     1. web浏览器代理
+            ```go
+            func (p *Pxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+                transport := http.DefaultTransport
+                // 浅拷贝对象，并新增属性
+                outReq := new(http.Request)
+                *outReq = *req
+                if clientIp, _, err := net.SplitHostPort(req.RemoteAddr); err != nil {
+                    ...
+                }
+                
+                // 请求下游
+                res, err := transport.RoundTrip(outReq)
+                if err != nil {...}
+
+                // 返回下游数据
+                for key, value := range res.Header {...}
+                rw.WriteHeader(res.StatusCode)
+                io.Copy(rw, res.Body)
+                res.Body.Close()
+            }
             ```
 1. webSocket
    - 认识：`golang.org/x/net/websocket`支持
