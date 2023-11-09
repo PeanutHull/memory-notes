@@ -130,6 +130,10 @@
      1. 事务、索引：同mysql
      1. 函数、约束、视图、触发器：同mysql
         - 约束：主键约束、唯一约束、检查约束
+   - 最佳实践
+     1. wasm
+        - https://github.com/sql-js/sql.js，A javascript library to run SQLite on the web
+        - worker+better-sqlite3方案：https://github.com/signalapp/Signal-Desktop
    - 运维
      1. 文件
         - xx.db

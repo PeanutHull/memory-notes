@@ -181,6 +181,23 @@
 1. Volo：RPC 框架，支持了 GRPC 和 thrift
 1. Monoio：异步的运行时，性能非常关键的业务以及基础设施，基础架构的服务去使用
    - 采用 Thread Per Core 模型，这样就可以解决 Tokio 的很多问题
+1. 数据库
+   - sqlite的飞书使用：rust code -> diesel orm -> sqlite ffi
+### pro
+1. wasm
+   - 飞书sqlite的wasm实践
+     1. 方案
+        - 项目本身使用rust开发，通过wasm移植，上层的业务代码不用动，直接可在web端使用
+        - sqlite放在内存中
+     1. 需要做的：将sqlite编译为一个emscripten target的wasm实例，由前端负责加载；然后在sdk侧，通过wasm的abi接口调用sqlite wasm实例提供的接口
+        - 将sqlite编译到wasm平台
+        - 给diesel封装wasm平台的跨模块调用接口
+   - wasm的工作模式：Emscripten、WASI、无任何依赖的纯粹模式，对C/C++代码的友好度：Emscripten>Wasi>>Unknown
+     1. wasm32-unknown-emscripten：需要宿主提供posix接口
+     1. wasm32-wasi：需要宿主提供wasi接口
+     1. wasm32-unknown-unknown
+   - 工具
+     1. emcc：编译rust为wasm
 ### wiki
 1. 历史
    - 08年：私人诞生

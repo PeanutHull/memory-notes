@@ -5051,6 +5051,91 @@
    - golangci-lint
    - gometalinter：停止维护
 #### 性能分析
+1. pprof
+   - 认识：性能分析，找出时间花在哪里。通过分析profile文件，实现可视化的火焰图、链路耗时图、top函数
+     1. 目前用的就是profile下载看火焰图等
+   - 组成
+     1. profile：整体cpu的profile
+     1. allocs：整体内存分配的
+     1. trace：trace的
+
+     1. goroutine：所有协程的
+     1. heap：堆内存的
+     1. block：调用阻塞的
+     1. mutex：锁的
+     1. threadcreate：线程的
+     1. cmdline：用到的命令行的
+   - 最佳实践
+     1. 步骤：重复进行，不断优化
+        - 先命令行或者web接口生成profile文件
+        - 使用pprof分析profile：`go tool pprof -http=127.0.0.1:8000 cpu.profile`，
+        - 查看慢在哪里优化代码
+        - 优先解决耗时大的、内存占用大的
+     1. 直接获取远端pprof并指定时间：`go tool pprof -http=:8000 http://xxx/debug/pprof/profile?seconds=5`
+   - 使用
+     1. web应用：`go tool pprof`
+        - 开启访问入口
+            ```go
+            go func() {
+                http.ListenAndServe(":8888", nil)
+            }()
+
+            // 另一边可以施加流量，用以观察
+            siege -c 50 -t 100 "http://localhost:8080/ping"
+            ```
+        - 获取分析文件
+            ```go
+            // 直接访问
+            http://localhost:8888/debug/pprof
+
+            // pprof工具获取
+            go tool pprof -http=:8000 http://localhost:8888/debug/pprof/profile?seconds=5
+            ```
+        - demo
+            ```go
+            import (
+                "net/http"
+                _ "net/http/pprof"
+                "github.com/gin-gonic/gin"
+            )
+
+            var GlobalVarDemo int32 = 0
+
+            // 模拟接口逻辑
+            func main() {
+                r := gin.Default()
+
+                // 业务逻辑
+                r.GET("/ping", func(c *gin.Context) {
+                    GlobalVarDemo++
+                    c.JSON(200, gin.H{
+                        "message": GlobalVarDemo,
+                    })
+                })
+                // 启动web服务
+                r.Run()
+
+                // 再开启一个端口获取pprof数据
+                go func() {
+                    http.ListenAndServe(":8888", nil)
+                }()
+            }
+            ```
+     1. 工具
+        - go-torch：将profile转换成火焰图的开源工具
+          1. Flame：火焰图绘制
+          1. graphviz：调用链生成
+1. trace
+   - 认识：调用链路，找出程序在一段时间内正在做什么，用于诊断性能问题，如延迟，并行化、竞争异常
+     1. 清晰查看每个逻辑处理器中Goroutine的执行过程，及阻塞消耗如网络阻塞、同步阻塞(锁)、系统调用阻塞、调度等待、GC耗时、GC STW(Stop The World)
+   - 使用：`go tool trace`
+     1. 生成
+        - `go test -bench -benchmem -run=^$ ^BenchmarkDemo_Pool$ demo -v -count=1 -trace=trace.out`
+        - `curl http://localhost:8888/debug/pprof/trace?seconds=20 > trace.out`：web方式
+     1. 分析：`go tool trace -http=127.0.0.1:8000 trace.out`
+   - 工具
+     1. go-callvis：通过分析main包将代码的调用关系可视化，即用箭头图显示所有方法的调用关系
+        - 使用：`go-callvis main.go`
 1. bench
    - 认识：即benchmark，基准测试
      1. 函数一般以Benchmark开头
@@ -5122,78 +5207,6 @@
         })
     }
     ```
-1. trace
-   - 认识：调用链路，找出程序在一段时间内正在做什么，用于诊断性能问题，如延迟，并行化、竞争异常
-     1. 清晰查看每个逻辑处理器中Goroutine的执行过程，及阻塞消耗如网络阻塞、同步阻塞(锁)、系统调用阻塞、调度等待、GC耗时、GC STW(Stop The World)
-   - 步骤：`go tool trace`
-     1. 生成trace.out
-        - `go test -bench -benchmem -run=^$ ^BenchmarkDemo_Pool$ demo -v -count=1 -trace=trace.out`
-        - `curl http://localhost:8888/debug/pprof/trace?seconds=20 > trace.out`：web方式
-     1. 分析trace.out：`go tool trace -http=127.0.0.1:8000 trace.out`
-   - 工具
-     1. go-callvis：通过分析main包将代码的调用关系可视化，即用箭头图显示所有方法的调用关系
-        - 使用：`go-callvis main.go`
-1. pprof
-   - 认识：性能分析，找出时间花在哪里。通过分析profile文件，实现可视化的火焰图、链路耗时图、top函数
-   - 使用
-     1. 步骤：重复进行，不断优化
-        - 先-cpuprofile生成profile文件
-        - 使用pprof分析profile：`go tool pprof -http=127.0.0.1:8000 cpu.profile`，
-        - 查看慢在哪里优化代码
-        - 优先解决耗时大的
-     1. web应用：`go tool pprof`
-        - 开启访问入口
-            ```go
-            // 
-            go func() {
-                http.ListenAndServe(":8888", nil)
-            }()
-
-            // 另一边可以施加流量，用以观察
-            siege -c 50 -t 100 "http://localhost:8080/ping"
-            ```
-        - 获取分析文件
-            ```go
-            // 直接访问
-            http://localhost:8888/debug/pprof
-
-            // pprof工具获取
-            go tool pprof -http=:8000 http://localhost:8888/debug/pprof/profile?seconds=5
-            ```
-        - demo
-            ```go
-            import (
-                "net/http"
-                _ "net/http/pprof"
-                "github.com/gin-gonic/gin"
-            )
-
-            var GlobalVarDemo int32 = 0
-
-            // 模拟接口逻辑
-            func main() {
-                r := gin.Default()
-
-                // 业务逻辑
-                r.GET("/ping", func(c *gin.Context) {
-                    GlobalVarDemo++
-                    c.JSON(200, gin.H{
-                        "message": GlobalVarDemo,
-                    })
-                })
-                // 启动web服务
-                r.Run()
-
-                // 再开启一个端口获取pprof数据
-                go func() {
-                    http.ListenAndServe(":8888", nil)
-                }()
-            }
-            ```
-     1. 工具
-        - go-torch：将profile转换成火焰图的开源工具
-          1. Flame：火焰图绘制
-          1. graphviz：调用链生成
 ### 运维
 1. 环境变量
    - GOROOT：go的安装路径，可以不设置，默认在/usr/local/go，编译的时候从GOROOT找system libariry
