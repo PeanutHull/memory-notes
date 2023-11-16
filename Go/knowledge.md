@@ -128,7 +128,7 @@
      1. 持续交付流水线
      1. 端到端工具链
      1. 工程实践规范
-1. 微服务架构：![avatar](../images/micro_service_struct.png)
+1. 微服务架构：![](../images/micro_service_struct.png)
    - 设计原则
      1. 要领域驱动设计，不是数据驱动设计，也不是界面驱动设计
      1. 边界清晰
@@ -149,7 +149,7 @@
         - registry：服务资源管理器
         - store：简单的状态存储
         - web：仪表盘浏览服务
-     1. framework：开发框架,![avatar](../images/go_micro_framework.png)
+     1. framework：开发框架,![](../images/go_micro_framework.png)
         - server、client
         - registry：提供服务发现机制
         - selector：服务选择器
@@ -199,11 +199,11 @@
    - 实例
      1. proto生成go代码
         - 编写proto文件，生成.pb.go代码
-          1. `protoc --proto_path=. --go_out=. plugin= protorpc=. arith.proto`，包含了rpc方法定义和服务注册的代码，即有service
+          1. `protoc --go_out=plugins=grpc:. arith.proto`，包含了rpc方法定义和服务注册的代码，即有service
           1. `protoc --proto_path=. --go_out=./ --go-grpc_out=./ ./mind-im-server/pkg/proto/auth/auth.proto`：插件新用法
         - 插件
-          1. protoc-gen-go
-          1. protoc-gen-go-grpc
+          1. protoc-gen-go：旧的在github上，新的在golang.org上
+          1. protoc-gen-go-grpc：专为生成grpc代码拆出来的，在golang.org上
         - 使用
           1. 服务端：`pb.ListenAndServeArithService("tcp", "127.0.0.1:8097", new(Arith))`
           1. 客户端
@@ -319,7 +319,7 @@
           1. 传输：通过socket传给另一个编程语言
           1. 再次翻译：翻译为本语言的数据结构
           1. 调用执行
-   - 最佳实践：![avatar](../images/go/rpc_struct.png)
+   - 最佳实践：![](../images/go/rpc_struct.png)
      1. 基础能力
         - 核心通信能力：请求构建封装、序列化、网络传输、反序列化、服务端处理等多个环节
           1. 调用方式：oneway、async（异步）、sync(同步)、stream 
@@ -765,11 +765,11 @@
     err = backoff.Retry(operation, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 3))
     ```
 #### 架构组件
-1. 进程管理：![avatar](../images/go/go_process_manage.png)
+1. 进程管理：![](../images/go/go_process_manage.png)
 1. sentinel
    - 认识：面向分布式服务架构的高可用流量防护组件，以流量为切入点，从限流、流量整形、熔断降级、系统负载保护、热点防护等多个维度来帮助开发者保障微服务的稳定性
      1. 承接ali的双11流量
-   - 生态：![avatar](../images/about_sentinel.png)
+   - 生态：![](../images/about_sentinel.png)
 1. 限流
    - 认识：保护后端服务
    - 举例
@@ -856,7 +856,7 @@
      1. bigcache底层存储是bytes queue，初始化时设置合理的配置项可以减少queue扩容的次数，提升性能
    - 特性
      1. 出现hash冲突时直接返回结果不存在
-   - 结构：![avatar](../images/go/bigcache.jpg)
+   - 结构：![](../images/go/bigcache.jpg)
      1. 内部对key进行分片，拆成一个个的cacheShard
      1. cacheShard由hashmap和entries组成
           1. `hashmap map[uint64]uint32`：key为hash值，value为BytesQueue中的偏移量
@@ -1075,7 +1075,7 @@
      1. 主要内容是获取连接、释放连接、复用连接、清理连接。用的时候取出空闲的，如果没有空闲的就等待或者在最大数的限制下新建
         - 尽量减少阻塞的请求。同时尽量回收连接
         - 非阻塞式的处理方式是直接拒绝，阻塞式的是将请求排队，排队要把握队伍长度相关的响应时间、充分利用系统资源/发挥最大性能之间的关系
-     1. 原理：![avatar](../images/conn_pool.png)
+     1. 原理：![](../images/conn_pool.png)
    - 工作者池是抢占，连接池是先查空闲的队列
    - 感觉大多数都用chan实现了，也就很简单了
 ##### 连接池
@@ -1216,7 +1216,7 @@
         - 大牛的特点，你不要管我的实现，我只要保持接口的清晰，你只管用就好了，至于内部实现是我自己的事情，我不保证可读性，我可以使用我认为的任何技巧
    - 组成
      1. database/sql：包含了sql的通用形接口和类型，是对外应用层，是db的抽象
-        - DB：数据库连接池管理器结构体类型，![avatar](../images/go/database_sql_db.png)
+        - DB：数据库连接池管理器结构体类型，![](../images/go/database_sql_db.png)
           1. connector：连接创建器
           1. numOpen：总连接数，正在用的、在连接池里的、将要打开的连接数量
           1. maxOpen：最大连接数，正在用的、在连接池里的的连接数量
@@ -1299,7 +1299,7 @@
           1. sql.QueryContext() —— sql.query() —— sql.DB.conn()、sql.DB.queryDC()
           1. sql.QueryRowContext()：只查询一行
         - 执行：sql.DB.Exec() —— sql.DB.ExecContext() —— sql.DB.exec() —— sql.DB.conn()、sql.DB.execDC()：不返还结果集，主要是非select的场景
-   - 流程：![avatar](../images/go/database_sql_open_process.png)
+   - 流程：![](../images/go/database_sql_open_process.png)
      1. 打开连接：获取数据库驱动、初始化sql.DB、异步协程监听需要新建连接的chan
      1. 执行
         - 获取连接sql.DB.conn()
@@ -2035,7 +2035,7 @@
         - 得到解析器整理的数据
      1. 分析
      1. 存储
-   - 设计思想/架构：![avatar](../images/spider_struct.png)
+   - 设计思想/架构：![](../images/spider_struct.png)
      1. seed：种子页面，即起始点，放入engine
      1. engine：驱动核心，总协调作用，需要轻量，耗时操作要交出去，放入fetcher提取
      1. fetcher：输入url，输出文本，放入parser
@@ -2143,7 +2143,7 @@
 1. 意义
    - 记录下整个架构实现，之后设计分布式架构就有参考了
    - https://github.com/owenliang/crontab
-   - ![avatar](../images/go/go_distribute_crontag.jpeg)
+   - ![](../images/go/go_distribute_crontag.jpeg)
 1. 实现
    - 简单任务调度的实现
      1. 设定一个结构体，包含cron表达式和下次执行时间
@@ -2155,7 +2155,9 @@
      1. 调度master，rpc下发任务给多个执行worker，反之进行状态上报
 #### 网关
 1. 网关/反向代理
-   - 认识：利用官方httputil包的NewSingleHostReverseProxy方法
+   - 认识：利用官方httputil包的NewSingleHostReverseProxy方法简单处理，定制需要再实现自己的interface{}
+     1. 架构图：![](../images/go/ReverseProxy_struct.png)
+     1. 为什么请求下游移除Connetion头？因为代理的连接要自己管理
    - demo
     ```go
     type ServerHandle struct {
@@ -2175,6 +2177,33 @@
         if err != nil {
             log.Fatalln("ListenAndServe: ", err)
         }
+    }
+
+    // 简化版
+    target, _ := url.Parse("http://www.domain.com")                                   // 设置要转发的地址
+    proxy := httputil.NewSingleHostReverseProxy(target)                                 // 实例化 ReverseProxy 包
+    //http.HandleFunc("/", proxy.ServeHTTP)
+    log.Fatal(http.ListenAndServe(":8082", proxy))                                      // 启动服务
+
+    // 手动版
+    func (p *Pxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+        transport := http.DefaultTransport
+        // 浅拷贝对象，并新增属性
+        outReq := new(http.Request)
+        *outReq = *req
+        if clientIp, _, err := net.SplitHostPort(req.RemoteAddr); err != nil {
+            ...
+        }
+        
+        // 请求下游
+        res, err := transport.RoundTrip(outReq)
+        if err != nil {...}
+
+        // 返回下游数据
+        for key, value := range res.Header {...}
+        rw.WriteHeader(res.StatusCode)
+        io.Copy(rw, res.Body)
+        res.Body.Close()
     }
     ```
 1. 流量转发

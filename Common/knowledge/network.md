@@ -454,7 +454,7 @@
         - 欺骗性代理：HTTP_X_FORWARDED_FOR传随机ip，HTTP_VIA如实
         - 高匿名代理：HTTP_X_FORWARDED_FOR和HTTP_VIA无数值
      1. 请求头
-        - x-forwarded-for；累加的逐级ip，因为代理往上走会再新加一层连接
+        - x-forwarded-for；为了向服务器提供更有用的客户端ip地址，累加的逐级ip，因为代理往上走会再新加一层连接
         - x-real-ip：真实ip
    - 优化
      1. 减少http请求数：每个新的请求都需要3次握手，很费时间

@@ -86,6 +86,7 @@
         - make：只用于slice、map、chan三种类型的内存分配，返回有初始值非零的T类型，帮忙将数据初始化好，参数是类型
           1. 因为这三种类型就是引用类型，就没有必要返回他们的指针
         - new：用于任意类型的内存分配，返回传入类型的零值的指针，会将分配出来的内存置零，参数是类型
+        - & 取的是已经存在变量的地址，不仅能够分配内存，还可以直接初始化变量，更常用，如直接&Aaa{a:1}，new的话需要先new再赋值，费劲
         - close：`func close(c chan<- Type)`，关闭
      1. 其他
         - 异常
@@ -4908,28 +4909,6 @@
             // 设置
             http.SetCookie(w, &c2)
             ```
-     1. web浏览器代理
-            ```go
-            func (p *Pxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-                transport := http.DefaultTransport
-                // 浅拷贝对象，并新增属性
-                outReq := new(http.Request)
-                *outReq = *req
-                if clientIp, _, err := net.SplitHostPort(req.RemoteAddr); err != nil {
-                    ...
-                }
-                
-                // 请求下游
-                res, err := transport.RoundTrip(outReq)
-                if err != nil {...}
-
-                // 返回下游数据
-                for key, value := range res.Header {...}
-                rw.WriteHeader(res.StatusCode)
-                io.Copy(rw, res.Body)
-                res.Body.Close()
-            }
-            ```
 1. webSocket
    - 认识：`golang.org/x/net/websocket`支持
    - 库
@@ -5336,12 +5315,14 @@
           1. ` -http=:8080`：生成本机的go官网，可用浏览器打开
      1. `go help`
    - 编写
-     1. `go vet`：代码格式错误检查 
      1. `go fmt`：格式化代码文件，是gofmt的简单封装
      1. `go fix`：转换老版本的代码到新版本，是命令go tool fix的简单封装
      1. `go generate`：用于在编译前自动化生成某类代码，举例：`//go:generate go tool yacc -o gopher.go -p parser gopher.y`
      1. `go bug`
      1. `go tool cgo`
+   - 代码检测
+     1. `go vet`：代码格式错误检查
+     1. `go race`：代码格式错误检查
    - 断点调试：dlv
 ### wiki
 1. 历史

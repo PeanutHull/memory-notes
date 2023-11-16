@@ -50,22 +50,10 @@
 1. topic
    - 认识：主题，逻辑概念，用于存储、区分消息，在broker上
      1. 紧凑的二进制字节数组，避免了java繁重的堆上内存分配
-   - 参数
-     1. topic名
-     1. 分区数
-        - 认识：建议为3，数据分布更均衡
-        - 压缩类型：zstd、lz4、snappy、gzip、生产者决定
-        - 清理策略
-          1. 方式
-             - compact：压实
-               1. 当键不为null时，相同的键只会保留最后的值
-             - delete
-               1. 完全删除某个key：设置value=null。kafka会先进行常规清理，该消息作为墓碑消息保留一段时间
-             - compact + delete
-          1. 单分区数据保留字节数
-          1. 单分区数据保留天数
-     1. 副本
-        - 认识：选择n个副本时，最多允许有(n-1)台broker宕机
+   - 组成
+     1. 名称
+     1. 分区数：建议为3，数据分布更均衡
+     1. 副本：选择n个副本时，最多允许有(n-1)台broker宕机
         - 不完全副本选举
           1. 开启：可用性优先
           1. 不开启：可靠性优先
@@ -77,30 +65,7 @@
         - 1：可用性优先
         - 2：可靠性优先
      1. 节点选取
-   - 组成
-     1. serializer：序列化器，对象、字节相互转换的编解码器
-     1. __consumer_offsets：位移主题，储存offset，之前放到了zk中高强度写不合适，也是普通topic，存的也是普通message，保存了group id，主题名，分区号
-        - 删除位移主题的过期消息：Compact策略，即key值相同只保留最新；Log Cleaner异步定义执行
-   - 删除：需要考虑生产者生产，消费者消费，broker损坏怎么办
-     1. 设置
-        - auto.create.topics.enable = false：要不然删不掉
-        - delete.topic.enable = true：最好打开，不然有问题
-     1. 原理
-        - 特点
-          1. 异步线程 + 延时操作
-        - 步骤
-          1. 注册zk的delete_topics节点的变化监听器
-          1. 启动删除topic线程，这时删除线程阻塞并等待删除事件
-          1. 执行删除命令时，在delete_topics节点添加
-          1. 唤起删除线程
-          1. 执行删除逻辑：删除分区信息、删除zk目录、清除controller中相关cache
-          1. 删除线程继续阻塞
-        - 最佳实践
-          1. 断掉所有访问：使用域名访问，切断解析，保证一定无流量进入
-          1. 进行删除
 1. message
-   - 认识
-     1. 可设置自动删除时间
    - 组成
      1. key：消息键，决定放到哪个partition
         - 有key：按照key进行哈希，相同key去一个partition
@@ -108,6 +73,7 @@
      1. batch：分批发送
      1. schema：消息编码方式
    - 属性
+     1. 自动删除时间
      1. 消费超时时间
      1. 最大重试次数：重新投递给业务方的最大重试次数，业务方消费消息的时间超过"消费超时时间"时，消息会判断消费失败，
      1. QOS：并发回调个数
@@ -116,50 +82,13 @@
      1. 只能追加写，避免了缓慢的随机io操作
      1. 使用日志段Log Segment机制，总是写最新的segment，每个消息有一个位移，单partition消息有序，全局不是
      1. kafka中叫分区，在mongodb和elasticsearch中叫分片shard，hbase中叫region，cassandra中叫vnode
-   - 组成：TopicName + Num是日志目录
-     1. active segment list：追加、读取、删除，用于确认具体的索引文件
-        - 是一个offset区间，有了offset就可确认哪个segment
-        - 查找消息用二分法，找出对应的offset在哪个segment的索引中，在定位出offset在segment中的大概位置，再遍历查找message
-     1. segment
-          1. xxxxxxx.index
-             - 左边是partation的全局offset，右边是segment的offset，
-             - 一条条的记录每条消息的字节位置，这样直接可以取到消息
-          1. xxxxxxx.log：segment file，包含一个个的message内容
-          1. xxxxxxx.timeindex：时间排序的索引
-          1. leader-epoch-checkpoint
-     1. message
-        - offset：4byte
-        - message length：4byte(1+4+n)，消息长度
-        - crc：4byte，CRC校验码
-        - magic value：1byte，版本号
-        - attributes：1byte
-        - timestamp：4byte
-        - key length：4byte
-        - key
-        - value length：4byte
-        - playload：n byte，消息内容
      1. offset：偏移量，递增的整数值。既可表示固定不变的消息的位置Offset，也能表示可能随时变化的消费者消费到的位置Consumer Offset
    - 索引
      1. 认识：为减少索引文件大小方便直接加载进内存，索引使用稀疏矩阵，每隔一定的字节数再建立一条索引
      1. 组成
         - baseOffset：对应segment文件中的第几条message。方便使用数值压缩算法节省空间。如varint
         - position：在segment中的绝对位置
-1. partition机制
-   - 读写
-     1. 特点
-        - 每个partition的日志分为n个大小相等的segment文件存储
-        - 每个segment的消息数量不一定相等(消息大小不同)
-     1. 写
-        - partition将消息串行追加到最后一个segment上，segment达到阈值就滚动到新segment
-          1. active segment：活跃片段，当前正在写入的片段，活动片段不会被删除
-        - segment一定阈值后flush到磁盘上
-     1. 读：一级级的检索快速找到消息内容，顺序读取磁盘可以有很高的性能
-        - 用offset通过active segment list文件：找出具体的哪个segment
-        - 找这个segment的index文件得到segment中消息的起始位置offset
-        - 通过上个offset移动到某条消息的开头后，先读取4字节，就可以知道整个消息的长度了，最后读取整个消息内容
-   - offset保存
-     1. 保存在__consumer offsets的topic中，消息的key由groupid、topic、partition组成
-     1. value是偏移量offset，清理策略compact，缓存在内存中，第一次遍历partition建立缓存
+   - 压缩类型：zstd、lz4、snappy、gzip、生产者决定
    - 分区策略
      1. 轮询：round-robin
         - 将n个broker和待分配的partition排序
@@ -184,37 +113,6 @@
         - 如果设置自动leader平衡，那么首选首领不是当前首领时会自动触发选举
     1. follower：主要用于备份消息
         - 从leader复制数据，可以有多个
-   - ISR
-     1. 认识：in-sync replica，同步的replica，集合里的才能选为主
-        - leader检测follower的偏移量，滞后一定程度时踢出ISR，追上再加回，自动的
-        - 集合中所有replica都收到消息才会置为已提交
-        - kafka的信息交付承诺：在ISR存活的条件下已提交信息不会丢失
-     1. 配置
-        - min insync replicas：最少同步replica
-   - 多副本同步
-     1. 认识
-        - follower同步leader拉取数据，replica通过fetcher去同步
-        - high/low watermark高水位机制：高水位以下消息被认为是已提交消息，反之未提交。依托于高水位既界定了消息的对外可见性，又实现了异步的副本同步机制
-          1. 认识
-             - 分区的高水位就是其leader副本的高水位
-             - 事务机制还依靠LSO(Log Stable Offset)的位移值来判断事务型消费者的可见性
-          1. 作用
-             - 定义消息可见性，用来标识分区下的哪些消息是可以被消费者消费的
-             - 帮助完成副本同步
-        - LEO：Log End Offset 日志末端位移，下一个offset值
-             - leader副本所在的broker上还保存了其他follower副本的leo值
-        - leader epoch机制：为了弥补高水位机制的一些缺陷，v0.11
-     1. leader副本处理生产者请求的逻辑
-        - 写入消息到本地磁盘
-        - 更新分区高水位值
-          1. 获取 leader 副本所在 broker 端保存的所有远程副本leo值{leo-1，leo-2， ......，leo-n}
-          1. 获取 leader 副本高水位值:currenthw
-          1. 更新 currenthw = min(currenthw, leo-1，leo-2，......，leo-n)
-     1. leader处理 follower 副本拉取消息的逻辑
-        - 读取磁盘(或页缓存)中的消息数据
-        - 使用 follower 副本发送请求中的位移值更新远程副本 leo 值 
-        - 更新分区高水位值(具体步骤与处理生产者请求的步骤相同)
-     1. follower副本从leader拉取消息的处理逻辑
 1. api
    - admin
      1. 查看topic列表、属性等
@@ -378,24 +276,33 @@
      1. 分类
         - 生产者拦截器：发送消息前 onSend、消息提交成功后 onAcknowledgement
         - 消费者拦截器：消费消息前、提交位移后
-#### 特性
-1. 消息交付可靠性保障
-   - 认识：默认提供至少一次
-     1. Producer禁止重试肯定不会重复发送，但是可能会丢失消息
-1. 精确处理一次
-   - 认识：通过幂等性 Idempotence和事务 Transaction实现
-   - 幂等性：Producer默认不是幂等性的，v0.11.0.0。enable.idempotence设置成true后，自动升级成幂等性Producer，其他所有的代码逻辑都不需改变。Kafka自动做消息的重复去重
-     1. 底层原理大致这么理解，就是经典的用空间去换时间的优化思路，即在 Broker 端多保存一些字段。当 Producer 发送了具有相同字段值的消息后，Broker 能够自动知晓这些消息已经重复了，于是可以在后台默默地把它们“丢弃”掉
-     1. 引入ProducerID和SequenceNumber：Producer初始化时像向 Broker 申请一个 ProducerID，为每条消息绑定一个 SequenceNumber
-        - Kafka Broker 收到消息后会以 ProducerID 为单位存储 SequenceNumber，也就是说即时 Producer 重复发送了， Broker 端也会将其过滤掉。
-     1. 只能保证单分区上的幂等性，因为 SequenceNumber 是以 Topic + Partition 为单位单调递增的
-     1. 只能实现单会话上的幂等性
-   - 事务：使用事务API，可包括多条消息。开启 enable.idempotence = true，设置 Producer 端参数 transactional. id。最好为其设置一个有意义的名字。
-     1. 事务型 Producer 也不惧进程的重启
-     1. read_uncommitted：这是默认值，表明 Consumer 能够读取到 Kafka 写入的任何消息，不论事务型 Producer 提交事务还是终止事务，其写入的消息都可以读取。
-        - 很显然，如果你用了事务型 Producer，那么对应的 Consumer 就不要使用这个值。
-     1. read_committed：表明 Consumer 只会读取事务型 Producer 成功提交事务写入的消息。
-        - 当然了，它也能看到非事务型 Producer 写入的所有消息
+#### 机制
+1. Log Compaction
+   - 认识：日志压缩，提供保留键名key最新版本的机制，可以删除更早的、重复的记录
+1. LSO
+   - 认识：Log Stable Offset，消息的稳定offset，消息在LSO之前被认为是不可变的，不会被任何未决的事务更改，即提供了一个安全点，用于日志的清理和压缩操作，同时为处理事务提供稳定的基准
+     1. 有助于Kafka管理存储空间，并确保在处理消费者读取请求时的一致性和持久性
+   - 作用
+     1. 可以被副本同步和日志清理器（日志压缩器）读取与处理，即支持了日志压缩的实现
+     1. 事务依靠LSO来判断事务型消费者的可见性
+1. LEO
+   - 认识：Log End Offset 日志的末端位移，是此分区中下一个将要写入的消息的偏移量
+     1. leader副本所在的broker上还保存了其他follower副本的leo值
+1. ISR
+   - 认识：in-sync replica，同步的replica，集合里的才能选为主
+     1. leader检测follower的偏移量，滞后一定程度时踢出ISR，追上再加回，自动的
+     1. 集合中所有replica都收到消息才会置为已提交
+     1. kafka的信息交付承诺：在ISR存活的条件下已提交信息不会丢失
+   - 配置
+     1. min insync replicas：最少同步replica
+1. 多副本同步
+   - 认识
+     1. follower同步leader拉取数据，replica通过fetcher去同步
+   - 概念
+     1. high watermark：高水位机制，既是消费者能看到的最大消息offset，也用于异步的副本同步
+        - 高水位以下是已提交消息，反之未提交；分区的高水位就是其leader副本的高水位
+     1. low watermark
+   - leader epoch机制：为了弥补高水位机制的一些缺陷，v0.11
 #### 流式计算
 1. 认识
    - 流处理平台：对比批处理，即处理源源不断数据，由于精确一次处理语义(Exactly Once Semantics，EOS)的状态流转和控制不好把握(如状态回滚、消息重复)，造成结果精确性不足，而批处理能实现精确结果
@@ -457,6 +364,7 @@
     final CountDownLatch latch = new CountDownLatch(1);
     ```
 ### 最佳实践
+#### 可靠
 1. 如何实现顺序消费
    - 对此标志位设定专门的分区策略，保证同一标志位的所有消息都发送到同一分区
    - 可以使用key + offset做到业务有序，一个key确定同一类型，offset作为顺序的判断，如先存了es，时序数据库中，攒够了一起处理
@@ -492,6 +400,24 @@
         - consumer先消费消息，再更新位移的原子性：反过来就是重复消费，让消费者的offset存储和消费者的输出存储之间实现一个两段式的提交
           1. 多个topic下，把commit offset和输出到其他的topic绑定成一个事务
         - 事务严重影响队列性能，用数据库代替队列的事务保障，记录消息状态，即先提交数据库事务，然后消息失败就定时去补偿
+1. 消息交付可靠性保障
+   - 认识：默认提供至少一次
+     1. Producer禁止重试肯定不会重复发送，但是可能会丢失消息
+1. 精确处理一次
+   - 认识：通过幂等性 Idempotence和事务 Transaction实现
+   - 幂等性：Producer默认不是幂等性的，v0.11.0.0。enable.idempotence设置成true后，自动升级成幂等性Producer，其他所有的代码逻辑都不需改变。Kafka自动做消息的重复去重
+     1. 底层原理大致这么理解，就是经典的用空间去换时间的优化思路，即在 Broker 端多保存一些字段。当 Producer 发送了具有相同字段值的消息后，Broker 能够自动知晓这些消息已经重复了，于是可以在后台默默地把它们“丢弃”掉
+     1. 引入ProducerID和SequenceNumber：Producer初始化时像向 Broker 申请一个 ProducerID，为每条消息绑定一个 SequenceNumber
+        - Kafka Broker 收到消息后会以 ProducerID 为单位存储 SequenceNumber，也就是说即时 Producer 重复发送了， Broker 端也会将其过滤掉。
+     1. 只能保证单分区上的幂等性，因为 SequenceNumber 是以 Topic + Partition 为单位单调递增的
+     1. 只能实现单会话上的幂等性
+   - 事务：使用事务API，可包括多条消息。开启 enable.idempotence = true，设置 Producer 端参数 transactional. id。最好为其设置一个有意义的名字。
+     1. 事务型 Producer 也不惧进程的重启
+     1. read_uncommitted：这是默认值，表明 Consumer 能够读取到 Kafka 写入的任何消息，不论事务型 Producer 提交事务还是终止事务，其写入的消息都可以读取。
+        - 很显然，如果你用了事务型 Producer，那么对应的 Consumer 就不要使用这个值。
+     1. read_committed：表明 Consumer 只会读取事务型 Producer 成功提交事务写入的消息。
+        - 当然了，它也能看到非事务型 Producer 写入的所有消息
+#### 性能
 1. 如何快速消费
    - consume改为非阻塞消费，后边线程池处理业务逻辑，不关心处理结果实现快速消费，适合非业务系统，如流处理/gps打点/机器监控，丢一些无所谓。![avatar](../images/one_consumer_mult_handle.png)
 1. topic分区数如何确定：根据实际需要设置数量，实现性能最大化
@@ -500,8 +426,84 @@
    - 原则
      1. 最好为broker的倍数，一般为3的倍数，这样分区可以均匀分布在所有broker上
      1. key hash的业务，需要在最初就定义好分区数，因为如果添加分区，原来的数据是不会自动重新hash的
+1. 查看积压数：通过检查 current-offset 和 log-end-offset 之间的差值，可以看到每个 partition 的积压消息数。
+1. topic操作
+   - 删除topic：需要考虑生产者生产，消费者消费，broker损坏怎么办
+     1. 设置
+        - auto.create.topics.enable = false：要不然删不掉
+        - delete.topic.enable = true：最好打开，不然有问题
+     1. 原理
+        - 特点
+          1. 异步线程 + 延时操作
+        - 步骤
+          1. 注册zk的delete_topics节点的变化监听器
+          1. 启动删除topic线程，这时删除线程阻塞并等待删除事件
+          1. 执行删除命令时，在delete_topics节点添加
+          1. 唤起删除线程
+          1. 执行删除逻辑：删除分区信息、删除zk目录、清除controller中相关cache
+          1. 删除线程继续阻塞
+        - 最佳实践
+          1. 断掉所有访问：使用域名访问，切断解析，保证一定无流量进入
+          1. 进行删除
 1. out-of-range
    - 认识：一般是消费速度不够快，服务端已经删除了消息。要么增大kafka的保留策略，要么提高消费能力
+### PRO
+1. topic
+   - 组成
+     1. serializer：序列化器，对象、字节相互转换的编解码器
+     1. __consumer_offsets：位移主题，储存offset，是普通topic，存的也是普通message，保存了group id，主题名，分区号
+        - 删除位移主题的过期消息：Compact策略，即key值相同只保留最新；Log Cleaner异步定义执行
+        - 之前放到了zk中，因为有高强度写不合适就挪出了
+1. partition
+   - 组成：TopicName + Num是日志目录
+     1. active segment list：追加、读取、删除，用于确认具体的索引文件
+        - 是一个offset区间，有了offset就可确认哪个segment
+        - 查找消息用二分法，找出对应的offset在哪个segment的索引中，在定位出offset在segment中的大概位置，再遍历查找message
+     1. segment
+          1. xxxxxxx.index
+             - 左边是partation的全局offset，右边是segment的offset，
+             - 一条条的记录每条消息的字节位置，这样直接可以取到消息
+          1. xxxxxxx.log：segment file，包含一个个的message内容
+          1. xxxxxxx.timeindex：时间排序的索引
+          1. leader-epoch-checkpoint
+     1. message
+        - offset：4byte
+        - message length：4byte(1+4+n)，消息长度
+        - crc：4byte，CRC校验码
+        - magic value：1byte，版本号
+        - attributes：1byte
+        - timestamp：4byte
+        - key length：4byte
+        - key
+        - value length：4byte
+        - playload：n byte，消息内容
+   - 读写
+     1. 特点
+        - 每个partition的日志分为n个大小相等的segment文件存储
+        - 每个segment的消息数量不一定相等(消息大小不同)
+     1. 写
+        - partition将消息串行追加到最后一个segment上，segment达到阈值就滚动到新segment
+          1. active segment：活跃片段，当前正在写入的片段，活动片段不会被删除
+        - segment一定阈值后flush到磁盘上
+     1. 读：一级级的检索快速找到消息内容，顺序读取磁盘可以有很高的性能
+        - 用offset通过active segment list文件：找出具体的哪个segment
+        - 找这个segment的index文件得到segment中消息的起始位置offset
+        - 通过上个offset移动到某条消息的开头后，先读取4字节，就可以知道整个消息的长度了，最后读取整个消息内容
+   - offset保存
+     1. 保存在__consumer offsets的topic中，消息的key由groupid、topic、partition组成
+     1. value是偏移量offset，清理策略compact，缓存在内存中，第一次遍历partition建立缓存
+1. leader&follower
+   - leader处理生产者请求
+     1. 写入消息到本地磁盘
+     1. 更新分区高水位值
+        - 获取leader所在broker端保存的所有远程副本leo值{leo-1，leo-2， ......，leo-n}
+        - 获取leader高水位值currenthw
+        - 更新currenthw=min(currenthw, leo-1，leo-2，......，leo-n)
+   - leader处理follower拉取消息
+     1. 读取磁盘(或页缓存)中的消息
+     1. 使用 follower 副本发送请求中的位移值更新远程副本 leo 值 
+     1. 更新分区高水位值(具体步骤与处理生产者请求的步骤相同)
+   - follower从leader拉取消息
 ### 运维
 1. 端口
    - kafka：9092
@@ -536,6 +538,14 @@
    - 带宽：直接传输的消息带宽 + 2倍的集群内副本复制所需带宽
    - 监控：消息量监控(生产、消费、堆积)
 1. 配置
+   - topic
+     1. 清理策略
+        - 单分区数据保留字节数
+        - 单分区数据保留天数
+        - 压缩方式
+          1. compact：压实：当键不为null时，相同的键只会保留最后的值
+          1. delete：完全删除某个key：设置value=null。kafka会先进行常规清理，该消息作为墓碑消息保留一段时间
+          1. compact + delete
    - message：大小最大2G
      1. broker
         - retention.ms:规定了该topic消息被保存的时长
@@ -574,7 +584,7 @@
      1. swap：建议调小点给调休排查留时间，禁用改为0
      1. 分区：单broker数量不超2000，大小不超25G
 1. 监控
-   - web管理界面：cmak，即Kafka-Manager
+   - web管理界面：provectus/kafka-ui、cmak即Kafka-Manager
    - 管理工具：kafka-run-class.sh
    - 脑裂问题：检测、自动恢复？
 ### 架构
