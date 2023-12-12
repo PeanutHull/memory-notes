@@ -24,6 +24,7 @@
    - --local 单独一个项目
 1. 别名：git config --global alias.c 'commit -m'
 1. 列举所有配置：git config -l
+1. 编辑：git config --global --edit
 ### diff
 1. git diff < file >     工作区和暂存区的差异
 1. git diff --cached              暂存区和版本库的差异

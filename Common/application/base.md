@@ -1,6 +1,30 @@
 ### 算法
 1. 心得
    - O(1)复杂度的具有获取最小值的栈问题、和 O(1)复杂度的具有获取最大值的队列问题，前者用栈不断累积最小值，pop就同时一起pop，push就比较下然后同时也push进min栈；而后者也是个栈，是push时for循环比较，小的就Push_back扔出去了，只有大的在最下边，然后小的跟了后边，pop的时候比较下，相同也是跟了后边就行
+1. 练功心法
+   - 方面
+     1. 数组、字符串
+     1. 双指针
+     1. 滑动窗口
+     1. 哈希表
+     1. 区间
+     1. 栈
+     1. 链表
+     1. 二叉树
+        - 遍历
+        - 搜索
+        - 字典树
+     1. 回溯、分治
+     1. 二分查找
+     1. 堆
+     1. 位运算
+   - 方式
+     1. 利用原有go的函数解决
+        - copy(dst, src)
+        - strconv.FormatInt/ParseInt：转为字符串，转为数字
+        - sort.Ints()：无返回值，sort.Slice()：自定义排序
+        - strings.Contains/Count/HasPrefix/HasSuffix/Index/Trim/Split/Replace/ToLower
+     1. 利用双指针、快慢指针
 #### 数据结构
 1. 栈
    - 数组实现
@@ -227,6 +251,40 @@
 
     func (c *customQueue) Empty() bool {
         return c.queue.Len() == 0
+    }
+    ```
+1. 二叉树
+   - 前序遍历
+    ```go
+    // TreeNode 表示二叉树节点  
+    type TreeNode struct {  
+        Val   int  
+        Left  *TreeNode  
+        Right *TreeNode  
+    }  
+    
+    // PreorderTraversal 实现二叉树前序遍历  
+    func PreorderTraversal(root *TreeNode) {  
+        if root == nil {  
+            return  
+        }  
+        fmt.Println(root.Val) // 输出当前节点值  
+        PreorderTraversal(root.Left)   // 遍历左子树  
+        PreorderTraversal(root.Right)  // 遍历右子树  
+    }  
+    
+    func main() {  
+        // 构造二叉树  
+        root := &TreeNode{Val: 1}  
+        root.Left = &TreeNode{Val: 2}  
+        root.Right = &TreeNode{Val: 3}  
+        root.Left.Left = &TreeNode{Val: 4}  
+        root.Left.Right = &TreeNode{Val: 5}  
+        root.Right.Left = &TreeNode{Val: 6}  
+        root.Right.Right = &TreeNode{Val: 7}  
+    
+        // 前序遍历二叉树  
+        PreorderTraversal(root)  
     }
     ```
 1. 大顶堆

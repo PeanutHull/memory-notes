@@ -13,6 +13,7 @@
 1. 特点
    - 原则
      1. 通过通信共享内存，不要通过共享内存来通信
+     1. 函数是一等公民
      1. 复制一点总比依赖一点好：A little copying is better than a little dependency
         - 依赖的原则
           1. 只要核心：去掉多余无用代码
@@ -297,7 +298,7 @@
      1. 返回值可以是一个，可以是两个，第二个用于判断是否存在
      1. 删除并不能释放内存，只会增长，不会减少
      1. map是引用类型，引用类型的变量在使用前必须初始化，未初始化时默认的zero value是nil，此时写入会panic
-     1. 运行时会检测并发写，触发panic；并发读没问题
+     1. 运行时会检测并发写，触发panic；并发读没问题，只是不保证能读到正确的
    - 使用
     ```go
     // 此情况value是一个结构体，可以是其他的基础类型
@@ -482,7 +483,7 @@
           1. 局部和全部可以重名，局部变量的改变不会改变全局变量
 1. 常量
    - 认识：const，是程序运行时不会被修改的简单值的标识符
-     1. 只能是string、bool、数字类型(整数、浮点、复数)
+     1. 只能是bool、数字类型(整数、浮点、复数)、string
      1. 常量表达式中只能是内置函数，自定义的会报错
      1. 会自动类型推导，分显式类型和隐式类型定义
      1. 作用域
@@ -902,6 +903,7 @@
         func recover() interface{}      // 可以返回任意类型 无参数
         ```
      1. 常见panic情况
+        - 除数为0
         - slice越界：判断长度
         - map没有初始化就直接使用、多个groutine读写map
         - 空指针异常
@@ -927,6 +929,7 @@
             }
             // panic: interface conversion: interface {} is string, not int
             ```
+        - 递归死循环或者超出栈空间造成内存溢出
         - 写为空的、已关闭的通道，重复关闭chan
             ```go
             func main() {
@@ -946,8 +949,6 @@
             }
             // fatal error: all goroutines are asleep - deadlock!
             ```
-        - 除数为0
-        - 递归死循环或者超出栈空间造成内存溢出
      1. 实例
         ```go
         // 最佳实践
@@ -998,7 +999,7 @@
           1. Elem()：指针指向的元素类型
    - 最佳实践
      1. 尽量避免使用，涉及内存copy、内存逃逸，性能相对差
-     1. 很难实现清晰并可维护的代码，导致代码可读性变差
+     1. 很难实现清晰并好维护的代码，导致代码可读性变差
      1. 优先使用TypeOf，不会产生内存逃逸，性能更高，ValueOf包含了TypeOf
      1. 一定注意不同的数据类型使用对应的函数，否则会导致panic
      1. 官方反射三定律
@@ -1006,6 +1007,7 @@
         - Reflection goes from reflection object to interface value
         - To modify a reflection object, the value must be settable
 1. 运行时
+   - 认识：对goroutine进行调度，获取运行时信息等
    - 获取goroutine id
      1. 简单方式
         ```go
@@ -1202,7 +1204,7 @@
 	}
     ```
 1. interface 接口
-   - 理解：接口类型是一组具有共性的方法定义在一起的集合。即抽象、封装、多态
+   - 理解：是一种定义了一组方法的抽象类型，它本身不包含也不能包含字段。接口类型是一组具有共性的方法定义在一起的集合。即抽象、封装、多态
      1. ‌是派生类型
      1. 接口是松散的结构，不与定义绑定，可以同时从多个维度对数据进行抽象，找出共同点，并使用同一套逻辑来处理。弱关联关系，接口已经可以在很多方面替代继承的作用，比如多态和泛型，而且接口的关系松散、随意，可以有更高的自由度、更多的抽象角度。
    - 接口实现：接口的实现都是隐式的，实现接口了的所有方法就隐式地实现了接口，是duck-type编程的一种体现，不关心属性（数据），只关心行为（方法）
@@ -1567,14 +1569,14 @@
         ```
 1. wiki
    - csp：通信顺序进程，描述两个独立的并发实体通过共享的通讯channel(管道)进行通信的很强大的并发数据模型，并行开发神器，go没有全部都实现
-     1. go仅仅借用了这两个概念：通道 channel，实体 process
+     1. go仅仅借用了这两个概念：通道 channel，实体 process，s shared或safe，共享的/安全的，理解为保障并发实体间通信安全性和正确性的关键因素
      1. 允许使用进程组件来描述系统，它们独立运行，并且只通过消息传递的方式通信
 #### channel
 1. channel
    - 认识：有类型的管道，用于协程间通信，操作符<-
      1. 使得goroutine可以在没有明确的锁或竞态变量(共享内存)的情况下同步，更高级，可以用-race检测数据访问冲突，内部还是有锁的
      1. 一般用在无状态的处理，数据库连接池就不合适
-     1. 就是个阻塞队列
+     1. 就是个阻塞队列，遵循先进先出FIFO的原则
    - 特性：![avatar](../images/channel_status.webp)
      1. nil的chan
         - 只声明不分配资源，var声明的是，make不是
@@ -2581,16 +2583,16 @@
 1. 并发池
    - 认识：`sync.Pool`，可以保存池化的、临时的、多协程安全的对象
      1. 可以有效地减少新对象的申请
-        - 将暂时不用的对象缓存起来，待下次需要的时候直接使用，不用再次经过内存分配，复用对象的内存，减轻 GC 的压力，提升系统的性能
+        - 将暂时不用的对象缓存起来，待下次需要的时候直接使用，不用再次经过内存分配流程，复用对象的内存；同时减轻GC压力，提升系统的性能
         - 对象的复用，避免重复创建、销毁
-     1. 池化的对象可能会被垃圾回收掉，对于长连接等场景不合适，那就get的时候没有就new一下
+     1. 池化的对象可能会被垃圾回收掉，对于长连接等场景不合适，get的时候没有就new一下
    - 背景
      1. 性能优化之对象池：把重复使用的对象回收起来避免被垃圾回收掉，这样使用的时候就不必在堆上重新创建了，减轻重新创建的成本，减轻垃圾收集器的压力
      1. gc耗时特别高，有大量的相同类型的临时对象不断地被创建销毁时
-   - 方法
+   - 方法：使用流程是先new，然后get，用完了put，没了
      1. `New()`：没有元素可返回时，会调用New方法创建
      1. `Get()`：随机移除返回，没有元素并且不设置New方法返回nil，无法保证以固定的顺序
-     1. `Put()`：放到池中，给nil会忽略
+     1. `Put()`：放回池中，给nil会忽略
    - 常见问题
      1. 内存泄漏：在使用 sync.Pool 回收 buffer 的时候，一定要检查回收的对象的大小。如果 buffer 太大，就不要回收了，否则就太浪费了
         - 因为 Pool 回收的机制，重新放回的大的Buffer(slice类型)可能不被回收，而是会一直占用很大的空间，这属于内存泄漏的问题
@@ -4506,12 +4508,7 @@
      1. macho
      1. pe
      1. plan9obj
-   - testing：go包的自动测试支持
-     1. iotest
-     1. quick
-     1. B
-        - 方法
-          1. RunParallel
+   - testing
 1. 应用相关
    - fmt
      1. 认识：类似c的printf、scanf的格式化输入输出，scann扫描格式化文本以生成值
@@ -4973,6 +4970,120 @@
     err := http.ListenAndServe(":1234", nil)
     ```
 ### 测试与性能
+1. testing包
+   - 认识：用于支持自动化测试，包含了接口和对应的go test工具，可以编写单元测试、基准测试、简单的例子测试
+   - 组成
+     1. 函数
+        - 测试函数：以Test开头，后跟一个大写字母，`func TestXxx(t *testing.T)`，*testing.T提供了日志记录、错误报告、失败声明等方法
+        - 基准测试函数
+        - 示例函数：以Example开头，后跟一个大写字母，函数签名通常为`func ExampleXxx()`
+     1. 断言：Assertions，testing包不提供断言函数，但提供了足够的支持断言的方法。如t.Errorf、t.Fatalf、t.FailNow等
+     1. 子测试：Subtests，通过调用t.Run可以创建子测试，允许创建分层和更加结构化的测试
+     1. 并行测试：Parallel tests，测试函数可以调用t.Parallel()来表明函数可以与其他并行测试同时执行
+     1. 跳过测试：Skipping tests，当某些条件不满足时，可以使用t.Skip()、t.SkipNow()、t.Skipf()来跳过当前测试
+     1. Setup 和 Teardown：Go 测试并不直接提供 Setup 和 Teardown 的特殊函数，但可以在测试函数中直接实现初始化和清理的代码块
+   - demo
+    ```go
+    func TestSum(t *testing.T) {
+        result := Sum(1, 2)
+        if result != 3 {
+            t.Errorf("Sum(1, 2) = %d; want 3", result)
+        }
+    }
+    // 子测试
+    func TestMyFunction(t *testing.T) {
+        testCases := []struct {
+            name     string
+            input    int
+            expected int
+        }{
+            {"case1", 1, 2},
+            {"case2", 0, 1},
+            // 更多测试案例...
+        }
+        for _, tc := range testCases {
+            t.Run(tc.name, func(t *testing.T) {
+                // 使用 tc.input 和 tc.expected 运行测试
+            })
+        }
+    }
+    ```
+   - iotest
+   - quick
+   - B
+     1. 方法
+        - RunParallel
+1. 基准测试
+   - 认识：即benchmark，`func BenchmarkXxx(b *testing.B)`，*testing.B提供了性能测试所需的方法，如重置计时器、设置迭代次数等。
+     1. 函数一般以Benchmark开头
+     1. case一般会跑N次，case无法达到一个稳态时无法完成测试，会自动跑到稳态时，才停止
+   - 使用：`go test -bench=.`
+     1. 举例：`go test -bench -benchmem -run=^$ ^(BenchmarkSyncMap)$ demo -v -count=1 -cpuprofile=cpu.profile -memprofile=mem.profile -benchtime=10s`
+     1. 参数
+        - -benchmem: 输出内存指标
+        - -run: 正则，指定需要test的方法
+        - -bench: 正则，指定需要benchmark的方法
+        - -v: 即使成功也输出打印结果和日志
+        - -count: 执行次数
+        - -cpuprofile: 输出cpu的profile文件
+        - -memprofile: 输出内存的profile文件
+        - -benchtime: 执行时间
+   - demo
+    ```go
+    func BenchmarkAll(b *testing.B) {
+        for n:=0; n <b.N; n++ {}
+    }
+
+    // 压力测试sync.Map
+    // 简单
+    func BenchmarkSyncMap(b *testing.B) {
+        demoMap := &sync.Map{}
+        b.RunParallel(func(pb *testing.PB) {
+            for pb.Next() {
+                demoMap.Store("a", "a")
+                for i := 0; i < 1000; i++ {
+                    demoMap.Load("a")
+                }
+            }
+        })
+    }
+
+    // 用读写锁实现一个并发map
+    type ConcurrentMap struct {
+        value map[string]string
+        mutex sync.RWMutex
+    }
+
+    // 写
+    func (c *ConcurrentMap) Store(key string, val string) {
+        c.mutex.Lock()
+        defer c.mutex.Unlock()
+        if c.value == nil {
+            c.value = map[string]string{}
+        }
+        c.value[key] = val
+    }
+
+    // 读
+    func (c *ConcurrentMap) Load(key string) string {
+        c.mutex.Lock()
+        defer c.mutex.Unlock()
+        return c.value[key]
+    }
+
+    // 压力测试并发map
+    func BenchmarkConcurrentMap(b *testing.B) {
+        demoMap := &ConcurrentMap{}
+        b.RunParallel(func(pb *testing.PB) {
+            for pb.Next() {
+                demoMap.Store("a", "a")
+                for i := 0; i < 1000; i++ {
+                    demoMap.Load("a")
+                }
+            }
+        })
+    }
+    ```
 1. 单元测试
    - 认识
      1. testing包：可以使用包中的方法
@@ -5156,77 +5267,6 @@
    - 工具
      1. go-callvis：通过分析main包将代码的调用关系可视化，即用箭头图显示所有方法的调用关系
         - 使用：`go-callvis main.go`
-1. bench
-   - 认识：即benchmark，基准测试
-     1. 函数一般以Benchmark开头
-     1. case一般会跑N次，case无法达到一个稳态时无法完成测试，会自动跑到稳态时，才停止
-   - 使用：`go test -bench=.`
-     1. 举例：`go test -bench -benchmem -run=^$ ^(BenchmarkSyncMap)$ demo -v -count=1 -cpuprofile=cpu.profile -memprofile=mem.profile -benchtime=10s`
-     1. 参数
-        - -benchmem: 输出内存指标
-        - -run: 正则，指定需要test的方法
-        - -bench: 正则，指定需要benchmark的方法
-        - -v: 即使成功也输出打印结果和日志
-        - -count: 执行次数
-        - -cpuprofile: 输出cpu的profile文件
-        - -memprofile: 输出内存的profile文件
-        - -benchtime: 执行时间
-   - demo
-    ```go
-    func BenchmarkAll(b *testing.B) {
-        for n:=0; n <b.N; n++ {}
-    }
-
-    // 压力测试sync.Map
-    // 简单
-    func BenchmarkSyncMap(b *testing.B) {
-        demoMap := &sync.Map{}
-        b.RunParallel(func(pb *testing.PB) {
-            for pb.Next() {
-                demoMap.Store("a", "a")
-                for i := 0; i < 1000; i++ {
-                    demoMap.Load("a")
-                }
-            }
-        })
-    }
-
-    // 用读写锁实现一个并发map
-    type ConcurrentMap struct {
-        value map[string]string
-        mutex sync.RWMutex
-    }
-
-    // 写
-    func (c *ConcurrentMap) Store(key string, val string) {
-        c.mutex.Lock()
-        defer c.mutex.Unlock()
-        if c.value == nil {
-            c.value = map[string]string{}
-        }
-        c.value[key] = val
-    }
-
-    // 读
-    func (c *ConcurrentMap) Load(key string) string {
-        c.mutex.Lock()
-        defer c.mutex.Unlock()
-        return c.value[key]
-    }
-
-    // 压力测试并发map
-    func BenchmarkConcurrentMap(b *testing.B) {
-        demoMap := &ConcurrentMap{}
-        b.RunParallel(func(pb *testing.PB) {
-            for pb.Next() {
-                demoMap.Store("a", "a")
-                for i := 0; i < 1000; i++ {
-                    demoMap.Load("a")
-                }
-            }
-        })
-    }
-    ```
 ### 运维
 1. 环境变量
    - GOROOT：go的安装路径，可以不设置，默认在/usr/local/go，编译的时候从GOROOT找system libariry

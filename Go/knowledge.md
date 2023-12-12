@@ -22,7 +22,10 @@
 1. Gin：以更好的性能实现类似Martini的API框架，5万star
    - 特点
      1. 简洁：只专注于对http handler的web处理，用了随之配合的一些组件
-     1. 高性能路由：会形成路由树，应该是字典树
+     1. 高性能路由：会形成压缩字典树，性能非常高，支持路由分组
+     1. 好用的middleware机制
+   - 缺点
+     1. 不是大而全，不是微服务，适合小项目
    - 结构
      1. Engine：是gin的实例，最终调用http.ListenAndServe(address, engine)来启动
      1. RouterGroup
@@ -266,12 +269,35 @@
      1. 效率高：二进制格式，比文本格式更紧凑，序列化/反序列化速度也很快
      1. 跨语言支持，包括c++、java、python
      1. 清晰的结构定义、向后兼容性
+   - 组成
+     1. 数据类型
+        - `int64 fieldName`：基本类型
+        - `repeated typeName fieldName`：列表类型
+        - `map<string, int32> fieldName`：map类型
+          1. 键的类型：int、string、bool
+          1. 值的类型：除了另一个map或者stream字段的基本数据类型、枚举类型或者其他消息类型
+            ```
+            // 嵌套举例
+            message InnerMap {
+                map<string, string> sub_map = 1;
+            }
+
+            message OuterMap {
+                map<string, InnerMap> nested_map = 1;           // InnerMap需要新定义一个类型
+            }
+            ```
    - 最佳实践
      1. proto跟顺序强相关，加字段要在下边加，不能在中间，会导致序号和字段名对不上导致丢失参数
    - 实例
     ```conf
     package test;
     option go_package="test";           // 指定go的包名
+
+    // 定义数据类型
+    message MyMessage {
+        map<string, int32> my_map = 1;                              // 定义一个从string到int32的map
+        repeated server_api_params.UserInfo UserInfoList = 2;       // 定义一个列表类型
+    }
 
     // 定义RPC服务接口
     service SearchService {
@@ -409,6 +435,10 @@
      1. 钩子函数：各种before、after的注入
      1. 各种反射的应用：判断类型、情况
    - 使用
+     1. 默认行为
+        - 默认表名：驼峰结构体，识别为对应下划线+s的表名
+        - 默认新增和更新时间：CreatedAt和UpdatedAt，Update/Updates/Save会更新UpdatedAt字段，UpdateColumn/UpdateColumns不会
+          1. 禁用：gorm:ignore_updated_at
      1. Query
         - First、Last：加了ORDER BY
         - Take
@@ -773,6 +803,7 @@
 1. 限流
    - 认识：保护后端服务
    - 举例
+     1. time/limit：官方
      1. uber/limit
      1. didip/tollbooth
 1. go-callvis：函数调用关系图，用来快速分析调用关系
@@ -840,6 +871,16 @@
    - 支持yaml语法
    - 支持不写入环境变量，使用`myEnv, err := godotenv.Read()`读取
 1. go-cmp：Google开源的比较库，递归、切片、浮点数、自定义比较，差异查找
+1. jinzhu/copier：简约的深拷贝所有东西到另一个结构体，包括字段field、method到字段、字段到method、slice到struct、map到map，根据tag忽略等
+#### 缓存
+1. rockscache：首个确保最终一致、强一致的redis缓存库。支持分布式缓存。使用上只有Fetch和TagAsDeleted
+   - 强一致性确保：采用旁路缓存方式，但是添加使用了标记删除方式，确保强一致性，原理大概是不再返回旧版本的数据，而是同步等待“取数据”的最新结果，因为有个微锁持有过期时间和锁持有者的一些判断
+   - 降级以及强一致：可设置关闭缓存读(Fetch不读缓存直接读fn)、关闭缓存删除(delete什么都不做)来降级
+   - 自带防缓存击穿
+     1. 一：Fetch会在进程内部使用singleflight
+     1. 二：在redis层使用分布式锁
+   - 自带防缓存穿透：当Fetch中fn返回空字符串时，认为是空结果，会将过期时间设定为rockscache选项中的EmptyExpire
+   - 自带防缓存雪崩：RandomExpireAdjustment默认为0.1，如设定为600的过期时间，那么过期时间会被设定为540s~600s的随机数，避免数据出现同时到期
 #### 本地缓存
 1. 基本款：依赖sync.Map，根据map元素的最后更新时间+最大缓存时间判断数据是否过期
 1. bigcache
@@ -1487,7 +1528,11 @@
      1. 使用协程开启调度器：设置超时基准时钟，设置worker队列，转发任务
      1. 使用协程执行worker
    - 推荐库
-     1. panjf2000/ants
+     1. panjf2000/ants：高性能且低损耗的goroutine池，支持对大规模goroutine的调度管理和复用
+        - 资源复用，极大节省内存使用量；在大规模批量并发任务场景下比原生goroutine并发具有更高的性能，2-6倍吞吐性能，10-20倍内存消耗，大体是通过运用PoolWithFunc，免除了每次给goroutine传送func的损耗
+        - 非阻塞机制
+        - 支持定期清理过期的goroutines
+        - 提供了大量有用的接口：任务提交、获取运行中的 goroutine 数量、动态调整Pool大小、释放Pool、重启Pool
      1. gammazero/workerpool：提供了更便利的Submit、SubmitWait、Pause方法，提供当前的worker数、task数、关闭Pool
         ```go
         // 关键代码
