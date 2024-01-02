@@ -263,6 +263,23 @@
    - Next.js：采用react，实现了SSR和SPA
    - Nuxt：采用vue，实现了SSR和SPA
 ### Tool
+1. nvm
+   - 认识：node版本管理工具
+   - 使用
+     1. nvm ls-remote：列出所有远程服务器的官方node version list
+     1. nvm list：列出所有已安装的node版本
+     1. nvm list available：显示所有可下载的版本
+     
+     1. nvm install [node版本号]：安装指定版本node
+     1. nvm install stable：安装最新版node
+     1. nvm uninstall [node版本号]：删除已安装的指定版本
+
+     1. nvm use [node版本号]：切换到指定版本 node
+     1. nvm current：当前 node 版本
+     
+     1. nvm alias [别名] [node版本号]：给不同的版本号添加别名
+     1. nvm unalias [别名]：删除已定义的别名
+     1. nvm alias default [node版本号]：设置默认版本
 1. npm：包管理工具
 1. n：node版本管理工具
    - 安装：`npm install n -g`

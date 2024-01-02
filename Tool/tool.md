@@ -204,6 +204,7 @@
    - brew cleanup [go]：清理旧的升级包
 
    - brew services start etcd：启动某个应用
+   - brew services restart etcd：重启某个应用
    - brew services stop etcd：停止某个应用
    - brew services list：查看当前应用列表
 1. 信息

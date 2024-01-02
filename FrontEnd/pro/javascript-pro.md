@@ -309,34 +309,43 @@
 1. web worker：为js实现多线程环境，允许后台运行，受到同源限制等
 1. sharedworker：为js实现多页面通信，有复用机制，代替localStorage的共享
 ### Flutter
-1. 认识：google的开源移动ui框架，快速在ios、android构建原生用户界面。渲染技术使用GDI，gpu渲染，比rn快很多。使用Dart语言
+1. 认识：快速在ios/android构建原生用户界面的移动ui框架，使用GDI/gpu渲染，比rn快很多，使用Dart语言，google开源
    - 跨平台：Linux、Android、IOS、Fuchsia
    - 原生：体验更好、性能更好，可以120fps
    - 开源：技术的生态环境，google推广
-1. 特点：![avatar](../../images/flutter_framework.jpeg)
-   - 基于底层Engine中的Skia库搭建起一套自渲染引擎，不需要在基于web内容的渲染，在性能上做到了媲美原生
-1. Dart：可用于全平台、web、脚本、服务端开发，google的开源的面向对象语言，立志成为下一代web开发语言，目前2.x版本
-   - 组件
-     1. Dart SDK：提供了开发 Dart 命令行、服务器和非flutter web 应用所需的库和命令行工具。Dart SDK 包含一个lib用于存放Dart 库的目录和一个bin 包含以下命令行工具的目录
-        - dart：用于创建、格式化、分析、测试、记录、编译和运行 Dart 代码的命令行界面
-        - dartaotruntime：AOT 编译快照的 Dart 运行时
-   - 命令行
-     1. dart --version
-1. Fuchsia：google的操作系统
-1. Hybrid App开发
-   - 集成组件和打包的：flutter、appcan、Dcloud(组件库mui)、WeX5、APICloud
-   - 组件代码库：Ionic(没落，放弃IOS6和Android4.1以下的版本支持)，React Native(生成原生app，但以view为基础嵌入)
-   - 打包工具(基于浏览器内核)：Cordova、Phonegap
-   - 安卓模拟器：genymotion、海马玩
-   - weex、quasar、nativeScript
-   - 基于web体系的 Progressive Web App
-1. 命令行
-   - flutter --no-color pub upgrade：更新依赖
-1. 网校架构：![avatar](../../images/wx_flutter_app_framework.jpeg)
+1. 实现：![avatar](../../images/flutter_framework.jpeg)
+   - 使用dart语言
+   - skia图形引擎：基于底层engine的skia库搭建起一套自渲染引擎，不需要再基于web内容的渲染，性能上媲美原生
+   - flutter引擎：c++编写，提供了底层渲染支持、动画、手势识别和编译技术等核心功能。引擎与dart框架层通过dart ffi（外部函数接口）进行通信
+   - framework框架层：提供丰富预制组件widgets，分为几个层级，包括基础组件、布局、材料设计（material widgets）和cupertino（ios风格的widgets）
+     1. widgets：在flutter中，几乎所有东西都是一个widget，包括布局（如行row、列column）、元素（如按钮、文本）和甚至是应用本身。widgets是flutter应用的基本构建块，它们描述了在当前配置和状态下应该如何显示
+     1. 渲染流程：当一个flutter应用运行时，widgets的层级结构（widget tree）会被创建。随着应用状态的变化，widget树也可能会变化。这些变更会生成一个新的widget树。flutter框架会将新旧widget树进行对比，确定哪些部分需要更新，然后flutter引擎会重新渲染用户界面。
+   - 平台通道(platform channels)：flutter和原生代码进行通信，这允许flutter应用调用平台特定的api，如获取电池电量、使用蓝牙等
+   - 编译和打包：开发过程中，flutter应用通常使用jit模式，允许热重载和快速迭代。当应用准备好发布时，它会被aot编译成本地代码，无论是ios的arm代码还是android的arm或x86代码，从而确保最佳性能
 1. 开发
    - 依赖：`pubspec.yaml`文件
-   - 组件
-     1. bugly：腾讯的崩溃收集组件
+   - flutter --no-color pub upgrade：更新依赖
+1. wiki
+   - Dart
+     1. 认识：面向对象的、类定义的、垃圾回收的语言，语法类似于js，可用于全平台、web、脚本、服务端开发，立志成为下一代web开发语言，目前2.x版本，google开源
+        - 支持JIT编译加快开发(热重载)，支持AOT(Ahead-Of-Time)编译用于发布应用时生成高效的ARM代码
+     1. 组件
+        - dart sdk：提供了dart命令行、服务器和非flutter web应用所需的库和命令行工具
+          1. dart：用于创建、格式化、分析、测试、记录、编译和运行 dart 代码的命令行界面
+          1. dart aot runtime：aot编译快照的dart运行时
+     1. 命令行
+        - dart --version
+   - Fuchsia：google的操作系统
+   - Skia：开源的2D图形库、图形引擎
+   - Hybrid App开发
+     1. 集成组件和打包的：flutter、appcan、Dcloud(组件库mui)、WeX5、APICloud
+     1. 组件代码库：Ionic(没落，放弃IOS6和Android4.1以下的版本支持)，React Native(生成原生app，但以view为基础嵌入)
+     1. 打包工具(基于浏览器内核)：Cordova、Phonegap
+     1. 安卓模拟器：genymotion、海马玩
+     1. weex、quasar、nativeScript
+     1. 基于web体系的 Progressive Web App
+   - bugly：腾讯的崩溃收集组件
+   - 网校架构：![avatar](../../images/wx_flutter_app_framework.jpeg)
 ### WebAssembly
 1. 认识：缩写 wasm，是基于堆栈的js抽象虚拟机的二进制指令格式字节码规范。为编程语言的可移植而设计，即使用非js如c/c++/go/rust/swift等编写代码并且能在浏览器上运行的技术方案
    - 理解
@@ -607,6 +616,7 @@
    - 抽时间学习 gulp.js API，特别是 gulp.task() 里关于任务体的详细描述，学会如何执行回调函数（callback），如何返回 promise 等等
    - 尝试编写适合自己工作流程和习惯的任务，如果它工作良好，把它做成插件发布给大家吧！
 ### 原理
+1. 虚拟dom：为避免真实dom大批量改变带来的极大性能开销，通过构建包含了真实dom必要信息的、轻量级的javascript对象结构，有更新时新旧虚拟dom树进行比较(做diffing)得出差异后，再更新真实dom
 1. js的运行方式发展
    - 解释器：
    - 即时编译器：JITs，速度快10倍

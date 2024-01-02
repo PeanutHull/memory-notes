@@ -35,6 +35,9 @@
     }catch() {
     }finally {}
     ```
+1. JSX
+   - 认识：是js的语法扩展，允许在js中编写jsx标签(类似html的结构)，这种语法使得创建/维护/删除组件的结构更加直观
+   - ESLint：开源的js和JSX代码质量和风格检查工具。用于识别代码的编码规范。目的是帮助开发人员遵循一致的编码风格和避免常见的编程错误
 ### DOM
 1. dom：一组用来描述脚本怎样与结构性文档进行交互和访问的Web标准。DOM定义了一系列的对象、方法和属性，用于访问、操作和创建文档中的内容、结构、样式以及行为。
 ### BOM
@@ -43,10 +46,12 @@
 1. cookie
    - session cookie：临时cookie，浏览器关闭就删除
    - persistent cookie：持久化cookie
-### npm
+### tool
+#### npm
 1. 认识：nodejs的包管理器，是全球最大的开源库生态系统。给js赋予了更多底层的能力
-   - package.json：具有的版本管理的nodejs配置文件，运行`npm install`就会自动安装。安装：`npm init`
+   - package.json：具有的版本管理的nodejs配置文件
 1. 操作
+   - `npm init`
    - 查看当前插件：`npm list`
    - 安装/卸载/更新：`npm install/uninstall/update <name> [-g] [--save-dev]`
      1. -g：全局安装，将安装在系统目录，并写入环境变量。本地安装则在定位目录的node_modules文件夹下，通过require()调用
@@ -54,6 +59,8 @@
      1. --dev：保存至package.json的devDependencies节点，不指定-dev将保存至dependencies节点
    - 选装cnpm：`npm install cnpm -g --registry=https://registry.npm.taobao.org`，查看版本：`cnpm -v`
    - 自我升级：`npm install -g npm`
+   - npm run dev：运行
+   - npm run build：打包得到dist文件夹，使用nginx代理过来
 ### wiki
 1. 严格模式：修复部分语言不足，更强错误检查，增强安全性。`use strict`
 1. ECMAScript
