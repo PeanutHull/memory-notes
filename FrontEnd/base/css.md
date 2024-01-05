@@ -1,3 +1,4 @@
+### 基础
 1. css
    - 理解：cascading style sheet，层叠样式表，控制网页样式并允许将样式信息和网页内容分离的标记性语言，div，division区块。div+css取代table布局，由电子出版/印刷行业而来
    - 控制页面的方式
@@ -131,7 +132,7 @@
      1. 相对定位：relative，右下为正方向，即相对于左上，原有位置还会占用
      1. 绝对定位：absolute，相对于最近的有定位属性的父级元素定位，一级级往上找，完全脱离文档流，原有位置不占用
    - fixed：固定定位
-###wiki
+### wiki
 1. 技巧
    - css导入其他css文件：`@import url(hd.css)`
    - 块级元素水平居中：margin：0px auto;
@@ -203,3 +204,16 @@
      1. -moz-
      1. -o-
 1. Sprite：雪碧图，背景精灵技术，节省服务器请求
+### pro
+1. css预处理器 Preprocessors
+   - 认识：一种扩展了css的功能，提供了变量、嵌套规则、混合（mixins）、函数、条件语句和循环等高级特性的脚本语言，这在原生css中是不支持的，通过编译转换为标准的css代码。让css编写更加高效、组织化、减少重复代码
+   - 组成
+     1. Sass：Syntactically Awesome Style Sheets，SCSS与其书写方式不同而已
+     1. LESS
+     1. Stylus
+1. css 后处理器 Postprocessors
+   - 认识：在标准css之后运行的工具，用来优化、转换与当前或未来的浏览器兼容的css代码。通常如自动添加厂商前缀、优化css代码的大小和性能、转换新的css特性使其与旧版浏览器兼容等。自动化处理css，确保代码质量，并且减少手动处理css兼容性问题的时间
+   - 组成
+     1. PostCSS
+     1. Autoprefixer：通常作为PostCSS的插件使用
+     1. cssnano：用于压缩CSS

@@ -14,6 +14,7 @@
    - 位：|
    - 字符串连接符：+
 1. 变量：一条语句定义多个变量用逗号隔开
+   - var
 1. 流程控制
    - callback最早，新加入promise、yield、generator
 1. 函数
@@ -38,6 +39,32 @@
 1. JSX
    - 认识：是js的语法扩展，允许在js中编写jsx标签(类似html的结构)，这种语法使得创建/维护/删除组件的结构更加直观
    - ESLint：开源的js和JSX代码质量和风格检查工具。用于识别代码的编码规范。目的是帮助开发人员遵循一致的编码风格和避免常见的编程错误
+1. Promise
+   - 认识：表示异步操作最终完成/失败及其结果值，为异步操作提供了更加灵活和强大的方式，避免了回调地狱(回调函数中嵌套多个回调函数)，通过链式调用`.then()`和`.catch()`方法可更清晰的方式来组织异步逻辑
+     1. 之前依赖回调函数callback的方式来处理
+   - 组成
+     1. 状态
+        - Pending 等待中：异步操作尚未完成，Promise对象的初始状态。
+        - Fulfilled 已实现：异步操作已经完成，并且成功返回了结果值
+        - Rejected 已拒绝：异步操作失败，返回了一个错误
+     1. 方法：处理异步操作的结果
+        - then(onFulfilled, onRejected)`：添加处理异步操作成功(fulfilled)和失败(rejected)的回调函数
+        - catch(onRejected)：添加处理异步操作失败（rejected）的回调函数，是`then(null, onRejected)`的语法糖
+        - finally(onFinally)：添加一个回调函数，无论异步操作成功还是失败都会执行
+     1. 静态方法：处理多个promise
+        - `promise.all(iterable)`：等待所有的Promise成功解决或任何一个被拒绝
+        - `promise.race(iterable)`：等待最先一个Promise解决或被拒绝
+        - `promise.allsettled(iterable)`：等待所有的Promise被解决或被拒绝，不关心结果是成功还是失败
+        - `promise.any(iterable)`：等待任何一个Promise成功解决，如果所有的Promise都失败了，则返回一个聚合错误
+#### ECMAScript6
+1. 变量
+   - let
+     1. 认识：声明块作用域的局部变量，var声明的变量是函数作用域或全局作用域，let是块级作用域
+   - const
+     1. 认识：声明块作用域的常量，常量不会改变，但声明的是一个常量引用，这个引用是对象或数组，其内部属性或元素可改变
+   - 最佳实践
+     1. 尽量避免使用var，因为其作用域规则可能导致难以发现的错误
+     1. 通常推荐优先使用const来声明变量，除非你确知变量的值需要改变
 ### DOM
 1. dom：一组用来描述脚本怎样与结构性文档进行交互和访问的Web标准。DOM定义了一系列的对象、方法和属性，用于访问、操作和创建文档中的内容、结构、样式以及行为。
 ### BOM
@@ -61,6 +88,21 @@
    - 自我升级：`npm install -g npm`
    - npm run dev：运行
    - npm run build：打包得到dist文件夹，使用nginx代理过来
+#### yarn
+1. 认识：快速、可靠、安全的依赖管理工具，解决npm的如性能不佳/安全性/一致性不足等问题，和npm使用相同的package.json文件来管理依赖，v1.x、v1.2版本，Facebook/Google等开发
+   - 性能：会缓存每一个下载过的包、通过队列请求来优化网络利用率
+   - 确定性：yarn.lock确定
+   - 安全性：验证安装包防篡改
+1. 使用
+   - 初始化新项目：`yarn init`
+   - 安装所有依赖：`yarn install`
+   - 添加依赖：`yarn add [package]`
+   - 更新依赖：`yarn upgrade [package]`
+   - 移除依赖：`yarn remove [package]`
+   - 运行脚本：`yarn run [script]`
+   - 发布包：`yarn publish`
+1. wiki
+   - v2.x：Plug'n'Play (PnP) 特性，进一步改善性能和一致性
 ### wiki
 1. 严格模式：修复部分语言不足，更强错误检查，增强安全性。`use strict`
 1. ECMAScript

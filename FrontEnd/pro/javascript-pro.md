@@ -123,6 +123,9 @@
         - 内置执行器，Generato必须要有执行器，才有了co模块，async只有一行
         - 不用像Generator需要调用next方法，或者co模块，才能真正执行，得到结果
         - 更好的语义，async表示函数里有异步操作，await表示后边表达式需要等待结果
+     1. async：关键字，用于声明异步的、会返回一个Promise对象的函数，
+        - 如果该函数正常执行完毕，则返回的 `promise` 将以该函数的返回值解决resolved。如果在函数中抛出错误，则返回的 `promise` 将以抛出的错误为理由拒绝（rejected）
+     1. await：关键字，async函数内部使用，会暂停异步函数的执行，等待promise解决，并返回promise的结果值，async和await一起使用可以使异步代码的阅读和维护变得更加容易
 1. 回调
    - 定义：一个函数的指针(地址)被用为它指向的函数，这就是回调函数，回调函数不是由该函数的实现方直接调用，而是在特定的事件/方法时另一方调用
    - 对function理解：在js中，function是内置的类对象，就可以储存和传递。回调：是功能性编程技术
@@ -474,7 +477,8 @@
 1. CEF： Chromium Embedded Framework，为第三方应用提供可嵌入浏览器支持
 ### 编译工具
 1. TypeScript
-1. Babel：转为es5
+1. Babel
+   - 认识：允许开发者使用最新js语言特性而不必担心旧版浏览器或环境的兼容性问题的编译器，核心功能是将ES6+代码(即ECMAScript2015及之后)转换成向后兼容的ES5代码
 1. Flow
 1. Reason
 1. Purescript

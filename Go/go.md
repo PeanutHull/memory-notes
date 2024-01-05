@@ -4646,7 +4646,7 @@
      1. 写法
         - go代码开始部分(package xxx之后)，添加注释，注释中编写需要使用C
         - 紧挨着注释结束，另起一行增加import "C"，且不要跟其他golang的import放在一起
-     1. demo
+     1. go语言调用c函数举例
         ```go
         package main
 
@@ -4668,6 +4668,54 @@
             C.print(cs)
         }
         ```
+     1. c++调用go
+        - 编写go代码，并导出为c兼容的api
+            ```go
+            package main
+
+            import "C"                                  // 特殊的c包
+            import "fmt"
+
+            //export HelloFromGo                        // 告诉go编译器导出该函数为c兼容的函数
+            func HelloFromGo(name *C.char) {
+                fmt.Printf("Hello, %s! This is Go.\
+            ", C.GoString(name))
+            }
+
+            func main() {} // 空的main函数，确保可以构建为C兼容的库
+            ```
+        - 使用`go build`命令构建go代码，生成c兼容的静态库或动态库
+            ```sh
+            // 生成静态库
+            go build -o libhello.a -buildmode=c-archive hello.go
+            // 生成动态库
+            go build -o libhello.so -buildmode=c-shared hello.go
+            ```
+        - 在c++代码中调用这些函数
+            ```cpp
+            #include <iostream>
+
+            extern "C" {
+                void HelloFromGo(const char* name);
+            }
+
+            int main() {
+                HelloFromGo("C++");
+                return 0;
+            }
+            ```
+        - 在c++代码中声明和链接这些c兼容函数
+            ```sh
+            // 静态库
+            g++ -o main main.cpp -L. -lhello -pthread               
+            // `-L.`告诉编译器在当前目录下查找库
+            // `-lhello`指定链接到`libhello.a`或`libhello.so`库（不需要写出完整的库文件名，编译器会自动添加`lib`前缀和适当的文件扩展名）
+            // `-pthread`是因为Go的运行时可能需要链接到线程库
+
+            // 动态库，添加库的路径到`LD_LIBRARY_PATH`环境变量
+            export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:.
+            g++ -o main main.cpp -L. -lhello -pthread
+            ```
 1. GUI
    - govcl
      1. 认识：跨平台的开源的gui库，核心绑定于liblcl
@@ -5358,6 +5406,14 @@
      1. `go fmt`：格式化代码文件，是gofmt的简单封装
      1. `go fix`：转换老版本的代码到新版本，是命令go tool fix的简单封装
      1. `go generate`：用于在编译前自动化生成某类代码，举例：`//go:generate go tool yacc -o gopher.go -p parser gopher.y`
+        ```go
+        // 会放到main文件的最上边
+
+        //go:generate go env -w GO111MODULE=on
+        //go:generate go env -w GOPROXY=https://goproxy.cn,direct
+        //go:generate go mod tidy
+        //go:generate go mod download
+        ```
      1. `go bug`
      1. `go tool cgo`
    - 代码检测
