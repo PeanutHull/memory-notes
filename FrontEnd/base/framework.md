@@ -6,6 +6,9 @@
    - 数据绑定：数据和视图双向绑定/数据驱动
    - 组件化：单独的vue组件可以互相引用而组装起来
    - 数据间依赖自动处理
+
+   
+   - 声明式渲染、组件系统、响应式数据绑定和指令
 1. 特性
    - 模块化：按需采用，庞大生态
    - 渐进式：逐步集成，可以逐步采用在项目中，不必完全投身于使用vue构建整个前端
@@ -44,6 +47,64 @@
         - Actions 提交 mutations 来更改状态
         - State 的变化会反馈到 Vue 组件中，可能会触发组件的重新渲染
         - 组件可以通过 getters 来获取派生的状态，以便减少重复逻辑和计算
+1. 组件
+   - 标签
+     1. 冒号开头：表示一个动态属性/绑定属性，可以绑定属性到组件或元素的实例数据，是语法糖
+        ```javascript
+        new Vue({
+            el: '#app',
+            data: {
+                url: 'https://example.com'                      # 定义url字段
+            }
+        });
+
+        <a v-bind:href="url">Link</a>                           # url字段绑定到a标签的href属性上
+
+        <a :href="url">Link</a>                                 # v-bind:缩写为:
+        ```
+     1. v-for
+     1. v-if、v-else-if、v-else
+   - data：是一个返回一个包含组件响应式状态的对象的函数，vue会对data返回的对象进行响应式处理，数据变化时视图会自动更新
+   - component：组件
+    ```javascript
+    // 定义一个名为 greeting-component 的新组件
+    Vue.component('greeting-component', {
+        template: '<p>Hello, Vue!</p>'
+    });
+
+    // 创建一个新的 Vue 实例，挂载到 id 为 app 的元素上
+    new Vue({
+        el: '#app'
+    });
+    ```
+   - computed：计算属性，用于需要根据某个状态进行数据转换或计算时，会根据依赖项的更新而动态更新。允许开发者声明式地定义响应式的数据依赖
+    ```javascript
+    computed: {
+        fullName: {
+            // getter
+            get: function () {
+                return this.firstName + ' ' + this.lastName
+            },
+            // setter
+            set: function (newValue) {
+                var names = newValue.split(' ')
+                this.firstName = names[0]
+                this.lastName = names[names.length - 1]
+            }
+        }
+    }
+    ```
+   - watch：观察和响应vue实例上的数据变动，用于在数据变化时执行异步操作或开销较大的操作时
+   - methods：用于定义组件中的方法，这些方法可在模板中通过事件绑定被调用，或者在其他方法、计算属性中被调用
+
+   - destroyed：是一个生命周期钩子，在vue组件被销毁之后调用，可在这个钩子中执行清理任务，如移除事件监听器或停止定时器
+### Taro
+1. 认识：开放式跨端跨框架解决方案，支持使用react/vue/nerv等框架开发微信/京东/百度/支付宝/字节跳动/qq/飞书小程序、h5/reactNative等应用，京东凹凸实验室创建和维护
+   - 跨平台编译
+   - 组件化开发
+1. 小程序开发概念
+   - onLoad/onShow：小程序页面生命周期的方法，用于初始化页面数据/刷新数据
+   - onShareAppMessage：用于自定义转发内容，如自定义标题、图片和路径
 ### React
 1. 认识：提供高效的视图渲染和更新，facebook开发并在2013年开源
    - 组件化开发：每个组件负责管理自己的状态和渲染
@@ -63,10 +124,6 @@
    - 虚拟dom：可快速且高效地更新ui
    - 异步和批处理：桥接机制会尽可能地异步和批量执行操作，使得js线程可以不用等待
    - 支持热重载：修改立即可见，无需重新编译整个应用
-### Taro
-1. 认识：开放式跨端跨框架解决方案，支持使用react/vue/nerv等框架开发微信/京东/百度/支付宝/字节跳动/qq/飞书小程序、h5/reactNative等应用，京东凹凸实验室创建和维护
-   - 跨平台编译
-   - 组件化开发
 ### Angular
 1. 认识：大而全，为html进行扩展，html是伟大的静态语言，但不适用动态展示，angular帮助html进行web开发，并且很好和其他类库合作，为web应用增强html的能力
 1. 组成

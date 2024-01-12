@@ -144,9 +144,18 @@
      1. distinct去重可能要全表扫描
      1. concat字符串连接
    - 控制流
+     1. IF(expr1, if_true_value, if_false_value)：一参为true，返回二参，否则返回三参
+        - 认识
+          1. 可用在select、where和其他sql中
+        - demo：如统计某条件时需要特殊处理的字段的总数，`SUM(IF(pay_type=2, round(consume/100, 2), consume))`
      1. IFNULL(expr1, expr2)：接受两个参数，如果不是NULL返回第一个参数。 否则返回第二个参数
+     1. NULLIF(expr1, expr2)：如果expr1=expr2返回NULL，否则返回expr1
+     1. CASE
+        - 认识：提供了更复杂的条件逻辑，允许多个条件判断和更复杂的控制流
+        - demo：`select CASE sva WHEN 1 THEN '南' ELSE '女' END as ssva from xxx`
+
      1. ISNULL(expr)：如expr 为null，那么返回1，否则返回0
-     1. NULLIF(expr1,expr2)：如果expr1=expr2返回NULL，否则返回expr1
+     1. COALESCE(field1, field2, fieldN)：返回参数列表中的第一个非空值，都空返回null
    - password
    - match：全文搜索
    - uuid()：aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
@@ -343,7 +352,7 @@
     union select * from table2                                                              # 组合查询
     select xx from table as x1 join table as x2 on x1.xx=x2.xx                              # 自关联        
     where x.x/=/</>/<=/!=/<>/is null/is not null/in(,,)/not in()/like/REGEXP '^$'           # 条件
-    and/or/between xx and xx                                                                # 逻辑
+    and/and not xx/or/between xx and xx                                                     # 逻辑
     XX=exists/not exists(select x from table2 where xx=xx);                                 # 子查询，返回布尔值
     group by having condition1 and condition2                                               # 分类筛选
     order by xx1 desc/asc/rand() xx2 asc                                                    # 排序，多个排序规则

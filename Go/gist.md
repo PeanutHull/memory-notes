@@ -110,6 +110,62 @@
 1. 性能优化
    - 当一个结构体很大、并且在函数中传递时，可以将结构体拆分成小的，将小的单独传递，将小的组合成原来的大的嘛，可以提升性能
    - 全局变量可以避免重复申请带来的内存交互
+#### 高级编码
+1. option编程
+   - 认识：使用函数式编程的装饰器模式优化工厂模式
+     1. 实现方式：把属性拆成一个个独立构造函数 + go可变参数特性
+     1. 适用点：结构体属性在多次实例化时变化比较大，且所有属性和需要实例化的属性数量差异较大
+   - 前提场景
+    ```go
+    // 一个构造结构体的工厂
+    type Diss struct {
+        Topic  string
+        Person string
+        Time   int
+    }
+
+    func traditionalNew(topic, person string, time int) Diss {
+        return Diss{
+            Topic:  topic,
+            Person: person,
+            Time:   time,
+        }
+    }
+    ```
+   - 假设我们不想传入时间参数怎么办？
+    ```go
+    type Option func(d *Diss)
+    
+    func optionNew(option ...Option) *Diss{             // 只需要传入option变量就可以构造结构体了，所以需要构造函数
+        diss := &Diss{}
+        for _, o := range option {
+            o(diss)
+        }
+        return diss
+    }
+
+    // 具体构造函数
+    func WithTopic(topic string) Option {
+        return func(d *Diss) {
+            d.Topic = topic
+        }
+    }
+    func WithPerson(person string) Option {
+        return func(d *Diss) {
+            d.Person = person
+        }
+    }
+    func WithTime(time int) Option {
+        return func(d *Diss) {
+            d.Time = time
+        }
+    }
+
+    func main() {
+        dissByOption := optionNew(WithTopic("something bad"), WithTime(2), WithPerson("funk"))
+    }
+    ```
+### 练习
 #### 语法练习
 1. 数据类型
    - 引号输出

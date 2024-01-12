@@ -425,125 +425,6 @@
    - ent
    - Gaea：小米基于mysql协议的数据库中间件，支持分库分表、sql路由、读写分离等基本特性
    - vitessio/vitess：youtube通过通用分片对mysql进行水平扩展
-1. gorm
-   - 组成
-     1. StructField 结构体：字段配置
-     1. Relationship 结构体：预定义链表的配置，根据配置相应操作
-     1. Scope：解析模型，拼接sql。比字段解析
-   - 实现
-     1. sql执行：每次使用Find、First这些写方法时，都会生成一个Statement对象，后面就是对Statement中的Clauses属性进行添加、修改和执行，执行过程中调用Expression接口的表达式生成器，生成最终的sql语句，`scope.SQLDB().QueryRow(scope.SQL, scope.SQLVars...).Scan(primaryField.Field.Addr().Interface())`
-     1. 钩子函数：各种before、after的注入
-     1. 各种反射的应用：判断类型、情况
-   - 使用
-     1. 默认行为
-        - 默认表名：驼峰结构体，识别为对应下划线+s的表名
-        - 默认新增和更新时间：CreatedAt和UpdatedAt，Update/Updates/Save会更新UpdatedAt字段，UpdateColumn/UpdateColumns不会
-          1. 禁用：gorm:ignore_updated_at
-     1. Query
-        - First、Last：加了ORDER BY
-        - Take
-        - Find
-     1. 会抛出ErrRecordNotFound的方法
-        - Take/First/Last()：find不会
-     1. Clause：子句生成器，父级到子集的实现排列为DB --> Statement --> Clause --> Expression
-        - 冲突
-            ```go
-            // 有冲突时什么都不做
-            db.Clauses(clause.OnConflict{
-                DoNothing: true
-            }).Create(&user)
-
-            // 当 `id` 有冲突时，更新指定列为默认值
-            db.Clauses(clause.OnConflict{
-                Columns:   []clause.Column{{Name: "id"}},
-                DoUpdates: clause.Assignments(map[string]interface{}{"role": "user"}),
-            }).Create(&users)
-            // MERGE INTO "users" USING *** WHEN NOT MATCHED THEN INSERT *** WHEN MATCHED THEN UPDATE SET ***; SQL Server
-            // INSERT INTO `users` *** ON DUPLICATE KEY UPDATE ***; MySQL
-
-            // 当 `id` 有冲突时，更新指定列为新值
-            db.Clauses(clause.OnConflict{
-                Columns:   []clause.Column{{Name: "id"}},
-                DoUpdates: clause.AssignmentColumns([]string{"name", "age"}),
-            }).Create(&users)
-
-            // 当 `id` 有冲突时，更新其他所有列
-            db.Clauses(clause.OnConflict{
-                UpdateAll: true
-            }).Create(&users)
-            ```
-        - 锁
-            ```go
-            // SELECT * FROM `users` FOR UPDATE
-            db.Clauses(clause.Locking{
-                Strength: "UPDATE"
-            }).Find(&users)
-
-            // SELECT * FROM `users` FOR SHARE OF `users`
-            db.Clauses(clause.Locking{
-                Strength: "SHARE",
-                Table: clause.Table{Name: clause.CurrentTable},
-            }).Find(&users)
-
-            // SELECT * FROM `users` FOR UPDATE NOWAIT
-            db.Clauses(clause.Locking{
-                Strength: "UPDATE",
-                Options: "NOWAIT",
-            }).Find(&users)
-            ```
-        - 优化器、索引提示
-            ```go
-            // SELECT * /*+ MAX_EXECUTION_TIME(10000) */ FROM `users`
-            db.Clauses(hints.New("MAX_EXECUTION_TIME(10000)")).Find(&User{})
-
-            // SELECT * FROM `users` USE INDEX (`idx_user_name`)
-            db.Clauses(hints.UseIndex("idx_user_name")).Find(&User{})
-
-            // SELECT * FROM `users` FORCE INDEX FOR JOIN (`idx_user_name`,`idx_user_id`)"
-            db.Clauses(hints.ForceIndex("idx_user_name", "idx_user_id").ForJoin()).Find(&User{})
-            ```
-     1. Gen: gorm官方代码生成器
-        - 自动生成CRUD和DIY方法
-        - 多种生成代码模式
-        - 自动根据表结构生成model
-        - 完全兼容GORM
-        - 更安全、更友好
-   - 优雅返回时间格式
-     1. 使用
-        ```go
-        type TestTimes truct{
-            CreatedTime utils.LocalTime "json: "created_time"
-        }
-        ```
-     1. 定义utils.time
-        ```go
-        const (  
-            LocalDateTimeFormat string = "2006-01-02 15:04:05"  
-        )  
-        type LocalTime time.Time  
-        
-        func (l *LocalTime) Scan(v interface{}) error {  
-            value, ok := v.(time.Time)  
-            if ok {  
-                *l = LocalTime(value)  
-                return nil  
-            }
-
-            return fmt.Errorf("can not convert %v to timestamp", v)  
-        }  
-        
-        func (l LocalTime) MarshalText() (text []byte, err error) {  
-            b := make([]byte, 0, len(LocalDateTimeFormat))
-
-            b = time.Time(l).AppendFormat(b, LocalDateTimeFormat)
-            
-            if string(b) == `0001-01-01 00:00:00` {
-                b = []byte(``)  
-            }
-
-            return b, nil  
-        }
-        ```
 1. redis
    - go-redis
      1. 认识：官方推荐第一个
@@ -599,6 +480,191 @@
 
         defer gClient.Close()
         ```
+##### gorm
+1. 认识
+   - 组成
+     1. StructField 结构体：字段配置
+     1. Relationship 结构体：预定义链表的配置，根据配置相应操作
+     1. Scope：解析模型，拼接sql。比字段解析
+   - 实现
+     1. sql执行：每次使用Find、First这些写方法时，都会生成一个Statement对象，后面就是对Statement中的Clauses属性进行添加、修改和执行，执行过程中调用Expression接口的表达式生成器，生成最终的sql语句，`scope.SQLDB().QueryRow(scope.SQL, scope.SQLVars...).Scan(primaryField.Field.Addr().Interface())`
+     1. 钩子函数：各种before、after的注入
+     1. 各种反射的应用：判断类型、情况
+1. 功能
+   - 模型映射：倾向于约定优于配置
+     1. 蛇形复数：涉及表名、字段(ID/CreatedAt/UpdatedAt/DeletedAt)
+        - 识别为对应下划线+s的表名
+        - Update/Updates/Save会更新UpdatedAt字段，UpdateColumn/UpdateColumns不会；禁用`gorm:ignore_updated_at`
+        - 查询时会自动加条件判断DeletedAt的状态
+     1. 标签：primaryKey/not null/scale(列大小)/column
+     1. 手动指定
+        - `.Model(&User{})`
+        - `.Table("users")`
+   - 字段选择
+     1. Select：在查询和创建、更新时指定选择
+     1. Omit：在查询和创建、更新时指定忽略
+   - 创建
+     1. Create：支持单条、多条、关联创建(嵌套结构体)，支持结构体、map
+     1. CreateInBatches
+     1. Upsert
+   - 查询
+     1. 获取：会抛出ErrRecordNotFound的方法：Take/First/Last()：find不会
+        - First、Last：加了order by，没有主键将按model第一个字段进行排序
+        - Take
+        - Find：支持单条、多条，单条时会查询所有但是只返回第一条
+        - Distinct
+        - Raw/Scan(&result{})/Rows()
+            ```go
+            // Raw SQL
+            db.Raw("SELECT name, age FROM users WHERE name = ?", "Antonio").Scan(&result)
+
+            // Rows()的用法
+            for rows.Next() {
+            }
+            ```
+     1. 条件
+        - Where
+          1. `.Where("name = ?", "jinzhu")`
+          1. `.Where("name <> ?", "jinzhu")`
+          1. `.Where("created_at BETWEEN ? AND ?", lastWeek, today)`
+
+          1. `.Where(&User{Name: "jinzhu", Age: 0})`：结构体查询时会自动忽略零值的
+          1. `.Where(map[string]interface{}{"name": "jinzhu", "age": 20})`
+        - Not：和where类似，会根据不同的类型转变为where not、WHERE xx <>、WHERE xx NOT IN
+        - Or
+          1. `.Or(User{Name: "jinzhu 2", Age: 18})`：`OR (name = 'jinzhu 2' AND age = 18)`
+          1. `.Or(map[string]interface{}{"name": "jinzhu 2", "age": 18})`
+        - Order/Limit/Offset
+          1. ``
+     1. 连接
+        - Joins
+          1. `.Joins("left join emails on emails.user_id = users.id")`
+          1. `.Joins("Company", db.Where(&Company{Alive: true}))`：joins时加条件
+          1. join衍生表
+            ```go
+            query := db.Table("order").Select("MAX(order.finished_at) as latest").Joins("left join user user on order.user_id = user.id").Where("user.age > ?", 18).Group("order.user_id")
+            db.Model(&Order{}).Joins("join (?) q on order.finished_at = q.latest", query).Scan(&results)
+            // SELECT `order`.`user_id`,`order`.`finished_at` FROM `order` join (SELECT MAX(order.finished_at) as latest FROM `order` left join user user on order.user_id = user.id WHERE user.age > 18 GROUP BY `order`.`user_id`) q on order.finished_at = q.latest
+            ```
+        - InnerJoins
+   - 钩子
+     1. BeforeCreate
+
+   - 使用
+     1. Clause：子句生成器，父级到子集的实现排列为DB --> Statement --> Clause --> Expression
+        - 冲突
+            ```go
+            // 有冲突时什么都不做
+            db.Clauses(clause.OnConflict{
+                DoNothing: true
+            }).Create(&user)
+
+            // 当 `id` 有冲突时，更新指定列为默认值
+            db.Clauses(clause.OnConflict{
+                Columns:   []clause.Column{{Name: "id"}},
+                DoUpdates: clause.Assignments(map[string]interface{}{"role": "user"}),
+            }).Create(&users)
+            // MERGE INTO "users" USING *** WHEN NOT MATCHED THEN INSERT *** WHEN MATCHED THEN UPDATE SET ***; SQL Server
+            // INSERT INTO `users` *** ON DUPLICATE KEY UPDATE ***; MySQL
+
+            // 当 `id` 有冲突时，更新指定列为新值
+            db.Clauses(clause.OnConflict{
+                Columns:   []clause.Column{{Name: "id"}},
+                DoUpdates: clause.AssignmentColumns([]string{"name", "age"}),
+            }).Create(&users)
+
+            // 当 `id` 有冲突时，更新其他所有列
+            db.Clauses(clause.OnConflict{
+                UpdateAll: true
+            }).Create(&users)
+
+            // SELECT * FROM users ORDER BY FIELD(id,1,2,3)
+            db.Clauses(clause.OrderBy{
+            Expression: clause.Expr{SQL: "FIELD(id,?)", Vars: []interface{}{[]int{1, 2, 3}}, WithoutParentheses: true},
+            }).Find(&User{})
+            ```
+        - 锁
+            ```go
+            // SELECT * FROM `users` FOR UPDATE
+            db.Clauses(clause.Locking{
+                Strength: "UPDATE"
+            }).Find(&users)
+
+            // SELECT * FROM `users` FOR SHARE OF `users`
+            db.Clauses(clause.Locking{
+                Strength: "SHARE",
+                Table: clause.Table{Name: clause.CurrentTable},
+            }).Find(&users)
+
+            // SELECT * FROM `users` FOR UPDATE NOWAIT
+            db.Clauses(clause.Locking{
+                Strength: "UPDATE",
+                Options: "NOWAIT",
+            }).Find(&users)
+            ```
+        - 优化器、索引提示
+            ```go
+            // SELECT * /*+ MAX_EXECUTION_TIME(10000) */ FROM `users`
+            db.Clauses(hints.New("MAX_EXECUTION_TIME(10000)")).Find(&User{})
+
+            // SELECT * FROM `users` USE INDEX (`idx_user_name`)
+            db.Clauses(hints.UseIndex("idx_user_name")).Find(&User{})
+
+            // SELECT * FROM `users` FORCE INDEX FOR JOIN (`idx_user_name`,`idx_user_id`)"
+            db.Clauses(hints.ForceIndex("idx_user_name", "idx_user_id").ForJoin()).Find(&User{})
+            ```
+     1. Gen: gorm官方代码生成器
+        - 自动生成CRUD和DIY方法
+        - 多种生成代码模式
+        - 自动根据表结构生成model
+        - 完全兼容GORM
+        - 更安全、更友好
+     1. 条件
+        - Where
+        - Not：where not xx的简洁版
+   - 优雅返回时间格式
+     1. 使用
+        ```go
+        type TestTimes truct{
+            CreatedTime utils.LocalTime "json: "created_time"
+        }
+        ```
+     1. 定义utils.time
+        ```go
+        const (  
+            LocalDateTimeFormat string = "2006-01-02 15:04:05"  
+        )  
+        type LocalTime time.Time  
+        
+        func (l *LocalTime) Scan(v interface{}) error {  
+            value, ok := v.(time.Time)  
+            if ok {  
+                *l = LocalTime(value)  
+                return nil  
+            }
+
+            return fmt.Errorf("can not convert %v to timestamp", v)  
+        }  
+        
+        func (l LocalTime) MarshalText() (text []byte, err error) {  
+            b := make([]byte, 0, len(LocalDateTimeFormat))
+
+            b = time.Time(l).AppendFormat(b, LocalDateTimeFormat)
+            
+            if string(b) == `0001-01-01 00:00:00` {
+                b = []byte(``)  
+            }
+
+            return b, nil  
+        }
+        ```
+1. 特例
+   - first等会自动加where
+    ```go
+    var user = User{ID: 10}
+    db.Where("id = ?", 20).First(&user)
+    // SELECT * FROM users WHERE id = 10 and id = 20 ORDER BY id ASC LIMIT 1
+    ```
 #### 队列相关
 1. kafka
    - 消费者组进行消费：使用Shopify/sarama库，初始化sarama.NewConsumerGroup，然后阻塞调用Consume消费，注入实现了ConsumeClaim等3个回调方法的sarama.ConsumerGroupHandler，在回调中接收消息

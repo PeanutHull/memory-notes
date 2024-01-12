@@ -3786,10 +3786,8 @@
         - 首字母大小写来区分包的可见性，首字母大写的名称是被导出的，可被其他包读取的
 1. Go Module
    - 认识：依赖管理，官方的包依赖版本管理工具，前身vgo
-     1. 支持vendor、GOPATH
-     1. go命令内置对模块的支持
-     1. 至少1.11及以上版本，最好1.13或以上，撑13以下是老版本，哈哈
-     1. 区分install、get、mod三个命令的区别
+     1. go内置对模块的支持，支持vendor、GOPATH
+     1. 至少1.11及以上版本，最好1.13或以上，称13以下是老版本，哈哈
    - 组成
      1. go.mod：依赖配置文件，可以将工程从GOPATH中移出来
         ```go
@@ -3810,6 +3808,10 @@
         exclude example.com/thismodule v1.3.0                           // 从使用中排除特定模块版本
         ```
      1. go.sum：用来校验依赖的文件，都是命令行自动操作
+     1. 重定向：提供版本控制的网址重定向服务，更多地用于引用主版本号，会自动使用指定大版本的最新版本
+        ```go
+        import "gopkg.in/user/example.v1"
+        ```
    - 命令
      1. `go mod <command> [arguments]`
         - init：初始化
@@ -3818,11 +3820,15 @@
         - tidy：整理，需要的加，不要的删
         - verify：验证是否被篡改过
         - graph：查看现有的依赖结构
-        - why：查看为什么需要依赖某模块
+        - why：查看某模块都用在了什么地方
+          1. `go mod why github.com/go-resty/resty/v2`
         - vendor：导出依赖放入vendor目录
-     1. `go get`：添加
-        - 认识：安装远程包，用于编辑go.mod变更依赖，包含clone、compile、install三个步骤。原理类似先通过源码工具clone代码到GOROOT/src目录，然后执行go install
-          1. 会回写go.mod文件，更新直接的模块依赖
+     1. `go list`：查看安装的package
+        - -f '{<!-- -->{.GoFiles}}'：查看将被编译的文件名
+        - `go list -m -json all | more`：查看库的依赖，包括go版本的依赖等
+        - `go list -m -json go.uber.org/zap`：查看特定
+     1. `go get`
+        - 认识：安装远程包、更新模块依赖并修改go.mod，包含clone、compile、install三个步骤。原理类似先通过源码工具clone代码到GOROOT/src目录，然后执行go install
           1. 会自动根据不同域名调用不同源码工具，如git或svn
         - 参数
           1. `-d`：不构建和安装，只下载，go-get应该与-d标志一起使用，以调整当前模块的依赖关系而不构建包，不推荐使用go-get来构建和安装包。在未来的版本中，-d标志将始终启用
@@ -3836,10 +3842,9 @@
           1. `-u`：强制使用网络更新直接或间接的依赖模块
           1. `-t ./...`：包括单元测试中用到的
           1. `-v`：显示执行的命令
-     1. `go list`：查看安装的package
-        - -f '{<!-- -->{.GoFiles}}'：查看将被编译的文件名
      1. `go install`：编译和安装，用于安装第三方库的可执行文件。将编译好的结果移到$GOPATH/pkg或$GOPATH/bin，.a移到$GOPATH/pkg，可执行文件移到$GOPATH/bin
         - `go install example.com/pkg@v1.2.3`：忽略mod文件指定依赖版本
+1. wiki
    - 发展
      1. 阶段
         - GOPATH：所有包必须放GOPATH目录下，无法支持不同版本包存在
@@ -4538,6 +4543,8 @@
           1. 默认值：0001-01-01 00:00:00 +0000 UTC
           1. 判断是否为默认值：`time.Time.IsZero()`
         - Location：时区
+          1. time.Now()输出默认本地时区时间(如CST中国时间)
+          1. time.Parse()默认输出UTC时区时间(Unix标准时间)
         - Duration：int64纳秒计数的单调时钟
           1. ParseDuration()：解析持续时间字符串，`time.ParseDuration("1h10m10s")`
           1. Since()：缩写，`time.Now().Sub(t)`
@@ -4551,6 +4558,10 @@
      1. 应用
         - 时间
           1. 获取时间(time类型的格式)：`time.Now()`
+          1. `time.Now().Unix()`：秒
+          1. `time.Now().UnixMilli()`：毫秒
+          1. `time.Now().UnixMicro()`：微秒
+          1. `time.Now().UnixNano()`：纳秒
         - 字符串和时间
           1. 获取格式化时间，并转为字符串：`time.Now().Format("2006-01-02 15:04:05")`
           1. 字符串转时间

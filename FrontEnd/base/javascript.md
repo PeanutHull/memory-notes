@@ -15,6 +15,16 @@
    - 字符串连接符：+
 1. 变量：一条语句定义多个变量用逗号隔开
    - var
+   - 解构赋值：Destructuring Assignment，语法，从一个对象中提取多个属性，并将这些属性作为变量赋值到当前的作用域中
+    ```js
+    const {
+        id, 
+        type,
+        Param,
+        status,
+        name,
+    } = obj;
+    ```
 1. 流程控制
    - callback最早，新加入promise、yield、generator
 1. 函数

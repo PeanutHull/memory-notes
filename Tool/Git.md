@@ -31,6 +31,8 @@
     alias.cm=commit -m
     alias.po=push origin
     alias.ch=checkout
+    alias.br=branch
+    alias.rs=restore --staged
     ```
 1. 列举所有配置：git config -l
 1. 编辑：git config --global --edit
@@ -51,10 +53,14 @@
 1. git rm < file >    工作区删除，该删除操作提交到暂存区，告诉git我删除了一个文件
 1. git rm --cached < file >  会从暂存区删除，同时不再跟踪其变更
 ### pull
-1. git pull                  git fetch + git merge
-1. git fetch                拉取
+1. git pull               git fetch + git merge
+1. git fetch              拉取
 1. git merge              合并
-1. git pull --rebase    变更基线特殊用法:迫使git将远程分支的变更同步到本地，然后将尚未推送的提交重新应用到这个最新版本，避免丑陋的合并信息
+1. git pull --rebase      变更基线拉取：拉取最新更改fetch后，把你本地的更改（即本地尚未推送的提交）重新应用`rebase`在这些远程更改之上。会改历史，将本地的提交放到远程提交的顶部，就好像这些本地提交是在远程提交之后进行的一样
+   - 更改本地的提交历史以创建一个线性的历史记录，这样做的目的是为了避免不必要的合并提交，并保持项目历史的清晰
+   - 通常用于个人开发分支，以保持历史记录的整洁性
+1. git pull --ff          快进拉取：会尝试快进合并，如果当前分支可以直接快进到最新的话就快进，不会创建新的合并而提交，否则就会pull失败。通常应用在本地更改与远程更改不冲突的情况下。--no-ff会创建一个新的合并提交
+   - 更多地用于公共或共享分支，其中快进合并是首选的更新方式
 ### commit
 1. git reset --hard HASH      push之前删除错误的commit用，不会删除commit
 1. git commit --amend         修改commit的内容，必须在push之前，可以在错误的commit之后，再add一次，然后commit --amend可以追加你的修改到commit

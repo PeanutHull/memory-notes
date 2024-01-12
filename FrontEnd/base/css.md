@@ -112,6 +112,65 @@
     letter-spacing       字符间距，px/em
     ```
    - 表格：`align/valign：top，bottom，middle`
+1. animation
+   - demo：
+    ```css
+    // 不倒翁
+    #xx {
+        transform-origin: 50% 100%; /* 设置旋转的基点在底部中间 */
+        animation: sway 1s ease-in-out infinite alternate; /* 初始动画设置 */
+    }
+
+    /* 定义摇晃的关键帧动画 */
+    @keyframes sway {
+        0% {
+            transform: rotate(-10deg);
+        }
+        100% {
+            transform: rotate(10deg);
+        }
+    }
+
+    <script>
+        const dondang = document.getElementById('dondang');
+
+        function reduceSway() {
+            let duration = parseFloat(getComputedStyle(dondang).animationDuration);
+            let maxAngle = 10; // 初始最大摇摆角度
+            let interval = 500; // 设置间隔时间
+
+            // 定时减少动画的摇摆角度和持续时间
+            let timer = setInterval(() => {
+                duration *= 0.9; // 逐渐减少动画时间，速度快一点
+                maxAngle *= 0.8; // 逐渐减少摇摆角度
+
+                // 更新CSS动画属性
+                dondang.style.animationDuration = `${duration}s`;
+                dondang.style.animationName = `sway-${maxAngle}`;
+
+                // 定义新的关键帧动画
+                const swayKeyframes = `@keyframes sway-${maxAngle} {
+        0% { transform: rotate(-${maxAngle}deg); }
+        100% { transform: rotate(${maxAngle}deg); }
+        }`;
+                // 将新的关键帧动画添加到文档中
+                document.styleSheets[0].insertRule(swayKeyframes, document.styleSheets[0].cssRules.length);
+
+                // 如果摇摆角度小于1度，则停止计时器
+                if (maxAngle < 1) {
+                    clearInterval(timer);
+                    // 将不倒翁的旋转角度重置为0
+                    dondang.style.transform = 'rotate(0deg)';
+                    // 移除动画效果
+                    dondang.style.animation = 'none';
+                }
+            }, interval);
+        }
+
+        // 开始减少不倒翁摇摆
+        reduceSway();
+    </script>
+    ```
 1. 待定
    - 元素类型：display，inline/block/inline-block/none
      1. 块级元素：有宽高属性，独占一行，默认宽度100%，如p、div、h1~h6、ul、li
@@ -121,8 +180,10 @@
      1. padding：内边距，padding-top/right/bottom/left，参数为上下左右/上下和左右/上和左右和下/上右下左顺时针
      1. margin：外边距，和padding相同
      1. border：边框，border-left/width/color/style，`1px solid red`，`border-top-style：solid|dashed 虚线|dotted 点状`
-1. 定位机制
-   - 标准文档流
+1. 页面布局模式
+   - 静态：网页中所有元素尺寸都使用px像素作为单位
+     1. 布局相对固定，不会随屏幕尺寸变化而调整
+        - 屏幕宽度小于元素的min-width时出现滚动条。大于内容、背景会居中显示
    - float：浮动，left/right
      1. 是半脱离文档流的左右浮动，所有元素都能浮动，会和正常元素重叠，但是正常元素的子元素会绕开
      1. 浮动元素是一直运动着的，浮动元素遇到浮动元素和父级元素会停止，宽度不够会向下挤
@@ -131,7 +192,12 @@
    - position：定位，left/top，只有定位元素有`z-index`属性
      1. 相对定位：relative，右下为正方向，即相对于左上，原有位置还会占用
      1. 绝对定位：absolute，相对于最近的有定位属性的父级元素定位，一级级往上找，完全脱离文档流，原有位置不占用
-   - fixed：固定定位
+     1. fixed：固定定位
+     1. sticky：粘性定位：元素根据用户的滚动位置在相对定位和固定定位之间切换
+   - 自适应：通过媒体查询，根据不同的屏幕分辨率分别定义不同的布局样式
+   - 流式：按照流式排列，即从上到下、从左到右。元素的大小和位置不随屏幕尺寸的变化而变化，可以实现响应式设计的效果，通过使用百分比或视窗单位（vw、vh）等相对单位
+   - grid：栅格
+   - flexbox：弹性
 ### wiki
 1. 技巧
    - css导入其他css文件：`@import url(hd.css)`
