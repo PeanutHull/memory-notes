@@ -504,9 +504,19 @@
      1. Select：在查询和创建、更新时指定选择
      1. Omit：在查询和创建、更新时指定忽略
    - 创建
+     1. Save
+        - 会保存包括字段是零值的所有字段
+        - 如果保存值不包含主键将Create，否则Update(包含所有字段)
+        - 不要将Save和Model一同使用, 这是未定义的行为
      1. Create：支持单条、多条、关联创建(嵌套结构体)，支持结构体、map
      1. CreateInBatches
-     1. Upsert
+   - 更新
+     1. Update：更新单个列，`.Update("name", "hello")`
+        - 根据条件更新：`.Model(&User{})`
+        - 根据条件和model的值进行更新：`.Model(&user)`，即添加`WHERE id=111`
+     1. Updates：更新多列
+        - 根据结构体：`.Updates(User{Name: "hello", Age: 18, Active: false})`
+        - 根据map：`.Updates(map[string]interface{}{"name": "hello", "age": 18, "active": false})`
    - 查询
      1. 获取：会抛出ErrRecordNotFound的方法：Take/First/Last()：find不会
         - First、Last：加了order by，没有主键将按model第一个字段进行排序
