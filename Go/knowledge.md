@@ -815,8 +815,27 @@
         ```go
         // 设置超时控制
         resty.Client.SetTimeout(5 * time.Second)
-        // 设置自动重试：最大重试3次，重试间隔1秒
-	    client.SetRetryCount(3).SetRetryWaitTime(1 * time.Second)
+        // 设置自动重试：最大重试2次，重试间隔500毫秒
+        client = client.
+            SetRetryCount(2).
+            SetRetryWaitTime(500 * time.Millisecond).
+            SetRetryMaxWaitTime(2 * time.Second).
+            AddRetryCondition(
+                func(r *resty.Response, err error) bool {
+                    var tempApiResp thirdApiResp.SensitiveMsgCheckResp
+                    err = json.Unmarshal(r.Body(), &tempApiResp)
+                    if err != nil {
+                        global.LOG.Error("文本检查请求失败:", zap.Any("err", err), zap.Any("resp", r.Body()))
+                        return true
+                    }
+                    if tempApiResp.ErrCode != 0 {
+                        global.LOG.Error("文本检查请求失败:", zap.Any("resp", r.RawBody()))
+                        return true
+                    }
+
+                    return false
+                },
+            )
         // SetRetryCount() 用于 Resty 对象上的全局设置，所有使用该 Resty 对象发送的请求都会遵循这个重试次数
         // RetryMax() 方法是应用于请求对象上的设置，即每次请求都可以根据具体需要独立地设置重试次数
         // 关闭证书校验
@@ -2579,6 +2598,11 @@
           1. 用户建立连接后，WS-Gateway将连接信息映射关系缓存到redis进行会话节点存储，并通过kafkaWS-API推送消息
           1. WS-API通过kafka接收客户端上线、上行消息，处理后通过kafka返回消息
           1. WS-Gateway通过kafka接收，返回给客户端
+### 开发
+1. swagger和go的配合
+   - 安装swag：`go install github.com/swaggo/swag/cmd/swag@last`
+   - 生成文档：`swag init`
+   - done
 ### wiki
 1. 脚手架
    - 认识：比喻各类语言的前期工作环境，方便直接进行开发

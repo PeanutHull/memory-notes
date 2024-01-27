@@ -524,6 +524,128 @@
             c = iota
         )
         ```
+1. 反射
+   - 认识：reflect，反射是在运行时动态的针对对象，获取属性、调用方法，go是静态类型的语言
+     1. go的反射是基于interface的
+     1. go会记录变量的类型等信息
+   - 应用场景：在必须传参类型不固定的场景下（业务开发一般用不到）
+     1. orm库、json序列化库、运行时
+   - 组成
+     1. 类型
+        - `reflect.Kind`：内置元类型，表示reflect包中定义的十几种，每种有一个整数编号
+        - `reflect.Type`：接口
+        - `reflect.Value`：结构体类型
+     1. 基础反射方法
+        - reflect.TypeOf()：，`func TypeOf(v interface{}) Type`，获取type对象，具体类型
+        - reflect.ValueOf()：`func ValueOf(v interface{}) Value`，获取value结构体，具体值
+          1. CanSet()
+          1. Elem()：指针指向的元素类型
+   - 最佳实践
+     1. 尽量避免使用，涉及内存copy、内存逃逸，性能相对差
+     1. 很难实现清晰并好维护的代码，导致代码可读性变差
+     1. 优先使用TypeOf，不会产生内存逃逸，性能更高，ValueOf包含了TypeOf
+     1. 一定注意不同的数据类型使用对应的函数，否则会导致panic
+     1. 官方反射三定律
+        - Reflection goes from interface value to reflection object
+        - Reflection goes from reflection object to interface value
+        - To modify a reflection object, the value must be settable
+1. 泛型
+   - 认识：泛型代码使用抽象的数据类型编写，以下笔记要根据理念来延伸出语法元素来理解整个概念，v1.18
+     1. 设计理念：三大概念
+        - 类型参数：T，泛型代码是使用抽象的数据类型编写的，将其称之为类型参数；类型参数是泛型的抽象数据类型
+          1. 类型参数列表在常规参数前面，为区分类型参数列表和常规参数列表，使用[]，不是()
+        - 类型约束：规定可用的范围，可以为基础数据类型、any、自定义的接口
+          1. 定义函数约束：可用interface类型约束`[T interfaceName]`
+          1. 定义运算符约束：可使用重载运算符，但go用的是新的设计，允许限制类型参数的类型范围
+             - ~T指底层类型为T的所有类型的集合，包括类型别名
+        - 类型推导：用来偷懒，类型推导+约束推导
+     1. 语法元素：四大落实方式
+        - 近似元素：~
+        - 联合元素：|
+        - 嵌入约束：支持嵌入约束
+        - 接口类型：使用接口会把该类型添加进约束中
+   - 分类
+     1. 泛型函数：使用泛型参数
+     1. 泛型结构体：使用泛型类型的结构体字段
+     1. 泛型接口：
+   - 示例
+    ```go
+    // 泛型函数
+    定义：可以打印任何slice的元素
+    func Print[T1 any, T2 any](s []T) {}
+
+    // 泛型结构体
+    type Pair[T1, T2 any] struct {
+        First  T1
+        Second T2
+    }
+
+    // 泛型接口：Sizer接口定义了一个方法Size，该方法返回类型T的大小
+    type Sizer[T any] interface {
+        Size() T
+    }
+    type IntSize struct {                       // IntSize结构体实现了Sizer接口
+        length int
+    }
+    func (i IntSize) Size() int {
+        return i.length
+    }
+
+    // 使用
+    Print[int]([]int{1, 2, 3})
+
+    // 类型约束
+    type AnyInt interface{ ~int | ~int64 }       // 所有类型为int或int64的类型，如int/int8/int16/int32/int64/AnyInt8
+
+    func Print(s []T) {
+        for _, v := range s {
+            fmt.Println(v)
+        }
+    }
+
+    // 类型推导：
+    fmt.Println(Min(1, 2))                      // 自动推导出泛型函数的T为int类型
+    fmt.Println(Min(3.5, 2.8))                  // 自动推导出T为float64类型
+    p1 := Pair{First: 1, Second: "apple"}       // 自动推导出泛型结构体的T1为int，T2为string
+    var sizer Sizer[int] = IntSize{length: 5}   // 自动推导出泛型接口的T为int
+
+    // 嵌入约束
+    type Signed interface {
+        ~int | ~int8 | ~int16 | ~int32 | ~int64
+    }
+    type Ordered interface {
+        Signed | ~string
+    }
+
+    // 接口类型
+    type Stringish interface {
+        string | fmt.Stringer
+    }
+    ```
+   - 最佳实践
+    ```go
+    // 类型约束：函数参数类，某些类型不具有某某方法
+    func Stringify[T any](s []T) (ret []string) {
+        for _, v := range s {
+            ret = append(ret, v.String())                   // 无效，因为any时，如int、float64等类型没有实现String()
+        }
+        return ret
+    }
+    // 解决方案
+    type Stringer interface {                               
+        String() string
+    }
+    func Stringify[T Stringer](s []T) (ret []string) {      // 使用接口统一实现String()
+        for _, v := range s {
+            ret = append(ret, v.String())
+        }
+        return ret
+    }
+
+    // 类型约束：运算符类，某些类型不能比较，需要约束运算符相关的
+    ```
+   - wiki
+     1. generic programming，是程序设计语言的一种风格或范式，允许在强类型语言编写代码时使用一些以后(如实例化时)才指定的类型
 1. 流程控制
    - 判断：不能使用()
      1. if
@@ -982,31 +1104,6 @@
    - 比较
      1. 在错误处理上采用了与c类似的检查返回值方式
      1. 意料之中用error，如文件打不开；意料之外用panic，如数组越界。异常定义为无法预测的，几乎不可能失败但是特殊条件下也没法返回错误，也无法继续执行
-1. 反射
-   - 认识：reflect，反射是在运行时动态的针对对象，获取属性、调用方法，go是静态类型的语言
-     1. go的反射是基于interface的
-     1. go会记录变量的类型等信息
-   - 应用场景：在必须传参类型不固定的场景下（业务开发一般用不到）
-     1. orm库、json序列化库、运行时
-   - 组成
-     1. 类型
-        - `reflect.Kind`：内置元类型，表示reflect包中定义的十几种，每种有一个整数编号
-        - `reflect.Type`：接口
-        - `reflect.Value`：结构体类型
-     1. 基础反射方法
-        - reflect.TypeOf()：，`func TypeOf(v interface{}) Type`，获取type对象，具体类型
-        - reflect.ValueOf()：`func ValueOf(v interface{}) Value`，获取value结构体，具体值
-          1. CanSet()
-          1. Elem()：指针指向的元素类型
-   - 最佳实践
-     1. 尽量避免使用，涉及内存copy、内存逃逸，性能相对差
-     1. 很难实现清晰并好维护的代码，导致代码可读性变差
-     1. 优先使用TypeOf，不会产生内存逃逸，性能更高，ValueOf包含了TypeOf
-     1. 一定注意不同的数据类型使用对应的函数，否则会导致panic
-     1. 官方反射三定律
-        - Reflection goes from interface value to reflection object
-        - Reflection goes from reflection object to interface value
-        - To modify a reflection object, the value must be settable
 1. 运行时
    - 认识：对goroutine进行调度，获取运行时信息等
    - 获取goroutine id
@@ -4538,6 +4635,7 @@
         - %s   字符串或切片的无解释字节
 
         - %p   指针，十六进制表示，前缀 0x (用于指针和chan)
+     1. 拼接字符串：`s := fmt.Sprintf("my name is %s and I'm %d years old.", name, age)`
    - time
      1. 类型
         - Time：时间

@@ -89,10 +89,8 @@
                             position：top|center|bottom
                             repeat：repeat-x|y|n
                             attachment：fixed|scroll，背景图滚动方式
-    overflow             滚动条，hidden 超出内容隐藏，auto，scroll 始终出现
     opacity              透明度，0-1
     visibility           可见性，visible，hidden
-    cursor               鼠标样式，hand/pointer手型，crosshair十字形，text挪到文本的效果，wait等待效果，default默认，help问号
     clear                元素侧面是否允许其他浮动元素，both/left/right
     ```
    - 文字
@@ -111,7 +109,15 @@
     text-indent          首行缩进，px/em，2em为两个字
     letter-spacing       字符间距，px/em
     ```
-   - 表格：`align/valign：top，bottom，middle`
+   - 表格
+    ```
+    align/valign：top，bottom，middle
+    ```
+   - 交互
+    ```
+    overflow             滚动条，hidden 超出内容隐藏，auto，scroll 始终出现
+    cursor               鼠标样式，hand/pointer手型，crosshair十字形，text挪到文本的效果，wait等待效果，default默认，help问号
+    ```
 1. animation
    - demo：
     ```css
@@ -178,9 +184,12 @@
      1. 行内块级元素：有宽高属性，不占一行，如img、from、input、textarea、select
    - 盒子模型：是css的基石，所有元素被看成矩形的盒子，由内容/填充(内边距)/边框/边界(外边距)组成，页面由很多通过纵向/横向/嵌套等方式堆积
      1. padding：内边距，padding-top/right/bottom/left，参数为上下左右/上下和左右/上和左右和下/上右下左顺时针
+        - 两个参数：上下、左右
+        - 四个参数：上、右、下、左
      1. margin：外边距，和padding相同
      1. border：边框，border-left/width/color/style，`1px solid red`，`border-top-style：solid|dashed 虚线|dotted 点状`
 1. 页面布局模式
+   - 盒状模型：依赖display + position + float
    - 静态：网页中所有元素尺寸都使用px像素作为单位
      1. 布局相对固定，不会随屏幕尺寸变化而调整
         - 屏幕宽度小于元素的min-width时出现滚动条。大于内容、背景会居中显示
@@ -196,8 +205,14 @@
      1. sticky：粘性定位：元素根据用户的滚动位置在相对定位和固定定位之间切换
    - 自适应：通过媒体查询，根据不同的屏幕分辨率分别定义不同的布局样式
    - 流式：按照流式排列，即从上到下、从左到右。元素的大小和位置不随屏幕尺寸的变化而变化，可以实现响应式设计的效果，通过使用百分比或视窗单位（vw、vh）等相对单位
-   - grid：栅格
    - flexbox：弹性
+     1. 排列方式
+     1. 占据比例
+   - grid：栅格
+1. 单位
+   - em、rem：相对长度单位，CSS3
+   - vw、vh：视野窗口的宽高单位，即百分比1为1%
+   - rpx：响应式像素，专门为小程序设计，根据屏幕宽度进行自适应。规定屏幕宽为750px. rpx换算px(750/屏幕宽度)
 ### wiki
 1. 技巧
    - css导入其他css文件：`@import url(hd.css)`

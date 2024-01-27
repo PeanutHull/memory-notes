@@ -193,6 +193,9 @@
      1. 支持和Cassandra一样的CQL查询语言和驱动，一样的SSTable存储格式
      1. 支持和DynamoDB一样的JSON-style查询和驱动
      1. 基于底层Seastar框架，采用高度异步、无共享设计。每个数据分片都分配有CPU、RAM、持久存储和网络资源，并尽可能高效使用。凭借其自己的用于CPU和I/O处理的自定义调度程序可最大效率运行
+
+     1. Discord从mongoDB 15年换到Cassandra，然后又换到ScyllaDB
+        - 解决热分区问题：在ScyllaDB和业务服务之间增加rust写的中介服务来合并请求
    - 服务架构
      1. Cluster集群
      1. Node节点
@@ -220,9 +223,6 @@
      1. Automatic Data Replication
    - 网络通信
      1. 通信使用高效的Seastar RPC流，并使用暗示切换等反熵机制保持彼此同步
-   - 业界实践
-     1. Discord从mongoDB 15年换到Cassandra，然后又换到ScyllaDB
-        - 解决热分区问题：在ScyllaDB和业务服务之间增加rust写的中介服务来合并请求
 1. greenplum
    - 基于PostgreSQL的大规模处理数据库，开源
      1. MPP架构

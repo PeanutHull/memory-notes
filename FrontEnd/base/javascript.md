@@ -25,8 +25,63 @@
         name,
     } = obj;
     ```
+1. 数组
+   - 认识：[]
+   - 操作
+     1. 新增
+        ```js
+        let arr = [1, 2, 3];  
+        // 直接赋值
+        arr[3] = 4;                     // arr is now [1, 2, 3, 4]
+        // 末尾追加，并返回新的长度
+        arr.push(4);
+        // 任意位置添加
+        arr.splice(2, 0, 4);            // arr is now [1, 2, 4, 3]
+        // 连接两个数组
+        arr = arr.concat([4]);          // arr is now [1, 2, 3, 4]
+        // 开头追加，并返回新的长度
+        arr.unshift(4);
+        ```
+     1. 修改
+        ```js
+
+        // 任意位置添加
+        arr.splice(2, 0, 4);            // arr is now [1, 2, 4, 3]
+        // 连接两个数组
+        arr = arr.concat([4]);          // arr is now [1, 2, 3, 4]
+        // 开头追加，并返回新的长度
+        arr.unshift(4);
+        ```
+     1. 删除
+        ```js
+        // 末尾删除，并返回新的长度
+        arr.pop(4);
+        // 开头删除，并返回新的长度
+        arr.shift(4);
+        // 位置 + 数量
+        arr.splice(1, 1);
+        // 可用于创建一个新的数组，返回false会删除
+        arr = arr.filter(function(item) {
+            return item !== "xxx"
+        });
+        // slice不会改变原数组，而是返回新数组
+        arr.slice(0, 1).concat(arr.slice(2));
+        // es6的filter
+        myArray = myArray.filter(item => item !== "banana");        // 删除所有banana元素
+        ```
+1. 对象
+   - 认识：{}
 1. 流程控制
    - callback最早，新加入promise、yield、generator
+   - for
+     1. for 语句
+     1. do...while
+     1. while
+     1. label
+     1. break
+     1. contin
+     1. for...in
+     1. for...of
 1. 函数
    - 理解：其他语言函数是二等公民，js不一样，可以声明/调用/传参/返回，是function类的实例，非常重要。js块：用{}声明，没有块级作用域，但有函数作用域
    - 实例
