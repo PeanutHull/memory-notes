@@ -29,24 +29,97 @@
 
    - 路由器
    - 状态管理
+1. Vuex
+   - 认识：vue的状态管理库，集中式管理所有组件状态，并以相应规则保证状态以可预测的方式发生变化。通过利用vue的响应式和组件系统的优势，提供了一个运行于前端的单向数据流架构
+     1. 意义：大型应用组件间状态共享会复杂且难以管理。直接通信和事件广播可能会导致数据流动难以追踪和维护。vuex通过集中式存储管理所有组件的状态，并以规则确保状态的变化是可预测的，从而解决了这些问题
+     1. 每个vuex应用的核心是store(仓库、容器)，包含状态state
+     1. 分离不同的操作mutations、action等概念可以方便地跟踪状态的变化
+   - 核心概念
+     1. State：存储的基本状态，单一状态树，state的变化会反馈到vue组件中，可能会触发组件的重新渲染
+        ```javascript
+        const store = new Vuex.Store({
+            state: {
+                count: 0
+            }
+        })
+        ```
+     1. Getters：类似vue的计算属性computed properties，用于从state派生出一些状态，以便减少重复逻辑和计算，如过滤列表、计算状态等
+        ```javascript
+        computed: {
+            // 使用 this.$store.getters 访问 getter
+            filteredList() {
+                return this.$store.getters.filteredList;
+            }
+        }
+
+        // 使用辅助函数mapGetters将store中getters映射到局部计算属性
+        export default {
+            computed: {
+                // 使用对象展开运算符将 getters 混入 computed 对象中
+                ...mapGetters([
+                'filteredList',
+                ])
+            }
+        }
+        ```
+     1. Mutations：变更，更改状态的方法，类似于事件，组成是事件类型字符串type和一个实际进行状态更改的回调函数handler，更改state的唯一方法是提交mutation
+        ```javascript
+        // 定义一个 mutation
+        const mutations = {
+            increment (state) {
+                // 变更状态
+                state.count++
+            }
+        }
+        // 提交一个mutation，即唤醒更新
+        store.commit('increment')
+        ```
+     1. Actions：动作，可以包含异步操作的方法，来处理异步事件或复杂逻辑，功能类似于mutation，但提交的是mutation不是直接变更状态，可以包含任意异步操作
+        - 认识：接受一个与store实例具有相同方法和属性的context对象
+          1. 调用context.commit提交一个mutation
+          1. 通过context.state和context.getters来获取 state 和 getters。
+        - 示例
+        ```javascript
+        const actions = {
+            increment ({ commit }) {
+                commit('increment')
+            }
+        }
+        // 分发 Action
+        store.dispatch('increment')
+        ```
+     1. Modules：允许将store分割成模块，每个模块拥有自己的state、mutations、actions、getters，甚至是嵌套子模块
+        ```javascript
+        const moduleA = {
+            namespaced: true,                       // 模块开关
+            state: { /* ... */ },
+            mutations: { /* ... */ },
+            actions: { /* ... */ },
+            getters: { /* ... */ }
+        }
+
+        const moduleB = {
+            namespaced: true,
+            state: { /* ... */ },
+            // ...
+        }
+
+        const store = new Vuex.Store({
+            modules: {
+                a: moduleA,
+                b: moduleB
+            }
+        })
+
+        // 访问模块 A 的状态
+        store.state.a // -> moduleA 的状态对象
+        // 调用模块 B 的 mutation
+        store.commit('b/someMutation')
+        ```
 1. 开发环境
    - node/npm/webpack
    - vue-cli：脚手架工具，用来生成模板的vue工程
    - element：vue的组件库
-   - vuex
-     1. 认识：为vue应用程序开发的状态管理模式和库，集中式管理所有组件状态，并以相应规则保证状态以可预测的方式发生变化。通过利用vue的响应式和组件系统的优势，提供了一个运行于前端的单向数据流架构
-     1. 意义：大型应用组件间状态共享会复杂且难以管理。直接通信和事件广播可能会导致数据流动难以追踪和维护。vuex通过集中式存储管理所有组件的状态，并以规则确保状态的变化是可预测的，从而解决了这些问题
-     1. 核心概念
-        - State
-        - Getters
-        - Mutations
-        - Actions
-        - Modules
-     1. 工作流程
-        - 组件通过调用 actions 来处理异步事件或复杂逻辑
-        - Actions 提交 mutations 来更改状态
-        - State 的变化会反馈到 Vue 组件中，可能会触发组件的重新渲染
-        - 组件可以通过 getters 来获取派生的状态，以便减少重复逻辑和计算
 1. 组件
    - 标签
      1. 冒号开头：表示一个动态属性/绑定属性，可以绑定属性到组件或元素的实例数据，是语法糖

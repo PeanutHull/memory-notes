@@ -71,6 +71,21 @@
         ```
 1. 对象
    - 认识：{}
+   - demo
+    ```js
+    // 按照年份分成二维数组
+    data.list.forEach((obj, i) => {
+        obj.playTime = formatTime(obj.createdAt, 'yyyy.MM.dd');
+        obj.playYear = obj.playTime.slice(0, 4);
+        if (info[obj.playYear]) {
+        info[obj.playYear].recordList.push(obj);
+        } else {
+        info[obj.playYear] = { hasRetract: i === 0 ? true : false };
+        info[obj.playYear].recordList = [obj];
+        }
+    });
+    this.userScriptList = Object.assign(this.userScriptList, info);
+    ```
 1. 流程控制
    - callback最早，新加入promise、yield、generator
    - for
