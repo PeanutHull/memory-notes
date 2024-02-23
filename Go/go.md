@@ -4295,6 +4295,22 @@
    - crypto：加解密
      1. rand：`crypto/rand`，实现用于加解密的更安全的随机数生成器，每次都是不同的随机数，性能肯定比`math/rand`低啦
         - `func Int(rand io.Reader, max *big.Int) (n *big.Int, err error)`：生成一个范围随机数
+            ```go
+            import (  
+                "math/rand"  
+            )
+            func main() {  
+                // 初始化随机数种子，通常使用当前时间
+                rand.Seed(time.Now().UnixNano())
+
+                // 生成一个[0, 1)之间的随机浮点数
+                randomFloat := rand.Float64()
+            
+                // 生成一个[0, n)之间的随机整数，其中n是你要指定的上限
+                n := 100
+                randomInt := rand.Intn(n)
+            }
+            ```
         - `func Prime(rand io.Reader, bits int) (*big.Int, error)`：返回一个给定比特长度的数字，该数字高概率是素数
         - `func Read(b []byte) (n int, err error)`：给定的字节切片塞满随机数
      1. md5：`crypto/md5`
