@@ -653,13 +653,23 @@
           1. `is_free_lock(key)/is_used_lock(key)`
    - 表锁
      1. Shared and Exclusive Lock
-        - 认识：共享和排它锁
+        - 认识：共享和排它锁；通常用在事务里，因为mysql默认自动提交模式，每个独立的sql都会立即执行并提交，就没啥意义了，因为这样加不加这个锁都一样了
           1. 强锁
           1. 锁级别：有主键或索引行级别，无则表级别
           1. 仅适用于InnoDB，必须在事务中执行
         - 分类
-          1. Shared Lock：共享锁，读锁，s，其他人读可以并行，锁拥有者不能修改，保证了拥有者释放锁时其他人读取的是对的，`lock in share mode`
+          1. Shared Lock：共享锁，读锁，s，其他人读可以并行，锁拥有者不能修改，保证了拥有者释放锁时其他人读取的是对的
+             - `lock in share mode`：select后使用，会对读取的行设置一个共享锁
+             - `for share of tableName`：v8.0加入，和上边是同义词，支持指定要锁定的表，在涉及多表join时可以更精确地控制锁定行为。语法和PostgreSQL更加接近，提高了跨数据库系统的兼容性
           1. Exclusive Locks：排他锁，写锁，x，其他人读写都不能并行，`for update`，update/delete/insert自动加，select任何锁不加
+             - `for update nowait`：v8.0，如果锁不可用导致获取失败，会立即返回一个error
+             - `for update skip locked`：v8.0，跳过所有已经被其他事务锁定的行，高并发情况下有用，那时你可能会想要对未经其他事务锁定的行进行操作
+        - sql
+            ```sql
+            lock tables tableName read; -- 给tableName加读锁
+            lock tables tableName write; -- 给tableName加写锁
+            unlock tables; -- 释放当前会话持有的所有的关于这个表的锁
+            ```
      1. Intention Lock
         - 认识：意向锁，表锁，为了允许行锁和表锁共存，实现多粒度锁机制。申请表锁时为了快速知道是否可锁，否则需要一行行去看是否有锁
           1. 弱锁，仅仅表明意向

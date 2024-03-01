@@ -485,12 +485,12 @@
    - 组成
      1. StructField 结构体：字段配置
      1. Relationship 结构体：预定义链表的配置，根据配置相应操作
-     1. Scope：解析模型，拼接sql。比字段解析
+     1. Scope：解析模型，拼接sql。对字段解析
    - 实现
      1. sql执行：每次使用Find、First这些写方法时，都会生成一个Statement对象，后面就是对Statement中的Clauses属性进行添加、修改和执行，执行过程中调用Expression接口的表达式生成器，生成最终的sql语句，`scope.SQLDB().QueryRow(scope.SQL, scope.SQLVars...).Scan(primaryField.Field.Addr().Interface())`
      1. 钩子函数：各种before、after的注入
      1. 各种反射的应用：判断类型、情况
-1. 功能
+1. 基础理解
    - 模型映射：倾向于约定优于配置
      1. 蛇形复数：涉及表名、字段(ID/CreatedAt/UpdatedAt/DeletedAt)
         - 识别为对应下划线+s的表名
@@ -500,6 +500,23 @@
      1. 手动指定
         - `.Model(&User{})`
         - `.Table("users")`
+   - 模式
+     1. QueryFields：打开后添加表名
+        ```go
+        db, err := gorm.Open(sqlite.Open("gorm.db"), &gorm.Config{
+            QueryFields: true,                                          // 打开
+        })
+
+        db.Find(&user)
+        // 打开的效果：SELECT `users`.`name`, `users`.`age`, ... FROM `users`
+        ```
+     1. Session：会话模式
+        ```go
+        db.Session(&gorm.Session{QueryFields: true}).Find(&user)        // 打开QueryFields
+        ```
+   - 钩子
+     1. BeforeCreate
+1. 基本使用
    - 字段选择
      1. Select：在查询和创建、更新时指定选择
      1. Omit：在查询和创建、更新时指定忽略
@@ -512,17 +529,25 @@
      1. CreateInBatches
    - 更新
      1. Update：更新单个列，`.Update("name", "hello")`
-        - 根据条件更新：`.Model(&User{})`
-        - 根据条件和model的值进行更新：`.Model(&user)`，即添加`WHERE id=111`
+        - 根据条件更新：`.Model(&User{})`，只指定模型，全依赖where
+        - 根据条件和model的值进行更新：`.Model(&user)`，即添加`WHERE id=111`，依赖变量user中的id和where
      1. Updates：更新多列
-        - 根据结构体：`.Updates(User{Name: "hello", Age: 18, Active: false})`
-        - 根据map：`.Updates(map[string]interface{}{"name": "hello", "age": 18, "active": false})`
+        - 多列字段选择
+          1. 根据结构体：`.Updates(User{Name: "hello", Age: 18, Active: false})`
+          1. 根据map：`.Updates(map[string]interface{}{"name": "hello", "age": 18, "active": false})`
+        - 根据条件：和Update相同
    - 查询
      1. 获取：会抛出ErrRecordNotFound的方法：Take/First/Last()：find不会
         - First、Last：加了order by，没有主键将按model第一个字段进行排序
         - Take
         - Find：支持单条、多条，单条时会查询所有但是只返回第一条
+          1. `.Find(&APIUser{})`：指定接口的结构体实现特定字段的返回
+          1. 加条件，省略where
+             - `.Find(&user, "name = ?", "jinzhu")、.Find(&users, "name <> ? AND age > ?", "jinzhu", 20)`
+             - `.Find(&users, User{Age: 20})`
+             - `.Find(&users, map[string]interface{}{"age": 20})`
         - Distinct
+          1. `.Distinct("name", "age").`
         - Raw/Scan(&result{})/Rows()
             ```go
             // Raw SQL
@@ -540,98 +565,120 @@
 
           1. `.Where(&User{Name: "jinzhu", Age: 0})`：结构体查询时会自动忽略零值的
           1. `.Where(map[string]interface{}{"name": "jinzhu", "age": 20})`
-        - Not：和where类似，会根据不同的类型转变为where not、WHERE xx <>、WHERE xx NOT IN
+          1. `.Where([]int64{20, 21, 22})`：按照主键id搜索
+        - Not：where not xx的简洁版，会根据不同的类型转变为where not、WHERE xx <>、WHERE xx NOT IN
         - Or
           1. `.Or(User{Name: "jinzhu 2", Age: 18})`：`OR (name = 'jinzhu 2' AND age = 18)`
           1. `.Or(map[string]interface{}{"name": "jinzhu 2", "age": 18})`
-        - Order/Limit/Offset
-          1. ``
+        - Order
+          1. `.Order("age desc, name")`：直接写要order的
+          1. `.Order("age desc").Order("name")`：多个要order的，效果如上一样
+          1. Clauses子句
+          ```go
+          db.Clauses(clause.OrderBy{
+            Expression: clause.Expr{SQL: "FIELD(id,?)", Vars: []interface{}{[]int{1, 2, 3}}, WithoutParentheses: true},
+          }).Find(&User{})
+
+          // SELECT * FROM users ORDER BY FIELD(id,1,2,3)
+          ```
+        - Limit/Offset
+          1. `.Limit(3).Offset(3)`：常规用法
+          1. `.Limit(10).Find(&users1).Limit(-1).Find(&users2)`：一次取俩，用-1取消limit
+          1. `.Offset(10).Find(&users1).Offset(-1).Find(&users2)`：效果如上
+        - Group By/Having
+          1. `.Group("date(created_at)").Having("sum(amount) > ?", 100)`：常规用法
      1. 连接
-        - Joins
+        - Joins/InnerJoins
           1. `.Joins("left join emails on emails.user_id = users.id")`
           1. `.Joins("Company", db.Where(&Company{Alive: true}))`：joins时加条件
-          1. join衍生表
+          1. join子表
             ```go
             query := db.Table("order").Select("MAX(order.finished_at) as latest").Joins("left join user user on order.user_id = user.id").Where("user.age > ?", 18).Group("order.user_id")
-            db.Model(&Order{}).Joins("join (?) q on order.finished_at = q.latest", query).Scan(&results)
+            db.Model(&Order{}).Joins("join (?) q on order.finished_at = q.latest", query).Scan(&results) // query作为子表
             // SELECT `order`.`user_id`,`order`.`finished_at` FROM `order` join (SELECT MAX(order.finished_at) as latest FROM `order` left join user user on order.user_id = user.id WHERE user.age > 18 GROUP BY `order`.`user_id`) q on order.finished_at = q.latest
             ```
-        - InnerJoins
-   - 钩子
-     1. BeforeCreate
+1. 进阶使用
+   - 锁
+    ```go
+    // SELECT * FROM `users` FOR UPDATE NOWAIT
+    db.Clauses(clause.Locking{
+        Strength: "UPDATE",
+        Options: "NOWAIT",                                  // 可以不加这个options
+    }).Find(&users)
 
-   - 使用
-     1. Clause：子句生成器，父级到子集的实现排列为DB --> Statement --> Clause --> Expression
-        - 冲突
-            ```go
-            // 有冲突时什么都不做
-            db.Clauses(clause.OnConflict{
-                DoNothing: true
-            }).Create(&user)
+    // SELECT * FROM `users` FOR SHARE OF `users`
+    db.Clauses(clause.Locking{
+        Strength: "SHARE",
+        Table: clause.Table{Name: clause.CurrentTable},     // 用于指定将要被锁定的表，在join多个表并且锁定其一时有用
+    }).Find(&users)
+    ```
+   - 子查询：当使用*gorm.DB对象作为参数时，gorm会自动生成子查询
+    ```go
+    // 简单子查询
+    db.Where("amount > (?)", db.Table("orders").Select("AVG(amount)")).Find(&orders)
+    // SELECT * FROM "orders" WHERE amount > (SELECT AVG(amount) FROM "orders");
 
-            // 当 `id` 有冲突时，更新指定列为默认值
-            db.Clauses(clause.OnConflict{
-                Columns:   []clause.Column{{Name: "id"}},
-                DoUpdates: clause.Assignments(map[string]interface{}{"role": "user"}),
-            }).Create(&users)
-            // MERGE INTO "users" USING *** WHEN NOT MATCHED THEN INSERT *** WHEN MATCHED THEN UPDATE SET ***; SQL Server
-            // INSERT INTO `users` *** ON DUPLICATE KEY UPDATE ***; MySQL
+    // 内嵌子查询
+    subQuery := db.Select("AVG(age)").Where("name LIKE ?", "name%").Table("users")
+    db.Select("AVG(age) as avgage").Group("name").Having("AVG(age) > (?)", subQuery).Find(&results)
+    // SELECT AVG(age) as avgage FROM `users` GROUP BY `name` HAVING AVG(age) > (SELECT AVG(age) FROM `users` WHERE name LIKE "name%")
+    ```
+   - Clause：子句生成器，父级到子集的实现排列为DB --> Statement --> Clause --> Expression
+     1. 冲突
+        ```go
+        // 有冲突时什么都不做
+        db.Clauses(clause.OnConflict{
+            DoNothing: true
+        }).Create(&user)
 
-            // 当 `id` 有冲突时，更新指定列为新值
-            db.Clauses(clause.OnConflict{
-                Columns:   []clause.Column{{Name: "id"}},
-                DoUpdates: clause.AssignmentColumns([]string{"name", "age"}),
-            }).Create(&users)
+        // 当 `id` 有冲突时，更新指定列为默认值
+        db.Clauses(clause.OnConflict{
+            Columns:   []clause.Column{{Name: "id"}},
+            DoUpdates: clause.Assignments(map[string]interface{}{"role": "user"}),
+        }).Create(&users)
+        // MERGE INTO "users" USING *** WHEN NOT MATCHED THEN INSERT *** WHEN MATCHED THEN UPDATE SET ***; SQL Server
+        // INSERT INTO `users` *** ON DUPLICATE KEY UPDATE ***; MySQL
 
-            // 当 `id` 有冲突时，更新其他所有列
-            db.Clauses(clause.OnConflict{
-                UpdateAll: true
-            }).Create(&users)
+        // 当 `id` 有冲突时，更新指定列为新值
+        db.Clauses(clause.OnConflict{
+            Columns:   []clause.Column{{Name: "id"}},
+            DoUpdates: clause.AssignmentColumns([]string{"name", "age"}),
+        }).Create(&users)
 
-            // SELECT * FROM users ORDER BY FIELD(id,1,2,3)
-            db.Clauses(clause.OrderBy{
-            Expression: clause.Expr{SQL: "FIELD(id,?)", Vars: []interface{}{[]int{1, 2, 3}}, WithoutParentheses: true},
-            }).Find(&User{})
-            ```
-        - 锁
-            ```go
-            // SELECT * FROM `users` FOR UPDATE
-            db.Clauses(clause.Locking{
-                Strength: "UPDATE"
-            }).Find(&users)
+        // 当 `id` 有冲突时，更新其他所有列
+        db.Clauses(clause.OnConflict{
+            UpdateAll: true
+        }).Create(&users)
 
-            // SELECT * FROM `users` FOR SHARE OF `users`
-            db.Clauses(clause.Locking{
-                Strength: "SHARE",
-                Table: clause.Table{Name: clause.CurrentTable},
-            }).Find(&users)
+        // SELECT * FROM users ORDER BY FIELD(id,1,2,3)
+        db.Clauses(clause.OrderBy{
+        Expression: clause.Expr{SQL: "FIELD(id,?)", Vars: []interface{}{[]int{1, 2, 3}}, WithoutParentheses: true},
+        }).Find(&User{})
+        ```
+     1. 优化器、索引提示
+        ```go
+        // SELECT * /*+ MAX_EXECUTION_TIME(10000) */ FROM `users`
+        db.Clauses(hints.New("MAX_EXECUTION_TIME(10000)")).Find(&User{})
 
-            // SELECT * FROM `users` FOR UPDATE NOWAIT
-            db.Clauses(clause.Locking{
-                Strength: "UPDATE",
-                Options: "NOWAIT",
-            }).Find(&users)
-            ```
-        - 优化器、索引提示
-            ```go
-            // SELECT * /*+ MAX_EXECUTION_TIME(10000) */ FROM `users`
-            db.Clauses(hints.New("MAX_EXECUTION_TIME(10000)")).Find(&User{})
+        // SELECT * FROM `users` USE INDEX (`idx_user_name`)
+        db.Clauses(hints.UseIndex("idx_user_name")).Find(&User{})
 
-            // SELECT * FROM `users` USE INDEX (`idx_user_name`)
-            db.Clauses(hints.UseIndex("idx_user_name")).Find(&User{})
-
-            // SELECT * FROM `users` FORCE INDEX FOR JOIN (`idx_user_name`,`idx_user_id`)"
-            db.Clauses(hints.ForceIndex("idx_user_name", "idx_user_id").ForJoin()).Find(&User{})
-            ```
-     1. Gen: gorm官方代码生成器
-        - 自动生成CRUD和DIY方法
-        - 多种生成代码模式
-        - 自动根据表结构生成model
-        - 完全兼容GORM
-        - 更安全、更友好
-     1. 条件
-        - Where
-        - Not：where not xx的简洁版
+        // SELECT * FROM `users` FORCE INDEX FOR JOIN (`idx_user_name`,`idx_user_id`)"
+        db.Clauses(hints.ForceIndex("idx_user_name", "idx_user_id").ForJoin()).Find(&User{})
+        ```
+   - Gen: gorm官方代码生成器
+     1. 自动生成CRUD和DIY方法
+     1. 多种生成代码模式
+     1. 自动根据表结构生成model
+     1. 完全兼容GORM
+     1. 更安全、更友好
+1. 最佳实践
+   - first/last会自动加where
+    ```go
+    var user = User{ID: 10}
+    db.Where("id = ?", 20).First(&user)
+    // SELECT * FROM users WHERE id = 10 and id = 20 ORDER BY id ASC LIMIT 1
+    ```
    - 优雅返回时间格式
      1. 使用
         ```go
@@ -668,13 +715,6 @@
             return b, nil  
         }
         ```
-1. 特例
-   - first等会自动加where
-    ```go
-    var user = User{ID: 10}
-    db.Where("id = ?", 20).First(&user)
-    // SELECT * FROM users WHERE id = 10 and id = 20 ORDER BY id ASC LIMIT 1
-    ```
 #### 队列相关
 1. kafka
    - 消费者组进行消费：使用Shopify/sarama库，初始化sarama.NewConsumerGroup，然后阻塞调用Consume消费，注入实现了ConsumeClaim等3个回调方法的sarama.ConsumerGroupHandler，在回调中接收消息

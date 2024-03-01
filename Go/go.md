@@ -76,6 +76,7 @@
    - 方法
      1. 数据操作
         - `len(v T)`：长度，string、array、slice、map、chan、pointer(指向元素的数量)
+          1. 含有中文的长度：`utf8.RuneCountInString(str)`，否则统计的是字节的长度
         - `cap(v T)`：容量，array、slice(返回cap)、chan、pointer(指向元素的数量)
         - `append(slice []T, elems ...T)`、`copy(dst, src)`：slice，容量够重新分配地址以容纳新元素，不够分配新底层数组，变长参数
             ```go
@@ -4122,6 +4123,8 @@
      1. 切字符串相关
         - `strings.Split(s, sep string) []string/SplitAfter/SplitAfterN/SplitN`：返回字符串切片，返回前后内容、是否找到
         - `strings.Cut(s, sep string) (before, after string, found bool)/CutPrefix/CutSuffix`
+        - `str = str[:20]`：截取n个英文和标点字符串
+        - `str = string([]rune(str)[:20])`：截取n个中文字符串
      1. 连接相关，根据给定字符串将字符串切片连接为字符串
         - `strings.Join(elems []string, sep string) string`
      1. 替换相关
@@ -4185,6 +4188,7 @@
         - 认识
           1. 共性
              - 只有可导出成员(首字母大写)才可和json互转，加了tag也不行
+             - 不加tag时，json内字段名跟结构体内字段原名一致；加了tag，以tag中为准
              - 当变量实现了Marshaler或者Unmarshaler，会调用其MarshalJSON或者UnmarshalJSON方法来生成json编码
              - 默认将数值当做float64
           1. 编码时

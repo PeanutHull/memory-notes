@@ -211,6 +211,17 @@
      1. 轻量
         - 无大小限制的goroutine栈：goroutine stack默认2k，可轻易创建几十万goroutine不用担心内存耗尽等问题
      1. 方便使用
+1. Golang程序启动原理
+   - 认识
+     1. 过程是：从ELF入口点到GMP初始化，到执行用户main
+   - 步骤：运行入口是runtime定义的一个汇编函数
+     1. 通过runtime中的osinit、schedinit等函数对golang运行时进行关键的初始化，包括GMP初始化、调度逻辑初始化
+     1. 创建入口函数是runtime.main的主协程（因为操作系统加载的时候只创建好了主线程，协程这种东西还是得用户态的golang自己来管理。golang在这里创建出了自己的第一个协程）
+     1. 调用runtime·mstart真正开启调度器进行运行，即runtime.main函数
+        - 新建一个线程执行sysmon。sysmon的工作是系统后台监控（定期垃圾回收和调度抢占）
+        - 启动gc清扫的goroutine
+        - 执行runtime init，用户init
+        - 执行用户main函数
 1. scheduler
    - 认识：调度器，基于M:N的G-P-M线程调度模型，![avatar](../images/goroutine_base_schedule.png)
      1. 协程调度：模仿linux的进程调度，在其之上自己实现一套
