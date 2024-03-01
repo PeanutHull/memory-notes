@@ -622,6 +622,12 @@
     subQuery := db.Select("AVG(age)").Where("name LIKE ?", "name%").Table("users")
     db.Select("AVG(age) as avgage").Group("name").Having("AVG(age) > (?)", subQuery).Find(&results)
     // SELECT AVG(age) as avgage FROM `users` GROUP BY `name` HAVING AVG(age) > (SELECT AVG(age) FROM `users` WHERE name LIKE "name%")
+
+    // 在from子句中结合n个子查询
+    subQuery1 := db.Model(&User{}).Select("name")
+    subQuery2 := db.Model(&Pet{}).Select("name")
+    db.Table("(?) as u, (?) as p", subQuery1, subQuery2).Find(&User{})
+    // SELECT * FROM (SELECT `name` FROM `users`) as u, (SELECT `name` FROM `pets`) as p
     ```
    - Clause：子句生成器，父级到子集的实现排列为DB --> Statement --> Clause --> Expression
      1. 冲突
