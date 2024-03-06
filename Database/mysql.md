@@ -662,8 +662,10 @@
              - `lock in share mode`：select后使用，会对读取的行设置一个共享锁
              - `for share of tableName`：v8.0加入，和上边是同义词，支持指定要锁定的表，在涉及多表join时可以更精确地控制锁定行为。语法和PostgreSQL更加接近，提高了跨数据库系统的兼容性
           1. Exclusive Locks：排他锁，写锁，x，其他人读写都不能并行，`for update`，update/delete/insert自动加，select任何锁不加
-             - `for update nowait`：v8.0，如果锁不可用导致获取失败，会立即返回一个error
-             - `for update skip locked`：v8.0，跳过所有已经被其他事务锁定的行，高并发情况下有用，那时你可能会想要对未经其他事务锁定的行进行操作
+             - 场景：想要在本事务完成前，阻止其他的事务修改本次准备更新的选中行，因为可以并行读取和修改，谁后提交事务结果就按谁的来
+             - 选项
+               1. `for update nowait`：v8.0，如果锁不可用导致获取失败，会立即返回一个error
+               1. `for update skip locked`：v8.0，跳过所有已经被其他事务锁定的行，高并发情况下有用，可能会想要对未经其他事务锁定的行进行操作
         - sql
             ```sql
             lock tables tableName read; -- 给tableName加读锁

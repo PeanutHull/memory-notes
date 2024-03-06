@@ -522,7 +522,11 @@
           1. 生命周期：挂起、运行、成功、失败、未知，和调度、创建、停止相关
      1. Storage：存储，volume
      1. Service：为一组Pod提供负载均衡，对外提供统一访问入口。主要解决pod ip短生命周期带来的问题，kube-proxy是Service的一部分，有四种类型，可以实现接受外边的访问
-     1. Ingress：路由，作用是定义请求如何转发到service的规则。相当于7层负载均衡器
+     1. Ingress：路由，为提供统一、灵活的声明式的方式来控制外部用户如何访问集群内部的service。相当于7层负载均衡器
+        - 作用
+          1. 简化资源暴露：允许使用单一入口来暴露多个service
+          1. 统一的入口和路由管理：作为集群统一入口点，可以统一管理外部到集群内部服务的流量，包括路径的路由规则、SSL终端、重定向、重写规则等
+          1. 统一管理tls证书，提供安全的https连接；支持扩展和插件
         - ingress-controiler：ingress依靠其来实现具体功能，有不同的ingress-controller实现，官方有google云的GCE与ingress-nginx两个
           1. 原理：其形式都是一个pod，里面跑着demon程序和反向代理程序。daemon负责不断监控集群的变化，根据ingress对象生成配置并应用新配置到反向代理
           1. 步骤
@@ -589,7 +593,8 @@
 1. 网络
    - 认识：CNI定义容器网络规范
    - service实现：Service clutserIP就是node side Loadbalancer
-     1. 认识：LoadBalancer类型的Service默认实现是基于NodePort：CLB会绑定各节点的NodePort作为后端RS（Real Server），将流量转发到节点的NodePort，节点再通过Iptables或IPVS将请求路由到Service对应的后端Pod（即 Nginx Ingress Controller 的 Pod）。后续如有节点的增删，CLB 也会自动更新节点NodePort的绑定
+     1. 认识
+        - LoadBalancer类型的Service默认基于NodePort实现，会有公共ip，CLB会绑定各节点的NodePort作为后端RS（Real Server），将流量转发到节点的NodePort，节点再通过Iptables或IPVS将请求路由到Service对应的后端Pod（即 Nginx Ingress Controller 的 Pod）。后续如有节点的增删，CLB 也会自动更新节点NodePort的绑定
      1. 转发方式
         - Iptables
         - IPVS
