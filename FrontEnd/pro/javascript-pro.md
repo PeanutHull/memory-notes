@@ -496,6 +496,9 @@
         - webpack -w      // 提供watch方法；实时进行打包更新
         - webpack -p      // 对打包后的文件进行压缩
         - webpack -d      // 提供source map，方便调式代码
+   - Vite：和vue配套的
+     1. 快速的冷启动：利用浏览器原生支持的 ES 模块加载机制，可以达到非常快的冷启动和热更新速度
+     1. 快速的热更新
    - fis
    - parcel
    - rollup

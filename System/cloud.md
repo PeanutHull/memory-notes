@@ -570,26 +570,37 @@
         - cAdvisor：监控资源
         - container：容器
      1. kubelet：负责执行 
-1. 卷
+1. 存储
    - 认识
-     1. 背景
-        - 容器中文件是临时存放的，崩溃、重启丢失
-        - 一个pod的多个容器需要共享文件时
+     1. 容器中文件是临时存放的，崩溃、重启丢失
+     1. 一个pod的多个容器需要共享文件时
      1. docker中的volume是一个目录
-   - 分类
-     1. volume，卷，解决存储，根据不同类型不同作用
-     1. persistentVolume，持久卷，提供了将存储如何供应的细节从其如何使用中抽象出来的api
-     1. storage class：提供了可以自动创建persistentVolume的api
-     1. persistentVolumeClaim：pod通过pvc向storage class申请存储
-   - 类型
-     1. emptyDir：空白卷，pod删除也删除，pod崩溃会保留
-        - 做基于磁盘的归并排序的缓存空间
-        - 为耗时长的任务提供检查点，以便从崩溃前状态恢复执行
-     1. hostPath：能将宿主机上文件、目录挂载到pod中
-     1. glusterfs
-     1. cephfs
-     1. nfs
-     1. ceph
+   - 组成
+     1. Volume：数据卷，解决文件因容器重启而丢失的存储问题，不同类型有不同的作用
+     1. PersistentVolume：pv 持久卷、集群内的存储资源，提供了将存储如何供应的细节从其如何使用中抽象出来的api，独立于pod的生命周期，可根据不同的StorageClass类型创建不同类型的PV
+     1. Storage Class：提供了可以自动创建pv的api
+     1. PersistentVolumeClaim：pvc 一种数据卷定义方式，将数据卷抽象成独立于pod的对象，供kubernetes负载挂载使用
+        - 其设计意图是分离存储与应用编排，将存储细节抽象出来并实现存储的编排解耦
+        - 集群内的存储请求，pod通过pvc向storage class申请存储
+   - Volume类型
+     1. 本地：数据保存在集群的特定节点上，并且不能随着应用迁移，节点停机时数据即不再可用
+        - EmptyDir：空白卷，pod删除也删除，pod崩溃会保留
+          1. 做基于磁盘的归并排序的缓存空间
+          1. 为耗时长的任务提供检查点，以便从崩溃前状态恢复执行
+        - HostPath：能将宿主机上文件、目录挂载到pod中
+     1. 网络：数据不在集群的某个节点上而在远端的存储服务上，使用时需将存储服务挂载到本地使用
+        - Ceph
+        - GlusterFS
+        - NFS
+        - iSCSI
+     1. Secret、ConfigMap：特殊的数据卷，是集群的一些对象信息，以卷的形式被挂载到节点上供应用使用
+   - 存储卷挂载方式
+     1. 静态：手动编辑和创建一个PV和PVC进行挂载
+     1. 动态：用于大量挂载
+   - 使用原则
+     1. 一个pod可以挂载多个数据卷、多种类型的数据卷。不建议给一个pod挂载过多数据卷
+     1. 每个被pod挂载的volume卷，可以在不同的容器间共享
+     1. 推荐使用PVC和PV方式挂载数据卷
 1. 网络
    - 认识：CNI定义容器网络规范
    - service实现：Service clutserIP就是node side Loadbalancer
@@ -721,6 +732,39 @@
      1. 认识：轻量级kubernetes发行版，小型，部署快，CNCF完全认证的kubernetes产品
         - 二进制程序不足50MB，只需要512MB内存即可运行
    - 开源云原生平台：KubeSphere、Rainbond、kubeVela
+### ack
+#### 网络
+1. 网络模型：实现同一个vpc下pod和ecs之间互相能访问
+   - Terway：云原生的基于阿里云的虚拟化网络中的弹性网卡资源直接分配vpc中的ip地址，不需额外指定虚拟pod网段
+     1. 全平面，便于业务云原生化迁移
+     1. 不依赖封包或者路由表，分配给容器的网络设备本身可以用来通信
+     1. 可以直接把容器挂载到SLB后端，无需在节点上使用NodePort进行转发
+     1. 在使用Alibaba Cloud Linux系统作为节点的操作系统时，Terway网络模式支持使用更高效的IPvlan+eBPF链路，加速容器网络性能
+   - Flannel
+     1. pod网段独立于vpc的网段。pod网段会按照掩码均匀划分给每个集群中的节点，每个节点上的Pod会从节点上划分的网段中分配IP地址
+1. service
+   - 网络模式：是4层负载均衡
+     1. ClusterIP：用于集群内部的应用间访问
+     1. NodePort：将集群中部署的应用通过集群节点上的一个固定端口暴露出去，这样在集群外部就可通过节点ip和这个固定端口来访问
+     1. LoadBalancer：用了阿里云的负载均衡，比NodePort有更高的可用性和性能
+1. ingress
+   - 网络模式：是7层负载均衡，可用来配置不同的7层的转发规则。如前后端分离用ingress根据url来划分流量
+1. 服务发现DNS：使用DNS来实现应用的服务发现能力，让集群中应用间的调用与IP地址和部署环境解耦。即把service名和pod名翻译成ip
+#### 存储
+1. CSI：容器存储接口
+   - 分类
+     1. 块存储
+        - Local Disk：数据库、Hadoop
+        - Cloud Disk：数据库、有状态的应用
+     1. 文件存储
+        - NAS：日志、共享数据
+        - CPFS：HPC(高性能计算)、深度学习
+     1. 对象存储
+        - OSS：多媒体、基因数据
+     1. 本地存储
+        - LVM 逻辑卷管理：数据库、文件存储
+        - QuotaPath 限制特定路径的存储配额：数据库
+        - AEP：数据库
 ### other
 1. MinIO
    - 认识：软件定义的高性能的企业级开源对象存储系统，能够构建自己的云储存服务
