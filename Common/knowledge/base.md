@@ -1022,45 +1022,128 @@
    - 理解
      1. 选择分区点算法：最理想的分区点是被分区点分开的两个分区中，数据的数量差不多
         - 三数取中法：首/尾/中间取数的中间值为分区点，数组大了就"十数取中"
-        - 随机法：随机找一个，最糟糕概率低
+        - 随机法：随机找一个，高效率的概率低，最糟糕
      1. 如果数据原来有序，每次分区点都选择最后一个数据，最糟糕，O(n^2)
    - 步骤
      1. 分两半，区分三部分数据
      1. 递归对每二个部分的数据继续分，直到分完，自然变的有序
-   - 伪代码
-    ```c
-    // 快速排序，A是数组，n表示数组的大小
-    quick_sort(A, n) {
-        quick_sort_c(A, 0, n-1)
-    }
-    // 快速排序递归函数，p,r为下标
-    quick_sort_c(A, p, r) {
-        if p >= r then return
+   - 示例
+    ```go
+    func quickSort(arr []int) []int {
+        if len(arr) < 2 {
+            return arr
+        }
 
-        q = partition(A, p, r)          // 获取分区点：随机选择一个元素作为pivot（一般p到r的最后一个元素），然后对A[p…r]分区，返回下标
-        quick_sort_c(A, p, q-1)
-        quick_sort_c(A, q+1, r)
-    }
+        left, right := 0, len(arr)-1
 
-    // 原地分区函数，很巧妙，代替额外内存空间，类似选择排序
-    partition(A, p, r) {
-        pivot := A[r]
-        i := p
-        for j := p to r-1 do {
-            if A[j] < pivot {
-                swap A[i] with A[j]     // 用交换省却插入的搬移数据
-                i := i+1
+        // 选择一个pivot，这里选择中间的元素
+        pivotIndex := left + (right-left)/2
+        pivot := arr[pivotIndex]
+
+        // 将pivot移到数组末尾
+        arr[pivotIndex], arr[right] = arr[right], arr[pivotIndex]
+
+        for i := range arr {
+            if arr[i] < pivot {
+                // 将比pivot小的元素放到左边
+                arr[i], arr[left] = arr[left], arr[i]
+                left++
             }
         }
-        swap A[i] with A[r]
-        return i
+
+        // 将pivot放到最终的位置
+        arr[left], arr[right] = arr[right], arr[left]
+
+        // 递归地对左右两部分进行快速排序
+        quickSort(arr[:left])
+        quickSort(arr[left+1:])
+
+        return arr
     }
     ```
    - 问题：如何在O(n)的时间复杂度内查找一个无序数组中的第K大元素？
      1. 方式一：类似快排数据分三部分，递归中比较K和p+1，K大则在A[p+1…n-1]区间，反之在对面分区，相等时就是所求
         - 时间复杂度因为是`n+n/2+n/4+n/8+…+1`即等比数列求和为2n-1，即O(n)
-     1. 方式二：笨办法，每次移动最小值到数组最前面，剩下数组中继续找最小值，重复K次就是
+        - 实例
+            ```go
+            // 从乱序的nums数组中找到第k大的数
+            func findKthLargest(nums []int, k int) int {
+                n := len(nums)
+                // 我们排序按照小的放在左边，大的放在右边的方式，所以第k大的数就是第n-k个数
+                return quickselect(nums, 0, n - 1, n - k)
+            }
+
+            // 返回第k大的数
+            // l: 数组的左边界
+            // r: 数组的右边界
+            // k: 找第k大的数
+            func quickselect(nums []int, l, r, k int) int{
+                if (l == r){ // =k
+                    return nums[k]
+                }
+
+                // 选取第一个数作为分区点，做一次调整
+                partition := nums[l]
+                i := l - 1
+                j := r + 1
+                for (i < j) {
+                    for i++;nums[i]<partition;i++{}
+                    for j--;nums[j]>partition;j--{}
+                    if (i < j) {
+                        nums[i],nums[j]=nums[j],nums[i]
+                    }
+                }
+                // 此时 i = j
+
+                // 根据当前分区点的位置，判断k在左边还是右边
+                // 如果k在分区点的左边，那么在左边继续找，右边界已经缩小到j了
+                // 如果k在分区点的右边，那么在右边继续找，左边界已经缩小到j+1了
+                // 通过递归，把边界逐步的缩小，直到左右两边界相等，也就是指向同一个位置，也就是函数开始的判断，就找到结果了
+                if (k <= j){
+                    return quickselect(nums, l, j, k) // k 在左边, 则在左边继续找，右边界已经缩小到j了
+                }else{ // k > j， k在右边
+                    return quickselect(nums, j + 1, r, k) // 从j+1到r找第k大的数,左边界已经缩小到j+1了
+                }
+            }
+            ```
+     1. 方式二：笨办法，每次移动最小值到数组最前面，剩下数组中继续找最小值，重复K次就是。类似堆排序
         - 时间复杂度是(K*n)，K大了就是O(n^2)了
+        - 实例
+            ```go
+            // 定义一个最小堆
+            type MinHeap []int
+
+            func (h MinHeap) Len() int           { return len(h) }
+            func (h MinHeap) Less(i, j int) bool { return h[i] < h[j] }
+            func (h MinHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
+
+            func (h *MinHeap) Push(x interface{}) {
+                *h = append(*h, x.(int))
+            }
+
+            func (h *MinHeap) Pop() interface{} {
+                old := *h
+                n := len(old)
+                x := old[n-1]
+                *h = old[0 : n-1]
+                return x
+            }
+
+            func findKthLargest(nums []int, k int) int {
+                h := &MinHeap{}
+                heap.Init(h)
+                for i := 0; i < k; i++ {
+                    heap.Push(h, nums[i])
+                }
+                for i := k; i < len(nums); i++ {
+                    if nums[i] > (*h)[0] {
+                        heap.Pop(h)
+                        heap.Push(h, nums[i])
+                    }
+                }
+                return (*h)[0]
+            }
+            ```
 
 1. 线性排序
    - 认识：不基于比较，对于要排序的数据要求严格，做了很多假设，需要掌握适用场景
@@ -1992,6 +2075,16 @@
         - 程序中的对象调用关系过于复杂，无法确认是否已经释放，此时应该重新设计数据结构，从根本上解决对象管理的混乱局面
         - 函数的return不要返回指向“栈内存”的“指针”或者“引用”，因为该内存在函数体结束时被自动销毁
         - 使用free或delete释放了内存后，没有将指针设置为NULL。导致产生野指针，避免5条规则 
+   - 内存泄露
+     1. 场景
+        - 申请了超过正常所需的内存
+        - 申请的内存无法删除，找不到原内存地址了，如memory_leak函数返回后找不到
+        - 内存碎片：数据结构上内存地址有空隙，但是操作系统的虚拟内存机制会使得这个问题不是那么严重，因为你看似申请了连续内存，在物理内存上可能是分散的，会利用边边角角的地址
+     1. 后果
+        - 虚拟内存系统将进程地址空间中不常用的一部分swap出去到磁盘，此时系统性能将快速下降，表现出来的就是程序员运行变慢、卡顿
+        - 被linux执行Out of Memory killer，简称oom killer
+     1. 解决方案：使用内存池
+     1. 检测工具：Valgrind、AddressSanitizer、MemorySanitizer
 #### 编程
 1. 编程范式
    - 认识：编写程序的方法论，范式就像武功心法，可以更快的练成绝世神功，但还是离不开基础功。不同的范式的出现，目的就是为了应对不同的场景，但最终的目标都是提高生产力。就如华山派的剑宗、气宗之别，剑宗认为“剑为主，气为辅”，而气宗则反之。每个范式都会有自己的”心法”，但最终殊途同归，达到至高境界后则是剑气双修

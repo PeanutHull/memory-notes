@@ -64,6 +64,7 @@
         arr = arr.filter(function(item) {
             return item !== "xxx"
         });
+        let template = tmplIds.filter(k => r[k] === 'accept');      // 从tmplIds数组中筛选出那些在对象r中对应值为'accept'的元素，并将这些元素作为一个新数组赋值给变量template。举例来说，如果tmplIds是['id1', 'id2', 'id3']，并且对象r是{ id1: 'accept', id2: 'reject', id3: 'accept' }，那么template的值将会是['id1', 'id3']
         // slice不会改变原数组，而是返回新数组
         arr.slice(0, 1).concat(arr.slice(2));
         // es6的filter
@@ -71,6 +72,11 @@
         ```
 1. 对象
    - 认识：{}
+   - 操作
+    ```js
+    // 读取
+    obj["fieldName"]
+    ```
    - demo
     ```js
     // 按照年份分成二维数组
