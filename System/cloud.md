@@ -503,16 +503,33 @@
      1. cpu缓存绑定：提高ln缓存亲和力从而提升性能
      1. 内存：以前VMM通过影子页表决解内存转换，coreI7系列处理器上集成了EPT技术，以硬件辅助的方式完成客户物理内存到机器物理内存的转换，完成内存虚拟化
 ### kubernetes
-1. 认识：k8s，google开源的容器管理、编排、调度的引擎和平台。用于管理云平台中多个主机上的容器化的应用，让部署容器化的应用简单并且高效
-   - 组成
-     1. 以pod为基本的编排和调度单元，声明式的对象配置模型(控制器、configMap、secret)
-   - 功能
-     1. 提供资源分配管理、健康检查、自愈、伸缩、滚动升级
-     1. 提供域名、负载均衡、纠错、回滚等管理
+1. 认识：k8s，google开源的容器管理、编排、调度的引擎和平台。通过策略管理、协调云平台中多个主机上的容器化的应用，让部署容器化的应用简单并且高效，介于应用服务和服务器之间
    - 意义
      1. 是微服务的支撑平台，是可移植的云平台
      1. 颁布了云原生的标准，已经成为容器管理领域事实上的标准，支持跨云迁移
      1. 生态圈：是google最成熟的管理经验输出，是战胜Docker Swarm和Apache Mesoc唯一值得绑定的平台
+   - 功能
+     1. 提供资源分配管理、健康检查、自愈、伸缩、滚动升级
+     1. 提供域名、负载均衡、纠错、回滚等管理
+     1. 以pod为基本的编排和调度单元，yaml格式声明式的对象配置模型(控制器、configMap、secret)
+1. 组成：即集群cluster的组成
+   - 控制平面：control plane/master，通过etcd的list-watch方式通信（事件发送与监听）
+     1. API Server：提供api服务，包括访问鉴权、调度事件等
+     1. Controller Manager：管理，手动或者自动调整资源状态、执行宕机修复流程等，是运维自动化的核心，分为8个Controller
+     1. Scheduler：调度，根据调度算法负责选择node执行pod
+        - 将待调度的Pod按照算法和策略绑定到Node上，同时将信息保存在etcd中
+        - 控制平面通过Controller Manager控制API Server来控制node创建和关闭服务，kubelet通过API Server监听到Scheduler产生的Pod绑定事件，然后通过Pod的描述装载镜像文件，并且启动容器
+     1. Etcd：提供一致性存储能力，作为数据库，存master节点信息，多master作高可用
+   - 工作节点：node，可以是裸机服务器或虚拟机，负责实际运行各个应用服务，多个应用共享一台node上的内存和cpu等计算资源
+     1. kubelet：负责管理和监控pod，区别于kubectl这个命令行工具
+     1. pod：k8s中最小的调度单位，可以做切换node部署、重启、动态扩缩容等调度
+        - cadvisor：监控资源
+        - container：多个容器组成pod，包括日志收集器Container或监控收集器Container
+     1. kube-proxy：即service，负责node的网络通信功能
+        - 定义服务访问入口地址：ip+port
+        - service与后端pod副本集群通过组(label selector)实现连接
+        - service的type=nodeport改为type=loadbalancer，kubernetes就会自动创建一个对应的load balancer实例并返回它的ip地址供外部客户端使用
+     1. container runtime：负责下载和部署镜像
 1. 基本概念
    - 实体
      1. Pods：共享命名空间和文件系统的容器组
@@ -553,23 +570,6 @@
           1. 滚动升级
      1. Service Discovery：服务发现
         - 所有Pod使用自定义的DNS服务器
-1. 组成
-   - Master：通过etcd的List-Watch方式通信（事件发送与监听）
-     1. APIServer：负责鉴权等处理
-     1. Controller Manager：管理，调整资源状态、执行宕机修复流程等，是运维自动化的核心，分为8个Controller
-     1. Scheduler：调度，根据调度算法负责选择node执行pod
-        - 将待调度的Pod按照算法和策略绑定到Node上，同时将信息保存在etcd中
-        - kubelet通过APIServer监听到Scheduler产生的Pod绑定事件，然后通过Pod的描述装载镜像文件，并且启动容器
-     1. Etcd：提供一致性存储能力，作为数据库，存master节点信息，多master作高可用
-   - Node：子节点
-     1. kube-proxy：即Service
-        - 定义服务访问入口地址：IP+Port
-        - Service与后端Pod副本集群通过组(Label Selector)实现连接
-        - Service的type=NodePort改为type=LoadBalancer，Kubernetes就会自动创建一个对应的Load Balancer实例并返回它的IP地址供外部客户端使用
-     1. Pod：被操作的对象
-        - cAdvisor：监控资源
-        - container：容器
-     1. kubelet：负责执行 
 1. 存储
    - 认识
      1. 容器中文件是临时存放的，崩溃、重启丢失
@@ -622,22 +622,8 @@
         - GlobalRouter模式：可以自定义三大私有网段作为容器网络，根据选择的集群内服务数量的上限，自动分配适当大小的CIDR段用于 Kubernetes service。也可根据选择的每个节点的Pod数量上限，自动为集群内每台云服务器分配一个适当大小的网段用于该主机分配Pod的IP地址。此模式基于底层私有网络VPC的全局路由能力，实现了容器网络和VPC互访的路由策略
         - VPC-CNI模式
         - Cilium-Overlay模式：基于Cilium VXLan实现的容器网络插件，可设置Overlay容器网段
-1. 运维
-   - 安装：单机安装、集群安装
-   - 操作
-     1. kubeadm：用来初始化集群
-     1. kubelet：在集群中的每个节点上用来启动 Pod 和容器
-     1. kubectl
-     1. restful api
-     1. dashboard
-   - 应用部署
-     1. 形式：使用manifests文件，即yaml配置形式，其他工具都是这个的封装
-     1. 工具
-        - helm
-        - kustomize：回归manifests
-        - operator: Controller + CRD
 1. kubectl
-   - 认识：用来与集群通信的命令行工具
+   - 认识：k8s提供的用来控制集群的命令行工具
    - 部署流程
      1. 制作镜像
      1. 使用控制器部署镜像：kubectl create deployment [name] --image=xx
@@ -699,7 +685,28 @@
           1. service.type：对外暴露端口的方式NodePort，缺省为LoadBalancer
           1. persistence.enabled：是否启用持久化存储卷
         - helm history
+1. 运维
+   - 安装：单机安装、集群安装
+   - 操作
+     1. kubeadm：用来初始化集群
+     1. kubelet：在集群中的每个节点上用来启动 Pod 和容器
+     1. kubectl
+     1. restful api
+     1. dashboard
+   - 应用部署
+     1. 形式：使用manifests文件，即yaml配置形式，其他工具都是这个的封装
+     1. 工具
+        - helm
+        - kustomize：回归manifests
+        - operator: Controller + CRD
 1. 实现
+   - 理解
+     1. 怎么部署服务？编写yaml文件、执行一次kubectl命令即可
+        - kubectl会读取和解析 yaml 文件，将解析后的对象通过 api 请求发送给 kubernetes 控制平面内 的 api server
+        - api server 会根据要求，驱使 scheduler 通过 etcd 提供的数据寻找合适的 node， controller manager 会通过 api server 控制 node 创建服务
+        - node 内部的 kubelet 在收到命令后会开始基于 container runtime 组件去拉取镜像创建容器，最终完成 pod 的创建
+     1. 服务是怎么被调用到的？
+        - 请求先到达集群的ingress控制器，然后请求被转发到集群内部的某个node的kube proxy上，再找到对应的pod，然后才是转发到内部容器服务中，处理结果原路返回，done
    - CNI：实现挂载网络，规范简单所以非常灵活
      1. k8s的CNI规范
         - 首先！有一个配置文件！配置文件里写上要使用的网络插件名儿，然后以及一些该插件需要的信息
