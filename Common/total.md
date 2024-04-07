@@ -485,7 +485,150 @@
      1. tcp最长空余时间，用heartbeat代替更好
      1. 允许内核重用time_wait状态的套接字
      1. 减少连接关闭的时间
-1. 性能压测
+1. 十亿行挑战：处理性能感知
+   - 认识：从一个包含十亿行信息的文本文件中检索温度测量值，并计算每个气象站的最小、平均值和最高温度，每一行即气象站名字和温度的键值对
+   - 对任务的初步认识：机器配置了SSD和32G内存
+     1. 10亿行，大小13GB文件
+     1. cat读取13GB，第一次操作接近6秒，之后越来越快到1秒，说明被放在了磁盘缓存中
+     1. wc计算13GB，需要55秒
+     1. 使用awk`time gawk -b -f 1brc.awk measurements.txt >measurements.out`，需要7分钟，说明最简单粗暴的Go方法，也能在7分钟左右搞定问题
+   - 方案一：简单常见的go代码，bufio.Scanner读数据行，strings.Cut用“；”分隔，strconv.ParseFloat解析温度，用map累积结果，1分45秒内完成
+    ```go
+    // 数据结构
+    type stats struct {
+        min, max, sum float64
+        count         int64
+    }
+    stationStats := make(map[string]stats)
+    ```
+   - 方案二：带指针值的map，因为每次存在一次读取、一次修改，所以数据结构改为map[string]*stats，1分30秒完成缩短了15秒
+     1. cpuprofile分析发现，Map操作占用了30%的时间，其中12%用于分配，17%用于查找
+   - 方案四：浮点数改为整数表示，浮点指令的执行速度要比整数指令慢得多，55秒完成缩短了5秒
+   - 方案八：并行处理各块，Map-Reduce类问题，把文件分为几个块并行处理，单行版的1分45秒完成缩短到24秒
+
+   - 方案七：自定义哈希表，40秒完成缩短了15秒
+     1. Go中自定义哈希表并不复杂，只需使用带有线性探测的FNV-1a哈希算法即可。如果发生冲突，则使用下一空槽
+     1. 预先分配大量哈希桶，哈希冲突的几率大概是2%
+     1. 代码
+        ```go
+        // The hash table structure:
+        type item struct {
+            key  []byte
+            stat *stats
+        }
+        items := make([]item, 100000) // hash buckets, linearly probed
+        size := 0                     // number of active items in items slice
+
+        buf := make([]byte, 1024*1024)
+        readStart := 0
+        for {
+            // ... same chunking as r6 ...
+
+            for {
+                const (
+                    // FNV-1 64-bit constants from hash/fnv.
+                    offset64 = 14695981039346656037
+                    prime64  = 1099511628211
+                )
+
+                // Hash the station name and look for ';'.
+                var station, after []byte
+                hash := uint64(offset64)
+                i := 0
+                for ; i < len(chunk); i++ {
+                    c := chunk[i]
+                    if c == ';' {
+                        station = chunk[:i]
+                        after = chunk[i+1:]
+                        break
+                    }
+                    hash ^= uint64(c) // FNV-1a is XOR then *
+                    hash *= prime64
+                }
+                if i == len(chunk) {
+                    break
+                }
+
+                // ... same temperature parsing as r6 ...
+
+                // Go to correct bucket in hash table.
+                hashIndex := int(hash & uint64(len(items)-1))
+                for {
+                    if items[hashIndex].key == nil {
+                        // Found empty slot, add new item (copying key).
+                        key := make([]byte, len(station))
+                        copy(key, station)
+                        items[hashIndex] = item{
+                            key: key,
+                            stat: &stats{
+                                min:   temp,
+                                max:   temp,
+                                sum:   int64(temp),
+                                count: 1,
+                            },
+                        }
+                        size++
+                        if size > len(items)/2 {
+                            panic("too many items in hash table")
+                        }
+                        break
+                    }
+                    if bytes.Equal(items[hashIndex].key, station) {
+                        // Found matching slot, add to existing stats.
+                        s := items[hashIndex].stat
+                        s.min = min(s.min, temp)
+                        s.max = max(s.max, temp)
+                        s.sum += int64(temp)
+                        s.count++
+                        break
+                    }
+                    // Slot already holds another key, try next slot (linear probe).
+                    hashIndex++
+                    if hashIndex >= len(items) {
+                        hashIndex = 0
+                    }
+                }
+            }
+
+            readStart = copy(buf, remaining)
+        }
+        ```
+   - 方案三：去掉 strconv.ParseFloat，不需要标准库函数处理特殊情况，都是一位小数，直接从Scanner.Bytes使用字节切片，1分完成缩短了30秒
+   - 方案五：去掉bytes.Cut，直接从后往前查找“；”来解析温度，其速度会比直接扫描完整气象站名称来查找“；”更快，50秒完成缩短了4秒
+    ```go
+    // 从后往前读，切割字符串
+    end := len(line)
+    tenths := int32(line[end-1] - '0')
+    ones := int32(line[end-3] - '0') // line[end-2] is '.'
+    var temp int32
+    var semicolon int
+    if line[end-4] == ';' {          // positive N.N temperature
+        temp = ones*10 + tenths
+        semicolon = end - 4
+    } else if line[end-4] == '-' {   // negative -N.N temperature
+        temp = -(ones*10 + tenths)
+        semicolon = end - 5
+    } else {
+        tens := int32(line[end-4] - '0')
+        if line[end-5] == ';' {      // positive NN.N temperature
+            temp = tens*100 + ones*10 + tenths
+            semicolon = end - 5
+        } else {                     // negative -NN.N temperature
+            temp = -(tens*100 + ones*10 + tenths)
+            semicolon = end - 6
+        }
+    }
+    station := line[:semicolon]
+    ```
+   - 方案六：去掉bufio.Scanner，整合扫描器在必须查看所有字节寻找换行符时，同时找“；”，f.Read代替bufio.Scanner，46秒完成缩短了5秒
+
+   - 方案九：优化加并行，上边所有优化+并行，4秒之内处理10亿行
+1. 压测
+   - 开发过程压测
+     1. 影响压测结果外界因素：本机句柄数限制(一般最大1024)，dns解析速度，网络质量，服务端连接数限制等
+     1. 工具
+        - ab：apache banch
+        - apipost：可视化一键压测，底层采用自研的基于golang的压测引擎
    - 性能场景设计
      1. 项目分析：目标、架构、业务流程
      1. 需求分析：28原则、公认标准
@@ -504,12 +647,6 @@
      1. jmeter
      1. loadRunner
      1. grinder
-1. 最佳实践
-   - 开发过程压测
-     1. 影响压测结果外界因素：本机句柄数限制(一般最大1024)，dns解析速度，网络质量，服务端连接数限制等
-     1. 工具
-        - ab：apache banch
-        - apipost：可视化一键压测，底层采用自研的基于golang的压测引擎
 #### 监控与预警、故障排查
 1. 监控
    - 基础设施

@@ -2006,15 +2006,31 @@
      1. COFF：Common Object File Format 通用对象文件格式，二进制文件格式
      1. PE：Portable Executable，windows上可移植可执行的标准文件格式，如exe、dll、vxd、sys、vdm
      1. ELF
-        - 认识：Executable and Linkable Format，unix上主要的二进制可执行文件格式，编译、链接的基石，从COFF衍生出来
-          1. 链接器和加载器在使用ELF时只会使用自己感兴趣的部分
+        - 认识：Executable and Linkable Format，是unix上主要的二进制可执行文件格式、目标代码、动态库.so和部分核心转储的标准文件格式，从COFF衍生出来
+          1. 是编译、链接的依据来源
+          1. 支持静态链接和动态链接
         - 组成
-          1. header：包含基本信息，如版本/文件类型/机器类型
+          1. header：文件头，描述基本属性，包括是否为可执行文件、入口点地址、程序头表和节头表的位置等
              - Program header table：程序头表的开始地址，在整个文件的什么地方
              - Section header table：节头表的开始地址，在整个文件的什么地方
-          1. section
+          1. 程序头表：可选，描述了程序执行时需要加载的段
+          1. 节头表：可选，描述了文件的组织结构，包括各个节（section）的位置和属性
+          1. 数据：包括代码和数据节
         - 操作
-          1. readelf：linux命令
+          1. readelf/objdump：查看ELF文件的详细信息
+            ```go
+            // 查看一个go build后的文件
+            // readelf -h ./userapi
+
+            // 结果摘抄
+            Machine:                           Advanced Micro Devices X86-64
+            Entry point address:               0x8545e0
+            
+            Start of program headers:          64 (bytes into file)
+            Start of section headers:          58703552 (bytes into file)
+            Size of this header:               64 (bytes)
+            Size of program headers:           56 (bytes)
+            ```
      1. OMF：Object Module File 对象模型文件
    - 形式
      1. 可重定位目标文件：即代码段和数据段的地址还没有最终确定，可以和其他目标文件进行合并，创建一个可执行目标文件。如启动代码/库代码/目标代码

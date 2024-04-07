@@ -370,6 +370,53 @@
         - 日志：应用级相关日志，对访问、超时、内部异常等需要有日志覆盖
      1. 微服务管理后台：查看、控制等
      1. 运维体系集成：CI\CD、CMDB、发布系统、k8s、监控系统等
+#### websocket
+1. 一种设计
+    ```go
+    // 使用协程和通道来管理连接
+    type ConnectionManager struct {
+        connections map[*websocket.Conn]bool
+        register   chan *websocket.Conn
+        unregister chan *websocket.Conn
+    }
+    // 处理连接时无锁设计提高性能
+    func (manager *ConnectionManager) run() {
+        for {
+            select {
+            case conn := <-manager.register:
+                manager.connections[conn] = true
+            case conn := <-manager.unregister:
+                if _, ok := manager.connections[conn]; ok {
+                    delete(manager.connections, conn)
+                    conn.Close()
+                }
+            }
+        }
+    }
+
+    // 具体实现
+    func NewServer() *Server {                                                          // 初始化
+        return &Server{
+            ConnectionManager: &ConnectionManager{
+                connections: make(map[*websocket.Conn]bool),
+                register:    make(chan *websocket.Conn),
+                unregister:  make(chan *websocket.Conn),
+            },
+        }
+    }
+    func (s *Server) HandleNewConnection(w http.ResponseWriter, r *http.Request) {      // 接受新连接
+        conn, err := websocket.Upgrade(w, r, nil, 1024, 1024)
+        if err != nil {
+            log.Println(err)
+            return
+        }
+        s.ConnectionManager.register <- conn
+    }
+    ```
+   - 服务器优化
+     1. ulimit -n 1000000：文件描述符
+     1. sysctl -w net.ipv4.tcp_fin_timeout=30：tcp参数
+     1. sysctl -w net.ipv4.tcp_tw_reuse=1：tcp参数
 ### 库
 1. 执行相关
    - brahma-adshonor/gohook：在运行时动态挂钩go函数，从而实现动态语言修补等功能。

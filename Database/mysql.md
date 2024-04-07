@@ -956,8 +956,14 @@
         - 高可用：去中心化集群，vip下在不同的节点部署多个mycat，根据某种策略(如ip选举)选举为临时master，之间采用心跳机制进行通信维持故障切换。可使用zk、haproxy、keepalived等组件，可以有选举、心跳、切换ip等功能
         - 功能复杂，细节还待改善
    - 主主
-     1. auto_increment_offset设置差1，auto_increment_increment设置为2：防止主键冲突
-     1. log_slave_updates：两节点都要开启，就是反着搭建主备同步
+     1. 局限性
+        - 行级锁无法同步：两个请求同时修改同一条数据，但请求分别打在了两个节点上，相互复制后导致结果相互覆盖
+        - Gap锁、事务都无法同步：这些机制都涉及不只一条数据
+          1. RR隔离级别Gap锁，锁住了一个范围，是不允许其他事务插入的，但另外一个主是感知不到的，照样可以插入
+          1. RR隔离级别多版本控制，多次读时一个主只能读到符合当前节点的版本，读不到另外一个主中的快照
+     1. 实现配置
+        - auto_increment_offset设置差1，auto_increment_increment设置为2：防止主键冲突
+        - log_slave_updates：两节点都要开启，就是反着搭建主备同步
    - MMM
      1. 认识：Master-Master replication managerfor Mysql Mysql主主复制管理器，perl实现的双主故障切换、管理的脚本程序
         - 功能

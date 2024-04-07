@@ -2,6 +2,7 @@
 1. 特点
    - 一切皆文件：linux环境下任何事物都以文件的形式存在
    - 对后缀不敏感
+   - linux比windows的io模型和网络传输的零拷贝都厉害
 ### 组成
 1. 环境变量
    - 认识：系统预定义的参数，window也有
@@ -627,6 +628,7 @@
         - awk脚本：用awk命令解释器作为脚本的首行，以便通过键入脚本名称来调用它
         - 域标识：浏览域，标记为$1/$2/$n，$0为所有域
         - 默认用空格识别分块，是逐行处理的
+        - gawk是这种语言的一个具体实现，遵循GNU项目的标准和理念，大多数linux发行版中使用awk命令实际上是在使用gawk，其他还有nawk、mawk
      1. 关键字
         - NEXT显示告诉去下一行
         - GEGIN
@@ -1153,39 +1155,6 @@
    - 应用
      1. 杀死僵死进程：`ps -ef | grep defunct | grep -v grep | cut -b8-20 | xargs kill -9`
      1. 杀死所有fpm：`ps -ef | grep php-fpm | awk -F ' ' '{print $2}' | xargs kill -9`
-### wiki
-1. 操作系统分类
-   - 硬实时：RT-Linux
-   - 软实时
-   - 嵌入式/专用操作系统：vxWorks、ucos
-1. 发展历史
-   - unix
-     1. 1969，AT&T实验室一个研究项目
-     1. 1979，无偿提供使用
-        - BSD：伯克利软件发行版，伯克利分校修改的unix版本。1989，无unix代码的完全开源的BSD诞生，后续有FreeBSD、OpenBSD
-   - GUN：GUN's Not UNIX，GUN计划，自由软件计划，参与者包括emacs、gcc、linux，即革奴计划，理查德·斯托曼1983年发起，目标打造出一套完全自由（即自由使用、自由更改、自由发布）、开源的操作系统
-   - linux
-     1. 1991，linus开源
-     1. 1994，内核1.0发布
-     1. 2010，centos6，内核2.6发布，ext4
-     1. 2017，centos7.4，内核3.1，xfs
-     1. 最新内核5.4
-1. linux的发行版本
-   - RedHat
-     1. Fedora：红帽赞助的社区免费版本，有点像实验版本，经过测试稳定后，增加的特性和功能会迁移到RHEL上
-     1. RHEL：Redhat Enterprise Linux，红帽的企业级商业化版本。红帽：来源于开源社区，服务于开源社区
-        - Centos：模仿红帽企业版的免费版本，无法得到红帽公司的商业支持，但可以获得开源社区的维护和支持，使用上相差无几
-   - SUSE
-     1. SUSE Linux Enterprise：novell公司的商业化版本
-     1. openSUSE：novell公司的社区版本
-   - Debian
-     1. Debian：免费版本
-     1. Ubuntu：类似Debian的免费版本
-   - alpine：基于musl libc和busybox的面向安全的轻量级linux发行版，最常用成docker容器的系统底包，系统镜像体积小，消耗内存少，安装迅速
-     1. 磁盘占用：一个容器不超过8MB。磁盘中最小安装大约130MB
-   - openEuler：华为欧拉，数字基础设施的开源操作系统
-1. 其他
-   - linux比windows的io模型和网络传输的零拷贝都厉害
 #### shell
 1. 理解：壳，命令行解释器，利用ASCII码表转换将命令传给内核，敲命令的界面就是shell。支持命令执行、条件判断、循环控制
 1. 语法
