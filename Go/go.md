@@ -62,6 +62,7 @@
           1. bool、byte、string、uintptr
           1. int、int8、int16、int32、int64、uint、uint8、uint16、uint32、uint64、float32、float64、complex64、complex128
           1. error、rune
+          1. any：interface{}的别名，用来表示一个空接口，v1.18，为了提高代码可读性和与即将到来的泛型功能的兼容性
         - 常量
           1. true、false、iota
         - 零值
@@ -556,6 +557,7 @@
         - reflect.ValueOf()：`func ValueOf(v interface{}) Value`，获取value结构体，具体值
           1. CanSet()
           1. Elem()：指针指向的元素类型
+        - v.MethodByName("SumNum").Call(nil)：调用方法
    - 最佳实践
      1. 尽量避免使用，涉及内存copy、内存逃逸，性能相对差
      1. 很难实现清晰并好维护的代码，导致代码可读性变差
@@ -3916,6 +3918,15 @@
         ```go
         import "gopkg.in/user/example.v1"
         ```
+     1. go.work：是用于定义和管理工作区的配置文件，允许在单一的工作区内同时管理和工作于多个Go Module，对于大型项目或在多个相关模块间进行开发时有用，v1.18
+        ```go
+        go 1.18
+
+        use (
+            ./path/to/module1
+            ./path/to/module2
+        )
+        ```
    - 命令
      1. `go mod <command> [arguments]`
         - init：初始化
@@ -4643,10 +4654,10 @@
         - 格式化动作源自c但更简单
      1. 方法
         - Print：都是输出到标准输出流，支持多个参数输出
-          1. 后边加f：根据format参数，`fmt.Printf("%3d%d", val)表示3位对齐和数字格式`
-          1. 前边加F：写入给定源，默认写入标准输出
-          1. 后边加Ln：总是用空格分隔并且加换行符，采用默认格式
           1. 前边加S：返回该字符串
+          1. 前边加F：写入给定源，默认写入标准输出
+          1. 后边加f：根据format参数，`fmt.Printf("%3d%d", val)表示3位对齐和数字格式`
+          1. 后边加Ln：总是用空格分隔并且加换行符，采用默认格式
         - Errorf：根据格式说明符进行格式化，并将字符串作为错误返回
      1. 格式化参数：记住常用即可，特殊的查手册
         - %v   值的默认格式
@@ -4660,7 +4671,9 @@
         - %s   字符串或切片的无解释字节
 
         - %p   指针，十六进制表示，前缀 0x (用于指针和chan)
-     1. 拼接字符串：`s := fmt.Sprintf("my name is %s and I'm %d years old.", name, age)`
+     1. 实例
+        - 拼接字符串：`fmt.Sprintf("my name is %s and I'm %d years old.", name, age)`
+        - float保留一位小数：`fmt.Sprintf("%.1f", f)`
    - time
      1. 类型
         - Time：时间
