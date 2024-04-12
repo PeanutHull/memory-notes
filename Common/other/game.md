@@ -21,6 +21,7 @@
         - 虚幻4：Unreal Engine 4，主要C++，主机、pc、vr
         - Unity3D
      1. 小而美
+        - Godot Engine
         - Cocos2dx
         - 白鹭：Egret，主要Typescript，跨平台强，适合h5、微信小程序游戏
         - LayaAir：国内h5引擎，相对Egret起步晚，支持AS3.0、Typescript、JS

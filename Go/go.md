@@ -1026,6 +1026,18 @@
     // 使用
     i, err := strconv.Atoi("42")
     if err != nil {}
+
+    // 判断错误的类型
+    var targetErr *MyCustomError
+    if errors.As(err, &targetErr) {                                                 // errors.As，复制为目标类型
+        // err是MyCustomError类型，可以用targetErr访问MyCustomError的方法和属性
+        targetErr.Xxx
+    }
+
+    if errors.Is(err, SomeSpecificError) {}                                         // errors.Is，判断是否目标类型
+    
+    if specificErr, ok := err.(*MyCustomError); ok {}                               // err.(Type)，使用断言复制为目标类型。传统使用，不如errors.As清晰
+    if reflect.TypeOf(err) == reflect.TypeOf(&MyCustomError{}) {}                   // reflect.TypeOf，使用反射判断是否目标类型。性能差，代码可读性差
     ```
    - 异常
      1. 认识：`panic recover`，抛出、接收异常
@@ -5164,6 +5176,16 @@
     rpc.Register(xxx)
     rpc.HandleHTTP()                                    // 注册到HTTP协议上
     err := http.ListenAndServe(":1234", nil)
+    ```
+1. url
+   - 获取字符串中get参数
+    ```go
+    parsedURL, err := url.Parse(str)
+	if err != nil {
+		return false, nil
+	}
+	queryParams := parsedURL.Query()
+	conversationId := queryParams.Get("xxx")
     ```
 ### 测试与性能
 1. testing包
