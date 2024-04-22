@@ -5398,6 +5398,28 @@
      1. gocov：可将生成的覆盖率文件cover.out转换成可被sonar识别的Cobertura格式的xml
 1. 静态代码分析工具
    - golangci-lint
+     1. 认识：是开源的go静态分析和代码审查工具，用以提高代码质量和一致性。通过运行多个静态分析工具linters发现问题
+     1. 使用
+        - 命令
+          1. linters：查看linter，并按启用/禁用分类
+          1. run：执行所有检查
+          1. run xx.go：执行单个检查
+          1. config：查看配置
+          1. completion：生成bash/fish/powershell/zsh等自动补全脚本
+          1. cache：缓存控制并打印缓存的信息
+        - 排除代码检查
+        ```go
+        var bad_name int //nolint
+
+        //nolint
+        //nolint:govet
+        func allIssuesInThisFunctionAreExcluded() *string {         // 排除整块代码
+        // ...
+        }
+        ```
+   - go vet
+   - golint
+   - revive
    - gometalinter：停止维护
 #### 性能分析
 1. pprof
@@ -5713,7 +5735,7 @@
 1. 开发配置
    - 配置GOROOT、GOPATH
    - 配置代理：`GOPROXY=https://goproxy.cn;GOPRIVATE=*.100tal.com`
-   - 配置goimports、gofmt，在Tools > File Watcher
+   - 配置goimports、gofmt、golangci-lint，在Tools > File Watcher
    - 运行
      1. go工具实参：`-gcflags="all=-N -l"`
      1. 程序实参：`-conf=$ProjectFileDir$/configs/dev`

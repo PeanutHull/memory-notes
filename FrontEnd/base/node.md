@@ -139,6 +139,63 @@
         ```
    - cluster：利用多核cpu，创建一堆node子进程，共享套接字从而实现负载均衡
      1. 进程间通信：...
+### Tool
+1. npm
+   - 认识：nodejs的包管理器，是全球最大的开源库生态系统。给js赋予了更多底层的能力
+     1. package.json：具有的版本管理的nodejs配置文件
+   - 操作
+     1. `npm init`
+     1. 查看当前插件：`npm list`
+     1. 安装/卸载/更新：`npm install/uninstall/update <name> [-g] [--save-dev]`
+        - -g：全局安装，将安装在系统目录，并写入环境变量。本地安装则在定位目录的node_modules文件夹下，通过require()调用
+        - --save：保存配置信息至nodejs的配置文件package.json中
+        - --dev：保存至package.json的devDependencies节点，不指定-dev将保存至dependencies节点
+     1. 选装cnpm：`npm install cnpm -g --registry=https://registry.npm.taobao.org`，查看版本：`cnpm -v`
+     1. 自我升级：`npm install -g npm`
+     1. npm run dev：运行
+     1. npm run build：打包得到dist文件夹，使用nginx代理过来
+1. yarn
+   - 认识：快速、可靠、安全的依赖管理工具，解决npm的如性能不佳/安全性/一致性不足等问题，和npm使用相同的package.json文件来管理依赖，v1.x、v1.2版本，Facebook/Google等开发
+     1. 性能：会缓存每一个下载过的包、通过队列请求来优化网络利用率
+     1. 确定性：yarn.lock确定
+     1. 安全性：验证安装包防篡改
+   - 使用
+     1. 初始化新项目：`yarn init`
+     1. 安装所有依赖：`yarn install`
+     1. 添加依赖：`yarn add [package]`
+     1. 更新依赖：`yarn upgrade [package]`
+     1. 移除依赖：`yarn remove [package]`
+     1. 运行脚本：`yarn run [script]`
+     1. 发布包：`yarn publish`
+   - wiki
+     1. v2.x：Plug'n'Play (PnP) 特性，进一步改善性能和一致性
+1. node版本管理工具
+   - nvm
+     1. nvm ls-remote：列出所有远程服务器的官方node version list
+     1. nvm list：列出所有已安装的node版本
+     1. nvm list available：显示所有可下载的版本
+     
+     1. nvm install [node版本号]：安装指定版本node
+     1. nvm install stable：安装最新版node
+     1. nvm uninstall [node版本号]：删除已安装的指定版本
+
+     1. nvm use [node版本号]：切换到指定版本 node
+     1. nvm current：当前 node 版本
+     
+     1. nvm alias [别名] [node版本号]：给不同的版本号添加别名
+     1. nvm unalias [别名]：删除已定义的别名
+     1. nvm alias default [node版本号]：设置默认版本
+   - n
+     1. 安装：`npm install n -g`
+     1. 查看当前版本：`n list`
+     1. 指定版本升级：`n 12.18.3`
+     1. 删除旧版本：`n rm xxx`
+1. heapdump：用于内存泄露分析，将结果导入chrome dev toole中进行分析
+1. inspector：单点调试。搭配调试工具如vs code和dev tools（地址：chrome://inspect）
+   - 查看上下文变量
+   - 函数调用栈
+   - 暂停状态执行代码
+   - 不侵入代码
 ### 应用
 1. mongoose
    - 解释：node的mongoDB驱动，提供Schema、Model、Document对象。安装：`npm install mongodb`
@@ -262,37 +319,6 @@
    - nest
    - Next.js：采用react，实现了SSR和SPA
    - Nuxt：采用vue，实现了SSR和SPA
-### Tool
-1. nvm
-   - 认识：node版本管理工具
-   - 使用
-     1. nvm ls-remote：列出所有远程服务器的官方node version list
-     1. nvm list：列出所有已安装的node版本
-     1. nvm list available：显示所有可下载的版本
-     
-     1. nvm install [node版本号]：安装指定版本node
-     1. nvm install stable：安装最新版node
-     1. nvm uninstall [node版本号]：删除已安装的指定版本
-
-     1. nvm use [node版本号]：切换到指定版本 node
-     1. nvm current：当前 node 版本
-     
-     1. nvm alias [别名] [node版本号]：给不同的版本号添加别名
-     1. nvm unalias [别名]：删除已定义的别名
-     1. nvm alias default [node版本号]：设置默认版本
-1. npm：包管理工具
-1. n：node版本管理工具
-   - 安装：`npm install n -g`
-   - 操作
-     1. 查看当前版本：`n list`
-     1. 指定版本升级：`n 12.18.3`
-     1. 删除旧版本：`n rm xxx`
-1. heapdump：用于内存泄露分析，将结果导入chrome dev toole中进行分析
-1. inspector：单点调试。搭配调试工具如vs code和dev tools（地址：chrome://inspect）
-   - 查看上下文变量
-   - 函数调用栈
-   - 暂停状态执行代码
-   - 不侵入代码
 ### wiki
 1. 历史
    - 09年诞生，v8是谷歌开发的c++编写的最快的js解析引擎
