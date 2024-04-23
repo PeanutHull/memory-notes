@@ -1038,6 +1038,65 @@
 
     // 为什么生产要放在ConsumeClaim里？
     ```
+1. rabbitMQ的断线重连
+   - 实践经验
+     1. 不能把事件的监听写在消费事件startConsumer里边，否则需要给监听连接的协程中的for加break让上一个退出
+     1. 连接方法里要有指数退避的连接策略
+   - 实例
+    ```go
+    // 初始的连接
+    conn := connectRabbitMQ(rabbitMQURL)
+    defer conn.Close()
+
+    // 初始的消费
+    go startConsumer(conn, queueName)
+
+    // 监听连接关闭事件，并重新连接
+    go func() {
+        for {
+            reason, ok := <-conn.NotifyClose(make(chan *amqp.Error)) // 阻塞直到连接关闭
+            if !ok {
+                log.Println("连接正常关闭")
+                break
+            }
+            log.Printf("连接关闭，原因：%s", reason)
+
+            // 重新连接
+            conn = connectRabbitMQ(rabbitMQURL)
+            // 重新启动消费者
+            go startConsumer(conn, queueName)
+        }
+    }()
+
+    // 为保持主进程运行
+    forever := make(chan bool)
+    <-forever
+
+
+    // 指数退避的连接，maxRetries为8，baseDelay为5，可实现40ms、1秒、2秒、2分钟、3小时、23小时，较为合理的指数值
+    func connectRabbit(amqpUrl string, maxRetries int, baseDelay int) (*amqp.Connection, error) {
+        var conn *amqp.Connection
+        var err error
+
+        for attempt := 1; attempt <= maxRetries; attempt++ {
+            conn, err = amqp.Dial(amqpUrl)
+            if err == nil {
+                global.GVA_LOG.Info("Successfully connect to RabbitMQ:")
+                return conn, nil
+            }
+
+            // 进行指数运算
+            backoff := time.Duration(baseDelay*int(math.Pow(2, float64(attempt*3)))) * time.Millisecond
+
+            global.GVA_LOG.Error("Failed to connect to RabbitMQ:"+err.Error(), zap.Int("attempt", attempt+1), zap.Int("backoff", int(backoff)))
+
+            // 进行等待
+            time.Sleep(backoff)
+        }
+
+        return nil, fmt.Errorf("after %d attempts, last error: %s", maxRetries, err)
+    }
+    ```
 1. machinery
    - 认识：分布式异步任务队列
    - 使用
@@ -1064,11 +1123,11 @@
      1. lestrrat-go/file-rotatelogs：支持指定时间和文件数的循环写、文件分割
 1. zap
    - 认识：uber开源的高性能日志库，支持结构化的多日志级别的日志格式
-     1. 使用体验不如logrus，因为需要更多明确的指定
      1. 性能比logrus好：zap的写日志性能是logrus的4倍
         - 使用sync.Pool减少堆内存分配
         - 避免使用interface{}带来的开销（拆装箱、对象逃逸到堆上）
         - 坚决不用反射，每个要输出的字段（field）在传入时都携带类型信息
+     1. 需要更多的指定明确类型
    - 组成
      1. Sugared Logger
      1. Logger：比SugaredLogger更快，只支持强类型的结构化日志记录

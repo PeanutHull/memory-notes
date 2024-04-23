@@ -217,7 +217,7 @@
    - stream：流，补充文件形式的其他数据源的处理能力，经常和socket联合使用
    - php协议：php://stdin/stdout/stderr/input/output/fd/filter：`file_get_contents("php://input")`：获取不同content-type下的post数据，type为multipart/form-data时无效
 1. 线程、进程管理
-   - Pcntl/Posix：进程管理扩展，用于进程创建、信号处理、进程中断，仅用于linux，window没有，fpm模式会有意外问题
+   - pcntl/posix：进程管理扩展，用于进程创建、信号处理、进程中断，仅用于linux，window没有，fpm模式会有意外问题
      1. pcntl_fork
      1. pcntl_signal_dispatch
      1. pcntl_signal

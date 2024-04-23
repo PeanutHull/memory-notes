@@ -370,3 +370,9 @@
      1. Gossip Protocol：八卦，一个事件发生时，其他节点需要知道这个事件
         - lan pool：局域网池
         - wan pool
+#### 集群
+1. Pacemaker + Corosync：用于构建高可用集群的开源的软件工具、资源管理器
+   - 集群通信和成员管理：Corosync负责在集群中的节点之间建立和维护通信，以及监控节点的状态
+   - 资源管理和调度：Pacemaker接收Corosync的状态信息，根据资源的配置和策略，进行资源的管理和调度，crmsh是pacemaker的命令行工具
+   - 故障检测与恢复：当某节点故障时，Corosync负责检测并通知Pacemaker，Pacemaker则根据预设的规则进行故障恢复，比如启动备用节点上的服务
+1. heartbeat：早期的，corosync更好

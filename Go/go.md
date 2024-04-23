@@ -1696,7 +1696,7 @@
      1. 一般用在无状态的处理，数据库连接池就不合适
      1. 就是个阻塞队列，遵循先进先出FIFO的原则
    - 特性：![avatar](../images/channel_status.webp)
-     1. nil的chan
+     1. nil的chan，即用var声明的chan
         - 只声明不分配资源，var声明的是，make不是
         - 读写不会报错，永远阻塞
      1. 无缓冲chan
@@ -4750,6 +4750,18 @@
         m.At(0, 0).RGBA()
         ```
 #### 应用
+1. 限流
+   - time/rate：使用令牌桶算法，是并发安全的
+     1. 方法
+        - limiter.Allow()：检查是否可以立即处理事件，可能导致某些事件过早丢弃
+     1. 实例
+        ```go
+        ctx := context.Background()    
+
+        limiter := rate.NewLimiter(2, 3)                // 每秒允许2个事件，具有3个事件的最大以及初始容量
+
+        err := limiter.Wait(ctx)                        // 会阻塞
+        ```
 1. 数据库
    - database/sql：接口，数据库驱动的官方标准、通用接口
      1. 类型
