@@ -1,4 +1,5 @@
 ### 架构
+1. 架构图：![](../../images/common/distribution_struct.png)
 1. 服务治理
    - 高负载/高并发
      1. 集群，负载均衡
