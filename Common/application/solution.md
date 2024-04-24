@@ -92,14 +92,83 @@
      1. 简单粗暴
      1. 时间约小，误差越小
      1. 不是平均速率限流，即一上来全部用光
-   - 滑动时间窗口算法：把时间划片，一点点往前挪，抛弃前一个格子，进入下一个格子，能够保留前后固定时间窗口的请求统计
-     1. 不存在临界问题。划分格子越多，限流统计越精准
+   - 滑动时间窗口算法
+     1. 认识：把时间划片，一点点往前挪，抛弃前一个格子，进入下一个格子，能够保留前后固定时间窗口的请求统计
+        - 不存在临界问题。划分格子越多，限流统计越精准
+     1. 实例
+        ```go
+        // TODO 使用环形队列等数据结构来优化性能
+        type Bucket struct {                                                                // Bucket 定义了窗口内的一个计数桶
+            Timestamp int64 // 桶的时间戳
+            Count     int   // 桶内的计数
+        }
+        type SlidingWindow struct {                                                         // SlidingWindow 定义了滑动窗口的结构
+            Buckets map[int64]*Bucket // 窗口内的桶
+            Mutex   *sync.RWMutex     // 读写锁，保证并发安全
+            Window  time.Duration     // 窗口大小
+            Granularity time.Duration // 粒度，即每个桶的时间跨度
+        }
+        func NewSlidingWindow(windowSize, granularity time.Duration) *SlidingWindow {       // NewSlidingWindow 初始化一个滑动窗口
+            return &SlidingWindow{
+                Buckets:     make(map[int64]*Bucket),
+                Mutex:       &sync.RWMutex{},
+                Window:      windowSize,
+                Granularity: granularity,
+            }
+        }
+        func (sw *SlidingWindow) getCurrentBucket() *Bucket {                               // getCurrentBucket 获取当前时间的桶
+            now := time.Now().UnixNano() / int64(sw.Granularity)
+            if bucket, ok := sw.Buckets[now]; ok {
+                return bucket
+            }
+
+            sw.Mutex.Lock()
+            defer sw.Mutex.Unlock()
+
+            bucket, ok := sw.Buckets[now]
+            if !ok {
+                bucket = &Bucket{Timestamp: now, Count: 0}
+                sw.Buckets[now] = bucket
+            }
+
+            return bucket
+        }
+        func (sw *SlidingWindow) removeOldBuckets() {                                       // removeOldBuckets 移除过期的桶
+            minTimestamp := (time.Now().UnixNano() / int64(sw.Granularity)) - int64(sw.Window/sw.Granularity)
+            sw.Mutex.Lock()
+            defer sw.Mutex.Unlock()
+
+            for timestamp := range sw.Buckets {
+                if timestamp < minTimestamp {
+                    delete(sw.Buckets, timestamp)
+                }
+            }
+        }
+        func (sw *SlidingWindow) Increment() {                                              // Increment 增加当前桶的计数
+            sw.getCurrentBucket().Count++
+            sw.removeOldBuckets()
+        }
+        func (sw *SlidingWindow) Sum() int {                                                // Sum 获取窗口内的总计数
+            sum := 0
+            sw.Mutex.RLock()
+            defer sw.Mutex.RUnlock()
+
+            minTimestamp := (time.Now().UnixNano() / int64(sw.Granularity)) - int64(sw.Window/sw.Granularity)
+            for timestamp, bucket := range sw.Buckets {
+                if timestamp >= minTimestamp {
+                    sum += bucket.Count
+                }
+            }
+            return sum
+        }
+        ```
    - 漏斗算法
      1. 认识：把请求往桶中放，定时拿出n个执行，桶满时抛弃，是请求放入入口，固定出口的方式，适合严格限制并发的场景
         - 严格限制执行速率，流入速度大于流出就溢出
         - 想象一个尖嘴向下的漏斗，下边的尖嘴固定时间执行，上边的容器放需要执行的请求
      1. code：make_space是核心，给漏斗腾出空间，取决于于过去了多久及流水速率，
         ```go
+        // TODO 需要做高并发情况下的性能优化
         type Funnel struct {                                                    // Funnel 漏斗结构
             capacity  float64   // 漏斗容量
             rate      float64   // 流出速率（每秒）
