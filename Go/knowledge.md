@@ -34,7 +34,7 @@
         - 路由匹配：使用julienschmidt/httprouter
      1. context
    - validator
-     1. 功能
+     1. 功能：`json:"type" binding:"required,oneof=1 2"`
         - 自定义约束
         - 错误处理
      1. 范围约束

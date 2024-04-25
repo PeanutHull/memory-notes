@@ -4025,24 +4025,17 @@
             ```
         - `sort.Slice(x any, less func(i, j int) bool)/sort.SliceStable()/sort.SliceIsSorted()`：用户自定义排序
             ```go
-            people := []struct {
-                Name string
-                Age  int
-            }{
-                {"Gopher", 7},
-                {"Alice", 55},
-                {"Vera", 24},
-                {"Bob", 75},
+            // 可以实现某结构体三个字段的按优先级的排序，当然也支持一个字段
+            less := func(i, j int) bool {
+                if resp[i].OpenedStoreManageNum != resp[j].OpenedStoreManageNum {
+                    return resp[i].OpenedStoreManageNum > resp[j].OpenedStoreManageNum
+                }
+                if resp[i].PlayedStoreManageNum != resp[j].PlayedStoreManageNum {
+                    return resp[i].PlayedStoreManageNum > resp[j].PlayedStoreManageNum
+                }
+                return resp[i].Distance <= resp[j].Distance
             }
-            sort.Slice(people, func(i, j int) bool { return people[i].Name < people[j].Name })
-            fmt.Println("By name:", people)
-
-            sort.Slice(people, func(i, j int) bool { return people[i].Age < people[j].Age })
-            fmt.Println("By age:", people)
-
-            // 结果
-            By name: [{Alice 55} {Bob 75} {Gopher 7} {Vera 24}]
-            By age: [{Gopher 7} {Vera 24} {Alice 55} {Bob 75}]
+            sort.Slice(resp, less)
             ```
         - `sort.Find(n int, cmp func(int) int) (i int, found bool)/Search(n int, f func(int) bool) int/SearchInts/SearchStrings()`：使用二分搜索来查找并返回[0, n)中f(i)为真的最小索引i，n为查找的数量范围，不会先排序，是直接搜
             ```go
