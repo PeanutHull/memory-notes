@@ -130,6 +130,10 @@
             console.log('listening on port 9999')
             })
             ```
+   - 模仿k8s各组件使用的通信机制list-watch的一种实现
+     1. list-watch 机制主要实现了两个 Restful API，一个 API 叫 list，一个 API 叫 watch，客户端首先通过 list API 一次性把存在于服务端的所有资源都捞下来缓存在本地，同时服务端一起返回一个叫做 “ResourceVersion” 的标志，该标志全局单调递增，客户端也会将该标志缓存在本地。
+     1. 接下来客户端通过 watch API 和服务端建立一条不会断开的长连接，每当服务端的资源发生改变之后，就会把该资源以及对该资源的 增/删/改 之类的操作通过该条长连接发送给客户端，同时把 ResourceVersion + 1，一并发送给客户端，客户端拿到该资源以及该资源对应的操作之后，就要根据对应的操作更新本地的对应资源的缓存以及 ResourceVersion
+     1. 那怎么保证消息的可靠性呢？譬如中间发生了断网之类的情况，此时 ResourceVersion 就派上了用场，客户端通过每次 watch 返回的 ResourceVersion 和本地上一轮缓存的 ResourceVersion 作对比，如果发现差值大于 1，则认为中间可能发生了数据丢失，此时会再进行一次 list API 的操作，重新将服务端的全量数据资源捞下来缓存在本地，这样既保证了消息的实时性，也保证了消息的可靠性
 ### 写法和技巧
 1. XMLHttpRequest
   - 组成
