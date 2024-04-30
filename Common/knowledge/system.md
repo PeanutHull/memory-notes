@@ -1,3 +1,241 @@
+### 方案知识
+1. 限流算法
+   - 固定时间窗口算法：即计数器，redis的key一定时间内做使用作减法、一段时间后作加法
+     1. 简单粗暴
+     1. 时间约小，误差越小
+     1. 不是平均速率限流，即一上来全部用光
+   - 滑动时间窗口算法
+     1. 认识：把时间划片，一点点往前挪，抛弃前一个格子，进入下一个格子，能够保留前后固定时间窗口的请求统计
+        - 不存在临界问题。划分格子越多，限流统计越精准
+     1. 实例
+        ```go
+        // TODO 使用环形队列等数据结构来优化性能
+        type Bucket struct {                                                                // Bucket 定义了窗口内的一个计数桶
+            Timestamp int64 // 桶的时间戳
+            Count     int   // 桶内的计数
+        }
+        type SlidingWindow struct {                                                         // SlidingWindow 定义了滑动窗口的结构
+            Buckets map[int64]*Bucket // 窗口内的桶
+            Mutex   *sync.RWMutex     // 读写锁，保证并发安全
+            Window  time.Duration     // 窗口大小
+            Granularity time.Duration // 粒度，即每个桶的时间跨度
+        }
+        func NewSlidingWindow(windowSize, granularity time.Duration) *SlidingWindow {       // NewSlidingWindow 初始化一个滑动窗口
+            return &SlidingWindow{
+                Buckets:     make(map[int64]*Bucket),
+                Mutex:       &sync.RWMutex{},
+                Window:      windowSize,
+                Granularity: granularity,
+            }
+        }
+        func (sw *SlidingWindow) getCurrentBucket() *Bucket {                               // getCurrentBucket 获取当前时间的桶
+            now := time.Now().UnixNano() / int64(sw.Granularity)
+            if bucket, ok := sw.Buckets[now]; ok {
+                return bucket
+            }
+
+            sw.Mutex.Lock()
+            defer sw.Mutex.Unlock()
+
+            bucket, ok := sw.Buckets[now]
+            if !ok {
+                bucket = &Bucket{Timestamp: now, Count: 0}
+                sw.Buckets[now] = bucket
+            }
+
+            return bucket
+        }
+        func (sw *SlidingWindow) removeOldBuckets() {                                       // removeOldBuckets 移除过期的桶
+            minTimestamp := (time.Now().UnixNano() / int64(sw.Granularity)) - int64(sw.Window/sw.Granularity)
+            sw.Mutex.Lock()
+            defer sw.Mutex.Unlock()
+
+            for timestamp := range sw.Buckets {
+                if timestamp < minTimestamp {
+                    delete(sw.Buckets, timestamp)
+                }
+            }
+        }
+        func (sw *SlidingWindow) Increment() {                                              // Increment 增加当前桶的计数
+            sw.getCurrentBucket().Count++
+            sw.removeOldBuckets()
+        }
+        func (sw *SlidingWindow) Sum() int {                                                // Sum 获取窗口内的总计数
+            sum := 0
+            sw.Mutex.RLock()
+            defer sw.Mutex.RUnlock()
+
+            minTimestamp := (time.Now().UnixNano() / int64(sw.Granularity)) - int64(sw.Window/sw.Granularity)
+            for timestamp, bucket := range sw.Buckets {
+                if timestamp >= minTimestamp {
+                    sum += bucket.Count
+                }
+            }
+            return sum
+        }
+        ```
+   - 漏斗算法
+     1. 认识：把请求往桶中放，定时拿出n个执行，桶满时抛弃，是请求放入入口，固定出口的方式，适合严格限制并发的场景
+        - 严格限制执行速率，流入速度大于流出就溢出
+        - 想象一个尖嘴向下的漏斗，下边的尖嘴固定时间执行，上边的容器放需要执行的请求
+     1. code：make_space是核心，给漏斗腾出空间，取决于于过去了多久及流水速率，
+        ```go
+        // TODO 需要做高并发情况下的性能优化
+        type Funnel struct {                                                    // Funnel 漏斗结构
+            capacity  float64   // 漏斗容量
+            rate      float64   // 流出速率（每秒）
+            water     float64   // 当前水量
+            lastLeak  time.Time // 上一次漏水时间
+            lock      sync.Mutex
+        }
+        func NewFunnel(capacity, rate float64) *Funnel {                        // NewFunnel 创建一个新的漏斗
+            return &Funnel{
+                capacity: capacity,
+                rate:     rate,
+                water:    0,
+                lastLeak: time.Now(),
+                }
+        }
+        func (f *Funnel) leak() {                                               // leak 模拟水漏出
+            now := time.Now()
+            leakDuration := now.Sub(f.lastLeak).Seconds()
+            leakVolume := leakDuration * f.rate // 计算这段时间内应该漏出的水量
+
+            f.water = f.water - leakVolume      // 更新当前水量
+            if f.water < 0 {
+                f.water = 0                     // 防止水量变成负数
+            }
+
+            f.lastLeak = now                    // 更新漏水时间
+        }
+        func (f *Funnel) TryWater(volume float64) bool {                        // TryWater 尝试加水，如果漏斗未满，返回true；否则返回false
+            f.lock.Lock()
+            defer f.lock.Unlock()
+
+            f.leak() // 先让水漏出
+            if f.capacity-f.water >= volume {
+                f.water += volume // 加水
+                return true
+            }
+            return false
+        }
+
+        func main() {
+            funnel := NewFunnel(10, 1) // 创建一个容量为10，每秒漏水速率为1的漏斗
+
+            for i := 0; i < 20; i++ {
+                go func(index int) {
+                    ok := funnel.TryWater(1) // 每个请求尝试加1单位的水
+                    if ok {
+                        fmt.Printf("Request %d passed\
+                        ", index)
+                        } else {
+                        fmt.Printf("Request %d blocked\
+                        ", index)
+                        }
+                    }(i)
+                }
+
+            time.Sleep(15 * time.Second) // 等待足够的时间，观察效果
+            }
+        }
+        ```
+        ```python
+        # coding: utf8
+        import time
+        class Funnel(object):
+            def __init__(self, capacity, leaking_rate):
+                self.capacity = capacity                                    # 漏斗容量
+                self.leaking_rate = leaking_rate                            # 漏嘴流水速率
+                self.left_quota = capacity                                  # 漏斗剩余空间
+                self.leaking_ts = time.time()                               # 上一次漏水时间
+            def make_space(self):
+                now_ts = time.time()
+                delta_ts = now_ts - self.leaking_ts                         # 距离上一次漏水，是否可以流入，这里严格限制了并发
+                delta_quota = delta_ts * self.leaking_rate
+                if delta_quota < 1:
+                    return
+
+                self.left_quota += delta_quota                              # 加水
+                self.leaking_ts = now_ts                                    # 更新漏水时间
+                if self.left_quota > self.capacity:                         # 剩余空间不得高于容量
+                    self.left_quota = self.capacity
+
+            def watering(self, quota):
+                self.make_space()
+                if self.left_quota >= quota:                                # 判断剩余空间是否足够
+                    self.left_quota -= quota
+                    return True
+                return False
+        
+        funnels = {}                                                        # 所有的漏斗
+
+        # capacity 漏斗容量
+        # leaking_rate 漏嘴流水速率 quota/s
+        def is_action_allowed(user_id, action_key, capacity, leaking_rate):
+            key = '%s:%s' % (user_id, action_key)
+            funnel = funnels.get(key)
+            if not funnel:
+                funnel = Funnel(capacity, leaking_rate)
+                funnels[key] = funnel
+            return funnel.watering(1)                                       # 进行漏水消费
+
+        # 测试
+        for i in range(20):
+            print is_action_allowed('laoqian', 'reply', 15, 0.5)
+        ```
+   - 令牌桶算法：以固定速率往桶中放入令牌，令牌有最大数量，使用时减去相应令牌即可，适合突发特性的流量，漏斗是匀速的无法解决
+     1. 拿到令牌才执行请求
+1. jaeger
+   - 认识：链路追踪，![avatar](../../images/jaeger_struct.jpg)
+     1. 高扩展
+     1. 可观察
+     1. 原生支持openTracing
+   - 设计
+     1. jaeger-client：使用thrift通过udp发送给agent
+     1. jaeger-agent：go，使用thrift通过Tchannel发送给collector
+     1. jaeger-collector：go，队列入存储
+     1. jaeger-query：go
+     1. jaeger-ui：react
+     1. 存储：cassandra
+   - 组成
+     1. span：逻辑工作单元，有操作名称、开始时间、持续时间，跨度可以嵌套并排序，建立因果关系模型
+        - 对象
+          1. tag：标签集合
+          1. log：一组span日志集合
+          1. spanContext：上下文对象
+          1. reference：span间关系
+   - 项目应用原理：![avatar](../../images/jaeger_in_project.jpg)
+1. prometheus
+   - 认识：SoundCloud的开源的Google BorgMon的监控、告警、时序数据数据库组合的解决方案，适用于容器环境。![avatar](../images/prometheus_struct.webp)
+     1. 多维度数据模型
+     1. 灵活的查询语言
+     1. 不依赖分布式存储，单个服务器节点是自主的
+     1. 通过基于HTTP的pull方式采集时序数据
+     1. 可以通过中间网关进行时序列数据推送
+     1. 通过服务发现或者静态配置来发现目标服务对象
+     1. 支持多种多样的图表和界面展示，比如Grafana等
+   - 组件
+     1. Client Library：客户端组合metrics并暴露给Push Gateway
+     1. Push Gateway：支持临时性Job主动推送指标的中间网关
+     1. Server：主要负责数据采集和存储，提供PromQL查询语言的支持
+     1. Alertmanager：警告管理器，从server接收到alert后，进行去重、分组，并路由对应的接受方式，发出报警
+     1. Exporter：暴露已有的第三方服务给server
+     1. instance：一个单独监控的目标，一般是一个进程
+     1. jobs：一组同类型的instances
+   - metric类型
+     1. counter：累加，如请求的个数、出现的错误数
+     1. gauge：任意加减
+     1. histogram：可对观察结果采样、分组、统计，如柱状图
+     1. summary：提供观测值的count、sum功能，如请求持续时间
+   - 原理：Prometheus的基本原理是通过HTTP协议周期性抓取被监控组件的状态，任意组件只要提供对应的HTTP接口就可以接入监控。不需要任何SDK或者其他的集成过程。这样做非常适合做虚拟化环境监控系统，比如VM、Docker、Kubernetes等。输出被监控组件信息的HTTP接口被叫做exporter 。目前互联网公司常用的组件大部分都有exporter可以直接使用，比如Varnish、Haproxy、Nginx、MySQL、Linux系统信息(包括磁盘、内存、CPU、网络等等)
+   - 服务过程
+     1. Prometheus Daemon负责定时去配置好的jobs/exporter/pushgateway抓取metrics(指标)数据，每个抓取目标需要暴露一个http服务的接口给它定时抓取。Prometheus支持通过配置文件、文本文件、Zookeeper、Consul、DNS SRV Lookup等方式指定抓取目标。Prometheus采用PULL的方式进行监控，即服务器可以直接通过目标PULL数据或者间接地通过中间网关来Push数据
+     1. Prometheus在本地存储抓取的所有数据，并通过一定规则进行清理和整理数据，并把得到的结果存储到新的时间序列中
+     1. Prometheus通过PromQL和其他API可视化地展示收集的数据。Prometheus支持很多方式的图表可视化，例如Grafana、自带的Promdash以及自身提供的模版引擎等等。Prometheus还提供HTTP API的查询方式，自定义所需要的输出
+     1. PushGateway支持Client主动推送metrics到PushGateway，而Prometheus只是定时去Gateway上抓取数据
+     1. Alertmanager是独立于Prometheus的一个组件，可以支持Prometheus的查询语句，提供十分灵活的报警方式
+   - PromQL：时间序列数据查询语音
 ### IM设计
 1. 认知
    - 消息是广义的，还存在用户看不见的各种指令和通知，如进群退群通知、好友添加通知等
@@ -307,244 +545,6 @@
    - 基于 CRDT 的 Yjs 方案
      1. 2015年开源代表着基于 CRDT 的协同方案正式得到发展
      1. 2020年slate-yjs开源，是Yjs和Slate的结合，有了一个基于Slate的完整协同方案
-### 方案知识
-1. 限流算法
-   - 固定时间窗口算法：即计数器，redis的key一定时间内做使用作减法、一段时间后作加法
-     1. 简单粗暴
-     1. 时间约小，误差越小
-     1. 不是平均速率限流，即一上来全部用光
-   - 滑动时间窗口算法
-     1. 认识：把时间划片，一点点往前挪，抛弃前一个格子，进入下一个格子，能够保留前后固定时间窗口的请求统计
-        - 不存在临界问题。划分格子越多，限流统计越精准
-     1. 实例
-        ```go
-        // TODO 使用环形队列等数据结构来优化性能
-        type Bucket struct {                                                                // Bucket 定义了窗口内的一个计数桶
-            Timestamp int64 // 桶的时间戳
-            Count     int   // 桶内的计数
-        }
-        type SlidingWindow struct {                                                         // SlidingWindow 定义了滑动窗口的结构
-            Buckets map[int64]*Bucket // 窗口内的桶
-            Mutex   *sync.RWMutex     // 读写锁，保证并发安全
-            Window  time.Duration     // 窗口大小
-            Granularity time.Duration // 粒度，即每个桶的时间跨度
-        }
-        func NewSlidingWindow(windowSize, granularity time.Duration) *SlidingWindow {       // NewSlidingWindow 初始化一个滑动窗口
-            return &SlidingWindow{
-                Buckets:     make(map[int64]*Bucket),
-                Mutex:       &sync.RWMutex{},
-                Window:      windowSize,
-                Granularity: granularity,
-            }
-        }
-        func (sw *SlidingWindow) getCurrentBucket() *Bucket {                               // getCurrentBucket 获取当前时间的桶
-            now := time.Now().UnixNano() / int64(sw.Granularity)
-            if bucket, ok := sw.Buckets[now]; ok {
-                return bucket
-            }
-
-            sw.Mutex.Lock()
-            defer sw.Mutex.Unlock()
-
-            bucket, ok := sw.Buckets[now]
-            if !ok {
-                bucket = &Bucket{Timestamp: now, Count: 0}
-                sw.Buckets[now] = bucket
-            }
-
-            return bucket
-        }
-        func (sw *SlidingWindow) removeOldBuckets() {                                       // removeOldBuckets 移除过期的桶
-            minTimestamp := (time.Now().UnixNano() / int64(sw.Granularity)) - int64(sw.Window/sw.Granularity)
-            sw.Mutex.Lock()
-            defer sw.Mutex.Unlock()
-
-            for timestamp := range sw.Buckets {
-                if timestamp < minTimestamp {
-                    delete(sw.Buckets, timestamp)
-                }
-            }
-        }
-        func (sw *SlidingWindow) Increment() {                                              // Increment 增加当前桶的计数
-            sw.getCurrentBucket().Count++
-            sw.removeOldBuckets()
-        }
-        func (sw *SlidingWindow) Sum() int {                                                // Sum 获取窗口内的总计数
-            sum := 0
-            sw.Mutex.RLock()
-            defer sw.Mutex.RUnlock()
-
-            minTimestamp := (time.Now().UnixNano() / int64(sw.Granularity)) - int64(sw.Window/sw.Granularity)
-            for timestamp, bucket := range sw.Buckets {
-                if timestamp >= minTimestamp {
-                    sum += bucket.Count
-                }
-            }
-            return sum
-        }
-        ```
-   - 漏斗算法
-     1. 认识：把请求往桶中放，定时拿出n个执行，桶满时抛弃，是请求放入入口，固定出口的方式，适合严格限制并发的场景
-        - 严格限制执行速率，流入速度大于流出就溢出
-        - 想象一个尖嘴向下的漏斗，下边的尖嘴固定时间执行，上边的容器放需要执行的请求
-     1. code：make_space是核心，给漏斗腾出空间，取决于于过去了多久及流水速率，
-        ```go
-        // TODO 需要做高并发情况下的性能优化
-        type Funnel struct {                                                    // Funnel 漏斗结构
-            capacity  float64   // 漏斗容量
-            rate      float64   // 流出速率（每秒）
-            water     float64   // 当前水量
-            lastLeak  time.Time // 上一次漏水时间
-            lock      sync.Mutex
-        }
-        func NewFunnel(capacity, rate float64) *Funnel {                        // NewFunnel 创建一个新的漏斗
-            return &Funnel{
-                capacity: capacity,
-                rate:     rate,
-                water:    0,
-                lastLeak: time.Now(),
-                }
-        }
-        func (f *Funnel) leak() {                                               // leak 模拟水漏出
-            now := time.Now()
-            leakDuration := now.Sub(f.lastLeak).Seconds()
-            leakVolume := leakDuration * f.rate // 计算这段时间内应该漏出的水量
-
-            f.water = f.water - leakVolume      // 更新当前水量
-            if f.water < 0 {
-                f.water = 0                     // 防止水量变成负数
-            }
-
-            f.lastLeak = now                    // 更新漏水时间
-        }
-        func (f *Funnel) TryWater(volume float64) bool {                        // TryWater 尝试加水，如果漏斗未满，返回true；否则返回false
-            f.lock.Lock()
-            defer f.lock.Unlock()
-
-            f.leak() // 先让水漏出
-            if f.capacity-f.water >= volume {
-                f.water += volume // 加水
-                return true
-            }
-            return false
-        }
-
-        func main() {
-            funnel := NewFunnel(10, 1) // 创建一个容量为10，每秒漏水速率为1的漏斗
-
-            for i := 0; i < 20; i++ {
-                go func(index int) {
-                    ok := funnel.TryWater(1) // 每个请求尝试加1单位的水
-                    if ok {
-                        fmt.Printf("Request %d passed\
-                        ", index)
-                        } else {
-                        fmt.Printf("Request %d blocked\
-                        ", index)
-                        }
-                    }(i)
-                }
-
-            time.Sleep(15 * time.Second) // 等待足够的时间，观察效果
-            }
-        }
-        ```
-        ```python
-        # coding: utf8
-        import time
-        class Funnel(object):
-            def __init__(self, capacity, leaking_rate):
-                self.capacity = capacity                                    # 漏斗容量
-                self.leaking_rate = leaking_rate                            # 漏嘴流水速率
-                self.left_quota = capacity                                  # 漏斗剩余空间
-                self.leaking_ts = time.time()                               # 上一次漏水时间
-            def make_space(self):
-                now_ts = time.time()
-                delta_ts = now_ts - self.leaking_ts                         # 距离上一次漏水，是否可以流入，这里严格限制了并发
-                delta_quota = delta_ts * self.leaking_rate
-                if delta_quota < 1:
-                    return
-
-                self.left_quota += delta_quota                              # 加水
-                self.leaking_ts = now_ts                                    # 更新漏水时间
-                if self.left_quota > self.capacity:                         # 剩余空间不得高于容量
-                    self.left_quota = self.capacity
-
-            def watering(self, quota):
-                self.make_space()
-                if self.left_quota >= quota:                                # 判断剩余空间是否足够
-                    self.left_quota -= quota
-                    return True
-                return False
-        
-        funnels = {}                                                        # 所有的漏斗
-
-        # capacity 漏斗容量
-        # leaking_rate 漏嘴流水速率 quota/s
-        def is_action_allowed(user_id, action_key, capacity, leaking_rate):
-            key = '%s:%s' % (user_id, action_key)
-            funnel = funnels.get(key)
-            if not funnel:
-                funnel = Funnel(capacity, leaking_rate)
-                funnels[key] = funnel
-            return funnel.watering(1)                                       # 进行漏水消费
-
-        # 测试
-        for i in range(20):
-            print is_action_allowed('laoqian', 'reply', 15, 0.5)
-        ```
-   - 令牌桶算法：以固定速率往桶中放入令牌，令牌有最大数量，使用时减去相应令牌即可，适合突发特性的流量，漏斗是匀速的无法解决
-     1. 拿到令牌才执行请求
-1. jaeger
-   - 认识：链路追踪，![avatar](../../images/jaeger_struct.jpg)
-     1. 高扩展
-     1. 可观察
-     1. 原生支持openTracing
-   - 设计
-     1. jaeger-client：使用thrift通过udp发送给agent
-     1. jaeger-agent：go，使用thrift通过Tchannel发送给collector
-     1. jaeger-collector：go，队列入存储
-     1. jaeger-query：go
-     1. jaeger-ui：react
-     1. 存储：cassandra
-   - 组成
-     1. span：逻辑工作单元，有操作名称、开始时间、持续时间，跨度可以嵌套并排序，建立因果关系模型
-        - 对象
-          1. tag：标签集合
-          1. log：一组span日志集合
-          1. spanContext：上下文对象
-          1. reference：span间关系
-   - 项目应用原理：![avatar](../../images/jaeger_in_project.jpg)
-1. prometheus
-   - 认识：SoundCloud的开源的Google BorgMon的监控、告警、时序数据数据库组合的解决方案，适用于容器环境。![avatar](../images/prometheus_struct.webp)
-     1. 多维度数据模型
-     1. 灵活的查询语言
-     1. 不依赖分布式存储，单个服务器节点是自主的
-     1. 通过基于HTTP的pull方式采集时序数据
-     1. 可以通过中间网关进行时序列数据推送
-     1. 通过服务发现或者静态配置来发现目标服务对象
-     1. 支持多种多样的图表和界面展示，比如Grafana等
-   - 组件
-     1. Client Library：客户端组合metrics并暴露给Push Gateway
-     1. Push Gateway：支持临时性Job主动推送指标的中间网关
-     1. Server：主要负责数据采集和存储，提供PromQL查询语言的支持
-     1. Alertmanager：警告管理器，从server接收到alert后，进行去重、分组，并路由对应的接受方式，发出报警
-     1. Exporter：暴露已有的第三方服务给server
-     1. instance：一个单独监控的目标，一般是一个进程
-     1. jobs：一组同类型的instances
-   - metric类型
-     1. counter：累加，如请求的个数、出现的错误数
-     1. gauge：任意加减
-     1. histogram：可对观察结果采样、分组、统计，如柱状图
-     1. summary：提供观测值的count、sum功能，如请求持续时间
-   - 原理：Prometheus的基本原理是通过HTTP协议周期性抓取被监控组件的状态，任意组件只要提供对应的HTTP接口就可以接入监控。不需要任何SDK或者其他的集成过程。这样做非常适合做虚拟化环境监控系统，比如VM、Docker、Kubernetes等。输出被监控组件信息的HTTP接口被叫做exporter 。目前互联网公司常用的组件大部分都有exporter可以直接使用，比如Varnish、Haproxy、Nginx、MySQL、Linux系统信息(包括磁盘、内存、CPU、网络等等)
-   - 服务过程
-     1. Prometheus Daemon负责定时去配置好的jobs/exporter/pushgateway抓取metrics(指标)数据，每个抓取目标需要暴露一个http服务的接口给它定时抓取。Prometheus支持通过配置文件、文本文件、Zookeeper、Consul、DNS SRV Lookup等方式指定抓取目标。Prometheus采用PULL的方式进行监控，即服务器可以直接通过目标PULL数据或者间接地通过中间网关来Push数据
-     1. Prometheus在本地存储抓取的所有数据，并通过一定规则进行清理和整理数据，并把得到的结果存储到新的时间序列中
-     1. Prometheus通过PromQL和其他API可视化地展示收集的数据。Prometheus支持很多方式的图表可视化，例如Grafana、自带的Promdash以及自身提供的模版引擎等等。Prometheus还提供HTTP API的查询方式，自定义所需要的输出
-     1. PushGateway支持Client主动推送metrics到PushGateway，而Prometheus只是定时去Gateway上抓取数据
-     1. Alertmanager是独立于Prometheus的一个组件，可以支持Prometheus的查询语句，提供十分灵活的报警方式
-   - PromQL：时间序列数据查询语音
 ### 全局唯一ID
 1. 最佳实践
    - 问题

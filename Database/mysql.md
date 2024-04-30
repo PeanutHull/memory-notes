@@ -52,7 +52,7 @@
         - 大小：v5.6.4之前固定4byte，之后支持微秒，根据毫秒位数确定
         - 最佳实践
           1. 调用底层系统函数有锁，不应依赖数据库
-          1. `NOT NULL DEFAULT '1970-01-01 00:00:00'`
+          1. `NOT NULL DEFAULT '1970-01-01 00:00:01'`
      1. DATE
         - 形式：`YYYY-MM-DD`
         - 范围：`1000-01-01 ~ 9999-12-31`
@@ -365,7 +365,7 @@
     and/and not xx/or/between xx and xx                                                     # 逻辑
     XX=exists/not exists(select x from table2 where xx=xx);                                 # 子查询，返回布尔值
     group by having condition1 and condition2                                               # 分类筛选
-    order by xx1 desc/asc/rand() xx2 asc                                                    # 排序，多个排序规则
+    order by xx1 desc/asc/rand(), xx2 asc                                                   # 排序，多个排序规则用逗号隔开
     limit x/limit x offset y/limit x.y                                                      # 限制条数/跳过x行的y行
 
     ## 插入数据
