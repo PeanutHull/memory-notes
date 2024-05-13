@@ -147,6 +147,7 @@
      1. 版本
         - 2000：Alpha版本，新版本SQLite 3
         - v3.7：支持wal
+1. levelDB：google开源的kv数据库存储引擎，企业微信的存储使用了
 1. IndexedDB
    - 认识：一种kv型的nosql的在浏览器存取数据的数据库，丰富了客户端的查询方式，是浏览器的底层api
    - 特性

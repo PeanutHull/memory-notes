@@ -2,6 +2,7 @@
 1. caddy：开源的go写的http服务器
    - http新特性支持全面，如http2、quic、https
    - 配置简便，5秒可完成配置
+1. tinyproxy：轻量级/跨平台/开源的代理服务器
 1. lighttpd：web服务器，低内存开销、模块丰富、动态页面处理能力很强
 1. apache
    - 特点

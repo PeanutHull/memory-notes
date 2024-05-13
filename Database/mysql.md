@@ -369,8 +369,8 @@
     limit x/limit x offset y/limit x.y                                                      # 限制条数/跳过x行的y行
 
     ## 插入数据
-    insert into table(xx) set XX=xx/(,,) values (,) on duplicate key update;                # 插入数据，如果引发唯一或主键索引重复则更新
-    replace into table (,,) values (,,);                                                    # 插入或更新，命中主键修改，未命中添加
+    insert into table(xx) set XX=xx/(,,) values (,) on duplicate key update;                # 插入数据，如果引发主键或唯一索引重复则更新
+    replace into table (,,) values (,,);                                                    # 插入或更新，命中主键或唯一索引修改，未命中添加
 
     ## 更新数据
     update table set XX1=xx1, XX2=xx;                                                       # 更新所有数据
@@ -419,9 +419,11 @@
           1. 转为时间戳：`unix_timestamp('2018-01-15 09:45:16');`
           1. 转为时间：` from_unixtime(date, '%Y-%c-%d %h:%i:%s')`
 1. 更新
-   - replace：是标准sql的mysql扩展，使用primary key/unique key确定是否插入新行
-     1. 注意：会抹掉其他未指定数据，应作为插入使用，而不是更新
-     1. 原理：将数据插入，成功则结束；否则引发重复键错误，先删除原有记录，然后更新
+   - replace
+     1. 认识：是标准sql的mysql扩展，使用主键或唯一索引确定是否插入新行
+        - 会抹掉其他未指定的字段的数据，应作为插入使用，而不是更新
+        - insert duplicate key update的方式是更新，而不是replace的删除
+     1. 原理：将数据插入，成功则结束；否则引发重复键错误，先删除原有记录，然后更新。所以可能会有删除操作，会删除其他字段的值、引发外键约束或触发器
    - update
 1. 用户和权限管理
    - user
@@ -1203,13 +1205,33 @@
         - between二次查询，order by time between $time_min and $time_N_max
         - 拿time_min在各个分库中比较，得出每个表的虚拟offset，相加从而得到time_min在全局的offset
         - 得到了time_min在全局的offset，自然得到了全局的offset X limit Y，要什么从后推着拿就行
-1. 特定场景
+1. 特定场景：把表结构扔给gpt，让gpt给出答案
    - 查询这个数据是否存在，存在则存到另一张表里：`create table temp as select * from admin a where exists (select uid from user u where a.userName = u.account);`
    - 查询两张表中是否有相同数据：`select * from admin where uid IN(select uid from temp);`
+   - 查询一张表中是否有相同字段的数据：`SELECT a.* FROM same_xxx a INNER JOIN same_xxx b ON a.xx = b.xx AND a.xx = b.xx;`
+   - 删除一张表中是否有相同字段的数据
+    ```sql
+    DELETE FROM script_interested_users
+    WHERE id NOT IN (
+        SELECT id FROM (
+            SELECT MIN(id) AS id
+            FROM script_interested_users
+            GROUP BY user_id, script_id
+        ) AS a
+    );
+    ```
    - 求差集：`SELECT * FROM A LEFT JOIN B ON A.xx = B.xx WHERE B.id IS NULL union SELECT * FROM A RIGHT JOIN B ON A.xx = B.xx WHERE A.id IS NULL;`
    - 求全集：`SELECT * FROM A LEFT JOIN B ON A.xx = B.xx union SELECT * FROM A RIGHT JOIN B ON A.xx = B.xx;`
    - 原所有id增加5万，必须倒叙操作：`update user SET uid=uid+50000 order by uid desc;`
    - 插入不重复数据行，mysql特有不是标准sql语法：`INSERT token(udid) values ('{$udid}') ON DUPLICATE KEY UPDATE activetime ='{$time}'`
+   - 洗数据用临时表：给某个表补数据，可以先建立临时表，把数据导进去，然后一条sql更新
+    ```sql
+    UPDATE script_interested_users siu
+    JOIN temp_script_interested_users temp
+    ON siu.user_id = temp.user_id AND siu.script_id = temp.script_id
+    SET siu.store_id = temp.store_id
+    WHERE siu.store_id = 0 and id < 19865
+    ```
 #### 设计实践
 1. 范式
    - 认识：为了消除重复数据，更高一级的范式要求先满足下边的范式。涉及数据库理论研究
