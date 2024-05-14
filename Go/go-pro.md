@@ -202,6 +202,22 @@
         - 调用 runtime.deferreturn 会从 Goroutine 的链表中取出 runtime._defer 结构并依次执行
 1. panic
    - 遍历当前 goroutine 所注册的 defered 函数并通过 reflectcall 调用遍历到的函数，如果某个 defered 函数调用了recover（对应到runtime的gorecover函数）则使用 mcall(recovery)  恢复程序的正常流程，否则执行完所有的 defered 函数之后打印出 panic 的栈信息然后退出程序
+1. sleep
+   - 认识
+    ```
+    Go语言中的`time.Sleep()`函数是用于暂停当前goroutine（轻量级线程）执行指定的时间。其实现原理通常基于操作系统提供的定时器和调度器功能。
+
+    在Go的源代码中，`time.Sleep()`函数最终会调用`runtime.sleep()`函数。`runtime.sleep()`会创建一个定时器，并将当前的goroutine与该定时器关联。定时器被设置为在指定的时间后触发，当定时器触发时，它会唤醒之前暂停的goroutine。
+
+    实现细节如下：
+    1. 创建一个 Timer 对象，并设置其到期时间。
+    2. 将当前 goroutine 设置为等待状态，并将其添加到等待队列中。
+    3. 当定时器到期时，定时器的回调函数会被调用，该函数将等待的goroutine标记为可运行。
+    4. Go调度器再次调度该goroutine继续执行。
+
+    这种实现方式使得`time.Sleep()`函数在暂停goroutine时不会占用任何CPU资源，因为它是通过操作系统的定时器和事件系统实现的，而不是通过忙等或其他CPU密集型操作。这使得Go程序能够高效地处理大量并发的goroutine。
+    ```
+   - 非常多goroutine同时运行的时候，sleep可能不准：因为操作系统资源紧张或者调度器延迟调度含有time.Sleep的goroutine，可能会变长
 ### 协程
 1. goroutine
    - 认识
