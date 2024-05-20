@@ -81,6 +81,7 @@
 1. langchain-ChatGLM
    - 认识：利用ChatGLM-6B+langchain实现的基于本地知识的问答机器人，如淘宝衣服尺寸机器人
    - 架构：![avatar](../../images/langchain-ChatGLM-struct.webp)
+1. Semantic Kernel：用于自然语言处理和信息检索的技术
 ### 图像
 1. midjourney：基于Stable Diffusion网络模型开发
 1. runway gen2

@@ -4913,6 +4913,12 @@
      1. `gomobile clean`
    - 运维
      1. 安装：`go install golang.org/x/mobile/cmd/gomobile`
+   - 实现
+     1. go自身支持跨平台编译，可以在一个平台（如macOS上编译出另一个平台（如Windows、Android或iOS）上运行的程序
+     1. 安卓平台的.aar文件包含了所有必要的java类以及用go编写的库的jni（java native interface）接口。这样android应用可以通过jni调用go代码作为库
+     1. ios平台生成的是一个静态库，可以直接被oc或swift调用。这通常是通过在go代码中导出c函数，然后在ios项目中通过桥接文件调用这些函数来实现的
+     1. gomobile提供了转换不同平台的数据类型和函数的机制
+     1. 这种转换运行会涉及一定的性能开销，同时会带有go运行时环境，这意味着go的垃圾回收和协程调度等机制也会在移动设备上运行
 ##### net
 1. net
    - 类型

@@ -148,7 +148,7 @@
      1. -v：Shell可使用的最大的虚拟内存，单位：kbytes
      1. -x：最多能拿到的文件锁数量
 1. 定时任务
-   - crontab：linux原生定时器，只能支持到分
+   - crontab：linux原生定时器，只能支持到分钟
      1. -l
      1. -e：打开vi后添加`* * * * *(分时日月周) php index.php >> index.log`
      1. at：执行一次，`at 2:00 tomorrow`

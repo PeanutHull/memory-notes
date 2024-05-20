@@ -227,10 +227,20 @@
      1. 轻量
         - 无大小限制的goroutine栈：goroutine stack默认2k，可轻易创建几十万goroutine不用担心内存耗尽等问题
      1. 方便使用
-1. Golang程序启动原理
+1. go程序启动的阶段
    - 认识
-     1. 过程是：从ELF入口点到GMP初始化，到执行用户main
-   - 步骤：运行入口是runtime定义的一个汇编函数
+     1. 过程是：ELF入口点、GMP初始化、执行用户main，三大阶段
+   - 操作系统阶段
+     1. exec系统调用加载到内存中
+     1. 判断并初始化可执行文件中的多个段（如text段，data段，bss段等）
+     1. 创建一个线程来执行程序，这通常是进程的主线程
+     1. 内核将控制权转交给Go程序的入口点（通常是`_start`），这是程序开始执行的地方
+   - go自身阶段
+     1. go的初始化函数，有内存分配器、调度器、垃圾回收器等关键系统
+     1. 创建n个系统线程，并将Go程分配到这些线程上运行
+     1. 调用所有已导入包的`init`函数，然后调用`main.main()`函数
+     1. main执行完后会清理并终止程序，包括结束所有goroutines，执行垃圾回收等
+   - go详细步骤：运行入口是runtime定义的一个汇编函数
      1. 通过runtime中的osinit、schedinit等函数对golang运行时进行关键的初始化，包括GMP初始化、调度逻辑初始化
      1. 创建入口函数是runtime.main的主协程（因为操作系统加载的时候只创建好了主线程，协程这种东西还是得用户态的golang自己来管理。golang在这里创建出了自己的第一个协程）
      1. 调用runtime·mstart真正开启调度器进行运行，即runtime.main函数
@@ -1110,7 +1120,7 @@
         - net.Listen("tcp", addr) 方法通过系统调用socket、bind、listen生成net.Listener对象
         - 在后面的for循环中，通过系统调用 accept 等待新的tcp conn，将其包装成一个 conn 对象，在新的 goroutine 中对这个conn进行处理
         - 创建socket时设置了syscall.SOCK_NONBLOCK
-### 源码阅读
+### 源码阅读方法
 1. 方法
    - 如果你阅读的是syscall包，恭喜你，感觉正常：再简洁的语言，遇到环境相关，仍然会有很多 tricks，甚至用到 Cgo
    - 如果你阅读的是os一类的包，恭喜你，感觉也挺正常：涉及到与其他层面的调用， 正常
