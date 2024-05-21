@@ -219,13 +219,16 @@
         ```go
         // 基于redis的setnx
         cacheKey := cache.GlobalSetInterestedPrefix + strconv.Itoa(req.ScriptId) + strconv.Itoa(req.StoreId) + strconv.Itoa(userId)
-        exists, err := global.REDIS.SetNX(context.Background(), cacheKey, 1, time.Second*10).Result()
+        success, err := global.REDIS.SetNX(context.Background(), cacheKey, 1, time.Second*10).Result()
         if err != nil {
             return data, err
         }
-        if exists {
+        if success {
             // 可以执行业务逻辑
         }
+
+        // 释放锁
+        defer global.REDIS.Del(ctx, lockKey)
         ```
 #### 性能
 1. 硬件指标

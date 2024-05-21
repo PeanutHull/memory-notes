@@ -96,7 +96,7 @@
    - b+tree
      1. 比较
         - b+tree只在叶子节点存放数据行，而btree会在叶子和非叶子结点上都放
-        - b-tree的叶子节点不需要链表串联
+        - b+tree的叶子节点互相链表串联，b-tree的叶子节点不需要链表串联
    - b*tree：在b+tree基础上，为非叶子节点也增加链表指针，将节点的最低利用率从1/2提高到2/3
 1. B+Tree
    - 结构：Balance tree，平衡树，在b-tree基础上
@@ -198,6 +198,127 @@
         - lock in share mode：s锁
 1. 内部XA事务
    - 认识：最常见的是binlog和redo log二者要求是原子性的，否则导致主从不一致(因为binlog传给从了)，如果redo没做，重启后就再做一次
+### 日志
+1. 日志
+   - 认识：undo是回滚，记录之前的数据，redo是重做，记录将要执行的操作
+   - undolog
+     1. 认识：回滚日志，用于回滚/撤销事务的更改，会记录修改前的数据、与当前操作相反的操作日志
+        - update/delete存放数据旧记录
+        - insert记录新数据行的PK(rowid)
+   - redolog
+     1. 认识：重做日志，存储了事务执行过程的日志，能够重新执行(重做)这些事务中的操作，确保事务的更改能够被恢复执行，保证可靠的事务，innoDB独有
+        - 顺序循环写速度快，大小固定，写满后循环记录(不需要对redo进行读取)
+        - LSN落后数量阈值检测，超出将脏页写回磁盘，会阻塞用户线程
+        - 触发redolog更新的条件有主线程、事务提交等
+        - 高可用：至少一个文件组、2个文件，循环2个文件依次写入
+          1. 多个镜像文件组会有更高可靠性，有了高可用方案如磁盘阵列可不用
+     1. 结构
+        - redo_log_type：类型，有几十种
+        - space：表空间id
+        - page_no：页号
+        - redo_log_body：由一个个redolog block组成，数据部分，恢复时需要调用相应函数进行解析
+        每个redo log都写入了文件里的一个redo log block里了，一个block最多放496自己的redo log日志
+     1. 写入流程：write pos到check point是未刷盘的，追上时推动check point向前移动覆盖来空出位置，![avatar](../images/redo-buffer.jpeg)
+        - 刷盘：根据innodb_flush_log_at_trx_commit确定刷盘策略
+        - redolog block：存储redo log的页，大小512byte，等于扇区大小，保证写入必定成功，不需要doublewrite
+     1. 组成
+        - write pos：当前记录的LSN
+        - checkpoint
+          1. 认识：已刷盘的LSN，之前的已刷盘，保证checkpoint之前的脏页都刷回磁盘，那么崩溃恢复直接从checkpoint的点开始应用redo即可
+          1. 分类
+             - sharp checkpoint：保证所有的脏页刷新到磁盘
+             - fuzzy checkpoint
+          1. 触发情形
+             - master thread固定频率checkpoint
+             - redolog不够用了，强制checkpoint以释放redo空间被新事务覆盖(write pos追上check point)
+             - buffer不够用了，LRU list淘汰page，淘汰的page属于脏页，需要强制checkpoint
+     1. redo和binlog
+        - redo引擎层产生，binlog库上层产生，binlog会包含redo的
+        - redo是物理格式，记录每个页的修改；binlog是逻辑日志，记录对应sql
+1. binlog
+   - 认识：记录所有除查询的DDL和DML语句，以事件形式记录的事务安全型的二进制文件集合，包含执行的时间
+     1. 开启1%的性能开销
+     1. 具体的写入时间：配置控制是否执行fsync，还是只写入了缓存
+     1. 生成新的日志文件的情况：重启时、执行`flush logs`、大小超过`max_binlog_size`
+     1. 会重写密码，不以纯文本展示；8可以进行加密
+   - 用途
+     1. 主从复制：传输binlog
+     1. 增量备份：
+     1. 数据恢复：使用mysqlbinlog工具，可进行任意时间点恢复
+     1. 审计：是否有攻击
+   - 组成
+     1. xx.index：索引文件，存储产生的二进制日志序号
+     1. xx.0001
+        - 格式
+          1. Statement：基于sql和上下文环境，不会记录每行变化，只记录要执行的操作
+             - 减少了日志量节约了io，尤其是修改量大的场景
+             - 主从版本可以不一样，从可以更高
+          1. Row：只记录行的修改点，5.7.7及以上默认，会一步步的优化的更好，主流使用，之前是Statement。最好同时设置`binlog_row_image=minimal`
+             - 日志量大，`alter table`每条都会记录，新版优化了
+             - 从库重放日志更快
+             - 避免了存储过程/function/trigger的调用和触发无法被正确复制的问题
+          1. MIXED：混合模式，系统选择，一般用statment，遇到无法完成主从复制的操作用row
+        - 事件类型：QUERY_EVENT、STOP_EVENT等
+   - 格式对复制的影响
+     1. Statement
+        - 为slave正确运行而记录相关信息，但uuid()等非确定性函数还是无法复制导致主从不一致
+        - 日志量较row小
+        - 需要更多的行锁，主上锁多长时间，从就锁多久
+     1. Row
+        - 包含了要精确操作的行的主键ID，不会出现主从不一致
+        - 日志量较statement大多了
+        - 可应用于任何sql的复制，包括非确定函数、存储过程等
+        - 传输数据量大，网络不好延迟大，同机房可保证更好
+        - 减少锁的使用，因为更新时只锁那一条
+        - 要求主从表结构相同
+        - 无法单独执行触发器
+     1. Mixed
+        - 当MySQL判断可能数据不一致时用row格式，否则用statement格式
+   - 操作
+     1. 认识
+        - 一个事务的binlog不会拆开，会确保一次性写入
+        - 事务组提交：group commit，会把后边来的事务一起处理，到时候他们直接返回，一起处理的越多，效果越好
+     1. 写入流程
+        - 基于session，根据binlog_cache_size写入缓存或临时文件
+        - 进行group commit，写入磁盘，清空缓存，同时根据sync_binlog判断是否fsync
+   - 使用
+     1. 配置
+        - log-bin：是否开启binlog及文件名
+        - binlog_cache_size：未提交的日志记录缓存的大小，超过了写入临时文件，基于会话。binlog_cache_use、binlog_cache_disk_use用于判断设置是否合适
+        - sync_binlog：写缓冲多少次就同步磁盘，1是同步写磁盘，默认0，建议设置为100~1000
+        - innodb_support_xa：为1解决binlog和innodb的数据文件的同步
+        - max_binlog_size：单个最大值，超过就加序号新建文件
+        - binlog-do-db/binlog-ignore-db：要记录库的范围
+        - log-slave-update：从库需要设置，不记录自己的master的日志
+        - binlog_format：格式
+        - expire_logs_days：保存天数
+     1. sql
+        - `show variables like '%log_bin%';`：查看配置
+        - `show variables like 'binlog_format';`：查看格式
+          1. `set global binlog_format='ROW/STATEMENT/MIXED';`：清空所有
+        - `show binary logs;`：查看二进制文件列表和大小
+        - `show binlog events in '' from pos limit [offset,]count;`：查看某个binlog
+        - `show master status;`：查看日志写入状态
+        - `reset master;`：清空所有
+     1. 工具
+        - mysqlbinlog：查看、恢复
+          1. -v/-vv：显示详细信息
+          1. 直接恢复：`mysqlbinlog /var/lib/mysql/mysqld-bin.000001 | mysql -uroot`
+          1. --database DB_name
+          1. --no-defaults 
+          1. --start/stop-datetime、--start/stop-position
+1. 组成
+   - rowId：行id
+   - LSN：log sequence number 日志序号，版本标记的计数，单调递增的值，写多少日志，就加多少
+   - trx_id：事务id
+   - GTID
+     1. 认识：Global Transaction ID 全局事务id，已提交事务的唯一的编号，v5.6。格式：source_id:transaction_id
+        - 全局唯一性
+        - 趋势递增
+     1. 作用
+        - 保证了同一个事务只在指定的从库执行一次，可以找到正确的复制位置，大大简化复制的维护
+        - 强化了主备一致性，故障恢复以及容错能力
+          1. 之前基于二进制日志的复制中从库需要告知主库从哪个偏移量进行增量同步，如果指定错误会造成数据的遗漏，从而造成数据的不一致
 ### 引擎
 1. 认识：基于表
    - 分类
@@ -359,42 +480,6 @@
         - 文件系统的最小单元是块，默认4k
         - InnoDB引擎的最小单元是页，默认16k
         - 数据行都存储在页中，一页可以存储多条数据
-1. 日志
-   - 认识：undo是回滚，记录之前的数据，redo是重做，记录将要执行的操作
-   - undolog
-     1. 认识：回滚日志，用于回滚/撤销事务的更改，会记录修改前的数据、与当前操作相反的操作日志
-        - update/delete存放数据旧记录
-        - insert记录新数据行的PK(rowid)
-   - redolog
-     1. 认识：重做日志，存储了事务执行过程的日志，能够重新执行(重做)这些事务中的操作，确保事务的更改能够被恢复执行，保证可靠的事务，innoDB独有
-        - 顺序循环写速度快，大小固定，写满后循环记录(不需要对redo进行读取)
-        - LSN落后数量阈值检测，超出将脏页写回磁盘，会阻塞用户线程
-        - 触发redolog更新的条件有主线程、事务提交等
-        - 高可用：至少一个文件组、2个文件，循环2个文件依次写入
-          1. 多个镜像文件组会有更高可靠性，有了高可用方案如磁盘阵列可不用
-     1. 结构
-        - redo_log_type：类型，有几十种
-        - space：表空间id
-        - page_no：页号
-        - redo_log_body：由一个个redolog block组成，数据部分，恢复时需要调用相应函数进行解析
-        每个redo log都写入了文件里的一个redo log block里了，一个block最多放496自己的redo log日志
-     1. 写入流程：write pos到check point是未刷盘的，追上时推动check point向前移动覆盖来空出位置，![avatar](../images/redo-buffer.jpeg)
-        - 刷盘：根据innodb_flush_log_at_trx_commit确定刷盘策略
-        - redolog block：存储redo log的页，大小512byte，等于扇区大小，保证写入必定成功，不需要doublewrite
-     1. 组成
-        - write pos：当前记录的LSN
-        - checkpoint
-          1. 认识：已刷盘的LSN，之前的已刷盘，保证checkpoint之前的脏页都刷回磁盘，那么崩溃恢复直接从checkpoint的点开始应用redo即可
-          1. 分类
-             - sharp checkpoint：保证所有的脏页刷新到磁盘
-             - fuzzy checkpoint
-          1. 触发情形
-             - master thread固定频率checkpoint
-             - redolog不够用了，强制checkpoint以释放redo空间被新事务覆盖(write pos追上check point)
-             - buffer不够用了，LRU list淘汰page，淘汰的page属于脏页，需要强制checkpoint
-     1. redo和binlog
-        - redo引擎层产生，binlog库上层产生，binlog会包含redo的
-        - redo是物理格式，记录每个页的修改；binlog是逻辑日志，记录对应sql
 1. double write
    - 认识：两次写，解决redolog数据页被写坏的可能，保证其完整可靠性。因为16k的页要写到512byte的扇区里
      1. 有些文件系统提供了部分写失效的防范机制(ZFS)，不用开启两次写
@@ -426,88 +511,3 @@
    - 最佳实践：主要看命中率评估其作用，参数`Innodb_buffer_pool_read`，`Innodb_buffer_pool_read_requests`请求数
 1. wiki
    - innoDB最早是第三方引擎，被oracle收购，5.5.8开始是默认引擎
-### 日志
-1. binlog
-   - 认识：记录所有除查询的DDL和DML语句，以事件形式记录的事务安全型的二进制文件集合，包含执行的时间
-     1. 开启1%的性能开销
-     1. 具体的写入时间：配置控制是否执行fsync，还是只写入了缓存
-     1. 生成新的日志文件的情况：重启时、执行`flush logs`、大小超过`max_binlog_size`
-     1. 会重写密码，不以纯文本展示；8可以进行加密
-   - 用途
-     1. 主从复制：传输binlog
-     1. 增量备份：
-     1. 数据恢复：使用mysqlbinlog工具，可进行任意时间点恢复
-     1. 审计：是否有攻击
-   - 组成
-     1. xx.index：索引文件，存储产生的二进制日志序号
-     1. xx.0001
-        - 格式
-          1. Statement：基于sql和上下文环境，不会记录每行变化，只记录要执行的操作
-             - 减少了日志量节约了io，尤其是修改量大的场景
-             - 主从版本可以不一样，从可以更高
-          1. Row：只记录行的修改点，5.7.7及以上默认，会一步步的优化的更好，主流使用，之前是Statement。最好同时设置`binlog_row_image=minimal`
-             - 日志量大，`alter table`每条都会记录，新版优化了
-             - 从库重放日志更快
-             - 避免了存储过程/function/trigger的调用和触发无法被正确复制的问题
-          1. MIXED：混合模式，系统选择，一般用statment，遇到无法完成主从复制的操作用row
-        - 事件类型：QUERY_EVENT、STOP_EVENT等
-   - 格式对复制的影响
-     1. Statement
-        - 为slave正确运行而记录相关信息，但uuid()等非确定性函数还是无法复制导致主从不一致
-        - 日志量较row小
-        - 需要更多的行锁，主上锁多长时间，从就锁多久
-     1. Row
-        - 包含了要精确操作的行的主键ID，不会出现主从不一致
-        - 日志量较statement大多了
-        - 可应用于任何sql的复制，包括非确定函数、存储过程等
-        - 传输数据量大，网络不好延迟大，同机房可保证更好
-        - 减少锁的使用，因为更新时只锁那一条
-        - 要求主从表结构相同
-        - 无法单独执行触发器
-     1. Mixed
-        - 当MySQL判断可能数据不一致时用row格式，否则用statement格式
-   - 操作
-     1. 认识
-        - 一个事务的binlog不会拆开，会确保一次性写入
-        - 事务组提交：group commit，会把后边来的事务一起处理，到时候他们直接返回，一起处理的越多，效果越好
-     1. 写入流程
-        - 基于session，根据binlog_cache_size写入缓存或临时文件
-        - 进行group commit，写入磁盘，清空缓存，同时根据sync_binlog判断是否fsync
-   - 使用
-     1. 配置
-        - log-bin：是否开启binlog及文件名
-        - binlog_cache_size：未提交的日志记录缓存的大小，超过了写入临时文件，基于会话。binlog_cache_use、binlog_cache_disk_use用于判断设置是否合适
-        - sync_binlog：写缓冲多少次就同步磁盘，1是同步写磁盘，默认0，建议设置为100~1000
-        - innodb_support_xa：为1解决binlog和innodb的数据文件的同步
-        - max_binlog_size：单个最大值，超过就加序号新建文件
-        - binlog-do-db/binlog-ignore-db：要记录库的范围
-        - log-slave-update：从库需要设置，不记录自己的master的日志
-        - binlog_format：格式
-        - expire_logs_days：保存天数
-     1. sql
-        - `show variables like '%log_bin%';`：查看配置
-        - `show variables like 'binlog_format';`：查看格式
-          1. `set global binlog_format='ROW/STATEMENT/MIXED';`：清空所有
-        - `show binary logs;`：查看二进制文件列表和大小
-        - `show binlog events in '' from pos limit [offset,]count;`：查看某个binlog
-        - `show master status;`：查看日志写入状态
-        - `reset master;`：清空所有
-     1. 工具
-        - mysqlbinlog：查看、恢复
-          1. -v/-vv：显示详细信息
-          1. 直接恢复：`mysqlbinlog /var/lib/mysql/mysqld-bin.000001 | mysql -uroot`
-          1. --database DB_name
-          1. --no-defaults 
-          1. --start/stop-datetime、--start/stop-position
-1. 组成
-   - LSN：Log Sequence Number 日志序号，版本标记的计数，单调递增的值，写多少日志，就加多少
-   - trx_id：事务id
-   - GTID
-     1. 认识：Global Transaction ID 全局事务id，已提交事务的唯一的编号，v5.6。格式：source_id:transaction_id
-        - 全局唯一性
-        - 趋势递增
-     1. 作用
-        - 保证了同一个事务只在指定的从库执行一次，可以找到正确的复制位置，大大简化复制的维护
-        - 强化了主备一致性，故障恢复以及容错能力
-          1. 之前基于二进制日志的复制中从库需要告知主库从哪个偏移量进行增量同步，如果指定错误会造成数据的遗漏，从而造成数据的不一致
-   - rowId：行id
