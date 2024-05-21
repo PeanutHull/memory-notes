@@ -48,7 +48,7 @@
         - 双击C://http/php/php.exe
         - httpd.exe -k install
         - httpd.exe -k start
-1. Pingora
+1. pingora
    - 认识：cloudflare内部暂未开源的新一代web代理，每天处理超万亿请求，提升了性能并节省了cpu、内存等硬件
      1. 作为一个平台打造可以扩展很多应用，类似openResty
      1. rust开发，在不影响性能的情况下以内存安全的方式完成c可以做的事情

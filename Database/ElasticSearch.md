@@ -945,6 +945,54 @@
      1. cerebro
      1. elasticsearch-head
 ### 最佳实践
+1. 修改包含了数据的索引的结构
+   - 添加新字段：直接加
+    ```
+    PUT /your_index/_mapping
+    {
+        "properties": {
+            "new_field": {
+                "type": "text"
+            }
+        }
+    }
+    ```
+   - 改变字段类型或修改索引设置：需要创建新索引并迁移现有数据到新索引中
+    ```
+    // 定义新索引的结构
+    PUT /new_index
+    {
+        "settings": {
+            "number_of_shards": 3,
+            "number_of_replicas": 1
+        },
+        "mappings": {
+            "properties": {
+                "field1": {
+                    "type": "text"
+                },
+                "field2": {
+                    "type": "integer"
+                }
+                // 更多字段和设置
+            }
+        }
+    }
+
+    // 迁移数据，会将所有文档复制
+    POST /_reindex
+    {
+        "source": {
+            "index": "your_index"
+        },
+        "dest": {
+            "index": "new_index"
+        }
+    }
+
+    // 清理旧索引
+    DELETE /old_index
+    ```
 1. 调优
     ```json
     GET index/_search?q=xx
