@@ -3,6 +3,640 @@
    - 100W连接，占用了25.8g的内存，一个连接占用27kb的内存、2个goroutine(一个读一个写)
    - go中一个goroutine循环read的方法对应每一个socket，大量连接下是巨大资源浪费，go中也可以用epoll优化，把fd拿到epoll中，检测到事件然后在协程池里面去读就行了，看情况读写分别10-20个协程的goroutine池应该够
    - go启动默认有8个协程
+### 语法
+#### chan的应用
+1. 通过设置为缓存通道，实现抢购场景的解决方案
+    ```go
+    // 响应公共结构体
+    type APIBase struct {
+        Code    int32  `json:"code"`
+        Message string `json:"message"`
+    }
+
+    // 模拟接口A的响应结构体
+    type APIDemoA struct {
+        APIBase
+        Data APIDemoAData `json:"data"`
+    }
+
+    type APIDemoAData struct {
+        Title string `json:"title"`
+    }
+
+    // 模拟接口B的响应结构体
+    type APIDemoB struct {
+        APIBase
+        Data APIDemoBData `json:"data"`
+    }
+
+    type APIDemoBData struct {
+        SkuList []int64 `json:"sku_list"`
+    }
+
+    // 模拟接口逻辑
+    func main() {
+        // 创建接口A传输结果的通道
+        execAResult := make(chan APIDemoA)
+        // 创建接口B传输结果的通道
+        execBResult := make(chan APIDemoB)
+
+        // 并发调用接口A
+        go func(execAResult chan<- APIDemoA) {
+            // 模拟接口A远程调用过程
+            time.Sleep(2 * time.Second)
+            execAResult <- APIDemoA{}
+        }(execAResult)
+
+        // 并发调用接口B
+        go func(execBResult chan<- APIDemoB) {
+            // 模拟接口B远程调用过程
+            time.Sleep(1 * time.Second)
+            execBResult <- APIDemoB{}
+        }(execBResult)
+
+        var resultA APIDemoA
+        var resultB APIDemoB
+        i := 0
+        for {
+            if i >= 2 {
+                fmt.Println("退出")
+                break
+            }
+            select {
+            case resultA = <-execAResult: // 等待接口A的响应结果
+                i++
+                fmt.Println("resultA", resultA)
+            case resultB = <-execBResult: // 等待接口B的响应结果
+                i++
+                fmt.Println("resultB", resultB)
+            }
+        }
+    }
+    ```
+1. 超时控制：使用channel的阻塞特性
+   - 简单啰嗦版
+    ```go
+    timeoutCh := make(chan struct{}, 1)
+    go func() {
+        time.Sleep(100 * time.Millisecond)
+        timeoutCh <- struct{}{}
+    }()
+    ```
+   - `case <-time.After(100 * time.Millisecond)`
+   - `context.WithCancel(context.Background())`
+   - `context.WithTimeout(context.Background(), time.Millisecond)`
+1. 限流
+   - 简单的多协程的时间频率limiter：常见于限制自己的程序
+    ```go
+    ratelimiter := time.Tick(100 * time.Millisecond)
+
+    // 调用处
+    <-ratelimiter
+    ```
+   - 简单的多协程的并存数limiter：计数法限流，常见于限制外部
+    ```go
+    type ConnLimiter struct {
+        concurrentConn int
+        bucket         chan int
+    }
+
+    func NewConnLimiter(cc int) *ConnLimiter {
+        return &ConnLimiter{
+            concurrentConn: cc,
+            bucket:         make(chan int, cc),
+        }
+    }
+
+    func (cl *ConnLimiter) GetConn() bool {
+        if len(cl.bucket) >= cl.concurrentConn {
+            log.Printf("Reached the rate limitation.")
+            return false
+        }
+
+        cl.bucket <- 1
+        return true
+    }
+
+    func (cl *ConnLimiter) ReleaseConn() {
+        C := <-cl.bucket
+        log.Printf("New connction coming: %d", C)
+    }
+
+    // 使用
+    用的时候先GetConn，然后defer ReleaseConn
+    ```
+1. select的简单调度
+    ```go
+    func createWorker(id int) chan<- int {
+        c := make(chan int)
+        go worker(id, c)
+        return c
+    }
+
+    func main() {
+
+        var c1, c2 = generator(), generator()
+        var worker = createWorker(0)
+
+        var values []int
+        tm := time.After(10 * time.Second)
+        tick := time.Tick(time.Second)
+
+        for {
+            var acticeWorker chan<- int
+            var acticeValue int
+            if len(values) > 0 {                          // 利用切片实现，生产者比消费者快的积压效果，不丢数据
+                acticeWorker = worker                     // 由于chan类型的c是一个指针，返回了一个指针，这样go worker(id, c)这个协程就能跑起来
+                acticeValue = values[0]
+            }
+
+            select {
+            case n := <-c1:
+                values = append(values, n)
+            case n := <-c2:
+                values = append(values, n)
+            case acticeWorker <- acticeValue:             // 利用var出来的为nil的channel，实现没有值时阻塞
+                values = values[1:]
+            case <-time.After(800 * time.Millisecond):    // 超时时间，和总时长原理相同
+                fmt.Print("timeout")
+            case <-tick:                                  // 定时报告channel的状态
+                fmt.Print("queue len = ", len(values))
+            case <-tm:                                    // 总运行时长，time.After控制
+                fmt.Print("bye")
+                return
+            }
+        }
+    }
+    ```
+1. 动态数量的case处理：利用反射`reflect.Select`
+    ```go
+    func main() {
+        var ch1 = make(chan int, 10)
+        var ch2 = make(chan int, 10)
+
+        // 创建SelectCase
+        var cases = createCases(ch1, ch2)
+
+        // 执行10次select
+        for i := 0; i < 10; i++ {                                           // 不用在意这个for，因为select中本来就不是顺序循环
+            chosen, recv, ok := reflect.Select(cases)                       // 从cases中选择一个case执行，相当于普通的select
+            if recv.IsValid() { // recv case
+                fmt.Println("recv:", cases[chosen].Dir, recv, ok)
+            } else { // send case
+                fmt.Println("send:", cases[chosen].Dir, ok)
+            }
+        }
+    }
+
+    func createCases(chs ...chan int) []reflect.SelectCase {                // 业务可以改造这个方法，创造自己要的case
+        var cases []reflect.SelectCase
+
+
+        // 创建recv case
+        for _, ch := range chs {
+            cases = append(cases, reflect.SelectCase{
+                Dir:  reflect.SelectRecv,
+                Chan: reflect.ValueOf(ch),
+            })
+        }
+
+        // 创建send case
+        for i, ch := range chs {
+            v := reflect.ValueOf(i)
+            cases = append(cases, reflect.SelectCase{
+                Dir:  reflect.SelectSend,
+                Chan: reflect.ValueOf(ch),
+                Send: v,
+            })
+        }
+
+        return cases
+    }
+    ```
+1. select无任务退出
+    ```go
+    forloop:
+    for {
+        select {
+        case d :=<- dc:
+            log.Printf("Executor received: %v", d)
+        default:
+            break forloop                               // 只执行一次
+            goto forloop                                // 会在for和forloop循环运行
+        }
+    }
+    ```
+#### 扩展并发原语
+1. 信号量
+   - 认识：Semaphore，是用来控制(保护)多个goroutine同时访问多个资源的并发原语，比如数据库连接池、一组客户端的连接
+     1. 优势：在批量获取资源的场景中，我建议你尝试使用官方扩展的信号量
+   - 操作
+     1. P：减少
+     1. V：增加
+   - 分类
+     1. 计数信号量：计数使用数字可以是任意值，到达某个特殊值时有固定操作
+     1. 二进位信号量：计数值只能是0或者1，就是互斥锁了
+   - go使用
+     1. go的扩展包：Weighted，使用互斥锁+List实现
+     1. go内部：信号量的P/V操作通过函数实现
+        ```go
+        type Mutex struct {
+            state int32
+            sema  uint32                // 这个就是信号量
+        }
+
+        func runtime_Semacquire(s *uint32)
+        func runtime_SemacquireMutex(s *uint32, lifo bool, skipframes int)
+        func runtime_Semrelease(s *uint32, handoff bool, skipframes int)
+        ```
+1. 请求合并
+   - 认识：SingleFlight，多个goroutine同时调用同一个函数，只让一个goroutine去执行，且返回时给到所有goroutine，减少并发调用的数量，go开发组提供
+     1. 和sync.Once的区别是只有一次，而SingleFlight主要用在合并并发请求的场景中
+     1. 使用互斥锁Mutex和Map实现
+     1. 特别适合缓存击穿场景
+   - 组成
+     1. 类型：Group
+     1. 方法
+        - Do()：通过传入一个key识别在同一时间只有一个在执行，其他并发的请求会等待。第一个执行的请求返回的结果，就是它的返回结果。shared表示是否返回给多个请求
+        - DoChan()：类似Do，只不过返回一个chan，有了结果能从这个chan接收
+        - Forget()：忘记，对这个key不进行合并
+1. 循环栅栏
+   - 认识：CyclicBarrier，可重用，用来控制一组请求同时执行的数据结构，用于重复进行一组goroutine同时执行的场景中。大家都到后放开栅栏通过，类似java的CountDownLatch/CyclicBarrier，C#的Barrier
+     1. 允许一组 goroutine 彼此等待，到达一个共同的执行点
+     1. 编排一组节点，让这些节点在同一个时刻开始执行任务
+     1. 和WaitGroup，
+        - WaitGroup：适用“一个goroutine等待一组goroutine到达同一个执行点”或者不需要重用的场景，重用需要小心翼翼，需要保证将WaitGroup的计数值重置到n的时候不会出现并发问题
+        - CyclicBarrier：适合在“固定数量的 goroutine 等待同一个执行点”场景中
+   - 方法
+     1. New()：指定循环栅栏参与者的数量
+     1. NewWithAction()：额外提供一个函数可以在每一次到达执行点的时候执行一次。具体的时间点是在最后一个参与者到达之后、其它参与者还未被放行之前。可以利用它做放行之前一些共享状态的更新等操作
+   - demo
+    ```go
+    // 三条产线，生产氢原子，氧原子，最后等待一起输出水
+    // 定义水分子合成的辅助数据结构
+    type H2O struct {
+        // 氢原子的信号量
+        semaH *semaphore.Weighted
+        // 氧原子的信号量
+        semaO *semaphore.Weighted
+        // 循环栅栏， 用来控制合成
+        b cyclicbarrier.CyclicBarrier
+    }
+
+    func New() *H2O {
+        return &H2O{
+            // 氢原子需要两个
+            semaH: semaphore.NewWeighted(2),
+            // 氧原子需要一个
+            semaO: semaphore.NewWeighted(1),
+            // 需要三个原子才能合成1
+            b: cyclicbarrier.New(3),
+        }
+    }
+
+    func (h2o *H2O) hydrogen(releaseHydrogen func()) {
+        h2o.semaH.Acquire(context.Background(), 1)
+        // 输出H
+        releaseHydrogen()
+        // 等待栅栏放行
+        h2o.b.Await(context.Background())
+        // 释放氢原子空槽
+        h2o.semaH.Release(1)
+    }
+
+    func (h2o *H2O) oxygen(releaseOxygen func()) {
+        h2o.semaO.Acquire(context.Background(), 1)
+        releaseOxygen()
+        // 输出O
+        h2o.b.Await(context.Background())
+        // 等待栅栏放行
+        h2o.semaO.Release(1)
+        // 释放氢原子空槽
+    }
+
+    func TestWaterFactory(t *testing.T) {
+        // 用来存放水分子结果的channel
+        var ch chan string
+        releaseHydrogen := func() {
+            ch <- "H"
+        }
+        releaseOxygen := func() {
+            ch <- "O"
+        }
+        // 300个原子，300个goroutine, 每个goroutine并发的产生一个原子
+        var N = 100
+        ch = make(chan string, N*3)
+        h2o := New()
+        // 用来等待所有的goroutine完成
+        var wg sync.WaitGroup
+        wg.Add(N * 3)
+        // 200个氢原子goroutine
+        for i := 0; i < 2*N; i++ {
+            go func() {
+                time.Sleep(time.Duration(rand.Intn(100)) * time.Millisecond)
+                h2o.hydrogen(releaseHydrogen)
+                wg.Done()
+            }()
+        }
+        // 100个氧原子goroutine
+        for i := 0; i < N; i++ {
+            go func() {
+                time.Sleep(time.Duration(rand.Intn(100)) * time.Millisecond)
+                h2o.oxygen(releaseOxygen)
+                wg.Done()
+            }()
+        }
+        // 等待所有的goroutine执行完
+        wg.Wait()
+        // 结果中肯定是300个原子
+        if len(ch) != N*3 {
+
+            t.Fatalf("expect %d atom but got %d", N*3, len(ch))
+        }
+        // 每三个原子一组，分别进行检查。要求这一组原子中必须包含两个氢原子和一个氧原子，这样才能
+        var s = make([]string, 3)
+        for i := 0; i < N; i++ {
+            s[0] = <-ch
+            s[1] = <-ch
+            s[2] = <-ch
+            sort.Strings(s)
+            water := s[0] + s[1] + s[2]
+            if water != "HHO" {
+                t.Fatalf("expect a water molecule but got %s", water)
+            }
+        }
+    }
+    ```
+1. 分组编排
+   - 认识：处理一组子任务的并发原语
+     1. 分组执行一批相同或类似的任务是任务编排中一类情形
+   - 组成
+     1. ErrGroup
+     1. go-pkgz/syncs
+     1. gollback
+     1. Hunch
+     1. schedgroup：和时间相关，可以指定任务在某个时间或者某个时间之后执行
+   - ErrGroup
+     1. 场景：用于将父任务拆成n个小任务并发执行的场景，对比waitGroup增加了错误传递，实现了统一处理各个协程的错误、或取消整个goroutine集合
+     1. 认识：类似WaitGroup，提供的功能更加丰富
+        - 和Context集成
+        - error向上传播，可以把子任务的错误传递给Wait的调用者
+        - 只能返回子任务的第一个错误，后续的抛弃，可以用全局变量slice保存
+     1. 方法
+        - `WithContext(ctx context.Context) (*Group, context.Context)`：初始化
+        - `Go(f func() error)`：开协程进行子任务处理
+        - `SetLimit(n int)`：限制该组中活动goroutine的数量最多为n
+        - `TryGo(f func() error) bool`：试着能不能执行，即是否小于limit限制了，返回是否已启动
+        - `Wait()`：阻塞，等待所有子任务并返回其中第一个如果有的非零错误
+     1. 扩展库
+        - bilibili/errgroup
+          1. 功能
+             - 可以使用固定数量的goroutine处理子任务，控制资源占用
+             - cancel：失败的子任务可以cancel所有正在执行任务
+             - recover：会把panic的堆栈信息放到error中，避免子任务panic导致的程序崩溃
+          1. 缺陷
+             - 并发优化：超过设置的并发数会限制值子任务在调用者调用Wait之后才会执行，而不是只要goroutine空闲下来就去执行，可能出现子任务不能及时处理的情况，可以优化
+             - 并发死锁：子任务放入了非并发安全的slice中，高并发下可能append不进去，但是却g.Go()了，程序一直会hang在Wait的调用上。如果是一直运行的服务器程序死锁问题可能检测不出来
+        - neilotoole/errgroup：可以直接替换官方，只不过增加了可以控制并发goroutine的功能
+        - facebookgo/errgroup：是对WaitGroup的扩展，功能类似
+     1. demo
+        ```go
+        type result struct {
+            path string
+            sum  [md5.Size]byte
+        }
+
+        // 一个多阶段的执行流水线pipeline，使用有限的goroutine计算每个文件的md5值，就是规定了20个goroutine
+        // 遍历根目录下所有的文件和子文件夹，计算它们的md5的值
+        func MD5All(ctx context.Context, root string) (map[string][md5.Size]byte, error) {
+            g, ctx := errgroup.WithContext(ctx)
+            // 文件路径channel
+            paths := make(chan string)
+
+            g.Go(func() error {
+                defer close(paths)
+                // 遍历完关闭paths chan
+                return filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+                    ...... // 将文件路径放入到paths
+                    return nil
+                })
+            })
+            // 启动20个goroutine执行计算md5的任务，计算的文件由上一阶段的文件遍历子任务生成
+            c := make(chan result)
+            const numDigesters = 20
+            for i := 0; i < numDigesters; i++ {
+                g.Go(func() error {
+                    for path := range paths {
+                        // 遍历直到paths chan被关闭
+                        ...... // 计算path的md5值，放入到c中
+                    }
+                    return nil
+                })
+            }
+            go func() {
+                // 20个goroutine以及遍历文件的goroutine都执行完
+                g.Wait()
+                // 关闭收集结果的chan
+                close(c)
+            }()
+
+            m := make(map[string][md5.Size]byte)
+            // 将md5结果从chan中读取到map中, 直到c被关闭才退出
+            for r := range c {
+                m[r.path] = r.sum
+            }
+
+            // 再次调用Wait，依然可以得到group的error信息
+            if err := g.Wait(); err != nil {
+                return nil, err
+            }
+            return m, nil
+        }
+
+        ```
+   - go-pkgz/syncs
+     1. SizedGroup：使用信号量和WaitGroup实现，通过信号量控制并发的goroutine数量，或者只控制子任务并发执行时的数量
+     1. ErrSizedGroup：比上边提供了error处理的功能
+#### 分布式并发原语
+1. 认识：借助etcd，etcd提供了非常好的分布式并发原语，如分布式互斥锁、分布式读写锁、leader选举、分布式队列、栅栏、STM
+1. leader选举
+   - 认识：leader选举可以交给etcd
+     1. 主从结构、主备结构
+     1. 架构中只能存在一个主，提供正确的写功能
+   - 方法
+     1. 选举：Campaign()、Proclaim()、Resign()
+     1. 查询：Leader()
+     1. leader变动监控：Observe()
+   - 使用
+    ```go
+    var (
+        nodeID    = flag.Int("id", 0, "nodeID")
+        addr      = flag.String("addr", "http://127.0.0.1:2379", "etcd addresses")
+        electName = flag.String("name", "my-test-elect", "election name")
+    )
+
+    func main() {
+        flag.Parse()
+        // 将etcd的地址解析成slice of string
+        endpoints := strings.Split(*addr, ",")
+        // 生成一个etcd的clien
+        cli, err := clientv3.New(clientv3.Config{Endpoints: endpoints})
+        if err != nil {
+            log.Fatal(err)
+        }
+        defer cli.Close()
+
+        // 创建session, 如果程序宕机导致session断掉，etcd能检测到
+        session, err := concurrency.NewSession(cli)
+        defer session.Close()
+
+        // 生成一个选举对象。下面主要使用它进行选举和查询等操作
+        // 另一个方法ResumeElection可以使用既有的leader初始化Election
+        e1 := concurrency.NewElection(session, *electName)
+
+        // 从命令行读取命令
+        consolescanner := bufio.NewScanner(os.Stdin)
+        for consolescanner.Scan() {
+            action := consolescanner.Text()
+            switch action {
+            // 选举命令
+            case "elect":
+                go elect(e1, *electName)
+            // 只更新leader的value
+            case "proclaim":
+                proclaim(e1, *electName)
+            // 辞去leader, 重新选举
+            case "resign":
+                resign(e1, *electName)
+            // 监控leader的变动
+            case "watch":
+                go watch(e1, *electName)
+            // 查询当前的leader
+            case "query":
+                query(e1, *electName)
+            case "rev":
+                rev(e1, *electName)
+            default:
+                fmt.Println("unknown action")
+            }
+        }
+    }
+    ```
+1. 互斥锁
+   - 认识：没有主从，所有节点一样，同一时刻只允许一个节点持有
+   - 组成
+     1. Locker：基于Mutex实现
+     1. Mutex：有了ctx，可以设置超时时间或主动取消
+   - demo
+    ```go
+    // Locker
+    func useLock(cli *clientv3.Client) {
+        // 为锁生成session
+        s1, err := concurrency.NewSession(cli)
+        if err != nil {
+            log.Fatal(err)
+        }
+        defer s1.Close()
+
+        // 得到一个分布式锁
+        locker := concurrency.NewLocker(s1, *lockName)
+
+        // 请求锁
+        locker.Lock()
+
+        // 等待一段时间
+        time.Sleep(time.Duration(rand.Intn(30)) * time.Second)
+
+        // 释放锁
+        locker.Unlock()
+    }
+
+    // Mutex
+    func useMutex(cli *clientv3.Client) {
+		// 为锁生成session
+		s1, err := concurrency.NewSession(cli)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer s1.Close()
+	
+		m1 := concurrency.NewMutex(s1, *lockName)
+		
+		// 在请求锁之前查询key
+		log.Printf("before acquiring.key:%s", m1.Key())
+		
+		// 请求锁
+		if err := m1.Lock(context.TODO()); err != nil {
+			log.Fatal(err)
+		}
+		log.Printf("acquired lock.key:%s", m1.Key())
+		
+		// 等待一段时间
+		time.Sleep(time.Duration(rand.Intn(30)) * time.Second)
+	
+		// 释放锁
+		if err := m1.Unlock(context.TODO()); err != nil {
+			log.Fatal(err)
+		}
+	}
+    ```
+1. 读写锁
+   - 认识：可以在分布式环境中的不同的节点使用
+   - 方法：RLock/RUnlock、Lock/Unlock
+1. 分布式队列
+   - 认识：多个写节点和多个读节点
+   - 方法
+     1. NewQueue()
+     1. NewPriorityQueue()：优先级队列
+     1. Enqueue()：入队
+     1. Dequeue()：出队
+1. 分布式栅栏
+   - 分类
+     1. Barrier：分布式栅栏，如果持有Barrier的节点释放了它，所有等待这个Barrier的节点就不会被阻塞而继续执行
+     1. DoubleBarrier：计数型栅栏，初始化时提供参与节点的数量，当节点都Enter或Leave后，栅栏放开
+   - 方法
+     1. NewBarrier()
+        - Hold()
+        - Release()
+        - Wait()
+     1. NewDoubleBarrier
+        - Enter()：持有，调用会阻塞，直到Enter调用数量满足了count才能继续。让这些节点在同一个时刻开始执行任务
+        - Leave()：释放，和Enter一样，如果你想让一组节点在同一个时刻完成任务
+1. STM
+   - 认识：软件事务内存，简化多个key的操作并且提供事务功能
+     1. etcd的有更新多个key的事务，基于CAS实现
+   - demo
+    ```go
+    func doTxnXfer(etcd *v3.Client, from, to string, amount uint) (bool, error) {
+		// 一个查询事务
+		getresp, err := etcd.Txn(ctx.TODO()).Then(OpGet(from), OpGet(to)).Commit()
+		if err != nil {
+			return false, err
+		}
+	
+		// 获取转账账户的值
+		fromKV := getresp.Responses[0].GetRangeResponse().Kvs[0]
+		toKV := getresp.Responses[1].GetRangeResponse().Kvs[1]
+		fromV, toV := toUInt64(fromKV.Value), toUint64(toKV.Value)
+		if fromV < amount {
+			return false, fmt.Errorf("insufficientvalue")
+		}
+	
+		// 转账事务
+	
+		// 条件块
+		txn := etcd.Txn(ctx.TODO()).If(v3.Compare(v3.ModRevision(from), "=", fromKV.ModRevision), v3.Compare(v3.ModRevision(to), "=", toKV.ModRevision))
+		// 成功块
+		txn = txn.Then(OpPut(from, fromUint64(fromV-amount)), OpPut(to, fromUint64(toV+amount))
+		// 提交事务
+		putresp, err := txn.Commit()
+		// 检查事务的执行结果
+		if err != nil {
+			return false, err
+		}
+		return putresp.Succeeded, nil
+	}
+    ```
 ### 框架
 1. 分类
    - 大型：功能大而全
