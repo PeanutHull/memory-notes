@@ -93,7 +93,7 @@
    - string
      1. 键值对的存储，如session_id为key的session
      1. incr原子计数器做粉丝数、关注数、ip封锁次数、锁、限流等
-     1. 作幂等对比：如MQ防止重复消费，订单防重，订单5分钟之内只能被消费一次，订单号作为key
+     1. 作幂等对比：如提交订单接口的防重，订单5分钟之内只能被消费一次，订单号作为key
      1. 二进制安全图片、文件等
    - list：消息排行，消息队列，日志收集器，配合发布订阅
    - hash：存对象数据，如用户基本信息，直接更新即可
@@ -110,6 +110,13 @@
         - getbit/setbit
         - bitcount/bitpos
         - bitfield：v3.2，多个位的操作
+   - 布隆过滤器
+     1. 认识：Bloom Filter，可理解为不怎么精确的set结构，v4.0
+        - 不存在时肯定不存在
+     1. 操作
+        - bf.reserve：参数设置，initial_size估计的过大浪费存储空间，过小影响准确率
+        - bf.add/bf.madd
+        - bf.exists/bf.mexists
    - hyperLogLog
      1. 认识：不精确的去重计数方案，标准误差0.81%，如统计千万级UV的页面，要个数就行
         - 输入元素数量非常大时，计算基数所需的空间总是固定的、很小的，就可以计算接近2^64个不同元素的基数
@@ -449,13 +456,6 @@
             redis.zadd("delay-queue", retry_ts, value) 
         ```
    - Stream应对中等规模和较弱可靠机制的队列服务
-1. 布隆过滤器
-   - 认识：Bloom Filter，可理解为不怎么精确的set结构，v4.0
-     1. 不存在时肯定不存在
-   - 操作
-     1. bf.reserve：参数设置，initial_size估计的过大浪费存储空间，过小影响准确率
-     1. bf.add/bf.madd
-     1. bf.exists/bf.mexists
 ### 架构
 1. 认识
    - 哨兵Sentinel提供高可用，集群Cluster提供自动分区
