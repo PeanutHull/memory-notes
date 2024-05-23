@@ -1083,7 +1083,7 @@
             // panic: interface conversion: interface {} is string, not int
             ```
         - 递归死循环或者超出栈空间造成内存溢出
-        - 写为空的、已关闭的通道，重复关闭chan
+        - 写已关闭的通道，重复关闭chan
             ```go
             func main() {
                 var ch chan int
