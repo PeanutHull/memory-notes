@@ -871,7 +871,7 @@
    - 认识：可以简单实现，性能不是非常高
    - 实现方式
      1. 添加/更新：`ZADD mylru <timestamp> "element"`
-     1. 移除最老的元素，需要定期判断执行：`ZREMRANGEBYRANK mylru 0 0`，这条命令会移除有序集合中分数最低的元素
+     1. 移除最老的元素，需要定期判断执行：`zremrangebyrank mylru 0 0`，这条命令会移除有序集合中分数最低的元素
      1. 获取所有：`zrangebyscore key -inf +inf`
 #### 性能和服务治理
 1. 性能监控
