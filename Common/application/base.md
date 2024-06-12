@@ -259,14 +259,14 @@
     // TreeNode 表示二叉树节点  
     type TreeNode struct {  
         Val   int  
-        Left  *TreeNode  
-        Right *TreeNode  
+        Left  *TreeNode
+        Right *TreeNode
     }  
     
     // PreorderTraversal 实现二叉树前序遍历  
-    func PreorderTraversal(root *TreeNode) {  
-        if root == nil {  
-            return  
+    func PreorderTraversal(root *TreeNode) {
+        if root == nil {
+            return
         }  
         fmt.Println(root.Val) // 输出当前节点值  
         PreorderTraversal(root.Left)   // 遍历左子树  
@@ -321,6 +321,128 @@
         heap.Push(h, 3)
         heap.Push(h, 2)
         fmt.Println(heap.Pop(h))
+    }
+    ```
+1. 实现带ttl功能的hashmap，只需实现get和set方法、基本的冲突开链、删除过期的key
+    ```go
+    type Node struct {
+        key    string
+        value  interface{}
+        expiry time.Time
+        next   *Node
+    }
+
+    type TTLHashMap struct {
+        capacity int
+        table    []*Node
+        mutex    sync.RWMutex
+    }
+
+    func NewTTLHashMap(capacity int) *TTLHashMap {
+        return &TTLHashMap{
+            capacity: capacity,
+            table:    make([]*Node, capacity),
+        }
+    }
+
+    func (m *TTLHashMap) hash(key string) int {
+        h := 0
+        for _, c := range key {
+            h = 31*h + int(c)
+        }
+        return h % m.capacity
+    }
+
+    func (m *TTLHashMap) isExpired(node *Node) bool {
+        return !node.expiry.IsZero() && time.Now().After(node.expiry)
+    }
+
+    func (m *TTLHashMap) Set(key string, value interface{}, ttl time.Duration) {
+        m.mutex.Lock()
+        defer m.mutex.Unlock()
+
+        index := m.hash(key)
+        newNode := &Node{
+            key:    key,
+            value:  value,
+            expiry: time.Now().Add(ttl),
+        }
+
+        if m.table[index] == nil {
+            m.table[index] = newNode
+            return
+        }
+
+        prev := m.table[index]
+        current := prev
+        for current != nil {
+            if current.key == key {
+                current.value = value
+                current.expiry = newNode.expiry
+                return
+            }
+            prev = current
+            current = current.next
+        }
+        prev.next = newNode
+    }
+
+    func (m *TTLHashMap) Get(key string) (interface{}, bool) {
+        m.mutex.RLock()
+        defer m.mutex.RUnlock()
+
+        index := m.hash(key)
+        current := m.table[index]
+        for current != nil {
+            if current.key == key {
+                if m.isExpired(current) {
+                    m.deleteNode(index, current)
+                    return nil, false
+                }
+                return current.value, true
+            }
+            current = current.next
+        }
+        return nil, false
+    }
+
+    func (m *TTLHashMap) deleteNode(index int, target *Node) {
+        m.mutex.Lock()
+        defer m.mutex.Unlock()
+
+        if m.table[index] == target {
+            m.table[index] = target.next
+            return
+        }
+
+        prev := m.table[index]
+        for prev.next != nil {
+            if prev.next == target {
+                prev.next = target.next
+                return
+            }
+            prev = prev.next
+        }
+    }
+
+    func main() {
+        cache := NewTTLHashMap(10)
+        cache.Set("key1", "value1", 5*time.Second)
+        value, found := cache.Get("key1")
+        if found {
+            fmt.Printf("Found key1: %v\n", value)
+        } else {
+            fmt.Println("key1 not found")
+        }
+
+        time.Sleep(6 * time.Second)
+
+        value, found = cache.Get("key1")
+        if found {
+            fmt.Printf("Found key1: %v\n", value)
+        } else {
+            fmt.Println("key1 not found or expired")
+        }
     }
     ```
 #### 排序
