@@ -380,45 +380,54 @@
         - 多文件可组合表示一个表空间，即多个磁盘文件负载可平均，可提高性能，可自动扩充大小
      1. 组成
         -数据，索引，插入缓冲bitmap页，undo信息，插入缓冲索引页、二次写缓冲、系统事务信息
-   - segment/inode：段，innoDB自身管理，空间分配的最小单位。数据即索引，索引即数据。每个segment都会从表空间FREE_PAGE中分配32个page
-        - 组成
-          1. 数据段：b+tree的叶子节点
-          1. 索引段：b+tree的非叶子节点
-          1. 回滚段
-        - page不够用的扩展规则
-          1. 当前小于1个extent，则扩展到1个extent
-          1. 小于32MB每次一个extent
-          1. 大于32MB每次4个extent
-   - extent：区，连续页组成，大小都是1m，一个区中有64个连续的页，逻辑管理单位
-   - page：数据页/块，大小默认16k，页号是一个32位int表示页数量，对应innodb单表的64TB存储容量(16kb * 2^32)。innodb磁盘管理的最小单位
-        - 结构
-          1. 页头：页号、前后指针、伪记录
-          1. 数据
-          1. 空闲区
-          1. 页目录
-          1. 页尾：8byte，校验码
-        - 类型
-          1. b-tree node：数据页
-          1. undo log page：undo页
-          1. system page：系统页
-          1. transaction system page：事务数据页
-          1. insert buffer bitmap：插入缓冲位图页
-          1. insert buffer free list：插入缓冲空闲列表页
-          1. uncompressed blob page：未压缩的二进制页
-          1. compressed blob page：压缩的二进制页
-        - 和索引
-          1. 在每个数据页里选出主键id和所在页号，组成新的record放入新生成的数据页中，加入上下页层级概念，就是B+树，用于加速查询，2层的2次io就可以完成
-          1. 最末级叶子节点存放数据，其他只放下一步的页号
-          1. 页的页号并不是连续的，在磁盘里也不一定是挨在一起的，这就是空洞
-   - row：行，数据页中存储的一行行真实的记录，InnoDB是面向列的则按行进行存放，每页最少2行最多16KB/2-200行，用链表连接起来即b+tree
+   - segment/inode：段，innoDB自身管理，空间分配的最小单位。每个segment都会从表空间FREE_PAGE中分配32个page
      1. 认识
-        - 数据大的行记录如大字符串、text用行溢出数据存储，指针指向页类型为未压缩二进制大对象页
+        - 数据即索引，索引即数据
+     1. 组成
+        - 数据段：b+tree索引的叶子节点段
+        - 索引段：b+tree索引的非叶子节点段
+        - 回滚段
+     1. page不够用的扩展规则
+        - 当前小于1个extent，则扩展到1个extent
+        - 小于32MB每次一个extent
+        - 大于32MB每次4个extent
+   - extent：区，通常包含64个连续的页，区是1MB的大小
+     1. 使用区而非单独的页进行数据分配可以优化磁盘操作，减少磁盘寻道时间，特别是在大量数据进行读写时
+     1. 是逻辑管理单位
+   - page：页/块，InnoDB每次读写(磁盘管理)的最小单位，默认16KB
+     1. 认识
+        - 索引树上的一个节点就是一个页
+        - 页号是一个32位int表示页数量，对应innodb单表的64TB存储容量(16kb * 2^32)
+     1. 结构
+        - 页头：页号、前后指针、伪记录
+        - 数据
+        - 空闲区
+        - 页目录
+        - 页尾：8byte，校验码
+     1. 类型
+        - b-tree node：数据页
+        - undo log page：undo页
+        - system page：系统页
+        - transaction system page：事务数据页
+        - insert buffer bitmap：插入缓冲位图页
+        - insert buffer free list：插入缓冲空闲列表页
+        - uncompressed blob page：未压缩的二进制页
+        - compressed blob page：压缩的二进制页
+     1. 和索引
+        - 在每个数据页里选出主键id和所在页号，组成新的record放入新生成的数据页中，加入上下页层级概念，就是B+树，用于加速查询，2层的2次io就可以完成
+        - 最末级叶子节点存放数据，其他只放下一步的页号
+        - 页的页号并不是连续的，在磁盘里也不一定是挨在一起的，这就是空洞
+   - row：行，InnoDB采用行存储的方式进行组织和管理，数据页中存储的一行行真实的记录，InnoDB是面向列的但是按行进行存放
+     1. 认识
+        - 每页最少2行，最多16KB/2-200行
+        - 用链表连接起来即b+tree
+        - 数据大的行记录，如大字符串、text等用行溢出方式存储(数据如果超过了页内联存储的限制会被存储在溢出页中)，指针指向页类型为未压缩二进制大对象页
      1. 记录格式
         - Redundant：稀疏，最早
           1. 没有NULL标志位
         - Compact：紧凑，5.0.3以后默认，有null标志位
           1. NULL值列不占用任何存储空间
-        - Dynamic：动态，Compact的升级版，完全的行溢出方式
+        - Dynamic：动态，Compact的升级版，完全的行溢出方式，v8.0默认
         - Compressed：压缩，Compact的升级版，行数据会以zlib算法进行压缩
 1. innoDB数据更新机制
    - 认识：即WAL Write-Ahead Logging，日志先行机制，![avatar](../images/mysql-update.jpeg)、![avatar](../images/db/innoDB_struct.jpeg)、![avatar](../images/db/changeBuffer.jpg)/
