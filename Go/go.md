@@ -324,7 +324,8 @@
     // 插入或修改
     m["a"] = Vertex{1, 2}
     // 删除
-    delete(m, "key")                                    // 并不能释放内存，且没有返回值
+    delete(m, "key")                                    // 没有返回值；删除不存在的不报错
+                                                        // 删除键值对后map容量不会变少；与该键值对相关联内存标记为可回收，在下次垃圾回收时内才回收
     // 检测是否存在，双赋值，ok为bool指示是否存在
     v, ok := m["key"]
     if ok {}
@@ -738,8 +739,10 @@
         ```
      1. range：后边跟一个可循环的，自动类型推断，可针对string、array、slice、map
         - 特点
-          1. `for range`其实是golang的语法糖，在循环开始前会获取其长度，然后再执行固定次数的循环
-          1. 在range迭代slice中得到的值其实是元素的一份值拷贝，更新拷贝并不会更改原来的元素，可以用索引直接访问，指针类型可以直接改
+          1. `for range`其实是golang的语法糖，在最初的循环开始前会获取其长度，然后再执行这个长度的循环
+          1. 在range中迭代得到的值，不论是被迭代的值，还是k、v，都是值拷贝
+             - 更新拷贝并不会更改原来的元素，可以用索引直接访问，指针类型可以直接改
+             - 直接更新值也不会在这次range循环中体现，依然会按照一开始的值进行循环；但是原值确实是产生了变化
         - demo
             ```go
             a := []string{"a","b"};
@@ -774,7 +777,7 @@
         - 在当前函数return前延迟执行函数
         - 所有的defer会压入栈中，先入后出，但是是一层层函数互不影响的
      1. 特点
-        - 上层函数panic也会执行defer函数
+        - 上层函数panic也会执行自己层的defer函数
           1. 每个协程只维护自己的panic、defer、recover链表，只在单个协程中生效
         - 会即时对函数参数进行求值：传递给defer的参数在到达defer时就会确定，之后修改参数不会变
         - 丢弃被修饰函数的返回值
@@ -1102,7 +1105,7 @@
             }
             // fatal error: all goroutines are asleep - deadlock!
             ```
-        - 多个协程并行写一个websocket连接，哈哈
+        - 多个协程并行写一个websocket连接
      1. 实例
         ```go
         // 最佳实践
@@ -1137,22 +1140,41 @@
      1. 意料之中用error，如文件打不开；意料之外用panic，如数组越界。异常定义为无法预测的，几乎不可能失败但是特殊条件下也没法返回错误，也无法继续执行
 1. 运行时
    - 认识：对goroutine进行调度，获取运行时信息等
-   - 获取goroutine id
-     1. 简单方式
+   - 功能
+     1. `runtime.GC()`：手动触发GC
+     1. 打印内存 占用
         ```go
-        func GoID() int {
-            var buf [64]byte
-            n := runtime.Stack(buf[:], false)
-            // 得到 id 字符串
-            idField := strings.Fields(strings.TrimPrefix(string(buf[:n]), "goroutine "))[0]
-            id, err := strconv.Atoi(idField)
-            if err != nil {
-                panic(fmt.Sprintf("cannot get goroutine id:, %v", err))
-            }
-            return id
+        func printMemUsage() {
+            var m runtime.MemStats
+
+            runtime.ReadMemStats(&m)
+
+            fmt.Printf("Alloc = %v MiB", bToMb(m.Alloc))
+            fmt.Printf("\tTotalAlloc = %v MiB", bToMb(m.TotalAlloc))
+            fmt.Printf("\tSys = %v MiB", bToMb(m.Sys))
+            fmt.Printf("\tNumGC = %v\n", m.NumGC)
+        }
+
+        func bToMb(b uint64) uint64 {
+            return b / 1024 / 1024
         }
         ```
-     1. hacker方式：每个运行的goroutine结构的g指针保存在当前goroutine的TLS对象中，不同Go版本的goroutine的结构可能不同，常用库`petermattis/goid`
+     1. 获取goroutine id
+        - 简单方式
+            ```go
+            func GoID() int {
+                var buf [64]byte
+                n := runtime.Stack(buf[:], false)
+                // 得到 id 字符串
+                idField := strings.Fields(strings.TrimPrefix(string(buf[:n]), "goroutine "))[0]
+                id, err := strconv.Atoi(idField)
+                if err != nil {
+                    panic(fmt.Sprintf("cannot get goroutine id:, %v", err))
+                }
+                return id
+            }
+            ```
+        - hacker方式：每个运行的goroutine结构的g指针保存在当前goroutine的TLS对象中，不同Go版本的goroutine的结构可能不同，常用库`petermattis/goid`
 1. plugin
    - 认识：go的运行时动态加载插件机制，即热插拔，v1.8
      1. 支持将go包编译为共享库.so的形式单独发布
@@ -3445,40 +3467,6 @@
             sort.Sort(stus)
             // 是否已排序
             sort.IsSorted(stus)
-            ```
-        - 用sort.IntSlice建堆：sort.IntSlice已经实现了Less、Swap、Len方法
-            ```go
-            // hheap继承自sort.IntSlice
-            type hheap struct {
-                sort.IntSlice
-            }
-
-            func (s hheap) Less(i, j int) bool {                        // 根据需要重写Less, 变成大根堆
-                if s.IntSlice[i] > s.IntSlice[j] {
-                    return true
-                }
-                return false
-
-                // 简便写法就一行：return s.IntSlice[i] > s.IntSlice[j]
-            }
-
-            func (s *hheap) Push(v interface{}) {                       // 堆的插入方法,实现了Less方法之后会自动排序
-                s.IntSlice = append(s.IntSlice, v.(int))
-            }
-
-            func (s *hheap) Pop() interface{} {                         // 弹出当前最大的元素
-                v := s.IntSlice[s.IntSlice.Len()-1]
-                s.IntSlice = s.IntSlice[:s.IntSlice.Len()-1]
-                return v
-            }
-
-            // 使用
-            heap := &hheap{sort.IntSlice{3, 6, 4, 1}}
-            heap.Sort()                                                 // 可以排序后pop，但就不是堆的排序了，变成线性排序了
-            n := heap.Len()
-            for i := 0; i < n; i++ {
-                fmt.Println(heap.Pop().(int))                           // 输出6431
-            }
             ```
    - expvar：提供公共变量的标准接口
 1. 文本相关
