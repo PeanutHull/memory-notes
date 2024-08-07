@@ -1233,6 +1233,30 @@
     SET siu.store_id = temp.store_id
     WHERE siu.store_id = 0 and id < 19865
     ```
+   - 找出未添加租户id(tenant_id)字段的表。
+    ```sql
+    SELECT 
+        table_name 
+    FROM
+        INFORMATION_SCHEMA.TABLES
+    WHERE table_schema = 'my'   
+        AND table_name NOT IN 
+        (SELECT 
+        t.table_name 
+        FROM
+        (SELECT 
+            table_name,
+            column_name 
+        FROM
+            information_schema.columns 
+        WHERE table_name IN 
+            (SELECT 
+            table_name 
+            FROM
+            INFORMATION_SCHEMA.TABLES 
+            WHERE table_schema = 'my')) t 
+        WHERE t.column_name = 'tenant_id') ;
+    ```
 #### 设计实践
 1. 范式
    - 认识：为了消除重复数据，更高一级的范式要求先满足下边的范式。涉及数据库理论研究
