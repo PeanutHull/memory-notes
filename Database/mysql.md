@@ -1235,6 +1235,24 @@
     ```
    - 找出未添加租户id(tenant_id)字段的表。
     ```sql
+    // 方法一
+    SELECT 
+        TABLE_NAME
+    FROM 
+        INFORMATION_SCHEMA.TABLES
+    WHERE 
+        TABLE_SCHEMA = 'your_database_name' 
+        AND TABLE_NAME NOT IN (
+            SELECT 
+                TABLE_NAME
+            FROM 
+                INFORMATION_SCHEMA.COLUMNS
+            WHERE 
+                TABLE_SCHEMA = 'your_database_name' 
+                AND COLUMN_NAME = 'tenant_id'
+        );
+
+    // 方法二
     SELECT 
         table_name 
     FROM
