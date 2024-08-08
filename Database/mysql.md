@@ -1381,7 +1381,7 @@
      1. 建表语句必须在sql审核平台审核通过，不然不予以创建，审核地址：http://app.xesv5.com/zeus
      1. MYSQL引擎默认使用InnoDB 使用其他引擎需要特别说明
      1. 字符集使用 utf8mb4 排序规则使用utf8mb4_general_ci
-     1. `id` int(11) NOT NULL AUTO_INCREMENT 作为第一个字段，且为主键，有自增属性
+     1. `id` int(10) NOT NULL AUTO_INCREMENT 作为第一个字段，且为主键，有自增属性
      1. 所有类型的字段均有NOT NULL属性，有默认值，不使用保留字（关键字），text和json两种类型因无法设置默认值，因此不需要NOT NULL属性
         - 必须有中文说明 时间类型字段的默认值遵循此类型的范围                          
           1. datetime	0001-01-01 00:00:00	9999/12/31 23:59
