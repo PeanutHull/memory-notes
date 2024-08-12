@@ -273,7 +273,7 @@
      1. 检查slice是否为空，始终使用len(s)==0，而非nil
      1. 作为函数返回值时，不应该明确返回长度为0的slice，应该返回nil代替
      1. 拷贝大切片一定比小切片代价大吗？
-        - 将一个slice变量分配给另一个变量只会复制三个字段(一个 uintptr，两个int)。所以拷贝大切片跟小切片的代价应该是一样的
+        - 将一个slice变量分配给另一个变量只会复制三个字段(一个uintptr，两个int)。所以拷贝大切片跟小切片的代价应该是一样的
      1. 字符串转成byte数组，会发生内存拷贝吗？
         - 严格来说，只要是发生类型强转都会发生内存拷贝
         - 在底层转换二者，只需要把StringHeader的地址强转成SliceHeader就行
@@ -1184,7 +1184,6 @@
             }
             // panic: interface conversion: interface {} is string, not int
             ```
-        - 递归死循环或者超出栈空间造成内存溢出
         - 写已关闭的通道，重复关闭chan
             ```go
             func main() {
@@ -1195,6 +1194,7 @@
             }
             // panic: close of nil channel
             ```
+        - 递归死循环或者超出栈空间造成内存溢出
         - 使得所有线程睡眠、或goroutine互相竞争资源造成死锁
             ```go
             func main() {

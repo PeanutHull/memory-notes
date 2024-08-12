@@ -35,7 +35,7 @@
         - `export`：系统定义所有
         - `set`：显示所有本地定义的shell变量，也可以用作修改
      1. 设置
-        - `export PATH=/php/bin:$PATH`：临时修改PATH，用:连接，用$PATH防止覆盖。仅对当前用户立即生效，关闭窗口后无效
+        - `export PATH=/php/bin:$PATH`：临时修改，用:连接，用$PATH防止覆盖。仅对当前用户立即生效，关闭窗口后无效
         - `source .bash_profile`：使生效，修改后要么重新登录要么用source
 1. 命令
    - 执行
@@ -830,6 +830,20 @@
      1. `find . -type f -exec grep -n 内容 '{}' ';' -print`：查找精确
      1. `find . | xargs grep -rin "内容"`：查找出了重复内容
    - 删除目录中的所有class文件：`find . | grep .class$ | xargs rm -rvf`
+   - 只保留当前目录最近一个月的文件
+    ```bash
+    #!/bin/bash  
+  
+    # 设置要保留的时间为一个月（以天为单位，因为find的-mtime参数是基于天的）  
+    DAYS_TO_KEEP=30  
+    
+    # 使用find命令在当前目录及其子目录下查找所有修改时间超过指定天数的文件，并删除它们  
+    # 注意：-type f 表示只查找文件，-exec rm -f {} \; 表示对每个找到的文件执行rm -f命令来删除它  
+    # 如果你不想包括子目录，可以将'.'改为'./*'并添加-maxdepth 1参数  
+    find . -type f -mtime +$DAYS_TO_KEEP -exec rm -f {} \;  
+    
+    echo "已删除所有修改时间超过$DAYS_TO_KEEP天的文件。"
+    ```
    - 把所有的rmvb文件拷贝到目录：`ls *.rmvb | xargs -n1 -i cp {} /tmp`
 1. grep
    - 显示e或a：`grep 'w[ea]ll' a.log`
