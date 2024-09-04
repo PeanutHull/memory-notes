@@ -65,23 +65,70 @@
      1. 超分辨率：模糊图变清晰
    - 操作三部曲：pix2pix、pix2pixHD、vid2vid
    - 换脸：使用UNI2I框架
-1. 产品
+1. wiki
+   - 术语
+     1. AI：人工智能 Artificial Intelligence
+     1. ML：机器学习 Machine Learning
+     1. DL：深度学习 Deep Learning
+
+     1. NN：神经网络 Neural Network
+     1. NLP：自然语言处理 Natural Language Processing
+
+     1. AGI：通用人工智能 Artificial General Intelligence，具备像人类一样全面智能的人工智能系统
+        - 能够跨领域、跨任务地发挥作用
+        - 具备学习、推理、感知、理解等多方面的能力
+        - 是人工智能研究的最终目标之一，也是科幻小说和未来研究的一个共同主题
+     1. 生成式人工智能（Generative AI）
+     
+     1. LLM：大型语言模型 Large Language Model
+     1. AIGC：人工智能生成内容、UGC、PGC(专家)
 ### LLM
 1. 认识
-   - LLM：大语言模型
-     1. 开源
-        - ChatGLM
-        - BLOOM
-        - LLaMA
-   - prompt工程师：即提示词工程师，对预训练大语言模型进行操作，并对输出结果进行调优
-   - Dify：是更简单快速创建AI应用的LLMOps平台，，支持开箱即用的聊天对话模式的web站点、后端api(组件、上下文增强)、可视化Prompt编排、数据集管理(标注、改进）、日志等，兼容OpenAI、Langchain等多种LLM
+   - LLM：大语言模型 large language model，通过海量文本训练的、能识别人类语言、执行语言类任务、拥有大量参数的模型。![](../../images/ai/llm_model.png)
+     1. 特点：不同于数据库和搜索引擎，LLM能创造性地生成历史上没有出现过的文本内容。
+     1. 缺点
+        - 最大的缺陷是幻觉严重，经常会生成无中生有的回复
+        - 训练信息更新不及时、逻辑能力差、推理速度慢
+   - 多模态LLM：除了文字能力外，还可以理解和生成图片、语音、视频
+     1. 额外的图片识别模块：GPT-4V和LLaVA
+     1. 原生多模态：GPT-4o和Gemini
+   - prompt engineering：提示词工程，对预训练大语言模型进行操作，并对输出结果进行调优。用于弥补现阶段LLM能力的不足，随着LLM的能力提升，提示词工程的作用会越来越小
+     1. 使用小模型时各种提示词方法都控制不了输出结果，换成更大更好的模型后，一句提示词就可以解决
+   - finetune：微调，补充和强化LLM。如使用中文数据集微调LLaMA 3 8B可大幅提升中文能力
+   - RAG：Retrieval Augmented Generation 检索增强生成
+     1. 主要的应用场景是企业客服系统和搜索结果结构化展示（代表作是Perplexity和秘塔）
+     1. 对数据的规范程度要求比较高，数据越规范，查询效果越好，结合树形结构或知识图谱结构的数据，RAG可以实现更好的效果
+     1. 框架：Cohere、Cognita
+   - Agent：智能体，搭配查网、查数据库等能力，可以执行任务、推理，实现一定程度的自主行动
+     1. 现阶段的Agent只能算工作流，什么时候Agent能根据用户要求直接创建好Agent，才算是真正的智能体
+        - 早期的如搜索引擎、个人助理等
+        - 现在的Agent = LLM + Planning + Memory + Tools。实现任务自动化，并且能够不断探索、规划和发展新技能
+     1. 是AGI的前奏，是实现AGI的最优方式，在大模型AI时代下，大模型应用 or AI Power+的应用就是大模型Agent，等同于移动互联时代的APP
+     1. 目前好用的Agent平台是Coze和Dify
+     1. 未来Agent将会成为真正的智能体，可以做到自主学习、自主决策、自主执行、自主学习、自主创造
+   - LLM越狱：安全机制，会拒绝回答一些问题
+1. 应用
+   - Dify：简单快速创建AI应用的LLMOps平台，支持开箱即用的聊天对话模式的web站点、后端api(组件、上下文增强)、可视化Prompt编排、数据集管理(标注、改进）、日志等，兼容OpenAI、Langchain等多种LLM
      1. 声明式YAML文件做配置
-   - 作用
      1. 将具体业务知识融合到大语言模型里
-1. langchain-ChatGLM
-   - 认识：利用ChatGLM-6B+langchain实现的基于本地知识的问答机器人，如淘宝衣服尺寸机器人
-   - 架构：![avatar](../../images/langchain-ChatGLM-struct.webp)
-1. Semantic Kernel：用于自然语言处理和信息检索的技术
+1. 项目
+   - langchain-ChatGLM
+     1. 认识：利用ChatGLM-6B + langchain实现的基于本地知识的问答机器人，如淘宝衣服尺寸机器人
+     1. 架构：![](../../images/langchain-ChatGLM-struct.webp)
+1. wiki
+   - 模型：GPT、Gemini、Copilot、Mistral、BERT、RoBERTa
+   - 国内模型：文心一言、通义、智谱清言、豆包、kimi、百小应、讯飞星火、海螺
+   - 开源模型：ChatGLM、BLOOM、LLaMA
+   - semantic kernel：用于自然语言处理和信息检索的技术。微软研发的一个开源的、面向大模型的开发框架（SDK）
+     1. 应用场景
+        - 问答系统：用户可以从可信的源文档（如公司内部文档）中提问并获得答案
+        - 聊天和会话创建：开发者可以使用Semantic Kernel构建聊天机器人，实现自动化的问答和对话功能
+        - 数据处理：包括结构化和非结构化数据的处理，如分析产品反馈情绪、分析支持电话和记录等
+        - 代码生成或转换：例如，将一种编程语言转换为另一种，为函数生成文档字符串等
+        - 新闻内容创作：用于创建新的新闻内容或重写用户提交的新闻内容，作为预定义主题的写作辅助
+   - 本地部署LLM工具个人电脑运行LLM，最大只能运行20B以下的模型，33B模型需要32G显存
+     1. 比较适合本地运行的是Phi 3 Medium（14B）、LLaMA 3 8B、Mistral 7B
+     1. 推荐以下两个客户端：Ollama； LM Studio
 ### 图像
 1. midjourney：基于Stable Diffusion网络模型开发
 1. runway gen2

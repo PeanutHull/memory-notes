@@ -223,6 +223,8 @@
 1. git branch --no--merge       查看没有合并到当前分支的分支
 
 1. git branch -m < old_name > < new_name >    重命名
+#### reflog
+1. 认识：可以展示已经执行过的所有动作的日志。包括合并、重置、还原，基本上包含你对你的分支所做的任何修改，通过重置 HEAD 来轻松地重做
 #### bisect
 1. 认识：定位故障版本
 1. git bisect 使用分治算法查找出错版本号，一个个的版本让你试，没问题就敲git bisect good

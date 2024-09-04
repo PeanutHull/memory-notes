@@ -945,8 +945,144 @@
      1. cerebro
      1. elasticsearch-head
 ### 最佳实践
-1. 修改包含了数据的索引的结构
-   - 添加新字段：直接加
+1. 两大调优方法
+   - 认识
+     1. profile使用方式
+        - Profile API
+        - 图形化Profile分析界面：会展示耗时，路劲`Dev Tools -> Search Profiler`
+     1. explain
+   - 使用
+    ```json
+    // 请求
+    GET index/_search?q=xx
+    {
+        "profile":true,             // 开启profile参数
+        "explain":true,             // 返回算分方法，es的算分按照shard进行，使用时注意分片数
+        "query" : {
+            "match" : { "message" : "GET /search" }
+        }
+    }
+
+    // 响应
+    {
+       "profile": {
+            "shards": [
+               {
+                  "id": "[q2aE02wS1R8qQFnYu6vDVQ][my-index-000001][0]", // 返回分片id，组成方式：节点名[q2aE02wS1R8qQFnYu6vDVQ] + 索引名[my-index-000001] + 分片号[0]
+                  "node_id": "q2aE02wS1R8qQFnYu6vDVQ",
+                  "shard_id": 0,
+                  "index": "my-index-000001",
+                  "cluster": "(local)",                         // 是否本地集群解析的
+                  "searches": [
+                     {
+                        "query": [...],                         // query阶段的耗时，其中包括各种query执行类、执行描述以及相关方法的执行耗时
+                        "rewrite_time": 51443,                  // 总共的rewrite耗时   
+                        "collector": [...]                      // collector阶段耗时，包括阶段名称、阶段描述和执行耗时           
+                     }
+                  ],
+                  "aggregations": [...],                        // 聚合阶段的各个执行类、执行描述以及相关方法的耗时           
+                  "fetch": {...}                                // fetch阶段的各个执行类、执行描述以及相关方法的耗时                   
+               }
+            ]
+         }
+    }
+    ```
+1. mapping属性设置
+   - 索引设置
+     1. 新建索引必须要有type（建议指定为mysql库名）和索引名index（建议指定为mysql表名）
+     1. shard分片数需要指定（建议设为机器数据节点的1.5~3倍，取8片），replication副本数需要指定（建议设为2）
+     1. 建议开启字段的store功能，方便搜索时返回字段值
+     1. 建议keyword类型的数据开启ignore_above模板
+     1. 建议关闭动态索引功能，防止脏数据破坏索引结构
+     1. 建议启动aliases别名模式。别名可以保证冷热数据的透明切换，别名的添加和删除只是操作了一个关系，不影响你的索引数据，可提高数据的健壮性
+   - 类型设置：![avatar](../images/mysql_to_es_type.png)
+1. 读性能优化
+   - 没有万金油，实战出真知：兵来将挡，水来土掩
+   - 数据模型是否符合业务模型
+     1. 因为script无法用到倒排索引，使用成本很大，需要计算的提前计算好写入字段中
+   - 数据是否过大
+   - 索引是否优化：合理的分片数和副本
+   - 查询语句是否优化
+     1. 尽量使用filter上下文，减少算分，同时有缓存机制，极大提高性能
+     1. 尽量不使用script进行计算
+     1. 结合profile、explain分析慢查询
+1. 写性能优化
+   - 认识：要增大写吞吐量 EPS(events per second)，越高越好
+   - 客户端方面：多线程写，批量写
+   - es方面：在高质量数据建模的前提下，针对refresh、translog、flush做优化
+     1. 合理设置shard数，保证shard均匀分配在所有node中，充分利用node资源
+        - `index.routing.allocation.total_shards_per_node`：设定每个node可分配的总主副分片数，实际要比可能分到的多1个，防止某个node下线，分片迁移失败
+     1. refresh：降低refresh的频率
+        - 增大refresh_interval，降低实时性，以增大每次refresh处理的文档数，默认1s
+        - 增大index buffer size，`indices.memory.index_buffer_size`，默认为10%
+     1. translog：降低translog写磁盘的频率，会降低容灾能力
+        - `index.translog.durability`设置为async，`index.translog.sync_interval`设置需要的大小
+        - `index.translog.flush_threshold_size`：默认512mb，往大调
+     1. flush：降低flush的次数，6.x后可优化不多，多为es自动完成
+     1. 主要为index级别优化
+        ```json
+        {
+            "settings": {
+                "index": {
+                    "refresh_interval": "30s",
+                    "routing": {
+                        "allocation": {
+                            "total_shards_per_node": "n"
+                        }
+                    },
+                    "translog": {
+                        "sync_interval": "30s",
+                        "durability": "async"
+                    },
+                    "number_of_replicas": "0"
+                }
+            },
+            "mappings": {
+                "xx": {
+                    "dynamic": false
+                }
+            }
+        }
+        ```
+     1. 副本设置为0，写入完毕再增加
+1. 生产环境部署
+   - 按照官网文档建议设置所有系统参数：日志、安全、系统参数(jvm option等)。静态参数(只能在yml中设置)和动态参数
+     1. cluster.name
+     1. node.name/node.master/node.data/node.ingest
+     1. network.host：指定为内网ip，外界通过代理访问，不能为0.0.0.0，否则被窃取连接不知道
+     1. discovery.zen.ping.unicast.hosts/discovery.zen.minimum_master_nodes一般为2
+     1. path.data/path.log
+     1. jvm 内存
+        - 不要超过31GB
+        - 预留一半内存给操作系统，用来做文件缓存，否则反而性能不好
+        - 具体大小根据node的数据量决定，建议搜索类比例在1:16之内，日志类在1:48~1:96。这是经验推算，具体要不断测试
+        - 如1TB数据，3个node，1个副本。每个node存储666GB即700，预留20%则为850GB，搜索类内存大小为850GB/16=53GB，超了31GB，倒推，31*16=496，至少需要5个node；日志类，850/48=18GB,3个node足够
+   - yml配置文件尽量简洁，通过api设置，因为版本迭代很多配置不支持。动态设定参数：都会覆盖elasticsearch.yml的相应配置
+    ```json
+    PUT _cluster/settings
+    {
+        "persistent" : {                // 重启不丢失
+            "xx": n
+        },
+        "transient" : {                 // 重启丢失
+            "xx": n
+        }
+    }
+    ```
+   - 优化方式：集群规划、索引配置、存储策略、索引拆分、冷热分区、段合并等几个维度优化
+     1. shard数：由于es性能是线性扩展，只要测出1个shard性能指标，单不要超过15G，日志的不超过50G，越大查询性能越低，估算总数据大小，除以单shard大小，就是分片数，测试方法如下
+        - 搭建和生产环境相同配置的单节点集群
+        - 设定一个单分片零副本的索引
+        - 写入实际生产数据进行测试，获取写指标
+        - 进行实际查询请求，获取读指标
+        - 工具可用esrally
+   - 连接
+     1. php的连接池使用静态的连接池，因为php的无共享架构，动态发现节点成本太高(每次请求来了都发现)
+        - 连接池会划分出活死节点，一旦发现不可用将其列为死节点，并设置重试检测定时器(第一次60s，失败后指数增长)，重连设置只会针对活结点
+     1. 节点选择器：连接池之上是选择器，随机选择不合理因为可能创建多个连接，采用粘性随机更合理
+### 方案
+1. 修改索引结构(已包含数据)
+   - 添加新字段/更新字段某些属性(如enabled、store、index、analyzer等)：直接加，不能改现有字段类型或删除字段
     ```
     PUT /your_index/_mapping
     {
@@ -957,6 +1093,7 @@
         }
     }
     ```
+   - 使用别名Aliases：创建新索引，其结构包含所有更改（如添加了新字段），然后将别名从旧索引切换到新索引。这允许保持查询的连续性，同时无缝地迁移到新索引结构
    - 改变字段类型或修改索引设置：需要创建新索引并迁移现有数据到新索引中
     ```
     // 定义新索引的结构
@@ -993,106 +1130,6 @@
     // 清理旧索引
     DELETE /old_index
     ```
-1. 调优
-    ```json
-    GET index/_search?q=xx
-    {
-        "profile":true,             // 返回执行信息
-        "explain":true              // 返回算分方法，es的算分按照shard进行，使用时注意分片数
-    }
-    ```
-1. 生产环境部署最佳实践
-   - 按照官网文档建议设置所有系统参数：日志、安全、系统参数(jvm option等)。静态参数(只能在yml中设置)和动态参数
-     1. cluster.name
-     1. node.name/node.master/node.data/node.ingest
-     1. network.host：指定为内网ip，外界通过代理访问，不能为0.0.0.0，否则被窃取连接不知道
-     1. discovery.zen.ping.unicast.hosts/discovery.zen.minimum_master_nodes一般为2
-     1. path.data/path.log
-     1. jvm 内存
-        - 不要超过31GB
-        - 预留一半内存给操作系统，用来做文件缓存，否则反而性能不好
-        - 具体大小根据node的数据量决定，建议搜索类比例在1:16之内，日志类在1:48~1:96。这是经验推算，具体要不断测试
-        - 如1TB数据，3个node，1个副本。每个node存储666GB即700，预留20%则为850GB，搜索类内存大小为850GB/16=53GB，超了31GB，倒推，31*16=496，至少需要5个node；日志类，850/48=18GB,3个node足够
-   - yml配置文件尽量简洁，通过api设置，因为版本迭代很多配置不支持。动态设定参数：都会覆盖elasticsearch.yml的相应配置
-    ```json
-    PUT _cluster/settings
-    {
-        "persistent" : {                // 重启不丢失
-            "xx": n
-        },
-        "transient" : {                 // 重启丢失
-            "xx": n
-        }
-    }
-    ```
-   - 优化方式：集群规划、索引配置、存储策略、索引拆分、冷热分区、段合并等几个维度优化
-     1. shard数：由于es性能是线性扩展，只要测出1个shard性能指标，单不要超过15G，日志的不超过50G，越大查询性能越低，估算总数据大小，除以单shard大小，就是分片数，测试方法如下
-        - 搭建和生产环境相同配置的单节点集群
-        - 设定一个单分片零副本的索引
-        - 写入实际生产数据进行测试，获取写指标
-        - 进行实际查询请求，获取读指标
-        - 工具可用esrally
-   - 连接
-     1. php的连接池使用静态的连接池，因为php的无共享架构，动态发现节点成本太高(每次请求来了都发现)
-        - 连接池会划分出活死节点，一旦发现不可用将其列为死节点，并设置重试检测定时器(第一次60s，失败后指数增长)，重连设置只会针对活结点
-     1. 节点选择器：连接池之上是选择器，随机选择不合理因为可能创建多个连接，采用粘性随机更合理
-1. 写性能优化：增大写吞吐量EPS，events per second，越高越好
-   - 客户端：多线程写，批量写
-   - es：高质量数据建模的前提下，在refresh、translog、flush做文章
-     1. refresh：降低refresh的频率
-        - 增大refresh_interval，降低实时性，以增大每次refresh处理的文档数，默认1s
-        - 增大index buffer size，`indices.memory.index_buffer_size`，默认为10%
-     1. translog：降低translog写磁盘的频率，会降低容灾能力
-        - `index.translog.durability`设置为async，`index.translog.sync_interval`设置需要的大小
-        - `index.translog.flush_threshold_size`：默认512mb，往大调
-     1. flush：降低flush的次数，6.x后可优化不多，多为es自动完成
-     1. 合理设置shard数，保证shard均匀分配在所有node中，充分利用node资源。`index.routing.allocation.total_shards_per_node`设定每个node可分配的总主副分片数，实际要比可能分到的多1个，防止某个node下线，分片迁移失败
-     1. 主要为index级别优化
-        ```json
-        {
-            "settings": {
-                "index": {
-                    "refresh_interval": "30s",
-                    "routing": {
-                        "allocation": {
-                            "total_shards_per_node": "n"
-                        }
-                    },
-                    "translog": {
-                        "sync_interval": "30s",
-                        "durability": "async"
-                    },
-                    "number_of_replicas": "0"
-                }
-            },
-            "mappings": {
-                "xx": {
-                    "dynamic": false
-                }
-            }
-        }
-        ```
-     1. 副本设置为0，写入完毕再增加
-1. 读性能优化
-   - 没有万金油，实战出真知：兵来将挡，水来土掩
-   - 数据模型是否符合业务模型
-     1. 因为script无法用到倒排索引，使用成本很大，需要计算的提前计算好写入字段中
-   - 数据是否过大
-   - 索引是否优化：合理的分片数和副本
-   - 查询语句是否优化
-     1. 尽量使用filter上下文，减少算分，同时有缓存机制，极大提高性能
-     1. 尽量不使用script进行计算
-     1. 结合profile、explain分析慢查询
-1. mapping设置
-   - 索引设置
-     1. 新建索引必须要有type（建议指定为mysql库名）和索引名index（建议指定为mysql表名）
-     1. shard分片数需要指定（建议设为机器数据节点的1.5~3倍，取8片），replication副本数需要指定（建议设为2）
-     1. 建议开启字段的store功能，方便搜索时返回字段值
-     1. 建议keyword类型的数据开启ignore_above模板
-     1. 建议关闭动态索引功能，防止脏数据破坏索引结构
-     1. 建议启动aliases别名模式。别名可以保证冷热数据的透明切换，别名的添加和删除只是操作了一个关系，不影响你的索引数据，可提高数据的健壮性
-   - 类型设置：![avatar](../images/mysql_to_es_type.png)
-### 成熟方案
 1. 马蜂窝binlog同步es实践
    - 方案：go-mysql-elasticsearch开源组件，binlog转入kafka，然后入es
    - 细节
