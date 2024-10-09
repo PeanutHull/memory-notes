@@ -64,7 +64,7 @@
    - 捕捉动作：Servlet2.5支持
      1. REQUEST：用户直接访问页面时调用
      1. ORWARD：转发时调用，即通过RequestDispatcher的forward访问
-     1. INCLUDE：被包含的请求时调用，即通过RequestDispatcher的include访问		
+     1. INCLUDE：被包含的请求时调用，即通过RequestDispatcher的include访问		
      1. ERROR：通过声明式异常处理机制时调用
    - Servlet3.0新功能
      1. async：支持异步处理，先返回结果，后台一直执行直到结束，开启web.xml和Filter类的异步开关，`AsyncContext context = request.startAsync();`
@@ -139,7 +139,7 @@
      1. xml标签
      1. jstl函数
 1. EL
-   - 理解：Expression Language，表达式语言，创建表达式并输出结果,用${expr}表示。和<%= %>作用相同，如`<%=session.getValue("name")%>`等于`<c:out value="${sessionScope.name}">`
+   - 理解：Expression Language，表达式语言，创建表达式并输出结果,用${expr}表示。和<%= %>作用相同，如`<%=session.getValue("name")%>`等于`<c:out value="${sessionScope.name}">`
    - 组成
      1. 操作符
         ```Java
@@ -209,7 +209,7 @@
           1. 理解：开源的管理EJB的容器和服务器，不支持Servlet/JSP，一般与Tomcat/Jetty配合使用
           1. 特点
              - JMX微内核作为总线结构
-             - 面向服务架构(SOA，Service-Oriented Architecture)
+             - 面向服务架构(SOA，Service-Oriented Architecture)：是一种以服务为基础的软件架构设计理念。它将应用程序的不同功能单元（称为服务）通过定义良好的接口和协议联系起来，以实现松耦合和高度集成的企业信息系统构建方式
              - 具有统一的类装载器，实现应用热部署和热卸载能力
              - 高度模块化和松耦合
              - 支持集群
@@ -220,7 +220,7 @@
      1. 编写RMI注册机制，并启动
      1. 客户端就可以访问了
 1. EJB
-   - 理解：JavaEE服务器端组件模型，Enterprise Java Beans，用于部署分布式应用程序，是一个逻辑概念，与传统的bean无关，就是将一个业务逻辑类放在服务器上部署，供客户端调用，依赖RMI通信，EJB3.0从早期版本已分离出来。用于部署分布式的程序，非常重量级，配置复杂，没有spring轻量，目前使用比较少。容器类框架
+   - 理解：JavaEE服务器端组件模型，Enterprise Java Beans，用于部署分布式应用程序，是一个逻辑概念，与传统的bean无关，就是将一个业务逻辑类放在服务器上部署，供客户端调用，依赖RMI通信，EJB3.0从早期版本已分离出来。用于部署分布式的程序，非常重量级，配置复杂，没有spring轻量，目前使用比较少。容器类框架
    - 关键字：服务集群、企业开发
    - 特点
      1. 数据持久化

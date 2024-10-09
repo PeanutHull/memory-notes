@@ -987,6 +987,8 @@
             document.querySelector('#remote-video').srcObject = event.stream;
         };
         ```
+   - 服务端
+     1. go实现：pion/webrtc
 1. 协议
    - ICE：Interactive Connecctivity Establishment, 交互式连接建立，不是协议是整合了STUN和TURN两种协议的框架
      1. STUN：Sesssion Traversal Utilities for NAT, NAT会话穿越应用程序，允许位于NAT（或多重NAT）后的客户端找出自己对应的公网IP地址和端口，即P2P“打洞”

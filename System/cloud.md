@@ -353,6 +353,7 @@
             ports:
                 - "19090: 9090"
     ```
+1. Rancher：docker容器管理系统
 1. wiki
    - 前端发布：k8s + skaffold + kaniko + gitops
 #### 命令操作
