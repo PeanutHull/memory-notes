@@ -356,7 +356,7 @@
 1. Rancher：docker容器管理系统
 1. wiki
    - 前端发布：k8s + skaffold + kaniko + gitops
-#### 命令操作
+#### 命令行操作
 1. 镜像操作
    - 常用
      1. docker images       # 显示所有

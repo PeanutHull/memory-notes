@@ -795,7 +795,6 @@
             for k, v := range m {
                 if k == 2 {
                     delete(m, 3)
-
                 }
 
                 fmt.Println(v)
