@@ -152,7 +152,7 @@
         - 正常状态：如果p存的是正常的数据，read和dirty会指向同一个entry
      1. 加锁：使用了doubleCheck确保无误
    - 实现
-     1. Store的过程
+     1. Store的过程 
         - 如果在read中能够key，且对应的entry中的p是正常的数据，表示key没有被删除，就直接更新entry
         - 否则，read中没有这个key，或者这个key被标记为删除，这时就加锁mu
         - 再次确认read中是否有这个可以，这里就是为了重新确认一下

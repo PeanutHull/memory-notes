@@ -1,6 +1,6 @@
 ### 算法
 1. 心得
-   - O(1)复杂度的具有获取最小值的栈问题、和 O(1)复杂度的具有获取最大值的队列问题，前者用栈不断累积最小值，pop就同时一起pop，push就比较下然后同时也push进min栈；而后者也是个栈，是push时for循环比较，小的就Push_back扔出去了，只有大的在最下边，然后小的跟了后边，pop的时候比较下，相同也是跟了后边就行
+   - O(1)复杂度的具有获取最小值的栈问题、和O(1)复杂度的具有获取最大值的队列问题，前者用栈不断累积最小值，pop就同时一起pop，push就比较下然后同时也push进min栈；而后者也是个栈，是push时for循环比较，小的就Push_back扔出去了，只有大的在最下边，然后小的跟了后边，pop的时候比较下，相同也是跟了后边就行
 1. 练功心法
    - 方面
      1. 数组、字符串
@@ -251,6 +251,54 @@
         lru.Put(1, 1)
         lru.Put(2, 2)
         fmt.Println(lru.Get(1)) // returns 1
+    }
+    ```
+1. 列车进站问题，有出站时间和入站时间，计算同时需要几个站台
+    ```go
+    type Train struct {
+        Arrival int
+        Leave   int
+    }
+
+    type arriveTrain struct {
+        currentTime int
+        arriveType  int // 0入站，1出站
+    }
+
+    // PlateformCount
+    func PlateformCount(trains []Train) (count int) {
+        // 遍历所有列车，写入时间线
+        timeline := make([]arriveTrain, 0)
+        for _, v := range trains {
+            timeline = append(timeline, arriveTrain{v.Arrival, 0})
+            timeline = append(timeline, arriveTrain{v.Leave, 1})
+        }
+
+        // 排序时间线
+        sort.Slice(timeline, func(i, j int) bool {
+            if timeline[i].currentTime == timeline[j].currentTime {
+                return timeline[i].arriveType < timeline[j].arriveType
+            }
+
+            return timeline[i].currentTime < timeline[j].currentTime
+        })
+
+        // 统计平台数
+        currentNum := 0
+        maxNum := 0
+        for _, v := range timeline {
+            if v.arriveType == 0 {
+                currentNum++
+            } else {
+                currentNum--
+            }
+
+            if currentNum > maxNum {
+                maxNum = currentNum
+            }
+        }
+
+        return maxNum
     }
     ```
 1. 大顶堆

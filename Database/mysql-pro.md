@@ -62,13 +62,13 @@
      1. 日志文件
         - ib_logfileN：重做日志文件
    - 日志
-     1. binlog：二进制日志，记录所有更改数据的语句，可用于复制，事务提交前只写一次
-     1. relaylog：中继日志，从接收的主的日志
-
      1. slowlog：慢查询日志，执行时间超过long_query_time的查询或不使用索引的查询
      1. errorlog：错误日志，启动、运行、停止遇到的问题，平时要关注，并进行数据库优化
      1. general log：通用查询日志，客户端连接和执行的语句
-     1. 引擎日志
+
+     1. redolog/undolog
+     1. binlog：二进制日志，记录所有更改数据的语句，可用于复制，事务提交前只写一次
+     1. relaylog：中继日志，从接收的主的日志
    - 系统文件目录
      1. --basedir = /usr
      1. --datadir = /var/lib/mysql，`show global variables like "%datadir%";`
