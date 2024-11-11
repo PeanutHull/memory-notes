@@ -94,18 +94,22 @@
         - 内核态和用户态的切换，很大的浪费
      1. php7内存接口
 1. 垃圾回收
-   - 认识：解决引用回收的缺陷，因为只记录了次数，没有记录引用的地址
-     1. 引用计数
-     1. 循环引用
-   - 四色法
+   - v5.3：循环引用计数法，解决了循环引用的回收问题，之前因为只记录了次数，没有记录引用的地址，这次解决了
+     1. 循环引用：导致其引用计数始终大于零，即使这些变量已不再被外部代码使用
+   - v7.x：优化的引用计数法，四色法
      1. 标成紫色放到垃圾桶（默认10000），标记后不会再次放入
      1. 垃圾桶满时，触发回收，触发gc
      1. 遍历垃圾桶，标记为灰色，同时引用计数减1
      1. 再一次遍历，都是0的标记为白色，回收，大于0的标记为黑色返回
+   - 步骤
+     1. 根缓冲区：存储变量的引用计数
+     1. 垃圾检测：
+        - 当根缓冲区达到一定大小（默认为 10000个变量）时，会启动垃圾检测过程
+     1. 垃圾回收：垃圾检测完成后释放所有被标记为垃圾的变量占用的内存，同时将其引用计数重零
 1. 生命周期
    - 认识：记录下，每个生命周期的异同，都完成了哪些
 1. 代码解析
-   - 认识：是实时编译的，最终会生成opcode。之前是直接生成opcode，php7后新增词法分析先生成ast，再生成opcode
+   - 认识：是实时编译的，最终会生成opcode。之前是直接生成opcode，php7后新增词法分析先生成抽象语法树ast，再生成opcode
    - 过程
      1. 词法分析
         - 认识：将代码看作长字符串，用正则匹配，找出所有的词块(token)，用zval存储，如变量、表达式、函数等类型，后缀.l
@@ -278,7 +282,11 @@ ipv4的udp一次最多发64k，dgram最大2M
    - 使用GCC 4.8以上进行编译
    - 开启HugePage （根据系统内存决定）：操作系统默认的内存是以4KB分页的，而虚拟地址和内存地址需要转换，而这个转换要查表，CPU为了加速这个查表过程会内建TLB(Translation Lookaside Buffer)。 显然，如果虚拟页越小，表里的条目数也就越多，而TLB大小是有限的，条目数越多TLB的Cache Miss也就会越高，所以如果我们能启用大内存页就能间接降低这个TLB Cache Miss。php将采用大内存页来保存，减少TLB miss，提高性能
    - PGO：Profile Guided Optimization，第一次编译成功后，用项目代码去训练PHP，会产生一些profile信息，最后根据这些信息第二次gcc编译PHP就可以得到量身定做的PHP7
-1. php7性能优化：使用Zend Engine 3.0，ZEND引擎升级到Zend Engine 3，也就是所谓的PHP NG，重写了ZendVM
+1. php7性能优化：重写了ZendVM升级到Zend Engine3，即PHP NG
+   - AST：Abstract Syntax Tree, 抽象语法树，在编译过程中作为中间件，替换原来直接从解释器吐出opcode的方式，让解释器(parser)和编译器(compliler)解耦, 可以减少一些Hack代码, 同时, 让实现更容易理解和可维护
+     1. PHP5 : PHP代码 -> Parser语法解析 -> OPCODE -> 执行
+     1. PHP7 : PHP代码 -> Parser语法解析 -> AST -> OPCODE -> 执行
+   - 数组php5的底层是HashTable实现的，php7使用了新的Zend Array类型，性能和访问速度上都有了大幅度提升
    - 标量类型声明：为了v7.1的jit特性做准备，因为jit有了准确的变量类型，可以生成最佳的机器指令
    - zval使用栈内存：ZVAL结构的重构，一个php变量就是一个zval指针，之前是动态从堆上分配，php7直接使用栈内存
    - zend_string存储hash值，array查询不再需要重复计算hash
@@ -286,8 +294,4 @@ ipv4的udp一次最多发64k，dgram最大2M
    - zend_parse_parameters改为宏实现，性能提升5%
    - 新增4种opcode，call_user_function，defined等函数变为OpCode指令，速度更快
    - int、float改为直接进行值拷贝
-   - AST：Abstract Syntax Tree, 抽象语法树，在编译过程中作为中间件，替换原来直接从解释器吐出opcode的方式，让解释器(parser)和编译器(compliler)解耦, 可以减少一些Hack代码, 同时, 让实现更容易理解和可维护
-     1. PHP5 : PHP代码 -> Parser语法解析 -> OPCODE -> 执行
-     1. PHP7 : PHP代码 -> Parser语法解析 -> AST -> OPCODE -> 执行
-   - 数组php5的底层是HashTable实现的，php7使用了新的Zend Array类型，性能和访问速度上都有了大幅度提升
    - https://www.csdn.net/article/2015-09-16/2825720   

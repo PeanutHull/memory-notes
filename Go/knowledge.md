@@ -39,7 +39,7 @@
         - 方法有：路由分组Group()、http方法POST()等
         - 添加路由：`Engine.addRoute()`
         - 路由匹配：使用julienschmidt/httprouter
-     1. context
+     1. Context
    - validator
      1. 功能：`json:"type" binding:"required,oneof=1 2"`
         - 自定义约束

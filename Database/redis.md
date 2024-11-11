@@ -822,7 +822,7 @@
         - 适合读多写少，弱一致的场景
           1. 缓存和db数据不一致的情况：更新完db没来得及删缓存时
         - 第一次读取会穿透：大数据量时要有提前预热机制，预热缓存过期时间应该为范围随机
-   - 穿透类型：缓存和db同等
+   - 穿透缓存：缓存和db同等
      1. 读 read through：和cache-aside一样
      1. 写
         - write through：这里需要抢写锁，读的时候抢读锁，并且读锁要考虑没有写锁才能执行，先查询缓存是否存在，不存在，直接写db；存在，先更新缓存，然后更新db
@@ -873,13 +873,125 @@
 1. cpu对redis影响的优化措施
    - 将redis执行绑定到固定核上运行，降低context switch对性能的波动，但是导致子进程、后台线程和主线程竞争cpu导致主阻塞，可以绑定物理核(逻辑核会竞争)或改源码
 #### 应用场景
-1. string的内存利用率不高：存储1亿条长度分别为8byte的id键值对，6.4G占用有4.8G都是元数据，可以采用hash存储来节省内存。方法是把key的前7位作为Hash的键，把key的后3位和value分别作为hash类型值中的 key和value(这么做是为了尽量使用ziplist类型的hash，更加高效)，这样多一条id键值对，只多16byte，大大节省内存
+1. string的内存利用率不高：存储1亿条长度分别为8byte的id键值对，6.4G占用有4.8G都是元数据，可以采用hash存储来节省内存。方法是把key的前7位作为Hash的键，把key的后3位和value分别作为hash类型值中的key和value(这么做是为了尽量使用ziplist类型的hash，更加高效)，这样多一条id键值对，只多16byte，大大节省内存
 1. zset做简单的lru
    - 认识：可以简单实现，性能不是非常高
    - 实现方式
-     1. 添加/更新：`ZADD mylru <timestamp> "element"`
-     1. 移除最老的元素，需要定期判断执行：`zremrangebyrank mylru 0 0`，这条命令会移除有序集合中分数最低的元素
-     1. 获取所有：`zrangebyscore key -inf +inf`
+     1. zset+hash：即用hash判断，然后调整list元素的位置
+        ```go
+        type LRUCache struct {
+            client  *redis.Client
+            cap     int
+            cache   string
+            timeset string
+        }
+
+        func NewLRUCache(client *redis.Client, cap int) *LRUCache {
+            return &LRUCache{
+                client:  client,
+                cap:     cap,
+                cache:   cacheKey,
+                timeset: timestampKey,
+            }
+        }
+
+        func (l *LRUCache) Put(key, value string) {
+            currentTime := time.Now().UnixNano()
+
+            // 更新哈希表中的值
+            err := l.client.HSet(ctx, l.cache, key, value).Err()
+            if err != nil {
+                fmt.Println("Error setting hash value:", err)
+                return
+            }
+
+            // 更新有序集合中的分数
+            err = l.client.ZAdd(ctx, l.timeset, &redis.Z{Score: float64(currentTime), Member: key}).Err()
+            if err != nil {
+                fmt.Println("Error adding to sorted set:", err)
+                return
+            }
+
+            // 检查缓存是否超过容量限制
+            count, _ := l.client.ZCard(ctx, l.timeset).Result()
+            if count > int64(l.cap) {
+                // 获取并移除最久未使用的键
+                oldest, _ := l.client.ZRangeWithScores(ctx, l.timeset, 0, 0).Result()
+                if len(oldest) > 0 {
+                    oldestKey := oldest[0].Member.(string)
+                    l.client.HDel(ctx, l.cache, oldestKey)
+                    l.client.ZRem(ctx, l.timeset, oldestKey)
+                }
+            }
+        }
+
+        func (l *LRUCache) Get(key string) string {
+            // 获取哈希表中的值
+            value, err := l.client.HGet(ctx, l.cache, key).Result()
+            if err != nil {
+                if err == redis.Nil {
+                    return "" // 键不存在
+                }
+                fmt.Println("Error getting hash value:", err)
+                return ""
+            }
+
+            // 更新有序集合中的分数
+            currentTime := time.Now().UnixNano()
+            err = l.client.ZAdd(ctx, l.timeset, &redis.Z{Score: float64(currentTime), Member: key}).Err()
+            if err != nil {
+                fmt.Println("Error updating sorted set:", err)
+                return ""
+            }
+
+            return value
+        }
+        ```
+     1. zset：
+        ```go
+        func initRedis() {
+            rdb = redis.NewClient(&redis.Options{
+                Addr:     "localhost:6379",
+                Password: "", // no password set
+                DB:       0,  // use default DB
+            })
+        }
+
+        func insert(key string) {
+            // 获取当前时间戳
+            now := time.Now().UnixMilli()
+
+            // 检查缓存是否已满
+            count, _ := rdb.ZCard(ctx, cacheKey).Result()
+            if count >= int64(capacity) {
+                // 获取并移除最久未使用的项
+                oldest, _ := rdb.ZRangeWithScores(ctx, cacheKey, 0, 0).Result()
+                if len(oldest) > 0 {
+                    rdb.ZRem(ctx, cacheKey, oldest[0].Member)
+                }
+                // 以上是否能用`zremrangebyrank mylru 0 0`来代替？这条命令会移除有序集合中分数最低的元素
+            }
+
+            // 插入新项
+            rdb.ZAdd(ctx, cacheKey, &redis.Z{
+                Score:  float64(now),
+                Member: key,
+            })
+        }
+
+        func access(key string) {
+            // 检查项是否存在
+            exists, _ := rdb.ZScore(ctx, cacheKey, key).Result()
+            if exists != 0 {
+                // 更新时间戳
+                now := time.Now().UnixMilli()
+                rdb.ZAdd(ctx, cacheKey, &redis.Z{
+                    Score:  float64(now),
+                    Member: key,
+                })
+            }
+        }
+        ```
 #### 性能和服务治理
 1. 性能监控
    - 连接数
