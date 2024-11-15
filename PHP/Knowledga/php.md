@@ -681,8 +681,8 @@
      1. composer.lock提交到代码库，利用lock文件确认深层次依赖中每一个的版本号，命令` composer install -vvv --no-dev --ignore-platform-reqs --no-interaction --optimize-autoloader`
 ### 测试与性能
 1. 代码调试
-   - xdebug
-   - tideways
+   - xdebug：本地调试
+   - tideways：性能分析工具，给php.ini添加配置，后台自动收集，还配置了web界面。提供函数调用次数、执行时间、内存使用等信息
    - xhprof
      1. 认识：php的层次性能分析工具，查看资源占用和各个调用的耗时，搭配graphviz图显示更直接，还有xhGui。facebook开源，性能开销低，可用在生产活动中
         - graphviz：开源的图形可视化软件，以简单的文本语言获取图形的描述，应用于网页、svg、pdf、postscript中，有颜色，字体，表格节点布局，线条样式，超链接和自定义形状的选项
