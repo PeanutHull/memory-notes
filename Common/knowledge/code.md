@@ -1004,6 +1004,97 @@
     ```
 1. 注册树模式
    - 意图：全局共享/交换对象
+### 软件设计模式
+1. IoC和DI
+   - 认识
+     1. 作用：降低代码之间耦合度、提高灵活性和可维护性、易于扩展
+     1. ioc从容器的角度，di从应用程序的角度，ioc是目的，di是手段。是同一件不同层面的解读
+   - DI：依赖注入，用于实现控制反转。在这种模式下一个对象的依赖项（即其使用的其他对象）不是由对象自己创建，而是在其运行期间由外部实体（如容器或框架）提供给它。这种方式允许对象专注于其核心职责，而不必关心其依赖项的创建和管理
+     1. 常见实现方式有构造器参数、setter方法注入
+   - IoC：Inversion of Control，控制反转，用于降低计算机程序各个模块之间的耦合。应用程序中的组件不再负责其依赖项的创建和管理，而是将这些职责交给外部容器或框架来处理。这样组件之间的耦合度降低，系统的可维护性和可扩展性得到提高
+     1. 为解决多个类之间的依赖
+     1. 将一个对象的依赖关系从硬编码中解耦出来，并将其交由外部的容器来管理。这个容器会负责创建和查找对象，并将它们注入到需要它们的对象中
+     1. 降低了代码的复杂性，使得代码更易于理解和测试。同时，它也使得代码的模块化程度更高，可以更方便地进行替换和扩展
+1. 简单举例
+   - 工厂模式和依赖：类所依赖的外部事物的实例都可以被一、多个工厂创建的开发模式即"工厂模式"
+        ```
+        class SuperModuleFactory {                                          // 工厂方法，创建超人技能模块
+            public function makeModule($moduleName) {
+                switch ($moduleName) {
+                    case 'Fight': 
+                        return new Fight();
+                    case 'Shot': 
+                        return new Shot();
+                }
+            }
+        }
+        class Superman {                                                    // 超人类
+            protected $power;
+
+            public function __construct(array $modules) {
+                $factory = new SuperModuleFactory;                          // 初始化工厂
+
+                foreach ($modules as $moduleName) {                         // 通过工厂提供的方法制造需要的模块
+                    $this->power[] = $factory->makeModule($moduleName);
+                }
+            }
+        }
+        // 结果：轻松实例化不同超人，扩展的话增加或修改工厂方法即可        
+        ```
+   - 依赖注入：工厂模式的问题，只是由对多个外部类的依赖变成了对一个"工厂"的依赖。有了统一的接口实现(契约)，就可以动态注入依赖
+        ```
+        interface SuperModuleInterface {
+            public function activate();
+        }
+        class Superman {
+            protected $module;
+
+            public function __construct(SuperModuleInterface $module) {
+                $this->module = $module;
+            }
+        }
+        // 依赖注入典型示例
+        $superModule = new XPower;                                          // 实例化技能模块
+        $superMan = new Superman($superModule);                             // 注入技能模块依赖
+        ```
+   - IoC容器：工厂模式的升华，向工厂提交一个脚本，工厂通过指令自动化生产
+        ```
+        class Container {                                                   // 容器
+            protected $binds;
+            protected $instances;
+
+            public function bind($abstract, $concrete) {
+                if ($concrete instanceof Closure) {
+                    $this->binds[$abstract] = $concrete;
+                } else {
+                    $this->instances[$abstract] = $concrete;
+                }
+            }
+            public function make($abstract, $parameters) {
+                if (isset($this->instances[$abstract])) {
+                    return $this->instances[$abstract];
+                }
+                array_unshift($parameters, $this);
+
+                return call_user_func_array($this->binds[$abstract], $parameters);
+            }
+        }
+        $container = new Container;
+        $container->bind('superman', function($container, $moduleName) {    // 添加超人生产脚本
+            return new Superman($container->make($moduleName));
+        });
+        // 添加超能力模组的生产脚本
+        $container->bind('xpower', function($container) {
+            return new XPower;
+        });
+        // 开始启动生产
+        $superman_1 = $container->make('superman', 'xpower');
+        $superman_2 = $container->make('superman', 'ultrabomb');
+        // 结果：解决了类和外部类的依赖关系，容器类也没有和外部类有依赖。通过注册/绑定的方式向容器中添加可被执行的回调(匿名函数、函数、类的方法)作为类的实例的脚本，只有生产时才触发。真正的IoC容器会根据类的需求，自动注册/绑定符合需求的依赖，自动注入到构造函数中去，通过反射
+        ```
+   - 关键词：控制反转, 依赖注入, 工厂模式, 契约, IoC容器, 服务容器, 服务提供者，反射
+1. AOP：面向切面编程，剖开封装的对象内部，并将影响多个类的公共行为封装到一个模块。旨在通过将应用程序中的横切关注点从业务逻辑中分离出来，提高代码的可重用性和可维护性。是OOP（面向对象编程）的延续
+   - 比如公共依赖的db、log等组件
 ### wiki
 1. GDB
    - 认识：The GNU Project Debugger，即GDB调试器(鱼)，可监控程序的执行流程。诞生于GUN计划，同时的还有GCC、Emacs等

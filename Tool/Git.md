@@ -292,17 +292,17 @@
    - --system 系统级
    - --global 用户全局
    - --local 单独一个项目
-1. 别名：git config --global alias.c 'commit -m'
+1. 别名：git config --global alias.cm 'commit -m'
     ```conf
-    alias.ll=pull
-    alias.s=status
-    alias.d=diff
-    alias.a=add -A
-    alias.cm=commit -m
-    alias.po=push origin
-    alias.ch=checkout
-    alias.br=branch
-    alias.rs=restore --staged
+        ll = pull
+        s = status
+        d = diff
+        a = add -A
+        cm = commit -m
+        po = push origin
+        ch = checkout
+        br = branch
+        rs = restore --staged
     ```
 1. 列举所有配置：git config -l
 1. 编辑：git config --global --edit

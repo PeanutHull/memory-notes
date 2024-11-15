@@ -1,217 +1,3 @@
-### 命名空间、文件载入
-1. 命名空间：解决重名，v5.3引入
-   - 全局空间：没有声明命名空间的默认空间，使用\表示使用全局空间
-   - 命名空间
-     1. namespace：声明命名空间，在所有代码之前
-        ```php
-        namespace foo\bar;                                  // 子命名空间定义
-        namespace foo\bar1{ // php代码 }                     // 另一种命名空间定义语法，可支持一个文件多个命名空间
-        ```
-     1. use：导入类，v5.6支持导入函数和常量
-        ```php
-        use foo\bar as Another;                             // 声明别名，可一行引入多个
-        use function foo\bar\functionName as func;
-        use const Mfooy\bar\CONSTANT;
-        ```
-     1. 作用范围：使用和定义时默认使用当前空间
-     1. 使用
-        ```php
-        namespace foo;
-        use My\Full\Classname as Another;
-        new namespace\Another;                              // 实例化 foo\Another 对象
-
-        new __NAMESPACE__ . '\\' . $classname;              // 动态创建名称
-        ```
-1. 文件载入
-   - 普通
-     1. 理解：once确保文件只被包含一次，避免函数重定义、变量重新赋值
-     1. 分类
-        - include()/include_once()：运行前引入、运行次数越多效率越高，出错产生警告
-        - require()/require_once()：用到才引入，出错抛出错误并终止脚本
-     1. 查找逻辑：找到即终止
-        - 如果给出路径按照路径查找
-        - 从include_path查找(include_path就是一个在php.ini中配置的，也可以用set_include_path()配置的用于载入文件的路径，path分隔符使用系统的)
-        - 从调用脚本目录(getcwd())和当前工作目录(__FILE__)查找
-   - __autoload
-     1. 理解：当需要使用的类没有被引入时，会在php报错前被触发，未定义的类名会被当作参数传入，这样就不用一个个的文件去require了，v7.2废弃
-    ```php
-    function __autoload($classname) {
-        require_once $classname . '.class.php';
-    }
-    $obj = new MyClass();                                       // MyClass类不存在时，自动调用__autoload()函数并传入参数”MyClass”
-    ```
-   - spl方式
-     1. 理解：使载入逻辑更加清晰，分离autoload的载入逻辑，重载spl函数即可。spl_autoload_register功能就是把传入的函数(函数或者回调函数)注册到spl的autoload函数队列中，并移除默认的autoload函数。当调用未定义类时，系统按顺序调用注册到register的所有函数，而不是只能载入一次
-     1. 使用spl载入文件
-        ```php
-        // 默认sql载入
-        spl_autoload_extensions('.class.php', '.php');              // 设置自动载入文件的后缀，有前后顺序
-        set_include_path(get_include_path() . PATH_SEPARATOR);      // 设置自动载入文件的目录，多个目录用PATH_SEPARATOR分割
-        spl_autoload_register();                                    // 注册
-        new Test();                                                 // 使用
-        // 使用自定义函数载入
-        function classLoader($className) {
-            set_include_path('libs');
-            spl_autoload($className);                               // sql方式
-            // require_once('libs' . $className . '.php');          // 或者使用普通方式
-        }
-        spl_autoload_register('classLoader');
-        new Test();
-        ```
-### Trait
-1. 理解：特质,是一种为类似PHP的单继承语言而准备的代码复用机制，使开发人员能够自由地在不同层次结构的独立的类中复用方法集。来避免传统多继承和混入类（Mixin）相关的典型问题，就是先定义trait，用use给类插入代码，代码复用，属于类与对象，v5.4
-    ```php
-    class Base {
-        public function sayHello () {
-            echo 'Hello ' ;
-        }
-    }
-    trait SayWorld {
-        public function sayHello () {
-            parent::sayHello();
-            echo 'World!';
-        }
-    }
-    class MyHelloWorld extends Base {
-        use SayWorld;
-    }
-    $o = new MyHelloWorld();
-    $o->sayHello ();                        // 输出Hello World!
-    ```
-### Reflection
-1. 理解：反射，是在php运行过程中分析php程序，提取类/对象/方法/属性/参数/注释等信息。获取信息和调用对象的方法叫做反射api，是php内建的oop扩展
-1. 分类
-   - 反射api：非常强大，任何信息都可以获取
-    ```php
-    $class = new ReflectionClass('Person');                                     // 建立Person类的反射类
-    $instance  = $class->newInstanceArgs($args);                                // 实例化Person类
-    $properties = $class->getProperties(ReflectionProperty::IS_PUBLIC);         // 获取公共属性
-    $ec=$class->getmethod();                                                    // 获得方法
-    $ec->invoke($instance);                                                     // 执行方法  
-    ```
-   - 函数
-     1. 判断啊
-        - interface_exist/trait_exists...
-        - class_exists/is_subclass_of/instanceof...
-        - property_exists/method_exists...
-        - is_null/is_int/is_string...
-     1. 获取
-        - get_class/get_class_methods
-        - get_defined_functions/get_defined_vars/get_called_class/get_declared_interfaces/func_get_args
-     1. 使用
-        - call_user_func/forward_static_call
-### 协程
-1. 理解：协作式的用户态"线程"，任务调度器，在用户程序中实现了协作式任务调度，是在同一进程或线程中运行多个任务，将任务切换的部分工作从内核转移到应用层
-   - php的协程是generator，是stackless协程，需要自己实现调度逻辑。是比js的async/await还要不方便的特性，go是stackfull协程。运行时自动调度，完全是用同步的方式来实现异步效果
-   - async/await和yielf from原理一样，只是方便理解、代码更简洁，php没有async、await
-1. 特点
-   - 以写同步代码的方式写出异步代码般的效率
-   - 进程调度可以很好的控制资源分配，线程调度让进程内部不因某个操作阻塞而整体阻塞。协程则是在用户态来优化程序，让程序员以写同步代码的方式写出异步代码般的效率
-   - 为应用层实现多任务提供了工具
-   - 协程不允许多任务同时执行，非抢占式多任务处理，由协程主动交出控制权
-   - 协程需要自己写任务管理器，以及任务调度器
-   - 减轻了OS处理零散任务和轻量级任务的负担
-1. 优势
-   - 内存消耗小：线程8m的内存申请量，协程2k
-   - 上下文切换快：不经过内核
-1. php7：迭代器，可以有一个最终返回值，也可以通过yield from的新语法进入一个另外一个生成器中。生成器的两个新特性（return 和 yield from）可以组合
-1. 实现：v5.5加入，使用迭代生成器和yield关键字
-    ```php
-    function gen(){
-        echo "hello gen".PHP_EOL;
-        $ret = (yield "gen1");
-        var_dump($ret);
-        $ret = (yield "gen2");
-        var_dump($ret);
-    }
-    $myGen = gen();                         // 使用
-    var_dump($myGen->current());
-    var_dump($myGen->send("main send"));
-    ```
-1. 实现生产者、消费者自协调
-   - 生产者通过调度生成器去调节消费者的启动时机，消费者执行完了再去启动生产者，二者用send通信
-1. 生成器协程
-   - 认识：将生成器封装成生成器协程，然后用生成器协调调度器调度
-   - 组成
-     1. 生成器协程：用生成器协程适配器
-     1. 事件循环协程
-     1. 协程调度器
-   - 特点
-     1. 生成器和列表内存模型怎么不一样
-     1. 可以大幅降低内存使用，并且性能更好，列表是线性增长，生成器只有自身的内存
-     1. 生成器可以实现延时计算，这个延时指的是一直就没停，只是切出去了，和函数不一样，函数执行一次就完事了，没有延时的概念，就是
-        ```
-        while true
-            aa = yield
-        ```
-        然后外边不时的send一下，就算延时了
-     1. yield在函数里会把函数变为生成器type(func())，须加()，yield表现就是切出，“暂停”
-     1. yield from可以在一个生成器里迭代另一个生成器，就可以切换到别的生成器迭代了
-     1. next控制生成器进入下一个，next可以激活生成器，或者用send(None)激活
-     1. send是给生成器送参数，aa = yield，那么send后就是aa的值
-     1. StopIteration异常，表示生成器已经结束，可以用try捕获
-     1. 装饰器：统一的行为放里边，简化函数，如@coroutine
-   - 步骤：通过装饰器将生成器交给调度器运行
-     1. 将socket封装一下，变成普通的io，用协程调度
-1. 事件驱动协程调度器
-### PSR
-1. 解释：PHP Standards Recommendation，php推荐标准，是PHP-FIG组织制定的php推荐书写标准
-1. 分类
-    - PSR-1：基本的代码风格
-        1. 标签   php代码必须在<?php ?>中
-        1. 编码   必须使用utf8，不能有字节顺序标记(BOM Byte Order Mark)
-        1. 常量   全部大写，可用下划线
-        1. 类名   必须驼峰
-        1. 方法名 小写开头+驼峰
-        1. 加载   命名空间和类必须遵守psr-4自动加载器标准
-        1. 目的   一个php文件，要么定义符号，要么执行操作，不能同时做
-    - PSR-2：严格的代码风格
-        1. 贯彻   首先遵守psr-1
-        1. 缩进   四个空格
-        1. 文件和代码行、关键字、命名空间、类、方法、可见性、控制结构
-    - PSR-3：日志记录器接口，不是指导，是一个接口
-    - PSR-4：自动加载，命名空间前缀和文件系统的目录对应起来，代替PSR-0(已弃用)
-    - PSR-7：http通信标准
-1. 注释书写参考
-   - @access
-   - @param  string|array
-   - @static
-   - @return  void|
-   - @desc
-   - @example
-   - @version
-### SPL
-1. 理解：Standard PHP Library，PHP标准库，用于解决典型问题的一组接口和类的集合
-1. 数据结构：对应数据的存储结构，数据的存储和操作
-   - 双向链表：SplQueue
-   - 堆：SplStack
-   - 阵列：SplFixedArray
-   - 映射：SplObjectStorage
-1. 迭代器：以不同的方式来遍历操作的对象，提供了对应数据类型的迭代器。虽然更多的代码，但是高度重用且可测试，都可以尝试下spl的迭代器，或许能改变你编写传统代码的习惯
-    ```php
-    class RecursiveFileFilterIterator extends FilterIterator {
-
-        // 满足条件的扩展名
-        protected $ext = array('jpg','gif');
-        // 提供 $path 并生成对应的目录迭代器
-        public function __construct($path) {
-            parent::__construct(new RecursiveIteratorIterator(new RecursiveDirectoryIterator($path)));
-        }
-        // 检查文件扩展名是否满足条件
-        public function accept() {
-            $item = $this->getInnerIterator();
-            if ($item->isFile() && in_array(pathinfo($item->getFilename(), PATHINFO_EXTENSION), $this->ext)) {
-                return TRUE;
-            }
-        }
-    }
-
-    // 实例化
-    foreach (new RecursiveFileFilterIterator('/path/to/something') as $item) {
-        echo $item . PHP_EOL;
-    }
-    ```
-1. 其他spl函数：文件处理、接口、异常、类和接口
 ### Opcache
 1. 认识：将opcode存储到共享内存中来提升性能，省去了每次加载和解析php脚本的开销，同时还应用了一些代码优化模式使之更快。还有WinCache
 1. 方法
@@ -338,6 +124,118 @@
      1. 上桩：继承类并覆盖方法、值，模拟数据对象
    - 代码覆盖算法：大致上对比准确性：路径覆盖 > 条件覆盖 ~= 判定覆盖 > 语句覆盖
    - 其他框架：JUnit
+### 协程
+1. 理解：协作式的用户态"线程"，任务调度器，在用户程序中实现了协作式任务调度，是在同一进程或线程中运行多个任务，将任务切换的部分工作从内核转移到应用层
+   - php的协程是generator，是stackless协程，需要自己实现调度逻辑。是比js的async/await还要不方便的特性，go是stackfull协程。运行时自动调度，完全是用同步的方式来实现异步效果
+   - async/await和yielf from原理一样，只是方便理解、代码更简洁，php没有async、await
+1. 特点
+   - 以写同步代码的方式写出异步代码般的效率
+   - 进程调度可以很好的控制资源分配，线程调度让进程内部不因某个操作阻塞而整体阻塞。协程则是在用户态来优化程序，让程序员以写同步代码的方式写出异步代码般的效率
+   - 为应用层实现多任务提供了工具
+   - 协程不允许多任务同时执行，非抢占式多任务处理，由协程主动交出控制权
+   - 协程需要自己写任务管理器，以及任务调度器
+   - 减轻了OS处理零散任务和轻量级任务的负担
+1. 优势
+   - 内存消耗小：线程8m的内存申请量，协程2k
+   - 上下文切换快：不经过内核
+1. php7：迭代器，可以有一个最终返回值，也可以通过yield from的新语法进入一个另外一个生成器中。生成器的两个新特性（return 和 yield from）可以组合
+1. 实现：v5.5加入，使用迭代生成器和yield关键字
+    ```php
+    function gen(){
+        echo "hello gen".PHP_EOL;
+        $ret = (yield "gen1");
+        var_dump($ret);
+        $ret = (yield "gen2");
+        var_dump($ret);
+    }
+    $myGen = gen();                         // 使用
+    var_dump($myGen->current());
+    var_dump($myGen->send("main send"));
+    ```
+1. 实现生产者、消费者自协调
+   - 生产者通过调度生成器去调节消费者的启动时机，消费者执行完了再去启动生产者，二者用send通信
+1. 生成器协程
+   - 认识：将生成器封装成生成器协程，然后用生成器协调调度器调度
+   - 组成
+     1. 生成器协程：用生成器协程适配器
+     1. 事件循环协程
+     1. 协程调度器
+   - 特点
+     1. 生成器和列表内存模型怎么不一样
+     1. 可以大幅降低内存使用，并且性能更好，列表是线性增长，生成器只有自身的内存
+     1. 生成器可以实现延时计算，这个延时指的是一直就没停，只是切出去了，和函数不一样，函数执行一次就完事了，没有延时的概念，就是
+        ```
+        while true
+            aa = yield
+        ```
+        然后外边不时的send一下，就算延时了
+     1. yield在函数里会把函数变为生成器type(func())，须加()，yield表现就是切出，“暂停”
+     1. yield from可以在一个生成器里迭代另一个生成器，就可以切换到别的生成器迭代了
+     1. next控制生成器进入下一个，next可以激活生成器，或者用send(None)激活
+     1. send是给生成器送参数，aa = yield，那么send后就是aa的值
+     1. StopIteration异常，表示生成器已经结束，可以用try捕获
+     1. 装饰器：统一的行为放里边，简化函数，如@coroutine
+   - 步骤：通过装饰器将生成器交给调度器运行
+     1. 将socket封装一下，变成普通的io，用协程调度
+1. 事件驱动协程调度器
+### PSR
+1. 解释：PHP Standards Recommendation，php推荐标准，是PHP-FIG组织制定的php推荐书写标准
+1. 分类
+    - PSR-1：基本的代码风格
+        1. 标签   php代码必须在<?php ?>中
+        1. 编码   必须使用utf8，不能有字节顺序标记(BOM Byte Order Mark)
+        1. 常量   全部大写，可用下划线
+        1. 类名   必须驼峰
+        1. 方法名 小写开头+驼峰
+        1. 加载   命名空间和类必须遵守psr-4自动加载器标准
+        1. 目的   一个php文件，要么定义符号，要么执行操作，不能同时做
+    - PSR-2：严格的代码风格
+        1. 贯彻   首先遵守psr-1
+        1. 缩进   四个空格
+        1. 文件和代码行、关键字、命名空间、类、方法、可见性、控制结构
+    - PSR-3：日志记录器接口，不是指导，是一个接口
+    - PSR-4：自动加载，命名空间前缀和文件系统的目录对应起来，代替PSR-0(已弃用)
+    - PSR-7：http通信标准
+1. 注释书写参考
+   - @access
+   - @param  string|array
+   - @static
+   - @return  void|
+   - @desc
+   - @example
+   - @version
+### SPL
+1. 理解：Standard PHP Library，PHP标准库，用于解决典型问题的一组接口和类的集合
+1. 数据结构：对应数据的存储结构，数据的存储和操作
+   - 双向链表：SplQueue
+   - 堆：SplStack
+   - 阵列：SplFixedArray
+   - 映射：SplObjectStorage
+1. 迭代器：以不同的方式来遍历操作的对象，提供了对应数据类型的迭代器。虽然更多的代码，但是高度重用且可测试，都可以尝试下spl的迭代器，或许能改变你编写传统代码的习惯
+    ```php
+    class RecursiveFileFilterIterator extends FilterIterator {
+
+        // 满足条件的扩展名
+        protected $ext = array('jpg','gif');
+        // 提供 $path 并生成对应的目录迭代器
+        public function __construct($path) {
+            parent::__construct(new RecursiveIteratorIterator(new RecursiveDirectoryIterator($path)));
+        }
+        // 检查文件扩展名是否满足条件
+        public function accept() {
+            $item = $this->getInnerIterator();
+            if ($item->isFile() && in_array(pathinfo($item->getFilename(), PATHINFO_EXTENSION), $this->ext)) {
+                return TRUE;
+            }
+        }
+    }
+
+    // 实例化
+    foreach (new RecursiveFileFilterIterator('/path/to/something') as $item) {
+        echo $item . PHP_EOL;
+    }
+    ```
+1. 其他spl函数：文件处理、接口、异常、类和接口
 ### 其他
 1. 消息队列：gearman
 1. 守护进程

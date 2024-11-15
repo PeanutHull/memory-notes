@@ -1,6 +1,6 @@
 ### php
 1. 认识：Hypertext Preprocessor/personal home pages/超文本预处理器，开源、用于产生动态网页的可嵌入HTML中的脚本语言，适合web开发。web是IO密集型，瓶颈在mysql，体现不出php性能劣势，密集计算方面比C/C++差几十倍
-1. php模式：<?php ?>
+1. php模式：`<?php ?>`
 ### 语法
 1. 数据类型
    - 8种原始数据类型
@@ -65,7 +65,11 @@
    - 三元表达式：表达式 ? 值1 : 值2
    - 字符串连接符：.
    - 数组合并符(后边不覆盖前边)：+
-1. 流程控制：选择if，循环while/for/switch-case，break离开循环，continue跳过本次循环进入下次，每执行一次低级语句就判断一下declare
+1. 流程控制
+   - 选择：if
+   - 循环：while/for/switch-case
+     1. break：离开循环
+     1. continue：跳过本次循环进入下次，每执行一次低级语句就判断一下
 1. 函数
    - 系统内置函数
    - 闭包：`$varClosure = function() {};`
@@ -77,6 +81,124 @@
      1. `$a = &method()`：引用返回，将返回值和一个变量绑定内存地址
      1. `$b=new a; $c=$b`：等于`$b=new a; $c=&$b`，php5默认对象赋值是引用，想要对象副本不影响原对象用__clone
    - 删除：`$a=null`，`unset($a)`
+1. 错误和异常
+   - 理解：Error和Exception都实现了Throwable接口，可用`handler(Throwable $e)`
+     1. 错误：错误不能以异常的形式捕获，php7中大多数错误被作为Error抛出，可用`Error`或`Throwable`捕获，不捕获就变为fatal_error，Exception不可以捕获错误。Throwable不可以捕获notice如`$a['notExist']`
+        - 类型
+          1. E_PARSE、E_ERROR、E_WARNING、E_NOTICE：语法解析错误、致命错误暂停执行脚本、警告、注意
+          1. E_USER_ERROR、E_USER_WARNING、E_USER_NOTICE、E_USER_DEPRECATED：用户自定义的用trigger_error触发的
+          1. E_CORE_ERROR, E_CORE_WARNING、E_COMPILE_ERROR, E_COMPILE_WARNING：php核心、编译的错误和警告
+          1. E_ALL：所有的错误和警告，不包括E_STRICT
+          1. E_STRICT：编码标准化警告
+          1. E_RECOVERABLE_ERROR：可被捕捉的致命错误，如果没有set_error_handler捕捉，就变为E_ERROR并停止运行
+          1. E_DEPRECATED：运行时通知。会对在未来版本中可能无法正常工作的代码给出警告
+   - 使用
+     1. 处理
+        - set_exception_handler/set_error_handler：设置异常、错误处理时的函数，不能捕获E_ERROR、E_PARSE
+        - register_shutdown_function：设置php终止执行的函数，脚本执行完后或exit后，可多次调用则依次执行，常配合error_get_last
+        - error_get_last/error_clear_last
+        - trigger_error：抛出用户级错误
+        - error_log/debug_backtrace/debug_print_backtrace：产生一条回溯跟踪
+        - @：错误控制运算符，放在表达式前，该表达式可生的任何错误信息都被忽略
+     1. 显示控制
+        - display_errors
+        - error_reporting：除了NOTICE的写法，`(E_ALL & ~E_NOTICE)`或`(E_ALL ^ ~E_NOTICE)`
+     1. 配置
+        - php.ini
+          1. log_errors：开关
+          1. display_errors：是否显示
+          1. error_reporting：错误级别
+          1. error_log：日志地址
+        - php-fpm.conf
+          1. error_log
+          1. log_level
+   - 预定义的异常：即老的异常
+     1. Exception：是所有异常的基类
+        - 抛出：`throw new Exception()`
+        - 捕获：`try {} catch (Exception $e) {} finally {}`
+        - 方法
+          1. Exception::getMessage/getCode — 获取异常消息内容
+          1. Exception::getFile/getLine/getTrace — 获取创建的异常所在文件中的行号
+          1. Exception::getPrevious — 返回异常链中的前一个异常
+        - 自定义异常处理类
+          1. 定义
+            ```php
+            class MyException extends Exception {
+                // 重定义构造器使 message 变为必须被指定的属性
+                public function __construct($message, $code = 0, Exception $previous = null) {
+                    // 自定义的代码
+                    // 确保所有变量都被正确赋值
+                    parent::__construct($message, $code, $previous);
+                }
+                // 自定义字符串输出的样式
+                public function __toString() {
+                    return __CLASS__ . ": [{$this->code}]: {$this->message}\n";
+                }
+            }
+            ```
+          1. 抛出：`throw new MyException('a', 5);`
+     1. ErrorException：错误异常
+        - 方法
+          1. `ErrorException::getSeverity`：获取异常级别
+        - 将错误信息托管至ErrorException
+            ```php
+            function exception_error_handler($errno, $errstr, $errfile, $errline ) {
+                throw new ErrorException($errstr, 0, $errno, $errfile, $errline);
+            }
+            set_error_handler("exception_error_handler");
+            ```
+1. 反射
+   - 认识：reflection，在php运行中分析php程序，提取类/对象/方法/属性/参数/注释等信息
+   - 组成
+     1. 反射api：非常强大，任何信息都可以获取，是php内建的oop扩展
+        ```php
+        $class = new ReflectionClass('Person');                                     // 建立Person类的反射类
+        $instance  = $class->newInstanceArgs($args);                                // 实例化Person类
+        $properties = $class->getProperties(ReflectionProperty::IS_PUBLIC);         // 获取公共属性
+        $ec=$class->getmethod();                                                    // 获得方法
+        $ec->invoke($instance);                                                     // 执行方法  
+        ```
+     1. 函数
+        - 判断
+          1. interface_exist/trait_exists...
+          1. class_exists/is_subclass_of/instanceof...
+          1. property_exists/method_exists...
+          1. is_null/is_int/is_string...
+        - 获取
+          1. get_class/get_class_methods
+          1. get_defined_functions/get_defined_vars/get_called_class/get_declared_interfaces/func_get_args
+        - 使用
+          1. call_user_func/forward_static_call
+1. 其他语法
+   - declare：用于设置影响整个脚本或某代码块的指令，主要用于设置脚本执行时间和线程栈大小
+     1. 语法
+        ```php
+        declare (directive);            // 作用于整个脚本，通常放在脚本的开头
+        // 代码块
+
+        declare (directive) {           // 作用于某代码块
+            // 代码块
+        }
+        ```
+     1. 示例
+        ```php
+        // 指定脚本字符编码，encoding是v7.2及以后可用
+        declare(encoding='UTF-8');
+        
+        // 每隔一定时间执行回调函数
+        function tick_handler() {
+            echo "Tick handler called\n";
+        }
+
+        // 注册回调函数
+        declare(ticks=1);
+        register_tick_function('tick_handler');
+
+        // 执行一些代码
+        for ($i = 0; $i < 10; $i++) {               // 每次循环都会触发一次tick_handler函数
+            echo "Loop iteration $i\n";
+        }
+        ```
 ### 面向对象
 1. 理解
    - 面向过程：优点：用什么功能就编写什么函数，注重实现细节。缺点：数据管理较混乱集中在函数方面
@@ -150,39 +272,28 @@
    - extends：继承
    - interface
    - implements
+1. 特质
+   - 认识：trait，是一种为类似PHP的单继承语言而准备的代码复用机制，使开发人员能够自由地在不同层次结构的独立的类中复用方法集。来避免传统多继承和混入类（Mixin）相关的典型问题，就是先定义trait，用use给类插入代码，代码复用，属于类与对象，v5.4
+    ```php
+    class Base {
+        public function sayHello () {
+            echo 'Hello ' ;
+        }
+    }
+    trait SayWorld {
+        public function sayHello () {
+            parent::sayHello();
+            echo 'World!';
+        }
+    }
+    class MyHelloWorld extends Base {
+        use SayWorld;
+    }
+    $o = new MyHelloWorld();
+    $o->sayHello ();                        // 输出Hello World!
+    ```
 ### 应用
-1. 会话控制
-   - cookie：$_COOKIE，setcookie()/unset/过期
-   - session：$_SESSION，session由服务器存储，基于cookie，信息安全，占用服务器资源，分布式问题
-     1. 使用
-        - session_start();
-        - session_destory();
-     1. 传递SessionID
-        - session_name()
-        - session_id()
-        - 
-     1. 存储：session_set_save_handler()，默认文件形式，用MySQL、Redis等
-     1. 配置
-        ```php
-        session.auto_start
-        session.cookie_domain
-        session.cookie_lifetime
-        session.cookie_path
-        session.name
-        session.save_path
-        session.save_handler
-        session.use_cookies
-        session.use_trans_sid
-        session.gc_probability
-        session.gc_divisor
-        session.gc_maxlifetime
-        ```
-1. 日期时间
-   - time        时间戳
-   - strtotime   字符串转为时间戳，啥都能转
-   - mktime      日期转为时间戳
-   - date        格式化时间/日期
-   - gmdate
+#### 基础
 1. 文件/目录
    - 文件
      1. filetype/mime_content_type：类型
@@ -216,15 +327,6 @@
    - socket：对底层Socket API的封装，socket类遵循tcp/ip协议，封装大量的内部通讯方法，用于创建主机端与客户端的数据通讯，就是listen/accept/send/write等几个基本操作，相关函数：fopen/fsockopen/stream_socket_server/stream_socket_client
    - stream：流，补充文件形式的其他数据源的处理能力，经常和socket联合使用
    - php协议：php://stdin/stdout/stderr/input/output/fd/filter：`file_get_contents("php://input")`：获取不同content-type下的post数据，type为multipart/form-data时无效
-1. 线程、进程管理
-   - pcntl/posix：进程管理扩展，用于进程创建、信号处理、进程中断，仅用于linux，window没有，fpm模式会有意外问题
-     1. pcntl_fork
-     1. pcntl_signal_dispatch
-     1. pcntl_signal
-   - Pthread：多线程、线程管理、锁的支持
-1. 事件管理
-   - Libevent：对libevent库的封装
-   - Event：基于Libevent更高级的封装，提供了面向对象接口、定时器、信号处理的支持
 1. 编解码
     ```php
     // web传输
@@ -244,76 +346,13 @@
     ```
 1. 加密
    sha1：用于校验文件完整性，是否被篡改，可生成一个160位校验值，不可逆
-1. 错误和异常
-   - 理解：Error和Exception都实现了Throwable接口，可用`handler(Throwable $e)`
-     1. 错误：错误不能以异常的形式捕获，php7中大多数错误被作为Error抛出，可用`Error`或`Throwable`捕获，不捕获就变为fatal_error，Exception不可以捕获错误。Throwable不可以捕获notice如`$a['notExist']`
-        - 类型
-          1. E_PARSE、E_ERROR、E_WARNING、E_NOTICE：语法解析错误、致命错误暂停执行脚本、警告、注意
-          1. E_USER_ERROR、E_USER_WARNING、E_USER_NOTICE、E_USER_DEPRECATED：用户自定义的用trigger_error触发的
-          1. E_CORE_ERROR, E_CORE_WARNING、E_COMPILE_ERROR, E_COMPILE_WARNING：php核心、编译的错误和警告
-          1. E_ALL：所有的错误和警告，不包括E_STRICT
-          1. E_STRICT：编码标准化警告
-          1. E_RECOVERABLE_ERROR：可被捕捉的致命错误，如果没有set_error_handler捕捉，就变为E_ERROR并停止运行
-          1. E_DEPRECATED：运行时通知。会对在未来版本中可能无法正常工作的代码给出警告
-   - 使用
-     1. 处理
-        - set_exception_handler/set_error_handler：设置异常、错误处理时的函数，不能捕获E_ERROR、E_PARSE
-        - register_shutdown_function：设置php终止执行的函数，脚本执行完后或exit后，可多次调用则依次执行，常配合error_get_last
-        - error_get_last/error_clear_last
-        - trigger_error：抛出用户级错误
-        - error_log/debug_backtrace/debug_print_backtrace：产生一条回溯跟踪
-        - @：错误控制运算符，放在表达式前，该表达式可生的任何错误信息都被忽略
-     1. 显示控制
-        - display_errors
-        - error_reporting：除了NOTICE的写法，`(E_ALL & ~E_NOTICE)`或`(E_ALL ^ ~E_NOTICE)`
-     1. 配置
-        - php.ini
-          1. log_errors：开关
-          1. display_errors：是否显示
-          1. error_reporting：错误级别
-          1. error_log：日志地址
-        - php-fpm.conf
-          1. error_log
-          1. log_level
-   - 预定义的异常：即老的异常
-     1. Exception：是所有异常的基类
-        - 抛出：`throw new Exception()`
-        - 捕获：`try {} catch (Exception $e) {} finally {}`
-        - 方法
-          1. Exception::getMessage/getCode — 获取异常消息内容
-          1. Exception::getFile/getLine/getTrace — 获取创建的异常所在文件中的行号
-          1. Exception::getPrevious — 返回异常链中的前一个异常
-        - 自定义异常处理类
-          1. 定义
-            ```php
-            class MyException extends Exception {
-                // 重定义构造器使 message 变为必须被指定的属性
-                public function __construct($message, $code = 0, Exception $previous = null) {
-                    // 自定义的代码
-                    // 确保所有变量都被正确赋值
-                    parent::__construct($message, $code, $previous);
-                }
-                // 自定义字符串输出的样式
-                public function __toString() {
-                    return __CLASS__ . ": [{$this->code}]: {$this->message}\n";
-                }
-            }
-            ```
-          1. 抛出：`throw new MyException('a', 5);`
-     1. ErrorException：错误异常
-        - 方法
-          1. `ErrorException::getSeverity`：获取异常级别
-        - 将错误信息托管至ErrorException
-            ```php
-            function exception_error_handler($errno, $errstr, $errfile, $errline ) {
-                throw new ErrorException($errstr, 0, $errno, $errfile, $errline);
-            }
-            set_error_handler("exception_error_handler");
-            ```
-1. 缓冲区
-   - 认识：是用来存储速度不同步或优先级不同的设备之间传输数据的内存地址空间。通过缓冲可以使进程之间的交互时间等待变小，从而使从速度慢的设备读取数据时，速度快的设备的操作进程不发生间断
-     1. 缓冲区是层层嵌套的，满了就会流到下一层
-     1. cli模式下会直接流到sapi的缓冲区
+1. 日期时间函数
+   - time        时间戳
+   - strtotime   字符串转为时间戳，啥都能转
+   - mktime      日期转为时间戳
+   - date        格式化时间/日期
+   - gmdate
+#### 组件
 1. 连接数据库
    - PDO：php database object
      1. 理解：提供了一个数据访问抽象层，这意味着不管使用哪种数据库，都可以用相同的方法来查询和获取数据
@@ -359,138 +398,47 @@
           1. PDO::ERRMODE_EXCEPTION：以异常
    - MySqli：可以设置长连接，进程重用长连接，但是mysqli会做一些清理工作
    - mysql函数：不支持预处理，不安全，已经淘汰
-### 运维
-1. PHP安装
-   - linux
-     1. 源码安装
-        - 安装php：开启fpm等配置
+#### pro
+1. 缓冲区
+   - 认识：是用来存储速度不同步或优先级不同的设备之间传输数据的内存地址空间。通过缓冲可以使进程之间的交互时间等待变小，从而使从速度慢的设备读取数据时，速度快的设备的操作进程不发生间断
+     1. 缓冲区是层层嵌套的，满了就会流到下一层
+     1. cli模式下会直接流到sapi的缓冲区
+1. 会话控制
+   - cookie：$_COOKIE，setcookie()/unset/过期
+   - session：$_SESSION，session由服务器存储，基于cookie，信息安全，占用服务器资源，分布式问题
+     1. 使用
+        - session_start();
+        - session_destory();
+     1. 传递SessionID
+        - session_name()
+        - session_id()
+        - 
+     1. 存储：session_set_save_handler()，默认文件形式，用MySQL、Redis等
+     1. 配置
+        ```php
+        session.auto_start
+        session.cookie_domain
+        session.cookie_lifetime
+        session.cookie_path
+        session.name
+        session.save_path
+        session.save_handler
+        session.use_cookies
+        session.use_trans_sid
+        session.gc_probability
+        session.gc_divisor
+        session.gc_maxlifetime
         ```
-        ./configure --prefix=/opt/php --with-mysql --with-gd --with-curl        // 安装位置和扩展
-        make
-        sudo make install           // 以管理员权限安装
-        ```
-        - 启动fpm：复制fpm配置文件，修改用户和权限组，启动 `/usr/local/php/sbin/php-fpm`
-        - 安装nginx
-        - nginx配置fpm：添加fastcgi支持
-   - window
-     1. apache+php
-        - 安装vc_redist.x64.exe和vcredist_x64
-        - apache配置修改
-          1. 将c:/Apache24全部替换成c:/http/Apache24
-          1. 在#LoadModule xml2enc_module modules/mod_xml2enc.so下面添加
-             - LoadModule php5_module "C:/http/php/php5apache2_4.dll"
-             - AddType application/x-httpd-php .php .html .htm
-             - PHPIniDir "C:/http/php"
-          1. 将DirectoryIndex index.html改为DirectoryIndex index.php index.html
-          1. 将ServerName www.example.com:80的注释去掉
-        - php环境配置
-          1. 把php文件目录下的libeay32.dll/php5ts.dll/ssleay32.dll和ext文件中的php_curl.dll复制到windows/system32下
-          1. 把C:/http/php和C:/http/php/ext加入环境变量
-        - php配置
-          1. 将php.ini-development在当前目录复制一份，保存为php.ini
-          1. extension_dir 指向c://http/php/ext
-          1. extension=php_curl.dll的分号去掉
-          1. date.timezone = 修改为date.timezone = Asia/Shanghai，去掉分号
-        - 启动php：双击C://http/php/php.exe
-        - 启动apache
-          1. httpd.exe -k install
-          1. httpd.exe -k start
-1. PHP依赖：Composer，依赖管理工具
-   - 命令
-     1. composer config                               // 配置设置
-     1. composer init                                 // 初始化项目依赖，自动生成json文件
-     1. composer install/update (foo/bar:1.0.0)       // 安装/更新所有/单个依赖
-     1. composer show                                 // 查看安装的依赖和依赖的版本号
-     1. composer dump-autoload --optimize             // 为生产环境做准备
-   - 参数
-     1. --prefer-dist：用于install/update，强制下载源代码，在修改文件后更新文件会给出提示
-     1. --prefer-source
-     1. --lock：仅更新锁文件，用于update
-     1. --no-dev：跳过require-dev中的包
-     1. -V
-   - 功能
-     1. 锁文件：会将把安装时确切的版本号列表写入，install会在lock存在情况下下载lock中的，忽略json中的，update会更新lock文件
-     1. 自动加载：composer自动会生成一个vender/autoload.php，载入这个文件后，直接new，就会自动载入。命名空间的申明应该以\\结束
-        - 在composer.json的autoload字段中增加自己的autoloader
-            ```json
-            "autoload": {                       
-                "psr-4": {"Acme\\": "src/"}     // 注册一个PSR-4 autoloader到Acme命名空间
-            }
-            ```
-        - PSR-0： PEAR形式的路径映射
-        - include-path：追加传统的引用路径，不建议
-   - 考虑缓存，dist包优先？？？
-   - 配置
-     1. 镜像地址
-        - 全局：`composer config -g repo.packagist composer https://packagist.phpcomposer.com`
-        - 局部：项目目录下执行，`composer config repo.packagist composer https://packagist.phpcomposer.com`
-        - 删除：`composer config -g --unset repos.packagist`
-   - json文件架构
-     1. 包版本
-        - 1.0.2：确切
-        - >=1.0：范围，,为and，|为or。>、>=、<、<=、!=，如>=1.0,<2.0
-        - 1.0.*：通配符
-        - ~1.0：适用遵循语义化版本号，以最后一位数字加1为上限，相当于>=1.0,<2.0
-        - 1.0.0-stable/dev/alpha3/beta2/RC5：添加后缀
-        - 1.0.0#2eb0c0978d29：添加提交编号，不建议
-        - ^1.8：
-     1. 包类型
-        - php：php版本要求
-        - hhvm：HipHop Virtual Machine，是Facebook执行php的虚拟机，是JIT（Just-In- Time）编译器，同时具有产生快速代码和即时编译的优点
-        - ext-：php扩展限制，可用*指定版本，如`ext-gd`
-        - lib-：php库的版本，如lib-curl
-     1. 稳定性
-        - 全局设置
-          1. minimum-stability：最小稳定容忍，有dev、alpha、beta、RC、stable
-          1. prefer-stable：是否更倾向稳定版，有true、false
-     1. type：安装类型
-        - library：默认，复制文件
-        - project：表示当前包是一个项目
-        - metapackage：当一个空的包，包含依赖并且需要触发依赖的安装，这将不会对系统写入额外的文件。因此这种安装类型并不需要一个 dist 或 source
-        - composer-plugin：自定义安装类型，可以继承接口写一个installler
-     1. require-dev：root-only，开发或测试使用
-     1. repositories：资源库，设置某个库拉取的地址
-        - 指定多个资源库，位置靠前的先使用
-        ```json
-        {
-            "repositories": [
-                {
-                    "type": "composer",
-                    "url": "http://packages.example.com"
-                },
-                {
-                    "type": "composer",
-                    "url": "https://packages.example.com",
-                    "options": {
-                        "ssl": {
-                            "verify_peer": "true"
-                        }
-                    }
-                },
-            ]
-        }
-        ```
-   - 最佳实践
-     1. composer.lock提交到代码库，利用lock文件确认深层次依赖中每一个的版本号，命令` composer install -vvv --no-dev --ignore-platform-reqs --no-interaction --optimize-autoloader`
-1. PHP配置：php.ini。register_globals(变量注入代码)、allow_url_include(包含远程文件)、allow_url_fopen、date.timezone、display_errors、error_reporting、safe_mode、post_max_size
-   - pcre.jit：
-   - session.gc_maxlifetime
-   - upload_max_filesize/max_file_uploads = 200M
-   - max_input_vars：影响最大表单数量
-1. PHP扩展安装
-   - yum：`yum/apt-get install php-pear`，推荐
-   - 源码编译
-     1. `cd ext/pcntl`
-     1. `phpize`：准备扩展库的编译环境，产生configure
-     1. `./configure --prefix=/ --with-php-config=/usr/local/php/bin/php-config`
-     1. `make && make install`
-     1. `php.ini：extension=pcntl.so && restart`
-   - pecl：PHP Extension Community Library，php扩展社区库，C编写，是通过pear打包系统的php扩展库
-     1. pecl install xx
-     1. php.ini：extension=xx.so && restart
-   - pear：php扩展和应用仓库，将常用功能(数据库访问、文件操作、数据结构、缓冲操作、网络协议)写成类库，提供下载，提高开发效率，php编写
-   - phar：Php ARchive，是php的打包文件
-### wiki
+1. 线程、进程管理
+   - pcntl/posix：进程管理扩展，用于进程创建、信号处理、进程中断，仅用于linux，window没有，fpm模式会有意外问题
+     1. pcntl_fork
+     1. pcntl_signal_dispatch
+     1. pcntl_signal
+   - Pthread：多线程、线程管理、锁的支持
+1. 事件管理
+   - Libevent：对libevent库的封装
+   - Event：基于Libevent更高级的封装，提供了面向对象接口、定时器、信号处理的支持
+#### 服务
 1. php运行模式
    - Cli：command-line interface
      1. php_sapi_name：运行环境检测
@@ -589,27 +537,307 @@
         daemonize = yes                                         // 设置成no用于调试bug，默认为yes
         include=/usr/local/php7/etc/php-fpm.d/*.conf
         ```
-1. TSRM
-   - 理解：Thread Safe Resource Manager，线程安全资源管理器，保证在单线程和多线程模型下的线程安全，和代码一致性
-1. ts/nts
-   - 查看：phpinfo()————Thread Safety
-   - 分类   
-     1. Thread Safe：线程安全，执行时会进行线程安全检查，防止有新要求就启动新线程的cgi执行方式耗尽系统资源
-        - ISAPI执行方式以DLL动态库的形式使用，在处理完一个用户请求后不会马上消失，需要进行线程安全检查
-     1. Non Thread Safe：非线程安全，执行时不进行线程安全检查
-        - FastCGI执行方式以单一线程来执行操作，不需要检查，效率更高
-1. PHP-GTK：gui
 1. 流行的php三种使用模式
    - nginx + php-fpm
    - apache + mod_php5
    - lighttp + spawn-fcgi
+1. PHP-GTK：gui
+### 包和依赖
+1. 命名空间：解决重名，v5.3引入
+   - 全局空间：没有声明命名空间的默认空间，使用\表示使用全局空间
+   - 命名空间
+     1. namespace：声明命名空间，在所有代码之前
+        ```php
+        namespace foo\bar;                                  // 子命名空间定义
+        namespace foo\bar1{ // php代码 }                     // 另一种命名空间定义语法，可支持一个文件多个命名空间
+        ```
+     1. use：导入类，v5.6支持导入函数和常量
+        ```php
+        use foo\bar as Another;                             // 声明别名，可一行引入多个
+        use function foo\bar\functionName as func;
+        use const Mfooy\bar\CONSTANT;
+        ```
+     1. 作用范围：使用和定义时默认使用当前空间
+     1. 使用
+        ```php
+        namespace foo;
+        use My\Full\Classname as Another;
+        new namespace\Another;                              // 实例化 foo\Another 对象
+
+        new __NAMESPACE__ . '\\' . $classname;              // 动态创建名称
+        ```
+1. 文件载入
+   - 普通
+     1. 理解：once确保文件只被包含一次，避免函数重定义、变量重新赋值
+     1. 分类
+        - include()/include_once()：运行前引入、运行次数越多效率越高，出错产生警告
+        - require()/require_once()：用到才引入，出错抛出错误并终止脚本
+     1. 查找逻辑：找到即终止
+        - 如果给出路径按照路径查找
+        - 从include_path查找(include_path就是一个在php.ini中配置的，也可以用set_include_path()配置的用于载入文件的路径，path分隔符使用系统的)
+        - 从调用脚本目录(getcwd())和当前工作目录(__FILE__)查找
+   - __autoload
+     1. 理解：当需要使用的类没有被引入时，会在php报错前被触发，未定义的类名会被当作参数传入，这样就不用一个个的文件去require了，v7.2废弃
+    ```php
+    function __autoload($classname) {
+        require_once $classname . '.class.php';
+    }
+    $obj = new MyClass();                                       // MyClass类不存在时，自动调用__autoload()函数并传入参数”MyClass”
+    ```
+   - spl方式
+     1. 理解：使载入逻辑更加清晰，分离autoload的载入逻辑，重载spl函数即可。spl_autoload_register功能就是把传入的函数(函数或者回调函数)注册到spl的autoload函数队列中，并移除默认的autoload函数。当调用未定义类时，系统按顺序调用注册到register的所有函数，而不是只能载入一次
+     1. 使用spl载入文件
+        ```php
+        // 默认sql载入
+        spl_autoload_extensions('.class.php', '.php');              // 设置自动载入文件的后缀，有前后顺序
+        set_include_path(get_include_path() . PATH_SEPARATOR);      // 设置自动载入文件的目录，多个目录用PATH_SEPARATOR分割
+        spl_autoload_register();                                    // 注册
+        new Test();                                                 // 使用
+        // 使用自定义函数载入
+        function classLoader($className) {
+            set_include_path('libs');
+            spl_autoload($className);                               // sql方式
+            // require_once('libs' . $className . '.php');          // 或者使用普通方式
+        }
+        spl_autoload_register('classLoader');
+        new Test();
+        ```
+1. 依赖管理工具：Composer
+   - 命令
+     1. composer config                               // 配置设置
+     1. composer init                                 // 初始化项目依赖，自动生成json文件
+     1. composer install/update (foo/bar:1.0.0)       // 安装/更新所有/单个依赖
+     1. composer show                                 // 查看安装的依赖和依赖的版本号
+     1. composer dump-autoload --optimize             // 为生产环境做准备
+   - 参数
+     1. --prefer-dist：用于install/update，强制下载源代码，在修改文件后更新文件会给出提示
+     1. --prefer-source
+     1. --lock：仅更新锁文件，用于update
+     1. --no-dev：跳过require-dev中的包
+     1. -V
+   - 功能
+     1. 锁文件：会将把安装时确切的版本号列表写入，install会在lock存在情况下下载lock中的，忽略json中的，update会更新lock文件
+     1. 自动加载：composer自动会生成一个vender/autoload.php，载入这个文件后，直接new，就会自动载入。命名空间的申明应该以\\结束
+        - 在composer.json的autoload字段中增加自己的autoloader
+            ```json
+            "autoload": {                       
+                "psr-4": {"Acme\\": "src/"}     // 注册一个PSR-4 autoloader到Acme命名空间
+            }
+            ```
+        - PSR-0： PEAR形式的路径映射
+        - include-path：追加传统的引用路径，不建议
+   - 考虑缓存，dist包优先？？？
+   - 配置
+     1. 镜像地址
+        - 全局：`composer config -g repo.packagist composer https://packagist.phpcomposer.com`
+        - 局部：项目目录下执行，`composer config repo.packagist composer https://packagist.phpcomposer.com`
+        - 删除：`composer config -g --unset repos.packagist`
+   - json文件架构
+     1. 包版本
+        - 1.0.2：确切
+        - >=1.0：范围，,为and，|为or。>、>=、<、<=、!=，如>=1.0,<2.0
+        - 1.0.*：通配符
+        - ~1.0：适用遵循语义化版本号，以最后一位数字加1为上限，相当于>=1.0,<2.0
+        - 1.0.0-stable/dev/alpha3/beta2/RC5：添加后缀
+        - 1.0.0#2eb0c0978d29：添加提交编号，不建议
+        - ^1.8：允许指定最小版本，允许Composer自动更新到该主要版本内的任何更高版本，但不允许跨越主要版本
+     1. 包类型
+        - php：php版本要求
+        - hhvm：HipHop Virtual Machine，是Facebook执行php的虚拟机，是JIT（Just-In- Time）编译器，同时具有产生快速代码和即时编译的优点
+        - ext-：php扩展限制，可用*指定版本，如`ext-gd`
+        - lib-：php库的版本，如lib-curl
+     1. 稳定性
+        - 全局设置
+          1. minimum-stability：最小稳定容忍，有dev、alpha、beta、RC、stable
+          1. prefer-stable：是否更倾向稳定版，有true、false
+     1. type：安装类型
+        - library：默认，复制文件
+        - project：表示当前包是一个项目
+        - metapackage：当一个空的包，包含依赖并且需要触发依赖的安装，这将不会对系统写入额外的文件。因此这种安装类型并不需要一个 dist 或 source
+        - composer-plugin：自定义安装类型，可以继承接口写一个installler
+     1. require-dev：root-only，开发或测试使用
+     1. repositories：资源库，设置某个库拉取的地址
+        - 指定多个资源库，位置靠前的先使用
+        ```json
+        {
+            "repositories": [
+                {
+                    "type": "composer",
+                    "url": "http://packages.example.com"
+                },
+                {
+                    "type": "composer",
+                    "url": "https://packages.example.com",
+                    "options": {
+                        "ssl": {
+                            "verify_peer": "true"
+                        }
+                    }
+                },
+            ]
+        }
+        ```
+   - 最佳实践
+     1. composer.lock提交到代码库，利用lock文件确认深层次依赖中每一个的版本号，命令` composer install -vvv --no-dev --ignore-platform-reqs --no-interaction --optimize-autoloader`
+### 测试与性能
+1. 代码调试
+   - xdebug
+   - tideways
+   - xhprof
+     1. 认识：php的层次性能分析工具，查看资源占用和各个调用的耗时，搭配graphviz图显示更直接，还有xhGui。facebook开源，性能开销低，可用在生产活动中
+        - graphviz：开源的图形可视化软件，以简单的文本语言获取图形的描述，应用于网页、svg、pdf、postscript中，有颜色，字体，表格节点布局，线条样式，超链接和自定义形状的选项
+     1. 使用
+        ```php
+        // 抓取
+        xhprof_enable(XHPROF_FLAGS_NO_BUILTINS | XHPROF_FLAGS_CPU | XHPROF_FLAGS_MEMORY);
+        // --业务代码--
+        $xhprof_data = xhprof_disable();
+
+        // 获取此次分析id
+        include_once "/usr/share/pear/xhprof_lib/utils/xhprof_lib.php";
+        include_once "/usr/share/pear/xhprof_lib/utils/xhprof_runs.php";
+        $xhprof_runs = new XHProfRuns_Default();
+        $run_id = $xhprof_runs->save_run($xhprof_data, "dengling");
+
+        // 查看生成报告，nginx指向xhprof的目录
+        http://xhprof.xesv5.com/index.php?run=604994b1e56a4&source=dengling
+        ```
+     1. 字段含义
+        - microsec：微秒
+        - Calls：方法被调用的次数
+        - Incl.Wall Time：方法执行花费的时间，包括子方法执行时间
+        - IWall%：方法执行花费的时间百分比
+        - Excl. Wall Time(microsec)：方法本身执行花费的时间，不包括子方法
+        - Incl. CPU(microsecs)：方法执行花费的CPU时间，包括子方法
+     1. 配置
+        ```conf
+        [xhprof]
+        extension=xhprof.so;
+        xhprof.output_dir=/tmp/xhprof           // 分析文件生成地址
+        ```
+1. 性能检测
+    ```php
+    ini_set('memory_limit', "1024M");
+    set_time_limit(0);
+    echo microtime() . PHP_EOL;
+    echo microtime() . PHP_EOL;
+    echo memory_get_usage() . PHP_EOL;
+    ```
+#### 调优
+1. 优化方式
+   - 编码方面
+     1. 文件加载：一个文件操作胜过优化N个CPU指令
+     1. 提前销毁大变量
+     1. 避免使用魔术方法耗性能
+     1. requiere_once耗性能
+     1. 少用正则
+     1. 不要用@符掩盖错误
+     1. 单引号代替双引号
+   - php方面
+     1. 配置
+        - php.ini：memory_limit、session.save_handler、output_buffering
+        - php-fpm：动态和静态的子进程管理，平衡cpu和内存
+   - 架构方面
+     1. 部署环境：nginx+php-fpm方式
+     1. 框架选择
+     1. 缓存
+        - 程序层面的文件静态和优化比底层来的更有效、直接
+        - 开启opcode缓存：避免重复编译，如APC、xcache
+        - 本地缓存：如用xcache缓存元数据，不用每次读文件
+     1. 外部
+        - nginx开启gzip压缩
+1. 发挥PHP7的性能
+   - 开启Opcache
+     1. zend_extension=opcache.so
+     1. opcache.enable=1
+     1. opcache.enable_cli=1
+   - 使用GCC 4.8以上进行编译
+   - 开启HugePage（根据系统内存决定）：操作系统默认的内存是以4KB分页的，而虚拟地址和内存地址需要转换，而这个转换要查表，CPU为了加速这个查表过程会内建TLB(Translation Lookaside Buffer)。 显然，如果虚拟页越小，表里的条目数也就越多，而TLB大小是有限的，条目数越多TLB的Cache Miss也就会越高，所以如果我们能启用大内存页就能间接降低这个TLB Cache Miss。php将采用大内存页来保存，减少TLB miss，提高性能
+   - PGO：Profile Guided Optimization，第一次编译成功后，用项目代码去训练PHP，会产生一些profile信息，最后根据这些信息第二次gcc编译PHP就可以得到量身定做的PHP7
+### 运维
+1. PHP安装
+   - linux
+     1. 源码安装
+        - 安装php：开启fpm等配置
+        ```
+        ./configure --prefix=/opt/php --with-mysql --with-gd --with-curl        // 安装位置和扩展
+        make
+        sudo make install           // 以管理员权限安装
+        ```
+        - 启动fpm：复制fpm配置文件，修改用户和权限组，启动 `/usr/local/php/sbin/php-fpm`
+        - 安装nginx
+        - nginx配置fpm：添加fastcgi支持
+   - window
+     1. apache+php
+        - 安装vc_redist.x64.exe和vcredist_x64
+        - apache配置修改
+          1. 将c:/Apache24全部替换成c:/http/Apache24
+          1. 在#LoadModule xml2enc_module modules/mod_xml2enc.so下面添加
+             - LoadModule php5_module "C:/http/php/php5apache2_4.dll"
+             - AddType application/x-httpd-php .php .html .htm
+             - PHPIniDir "C:/http/php"
+          1. 将DirectoryIndex index.html改为DirectoryIndex index.php index.html
+          1. 将ServerName www.example.com:80的注释去掉
+        - php环境配置
+          1. 把php文件目录下的libeay32.dll/php5ts.dll/ssleay32.dll和ext文件中的php_curl.dll复制到windows/system32下
+          1. 把C:/http/php和C:/http/php/ext加入环境变量
+        - php配置
+          1. 将php.ini-development在当前目录复制一份，保存为php.ini
+          1. extension_dir 指向c://http/php/ext
+          1. extension=php_curl.dll的分号去掉
+          1. date.timezone = 修改为date.timezone = Asia/Shanghai，去掉分号
+        - 启动php：双击C://http/php/php.exe
+        - 启动apache
+          1. httpd.exe -k install
+          1. httpd.exe -k start
+1. PHP配置：php.ini
+   - register_globals(变量注入代码)
+   - allow_url_include(包含远程文件)
+   - allow_url_fopen
+   - date.timezone
+   - display_errors
+   - error_reporting
+   - safe_mode
+   - post_max_size
+
+   - pcre.jit
+   - session.gc_maxlifetime
+   - upload_max_filesize/max_file_uploads = 200M
+   - max_input_vars：影响最大表单数量
+1. PHP扩展安装
+   - yum：`yum/apt-get install php-pear`，推荐
+   - 源码编译
+     1. `cd ext/pcntl`
+     1. `phpize`：准备扩展库的编译环境，产生configure
+     1. `./configure --prefix=/ --with-php-config=/usr/local/php/bin/php-config`
+     1. `make && make install`
+     1. `php.ini：extension=pcntl.so && restart`
+   - pecl：PHP Extension Community Library，php扩展社区库，c编写，是通过pear打包系统的php扩展库
+     1. pecl install xx
+     1. php.ini：extension=xx.so && restart
+   - pear：php扩展和应用仓库，将常用功能(数据库访问/文件操作/数据结构/缓冲操作/网络协议)写成类库，提供下载，提高开发效率，php编写
+   - phar：php archive，php的打包文件
+1. PHP开发
+   - 配置
+     1. brew安装的ini位置：`/opt/homebrew/etc/php/8.2/`
+   - 启动/停止fpm
+     1. `brew services start/stop php@8.2`
+     1. `brew services start/stop shivammathur/php/php@7.3`
+   - nginx
+     1. 启动/停止
+        - 前台：`/opt/homebrew/opt/nginx/bin/nginx -g daemon\ off\;`
+        - 后台：`brew services start/stop nginx`
+     1. 配置：`/opt/homebrew/etc/nginx/nginx.conf`
+        - 文件路径：`/opt/homebrew/var/www`
+        - 文件路径：`/opt/homebrew/etc/nginx/servers/`
+### wiki
 1. 历史
-   - 1994：Rasmus Lerdorf 为了维护个人网页而制作了一个简单的用 Perl 语言编写的程序，称为 Personal Home Page
-   - 1995：Rasmus Lerdorf 用 C 语言对"Personal Home Page"进行重新编写，包括可以访问数据库，并于 1995 年 6 月 8 日发布了首个公开版。这是 PHP 1.0 版本，也是第一次使用了"PHP"的名字
+   - 1994：Rasmus Lerdorf为维护个人网页而制作了一个简单的用Perl语言编写的程序，称为Personal Home Page
+   - 1995：Rasmus Lerdorf用C对Personal Home Page进行重新编写，包括可以访问数据库，于1995年6月发布首个公开版。即PHP1.0
    - 1997：Rasmus Lerdorf、Andi Gutmans 和 Zeev Suraski 加入了该语言的第三个版本的开发，并进行根本性的重新设计，性能大大提升。从那之后， PHP 开发组也创建并发展起来。PHP 也在这个时候改称为 PHP：Hypertext Preprocessor
    - 2000：以 Zend Engine 1.0 为基础的 PHP 4 正式发布，自此，PHP 的性能才开始变得正式起来
-   - 2004：发布了 PHP 5，PHP 5 使用了第二代的 Zend Engine。PHP 包含了许多新特色，如强化的面向对象功能、引入 PDO（PHP Data Objects，一个存取数据库的延伸函数库）、以及许多效能上的增强
-   - 2015：12 月 3 日，PHP 7.0 正式发布，使用的 Zend Engine 3 带来了 100% 的性能提升，还有统一的变量语法，基于抽象语法树编译过程
+   - 2004：发布了 PHP 5，PHP 5 使用了第二代的 Zend Engine。PHP 包含了许多新特色，如强化的面向对象功能、引入PDO、许多效能增强
+   - 2015：12月3日，P7.0正式发布，使用的 Zend Engine 3 带来了 100% 的性能提升，还有统一的变量语法，基于抽象语法树编译过程
 1. 版本
    - 2
      1. 发布PHP/FI
@@ -649,6 +877,8 @@
      1. 引入"HYBRID VM"虚拟机引擎
      1. 优化opcache
      1. 弃用__autoload、each()、assert
+   - 7.3
+     1. 性能提升：比7.0快22%，比5.6快3倍
    - 7.4
      1. PDO持久化：PDO支持持久化连接，提高了数据库操作的性能
      1. 增加声明类属性的类型
@@ -662,3 +892,119 @@
      1. 增加声明只读的类属性，不能通过常规方式修改其值
      1. 增加Fiber协程，提供了一种轻量级的并发执行机制
    - 8.3
+1. TSRM
+   - 理解：Thread Safe Resource Manager，线程安全资源管理器，保证在单线程和多线程模型下的线程安全，和代码一致性
+1. ts/nts
+   - 查看：phpinfo()————Thread Safety
+   - 分类   
+     1. Thread Safe：线程安全，执行时会进行线程安全检查，防止有新要求就启动新线程的cgi执行方式耗尽系统资源
+        - ISAPI执行方式以DLL动态库的形式使用，在处理完一个用户请求后不会马上消失，需要进行线程安全检查
+     1. Non Thread Safe：非线程安全，执行时不进行线程安全检查
+        - FastCGI执行方式以单一线程来执行操作，不需要检查，效率更高
+#### 版本更新
+1. php7
+   - 整体：性能提升，内核更加健壮，抛弃了很多历史包袱，同时最大程度保证向前兼容，之前的代码基本可以无缝升级
+     1. PHPNG代码合并到PHP7，速度是v5.6的3倍，内存消耗比v5.6低50％
+     1. 一致的64位支持：不论32位64位机，变量占用不变
+     1. 7.2是7.1的10%性能提升
+   - 更新内容：标量和返回值类型、匿名类、常量数组、use增强、<=>、??、闭包对象绑定优化、层次异常扩展、原生的TLS
+     1. ZEND引擎升级到Zend Engine 3，也就是所谓的PHP NG
+     1. 增加抽象语法树，使编译更加科学
+     1. 64位的INT支持，变量突破最大4G的限制
+     1. 统一的变量语法
+     1. 原生的TLS - 对扩展开发有意义
+     1. 一致性foreach循环的改进
+     1. 新增 <=>、**、?? 、\u{xxxx}操作符
+     1. 增加了返回类型的声明
+     1. 增加了标量类型的声明
+     1. 错误处理：大多数错误被作为Error异常抛出，核心错误可以通过异常捕获了：很多致命错误以及可恢复的致命错误，都被转换为异常来处理，这些异常继承自Error类、实现了Throwable接口。PHP7实现了一个全局的throwable接口，原来的Exception和部分Error都实现这个接口，以接口的方式定义了异常的继承结构
+     1. 增加了上下文敏感的词法分析
+   - 移除的特性
+     1. 移除的扩展：Ereg正则表达式、mysql(迁移到了PECL)
+     1. 移除SAPIs的支持
+     1. <?和<? language=“php”这样的标签被移除了
+     1. 16进制的字符串转换被废除
+        ```php
+        //PHP5
+        "0x10" == "16"
+        //PHP7
+        "0x10" != "16"
+        ```
+     1. $o = & new className{}，不再支持这样的写法
+     1. php.ini文件移除了#作为注释，统一用;去注释
+     1. php4样式的构造函数(即和类名相同)，弃用
+     1. 对非静态方法的静态调用，弃用。`class A { function b() {}}`，`A::b();`
+   - 返回值类型声明
+     1. 理解：参数和返回值增加了类型限定，可以是标量或者对象，如`function test(int $a, string $b, array $c) : int {}`
+     1. 选项
+        - 强制：默认，也可以不声明类型
+        - 严格：开始 `declare(strict_types=1);`
+     1. 类型字段：bool、int、float、string、array、callable、interfaces
+   - 匿名类：可以代替完整的类定义
+    ```php
+    interface Logger { public function log(string $msg); }
+
+    class Application {
+        private $logger;
+        public function getLogger(): Logger { return $this->logger; }
+        public function setLogger(Logger $logger) { $this->logger = $logger; }
+    }
+
+    $app = new Application;
+    $app->setLogger(new class implements Logger {
+        public function log(string $msg) {
+            print($msg);
+        }
+    });
+
+    $app->getLogger()->log("My first Log Message");
+    ```
+   - 常量数组：使用define定义数组常量，v5.6中只能使用类常量const定义
+    ```php
+    define('animals', [
+        'dog',
+        'cat',
+    ]);
+    ```
+   - use增强：可以使用单个use从相同的命名空间导入类/函数/常量，如`use com\{ClassA, ClassB as B};`
+   - 空合并运算符：用空合并运算符??代替isset和三元结合的操作
+    ```php
+    $username ?? 'no';
+    isset($username) ? $username : 'no';
+    $username = $_GET['username'] ?? $_POST['username'] ?? 'not passed';        // 连续判断并采用
+    ```
+   - 太空船运算符(组合比较符)：<=>，第一个表达式大等小于第二个分别返回-1/0/1
+    ```php
+    1 <=> 1     // 0
+    1 <=> 2     // -1
+    2 <=> 1     // 1
+    ```
+   - Closure::call()：作为一个简短的方式来临时绑定一个对象作用域到一个闭包并调用它，比v5的bindTo快很多
+    ```php
+    class A { private $x = 1; }
+
+    $getValue = function() { return $this->x; };          // php5之前
+    $value = $getValue->bindTo(new A, 'A');
+    print($value());
+
+    $value = function() { return $this->x; };             // php7
+    print($value->call(new A));
+    ```
+   - 其他
+     1. list不再按照相反的顺序赋值
+     1. 对变量、属性和方法的间接调用现在将严格遵循从左到右的顺序来解析，而不是之前混杂着几个特殊的案例
+     1. Unicode codepoint转译语法：接受任何有效的16进制的codepoint，如 `echo "\u{9999}"; // 香`
+     1. 零成本断言增加：向后兼用并增强之前的assert的方法，使得在生产环境中启用断言为零成本，并提供当断言失败时抛出特定异常的能力
+        ```php
+        ini_set('assert.exception', 1);
+        class CustomError extends AssertionError {}
+        assert(false, new CustomError('Some error message'));
+        ```
+     1. 过滤unserialize()：方便在对不可信数据上的对象进行反序列化时提供更好的安全性，防止可能的代码注入
+        ```php
+        $serializedObj = serialize($obj);
+        $data = unserialize($serializedObj , ["allowed_classes" => ["MyClass1", "MyClass2"]]);
+        ```
+     1. 新增：intdiv整数除法
+     1. CSPRNG：两个新函数来以跨平台的方式生成密码安全的整数和字符串，`random_bytes/random_int`
+     1. IntlChar类：试图揭示额外的ICU功能，用来处理Unicode字符

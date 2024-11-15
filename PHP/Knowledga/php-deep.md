@@ -147,6 +147,19 @@
      1. 解释层：词法分析+语法分析 -> AST -> 编译器
      1. 中间数据层：执行栈、opline指令、符号表
      1. 执行层：执行引擎
+1. php7性能优化：重写了ZendVM升级到Zend Engine3，即PHP NG
+   - AST：Abstract Syntax Tree, 抽象语法树，在编译过程中作为中间件，替换原来直接从解释器吐出opcode的方式，让解释器(parser)和编译器(compliler)解耦, 可以减少一些Hack代码, 同时, 让实现更容易理解和可维护
+     1. PHP5 : PHP代码 -> Parser语法解析 -> OPCODE -> 执行
+     1. PHP7 : PHP代码 -> Parser语法解析 -> AST -> OPCODE -> 执行
+   - 数组php5的底层是HashTable实现的，php7使用了新的Zend Array类型，性能和访问速度上都有了大幅度提升
+   - 标量类型声明：为了v7.1的jit特性做准备，因为jit有了准确的变量类型，可以生成最佳的机器指令
+   - zval使用栈内存：ZVAL结构的重构，一个php变量就是一个zval指针，之前是动态从堆上分配，php7直接使用栈内存
+   - zend_string存储hash值，array查询不再需要重复计算hash
+   - hashtable桶内直接存数据，减少了内存申请次数，提升了cache命中率和内存访问速度
+   - zend_parse_parameters改为宏实现，性能提升5%
+   - 新增4种opcode，call_user_function，defined等函数变为OpCode指令，速度更快
+   - int、float改为直接进行值拷贝
+   - https://www.csdn.net/article/2015-09-16/2825720  
 1. 问题
    - 词法语法解析的过程还是不懂
    - re2c生成的DFA怎么用于bison？二者同时进行又是怎么进行的？
@@ -208,90 +221,4 @@ ipv4的udp一次最多发64k，dgram最大2M
    - 这节课是通信的细节，协议的实现，结合man查看使用方法，协议中数据流的传输
    - socket有六种。新的连接放到reator_thread的事件循环中，socket_create方法，是异步的，然后reator_add添加到epoll中，调用epoll_wait，从listen队列中取出来，加到epoll的事件监听中
    - 四种消耗之一的系统调用消耗很大，内存拷贝，进程切换，锁（碰撞就进程切换）
-### 调优
-1. 优化方式
-   - 语言本身
-     1. 配置
-        - php.ini：memory_limit、session.save_handler、output_buffering
-        - php-fpm：动态和静态的子进程管理，平衡cpu和内存
-   - 架构
-     1. 部署环境：nginx+php-fpm方式
-     1. 框架选择
-     1. 缓存
-        - 程序层面的文件静态和优化比底层来的更有效、直接
-        - 开启opcode缓存：避免重复编译，如APC、xcache
-        - 本地缓存：如用xcache缓存元数据，不用每次读文件
-     1. 外部
-        - nginx开启gzip压缩
-   - 编码
-     1. 文件加载：一个文件操作胜过优化N个CPU指令
-     1. 提前销毁大变量
-     1. 避免使用魔术方法耗性能
-     1. requiere_once耗性能
-     1. 少用正则
-     1. 不要用@符掩盖错误
-     1. 单引号代替双引号
-1. 工具
-   - xdebug
-   - tideways
-   - xhprof
-     1. 认识：php的层次性能分析工具，查看资源占用和各个调用的耗时，搭配graphviz图显示更直接，还有xhGui。facebook开源，性能开销低，可用在生产活动中
-        - graphviz：开源的图形可视化软件，以简单的文本语言获取图形的描述，应用于网页、svg、pdf、postscript中，有颜色，字体，表格节点布局，线条样式，超链接和自定义形状的选项
-     1. 使用
-        ```php
-        // 抓取
-        xhprof_enable(XHPROF_FLAGS_NO_BUILTINS | XHPROF_FLAGS_CPU | XHPROF_FLAGS_MEMORY);
-        // --业务代码--
-        $xhprof_data = xhprof_disable();
-
-        // 获取此次分析id
-        include_once "/usr/share/pear/xhprof_lib/utils/xhprof_lib.php";
-        include_once "/usr/share/pear/xhprof_lib/utils/xhprof_runs.php";
-        $xhprof_runs = new XHProfRuns_Default();
-        $run_id = $xhprof_runs->save_run($xhprof_data, "dengling");
-
-        // 查看生成报告，nginx指向xhprof的目录
-        http://xhprof.xesv5.com/index.php?run=604994b1e56a4&source=dengling
-        ```
-     1. 字段含义
-        - microsec：微秒
-        - Calls：方法被调用的次数
-        - Incl.Wall Time：方法执行花费的时间，包括子方法执行时间
-        - IWall%：方法执行花费的时间百分比
-        - Excl. Wall Time(microsec)：方法本身执行花费的时间，不包括子方法
-        - Incl. CPU(microsecs)：方法执行花费的CPU时间，包括子方法
-     1. 配置
-        ```conf
-        [xhprof]
-        extension=xhprof.so;
-        xhprof.output_dir=/tmp/xhprof           // 分析文件生成地址
-        ```
-1. 性能检测
-    ```php
-    ini_set('memory_limit', "1024M");
-    set_time_limit(0);
-    echo microtime() . PHP_EOL;
-    echo microtime() . PHP_EOL;
-    echo memory_get_usage() . PHP_EOL;
-    ```
-1. 发挥PHP7的性能
-   - 开启Opcache
-     1. zend_extension=opcache.so
-     1. opcache.enable=1
-     1. opcache.enable_cli=1
-   - 使用GCC 4.8以上进行编译
-   - 开启HugePage （根据系统内存决定）：操作系统默认的内存是以4KB分页的，而虚拟地址和内存地址需要转换，而这个转换要查表，CPU为了加速这个查表过程会内建TLB(Translation Lookaside Buffer)。 显然，如果虚拟页越小，表里的条目数也就越多，而TLB大小是有限的，条目数越多TLB的Cache Miss也就会越高，所以如果我们能启用大内存页就能间接降低这个TLB Cache Miss。php将采用大内存页来保存，减少TLB miss，提高性能
-   - PGO：Profile Guided Optimization，第一次编译成功后，用项目代码去训练PHP，会产生一些profile信息，最后根据这些信息第二次gcc编译PHP就可以得到量身定做的PHP7
-1. php7性能优化：重写了ZendVM升级到Zend Engine3，即PHP NG
-   - AST：Abstract Syntax Tree, 抽象语法树，在编译过程中作为中间件，替换原来直接从解释器吐出opcode的方式，让解释器(parser)和编译器(compliler)解耦, 可以减少一些Hack代码, 同时, 让实现更容易理解和可维护
-     1. PHP5 : PHP代码 -> Parser语法解析 -> OPCODE -> 执行
-     1. PHP7 : PHP代码 -> Parser语法解析 -> AST -> OPCODE -> 执行
-   - 数组php5的底层是HashTable实现的，php7使用了新的Zend Array类型，性能和访问速度上都有了大幅度提升
-   - 标量类型声明：为了v7.1的jit特性做准备，因为jit有了准确的变量类型，可以生成最佳的机器指令
-   - zval使用栈内存：ZVAL结构的重构，一个php变量就是一个zval指针，之前是动态从堆上分配，php7直接使用栈内存
-   - zend_string存储hash值，array查询不再需要重复计算hash
-   - hashtable桶内直接存数据，减少了内存申请次数，提升了cache命中率和内存访问速度
-   - zend_parse_parameters改为宏实现，性能提升5%
-   - 新增4种opcode，call_user_function，defined等函数变为OpCode指令，速度更快
-   - int、float改为直接进行值拷贝
-   - https://www.csdn.net/article/2015-09-16/2825720   
+ 

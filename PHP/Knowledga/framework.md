@@ -1,3 +1,7 @@
+### 框架
+1. workerman：长连接的框架
+1. yar：yet another RPC framework，可并行的支持msgpack/json/php打包协议的rpc框架，基于HTTP协议, 在libcurl基础上开发而成
+   - RPC框架：xml-rpc, soap
 ### YAC
 1. 认识：Yet Another cache，无锁的共享内存的用户数据缓存，可进程间共享内存数据，相当于本机kv缓存，可以代替apc和memcache
    - 只用于简单的数据共享，不能当数据库，没有强大能力
@@ -27,9 +31,6 @@
 1. 其他
    - apc、apcu
    - swoole-table：可遍历，yac不行
-### YAR
-1. 认识：yet another RPC framework，可并行的支持msgpack/json/php打包协议的rpc框架，基于HTTP协议, 在libcurl基础上开发而成
-   - RPC框架：xml-rpc, soap
 ### ThinkPHP
 1. 结构
    - URL模式：普通(get参数形式)、PATHINFO、REWRITE、兼容(不支持PATHINFO)。优点排序：REWRITE>PATHINFO>普通
@@ -413,5 +414,3 @@
 
    - 闭包方式调用事务
    - 全局的分布式事务
-### workerman
-1. 长连接的框架
