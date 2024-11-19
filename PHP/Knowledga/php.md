@@ -681,7 +681,7 @@
    - 最佳实践
      1. composer.lock提交到代码库，利用lock文件确认深层次依赖中每一个的版本号，命令` composer install -vvv --no-dev --ignore-platform-reqs --no-interaction --optimize-autoloader`
 ### 测试与性能
-1. 代码调试
+1. 代码调试和性能分析
    - xdebug：本地调试
    - tideways：性能分析工具，给php.ini添加配置，后台自动收集，还配置了web界面。提供函数调用次数、执行时间、内存使用等信息
    - xhprof
@@ -716,45 +716,51 @@
         extension=xhprof.so;
         xhprof.output_dir=/tmp/xhprof           // 分析文件生成地址
         ```
-1. 性能检测
-    ```php
-    ini_set('memory_limit', "1024M");
-    set_time_limit(0);
-    echo microtime() . PHP_EOL;
-    echo microtime() . PHP_EOL;
-    echo memory_get_usage() . PHP_EOL;
-    ```
 #### 调优
 1. 优化方式
    - 编码方面
-     1. 文件加载：一个文件操作胜过优化N个CPU指令
-     1. 提前销毁大变量
-     1. 避免使用魔术方法耗性能
-     1. requiere_once耗性能
-     1. 少用正则
-     1. 不要用@符掩盖错误
+     1. 文件加载：少一个文件操作胜过优化n个cpu指令
+     1. 提前销毁超大变量
+
      1. 单引号代替双引号
-   - php方面
-     1. 配置
-        - php.ini：memory_limit、session.save_handler、output_buffering
-        - php-fpm：动态和静态的子进程管理，平衡cpu和内存
+     1. 避免使用魔术方法耗性能
+     1. 不要用@符掩盖错误
+     1. requiere_once更耗性能，使用include_once
+   - 配置方面
+     1. php.ini
+        - memory_limit
+        - session.save_handler
+        - output_buffering
+     1. php-fpm
+        - 配置文件
+          1. 主配置文件：`/etc/php-fpm.conf`
+          1. 池配置文件：`/etc/php-fpm.d/www.conf`
+        - 配置调整项
+          1. 调节子进程管理方式：根据期望qps和机器配置(cpu/内存)进行。注意服务最高承载能力/服务资源占用量(最大子进程数、每子进程最大请求处理数)、服务抖动性(最小空闲子进程数、最大空闲子进程数)、服务容错性(等待处理队列长度、请求超时时间)等
+          1. 增加监听队列的长度：`listen.backlog = 4096`，后果是会导致连接请求被拒绝。定义了在fpm暂无法接受新连接时，操作系统内核可将多少个连接请求放入队列中等待处理
+             - 其受限于操作系统的somaxconn参数，如果大于则实际使用somaxconn的值
+     1. 开启opcode缓存：避免重复编译，如APC、xcache
+        ```
+        zend_extension=opcache.so
+        opcache.enable=1
+        opcache.enable_cli=1
+        ```
+     1. nginx开启gzip压缩
    - 架构方面
-     1. 部署环境：nginx+php-fpm方式
-     1. 框架选择
-     1. 缓存
-        - 程序层面的文件静态和优化比底层来的更有效、直接
-        - 开启opcode缓存：避免重复编译，如APC、xcache
-        - 本地缓存：如用xcache缓存元数据，不用每次读文件
-     1. 外部
-        - nginx开启gzip压缩
-1. 发挥PHP7的性能
-   - 开启Opcache
-     1. zend_extension=opcache.so
-     1. opcache.enable=1
-     1. opcache.enable_cli=1
-   - 使用GCC 4.8以上进行编译
-   - 开启HugePage（根据系统内存决定）：操作系统默认的内存是以4KB分页的，而虚拟地址和内存地址需要转换，而这个转换要查表，CPU为了加速这个查表过程会内建TLB(Translation Lookaside Buffer)。 显然，如果虚拟页越小，表里的条目数也就越多，而TLB大小是有限的，条目数越多TLB的Cache Miss也就会越高，所以如果我们能启用大内存页就能间接降低这个TLB Cache Miss。php将采用大内存页来保存，减少TLB miss，提高性能
-   - PGO：Profile Guided Optimization，第一次编译成功后，用项目代码去训练PHP，会产生一些profile信息，最后根据这些信息第二次gcc编译PHP就可以得到量身定做的PHP7
+     1. 框架选择：laravel最重/qps最低/只有倒数第二的一半，ci比thinkphp高两倍，lumen也很高
+        - laravel	700
+        - lumen	    2500	
+        - CI	    2900
+        - thinkphp	1500	
+        - symfony	1900
+        - webman	31000(cli模式)
+        - mixphp	25000(cli模式，swoole，hello world测试超过go-zero)
+     1. 部署环境选择nginx+php-fpm方式，不用apache
+   - 发挥php7的性能
+     1. 开启opcache
+     1. 使用gcc 4.8以上进行编译
+     1. 开启hugepage（根据系统内存决定）：操作系统默认的内存是以4kb分页的，而虚拟地址和内存地址需要转换，而这个转换要查表，cpu为了加速这个查表过程会内建tlb(translation lookaside buffer)。 显然，如果虚拟页越小，表里的条目数也就越多，而tlb大小是有限的，条目数越多tlb的cache miss也就会越高，所以如果我们能启用大内存页就能间接降低这个TLB Cache Miss。php将采用大内存页来保存，减少TLB miss，提高性能
+     1. PGO：Profile Guided Optimization，第一次编译成功后，用项目代码去训练PHP，会产生一些profile信息，最后根据这些信息第二次gcc编译PHP就可以得到量身定做的PHP7
 ### 运维
 1. PHP安装
    - linux

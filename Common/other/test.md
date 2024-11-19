@@ -113,8 +113,8 @@
      1. locust
      1. GoReplay
      1. TcpCopy
-     1. ab：`ab -n total -c runNum http://`，QPS/TPS=并发数/平均响应时间
-     1. wrk：轻量级HTTP性能测试工具，比ab好用？
+     1. ab：`ab -n total -c runNum http://`，并发数 除以 平均响应时间 = QPS/TPS
+     1. wrk：轻量级HTTP性能测试工具，比ab好用？wrk支持http1.1，ab只支持http1.0
         ```lua
         // wrk.lua文件
         --school/course/detail
