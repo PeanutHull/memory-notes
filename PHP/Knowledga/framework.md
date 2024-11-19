@@ -292,60 +292,30 @@
  - yii/helpers/FileHelper
  - yii/helpers/Json
 ### Laravel
-1. 介绍：像流水线一样处理用户请求，模块耦合低、扩展性高。运用了组件化开发、依赖注入、接口编程
+1. 认识：像流水线一样处理用户请求，模块耦合低、扩展性高。运用了组件化开发、依赖注入、接口编程
+   - 是一个比较重的框架，作为api使用可能性能无法做到极致
    - 提供常用组件，简化程序开发，让开发更有乐趣
-1. laravel哲学
+1. 哲学
    - 简洁、优雅和可读性，使用现代化的技术和设计模式
    - 富有表达性、简洁语法的应用框架，开发过程应该是愉悦并且有创造性的，快乐的开发者才能创造最棒的代码
    - laravel易于理解且强大，杰出的IoC、数据库迁移工具、紧密集成的单元测试
-1. 路由
-   - 路由参数、路由别名、路由群组
-1. 视图
-   - 输出视图用`return view('member/info', []);`
-   - 文件名xx.blade.php，模板引擎Blade，不限制使用原生php
-   - 输出变量用{{}}
-1. 模型
-   - DB facade(原始查找)
-   - 查询构造器：提供方便、流畅的接口，建立/执行数据库操作方法。使用PDO参数绑定，免于SQL注入，参数不需转义
-   - Eloquent ORM：优美、简洁的ActiveRecord实现，firstOrCreate/firstOrNew
-     1. 指定查询的字段：`DB::raw`
-        ```php
-        DB::table('entity_question')
-            ->where('id' , 899)
-            ->select(DB::raw("json_extract(json_data,'$.content.answer')"))
-            ->get();
-        ```
-1. 中间件：过滤http请求，在请求到达最终动作之前对请求进行过滤和处理。如Auth中间件身份校验地址导向，CORS为离开程序的响应加标头。用于日志\维护\CSRF保护\身份验证等。有前置/后置中间件
-1. 队列
- - 理解：将用框架处理的东西，放到一个队列里，延迟执行
-    ```php
-    Queue::push('SendEmail', array('message' => $message)); // 添加队列，指定SendEmail的jobs之类执行，fire为默认执行方法 
-    Queue::connection('redis')->later($later, 'ParserQuestion', ['question_str' => $value]); // 指定连接队列，延迟执行
-    class ParserQuestion extends BaseJob {}// 定义解决队列问题的方法，在app/jobs目录下，fire为默认执行方法 
-    ```
-1. Artisan命令行工具：基于Symfony Console开发。新增app/commands文件夹下继承Command即可
-    ```php
-    php artisan list                                // 显示命令列表
-    php artisan *** --env=_zzg                      // 指定配置环境
-    php artisan config:cache                        // 缓冲配置信息到文件，更快
-    php artisan read:word                           // 生成队列
-    php artisan queue:work redis                    // 消费队列，指使用哪个队列，如redis、mq
-    php artisan queue:work connection --daemon      // 常驻队列
-    php artisan dump-autoload                       // 重新载入类
-    ```
-1. 配置
-   - app/config下配置多文件夹界定不同环境配置，修改.env即可
-    ```php
-    php artisan env --env=_zzg
-    fastcgi_param  ENV '_zzg';      // 修改nginx配置
-    ```
-   - 使用`Config::get('app.aa')`或`Config::get('question.aa')`获取对应配置，配置都在超全局变量$_ENV中
-1. 日志：`app/storage/logs`，查看日志`grep "ERROR" laravel.log`
-1. Contracts：契约，定义框架核心服务的接口
-1. Facade：门面，模拟一个类，提供静态魔术方法`__callStatic`，将该静态方法映射到真正的方法上。提供了一个"static"（静态）接口去访问注册到IoC 容器中的类
-1. 运维
-   - 安装：`composer create-project laravel/laravel your-project-name --prefer-dist "5.1.*"`
-   - 目录
+1. 组成
+   - Contracts：契约，定义框架核心服务的接口
+   - Facade：门面，模拟一个类，提供静态魔术方法`__callStatic`，将该静态方法映射到真正的方法上。提供了一个"static"（静态）接口去访问注册到IoC 容器中的类
+   - 服务容器
+     1. 理解：IoC容器，是laravel的核心，该容器提供了整个框架中的一系列服务
+     1. 步骤
+        - Container：binding成员变量存储服务
+        - bind：绑定服务
+        - make：利用反射解决服务依赖，并且实例化服务
+   - 服务提供者
+     1. 一个类能够被提取，要先被注册，绑定到容器，提供服务并绑定服务至容器的东西就是服务提供者
+     1. 意义：是启动laravel的真正关键，自己和所有的laravel都是通过服务提供者启动的。启动指注册事物，包括注册服务容器绑定/事件侦听器/中间件/路由，有些属于延迟注册。应用程序创建————服务提供者注册————请求转义至已启动的应用程序。默认的服务提供者在 `app\Providers` 目录下，config/app.php的providers数组即是
+     1. 组成：`register`（注册） 和 `boot`（引导、初始化）
+   - 请求处理管道
+     1. 理解：使用装饰器模式，利用父子方法继承或者递归回调，实现中心方法执行前后的动态触发事件
+     1. 步骤：`new Pipeline($this->app)->send()->through()->then();        // then管道触发执行`
+   - 目录结构
      1. app 应用程序核心代码
         - console 全部的Artisan命令
         - Jobs 放置应用程序可队列的任务
@@ -357,19 +327,51 @@
      1. public 前端控制器和资源文件
      1. resource 视图、原始的资源文件(LESS/SASS/CoffeeScript)、语言包
      1. storage 编译后的blade模板，基于文件的session，文件缓冲等其他文件。包含app存储应用程序使用的文件/framework保存框架生成的文件和缓冲/logs
-1. 服务容器
-   - 理解：IoC容器，是laravel的核心，该容器提供了整个框架中的一系列服务
-   - 步骤
-     1. Container：binding成员变量存储服务
-     1. bind：绑定服务
-     1. make：利用反射解决服务依赖，并且实例化服务
-1. 服务提供者
-   - 一个类能够被提取，要先被注册，绑定到容器，提供服务并绑定服务至容器的东西就是服务提供者
-   - 意义：是启动laravel的真正关键，自己和所有的laravel都是通过服务提供者启动的。启动指注册事物，包括注册服务容器绑定/事件侦听器/中间件/路由，有些属于延迟注册。应用程序创建————服务提供者注册————请求转义至已启动的应用程序。默认的服务提供者在 `app\Providers` 目录下，config/app.php的providers数组即是
-   - 组成：`register`（注册） 和 `boot`（引导、初始化）
-1. 请求处理管道
-   - 理解：使用装饰器模式，利用父子方法继承或者递归回调，实现中心方法执行前后的动态触发事件
-   - 步骤：`new Pipeline($this->app)->send()->through()->then();        // then管道触发执行`
+1. 功能
+   - 路由
+     1. 路由参数、路由别名、路由群组
+   - 中间件：过滤http请求，在请求到达最终动作之前对请求进行过滤和处理。如Auth中间件身份校验地址导向，CORS为离开程序的响应加标头。用于日志\维护\CSRF保护\身份验证等。有前置/后置中间件
+   - 模型
+     1. DB facade(原始查找)
+     1. 查询构造器：提供方便、流畅的接口，建立/执行数据库操作方法。使用PDO参数绑定，免于SQL注入，参数不需转义
+     1. Eloquent ORM：优美、简洁的ActiveRecord实现，firstOrCreate/firstOrNew
+        - 指定查询的字段：`DB::raw`
+            ```php
+            DB::table('entity_question')
+                ->where('id' , 899)
+                ->select(DB::raw("json_extract(json_data,'$.content.answer')"))
+                ->get();
+            ```
+   - 队列：将用框架处理的东西，放到一个队列里，延迟执行
+    ```php
+    Queue::push('SendEmail', array('message' => $message));                                         // 添加队列，指定SendEmail的jobs之类执行，fire为默认执行方法 
+    Queue::connection('redis')->later($later, 'ParserQuestion', ['question_str' => $value]);        // 指定连接队列，延迟执行
+    class ParserQuestion extends BaseJob {}                                                         // 定义解决队列问题的方法，在app/jobs目录下，fire为默认执行方法 
+    ```
+   - artisan：命令行工具，基于Symfony Console开发。新增app/commands文件夹下继承Command即可
+    ```php
+    php artisan list                                // 显示命令列表
+    php artisan *** --env=_zzg                      // 指定配置环境
+    php artisan config:cache                        // 缓冲配置信息到文件，更快
+    php artisan read:word                           // 生成队列
+    php artisan queue:work redis                    // 消费队列，指使用哪个队列，如redis、mq
+    php artisan queue:work connection --daemon      // 常驻队列
+    php artisan dump-autoload                       // 重新载入类
+    ```
+   - 视图
+     1. 输出视图用`return view('member/info', []);`
+     1. 文件名xx.blade.php，模板引擎Blade，不限制使用原生php
+     1. 输出变量用{{}}
+1. 使用
+   - 配置
+     1. app/config下配置多文件夹界定不同环境配置，修改.env即可
+        ```php
+        php artisan env --env=_zzg
+        fastcgi_param  ENV '_zzg';      // 修改nginx配置
+        ```
+     1. 使用`Config::get('app.aa')`或`Config::get('question.aa')`获取对应配置，配置都在超全局变量$_ENV中
+   - 日志：`app/storage/logs`，查看日志`grep "ERROR" laravel.log`
+#### deep
 1. 5.X启动过程
    - 单入口文件，加载Composer自动加载器，获取app.php中laravel实例，即$app创建服务容器，构造函数初始化以下
      1. 基础绑定：将app/Container和$this进行bind，即instance注册实例化后的实例
@@ -379,6 +381,15 @@
      1. 定义middleware和routeMiddleware以接收之后的请求处理管道
      1. 实例化请求：capture
      1. 处理请求：handle：使用sendRequestThroughRouter处理管道，包含：环境检测、配置加载、日志配置、异常处理、外观注册、服务提供者注册、启动服务，之后是中间件处理(cookie/session/csrf)，路由处理(路由到对应的处理方法)，控制器生成响应
+#### 优化
+1. 性能提升tips
+   - 部署时
+     1. 配置缓存：`php artisan config:cache`，将所有配置合并成一个文件
+     1. 路由缓存：`php artisan route:cache`，将所有路由注册合并成一个文件中的单个方法调用
+     1. 优化自动加载器：`composer install --optimize-autoloader --no-dev`，更快的找到加载文件去加载给定的类
+#### wiki
+1. 配套工具
+   - 开发环境：Homestead和Valet，都是基于虚拟机原理，和容器比起来性能低下，Valet只能再mac上运行更加简洁
 1. 版本特性
    - 5.2：访问频率限制中间件throttle
    - 5.3：支持mysql5.7的json操作、WebSockets操作的Echo

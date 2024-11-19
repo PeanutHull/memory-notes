@@ -605,6 +605,7 @@
 1. 依赖管理工具：Composer
    - 命令
      1. composer config                               // 配置设置
+     1. composer global config --list                 // 查看全局配置
      1. composer init                                 // 初始化项目依赖，自动生成json文件
      1. composer install/update (foo/bar:1.0.0)       // 安装/更新所有/单个依赖
      1. composer show                                 // 查看安装的依赖和依赖的版本号
@@ -819,7 +820,8 @@
    - phar：php archive，php的打包文件
 1. PHP开发
    - 配置
-     1. brew安装的ini位置：`/opt/homebrew/etc/php/8.2/`
+     1. brew安装的php.ini位置：`/opt/homebrew/etc/php/8.2/`
+     1. brew安装的位置：`/opt/homebrew/opt/php@7.2`
    - 启动/停止fpm
      1. `brew services start/stop php@8.2`
      1. `brew services start/stop shivammathur/php/php@7.3`
