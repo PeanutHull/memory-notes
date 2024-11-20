@@ -135,21 +135,26 @@
         set @@global.sql_warnings = OFF;                    
         ```
 1. 函数
-   - cast：类型转换，如`cast(1 as signed)`
-   - 数学：format/round/pow/abs/sin/cos/tan/bit_and
-     1. truncate(xx, 2)：保留n位小数
+   - 修饰符
+     1. unsigned
+     1. zerofill
+     1. variables
+   - 类型相关
+     1. cast：类型转换，如`cast(1 as signed)`
    - 字符串
      1. char/concat/length
      1. instr('x,x,x', xx)：搜索字符串，逗号分隔
      1. locate(xx, 'x,x,x')：搜索字符串，逗号分隔
-   - Find_IN_SET：查找通过,分隔的某一个数据
-   - 时间
-     1. year()、month()、day()、dayname() 星期n
-     1. now()、curtime()、localtime()、unix_timestamp() 时间转换为时间戳
-     1. extract()、datediff()、timestampdiff()
+   - 搜索
+     1. find_in_set：查找通过,分隔的某一个数据
+     1. match：全文搜索
    - 数据处理
-     1. distinct去重可能要全表扫描
-     1. concat字符串连接
+     1. distinct：去重，可能要全表扫描
+
+     1. substring_index：从字符串中提取子字符串，`SUBSTRING_INDEX(str, delimiter, count)`
+
+     1. concat：字符串连接
+     1. group_concat：将分组中的多行数据合并成逗号分隔的字符串
    - 控制流
      1. IF(expr1, if_true_value, if_false_value)：一参为true，返回二参，否则返回三参
         - 认识
@@ -163,13 +168,26 @@
 
      1. ISNULL(expr)：如expr 为null，那么返回1，否则返回0
      1. COALESCE(field1, field2, fieldN)：返回参数列表中的第一个非空值，都空返回null
-   - password
-   - match：全文搜索
-   - uuid()：aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
-   - 修饰符
-     1. unsigned
-     1. zerofill
-     1. variables
+   - 时间
+     1. year()、month()、day()、dayname() 星期n
+     1. now()、curtime()、localtime()、unix_timestamp() 时间转换为时间戳
+     1. extract()、datediff()、timestampdiff()
+   - 数学相关：format/round/pow/abs/sin/cos/tan/bit_and
+     1. truncate(xx, 2)：保留n位小数
+   - 其他
+     1. password
+     1. uuid()：aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
+   - 窗口函数
+     1. 认识：也叫分析函数，和分组聚合类似，是每一行生成一个结果，允许在一组相关行上进行计算，可以结合统计函数一起使用，非常灵活，v8.0
+     1. 组成
+        - OVER：定义了一个窗口
+        - ROW_NUMBER()
+          1. 认识：为结果集中的每一行分配一个唯一的行号，是标准的sql窗口函数
+          1. 实例：`select * , ROW_NUMBER() OVER (PARTITION BY group_id ORDER BY id DESC) as row_num from xxx) as a where row_num=1`，结果集作为一个子查询被命名为a，可以确保每个group_id组内只保留最新的记录(即id最大的记录)。常用于数据去重、分页、其他需按特定规则排序和编号的场景
+        - RANK()
+        - DENSE_RANK()
+        - LEAD()
+        - LAG()
 #### 库表
 1. 库
    - mysql
@@ -397,7 +415,31 @@
 1. 查询调整
    - 分页：limit 100 offset 517325，这个会查询51万的数据，只保留了你需要的100条，用id>n使用索引从而过滤数据
    - 分组
-     1. group by：用列的值进行分组/计算，必须在where之后order by之前，select的字段除了被group的其他要么被统计，要么没有
+     1. group by：用列的值进行分组/计算，默认只会返回每个组的第一个记录，而不是最大记录。必须在where之后order by之前，select的字段除了被group的，其他要么被统计，要么没有
+        - 筛选组内最大的id
+          1. 子查询方式
+            ```sql
+            SELECT cs.*
+            FROM class_snapshot cs
+            JOIN (
+                SELECT commit_group_id, MAX(id) as max_id
+                FROM class_snapshot
+                GROUP BY commit_group_id
+            ) AS max_ids
+            ON cs.commit_group_id = max_ids.commit_group_id AND cs.id = max_ids.max_id;
+            ```
+          1. 使用GROUP_CONCAT和子查询
+            ```sql
+            SELECT cs.*
+            FROM class_snapshot cs
+            JOIN (
+                SELECT commit_group_id, SUBSTRING_INDEX(GROUP_CONCAT(id ORDER BY id DESC), ',', 1) as max_id
+                FROM class_snapshot
+                GROUP BY commit_group_id
+            ) AS max_ids
+            ON cs.commit_group_id = max_ids.commit_group_id AND cs.id = max_ids.max_id;
+            ```
+          1. 窗口函数
      1. having：筛选成组后的数据，作用于组，如`having sum(age) > 10`
    - 排序
      1. 常用：`order by xx1 asc/desc xx2 asc/desc/rand()`
@@ -730,6 +772,9 @@
           1. 批量处理数据时事先对数据排序，保证每个线程按固定顺序处理记录，也可以大大降低出现死锁的可能
      1. 设置等锁超时机制
      1. 引入碰撞检测：性能高成本低
+   - 实际场景
+     1. 业务的事务代码中，一个某where条件下的update语句产生间隙锁，下边insert语句会往锁住的行中插入数据产生死锁
+        -解决方法：某where条件下的update语句拆分为先拿出来主键id，再update特定行，即可避免
 #### 其他
 1. 预解析
    - 理解：使用占位符预先准备查询语句，不用解析语句，查询速度更快，防止注入。步骤有：prepare、execute、deallocate prepare(发布)
