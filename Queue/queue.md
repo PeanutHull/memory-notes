@@ -102,7 +102,7 @@
    - 特性
      1. 多语言客户端：Java、C、C++、C#、Ruby、Python、PHP
      1. 多种应用协议：OpenWire、Stomp REST、WS Notification、XMPP、AMQP
-     1. 支持JMS1.1和J2EE1.4规范，包括持久化、XA消息、事务
+     1. 支持JMS1.1和J2EE1.4规范，包括持久化、XA消息、事务
      1. 高级特性：虚拟主题、组合目的、镜像队列
 ### rocketMQ
 1. 认识：阿里kafka基础上开源
