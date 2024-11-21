@@ -222,3 +222,14 @@ ipv4的udp一次最多发64k，dgram最大2M
    - socket有六种。新的连接放到reator_thread的事件循环中，socket_create方法，是异步的，然后reator_add添加到epoll中，调用epoll_wait，从listen队列中取出来，加到epoll的事件监听中
    - 四种消耗之一的系统调用消耗很大，内存拷贝，进程切换，锁（碰撞就进程切换）
  
+
+
+1. 实现
+   - 网络io：epoll
+   - 文件io
+     1. AIO线程池，命中page cache时开启swoole文件系统io的协程hook，不仅不能提高性能，反而会降低
+     1. v6，使用io_uring，并发读写文件io的性能提高5倍
+        - io_uring：2019年linux 5.1内核首次引入高性能革命性的异步i/o框架，能显著加速i/o密集型应用的性能
+          1. 认识：统一了linux异步i/o框架，io_uring不仅支持磁盘文件，也同时支持支持socket网络io，还支持更多的异步系统调用如：accept/openat/unlink/rmdir/mkdir等系统调用
+          1. 实现原理：每个io_uring实例都有两个环形队列（ring），在内核和应用程序之间共享，包括提交队列、完成队列
+          1. liburing的头文件中定义了许多opcode，每一个opcode对应的是一个或多个Linux系统调用。根据列表所示，几乎支持绝大部分Linux系统调用

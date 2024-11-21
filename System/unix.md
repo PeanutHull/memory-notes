@@ -23,11 +23,11 @@
    - realloc可创建恰好的数组，如路径
    - 进程线程很昂贵，存在上下文切换开销。协程：非抢占式的用户态进程/线程，遇到io主动让出，是串行的
 ### 标准和实现
-1. 标准化
-   - ISO C：c语言标准，涉及是否支持头文件和库函数
-   - IEEE POSIX：Portable Operating System Interfac，可移植操作系统接口，是IEEE为要在各种UNIX上运行软件而定义API的一系列互相关联的标准的总称，用于提升应用程序在unix操作系统的可移植性，规定了各种必须的服务
+1. 标准化：操作系统的标准
+   - POSIX：Portable Operating System Interfac，可移植操作系统接口，是IEEE制定的一系列标准，旨在确保操作系统接口的可移植性和互操作性。为要在各种unix上运行软件定义的api标准，用于提升应用程序在unix操作系统的可移植性，规定了各种必须的服务
      1. 通过应用编程接口(API)而不是直接通过系统调用来编程
-   - Single UNIX Specification：单一unix规范，是POSIX.1标准的超集，包括XSI(X/Open System Interface)
+   - XSI：Single UNIX Specification：单一unix规范，是POSIX.1标准的超集，X/Open组织制定的标准
+   - ISO C：c语言标准，涉及是否支持头文件和库函数
 1. 实现
    - 分支
      1. AT&T：系统三、系统五
@@ -750,66 +750,77 @@
 ##### 进程间通信
 1. 理解：缩写IPC
 1. 管道
-   - 理解：最古老的通信机制，不能假定为全双工的，只能在有共同祖先的进程间使用
+   - 理解：只有共同祖先的半双工的进程间使用，最古老
    - 使用
      1. pipe，可控制数据流向，可与fork联合使用，PIPE_BUF确定传输字节数，可有多个写端
      1. popen/pclose：参数传递w/r用于读写管道
    - 协同进程：同时产生某个过滤程序的输入，和读取其输出，相当于有两个popen
-1. FIFO
-   - 理解：命名管道，FIFO是一种文件类型，不相关进程可用
+1. 命名管道
+   - 理解：FIFO，是一种文件类型，不相关进程可用
    - 使用：mkfifo/mkfifoat
-1. XSI
-   - 特点
+
+1. 消息队列
+   - 理解：允许多个进程发送和接收消息
+     1. 实现原理：存储在内核中的消息链表，由标识符标识，使用全双工管道和记录锁
+     1. 和信号量不建议使用？？？啥意思
+   - 使用：msgget、msgsnd、msgrcv、msgctl(类似ioctl垃圾桶函数)
+1. 共享内存
+   - 理解：最快的方式，不需要数据复制，需要保证写时不能读，可用信号量/记录锁/互斥量。mmap映射的存储段是文件相关联的，共享存储没有。匿名存储映射
+   - 使用：shmget、shmctl、shmat、shmdt
+
+1. 信号
+   - 理解：异步通知机制，用于进程间传递简单的信息
+1. 信号量
+   - 理解：是一个计数器，用于多进程的共享数据对象访问，初值表示多少个单位可共享，使用加1，放弃减1，和记录锁、互斥量比较
+   - 组成
+     1. XSI：semget、semctl、semop
+     1. POSIX：未/已命名，未命名的只能是同一进程的线程中，或不同进程中已映射相同内存内容中的线程
+        - 命名使用：sem_open、sem_close、sem_unlink、sem_trywait、sem_wait、sem_timewait、sem_post
+        - 未命名使用：sem_init、sem_destory、sem_getvalue、sem_
+
+1. 套接字
+   - 认识：sockets
+     1. 套接字：是通信端点的抽象，使用套接字描述符访问套接字
+     1. 套接字描述符：在unix中当做文件描述符
+   - 分类
+     1. tcp/ip方式
+        - 认识：TCP/IP Socket，为实现不同或相同计算机上的进程通信的接口，使用tcp/ip协议栈，可双向传输
+        - 使用
+          1. 函数
+             - socket：创建，可指定协议，可指定底层的ip层传输，read/write/dup/dup2/poll/select为可正常工作的函数
+             - bind：关联地址
+             - listen：监听请求
+             - accept：获得连接请求并建立连接
+             - send/sendto/sendmsg：发送数据
+             - recv/recvfrom/recvmsg
+             - connect：建立连接
+             - close：关闭连接
+             - shutdown：禁止读/写端
+          1. 寻址
+             - 字节序：大/小端，tcp/ip指定了字节序，函数有htonl/htons/ntohl/ntohs
+             - 地址格式：使用sockaddr结构，转换函数inet_ntop/inet_pton
+             - 地址查询：hostent/sethostent/endhostent，getnetbyaddr/getnetbyname/getnetent/setnetent/endnetent,getprotobyname/getprotobynumber/getprotoent/setprotoent/endprotoent，getservbyname/getservbyport/getservent/setservent/endservent，getaddrinfo/freeaddrinfo，getsockname/getpeername
+          1. 设置：setsockopt/getsockopt
+          1. 带外数据：允许更高优先级数据传输，tcp支持，称为紧急数据，也可有紧急标记，使用sockatmark
+          1. 非阻塞：使用poll或select判断是否能够操作数据
+          1. 异步io：发送信号SIGIO，使用fcntl、ioctl
+     1. 域套接字
+        - 理解：Unix Domain Socket，高级IPC，可传送打开的文件描述符，进程可关联描述符。提供流和数据报两种接口，只能本地，.sock后缀，比tcp/ip的快
+          1. 效率更高，仅复制数据，不执行协议处理
+        - 使用
+          1. 数据报：SOCK_DGRAM，可靠，不会丢失报文不会传递出错，像套接字和管道的混合
+             - socketpair：创建无命名、相互连接的unix域套接字，全双工，意味着无关进程不能使用
+             - sockaddr_un：命名域套接字，域套接字的地址，使用socket创建
+        - 唯一连接：就是每有新客户端连接，就新建一条
+        - 传送文件描述符
+1. 不同unix标准的区别
+   - XSI
      1. 标识符和键：都有一个非负整数的标识符，是内部名，和一个键关联作为外部名
      1. 权限结构：包括uid、gid等
      1. 结构限制
      1. 没有引用计数，在文件系统中没有名字从而多了系统调用(函数)，不使用文件描述符从而不能多路转接
      1. 不相关进程可用
-   - 分类
-     1. 消息队列
-        - 理解：存储在内核中的消息链表，由标识符标识，和信号量不建议使用，使用全双工管道和记录锁
-        - 使用：msgget、msgsnd、msgrcv、msgctl(类似ioctl垃圾桶函数)
-     1. 信号量
-        - 理解：是一个计数器，用于多进程的共享数据对象访问， 初值表示多少个单位可共享，使用加1，放弃减1，和记录锁、互斥量比较
-        - 使用：semget、semctl、semop
-     1. 共享存储
-        - 理解：不需要数据复制，最快，需要保证写时不能读，可用信号量/记录锁/互斥量。mmap映射的存储段是文件相关联的，共享存储没有。匿名存储映射
-        - 使用：shmget、shmctl、shmat、shmdt
-1. POSIX 信号量
-   - 理解：比XSI 信号量有更高性能，删除时更完美。未/已命名，未命名的只能是同一进程的线程中，或不同进程中已映射相同内存内容中的线程
-   - 命名使用：sem_open、sem_close、sem_unlink、sem_trywait、sem_wait、sem_timewait、sem_post
-   - 未命名使用：sem_init、sem_destory、sem_getvalue、sem_
-1. 网络IPC
-   - 理解：一套为实现不同或相同计算机上的进程通信的接口，双向传输，使用tcp/ip协议栈，即套接字api
-     1. 套接字：是通信端点的抽象，使用套接字描述符访问套接字
-     1. 套接字描述符：在unix中当做文件描述符
-   - 使用
-     1. socket：创建，可指定协议，可指定底层的ip层传输，read/write/dup/dup2/poll/select为可正常工作的函数
-     1. bind：关联地址
-     1. listen：监听请求
-     1. accept：获得连接请求并建立连接
-     1. send/sendto/sendmsg：发送数据
-     1. recv/recvfrom/recvmsg
-     1. connect：建立连接
-     1. close：关闭连接
-     1. shutdown：禁止读/写端
-   - 寻址
-     1. 字节序：大/小端，tcp/ip指定了字节序，函数有htonl/htons/ntohl/ntohs
-     1. 地址格式：使用sockaddr结构，转换函数inet_ntop/inet_pton
-     1. 地址查询：hostent/sethostent/endhostent，getnetbyaddr/getnetbyname/getnetent/setnetent/endnetent,getprotobyname/getprotobynumber/getprotoent/setprotoent/endprotoent，getservbyname/getservbyport/getservent/setservent/endservent，getaddrinfo/freeaddrinfo，getsockname/getpeername
-   - 设置：setsockopt/getsockopt
-   - 带外数据：允许更高优先级数据传输，tcp支持，称为紧急数据，也可有紧急标记，使用sockatmark
-   - 非阻塞：使用poll或select判断是否能够操作数据
-   - 异步io：发送信号SIGIO，使用fcntl、ioctl
-1. unix 域套接字
-   - 理解：高级IPC，可传送打开的文件描述符，进程可关联描述符。提供流和数据报两种接口，不是网络协议只能本地，.sock后缀
-     1. 效率更高，仅复制数据，不执行协议处理
-   - 使用
-     1. 数据报：SOCK_DGRAM，可靠，不会丢失报文不会传递出错，像套接字和管道的混合
-        - socketpair：创建无命名、相互连接的unix域套接字，全双工，意味着无关进程不能使用
-        - sockaddr_un：命名域套接字，域套接字的地址，使用socket创建
-   - 唯一连接：就是每有新客户端连接，就新建一条
-   - 传送文件描述符
+   - POSIX信号量比XSI信号量有更高性能，删除时更完美
 ### 其他
 1. sleep
    - 认识：基于系统调用nanosleep，使当前进程挂起一段指定的时间，期间不占用CPU资源，中断信号或时间到了后将进程的状态恢复为TASK_RUNNING，并重新将进程添加到运行队列中，等待调度器重新调度
