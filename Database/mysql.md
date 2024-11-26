@@ -771,8 +771,8 @@
         - 环路等待
      1. 会出现的地方
         - 记录锁（LOCK_REC_NOT_GAP）: lock_mode X locks rec but not gap
-        - 间隙锁（LOCK_GAP）: lock_mode X locks gap before rec
-        - 插入意向锁（LOCK_INSERT_INTENTION）: lock_mode X locks gap before rec insert intention
+        - 间隙锁（LOCK_GAP）: lock_mode X locks gap before rec，where条件的update可以产生
+        - 插入意向锁（LOCK_INSERT_INTENTION）: lock_mode X locks gap before rec insert intention/waiting
         - Next-key锁（LOCK_ORNIDARY）: lock_mode X
    - 解决方案
      1. 合格的设计：通常来说死锁都是应用设计的问题。死锁的关键在于两个(或以上)的session加锁的顺序不一致
@@ -783,11 +783,24 @@
         - 有序顺行
           1. 如果并发查询多个表，约定访问顺序
           1. 批量处理数据时事先对数据排序，保证每个线程按固定顺序处理记录，也可以大大降低出现死锁的可能
-     1. 设置等锁超时机制
+     1. 依赖mysql的等锁超时机制：InnoDB使用一种图遍历算法来检测死锁，不是每次事务都进行检测，在事务等待资源超时后才进行检测。默认情况等待超时时间为50秒(innodb_lock_wait_timeout)
      1. 引入碰撞检测：性能高成本低
+   - 最佳实践
+     1. 如何查看死锁日志
+        - 查看基础信息：host、thread(执行线程)、status(normal/rollback是否回滚)、相关sql
+        - 查看产生死锁信息：LockRequest(要请求的锁)、LockHold(已经持有的锁)
+        - 事务id是自增的，可以看出来谁先执行
    - 实际场景
-     1. 业务的事务代码中，一个某where条件下的update语句产生间隙锁，下边insert语句会往锁住的行中插入数据产生死锁
-        -解决方法：某where条件下的update语句拆分为先拿出来主键id，再update特定行，即可避免
+     1. 业务的事务代码中，一个where条件下的update语句产生间隙锁，下边insert语句会往锁住的行中插入数据产生死锁
+        - 解决方法：某where条件下的update语句拆分为先拿出来主键id，再update特定行，即可避免
+     1. 有个并发更新场景，一个用主键更新，一个用自建索引更新，然后互相持有对方的主键锁、索引锁产生死锁
+        - sql
+          1. `update 'ds_bjy_room' set 'live_status' = 2 where 'classroom_id' = 2724 and 'live_status' = 1`：持有索引锁，请求主键锁
+          1. `update 'ds_bjy_room' set 'live_status' = 2 where 'id' = 2700`：持有主键锁，请求索引锁
+        - 原理
+          1. 更新数据时，主键索引、自建索引都会被更新
+          1. where条件用了哪个索引，就先更新哪个索引
+        - 解决方案：把更新自建索引改为先查出来所有id，然后按照主键去更新
 #### 其他
 1. 预解析
    - 理解：使用占位符预先准备查询语句，不用解析语句，查询速度更快，防止注入。步骤有：prepare、execute、deallocate prepare(发布)
