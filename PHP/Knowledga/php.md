@@ -611,13 +611,14 @@
      1. composer show                                 // 查看安装的依赖和依赖的版本号
      1. composer dump-autoload --optimize             // 为生产环境做准备
    - 参数
+     1. -V
+
      1. --prefer-dist：用于install/update，强制下载源代码，在修改文件后更新文件会给出提示
      1. --prefer-source
      1. --lock：仅更新锁文件，用于update
      1. --no-dev：跳过require-dev中的包
-     1. -V
    - 功能
-     1. 锁文件：会将把安装时确切的版本号列表写入，install会在lock存在情况下下载lock中的，忽略json中的，update会更新lock文件
+     1. 锁文件：`composer.lock`，会将把安装时所有依赖的确切的版本号列表写入(包括深层次)，install会在lock存在情况下下载lock中的，忽略json中的，update命令会更新lock文件
      1. 自动加载：composer自动会生成一个vender/autoload.php，载入这个文件后，直接new，就会自动载入。命名空间的申明应该以\\结束
         - 在composer.json的autoload字段中增加自己的autoloader
             ```json
@@ -679,7 +680,9 @@
         }
         ```
    - 最佳实践
-     1. composer.lock提交到代码库，利用lock文件确认深层次依赖中每一个的版本号，命令` composer install -vvv --no-dev --ignore-platform-reqs --no-interaction --optimize-autoloader`
+     1. 生产代码中应该书写指定的版本号，防止以后的上线构建时执行composer install因为依赖包的更新可能带来的问题，比如依赖包更新了一个版本写了一个bug，就会影响服务
+     1. composer.lock提交到代码库，利用lock文件确认深层次依赖中每一个的版本号
+     1. 优化自动加载器：命令`composer install -vvv --no-dev --ignore-platform-reqs --no-interaction --optimize-autoloader`
 ### 测试与性能
 1. 代码调试和性能分析
    - xdebug：本地调试

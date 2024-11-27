@@ -1266,35 +1266,94 @@
 1. 问题
    - conflicts=proceed？
 ### deep
-1. Lucene：被认为是最好的搜索引擎
-   - index：倒排索引，多个segment信息用于同时查，commit point记录多个segment信息，为了提高查询实时性
-     1. segment：单个倒排索引
-        - segment merge：由于segment增多会导致查询变慢，es会定时在后台进行merge操作，有force_merge api
-   - 删除文档：segment生成后不能修改，所以维护.del文件记录已删除的文档，记录的是lucene内部的id，查询返回前过滤掉.del的文档
-   - 更新文档：先删除，再新增
-1. 搜索引擎
-   - 认识：先分词，通过倒排索引获取文档id，再用正排索引获取完整内容
+1. lucene
+   - 认识：被认为是最好的搜索引擎，es的分片相当于lucene的倒排索引index
+     1. es中每个字段都有自己的倒排索引
+   - 原理：先分词形成一大堆词的词典，查询时先匹配词再通过倒排索引获取文档id，再用正排索引获取完整内容
    - 索引类型
-     1. 倒排索引
-        - 认识：单词到文档id，即书后边的索引
-        - 组成
-          1. 单词词典：Term Dictionary，一般使用B+Tree数实现
-             - 记录所有文档的单词，比较大
-             - 记录单词到倒排列表的偏移
-          1. 倒排列表：Posting List，记录单词对应文档的集合，由倒排索引项组成。es中每个字段都有自己的倒排索引
-             - 文档id：查最终内容
-             - 单词频率：出现次数，用于相关性算分
-             - 位置：记录文档中的分词位置，用于词语搜索
-             - 偏移：在文档中的开始和结束位置，用于高亮显示
-        - 不可修改
-          1. 好处
-             - 避免文件并发写的锁机制的性能问题
-             - 充分利用文件系统缓存，载入次数少，只要内存够都能从内存读，性能高
-             - 写入时候利于生成缓存
-             - 利于文件压缩存储，可用一些压缩算法，节省磁盘、内存空间
-          1. 坏处
-             - 写入新文档时，必须重新构建倒排索引文件，替换老文件后才能被检索，实时性差
+     1. 倒排索引：index
      1. 正排索引：文档id到内容/单词
+1. 倒排索引
+   - 认识：单词到文档id
+   - 组成
+     1. 单词词典：Term Dictionary，一般用B+Tree实现
+        - 记录所有文档的单词，比较大
+        - 记录单词到倒排列表的偏移
+     1. 倒排列表：Posting List，记录单词对应文档的集合，由倒排索引项组成
+        - 文档id：查最终内容
+        - 单词频率：出现次数，用于相关性算分
+        - 位置：记录文档中的分词位置，用于词语搜索
+        - 偏移：在文档中的开始和结束位置，用于高亮显示
+     1. 实现
+        - segment：单个倒排索引，会同时用到多个segment进行查询
+          1. segment merge：由于segment增多会导致查询变慢，es会定时在后台进行merge操作，有force_merge api
+          1. 为提高查询实时性commit point记录了多个segment信息
+   - 特性
+     1. 不可修改
+        - 好处
+          1. 避免文件并发写的锁机制的性能问题
+          1. 充分利用文件系统缓存，载入次数少，只要内存够都能从内存读，性能高
+          1. 写入时候利于生成缓存
+          1. 利于文件压缩存储，可用一些压缩算法，节省磁盘、内存空间
+        - 坏处
+          1. 写入新文档时，必须重新构建倒排索引文件，替换老文件后才能被检索，实时性差
+   - 操作
+        - 删除文档：segment生成后不能修改，所以维护.del文件记录已删除的文档，记录的是lucene内部的id，查询返回前过滤掉.del的文档
+        - 更新文档：先删除，再新增
+1. 查询
+   - 认识：es是一个分布式系统，一个索引数据查询需要汇总每个索引分片的结果。类似map-reduce，分开聚合
+     1. 大多数的es查询是一个二阶段的查询，进行二阶段查询主要因为要减少fetch阶段的资源损耗，因为每个分片排序的数据不一定都要
+     1. global ordinals：假如需要聚合的数据是海量的，如果将查询结果全部读取回来放到内存里计算，内存消耗会非常大。因此利用global ordinals先打有序标记，之后遍历时很快可以查出，成本在于原始构建上。还有High Cardinality的概念
+   - 特性
+     1. 数量：要n条数据，总的文档查询数是 分片数*n
+     1. 排名：每个节点按照自身局部数据排序，聚合后排名不准，除非抽取所有数据
+   - 查询方式
+     1. query and fetch：一次查询返回全部数据，适合小规模数据集、低延迟要求
+     1. query then fetch：两次查询，默认，排名不准
+     1. DFS query and fetch：将所有分片的打分数据全部汇总，排名准确
+     1. DFS query then fetch
+   - query then fetch的过程
+     1. 指定docId：每个文档指定唯一docId，docId作为hash路由到某个分片的依据
+     1. 协调节点负载请求：client发送请求到任意一个node，这个node成为协调节点(coordinate node)
+     1. 寻找数据节点：协调节点进行hash路由后请求转发到对应node，使用round-robin随机轮询算法决定主副分片中的某一个从而实现负载均衡
+     1. docId方式
+        - 接收请求的node返回文档给协调节点
+        - 协调节点返回文档给client
+     1. 条件查询方式
+        - query阶段：每个分片将自己的结果(docId/算分等)返回给协调节点，由协调节点进行合并、排序、分页等操作，产生最终结果
+          1. 取各个分片from + size个docId和排序分(每个分片上的数量可能不均衡)，协调节点根据排序分选取正确的docId
+        - fetch阶段：协调节点根据docId去各个分片上发送multi_get请求拉取完整的文档数据，最终返回给客户端
+   - 算分
+     1. 算分问题：因为分片间数据独立，一个term的IDF值在不同分片而不同，文档数不多时会导致严重不准
+        - 设置分片数为1：根本上排除，适合文档数不多，但是千万级太慢
+        - DFS Query-then-Fetch：拿到所有文档后重算一次，耗费更多cpu和内存，不建议。`http://xx?search_type=dfs_query_then_fetch`
+     1. 算分的算法：es5之前TF-IDF算法，一排除无实际意义词如'的'干扰，每个文档都有则IDF趋近于0，二关键词次数越少IDF值越高。后改为BM25
+        - TF = count(词频数) / count(总词数)
+        - IDF = log(count(所有文章) / count(关键词出现的文章))
+   - 查询实时性
+     1. lucene特性：新文档生成新的倒排索引文件segment，查的时候同时查然后汇总计算。这样开销小，实时性高
+     1. refresh：每1秒执行一次，所以文档实时性为1秒、es被称为近实时。即lucene的segment写入依然耗时，先将segment写入缓存并开放查询进一步提升实时性。refresh之前文档存储在buffer中，refresh时buffer清空并生成segment，都是在内存中操作
+        - 执行时机
+          1. 间隔时间达到，`index.settings.refresh.interval`，默认1秒
+          1. index.buffer满时，`indices.memory.index_buffer_size`，默认jvm heap的10%，所有分片共享
+          1. flush发生时
+     1. flush：负责将各个数据写入磁盘
+        - 步骤
+          1. 将translog写入磁盘
+          1. 将index buffer清空并生成新的segment文件，相当于refresh
+          1. 更新commit point并写入磁盘
+          1. 执行fsunc，将内存中的segment写入磁盘
+          1. 删除旧的内存中的translog文件
+        - 执行时机
+          1. 间隔时间达到，默认30分钟，5.x之前`index.translog.flush_threshold_period`修改，之后无法修改，不建议
+          1. translog满时，`index.translog.flush_threshold_size`，默认512M，一个索引一个自己的translog
+1. 持久化
+   - 数据高可用：translog机制
+     1. 文档写入到buffer时，同时即时落盘(fsync)写入translog，6.x默认每个请求都落盘安全性最高，可改为5秒一次忍受最长5秒的数据丢失`index.translog.*`
+     1. es启动时检查translog文件，从中恢复数据
+1. 其他
+   - 相关性算分：relevance，概念：词频、文档频率(出现的总文档数)、逆向文档频率(即1/n)、文档长度(越短越高)。算分模型：TF/IDF，BM25(5.x默认)，best match，迭代了25次才计算
+   - 加快查询速度：顺序扫描法、索引扫描法。将全文数据一部分提取出来变成一定结构
    - 分词器
      1. 认识：Analyzer，es中处理分词的组件，在查询、新增和更新时使用
         - 分词：analysis，将文本转换成一系列term(单词)，也叫文本分析
@@ -1366,63 +1425,7 @@
         - 多看文档
         - 将mapping进行版本管理，添加好注释，可以加个metadata，维护一些文档相关的元数据，方便数据管理，加版本字段可区分老的数据文档
         - 防止字段过多，设置dynamic为true，可拆分多个索引
-1. 查询
-   - 认识：类似mapreduce，分开聚合
-   - 搜索方式
-     1. query and fetch：一次查询
-     1. query then fetch：两次查询，默认，排名不准
-     1. DFS query and fetch：将所有分片的打分数据全部汇总，排名准确
-     1. DFS query then fetch
-1. 查询问题
-   - 数量：要n条数据，总的查询是分片数*n
-   - 排名：每个节点是按照自身局部数据排序，聚合后排名不准，除非先抽取出所有数据
-1. 查询过程
-   - 单id
-     1. 每个document分配/指定唯一doc id，作为hash路由到某个shard的依据
-     1. client发送请求到任意一个node，这个node成为coordinate node
-     1. coordinate node进行hash路由后请求转发到对应node，使用round-robin随机轮询算法决定主副分片中的某一个，让读请求负载均衡
-     1. 接收请求的node返回document给coordinate node
-     1. coordinate node返回document给client
-   - 搜索
-     1. 还是coordinate node转发请求
-     1. query phase：每个shard将自己结果(doc id/算分等)，返回给协调节点，由协调节点进行合并、排序、分页等操作，产出最终结果
-     1. fetch phase：接着由协调节点，根据doc id去各个节点上拉取实际的document数据，最终返回给客户端0
-1. ElasticSearch
-   - 分片：相当于lucene的index
-   - 搜索机制
-     1. query then fetch
-        - query：取各个分片from + size个文档id和排序值(每个分片上的数量可能不均衡)，根据排序值选取正确的文档id
-        - fetch：向相关分片发送multi_get请求，获取文档内容
-     1. 算分问题：因为分片间数据独立，一个term的IDF值在不同shard而不同，文档数不多时会导致严重不准
-        - 设置分片数为1：根本上排除，适合文档数不多，但是千万级太慢
-        - DFS Query-then-Fetch：拿到所有文档后重算一次，耗费更多cpu和内存，不建议。`http://xx?search_type=dfs_query_then_fetch`
-     1. 算分的算法：es5之前TF-IDF算法，一排除无实际意义词如'的'干扰，每个文档都有则IDF趋近于0，二关键词次数越少IDF值越高。后改为BM25
-        - TF = count(词频数) / count(总词数)
-        - IDF = log(count(所有文章) / count(关键词出现的文章))
-   - 搜索实时性
-     1. lucene特性：新文档生成新的倒排索引文件segment，查的时候同时查然后汇总计算。这样开销小，实时性高
-     1. refresh：每1秒执行一次，所以文档实时性为1秒、es被称为近实时。即lucene的segment写入依然耗时，先将segment写入缓存并开放查询进一步提升实时性。refresh之前文档存储在buffer中，refresh时buffer清空并生成segment，都是在内存中操作
-        - 执行时机
-          1. 间隔时间达到，`index.settings.refresh.interval`，默认1秒
-          1. index.buffer满时，`indices.memory.index_buffer_size`，默认jvm heap的10%，所有分片共享
-          1. flush发生时
-     1. flush：负责将各个数据写入磁盘
-        - 步骤
-          1. 将translog写入磁盘
-          1. 将index buffer清空并生成新的segment文件，相当于refresh
-          1. 更新commit point并写入磁盘
-          1. 执行fsunc，将内存中的segment写入磁盘
-          1. 删除旧的内存中的translog文件
-        - 执行时机
-          1. 间隔时间达到，默认30分钟，5.x之前`index.translog.flush_threshold_period`修改，之后无法修改，不建议
-          1. translog满时，`index.translog.flush_threshold_size`，默认512M，一个索引一个自己的translog
-   - 数据高可用：translog机制
-     1. 文档写入到buffer时，同时即时落盘(fsync)写入translog，6.x默认每个请求都落盘安全性最高，可改为5秒一次忍受最长5秒的数据丢失`index.translog.*`
-     1. es启动时检查translog文件，从中恢复数据
-   - global ordinals：假如需要聚合的数据是海量的，如果将查询结果全部读取回来放到内存里计算，内存消耗会非常大。因此利用global ordinals先打有序标记，之后遍历时很快可以查出，成本在于原始构建上。还有High Cardinality的概念
-1. 相关性算分：relevance，概念：词频、文档频率(出现的总文档数)、逆向文档频率(即1/n)、文档长度(越短越高)。算分模型：TF/IDF，BM25(5.x默认)，best match，迭代了25次才计算
-1. 顺序扫描法、索引扫描法：将全文数据一部分提取出来变成一定结构，加快搜索速度
-1. 通过有限状态转换器实现全文检索的倒排索引：用于存储数值数据的BKD树，和用于分析的列存储
-   - 存储数据时按有序存储
-   - 将数据和索引分离；
-   - 压缩数据
+   - 通过有限状态转换器实现全文检索的倒排索引：用于存储数值数据的BKD树，和用于分析的列存储
+     1. 存储数据时按有序存储
+     1. 将数据和索引分离
+     1. 压缩数据
