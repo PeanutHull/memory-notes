@@ -663,20 +663,23 @@
           1. 数据库访问频次低，压力小
           1. 性能较好
    - redis原子步长：多台redis设置不同步长，每天重新生成一个id，然后累加获得，实现高可用、负载均衡，性能好，数字ID天然排序
-### 登录鉴权
-1. 登录和鉴权方式
-   - 账号密码
-   - MFA：多因素认证，增加基于应用的令牌、指纹
-   - SSO
-     1. 认识：单点登录，用户的一次登录能得到其他所有系统的信任
-        - 共享同一个身份认证系统，也就是说所有站点的身份验证操作在同一个系统下完成
-        - 每个子系统从共同的身份认证系统中取得用户凭证，包含用户的身份/权限信息等
-     1. 方案
-        - 服务端写入持久化共享session（db,nosql等)，集中度高
-        - 服务端不保存session，数据由客户端发回服务端，服务端变为无状态，如jwt
-     1. 应用协议
-        - CAS：Central Authentication Service 中央认证服务，一种开放的易于集成的sso协议，没认证会将用户重定向到cas服务器进行登录后再重定向回去，能够与ldap/数据库等认证机制集成，1998年创建
-        - SAML：Security Assertion Markup Language，基于XML的支持sso的开放标准
+### 认证&授权
+1. 认证&授权
+   - 认证
+     1. 认识：身份验证/鉴权，指通过一定的手段完成对用户身份的确认，确认当前所声称为某种身份的用户，确实是所声称的用户
+     1. 方法
+        - HTTP Basic Authentication
+        - HMAC(AK/SK）
+        - OAuth2
+        - JWT
+   - 授权
+     1. 认识：访问控制，对安全相关的资源定义与授予访问权限
+     1. 权限分类
+        - 功能权限
+        - 数据权限
+1. 身份认证协议
+   - 账号密码/HTTP Basic Authentication
+   - HMAC
    - OAuth2.0
      1. 认识：Open Authorization 开放式授权，为解决第三方程序可获取服务器上的用户信息但用户又不用将自己的账号密码告知第三方程序的问题，v1.0有漏洞
      1. 授权方式
@@ -692,34 +695,85 @@
         - 用户输入本方密码，发放令牌
         - 利用令牌访问相应api
         - 令牌更新：颁发令牌时颁发两个，一个获取数据，一个用于获取新的，到期前用refresh token去获取新令牌
-1. 解决方案
+   - OIDC：基于OAuth2的身份认证协议，为用户提供安全的单点登录SSO和联合身份认证功能，采用RESTful HTTP API，应用程序不仅可以获取访问令牌Access Token，还可以获取包含了用户的身份信息的ID Token
+   - MFA：多因素认证，增加基于应用的令牌、指纹
+
+   - OpenID Connect
+   - LDAP：Lightweight Directory Access Protocol，轻量级目录访问协议，用来查询、更新Active Directory的目录服务通信协议，可以允许任何程序获得目录和其他信息，类似电话薄
+     1. 目录：指一种按照树状结构存储信息的数据库
+     1. ADDS：Active Directory Domain Service，ad域服务器，利用ldap命名路径（LDAP naming path）来表示对象在ad内的位置，提供查询、修改等服务。ad域内的资源以Object(对象)的形式存在，对象通过属性描述特征，就像电话簿中的一个记录，有姓名、地址等
+   - SAML：技术复杂度高，适配场景大，xml格式，使用起来复杂
+1. 权限模型
+   - ACL：Access Control List 访问控制列表，就是用户直接关联权限，数据大量且分散，不方便集中管理
+   - RBAC
+     1. 认识：基于角色的访问控制，用户通过角色与权限进行关联，即用户-角色-权限-资源，用于相对简单的访问控制需求
+     1. 组成
+        - RBAC0：最核心最基本的，只包含用户、角色、权限、会话
+        - RBAC1：引入了角色的继承概念，角色的权限可以设计为继承获得
+        - RBAC2：引入了SSD(静态职责分离)、DSD(动态职责分离)
+          1. SSD：用户和角色之间的约束
+             - 互斥角色，同一个用户不能授于互斥关系的角色
+             - 基数约束，一个用户拥有的角色是有限的，一个角色拥有的许可是有限的
+             - 先决条件约束，用户想得到高级权限，必须先拥有低级权限
+          1. DSD：会话和角色之间的约束，动态决定怎么样计划角色，如一个用户拥有5个角色，只能激活2个
+        - RBAC3：RBAC1+RBAC2
+     1. 表结构
+        - ucenter_member：用户表
+        - auth_rule：权限表，模块+控制器+方法名
+        - auth_role：角色表
+        - auth_role_rule：角色、权限关系表
+        - auth_role_user：角色、用户关系表
+   - ABAC
+     1. 认识：Attribute Base Access Control 基于属性的权限控制，通过动态计算n个属性是否满足设置好的逻辑进行授权判断，支持布尔逻辑，规则包含谁在发出请求、资源和操作的`IF，THEN`语句，表示复杂布尔规则集的策略的概念可以评估许多不同的属性，更加灵活可控
+     1. 维度
+        - 外部授权管理
+        - 动态授权管理
+        - 基于策略的访问控制
+        - 细粒度的授权
+     1. 组件
+        - attribute：属性，用于表示 subject、object、environment conditions的特点，key-value形式
+        - subject：指使用者
+        - object：指代ACM(访问控制机制)需要管理的资源，如文件、某项记录，某台机器、某个网站
+        - operation：subject需要做的操作，如查看某条记录/使用某个功能/登录某台服务器。往往包括读/写/修改/拷贝等，一般operation会表达在request中，比如http method
+        - environment conditions：环境特征，表示请求发生时的操作或上下文。如当前时间、当前安全等级、生产环境还是测试环境等
+        - policy：通过subject、object的attribute与environment conditions一起来判断subject的请求是否能够允许的关系表示，一般是一系列的boolean逻辑判断的组合
+   - PBAC：基于策略的权限控制，通过定义策略来管理访问控制、更细粒度、支持动态控制的策略
+   - TBAC：基于任务的权限控制，用户只能在特定任务或角色下获得特定的权限，以完成特定的任务
+1. 单点登录方法
+   - SSO
+     1. 认识：单点登录，用户的一次登录能得到其他所有系统的信任
+        - 共享同一个身份认证系统，也就是说所有站点的身份认证操作在同一个系统下完成
+        - 每个子系统从共同的身份认证系统中取得用户凭证，包含用户的身份/权限信息等
+     1. 方案
+        - 服务端写入持久化共享session（db,nosql等)，集中度高
+        - 服务端不保存session，数据由客户端发回服务端，服务端变为无状态，如jwt
+     1. 应用协议
+        - CAS：Central Authentication Service 中央认证服务，一种开放的易于集成的sso协议，没认证会将用户重定向到cas服务器进行登录后再重定向回去，能够与ldap/数据库等认证机制集成，1998年创建
+        - SAML：Security Assertion Markup Language，基于XML的支持sso的开放标准
    - JWT
-     1. 认识：JSON Web Token，跨域认证解决方案，服务端签发，客户端发回token进行校验。有官方写法，用base64和hs256
+     1. 认识：JSON Web Token，跨域认证解决方案，服务端签发，客户端发回token进行校验。有官方写法，用base64和hs256，避免了cookie的域名限制
      1. 组成：三者base64压缩，用.连接
         - header：官方声明类型、加密算法
         - playload：放一些无关紧要的东西，签发者、签发时间、过期时间等
         - signature：加密的签名token，用来获取后续的信息
-   - ADDS
-     1. 认识：Active Directory Domain Service，ad域服务器，利用ldap命名路径（LDAP naming path）来表示对象在ad内的位置，提供查询、修改等服务。ad域内的资源以Object(对象)的形式存在，对象通过属性描述特征，就像电话簿中的一个记录，有姓名、地址等
-        - LDAP：Lightweight Directory Access Protocol，轻量级目录访问协议，用来查询、更新Active Directory的目录服务通信协议，可以允许任何程序获得目录和其他信息，类似电话薄
-          1. 目录：指一种按照树状结构存储信息的数据库
-1. 权限管理
-   - ACL：Access Control List 访问控制列表，就是用户直接关联权限，数据分散，不方便集中管理
-   - ABAC：Attribute Base Access Control 基于属性的权限控制，通过动态计算n个属性是否满足设置好的逻辑进行授权判断，控制可以更加细粒度
-     1. 属性四类：用户属性（如用户年龄），环境属性（如当前时间），操作属性（如读取），对象属性（如一篇文章，又称资源属性）
-     1. 配置文件管理
-   - RBAC
-     1. 认识：基于角色的访问控制，用户通过角色与权限进行关联，即 用户-角色-权限-资源
-     1. 表结构
-        - ucenter_member：用户表
-        - auth_group：组数据表
-        - auth_group_access：用户、组关系表
-        - auth_rule：权限表，模块+控制器+方法名、名称
+1. 组织架构设计
+   - auth_group：组数据表
+     1. parent_id：父级组id，用于实现无限极组
+   - auth_group_access：用户、组关系表
 1. wiki
    - 令牌和密码
      1. 令牌是短期的，到期会自动失效，用户自己无法修改。密码一般长期有效，用户不修改，就不会发生变化
      1. 令牌可以被数据所有者撤销，会立即失效。密码一般不允许被他人撤销
      1. 令牌有权限范围，密码一般是完整权限
+   - IAM：身份权限管理系统
+   - IdP：身份提供商，有Google、GitHub、LDAP/AD等
+   - 集成IAM/SSO方案
+     1. 开源
+        - casdoor
+        - stytch
+        - Keycloak：类似casdoor，redHat开发并维护
+     1. 商业
+        - www.authing.com：完善的登录方案提供商
 ### 阿里云
 1. ACK
    - 认识

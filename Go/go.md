@@ -3386,7 +3386,7 @@
         ```
    - 命令
      1. `go mod <command> [arguments]`
-        - init：初始化
+        - init projectName：初始化
         - download：下载
         - edit -module/require/version/print xx：手动修改依赖文件
         - tidy：整理，需要的加，不要的删

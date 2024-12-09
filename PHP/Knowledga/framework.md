@@ -371,6 +371,19 @@
         ```
      1. 使用`Config::get('app.aa')`或`Config::get('question.aa')`获取对应配置，配置都在超全局变量$_ENV中
    - 日志：`app/storage/logs`，查看日志`grep "ERROR" laravel.log`
+1. 队列
+   - 认识
+     1. 队列驱动
+        - 同步：sync，即当前进程内立即执行，阻塞当前的http请求
+        - 数据库：database
+        - Redis
+        - RabbitMQ
+        - Beanstalkd、Amazon SQS
+   - 使用
+     1. 创建：任务类通常继承自`Illuminate\Contracts\Queue\ShouldQueue`。或者使用`php artisan make:job JobName --queue`来创建
+     1. 运行：启动n个worker进程，轮询队列的方式，启动方式`php artisan queue:work`
+     1. 失败：自动重试，转移到失败队列
+     1. 调度：延迟/定时执行、时间间隔重复执行
 #### deep
 1. 5.X启动过程
    - 单入口文件，加载Composer自动加载器，获取app.php中laravel实例，即$app创建服务容器，构造函数初始化以下

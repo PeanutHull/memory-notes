@@ -86,7 +86,7 @@
           1. root tree，存储http方法的映射，用slice而不是用map并不是为了内存考虑，在短长度的情况下，slice的速度会比map快很多
      1. middleware：基于HandlersChain []HandlerFunc来确认事件内容
 1. beego
-   - 用于开发api、web的http框架，自带orm，大而全，最后一次更新20年12月
+   - 用于开发api、web的http框架，自带orm，大而全
      1. 简单：RESTFul、mvc，支持热编译，自动化打包
      1. 智能：路由、监控
      1. 模块：Session、缓存、日志、配置解析、性能监控、上下文操作、ORM 模块、请求模拟

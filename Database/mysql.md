@@ -466,6 +466,14 @@
         - 时间戳
           1. 转为时间戳：`unix_timestamp('2018-01-15 09:45:16');`
           1. 转为时间：` from_unixtime(date, '%Y-%c-%d %h:%i:%s')`
+1. 插入
+   - `insert ignore into`：ignore的作用为插入数据时忽略某些错误不中断从而继续执行成功，事务冲突、语法错误或严重数据类型不匹配错误仍然会导致插入操作失败
+     1. 特性
+        - 违反唯一键或主键约束，会忽略
+        - 如果存在重复记录，不会插入而是跳过
+        - 忽略简单的数据类型不匹配
+     1. 最佳实践
+        - 先进行数据清洗，避免此类操作
 1. 更新
    - replace
      1. 认识：是标准sql的mysql扩展，使用主键或唯一索引确定是否插入新行
@@ -683,12 +691,9 @@
      1. 活锁：不会阻塞执行，但也不能继续执行，需要一直重复，可能会成功，会降低执行效率，引入随机性解决
         - 像两个过于礼貌的人在路上相遇，彼此让路，然后在另一条路上相遇，然后一直循环
      1. 饥饿：可运行进程能继续执行，但被调度器无限期忽视，而不能被执行，通过计数取样解决
-   - 查看
-     1. 表锁争用情况：`show status like 'table%';`
-     1. 行锁争用情况：`show status like 'innodb_row_lock%';`，使用监视器`CREATE TABLE innodb_monitor(a INT) ENGINE=INNODB;Show innodb status\G;DROP TABLE innodb_monitor;`
 1. 分类
-   - 悲观乐观的选择：数据争抢更严重的用悲观
-     1. 悲观锁：：Pessimistic Locking，读取的时候为后面的更新加锁，之后再来的读写都会等待，属于数据库锁
+   - 乐观锁/悲观锁：数据争抢更严重的用悲观
+     1. 悲观锁：Pessimistic Locking，读取的时候为后面的更新加锁，之后再来的读写都会等待，属于数据库锁
         - 数据修改排他性，每次取数据时都认为其他线程会修改
         - 高并发下，数据可以正确写入。但带来数据库性能的大量开销，影响并发访问性，特别是长事务
      1. 乐观锁
@@ -704,11 +709,11 @@
           1. 版本错误，认为是过期数据，回滚重新执行
    - 基于范围
      1. 全局锁
-     1. 表锁：MyISAM，性能开销小，加锁快，无死锁，冲突高，并发低。可以并发读
+     1. 表锁：开销小，加锁快，无死锁，冲突高，并发低。可以并发读，MyISAM
         - 写的时候读写都加锁等待，系统自动加锁。因为一次获取所有锁，不会死锁
         - 必须一次锁定所有用到的表，别名也要指定，否则出错
-     1. 行锁：InnoDB，记录锁，开销大，加锁慢，有死锁，冲突低，并发高。基于索引，如果改的字段是索引或者自增字段，会锁住整个表
-     1. 页锁：BDB被InnoDB取代，并发介于表和行之间，会死锁
+     1. 行锁：开销大，加锁慢，有死锁，冲突低，并发高。基于索引，如果改的字段是索引或者自增字段，会锁住整个表，InnoDB，记录锁
+     1. 页锁：性能介于表锁和行锁之间，会死锁，BDB(被InnoDB取代)
 1. mysql中的锁
    - 全局锁
      1. Metadata Lock
@@ -721,26 +726,6 @@
           1. `release_lock(key)/release_all_lock()`：释放锁，关闭连接锁也释放
           1. `is_free_lock(key)/is_used_lock(key)`
    - 表锁
-     1. Shared and Exclusive Lock
-        - 认识：共享和排它锁；通常用在事务里，因为mysql默认自动提交模式，每个独立的sql都会立即执行并提交，就没啥意义了，因为这样加不加这个锁都一样了
-          1. 强锁
-          1. 锁级别：有主键或索引行级别，无则表级别
-          1. 仅适用于InnoDB，必须在事务中执行
-        - 分类
-          1. Shared Lock：共享锁，读锁，s，其他人读可以并行，锁拥有者不能修改，保证了拥有者释放锁时其他人读取的是对的
-             - `lock in share mode`：select后使用，会对读取的行设置一个共享锁
-             - `for share of tableName`：v8.0加入，和上边是同义词，支持指定要锁定的表，在涉及多表join时可以更精确地控制锁定行为。语法和PostgreSQL更加接近，提高了跨数据库系统的兼容性
-          1. Exclusive Locks：排他锁，写锁，x，其他人读写都不能并行，`for update`，update/delete/insert自动加，select任何锁不加
-             - 场景：想要在本事务完成前，阻止其他的事务修改本次准备更新的选中行，因为可以并行读取和修改，谁后提交事务结果就按谁的来
-             - 选项
-               1. `for update nowait`：v8.0，如果锁不可用导致获取失败，会立即返回一个error
-               1. `for update skip locked`：v8.0，跳过所有已经被其他事务锁定的行，高并发情况下有用，可能会想要对未经其他事务锁定的行进行操作
-        - sql
-            ```sql
-            lock tables tableName read; -- 给tableName加读锁
-            lock tables tableName write; -- 给tableName加写锁
-            unlock tables; -- 释放当前会话持有的所有的关于这个表的锁
-            ```
      1. Intention Lock
         - 认识：意向锁，表锁，为了允许行锁和表锁共存，实现多粒度锁机制。申请表锁时为了快速知道是否可锁，否则需要一行行去看是否有锁
           1. 弱锁，仅仅表明意向
@@ -754,19 +739,28 @@
           1. 如果插入位置冲突，多个事务会阻塞，以保证数据一致性
           1. innodb_autoinc_lock_mode：调节该锁的模式与行为，3种配置，0加自增锁，1回滚自增列不连续，2批量插入自增列可能不连续，主从同步可能出问题
    - 行锁
-     1. Record Lock：记录锁，索引记录上加锁
-     1. Gap Lock：间隙锁，锁定索引范围查找中这个区间内所有行，不可以被其他事务读取/修改，防止幻读
-     1. Insert Intention Lock
-        - 认识：LOCK_INSERT_INTENTION 插入意向锁，插入操作时使用，多个事务在同一个索引、同一个范围区间插入记录时，如果插入的位置冲突会阻塞
-        - 实际是gap锁上加一个LOCK_INSERT_INTENTION标记，是特殊的GAP锁
-     1. Next-key Lock
-        - 认识：LOCK_ORDINARY/Ordinary Lock 临键锁，同时锁住索引的记录和间隙，Record Lock + Gap Lock
-          1. 在RR下有效，防止幻读
+     1. record lock：记录锁，索引记录上加锁
+     1. gap lock：间隙锁，锁定索引范围查找中这个区间内所有行，不可以被其他事务读取/修改，防止幻读
+        - insert intention lock：插入意向锁，多个事务在同一个索引、同一个范围区间插入记录时，如果插入的位置冲突会阻塞，实际是gap锁上加一个lock_insert_intention标记，是特殊的gap锁
+     1. next-key lock：ordinary lock 临键锁，同时锁住索引的记录和间隙，record lock + gap lock
+          1. 在rr下有效，防止幻读
           1. 两种锁可能只成功一个，所以next-key是半开半闭区间，且是下界开，上界闭
-   - 常规锁模式
      1. LOCK_S：读锁，共享锁
      1. LOCK_X：写锁，排它锁
-   - 锁的属性可以与锁模式任意组合，如
+   - 共享锁和排它锁
+     1. 认识：共享和排它锁，通常用在事务里，因为mysql单条sql默认是自动提交模式，会立即执行并提交，用在单条sql里没有效果
+        - 强锁
+        - 锁级别：有主键或索引是行级别，无则表级别
+        - 仅适用于InnoDB，必须在事务中执行
+     1. 共享锁：读锁，s，Shared Lock，其他人读可以并行，锁拥有者不能修改，保证了拥有者释放锁时其他人读取的是对的
+        - `lock in share mode`：select后使用，会对读取的行设置一个共享锁
+        - `for share of tableName`：v8.0加入，和上边是同义词，支持指定要锁定的表，在涉及多表join时可以更精确地控制锁定行为。语法和PostgreSQL更加接近，提高了跨数据库系统的兼容性
+     1. 排他锁，写锁，x，Exclusive Locks，其他人读写都不能并行，`for update`，update/delete/insert自动加，select任何锁不加
+        - 场景：想要在本事务完成前，阻止其他的事务修改本次准备更新的选中行，因为可以并行读取和修改，谁后提交事务结果就按谁的来
+        - 选项
+          1. `for update nowait`：v8.0，如果锁不可用导致获取失败，会立即返回一个error
+          1. `for update skip locked`：v8.0，跳过所有已经被其他事务锁定的行，高并发情况下有用，可能会想要对未经其他事务锁定的行进行操作
+   - 锁属性可以与锁模式任意组合，如
      1. waiting                       表示锁等待：lock->type_mode & LOCK_WAIT
 1. 死锁
    - 认识：互相持有对方的锁都不放开，没有外力就一直僵持
@@ -778,7 +772,7 @@
      1. 会出现的地方
         - 记录锁（LOCK_REC_NOT_GAP）: lock_mode X locks rec but not gap
         - 间隙锁（LOCK_GAP）: lock_mode X locks gap before rec，where条件的update可以产生
-        - 插入意向锁（LOCK_INSERT_INTENTION）: lock_mode X locks gap before rec insert intention/waiting
+        - 插入意向锁（LOCK_INSERT_INTENTION）: lock_mode X locks gap before rec insert intention waiting
         - Next-key锁（LOCK_ORNIDARY）: lock_mode X
    - 解决方案
      1. 合格的设计：通常来说死锁都是应用设计的问题。死锁的关键在于两个(或以上)的session加锁的顺序不一致
@@ -807,6 +801,16 @@
           1. 更新数据时，主键索引、自建索引都会被更新
           1. where条件用了哪个索引，就先更新哪个索引
         - 解决方案：把更新自建索引改为先查出来所有id，然后按照主键去更新
+1. 最佳实践
+   - 查看
+     1. 表锁争用情况：`show status like 'table%';`
+     1. 行锁争用情况：`show status like 'innodb_row_lock%';`，使用监视器`CREATE TABLE innodb_monitor(a INT) ENGINE=INNODB;Show innodb status\G;DROP TABLE innodb_monitor;`
+   - 锁表
+    ```sql
+    lock tables tableName read;         -- 给表加读锁
+    lock tables tableName write;        -- 给表加写锁
+    unlock tables;                      -- 释放当前会话持有的所有的关于这个表的锁
+    ```
 #### 其他
 1. 预解析
    - 理解：使用占位符预先准备查询语句，不用解析语句，查询速度更快，防止注入。步骤有：prepare、execute、deallocate prepare(发布)

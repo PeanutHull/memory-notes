@@ -613,12 +613,19 @@
    - 参数
      1. -V
 
+     1. 开发
+     1. --lock：仅更新锁文件，用于update
      1. --prefer-dist：用于install/update，强制下载源代码，在修改文件后更新文件会给出提示
      1. --prefer-source
-     1. --lock：仅更新锁文件，用于update
-     1. --no-dev：跳过require-dev中的包
+
+     1. 线上部署
+     1. --no-dev：跳过require-dev中的包，即排除开发环境专用包
+     1. --optimize-autoloader：优化自动加载器，提高性能
+     1. --ignore-platform-reqs：忽略平台需求，适用于多环境部署。
    - 功能
-     1. 锁文件：`composer.lock`，会将把安装时所有依赖的确切的版本号列表写入(包括深层次)，install会在lock存在情况下下载lock中的，忽略json中的，update命令会更新lock文件
+     1. 锁文件：`composer.lock`，会将把安装时所有依赖的确切的版本号列表写入(包括深层次)
+        - install会在lock存在情况下下载lock中的，忽略json中的，update命令会更新lock文件
+        - 官方提醒将composer.lock（包括 composer.json）提交到版本库中
      1. 自动加载：composer自动会生成一个vender/autoload.php，载入这个文件后，直接new，就会自动载入。命名空间的申明应该以\\结束
         - 在composer.json的autoload字段中增加自己的autoloader
             ```json
@@ -660,12 +667,18 @@
      1. require-dev：root-only，开发或测试使用
      1. repositories：资源库，设置某个库拉取的地址
         - 指定多个资源库，位置靠前的先使用
+        - composer2.x默认所有存储库都是规范的。1.x则为非规范
+          1. 规范存储库：一旦在一个库中找到就不去其他库找了
+          1. 规范存储库更好，因为不找了一效率更高、避免加载重复包；二期望来自最重要的存储库的包永远不会从另一个存储库加载，即使其版本更高
         ```json
         {
             "repositories": [
                 {
                     "type": "composer",
-                    "url": "http://packages.example.com"
+                    "url": "http://packages.example.com",
+                    "canonical": false,                         // 使存储库变得非规范
+                    "only": ["foo/bar", "some-vendor/*"],       // 只想从这个存储库中拉取的包
+                    "exclude": ["toy/package"]                  // 排除不想在该项目中加载的内容
                 },
                 {
                     "type": "composer",
