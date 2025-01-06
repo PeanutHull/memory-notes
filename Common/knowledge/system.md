@@ -695,10 +695,9 @@
         - 用户输入本方密码，发放令牌
         - 利用令牌访问相应api
         - 令牌更新：颁发令牌时颁发两个，一个获取数据，一个用于获取新的，到期前用refresh token去获取新令牌
-   - OIDC：基于OAuth2的身份认证协议，为用户提供安全的单点登录SSO和联合身份认证功能，采用RESTful HTTP API，应用程序不仅可以获取访问令牌Access Token，还可以获取包含了用户的身份信息的ID Token
+   - OIDC：OpenID Connect，基于OAuth2的身份认证协议，为用户提供安全的单点登录SSO和联合身份认证功能，采用RESTful HTTP API，应用程序不仅可以获取访问令牌Access Token，还可以获取包含了用户的身份信息的ID Token
    - MFA：多因素认证，增加基于应用的令牌、指纹
 
-   - OpenID Connect
    - LDAP：Lightweight Directory Access Protocol，轻量级目录访问协议，用来查询、更新Active Directory的目录服务通信协议，可以允许任何程序获得目录和其他信息，类似电话薄
      1. 目录：指一种按照树状结构存储信息的数据库
      1. ADDS：Active Directory Domain Service，ad域服务器，利用ldap命名路径（LDAP naming path）来表示对象在ad内的位置，提供查询、修改等服务。ad域内的资源以Object(对象)的形式存在，对象通过属性描述特征，就像电话簿中的一个记录，有姓名、地址等

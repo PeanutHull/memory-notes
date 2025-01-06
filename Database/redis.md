@@ -43,6 +43,7 @@
         - hkeys/hvals/hlen/hscan：键值对数量、迭代键值对
         - hincrby/hincrbyfloat：单个key可以计数，加一
         - hdel/hexists：删除n个字段、是否存在某个字段
+        - hexpire、hpexpire、hexpireat、hpexpireat、hpersist：设置hash中field的ttl，v7.4，时间复杂度为o(n)；
    - set
      1. 认识：无序集合，string类型的成员唯一的无序集合。通过hash table实现，所有操作复杂度都是O(1)
      1. 命令
@@ -265,6 +266,9 @@
         - 多行字符串 => 表(数组形式)
         - 状态/错误 => 表(ok/err)
         - 空 => false
+1. Hashtag
+   - 认识：用在集群环境中，允许将键强制存储在同一个哈希槽hash slot中，v4.0
+     1. 用法：`xxxx{}:xxxx`，redis会只计算{}中的数据作为分槽依据
 #### 应用
 1. 锁：锁的性能很高
    - 使用incr的原子计数特性实现库存扣减，防止超卖

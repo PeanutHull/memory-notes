@@ -113,7 +113,7 @@
             }
             ```
         - 复合字面量：通过类型后跟由花括号{}括起来的复合元素列表来定义，提供了定义时的简洁和灵活性。基础数据类型和复合类型的都是这样定义的，如`s := []int{1,2}`
-        - &：不仅可以取已经存在变量的地址分配内存，还可以直接初始化变量，更常用，如搭配复合字面量使用`&Aaa{a:1}`，new的话需要先new再赋值，费劲
+        - &：返回指针，不仅可以取已经存在变量的地址分配内存，还可以直接初始化变量，更常用，如搭配复合字面量使用`&Aaa{a:1}`，new的话需要先new再赋值，费劲
         - close：`func close(c chan<- Type)`，关闭
      1. 其他
         - 异常
@@ -4987,6 +4987,8 @@
           1. 跨平台
              - GOOS=linux|windows|darwin(mac)|freebsd|plan9，代表操作系统
              - GOARCH=386|amd64|arm|wasm|mips|ppc64，代表编译的处理器体系架构
+        - 最佳实践
+          1. 线上部署：`go build -ldflags "-s -w" -tags "production"`
      1. `go clean`：移除当前源码包里面编译生成的文件，如_obj/、_test/、test.out
 1. 部署
    - supervisor来管理go程序，go自己用异常捕捉来处理
@@ -5018,8 +5020,8 @@
           1. ` -http=:8080`：生成本机的go官网，可用浏览器打开
      1. `go help`
    - 编写
-     1. `go fmt`：格式化代码文件，是gofmt的简单封装
-     1. `go fix`：转换老版本的代码到新版本，是命令go tool fix的简单封装
+     1. `go fmt`：格式化代码文件，是gofmt的简单封装，在go安装目录的bin文件夹中
+        - v1.18，goimports 的功能已经集成到了 go fmt 命令中
      1. `go generate`：用于在编译前自动化生成某类代码，举例：`//go:generate go tool yacc -o gopher.go -p parser gopher.y`
         ```go
         // 会放到main文件的最上边
@@ -5031,6 +5033,7 @@
         ```
      1. `go bug`
      1. `go tool cgo`
+     1. `go fix`：转换老版本的代码到新版本，是命令go tool fix的简单封装
    - 代码检测
      1. `go vet`：代码格式错误检查
      1. `go race`：代码格式错误检查
