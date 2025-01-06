@@ -74,6 +74,10 @@
    - 生态
      1. 计算框架对接：Spark、Storm、Flink
      1. 存储对接：HDFS、HBase、Elasticsearch
+   - 角色
+     1. namespace、topic
+     1. Reader：读模式访问消息，没有游标(Pulsar不会跟踪Reader的进度)，也不需要对消息进行确认
+        - 功能：消息重放
 1. nsp
    - 认识：实时分布式mq，go编写
      1. 原生分布式，无中心化，无限横向扩展。故障容错
@@ -138,3 +142,27 @@
      1. broker存储消费者的消息偏移量offset
    - 广播模式
      1. 不支持消息重试：因为每个消费者维护自己的offset，重试的话会同时给其他消费者产生消息
+### pulsar
+1. 认识
+   - 计算与存储分离的架构
+   - 分片存储的设计
+1. 特性
+   - 如何确认分区数
+     1. 吞吐量、延迟、Broker负载
+   - 允许增加分区数量，但不能减少
+   - 每个分区只能由一个消费者处理（对于 Exclusive 和 Failover 订阅类型）
+1. 顺序消费
+   - 使用 Message Key
+    ```go
+    err = producer.Send(context.Background(), &pulsar.ProducerMessage{
+        Payload:  []byte(msg),
+        Key:      "my-order-key", // 确保所有消息都使用相同的键
+    })
+    ```
+   - 使用 Ordering Keys (有序键)
+    ```go
+    err = producer.Send(context.Background(), &pulsar.ProducerMessage{
+        Payload:     []byte(msg),
+        OrderingKey: "my-order-key", // 确保所有消息都使用相同的有序键
+    })
+    ```
