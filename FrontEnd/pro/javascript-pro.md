@@ -332,6 +332,7 @@
    - Dart
      1. 认识：面向对象的、类定义的、垃圾回收的语言，语法类似于js，可用于全平台、web、脚本、服务端开发，立志成为下一代web开发语言，目前2.x版本，google开源
         - 支持JIT编译加快开发(热重载)，支持AOT(Ahead-Of-Time)编译用于发布应用时生成高效的ARM代码
+        - Lars Bak从开发Strongtalk语言，到开发Self虚拟机、jvm的HotSpot，然后到V8，发现V8已经把js的性能压榨干净，推出了新的语言Dart
      1. 组件
         - dart sdk：提供了dart命令行、服务器和非flutter web应用所需的库和命令行工具
           1. dart：用于创建、格式化、分析、测试、记录、编译和运行 dart 代码的命令行界面
