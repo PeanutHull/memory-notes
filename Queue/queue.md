@@ -49,35 +49,6 @@
    - JMS试图通过公共Java API的方式，隐藏不同mq的实际接口，解决互通问题，但是使用单独接口胶合众多不同的接口也是存在很多问题。老牌ActiveMQ是JMS的一种实现
    - 消息通信标准化方案：2006年思科、红帽等联合制定了AMQP的公开标准。rabbitMQ是其开源实现，阿里的rocketMQ、kafka
 ### 常见消息队列
-1. Pulsar
-   - 认识：专为云构建的云原生、分布式消息传递和流处理平台，Apache软件基金会排名前10的项目
-     1. 快速水平动态扩容：服务和存储分层架构允许跨数百个节点快速扩展，而无需重新调整数据，独立的存储层可以在几秒钟内横向扩展
-     1. 非常低的消息端到端延迟：单独确认消息(RabbitMQ 风格)或按分区累积确认消息(即类似偏移量)。支持大规模(数百个节点)和低延迟(<10ms)的分布式工作队列或保序数据流等用例
-     1. 跨区域的异地复制
-        - 支持多集群，能够无缝的基于地理位置进行跨集群的备份
-        - 支持客户端自动故障转移到健康集群
-     1. 自动负载平衡：热点主题包会自动拆分并均匀分布在代理之间
-     1. 具有资源分离和访问控制的多租户
-     1. 官方集成第三方连接器，MySQL、ES、Cassandra等流数据输入或输出
-     1. 无服务的轻量级计算框架Pulsar Functions提供了原生的流数据处理
-     1. 支持单个集群100万个主题
-   - 功能
-     1. 消息存储：分片存储、水平扩展、自动负载
-     1. 消息可靠性：强一致、昇常转移、副本修复
-   - 实现
-     1. Pulsar无状态的代理负载均衡topic，有缓存
-     1. 数据托管在BookKeeper，是bookies的节点集群，BookKeeper一致性协议
-   - 功能
-     1. 消息类型：普通、定时、顺序、延迟消息
-     1. 消息发送：同步、批量、异步、分区
-     1. 订阅模式：独占（exclusive）、共享（shared）、灾备（failover）、key共享
-   - 生态
-     1. 计算框架对接：Spark、Storm、Flink
-     1. 存储对接：HDFS、HBase、Elasticsearch
-   - 角色
-     1. namespace、topic
-     1. Reader：读模式访问消息，没有游标(Pulsar不会跟踪Reader的进度)，也不需要对消息进行确认
-        - 功能：消息重放
 1. nsp
    - 认识：实时分布式mq，go编写
      1. 原生分布式，无中心化，无限横向扩展。故障容错
@@ -150,7 +121,43 @@
    - 如何确认分区数
      1. 吞吐量、延迟、Broker负载
    - 允许增加分区数量，但不能减少
-   - 每个分区只能由一个消费者处理（对于 Exclusive 和 Failover 订阅类型）
+1. 高可用
+   - 消息存储：分片存储、水平扩展、自动负载
+   - 消息可靠性：强一致、昇常转移、副本修复
+
+1. Pulsar
+   - 认识：专为云构建的云原生、分布式消息传递和流处理平台，Apache软件基金会排名前10的项目
+     1. 快速水平动态扩容：服务和存储分层架构允许跨数百个节点快速扩展，而无需重新调整数据，独立的存储层可以在几秒钟内横向扩展
+     1. 非常低的消息端到端延迟：单独确认消息(RabbitMQ 风格)或按分区累积确认消息(即类似偏移量)。支持大规模(数百个节点)和低延迟(<10ms)的分布式工作队列或保序数据流等用例
+     1. 跨区域的异地复制
+        - 支持多集群，能够无缝的基于地理位置进行跨集群的备份
+        - 支持客户端自动故障转移到健康集群
+     1. 自动负载平衡：热点主题包会自动拆分并均匀分布在代理之间
+     1. 具有资源分离和访问控制的多租户
+     1. 官方集成第三方连接器，MySQL、ES、Cassandra等流数据输入或输出
+     1. 无服务的轻量级计算框架Pulsar Functions提供了原生的流数据处理
+     1. 支持单个集群100万个主题
+   - 生态
+     1. 计算框架对接：Spark、Storm、Flink
+     1. 存储对接：HDFS、HBase、Elasticsearch
+#### 使用
+1. 消息
+   - 消息类型：普通、定时、顺序、延迟消息
+   - 消息发送：同步、批量、异步、分区
+1. 消费的订阅模式
+   - Exclusive 独占、Failover 灾备
+     1. 每个分区只能由一个消费者处理
+   - Shared 共享、Key_Shared key共享
+     1. 多个消费者使用同一个订阅名称时，就是共享了同一个订阅，Pulsar通过轮询机制将消息分发给不同的消费者，同时只能一个消费者消费。不同的订阅名称就会多消费
+     1. Key_Shared多支持了指定key值可实现顺序消费，只给某一个消费者
+     1. Shared模式通常能提供更高的吞吐量，因为它不需要考虑消息的键值，可以直接进行轮询分发
+1. 角色
+   - namespace、topic
+   - producer
+   - consumer
+   - reader：读模式访问消息，没有游标(Pulsar不会跟踪Reader的进度)，也不需要对消息进行确认
+     1. 功能：消息重放
+##### 消费
 1. 顺序消费
    - 使用 Message Key
     ```go
@@ -166,3 +173,68 @@
         OrderingKey: "my-order-key", // 确保所有消息都使用相同的有序键
     })
     ```
+1. 事务消费
+    ```go
+    txnID, err := client.NewTransaction(pulsar.TransactionOptions{
+        TransactionTimeoutMs: 30000,
+    }).ID()
+    if err != nil {}
+
+    // 在事务中处理消息
+    consumer.AckWithTxn(msg, txnID)
+    client.CommitTransaction(txnID)
+    ```
+1. 消费最佳实践
+   - 及时确认消息
+    ```go
+    msg, err := consumer.Receive(context.Background())
+    if err != nil {
+        // 处理错误
+    }
+    // 处理消息
+    consumer.Ack(msg)
+
+    // 如期望再次消费，可不进行ack，Pulsar会自动将其重新排队
+    ```
+   - 使用批量确认
+    ```go
+    for {
+        msg, err := consumer.Receive(context.Background())
+        if err != nil {
+            // 处理错误
+            continue
+        }
+        // 处理消息
+        consumer.Ack(msg)
+        if consumer.MessagesReceived() % 100 == 0 {
+            consumer.AckCumulative(msg)
+        }
+    }
+    ```
+   - 使用消息监听器：来异步处理消息，这样可以提高应用的响应性和吞吐量
+    ```go
+    consumer.MessageListener(func(msg pulsar.Message) {
+        // 处理消息
+        consumer.Ack(msg)
+    })
+    ```
+#### 原理
+1. 实现
+   - 数据托管在BookKeeper，是bookies的节点集群，BookKeeper一致性协议
+   - pulsar无状态的代理负载均衡topic，有缓存
+1. 游标
+   - 认识：pulsar为每个订阅名称都会维护一个游标，指示该订阅已经消费到的消息位置
+     1. ack时会更新
+     1. 存储在BookKeeper集群中进行持久化，不会丢失
+   - 作用
+     1. 确保消息不会被重复处理
+     1. 根据消费者的确认情况决定何时删除消息
+   - 游标与消息
+     1. 未确认消息：所有未被确认的消息会一直保存在订阅的backlog中
+     1. 消息删除：当一条消息被所有订阅者确认后，该消息进入可以被删除的状态。pulsar会根据配置的保留策略（retention policy）和时间阈值（ttl）来决定何时删除这些消息
+1. ack机制
+   - 不进行ack的情况
+     1. Shared和Key_Shared订阅类型
+        - 重试机制：会根据配置的重试策略重新推送，如negativeAckRedeliveryDelay 指定的时间后重新发送
+        - 死信队列：如重试多次后仍未被确认，pulsar可将消息发送到死信队列（dead letter queue），以便进行进一步的处理
+     1. Exclusive订阅类型：一直发，直到消息被确认或消费者断开连接

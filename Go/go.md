@@ -1321,6 +1321,8 @@
      1. 避免通过指针访问结构体字段：解引用是昂贵的，尤其是在循环中。同时也失去使用快速寄存器的能力
      1. 构造结构体时根据字段的大小注意字段顺序，进行内存对齐，以此减小结构体本身的大小
      1. 使用空结构体为值：struct{}{}什么都不是（不占内存），因此例如传递信号时，使用它是非常有益的
+     1. 判断结构体是否是nil时，通常在实际应用的用法是判断某个字段是否为nil，而不能用整个结构体去判断。如果非要，可以使用指针或者比较所有字段或者使用反射`reflect.DeepEqual(v, reflect.Zero(reflect.TypeOf(v)).Interface())`判断
+        - 结构体的零值是指其所有字段都为各自类型的零值
      1. 当对象内部私有变量类型为map时，千万不要将其作为函数的返回值；这样会对外暴露对象内部状态，而且可能会导致其他意外情况
         ```go
         type Stats struct {
@@ -3454,6 +3456,11 @@
 1. 数据类型、变量
    - strconv：基本数据类型和其字符串表示的相互转换，Itoa/Atoi针对int，FormatInt/ParseInt针对int64，支持进制(大多为第二参数)
      1. `strconv.FormatBool/FormatInt/FormatUint/FormatFloat/Itoa()`：转为字符串
+        - FormatFloat
+            ```go
+            str1 := strconv.FormatFloat(num1, 'f', 2, 64)  // 保留两位小数
+            str2 := strconv.FormatFloat(num2, 'e', 4, 64)  // 科学计数法，保留四位小数
+            ```
      1. `strconv.ParseBool/ParseInt(str, 10, 64)/ParseUint/ParseFloat/Atoi(s string, base int, bitSize int)`：字符串转换为其他类型
         - base 基数：0、2到36，即进制，2表示“0b”，8表示“0”或“0o”，16表示“0x”，否则为10
         - bitSize 位大小：0到64，即整数类型，0/8/16/32/64对应int/int8/int16/int32/int64
