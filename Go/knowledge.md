@@ -1370,6 +1370,7 @@
 1. go-cmp：Google开源的比较库，递归、切片、浮点数、自定义比较，差异查找
 1. jinzhu/copier：简约的深拷贝所有东西到另一个结构体，包括字段field、method到字段、字段到method、slice到struct、map到map，根据tag忽略等
 #### 缓存
+1. go中使用redis获取值时，即使用get、hget、SPop等，如果key不存在，会抛出redis.Nil类型的错误，使用`errors.Is(err, redis.Nil)`判断
 1. rockscache：首个确保最终一致、强一致的redis缓存库。支持分布式缓存。使用上只有Fetch和TagAsDeleted
    - 强一致性确保：采用旁路缓存方式，但是添加使用了标记删除方式，确保强一致性，原理大概是不再返回旧版本的数据，而是同步等待“取数据”的最新结果，因为有个微锁持有过期时间和锁持有者的一些判断
    - 降级以及强一致：可设置关闭缓存读(Fetch不读缓存直接读fn)、关闭缓存删除(delete什么都不做)来降级

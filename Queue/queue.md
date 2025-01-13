@@ -184,7 +184,7 @@
     consumer.AckWithTxn(msg, txnID)
     client.CommitTransaction(txnID)
     ```
-1. 消费最佳实践
+1. ack最佳实践
    - 及时确认消息
     ```go
     msg, err := consumer.Receive(context.Background())
@@ -197,20 +197,24 @@
     // 如期望再次消费，可不进行ack，Pulsar会自动将其重新排队
     ```
    - 使用批量确认
-    ```go
-    for {
-        msg, err := consumer.Receive(context.Background())
-        if err != nil {
-            // 处理错误
-            continue
+     1. AckCumulative
+        - 订阅类型限制：AckCumulative主要用于Exclusive和Failover订阅类型，在Shared和Key_Shared订阅类型中，由于消息可能被多个消费者共享，使用AckCumulative可能会导致其他消费者的消息被错误确认
+        - 正确使用：确保在使用 AckCumulative 时，消费者已经正确处理了所有之前的消息，以避免消息丢失或重复处理
+     1. 实例
+        ```go
+        for {
+            msg, err := consumer.Receive(context.Background())
+            if err != nil {
+                // 处理错误
+                continue
+            }
+            // 处理消息
+            consumer.Ack(msg)
+            if consumer.MessagesReceived() % 100 == 0 {
+                consumer.AckCumulative(msg)                         // 累积消息确认机制，会将该消息及其之前的所有消息全部标记为已确认，适用于顺序性、高吞吐量的场景
+            }
         }
-        // 处理消息
-        consumer.Ack(msg)
-        if consumer.MessagesReceived() % 100 == 0 {
-            consumer.AckCumulative(msg)
-        }
-    }
-    ```
+        ```
    - 使用消息监听器：来异步处理消息，这样可以提高应用的响应性和吞吐量
     ```go
     consumer.MessageListener(func(msg pulsar.Message) {
@@ -220,7 +224,7 @@
     ```
 #### 原理
 1. 实现
-   - 数据托管在BookKeeper，是bookies的节点集群，BookKeeper一致性协议
+   - 用BookKeeper持久化存储消息和游标信息，是bookies的节点集群，BookKeeper一致性协议
    - pulsar无状态的代理负载均衡topic，有缓存
 1. 游标
    - 认识：pulsar为每个订阅名称都会维护一个游标，指示该订阅已经消费到的消息位置

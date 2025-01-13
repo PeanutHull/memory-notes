@@ -612,6 +612,7 @@
      1. composer dump-autoload --optimize             // 为生产环境做准备
    - 参数
      1. -V
+     1. -vvv：查看详细信息
 
      1. 开发
      1. --lock：仅更新锁文件，用于update
@@ -841,19 +842,107 @@
    - pear：php扩展和应用仓库，将常用功能(数据库访问/文件操作/数据结构/缓冲操作/网络协议)写成类库，提供下载，提高开发效率，php编写
    - phar：php archive，php的打包文件
 1. PHP开发
-   - 配置
-     1. brew安装的php.ini位置：`/opt/homebrew/etc/php/8.2/`
-     1. brew安装的位置：`/opt/homebrew/opt/php@7.2`
-   - 启动/停止fpm
-     1. `brew services start/stop php@8.2`
-     1. `brew services start/stop shivammathur/php/php@7.3`
-   - nginx
-     1. 启动/停止
-        - 前台：`/opt/homebrew/opt/nginx/bin/nginx -g daemon\ off\;`
-        - 后台：`brew services start/stop nginx`
-     1. 配置：`/opt/homebrew/etc/nginx/nginx.conf`
-        - 文件路径：`/opt/homebrew/var/www`
-        - 文件路径：`/opt/homebrew/etc/nginx/servers/`
+   - docker方式
+     1. 目录结构
+        ```
+        my_project/
+        │
+        ├── docker-compose.yml
+        └── php/
+            └── Dockerfile
+        ```
+     1. docker-compose.yml
+        ```yml
+        version: '3'
+
+        services:
+        web:
+            image: nginx:latest
+            ports:
+            - "80:80"
+            volumes:
+            - ../nginx/default.conf:/etc/nginx/conf.d/default.conf
+            - ../nginx/live-class-notify.conf:/etc/nginx/conf.d/live-class-notify.conf
+            - ../live-class-notify:/var/www/html
+            depends_on:
+            - php
+
+        php:
+            build:
+            context: ./php
+            volumes:
+            - ../live-class-notify:/var/www/html
+            environment:
+            - PHP_IDE_CONFIG=serverName=docker
+            - XDEBUG_CONFIG=remote_host=host.docker.internal
+
+
+        volumes:
+        live-class-notify:
+        ```
+     1. Dockerfile
+        ```conf
+        FROM php:8.2-fpm
+
+        # 安装必要的依赖
+        RUN apt-get update && apt-get install -y \
+            libpq-dev \
+            && docker-php-ext-install pdo pdo_mysql
+
+        # 安装 Redis 扩展
+        RUN pecl install redis && docker-php-ext-enable redis
+        ```
+     1. default.conf
+        ```sh
+        server {
+            listen 80;
+            server_name 127.0.0.1;
+
+            location / {
+                root   html;
+                index  index.html index.htm;
+            }
+        }
+        ```
+     1. live-class-notify.conf
+        ```sh
+        server {
+            listen 80;
+            server_name dev-notify.douyuxingchen.com;
+
+            root /var/www/html/public;
+            index index.php index.html index.htm;
+
+            location / {
+                try_files $uri $uri/ /index.php?$query_string;
+            }
+
+            location ~ \.php$ {
+                fastcgi_pass php:9000;
+                fastcgi_index index.php;
+                fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+                include fastcgi_params;
+            }
+
+            location ~ /\.ht {
+                deny all;
+            }
+        }
+        ```
+   - 本地方式
+     1. 配置
+        - brew安装的php.ini位置：`/opt/homebrew/etc/php/8.2/`
+        - brew安装的位置：`/opt/homebrew/opt/php@7.2`
+     1. 启动/停止fpm
+        - `brew services start/stop php@8.2`
+        - `brew services start/stop shivammathur/php/php@7.3`
+     1. nginx
+        - 启动/停止
+          1. 前台：`/opt/homebrew/opt/nginx/bin/nginx -g daemon\ off\;`
+          1. 后台：`brew services start/stop nginx`
+        - 配置：`/opt/homebrew/etc/nginx/nginx.conf`
+          1. 文件路径：`/opt/homebrew/var/www`
+          1. 文件路径：`/opt/homebrew/etc/nginx/servers/`
 ### wiki
 1. 历史
    - 1994：Rasmus Lerdorf为维护个人网页而制作了一个简单的用Perl语言编写的程序，称为Personal Home Page

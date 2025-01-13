@@ -197,7 +197,6 @@
    - brew install/uninstall go@1.16.8：安装指定版本
    - brew upgrade go：安装最新版
 
-   - brew switch go 1.17.1：切换版本
    - brew unlink go：将当前软链移除
    - brew link go@1.12：指定新的软链
 
