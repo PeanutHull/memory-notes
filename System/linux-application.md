@@ -518,6 +518,7 @@
      1. 监控网络套接字(如动态开关进程)
      1. 运行时系统
    - 使用：systemctl，systemd的管理命令
+     1. `systemctl status`：查看状态
      1. `systemctl xx start`：兼容service启停
      1. `systemctl enable xx`：开机启动
    - 功能：处理时称之为单元，有单元类型

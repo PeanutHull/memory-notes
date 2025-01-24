@@ -36,6 +36,8 @@
    - 确保消息幂等：业务保证
      1. 唯一id + 指纹码
      1. redis原子性实现
+   - 死信队列的最佳实践
+     1. 记录处理失败的消息，当业务解决完bug，能够处理时，进而进行消费，补全数据，起到一个临时存储的作用
 1. 一种延迟队列的设计
    - 架构图：![avatar](../images/queue/delay-queue.png)
    - 流程
@@ -143,14 +145,16 @@
 #### 使用
 1. 消息
    - 消息类型：普通、定时、顺序、延迟消息
+     1. 延迟
+        - Exclusive/Failover模式不支持
    - 消息发送：同步、批量、异步、分区
 1. 消费的订阅模式
-   - Exclusive 独占、Failover 灾备
-     1. 每个分区只能由一个消费者处理
    - Shared 共享、Key_Shared key共享
      1. 多个消费者使用同一个订阅名称时，就是共享了同一个订阅，Pulsar通过轮询机制将消息分发给不同的消费者，同时只能一个消费者消费。不同的订阅名称就会多消费
      1. Key_Shared多支持了指定key值可实现顺序消费，只给某一个消费者
      1. Shared模式通常能提供更高的吞吐量，因为它不需要考虑消息的键值，可以直接进行轮询分发
+   - Exclusive 独占、Failover 灾备
+     1. 每个分区只能由一个消费者处理
 1. 角色
    - namespace、topic
    - producer
@@ -158,6 +162,41 @@
    - reader：读模式访问消息，没有游标(Pulsar不会跟踪Reader的进度)，也不需要对消息进行确认
      1. 功能：消息重放
 ##### 消费
+1. 正常消费
+   - 组成
+     1. DLQ：dead letter queue，死信队列
+     1. RLQ：retry letter queue，重试队列，和死信队列的地位同等，只是是否将重试和原队列分开
+        - 重试队列实际上是一个延迟队列
+   - ack
+     1. 不进行ack的情况
+        1. Shared和Key_Shared订阅类型
+           - 重试机制：会根据配置的重试策略重新推送，如negativeAckRedeliveryDelay 指定的时间后重新发送
+           - 死信队列：如重试多次后仍未被确认，pulsar可将消息发送到死信队列，以便进行进一步的处理
+        1. Exclusive订阅类型：一直发，直到消息被确认或消费者断开连接
+     1. 示例
+        ```go
+        // 重试队列和死信队列的配置
+        consumer, err := client.Subscribe(pulsar.ConsumerOptions{
+            Topic: "persistent://group/server/xxx",
+            SubscriptionName: "test",
+            Type: pulsar.Failover,
+            RetryEnable: true,
+            DLQ: &pulsar.DLQPolicy{
+                MaxDeliveries: 3,
+                RetryLetterTopic: "persistent://group/server/xxx-RETRY",            // 重试队列名称
+                DeadLetterTopic: "persistent://group/server/xxx-DLQ",               // 死信队列名称
+            },
+            NackRedeliveryDelay: time.Second * 3,
+        })
+
+        // 确认的处理
+        consumer.Ack(msg)
+
+        // 不确认，等NackRedeliveryDelay后将被重新投递到主队列进行消费
+        consumer.Nack(msg)
+        // 稍后处理,等 xx 秒后将被重新投递到重试队列
+        consumer.ReconsumeLater(msg, time.Second * 5)
+        ```
 1. 顺序消费
    - 使用 Message Key
     ```go
@@ -236,9 +275,3 @@
    - 游标与消息
      1. 未确认消息：所有未被确认的消息会一直保存在订阅的backlog中
      1. 消息删除：当一条消息被所有订阅者确认后，该消息进入可以被删除的状态。pulsar会根据配置的保留策略（retention policy）和时间阈值（ttl）来决定何时删除这些消息
-1. ack机制
-   - 不进行ack的情况
-     1. Shared和Key_Shared订阅类型
-        - 重试机制：会根据配置的重试策略重新推送，如negativeAckRedeliveryDelay 指定的时间后重新发送
-        - 死信队列：如重试多次后仍未被确认，pulsar可将消息发送到死信队列（dead letter queue），以便进行进一步的处理
-     1. Exclusive订阅类型：一直发，直到消息被确认或消费者断开连接
