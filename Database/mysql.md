@@ -713,6 +713,7 @@
         - 写的时候读写都加锁等待，系统自动加锁。因为一次获取所有锁，不会死锁
         - 必须一次锁定所有用到的表，别名也要指定，否则出错
      1. 行锁：开销大，加锁慢，有死锁，冲突低，并发高。基于索引，如果改的字段是索引或者自增字段，会锁住整个表，InnoDB，记录锁
+        - 通过索引来实现行锁。如果查询使用了索引锁会加在索引上；如果没有索引，InnoDB会使用隐藏的聚簇索引(通常是主键)来加锁
      1. 页锁：性能介于表锁和行锁之间，会死锁，BDB(被InnoDB取代)
 1. mysql中的锁
    - 全局锁
@@ -770,10 +771,10 @@
         - 持有和等待：goroutine 持有一个资源，并且还在请求其它 goroutine 持有的资源
         - 环路等待
      1. 会出现的地方
-        - 记录锁（LOCK_REC_NOT_GAP）: lock_mode X locks rec but not gap
-        - 间隙锁（LOCK_GAP）: lock_mode X locks gap before rec，where条件的update可以产生
+        - 记录锁（LOCK_REC_NOT_GAP）: lock_mode X locks rec but not gap。锁定索引记录
+        - 间隙锁（LOCK_GAP）: lock_mode X locks gap before rec，where条件的update可以产生。锁定索引记录之间的间隙
         - 插入意向锁（LOCK_INSERT_INTENTION）: lock_mode X locks gap before rec insert intention waiting
-        - Next-key锁（LOCK_ORNIDARY）: lock_mode X
+        - Next-key锁（LOCK_ORNIDARY）: lock_mode X。记录锁和间隙锁的组合，锁定记录及其前后的间隙
    - 解决方案
      1. 合格的设计：通常来说死锁都是应用设计的问题。死锁的关键在于两个(或以上)的session加锁的顺序不一致
         - 降低成本
@@ -797,10 +798,17 @@
         - sql
           1. `update 'ds_bjy_room' set 'live_status' = 2 where 'classroom_id' = 2724 and 'live_status' = 1`：持有索引锁，请求主键锁
           1. `update 'ds_bjy_room' set 'live_status' = 2 where 'id' = 2700`：持有主键锁，请求索引锁
+        - LockRequest和LockHold，两个是相互的，这里只写出一个，另一个是反过来的
+          1. LockRequest：`RECORD LOCKS space id 7 page no 4231 n bits 808 index idx_mbr of table `ds_live_class`.`ds_huanxin_chat_enter` trx id 8868071 lock_mode X locks rec but not gap waiting`
+             - 这个请求索引名idx_mbr的行锁
+          1. LockHold：`RECORD LOCKS space id 7 page no 3617 n bits 152 index PRIMARY of table `ds_live_class`.`ds_huanxin_chat_enter` trx id 8868071 lock_mode X locks rec but not gap`
+             - 这个请求主键索引的行锁
         - 原理
           1. 更新数据时，主键索引、自建索引都会被更新
           1. where条件用了哪个索引，就先更新哪个索引
-        - 解决方案：把更新自建索引改为先查出来所有id，然后按照主键去更新
+        - 解决方案
+          1. 把更新自建索引改为先查出来所有id，然后按照主键去更新
+          1. 
 1. 最佳实践
    - 查看
      1. 表锁争用情况：`show status like 'table%';`
@@ -1461,7 +1469,7 @@
    - 建库、表
      1. 建表语句必须在sql审核平台审核通过，不然不予以创建，审核地址：http://app.xesv5.com/zeus
      1. MYSQL引擎默认使用InnoDB 使用其他引擎需要特别说明
-     1. 字符集使用 utf8mb4 排序规则使用utf8mb4_general_ci
+     1. 字符集使用 utf8mb4 排序规则使用utf8mb4_general_ci，v8默认为utf8mb4_0900_ai_ci(对应Unicode 9.0的规范)
      1. `id` int(10) NOT NULL AUTO_INCREMENT 作为第一个字段，且为主键，有自增属性
      1. 所有类型的字段均有NOT NULL属性，有默认值，不使用保留字（关键字），text和json两种类型因无法设置默认值，因此不需要NOT NULL属性
         - 必须有中文说明 时间类型字段的默认值遵循此类型的范围                          

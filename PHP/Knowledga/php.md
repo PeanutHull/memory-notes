@@ -778,19 +778,133 @@
      1. 使用gcc 4.8以上进行编译
      1. 开启hugepage（根据系统内存决定）：操作系统默认的内存是以4kb分页的，而虚拟地址和内存地址需要转换，而这个转换要查表，cpu为了加速这个查表过程会内建tlb(translation lookaside buffer)。 显然，如果虚拟页越小，表里的条目数也就越多，而tlb大小是有限的，条目数越多tlb的cache miss也就会越高，所以如果我们能启用大内存页就能间接降低这个TLB Cache Miss。php将采用大内存页来保存，减少TLB miss，提高性能
      1. PGO：Profile Guided Optimization，第一次编译成功后，用项目代码去训练PHP，会产生一些profile信息，最后根据这些信息第二次gcc编译PHP就可以得到量身定做的PHP7
+   - 方式：通过top发现fpm占用，接着通过pidstat, vmstat发现大量系统中断, 通过watch -d cat /proc/interrupts发现主要中断来自于重调度中断（RES)，通过strace查看具体系统调用, 发现大量来自于stat, 猜测可能是opcache频繁检查时间戳, 判断文件修改，通过修改配置项提升了46%性能，再通过perf, 查看函数调用栈，可能是大量的与redis的TCP连接带来不必要的资源消耗. 通过安装redis扩展, 以及使用phpredis来驱动Laravel的redis缓存, 提升性能, 达到了又一次近50%的性能提升
 ### 运维
 1. PHP安装
    - linux
      1. 源码安装
-        - 安装php：开启fpm等配置
-        ```
-        ./configure --prefix=/opt/php --with-mysql --with-gd --with-curl        // 安装位置和扩展
-        make
-        sudo make install           // 以管理员权限安装
-        ```
+        - php7编译安装
+            ```
+            ./configure \
+                --prefix=/data/webserver/php \
+                --with-config-file-path=/data/webserver/php/etc \
+                --with-mysqli=mysqlnd \
+                --with-pdo-mysql=mysqlnd \
+                --with-openssl \
+                --with-curl \
+                --with-mhash \
+                --with-xmlrpc \
+                --without-pear \
+                --with-zlib \
+                --with-gd \
+                --with-iconv \
+                --with-jpeg-dir \
+                --with-png-dir \
+                --with-freetype-dir \
+                --with-bz2 \
+                --with-gettext \
+                --with-libxml-dir \
+                --with-fpm-user=work \
+                --with-fpm-group=work \
+                --enable-fpm \
+                --enable-bcmath \
+                --enable-mbstring \
+                --enable-sockets \
+                --enable-xml \
+                --enable-zip \
+                --enable-soap \
+                --enable-ftp \
+                --enable-mysqlnd \
+                --enable-cgi \
+                --enable-session \
+                --enable-opcache \
+                --enable-cli \
+                --enable-sysvmsg \
+                --enable-sysvshm \
+                --enable-shmop \
+                --enable-exif \
+                --disable-ipv6
+                echo "make and make install"
+                make -j 4 && make install
+                echo "make success"
+                #copy php.ini
+                cp php.ini-production /data/webserver/php/etc/php.ini
+            ```
+        - redis扩展安装
+            ```
+            tar zxvf redis-5.2.2.tgz
+            cd redis-5.2.2
+            make clean
+            /data/webserver/php/bin/phpize
+            ./configure --with-php-config=/data/webserver/php/bin/php-config
+            make -j 4 && make install
+            echo 'extension=redis.so' >> /data/webserver/php/etc/php.ini
+            /data/webserver/php/bin/php  --ri redis
+            ```
+        - php8安装
+            ```
+            ./configure \
+                --prefix=/data/webserver/php \
+                --with-config-file-path=/data/webserver/php/etc \
+                --with-mysqli=mysqlnd \
+                --with-pdo-mysql=mysqlnd \
+                --with-openssl \
+                --with-curl \
+                --with-mhash \
+                --with-xmlrpc \
+                --without-pear \
+                --with-zlib \
+                --with-gd \
+                --with-iconv \
+                --with-jpeg-dir \
+                --with-png-dir \
+                --with-freetype-dir \
+                --with-bz2 \
+                --with-gettext \
+                --with-libxml-dir \
+                --with-fpm-user=work \
+                --with-fpm-group=work \
+                --enable-fpm \
+                --enable-bcmath \
+                --enable-mbstring \
+                --enable-sockets \
+                --enable-xml \
+                --enable-zip \
+                --enable-soap \
+                --enable-ftp \
+                --enable-mysqlnd \
+                --enable-cgi \
+                --enable-session \
+                --enable-opcache \
+                --enable-cli \
+                --enable-sysvmsg \
+                --enable-sysvshm \
+                --enable-shmop \
+                --enable-exif \
+                --disable-ipv6
+                echo "make and make install"
+                make -j 4 && make install
+                echo "make success"
+                #copy php.ini
+                cp php.ini-production /data/webserver/php/etc/php.ini
+            ```
         - 启动fpm：复制fpm配置文件，修改用户和权限组，启动 `/usr/local/php/sbin/php-fpm`
         - 安装nginx
         - nginx配置fpm：添加fastcgi支持
+        - swoole安装
+            ```conf
+            # install swoole
+            # https://github.com/swoole/swoole-src/archive/v4.5.2.tar.gz
+            tar zxvf swoole-src-4.5.2.tar.gz
+            cd swoole-src-4.5.2/
+            /home/work/hyperf/php/bin/phpize
+            ./configure --with-php-config=/data/webserver/php/bin/php-config
+            make clean
+            make -j 4 && make install
+            echo 'extension=swoole.so' >> /data/webserver/php/etc/php.ini
+            echo 'swoole.use_shortname=Off' >> /data/webserver/php/etc/php.ini
+            /data/webserver/php/bin/php --ri swoole
+            ```
    - window
      1. apache+php
         - 安装vc_redist.x64.exe和vcredist_x64

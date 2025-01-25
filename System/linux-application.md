@@ -521,6 +521,8 @@
      1. `systemctl status`：查看状态
      1. `systemctl xx start`：兼容service启停
      1. `systemctl enable xx`：开机启动
+     1. `journalctl -u xx.service -e > xx.log`：查看某服务最近的日志
+     1. `systemctl enable xx`：开机启动
    - 功能：处理时称之为单元，有单元类型
      1. 服务单元：.service文件，控制unix上的传统服务守护进程，编写.service文件，通过设置参数决定某一命令的守护
      1. 挂载单元：.mount文件，控制文件系统的挂载，类似mount命令
@@ -627,3 +629,29 @@
    - clamav：linux杀毒软件
 ### 最佳实践
 1. 生产环境ulimit配置：![avatar](../images/ulimit.png)
+1. 参数优化
+   - /etc/security/limits.d/80-nofile.conf
+    ```conf
+    *          soft    nofile     655350
+    *          hard    nofile     655350
+    root       soft    nofile     655350
+    root       hard    nofile     655350
+    ```
+   - 内核参数
+    ```conf
+    net.core.rmem_max = 16777216
+    net.core.wmem_max = 16777216
+    net.ipv4.tcp_rmem = 4096 87380 16777216
+    net.ipv4.tcp_wmem = 4096 65536 16777216
+    net.ipv4.tcp_fin_timeout = 30
+    net.ipv4.tcp_tw_reuse = 1
+    net.ipv4.tcp_max_syn_backlog = 4096
+    net.ipv4.tcp_max_tw_buckets = 5000
+    net.ipv4.tcp_synack_retries = 2
+    net.ipv4.tcp_syn_retries = 2
+    net.ipv4.ip_local_port_range = 1024 65000
+    net.ipv4.tcp_congestion_control = cubic
+    # 增加文件系统性能，调整文件系统相关参数
+    vm.dirty_ratio = 20
+    vm.dirty_background_ratio = 10
+    ```

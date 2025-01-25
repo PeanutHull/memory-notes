@@ -1196,7 +1196,7 @@
    - 7.2：最新
 1. 编程语言客户端
    - php：官方推荐两个
-     1. Predis：php代码实现的原生客户端
+     1. predis：php代码实现的原生客户端，可以不安装扩展直接使用
      1. phpredis：c编写的php扩展，性能更好
    - ruby：redis-rb，最稳定的客户端
    - python：redis-py

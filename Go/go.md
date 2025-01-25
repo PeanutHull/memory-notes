@@ -1118,6 +1118,15 @@
           1. panic无法跨协程, 当前协程产生的异常, 必须由当前协程处理，如果当前协程不处理，整个进程所有协程退出。 每个协程只维护自己的panic、defer、recover链表，只在单个协程中生效
           1. panic可以嵌套
         - recover：可以捕获到panic的输入值，让进入panic流程中的goroutine恢复正常执行
+          1. recover只能捕获以下两种情况的错误
+             - 由panic触发的错误
+             - 由Go运行时隐式触发的panic：如
+               1. 空指针解引用：`panic: runtime error: invalid memory address or nil pointer dereference`
+               1. 数组或切片越界：`panic: runtime error: index out of range`
+               1. 类型断言失败：`panic: interface conversion: interface {} is <type>, not <expected type>`
+               1. 除零错误：`panic: runtime error: integer divide by zero`
+               1. 关闭已关闭的 channel：panic: close of closed channel`
+               1. 类型断言失败：``
           1. 只能在defer语句中使用，只能捕获当前协程的异常。如果发生panic没用recover捕获那么该协程会终止并且会导致整个程序panic，协程中一定要使用recover函数
           1. 直接使用没有任何效果且返回nil，因为只要panic后面的代码都不会被执行
           1. 通过判断recover的返回值查看是否发生了panic
@@ -1204,6 +1213,7 @@
             // fatal error: all goroutines are asleep - deadlock!
             ```
         - 多个协程并行写一个websocket连接
+   - fatal error：致命错误，不能被recover捕获，会导致程序直接崩溃。如`concurrent map writes`、`stack overflow`、`runtime: out of memory`
    - 比较
      1. 在错误处理上采用了与c类似的检查返回值方式
      1. 意料之中用error，如文件打不开；意料之外用panic，如数组越界。异常定义为无法预测的，几乎不可能失败但是特殊条件下也没法返回错误，也无法继续执行

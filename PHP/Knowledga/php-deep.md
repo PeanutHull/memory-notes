@@ -4,7 +4,7 @@
    - sapi：php的应用接口层
      1. 认识：Server Application Programming Interface，服务器端应用编程端口，是php与其它应用交互的接口，是php的接入层，接受请求，然后调用php内核api，严格来说不属于内核。为内部的PHP提供一套固定的, 统一的接口, 使得PHP自身实现能够不受错综复杂的外部环境影响，保持一定的独立性
      1. 组成：cli、cgi、mod_php5(apache)、isapi(iis)、fpm
-   - Zend：解析器、执行器
+   - Zend：解析和执行php
      1. 理解：引擎，核心，负责从编译到执行。zend engine、zend api、zend extension api
      1. 组成
         - 编译器：代码->抽象语法树->opcode，相当于gcc，编译器是一个语言实现的基础
