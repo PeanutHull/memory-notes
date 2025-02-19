@@ -340,14 +340,14 @@
    - SPA：单页应用
    - JXcore：多线程版node，100%兼容node。还有打包功能，生成jx二进制文件，jxp中间件文件(包含需要编译的完整项目信息)
 1. 调优
-   - process.env.UV_THREADPOOL_SIZE：io线程池数量，默认4
+   - process.env._THREADPOOL_SIZE：io线程池数量，默认4
 1. node理解
    - 组成
      1. node standard library
      1. node binding：联络c++
-     1. v8、libuv、c-ares、zlib、openssl等
+     1. v8、lib、c-ares、zlib、openssl等
    - node
-     1. 以libuv为核心，事件驱动就是依赖的libuv的事件循环
+     1. 以lib为核心，事件驱动就是依赖的lib的事件循环
      1. 比如数据加解密重cpu，一个个算，前面没完成，后边就等着，就会阻塞
      1. 所以
      1. 杂谈：就是前端人玩玩后端服务
@@ -369,7 +369,7 @@
         - 将请求对象推入io线程池等待执行
         - js的异步调用结束，继续执行后续操作
      1. 执行回调
-        - libuv用event loop来控制何时调用io队列
+        - lib用event loop来控制何时调用io队列
         - 取出封装在请求对象中的回调函数并执行，用以完成回调目的
    - EventLoop
      1. 认识：node的EventLoop有6个事件队列/阶段/观察者，每个阶段都有一个FIFO的先进先出的callbacks队列，每个阶段都有自己的事件处理方式. 一个个的阶段往下走, 每当进入某个阶段将会在该阶段内执行回调，直到队列耗尽或者回调的最大数量已执行, 那么将进入下一个处理阶段
@@ -380,4 +380,4 @@
         - poll：最为重要的阶段，执行I/O callback，在适当的条件下会阻塞在这个阶段，连接、数据从这里加入
         - check：执行setImmediate的callback
         - close callbacks：执行close事件的callback，例如socket.on("close",func)
-     1. 图示：![avatar](../../images/libuv_eventLoop.png)
+     1. 图示：![avatar](../../images/lib_eventLoop.png)

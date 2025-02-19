@@ -389,6 +389,11 @@
             Sec-WebSocket-Protocol: chat
             ```
         - 数据传输：![avatar](../../images/common/websocket_data.jpg)
+   - 最佳实践
+     1. close状态码
+        - 1000：Normal Closure，正常关闭
+        - 1001：Going Away，端点离开，如服务器关闭、浏览器关闭
+        - 1005：Abnormal Closure，异常关闭，如没有发送关闭帧
 1. 应用
    - 连接控制
      1. 认识：keepalive，复用tcp连接，要和tcp的keepalive区别

@@ -852,7 +852,36 @@
         - 可以影响主函数的返回值：defer在return之前执行
         - defer在return下边不会执行，实践中如果defer放最下边，中间加了return，会导致永远不会defer
 
-        - 有一定开销, 为节省性能可避免使用
+        - 可以在for循环中使用defer，但需注意会将函数调用推迟到当前函数返回时执行，而不是在每次循环迭代结束时执行
+          1. 问题：可能导致资源未及时释放或意外行为。如可能导致资源占用时间过长、defer执行时使用的是当时的值而不是循环结束后变量当前的值
+          1. 解决方案：使用匿名函数包裹defer确保defer在每次循环结束时执行
+          1. 实例
+            ```go
+            type conn struct {
+                MU sync.Mutex
+            }
+            connections := make([]*conn, 0)
+
+            // bad code
+            for _, conn := range connections {
+                conn.MU.Lock()
+                defer conn.MU.Unlock() // 导致资源占用时间过长
+            }
+
+            // good code
+            for _, conn := range connections {
+                conn.MU.Lock()
+                func() {
+                    defer conn.MU.Unlock()
+                }()
+
+                // 下边再写业务逻辑，确保defer可以执行到，因为万一bizEvent崩溃了，defer就执行不到了
+                if err := bizEvent(); err != nil {
+                    break
+                }
+            }
+            ```
+        - 有一定开销，为节省性能可避免使用。估计是对栈的占用吧，走到哪儿都要带着
      1. 应用
         - 确保安全的回收资源，同时简化资源回收
         - 捕获panic异常
@@ -5178,13 +5207,13 @@
 1. 开发配置
    - 配置GOROOT、GOPATH
    - 配置代理：`GOPROXY=https://goproxy.cn;GOPRIVATE=*.100tal.com`
-   - 配置goimports、gofmt、golangci-lint，在Tools > File Watcher
+   - 配置gofmt、golangci-lint，在Tools > File Watcher
    - 运行
      1. go工具实参：`-gcflags="all=-N -l"`
      1. 程序实参：`-conf=$ProjectFileDir$/configs/dev`
    - 工具
      1. gofmt：代码格式化
-     1. goimports：代码包管理
+     1. goimports：代码包管理，功能已经集成到了go fmt命令中
      1. govet：代码格式错误检查，关注正确性
      1. golint：代码规范检查，关注编码风格，打印出代码规范的错误
      1. gometalinter：代码静态分析并规范化其输出的linter工具集

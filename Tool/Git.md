@@ -9,13 +9,16 @@
      1. github,基于git的代码托管平台
      1. gitlab,基于git的项目管理软件
      1. bitbucket，代码托管网站
+   - 文件
+     1. .gitignore：
+     1. .gitkeep：占位文件，用于确保git跟踪空目录，因为git不会跟踪空目录
 ### 修改
 #### init
 1. git init：初始化项目，--bare 初始化项目为远程
 #### fetch
 1. 认识：获取
-1. git fetch       创建并更新所有远程分支的本地的远程分支
-1. git fetch -p    获取最新数据(如最新分支数据)和清除旧数据
+1. git fetch       创建并更新所有在本地的远程分支，下载最新的提交、分支和标签等信息，但不会直接修改本地的工作目录或当前分支
+1. git fetch -p    fetch的基础上，删除本地对应远程已经删除的分支
 #### pull
 1. git pull               git fetch + git merge
 1. git fetch              拉取最新代码，但不合并

@@ -521,6 +521,8 @@
      1. `systemctl status`：查看状态
      1. `systemctl xx start`：兼容service启停
      1. `systemctl enable xx`：开机启动
+     1. `journalctl`：从旧到新查看日志
+     1. `journalctl -f`：跟踪日志文件
      1. `journalctl -u xx.service -e > xx.log`：查看某服务最近的日志
      1. `systemctl enable xx`：开机启动
    - 功能：处理时称之为单元，有单元类型

@@ -50,6 +50,7 @@
         - sadd/spop/smove/srem：移除某一随机元素、移到另一集合、移除n个
         - sdiff/sdiffstore/sinter/sinterstone/sunion/sunionstone：求差集、求交集、求并集。[并储存到另一个集合]
         - scard/sismember/smembers/sscan：成员数量、是否成员、返回所有成员(会阻塞)、迭代元素
+        - srandmember：返回一个随机元素
    - sorted set
      1. 认识：有序集合 zset，string类型的成员唯一的有序集合，每个元素关联一个double类型的分数
         - 成员唯一，分数可重复
