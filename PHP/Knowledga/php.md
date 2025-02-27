@@ -347,11 +347,12 @@
 1. 加密
    sha1：用于校验文件完整性，是否被篡改，可生成一个160位校验值，不可逆
 1. 日期时间函数
-   - time        时间戳
-   - strtotime   字符串转为时间戳，啥都能转
-   - mktime      日期转为时间戳
-   - date        格式化时间/日期
-   - gmdate
+   - time()             时间戳
+   - microtime(true)    毫秒时间戳
+   - strtotime()        字符串转为时间戳，啥都能转
+   - mktime()           日期转为时间戳
+   - date()             格式化时间/日期，`date("Y-m-d H:i:s", $timestamp)`
+   - gmdate()
 #### 组件
 1. 连接数据库
    - PDO：php database object
@@ -995,17 +996,33 @@
         live-class-notify:
         ```
      1. Dockerfile
-        ```conf
-        FROM php:8.2-fpm
+        - v8.2的
+            ```conf
+            FROM php:8.2-fpm
 
-        # 安装必要的依赖
-        RUN apt-get update && apt-get install -y \
-            libpq-dev \
-            && docker-php-ext-install pdo pdo_mysql
+            # 安装必要的依赖
+            RUN apt-get update && apt-get install -y \
+                libpq-dev \
+                && docker-php-ext-install pdo pdo_mysql
 
-        # 安装 Redis 扩展
-        RUN pecl install redis && docker-php-ext-enable redis
-        ```
+            # 安装 Redis 扩展
+            RUN pecl install redis && docker-php-ext-enable redis
+            ```
+        - v7.3的
+            ```conf
+            FROM php:7.3-fpm
+
+            # 安装必要的依赖
+            RUN apt-get update && apt-get install -y \
+                libpq-dev \
+                && docker-php-ext-install pdo pdo_mysql
+
+            # 安装 Redis 扩展
+            RUN pecl install redis-5.3.7 && docker-php-ext-enable redis
+
+            # 安装 BCMath 扩展
+            RUN docker-php-ext-install bcmath
+            ```
      1. default.conf
         ```sh
         server {
