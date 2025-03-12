@@ -298,38 +298,138 @@
 1. 哲学
    - 简洁、优雅和可读性，使用现代化的技术和设计模式
    - 富有表达性、简洁语法的应用框架，开发过程应该是愉悦并且有创造性的，快乐的开发者才能创造最棒的代码
-   - laravel易于理解且强大，杰出的IoC、数据库迁移工具、紧密集成的单元测试
+   - 易于理解且强大，杰出的IoC、数据库迁移工具、紧密集成的单元测试
+1. 目录结构
+   - app：应用程序核心代码
+     1. Console：全部的artisan命令
+     1. Jobs：队列任务
+     1. Events：事件类
+     1. Providers：服务提供者
+     1. Listeners：事件的处理类，如UserRegistered可由SendWelcomeEmail监听
+     1. Exceptions：应用程序的异常处理进程
+   - bootstrap：框架启动和自动加载设置的文件，cache包含启动性能优化的文件
+   - public：前端控制器和资源文件
+   - resource：视图、原始的资源文件(LESS/SASS/CoffeeScript)、语言包
+   - storage：编译后的blade模板，基于文件的session，文件缓冲等其他文件。包含app存储应用程序使用的文件/framework保存框架生成的文件和缓冲/logs
 1. 组成
-   - Contracts：契约，定义框架核心服务的接口
-   - Facade：门面，模拟一个类，提供静态魔术方法`__callStatic`，将该静态方法映射到真正的方法上。提供了一个"static"（静态）接口去访问注册到IoC 容器中的类
    - 服务容器
      1. 理解：IoC容器，是laravel的核心，该容器提供了整个框架中的一系列服务
      1. 步骤
-        - Container：binding成员变量存储服务
+        - container：binding成员变量存储服务
         - bind：绑定服务
         - make：利用反射解决服务依赖，并且实例化服务
-   - 服务提供者
-     1. 一个类能够被提取，要先被注册，绑定到容器，提供服务并绑定服务至容器的东西就是服务提供者
-     1. 意义：是启动laravel的真正关键，自己和所有的laravel都是通过服务提供者启动的。启动指注册事物，包括注册服务容器绑定/事件侦听器/中间件/路由，有些属于延迟注册。应用程序创建————服务提供者注册————请求转义至已启动的应用程序。默认的服务提供者在 `app\Providers` 目录下，config/app.php的providers数组即是
-     1. 组成：`register`（注册） 和 `boot`（引导、初始化）
+   - Provider
+     1. 认识：服务提供者，注册到容器一个类才能够被提取
+        - 是启动laravel的真正关键，自己和所有的laravel都是通过服务提供者启动的
+        - 包括绑定服务容器/事件侦听器/中间件/路由，有些属于延迟注册
+     1. 位置
+        - `app\Providers`目录下
+        - `config/app.php`的providers数组
+   - Facade
+     1. 认识：门面，为服务容器中的类提供静态接口，可以通过简洁的静态语法访问复杂的服务，而不需要手动解析服务容器中的依赖
+        - 增加简洁和方便：静态调用使得代码更加直观，易于理解；避免了手动解析依赖的繁琐操作
+        - 增加灵活性：调用和实现隔离
+     1. 实现
+        - 门面类：每个门面类都继承Illuminate\Support\Facades\Facade，并实现getFacadeAccessor方法
+        - 服务容器绑定：在服务容器中，cache键名绑定了一个具体的实现类（例如 Illuminate\Cache\CacheManager）。当调用 Cache::get('key') 时，门面会通过getFacadeAccessor方法找到cache键名对应的实例，并调用其get方法
+        - 静态方法调用：通过__callStatic魔术方法将静态调用转发给服务容器中的实例
+            ```php
+            public static function __callStatic($method, $args)
+            {
+                $instance = static::getFacadeRoot();
+                return $instance->$method(...$args);
+            }
+            ```
+     1. 使用
+        - 内置的门面，如Cache、DB、Route等
+            ```php
+            use Illuminate\Support\Facades\Cache;
+
+            $value = Cache::get('key');
+            ```
+        - 自定义门面：先在服务容器中绑定服务，然后创建一个门面类并实现getFacadeAccessor方法
+            ```php
+            // 服务容器绑定
+            $this->app->bind('my-service', function () {
+                return new MyService();
+            });
+
+            // 自定义门面
+            namespace App\Facades;
+
+            use Illuminate\Support\Facades\Facade;
+
+            class MyServiceFacade extends Facade
+            {
+                protected static function getFacadeAccessor()
+                {
+                    return 'my-service';
+                }
+            }
+            ```
+   - Queue
+     1. 认识：队列
+     1. 实现
+        - 驱动队列的方式
+          1. sync：同步，即当前进程内立即执行，会阻塞当前的http请求
+          1. database：数据库
+          1. Redis
+          1. RabbitMQ
+          1. Beanstalkd、Amazon SQS
+     1. 使用
+        - 创建：任务类通常继承自`Illuminate\Contracts\Queue\ShouldQueue`。或使用`php artisan make:job JobName --queue`来创建
+        - 运行：启动n个worker进程，轮询队列的方式，启动方式`php artisan queue:work`
+        - 失败：自动重试，转移到失败队列
+        - 调度：延迟/定时执行、时间间隔重复执行
+     1. 实例
+        ```php
+        Queue::push('SendEmail', array('message' => $message));                                         // 添加队列，指定SendEmail的jobs子类执行，fire为默认执行方法 
+        Queue::connection('redis')->later($later, 'ParserQuestion', ['question_str' => $value]);        // 指定连接队列，延迟执行
+        class ParserQuestion extends BaseJob {}                                                         // 定义解决队列问题的方法，在app/jobs目录下，fire为默认执行方法 
+        ```
+   - Artisan
+     1. 认识：命令行工具，基于Symfony Console开发。新增app/commands文件夹下继承Command即可
+     1. 组成
+        - 入口文件：artisan.php
+        - 核心类：Console\Kernel 是 Artisan 的核心类，负责加载和运行命令
+        - 
+     1. 使用
+        - 自身处理
+          1. php artisan list                显示命令列表
+          1. php artisan *** --env=_zzg      指定配置环境
+        - 队列管理
+          1. php artisan queue:work          启动队列worker
+          1. php artisan queue:retry         重试失败的任务
+        - 生成器
+          1. php artisan make:command xx     创建命令
+          1. php artisan make:controller UserController
+          1. php artisan make:model User
+          1. php artisan make:migration create_users_table
+        - 调试和优化
+          1. php artisan route:list          查看路由列表
+          1. php artisan optimize            生成优化文件
+        - 缓存管理
+          1. php artisan cache:cache
+          1. php artisan cache:clear
+          1. php artisan route:clear        
+          1. php artisan view:clear
+        - 数据库管理
+          1. php artisan migrate
+          1. php artisan migrate:rollback
    - 请求处理管道
      1. 理解：使用装饰器模式，利用父子方法继承或者递归回调，实现中心方法执行前后的动态触发事件
      1. 步骤：`new Pipeline($this->app)->send()->through()->then();        // then管道触发执行`
-   - 目录结构
-     1. app 应用程序核心代码
-        - console 全部的Artisan命令
-        - Jobs 放置应用程序可队列的任务
-        - Events 事件类
-        - Listeners 事件的处理类，如UserRegistered可由SendWelcomeEmail侦听
-        - Exceptions 应用程序的异常处理进程，
-        - Providers
-     1. bootstrap 框架启动和自动加载设置的文件，cache 包含启动性能优化的文件
-     1. public 前端控制器和资源文件
-     1. resource 视图、原始的资源文件(LESS/SASS/CoffeeScript)、语言包
-     1. storage 编译后的blade模板，基于文件的session，文件缓冲等其他文件。包含app存储应用程序使用的文件/framework保存框架生成的文件和缓冲/logs
-1. 功能
-   - 路由
-     1. 路由参数、路由别名、路由群组
+   - Contracts：契约，定义框架核心服务的接口
+1. 使用
+   - 配置
+     1. app/config下配置多文件夹界定不同环境配置，修改.env即可
+        ```php
+        php artisan env --env=_zzg
+        fastcgi_param  ENV '_zzg';      // 修改nginx配置
+        ```
+     1. 使用`Config::get('app.aa')`或`Config::get('question.aa')`获取对应配置，配置都在超全局变量$_ENV中
+   - 日志：`app/storage/logs`
+   - 路由：路由参数、路由别名、路由群组
    - 中间件：过滤http请求，在请求到达最终动作之前对请求进行过滤和处理。如Auth中间件身份校验地址导向，CORS为离开程序的响应加标头。用于日志\维护\CSRF保护\身份验证等。有前置/后置中间件
    - 模型
      1. DB facade(原始查找)
@@ -342,48 +442,10 @@
                 ->select(DB::raw("json_extract(json_data,'$.content.answer')"))
                 ->get();
             ```
-   - 队列：将用框架处理的东西，放到一个队列里，延迟执行
-    ```php
-    Queue::push('SendEmail', array('message' => $message));                                         // 添加队列，指定SendEmail的jobs之类执行，fire为默认执行方法 
-    Queue::connection('redis')->later($later, 'ParserQuestion', ['question_str' => $value]);        // 指定连接队列，延迟执行
-    class ParserQuestion extends BaseJob {}                                                         // 定义解决队列问题的方法，在app/jobs目录下，fire为默认执行方法 
-    ```
-   - artisan：命令行工具，基于Symfony Console开发。新增app/commands文件夹下继承Command即可
-    ```php
-    php artisan list                                // 显示命令列表
-    php artisan *** --env=_zzg                      // 指定配置环境
-    php artisan config:cache                        // 缓冲配置信息到文件，更快
-    php artisan read:word                           // 生成队列
-    php artisan queue:work redis                    // 消费队列，指使用哪个队列，如redis、mq
-    php artisan queue:work connection --daemon      // 常驻队列
-    php artisan dump-autoload                       // 重新载入类
-    ```
    - 视图
      1. 输出视图用`return view('member/info', []);`
      1. 文件名xx.blade.php，模板引擎Blade，不限制使用原生php
      1. 输出变量用{{}}
-1. 使用
-   - 配置
-     1. app/config下配置多文件夹界定不同环境配置，修改.env即可
-        ```php
-        php artisan env --env=_zzg
-        fastcgi_param  ENV '_zzg';      // 修改nginx配置
-        ```
-     1. 使用`Config::get('app.aa')`或`Config::get('question.aa')`获取对应配置，配置都在超全局变量$_ENV中
-   - 日志：`app/storage/logs`，查看日志`grep "ERROR" laravel.log`
-1. 队列
-   - 认识
-     1. 队列驱动
-        - 同步：sync，即当前进程内立即执行，阻塞当前的http请求
-        - 数据库：database
-        - Redis
-        - RabbitMQ
-        - Beanstalkd、Amazon SQS
-   - 使用
-     1. 创建：任务类通常继承自`Illuminate\Contracts\Queue\ShouldQueue`。或者使用`php artisan make:job JobName --queue`来创建
-     1. 运行：启动n个worker进程，轮询队列的方式，启动方式`php artisan queue:work`
-     1. 失败：自动重试，转移到失败队列
-     1. 调度：延迟/定时执行、时间间隔重复执行
 #### deep
 1. 5.X启动过程
    - 单入口文件，加载Composer自动加载器，获取app.php中laravel实例，即$app创建服务容器，构造函数初始化以下
@@ -406,6 +468,13 @@
 1. 版本特性
    - 5.2：访问频率限制中间件throttle
    - 5.3：支持mysql5.7的json操作、WebSockets操作的Echo
+### hyperf
+1. 认识：基于swoole的高性能、高灵活性的php协程框架，专为微服务和中间件开发设计
+   - 支持依赖注入DI、注解、中间件、ORM
+   - 支持配置管理、日志系统、任务调度
+   - 支持websocket服务、rpc服务
+   - 支持协程版的MySQL/Redis/Elasticsearch/Eloquent ORM/WebSocket/JSON RPC 服务端/gRPC 服务端/Zipkin/Jaeger(OpenTracing)/Guzzle HTTP/Consul/ETCD客户端、AMQP组件、Apollo配置中心、阿里云ACM应用配置管理、ETCD配置中心、基于令牌桶算法的限流器、通用连接池、熔断器、Swagger文档生成、视图引擎、Snowflake全局ID生成器
+   - 提供基于PSR-11的依赖注入容器、注解、AOP面向切面编程、基于PSR-15的中间件、自定义进程、基于PSR-14的事件管理器、Redis/RabbitMQ消息队列、自动模型缓存、基于PSR-16的缓存、Crontab秒级定时任务、国际化、Validation表单验证器
 ### ORM
 1. 安全性
 1. 便捷性

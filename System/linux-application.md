@@ -446,8 +446,8 @@
     supervisorctl -c supervisor.conf start/stop [all]|[zzg_worker]            // 启动停止所有/一个
     ```
    - 操作
-     1. `supervisorctl start/stop/restart all/xx`
      1. `supervisorctl status`        //查看所有进程的状态
+     1. `supervisorctl start/stop/restart all/xx`
      1. `supervisorctl update`        //配置文件修改后使用该命令加载新的配置
      1. `supervisorctl reload`        //重新启动配置中的所有程序
    - supervisor的配置文件：supervisor.conf

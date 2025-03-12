@@ -46,6 +46,7 @@
         - hexpire、hpexpire、hexpireat、hpexpireat、hpersist：设置hash中field的ttl，v7.4，时间复杂度为o(n)；
    - set
      1. 认识：无序集合，string类型的成员唯一的无序集合。通过hash table实现，所有操作复杂度都是O(1)
+        - set的存储顺序并不保证与插入顺序一致，因为数据量少可能使用intset类型具备一个排序的特性，使得插入的顺序和存储顺序不一致
      1. 命令
         - sadd/spop/smove/srem：移除某一随机元素、移到另一集合、移除n个
         - sdiff/sdiffstore/sinter/sinterstone/sunion/sunionstone：求差集、求交集、求并集。[并储存到另一个集合]

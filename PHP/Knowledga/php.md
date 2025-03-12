@@ -1007,6 +1007,9 @@
 
             # 安装 Redis 扩展
             RUN pecl install redis && docker-php-ext-enable redis
+
+            # 安装 BCMath 扩展
+            RUN docker-php-ext-install bcmath
             ```
         - v7.3的
             ```conf
