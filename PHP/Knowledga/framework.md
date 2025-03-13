@@ -311,7 +311,7 @@
    - public：前端控制器和资源文件
    - resource：视图、原始的资源文件(LESS/SASS/CoffeeScript)、语言包
    - storage：编译后的blade模板，基于文件的session，文件缓冲等其他文件。包含app存储应用程序使用的文件/framework保存框架生成的文件和缓冲/logs
-1. 组成
+1. 架构
    - 服务容器
      1. 理解：IoC容器，是laravel的核心，该容器提供了整个框架中的一系列服务
      1. 步骤
@@ -367,18 +367,69 @@
                 }
             }
             ```
+1. 功能
+   - Job
+     1. 认识：任务，代表了一个需要在后台执行的具体任务逻辑的类
    - Queue
-     1. 认识：队列
+     1. 认识：是一种异步处理的任务调度的队列，将job放入队列中，等待后台的队列worker处理
+        - 队列worker会从队列中取出任务并执行
      1. 实现
-        - 驱动队列的方式
+        - 驱动队列的方式：`QUEUE_CONNECTION=database`
           1. sync：同步，即当前进程内立即执行，会阻塞当前的http请求
           1. database：数据库
           1. Redis
           1. RabbitMQ
           1. Beanstalkd、Amazon SQS
+        - 任务分发：调用dispatch时，laravel会将任务序列化并存储到队列中
+        - 任务执行：队列worker会从队列中取出任务，反序列化后执行handle方法
+        - 任务重试：如果任务执行失败，laravel会将任务重新放回队列，直到达到最大重试次数
+        - 任务超时：如果任务执行时间超过 $timeout设置的时间，laravel会强制终止任务并标记为失败
      1. 使用
-        - 创建：任务类通常继承自`Illuminate\Contracts\Queue\ShouldQueue`。或使用`php artisan make:job JobName --queue`来创建
-        - 运行：启动n个worker进程，轮询队列的方式，启动方式`php artisan queue:work`
+        - 创建Job
+            ```php
+            namespace App\Jobs;
+
+            use Illuminate\Contracts\Queue\ShouldQueue;
+
+            class SendEmail implements ShouldQueue
+            {
+                use InteractsWithQueue, Queueable, SerializesModels;
+
+                protected $user;
+
+                public function __construct(User $user)
+                {
+                    $this->user = $user;
+                }
+
+                public function handle()
+                {
+                    Mail::to($this->user->email)->send(new WelcomeEmail($this->user));
+                }
+
+                public $tries = 3;                                                          // 最大重试次数
+                public $timeout = 60;                                                       // 超时时间
+                public function failed(\Throwable $exception)                               // 失败方法
+                {
+                    // 处理任务失败逻辑
+                }
+            }
+
+
+            // 或使用 php artisan make:job JobName --queue 创建
+            ```
+        - 分发：创建任务
+            ```php
+            use App\Jobs\SendEmail;
+            use App\Models\User;
+
+            $user = User::find(1);
+            SendEmail::dispatch($user);                                         // 将job放入队列中异步执行
+            SendEmail::dispatch_now($user);                                     // 立即在当前请求中同步执行job的逻辑
+            SendEmail::dispatch($user)->onQueue('emails');                      // 分发到特定的队列中
+            SendEmail::dispatch($user)->delay(now()->addMinutes(10));           // 延迟执行
+            ```
+        - 进行处理：`php artisan queue:work`。启动n个轮询队列方式的worker进程
         - 失败：自动重试，转移到失败队列
         - 调度：延迟/定时执行、时间间隔重复执行
      1. 实例
@@ -391,8 +442,7 @@
      1. 认识：命令行工具，基于Symfony Console开发。新增app/commands文件夹下继承Command即可
      1. 组成
         - 入口文件：artisan.php
-        - 核心类：Console\Kernel 是 Artisan 的核心类，负责加载和运行命令
-        - 
+        - 核心类：Console\Kernel是Artisan的核心类，负责加载和运行命令
      1. 使用
         - 自身处理
           1. php artisan list                显示命令列表
@@ -402,6 +452,7 @@
           1. php artisan queue:retry         重试失败的任务
         - 生成器
           1. php artisan make:command xx     创建命令
+          1. php artisan make:job xx         创建队列
           1. php artisan make:controller UserController
           1. php artisan make:model User
           1. php artisan make:migration create_users_table
