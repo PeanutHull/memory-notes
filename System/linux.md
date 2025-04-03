@@ -968,6 +968,8 @@
    - wget
    - ftp/sftp
    - sz/rz
+     1. sz：Send Zmodem，从服务器向本地终端发送文件
+     1. rz：Receive Zmodem，从本地终端上传文件到服务器
    - scp
      1. 上传：`scp [-r] local addr@ip:/addr`
      1. 下载：`scp [-r] addr@ip:/addr local`

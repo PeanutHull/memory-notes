@@ -782,6 +782,15 @@
    - 方式：通过top发现fpm占用，接着通过pidstat, vmstat发现大量系统中断, 通过watch -d cat /proc/interrupts发现主要中断来自于重调度中断（RES)，通过strace查看具体系统调用, 发现大量来自于stat, 猜测可能是opcache频繁检查时间戳, 判断文件修改，通过修改配置项提升了46%性能，再通过perf, 查看函数调用栈，可能是大量的与redis的TCP连接带来不必要的资源消耗. 通过安装redis扩展, 以及使用phpredis来驱动Laravel的redis缓存, 提升性能, 达到了又一次近50%的性能提升
 ### 运维
 1. PHP安装
+   - mac
+     1. php安装
+        ```sh
+        brew install php@7.3
+        pecl install redis-5.3.7 # 支持v7.3的最高的redis版本
+
+        brew install php@8.2
+        pecl install redis
+        ```
    - linux
      1. 源码安装
         - php7编译安装
