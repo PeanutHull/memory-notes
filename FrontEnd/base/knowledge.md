@@ -135,6 +135,26 @@
      1. list-watch 机制主要实现了两个 Restful API，一个 API 叫 list，一个 API 叫 watch，客户端首先通过 list API 一次性把存在于服务端的所有资源都捞下来缓存在本地，同时服务端一起返回一个叫做 “ResourceVersion” 的标志，该标志全局单调递增，客户端也会将该标志缓存在本地。
      1. 接下来客户端通过 watch API 和服务端建立一条不会断开的长连接，每当服务端的资源发生改变之后，就会把该资源以及对该资源的 增/删/改 之类的操作通过该条长连接发送给客户端，同时把 ResourceVersion + 1，一并发送给客户端，客户端拿到该资源以及该资源对应的操作之后，就要根据对应的操作更新本地的对应资源的缓存以及 ResourceVersion
      1. 那怎么保证消息的可靠性呢？譬如中间发生了断网之类的情况，此时 ResourceVersion 就派上了用场，客户端通过每次 watch 返回的 ResourceVersion 和本地上一轮缓存的 ResourceVersion 作对比，如果发现差值大于 1，则认为中间可能发生了数据丢失，此时会再进行一次 list API 的操作，重新将服务端的全量数据资源捞下来缓存在本地，这样既保证了消息的实时性，也保证了消息的可靠性
+1. 前端流媒体播放
+   - <video src="demo.mp4"></video>：需要资源地址必须是一个完整的媒体文件
+   - MSE：媒体源扩展API，提供了实现无插件且基于 Web 的流媒体的功能
+     1. 示例代码
+        ```js
+        // 创建资源
+        const mediaSource = new MediaSource();
+
+        const video = document.querySelector('video');
+        video.src = URL.createObjectURL(mediaSource);
+
+        // 喂视频数据
+        mediaSource.addEventListener('sourceopen', () => {
+        const mime = 'video/mp4; codecs="avc1.42E01E, mp4a.40.2"';
+        const sourceBuffer = mediaSource.addSourceBuffer(mime);
+
+        const data = new ArrayBuffer([...]);    // 视频数据
+            sourceBuffer.appendBuffer(data);
+        });
+        ```
 1. 浏览器协议
    - `http:`
    - `blob:`：一种表示本地浏览器中二进制大对象的URL方案（scheme），指向临时文件或内存，可像普通URL一样被使用，如作为img标签的src属性或a标签的href属性

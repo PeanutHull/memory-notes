@@ -859,6 +859,7 @@
      1. hls是切片，其他都是连续流
    - 组成
      1. m3u8：播放列表文件
+        - 服务器端动态修改m3u8文件，实现ts文件插入；播放器会自动检测清单变化并加载新片段。适用于直播中插入广告、紧急消息插播、动态内容更新
      1. ts/mp4：切片文件，`MPEG-2 transport stream`，`fragemented MPEG-4`
 #### 应用
 1. 流媒体服务器
@@ -871,9 +872,8 @@
    - srs
      1. 认识：Simple Rtmp Server。开源，性能高，比nginx更专业干这个
         - 支持rtmp、hls、http-flv、rtc
-   - cdn
+   - Wowza
    - fms：adobe公司的，落后了
-   - rtmp
 1. 流媒体服务
    - 搭建
      1. 推流：采集、编码
