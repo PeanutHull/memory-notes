@@ -517,14 +517,17 @@
      1. 挂载文件系统
      1. 监控网络套接字(如动态开关进程)
      1. 运行时系统
-   - 使用：systemctl，systemd的管理命令
-     1. `systemctl status`：查看状态
-     1. `systemctl xx start`：兼容service启停
-     1. `systemctl enable xx`：开机启动
-     1. `journalctl`：从旧到新查看日志
-     1. `journalctl -f`：跟踪日志文件
-     1. `journalctl -u xx.service -e > xx.log`：查看某服务最近的日志
-     1. `systemctl enable xx`：开机启动
+   - 使用：systemctl，systemd
+     1. 进程管理
+        - `systemctl status`：查看状态
+        - `systemctl status xx.service`：查看某服务状态
+        - `systemctl restart xx.service`
+        - `systemctl enable xx`：开机启动
+        - `systemctl enable xx`：开机启动
+     1. 日志查看
+        - `journalctl`：从旧到新查看日志
+        - `journalctl -f`：跟踪日志文件
+        - `journalctl -u xx.service -e > xx.log`：查看某服务最近的日志
    - 功能：处理时称之为单元，有单元类型
      1. 服务单元：.service文件，控制unix上的传统服务守护进程，编写.service文件，通过设置参数决定某一命令的守护
      1. 挂载单元：.mount文件，控制文件系统的挂载，类似mount命令
