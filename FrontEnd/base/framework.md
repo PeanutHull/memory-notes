@@ -538,6 +538,11 @@
      1. 使用社区支持的工具生成特定于平台的工具，如macOS的.dmg、windows的.msi、linux的.rpm(RPM Package Manager)
      1. 支持自定义应用程序窗口外观
      1. 支持应用商店分发
+1. tauri：
+   - 认识：利用系统原生webView并以Rust为核心驱动的全新跨平台桌面应用构建工具，使用rust和js的跨平台桌面应用程序框架，比electron更加轻量，安装包只有几MB
+     1. 采用系统内置的webView进行渲染，不再额外捆绑完整的浏览器内核
+        - windows：WebView2，chromium渲染引擎，与microsoft edge同源
+        - macOS：WKWebView，webkit2渲染引擎，与safari同款引擎
 1. wiki
    - 基于OpenJS基金会
    - 底层包装了native API
