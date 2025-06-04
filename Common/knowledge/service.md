@@ -623,8 +623,34 @@
      1. jeager：Uber
      1. CAT：点评的
 1. opentelemetry
-   - 包括链路/指标/日志等可观测性的、编程语言/基础设施/运行时环境无关的框架和工具包，专注遥测数据的生成/采集/管理/导出，存储和可视化有意留给其他工具处理
-
+   - 认识：CNCF主导的云原生可观测性的标准协议。可观测性的链路Traces/指标Metrics/日志Logs/resources、编程语言/基础设施/运行时环境无关的框架和工具包，专注遥测数据的生成/采集/管理/导出，存储和可视化有意留给其他工具处理（如OTLP、Prometheus、Zipkin、stdout）
+     1. opentelemetry定义了可观测性的几个方面的标准
+   - 组成
+     1. trace
+        - Trace：由多个span组成，表示一个完整的请求或事务，traceId在整个调用链中保持不变，标识一个完整的请求链路
+        - Span：跟踪的基本单位，代表一个操作；每次跨服务调用会生成新的Span，通过Parent Span ID建立层级关系，形成树状结构
+          1. 操作名称：如 "HTTP GET /users"）
+          1. 开始和结束时间戳
+          1. 键值对形式的属性：如{"http.method": "GET"}
+          1. 状态：成功、失败或未设置unset
+        - Context Propagation：上下文传播，用于在不同span之间传递信息，如traceid、spanid等
+          1. 方式
+             - W3C Trace Context（通过HTTP头、gRPC Metadata传递）
+             - B3 Propagation（Zipkin兼容）
+   - wiki
+     1. OTLP：OpenTelemetry Protocol，OpenTelemetry的核心的标准数据交换格式和传输协议，就是个传输协议
+        - 取代了之前分开的协议（如Zipkin、Jaeger等专用协议）
+        - 支持traces、metrics、logs三种遥测数据类型
+        - 支持gRPC和HTTP两种传输方式
+        - 默认使用protobuf编码，体积小、解析快，也支持 JSON 格式（通常用于调试）
+     1. trace
+        - 发展：两个业界标杆，OpenTracing、OpenCensus
+          1. OpenTracing是一个规范，jaeger基于opentracing实现的开源工具
+          1. OpenCensus，google开源的度量工具，两者在可观测性领域功能高度重合，因此在CNCF主导下进行合并形成opentelemetry项目，OpenTracing跟OpenCensus共同推进opentelemetry，两者的官网也赫赫表达基本不再维护
+        - 组成
+          1. Span：span是跟踪的基本单位，代表一个操作或事件，包含开始时间、持续时间、状态等信息
+          1. Trace：trace是由多个span组成的，表示一个完整的请求或事务
+          1. Context：上下文信息，用于在不同span之间传递信息，如traceid、spanid等
 1. 报警、预警
    - 阈值设置
    - 事件响应机制

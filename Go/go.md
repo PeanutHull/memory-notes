@@ -3680,6 +3680,10 @@
              - 空字段默认给出类型默认值，指定默认值的一个方法是：定义一个带需要的默认值的结构体变量给到Unmarshal
              - 使用空接口可实现任意类型的成员赋值和转换
              - map结构是采用map[string]interface{}和[]interface{}结构来存储任意的JSON对象和数组
+        - 最佳实践
+          1. 返回空值
+             - {}：`struct{}{}`
+             - []：`make(map[string]interface{})`
         - Marshal：序列化为json，用于map和struct
             ```go
             type Server struct {

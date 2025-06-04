@@ -2155,8 +2155,8 @@
    - 严格模式
    - NULL与任何其它值的比较永远返回false，即使NULL=NULL也返回false
    - 修饰符：格式化显示 \G、取消当前sql \c、退出 \q、显示状态 \s、\h、\d
-   - 数据大小写
-     1. 默认的字符检索策略：utf8_general_ci，不区分大小写
+   - 数据大小写：取决于字段的校对规则 collation
+     1. 默认的字符检索策略：xx_general_ci、xx_unicode_ci，不区分大小写
      1. utf8_general_cs 表示区分大小写，utf8_bin表示二进制比较，同样也区分大小写
      1. 解决方案
         - 直接修改字符集属性

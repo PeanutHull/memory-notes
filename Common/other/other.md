@@ -120,6 +120,14 @@
    - Adobe Animate：flash改名，用于矢量图形和动画
    - FlipaClip：逐帧动画工具，通过多帧图片自动合成一张动图或者短视频
    - 专业的：3DSMax / Maya / C4D / Blender
+### 技术图
+1. 工具
+    - Mermaid：基于js的图表工具，画的分支流程图很漂亮
+      1. 基于Markdown风格的语法，可直接在Markdown文件中嵌入
+      1. GitHub支持显示，用的最多
+      1. 通过简单的文本语法快速绘制各种图表
+    - PlantUML：画序列图等UML图
+    - draw.io：在线图形编辑器
 ### other
 1. 搜索引擎
    - 组成：搜集、分析、索引、查询
