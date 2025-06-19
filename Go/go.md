@@ -352,7 +352,7 @@
         "b": vertex{5, 6},
     }
 
-    // 获取
+    // 获取，获取不存在的不会报错，返回类型的零值
     m["key"]
     // 插入或修改
     m["a"] = Vertex{1, 2}
@@ -364,13 +364,11 @@
     if ok {}
     ```
    - 最佳实践
-     1. 空map请使用make(..)初始化
+     1. 空map请使用make(..)初始化，只声明未定义的写入会panic
         ```go
         var (
-            // m1 读写安全
-            // m2 在写入时会 panic
-            m1 = make(map[T1]T2)
-            m2 map[T1]T2
+            m1 := make(map[string]string)       // m1 读写安全
+            var m2 map[string]string            // m2 在写入时会 panic
         )
         ```
      1. 提前分配内存：初始化指定其大小
