@@ -890,6 +890,11 @@
      1. 更及时的响应
      1. 降低nginx io消耗
      1. 一旦开始发送内容，proxy_next_upstream功能失效
+#### 最佳实践
+1. log出现`104: Connection reset by peer`
+   - 认识：表示对端非正常地关闭连接，不是优雅的关闭(FIN包)，而是强制重置(RST包)
+     1. 如`go-resty/resty/v2`库的`SetTimeout(5 * time.Second)`超时时间设置，为快速释放资源，避免连接池被长时间占用，go-resty底层采用的是标准库net/http，其在超时或取消请求时，会直接关闭底层TCP连接，通常发送RST而不是FIN
+     1. 对端断开连接，upstream也会断开。如实际日志`epoll_wait() reported that client prematurely closed connection, so upstream connection is closed too (104: Connection reset by peer) while sending request to upstream`
 #### cgi处理
 1. fastcgi配置：`fastcgi.conf`
     ```conf

@@ -337,7 +337,16 @@
    - OpenJS基金会
    - Deno：运行在V8上的安全的ts、js运行时，node之父编写
    - SSR：服务端渲染
-   - SPA：单页应用
+   - SPA：Single Page Application，单页应用。实现无页面刷新的动态交互
+     1. 原理：动态内容替换的架构模式
+        - 前端路由（如 react-router）
+        - API 动态数据加载（如 Fetch/Axios）
+        - 状态管理（如 Redux、Vuex）
+   - PWA：Progressive Web App，渐进式web应用。通过现代web技术提供类似原生应用的体验
+     1. 组成
+        - service worker：离线缓存，缓存静态资源（html、js、img）、api请求结果、预缓存、推送通知数据
+        - web app manifest：安装到主屏幕，定义应用的名称、图标、启动页等元数据
+        - https：安全要求
    - JXcore：多线程版node，100%兼容node。还有打包功能，生成jx二进制文件，jxp中间件文件(包含需要编译的完整项目信息)
 1. 调优
    - process.env._THREADPOOL_SIZE：io线程池数量，默认4

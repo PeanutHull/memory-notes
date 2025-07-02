@@ -31,6 +31,10 @@
           1. 高可用性：系统稳定，24小时服务
         - 用户设计
           1. 角色分类：平台管理员(平台超管、平台普通管理员)、租户机构、租户管理员、租户用户、租户角色
+     1. FaaS：功能即服务，Function as a Service
+        - 无服务器架构，函数即服务，云端运行的函数
+        - 事件驱动，按需付费
+        - 代表：AWS Lambda、Azure Functions、Google Cloud Functions
    - 云服务平台
      1. Amazon的AWS、Microsoft的Azure、Google的Google cloud
      1. OpenStack
