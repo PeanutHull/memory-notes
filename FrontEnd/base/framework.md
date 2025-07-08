@@ -546,6 +546,7 @@
 1. wiki
    - 基于OpenJS基金会
    - 底层包装了native API
+   - Wails：基于go的跨平台桌面应用框架，使用go和前端框架（如vue、react）构建桌面应用，具有轻量、快速的特点。前端使用webview渲染
 
 #### 可视化
 1. CesiumGS/cesium：真实感非常强的3D地图，基于webGL，跨平台支持，如Cesium for Unreal搭配Google Photorealistic 3D Tiles在UE虚拟现实环境中的应用
