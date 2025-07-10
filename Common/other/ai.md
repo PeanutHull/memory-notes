@@ -88,6 +88,7 @@
      1. 不同于数据库和搜索引擎，LLM能创造性地生成历史上没有出现过的文本内容。
      1. 会有幻觉，会生成无中生有的回复；训练信息更新不及时、逻辑能力差、推理速度慢
      1. GPT：生成型预训练变换模型，是基于深度学习的大语言模型，旨在通过训练模型预测下一个单词或字符的来学习自然语言的统计规律
+     1. 用处是理解和生成自然语言和代码、推理
    - 分类
      1. 多模态LLM：除了文字能力外，还可以理解和生成图片、语音、视频
         - 额外的图片识别模块，如GPT-4V和LLaVA
@@ -107,8 +108,14 @@
      1. finetune：微调，补充和强化LLM。如使用中文数据集微调LLaMA 3 8B可大幅提升中文能力
      1. LoRA：插件式微调，对大语言模型进行个性化的特定任务的定制，其将模型的权重矩阵分解成低秩的相似矩阵，降低了参数空间的复杂性，从而减少微调的计算成本和模型存储
    - 实现原理
-     1. 条件概率：在已知一个事件已经发生的情况下，另一个事件发生的概率
-     1. 温度参数：控制生成文本的随机性，温度越高，生成的文本越随机；温度越低，生成的文本越确定
+     1. 概念
+        - 条件概率：在已知一个事件已经发生的情况下，另一个事件发生的概率
+        - 温度参数：控制生成文本的随机性，温度越高，生成的文本越随机；温度越低，生成的文本越确定
+     1. 训练方式
+        - 大量数据训练
+        - 指令微调阶段：instruction tuning
+           - 通过人类反馈强化学习（RLHF）来优化模型的输出质量。如为理解Jinja2模版语法，模型会被显式训练处理结构化指令，从而强化对特定语法的理解
+           - 通过人类标注的示例来指导模型生成更符合人类期望的回答
    - wiki
      1. llm越狱：安全机制，避免生成不当内容
      1. maas：模型即服务 model as a service，提供api接口的llm服务，如Hugging Face
@@ -126,6 +133,33 @@
           1. RoBERTa
         - 国内：通义、文心一言、智谱清言、豆包、kimi、百小应、讯飞星火、海螺
         - 开源：ChatGLM、BLOOM、LLaMA
+     1. openAI API交互模型
+        - 文本
+          1. completion：补全模式，适用于单次文本生成任务，核心功能是根据提示prompt进⾏提示语句的补全（即继续进行后续⽂本创作），它本质上是文本补全模型。如gpt-3.5-turbo
+          1. chat：对话模式，支持多轮对话，通过messages数组管理上下文，包含system、user、assistant三种角色。如gpt-4o
+             - system：系统消息，提供背景信息和指令
+             - user：用户消息，用户输入的内容
+             - assistant：助手消息，助手生成的回复
+          1. edit：编辑模式，用户提供待修改文本和修改指令，模型返回调整后的内容。用于文本润色、代码优化、语法修正。目前较少使用，部分功能已整合至chat模式
+        - embedding：嵌入模式，将文本转换为向量表示，用于语义搜索、聚类、相似性匹配、知识检索等任务
+             - 不直接生成文本，而是提供数值化表示
+             - 适用于机器学习任务
+
+        - responses api：响应模式，支持状态化交互，可集成外部工具（如mcp协议、文件搜索、代码解释器）
+        - multi-agent：多代理模式，支持多个ai代理协同工作，如orchestrator-sub-agent模式或直接handoffs（子代理直接与用户交互）
+
+        - vision：视觉模式，图像识别与分析，支持url或base64编码的图像输入
+        - streaming：流式模式，支持实时流式返回生成内容，适用于长文本或动态交互
+     1. 大模型如何理解Jinja2，加深大模型处理模式的理解
+        - 预训练数据的广泛覆盖
+          1. 接触过海量的开源代码、技术文档和论坛内容
+          1. 模式识别能力：模型通过统计规律学会{}包裹的内容通常表示变量、{%%}和{{}}是Jinja2的控制块和表达式标记
+        - 指令微调：微调阶段会被显式训练处理某种特定数据，并由人类反馈
+        - 
+          1. 
+        - 
+        - 
+        - 
 1. prompt engineering
    - 认识：提示词工程，对预训练大语言模型进行操作，并对输出结果进行调优，致力于优化和提高llm输出质量的技术和方法。用于弥补现阶段llm能力的不足，随着llm的能力提升，提示词工程的作用会越来越小
      1. prompt：提示词，指给定一段文本或问题，用于引导和启发llm生成相关的回答或问题，是目前和llm交互的核心方式
@@ -179,18 +213,7 @@
         - 副驾驶：copilot，人类和ai是伙伴关系共同完成任务，ai提供建议并协助任务，ai像知识丰富的伙伴而非工具
         - 智能体：agent，人类设定目标并提供资源，ai独立完成大部分工作，最后人类监督和评估结果
 1. 应用
-   - Dify：简单快速创建AI应用的LLMOps平台，内置了构建LLM应用所需的关键技术栈
-     1. 功能
-        - 支持开箱即用的聊天对话模式的web站点
-        - 后端api(组件、上下文增强)
-
-        - 可视化Prompt编排界面、上下文、插件等
-        - 数据集管理(标注、改进）、日志等
-        - 兼容OpenAI、Langchain等多种LLM
-
-        - 高质量的RAG引擎
-        - 灵活的Agent框架
-     1. 声明式YAML文件做配置
+   - dify
    - LangChain
      1. 认识：用于语言模型和应用程序开发的开源框架，简化与LLMs的交互，整合数据检索和功能模块，从而构建端到端的应用程序，由Lang.AI开发
      1. 功能
@@ -214,7 +237,7 @@
      1. 为Agent提供了额外的知识来源
      1. 框架：Cohere、Cognita
    - 数据蒸馏：将大数据集浓缩为小型数据
-   - embedding：是一种将离散的符号或类别信息（如单词、字符或实体）映射到连续向量空间的技术，如将长文本编码为紧凑的高维向量、保持上下文连贯性
+   - embedding：是文本的数值表示，可以用来衡量两段文本之间的相关性。是一种将离散的符号或类别信息（如单词、字符或实体）映射到连续向量空间的技术，如将长文本编码为紧凑的高维向量、保持上下文连贯性
 1. 最佳实践
    - 如何使用：和AI协作就像带新人，目标明确、步骤细化、实时盯进度，才能高效拿到结果
      1. 描述清晰目标
@@ -235,6 +258,222 @@
      1. 比较适合本地运行的是Phi 3 Medium（14B）、LLaMA 3 8B、Mistral 7B
      1. 推荐以下两个客户端：Ollama； LM Studio
      1. 工具：ollama、langChain、langGraph、langSmith、LlamaIndex、Haystack
+1. Eino
+   - 字节开源的Golang的AI应用开发框架
+     1. 明确的组件定义
+     1. 强大的流程编排功能
+   - 功能
+     1. 对话与交互类：ChatModel组件，构建多轮对话系统，结合模板功能动态生成提示词、流式输出等
+        - 利用角色定义和prompt模板，如fstring、jinja2
+     1. 数据处理与自动化：将用户自然语言转换为结构化查询条件，如解析为数据库查询参数
+        - 实现
+          1. DataOperator组件：核心，数据处理
+          1. Tool组件：BindTools绑定外部工具，如数据库、爬虫、OCR服务
+          1. 流程编排
+     1. RAG：结合向量化知识库，通过语义检索召回相关信息，增强模型回答的准确性
+        - 文档加载器和检索器组件
+     1. 复杂逻辑编排：react智能体通过graph编排实现自主决策，如模型判断是否调用工具（如天气查询api），并将工具结果作为下一轮输入，形成循环推理链，以及是否及时中断
+     1. 内容生成、多模态：multicontent字段
+     1. 扩展与集成能力：bindtools绑定外部api或自定义函数
+   - 组成
+     1. 功能组件
+     1. prompt模板
+     1. 流程编排
+   - 功能组件
+     1. ChatTemplate：接收外界输入，转化成预设格式的prompt交给模型
+
+     1. Embedding：Retriever和Indexer的共同依赖，文本转向量，捕获文本语义
+     1. Indexer：存储文件并建立索引，供后续Retriever使用
+     1. Retriever：获取相关的上下文，让模型的输出基于高质量的事实
+
+     1. ChatModel：与大模型交互，输入Message上下文，得到模型的输出Message
+     1. Tool：与世界交互的工具，根据模型的输出，执行对应的动作
+
+     1. Document Loader：加载指定的文本
+     1. Document Transformer：按照特定规则转化指定的文本
+
+     1. DataOperator
+        - StreamOperator：流式数据支持     
+     1. Lambda：用户定制function
+
+     1. EinoDev：可视化工具
+   - prompt模板
+     1. 功能
+        - 动态变量填充：将上下文数据（如用户输入、历史对话）自动插入模板
+        - 多格式支持：兼容FString（Python 风格）、Jinja2（逻辑控制）等模板引擎
+        - 角色定义：为模型设定行为风格（如客服、编程助手）
+        - 工具描述集成：在ReAct模式中，自动生成工具调用指令
+     1. 模版
+        - FString：简洁的 {variable} 占位符，适合简单插值，python
+            ```python
+            # 伪代码：用户问答模板
+            template = """
+            你是一个专业客服，请回答用户问题：
+            用户输入: {user_input}
+            历史记录: {history}
+            请用中文回复，不超过100字。
+            """
+            ```
+        - Jinja2：支持条件判断、循环等逻辑，适合复杂场景，web模板
+            ```python
+            {% if user.role == "vip" %}             # 逻辑判断是控制块 {% %}
+            尊贵的VIP用户，您的问题已优先处理：
+            {{ user_input }}                        # 变量是表达式 {{ }}
+            {% else %}
+            您好，您的问题正在处理中：
+            {{ user_input }}
+            {% endif %}
+            ```
+        - ReAct专用模板
+            ```python
+            请根据任务决定是否需要调用工具：
+            问题: {{question}}
+            可用工具:
+            - 天气查询: 输入地点，返回天气数据
+            - 订单查询: 输入订单号，返回状态
+            逐步思考后，按格式响应：
+            Thought: <推理步骤>
+            Action: <工具名|null>                   # 方法<>
+            ActionInput: <参数>             # 方法<># 参数<>
+            ```
+     1. 功能
+        - 模板继承
+            ```jinja2
+            {% extends "base_prompt.j2" %}
+            {% block content %}用户问题: {{input}}{% endblock %}
+            ```
+        - 自动变量补全：`{{time|default:"2024-07-15"}}`
+        - 多模态支持：`![image]({{image_url}})`
+   - 流程编排
+     1. 概念
+        - 节点：node
+        - 边：edge，节点之间的关系
+        - 分支：branch，节点之间的分支关系
+     1. 实现方式
+        - chain：线性执行多个数据处理步骤，链式有向图，始终向前
+        - graph：有向图，有最大的灵活性，通过可视化节点（如分支、循环）实现复杂条件逻辑
+     1. 可实现的模式
+        - ReAct：reasoning + acting，基于动态推理与工具调用的智能体实现模式，是通过组件拼装实现的高级功能模式。和chain、graph区别在于是动态决定下一步，是Eino支持的一种高级任务解决策略、或者动态组合出“推理-行动”的循环能力
+          1. 认识
+             - reasoning：模型自主分析问题，拆解步骤，如需要查询天气api
+             - acting：调用工具执行具体操作，并根据工具返回结果决定下一步动作
+             - 循环迭代：重复“推理-行动”直到任务完成或达到终止条件
+          1. 实现本质
+             - 通过prompt模板引导模型生成推理步骤，包含工具描述、推理步骤占位符等
+             - 通过graph的循环实现“行动结果→重新推理”的闭环
+             - 通过tool绑定提供可调用的外部能力，如api、数据库
+          1. 示例
+            ```go
+            // 1. 定义工具函数
+            func fetchWeather(location string) string {
+                // 模拟天气API调用
+                return fmt.Sprintf(`{"location": "%s", "weather": "晴", "temp": 25}`, location)
+            }
+
+            // 2. ReAct Prompt模板（简化版）
+            const reactPrompt = `
+            请逐步思考并决定是否需要调用工具。可用工具：
+            - get_weather(location): 查询天气
+
+            当前任务: {{.input}}
+            按格式响应：
+            Thought: <思考步骤>
+            Action: <get_weather|null>
+            ActionInput: <参数>`
+
+            func main() {
+                // 3. 初始化Eino组件
+                // 绑定工具
+                weatherTool := eino.BindTool("get_weather", fetchWeather)
+                
+                // 创建ChatModel（加载ReAct模板）
+                model := eino.ChatModel{
+                    PromptTemplate: eino.NewPromptTemplate("react", reactPrompt, "jinja2"),
+                    Tools:          []eino.Tool{weatherTool},
+                }
+
+                // 4. 构建ReAct Graph
+                graph := eino.NewGraph().
+                    AddNode("reason", model).                                                       // 推理节点
+                    AddNode("act_weather", weatherTool).                                            // 工具节点
+                    AddEdge("reason", "act_weather", eino.If(func(ctx eino.Context) bool {
+                        // 条件边：当模型输出Action=get_weather时触发
+                        return ctx.LastOutput().Action == "get_weather"
+                    })).
+                    AddEdge("act_weather", "reason", eino.OnSuccess())                              // 循环边：工具结果返回推理
+
+                // 5. 执行任务
+                input := "杭州明天适合穿什么？"
+                result := graph.Run(input)
+                fmt.Println("最终回答:", result.Text)
+                
+                /* 预期输出流程：
+                1. 模型推理: Thought: 需要查询杭州天气 → Action: get_weather, ActionInput: 杭州
+                2. 调用工具: fetchWeather("杭州") 返回天气数据
+                3. 二次推理: Thought: 晴天25度建议穿短袖 → Action: null
+                4. 输出结果: "杭州明天晴25°C，建议穿短袖"
+                */
+            }
+            ```
+   - 功能
+     1. Compose：声明式地组合多个组件或逻辑单元，构建数据处理流程。将独立模块（如模型调用、工具执行、数据处理）串联成可复用的任务流水线
+        - Compose快速组合线性/简单分支逻辑，Graph处理复杂拓扑（循环、多分支）
+   - 高级功能
+     1. 并发处理、扇入扇出、通用横切面、option分配
+   - 实例
+     1. 图编排
+        ```go
+        // 定义查询工具
+        dbTool := eino.BindTool("photo_db", func(query Query) Result {
+            return DB.Execute("SELECT * FROM photos WHERE year=? ORDER BY size", query.Year)
+        })
+
+        // 图编排
+        graph := eino.NewGraph().
+            AddNode("parse_input", ChatModel.WithPrompt(intent_prompt)).
+            AddNode("query_db", dbTool).
+            AddEdge("parse_input", "query_db", eino.IfNeedTool())
+
+        // 执行
+        result := graph.Run(userInput)
+        ```
+     1. Hertz路由中处理SSE连接
+        ```go
+        eino.Get("/stream", func(c context.Context, ctx *app.RequestContext) {
+            ctx.SetContentType("text/event-stream")
+            for {
+                data := getStreamData()                 // 从 Eino 流式节点获取数据
+                ctx.SSEvent("message", data)            // 发送 SSE 事件
+                ctx.Flush()                             // 立即推送至客户端
+            }
+        })
+        ```
+#### Dify
+1. Dify
+   - 认识：简单快速创建AI应用的LLMOps平台，内置了构建LLM应用所需的关键技术栈
+   - 功能
+     1. 支持开箱即用的聊天对话模式的web站点
+     1. 后端api(组件、上下文增强)
+
+     1. 可视化Prompt编排界面、上下文、插件等
+     1. 数据集管理(标注、改进）、日志等
+     1. 兼容OpenAI、Langchain等多种LLM
+
+     1. 高质量的RAG引擎
+     1. 灵活的Agent框架
+     1. 声明式YAML文件做配置
+1. 组成
+   - 模型
+     1. 分类：系统推理、Embedding 文本嵌入、Rerank、TTS、ASR
+   - 应用
+     1. 交付结果：有鉴权的控制api、可二开的webApp、一套包含提示词工程、上下文管理、日志分析和标注的易用界面
+     1. 分类
+        - Chatbot 聊天助手：基于 LLM 构建对话式交互的助手
+        - Text Generator 文本生成应用：面向文本生成类任务的助手，例如撰写故事、文本分类、翻译等
+        - Agent：能够分解任务、推理思考、调用工具的对话式智能助手
+        - Chatflow 对话流：适用于定义等复杂流程的多轮对话场景，具有记忆功能的应用编排方式
+        - Workflow 工作流：适用于自动化、批处理等单轮生成类任务的场景的应用编排方式
+
 ### 图像
 ### 视频
 1. 大模型

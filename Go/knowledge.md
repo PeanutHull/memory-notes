@@ -28,6 +28,12 @@
     testing.Init()      // 注册测试标志，用于不使用go test的情况下，进行如基准测试的函数调用
     err = gracehttp.Serve(&http.Server{Addr: ":" + configs.GetServer().Server.Port, Handler: g})        // grace承接http服务
     ```
+#### 中间件框架
+1. CloudWeGo
+   - 认识：企业级云原生微服务中间件集合。高性能、高扩展性、高可靠，专注于微服务通信与治理。框架下至网络库、编解码库、序列化库均是自研
+   - 组成
+     1. 子项目：Kitex、Hertz、Volo、Netpoll、Sonic、Eino
+     1. 语言：go、rust
 #### http框架
 1. Gin：以更好的性能实现类似Martini的API框架，5万star
    - 特点
