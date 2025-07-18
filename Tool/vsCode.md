@@ -337,3 +337,6 @@
      1. claude code
      1. Roo Code：完全免费，对token的使用非常透明会有显示
      1. Windsurf
+### vs code
+1. 单词的分隔符设置：`editor.wordSeparators`
+   - 认识：设置哪些字符被视为单词分隔符，影响光标移动、选择等操作
