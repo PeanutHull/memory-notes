@@ -2221,8 +2221,51 @@
           1. 隐藏索引：不会被优化器使用
           1. 降序索引：descending index，只有innodb支持，只支持btree
         - 支持函数索引：在索引中使用函数，支持json数据索引，基于虚拟列实现
-     1. 支持通用表表达式：CTE，即with子句，和派生表类似，像语句级别的临时表或视图，用完就不用管了，类似临时的变量等
-        - 可以引用其他cte
+     1. 支持公用表表达式：CTE
+        - 认识：Recursive CTE 递归公用表表达式，即with子句，和派生表类似，像语句级别的临时表或视图，用完就不用管了，类似临时的变量等。是一种sql中强大的功能，特别适合处理层次结构或树形数据，如组织架构、评论回复链、产品分类等
+          1. 可以引用其他cte
+        - 语法
+            ```sql
+            WITH RECURSIVE cte_name AS (                                        # 声明
+                -- 基础查询：提供递归的起点
+                SELECT columns FROM table WHERE base_condition
+                
+                UNION [ALL]
+                
+                -- 递归部分：引用CTE自身，逐步构建结果
+                SELECT columns FROM table JOIN cte_name ON join_condition
+            )
+            SELECT * FROM cte_name;
+            ```
+        - 实例
+            ```sql
+            # 查询部门层级结构，由parent_id关联上下级
+            WITH RECURSIVE dept_path AS (
+                -- 基础查询：选择顶级部门
+                SELECT 
+                    id,
+                    dept_name,
+                    parent_id,
+                    level,
+                    CAST(dept_name AS CHAR(1000)) AS path
+                FROM staff_department
+                WHERE parent_id = 0
+                
+                UNION ALL
+                
+                -- 递归查询：连接子部门
+                SELECT 
+                    sd.id,
+                    sd.dept_name,
+                    sd.parent_id,
+                    sd.level,
+                    CONCAT(dp.path, ' > ', sd.dept_name) AS path
+                FROM staff_department sd
+                JOIN dept_path dp ON sd.parent_id = dp.id
+            )
+            SELECT * FROM dept_path
+            ORDER BY path;
+            ```
      1. 支持窗口函数，也叫分析函数，over，和分组聚合类似，是每一行生成一个结果，可以结合统计函数一起使用，非常灵活
         - row_number/rank
         - first_value/last_value/lead
