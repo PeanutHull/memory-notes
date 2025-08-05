@@ -3443,7 +3443,7 @@
         - `go list -m -json all | more`：查看库的依赖，包括go版本的依赖等
         - `go list -m -json go.uber.org/zap`：查看特定
      1. `go get`
-        - 认识：安装远程包、更新模块依赖并修改go.mod，包含clone、compile、install三个步骤。原理类似先通过源码工具clone代码到GOROOT/src目录，然后执行go install
+        - 认识：安装远程包、更新要安装模块的依赖并修改go.mod，包含clone、compile、install三个步骤。原理类似先通过源码工具clone代码到GOROOT/src目录，然后执行go install
           1. 会自动根据不同域名调用不同源码工具，如git或svn
         - 参数
           1. `-d`：不构建和安装，只下载，go-get应该与-d标志一起使用，以调整当前模块的依赖关系而不构建包，不推荐使用go-get来构建和安装包。在未来的版本中，-d标志将始终启用
