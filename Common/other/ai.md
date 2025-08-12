@@ -172,6 +172,93 @@
      1. 例子：示范学习
      1. 输入：数据输入
      1. 输出：结果格式
+   - 分类
+     1. 语言提示词工程：有局限性，但是灵活、快
+     1. 代码提示词工程：可以更加深入
+   - CoT：思维链
+     1. One-shot、Few-shot：先给出一段相似的问题和答案，然后提问，就能增强模型的推理能力。问题越复杂，推理越难
+     1. Zero-shot-CoT：提示词尾部追加一句“Let’s think step by step”，深度思考模式
+     1. Few-shot-CoT：通过编写思维链样本作为提示词，让模型学会思维链的推导方式，从而更好的完成推导任务。结果不稳定
+     1. LtM提示法：LEAST-TO-MOST PROMPTING，让大模型自己找到解决当前问题的思维链，是一种Zer-shot-LtM方法，最为有效的提示学习方法。Few-Shot-LtM流程图：![](../../images/ai/Few-Shot-LtM_flow.jpeg)
+        - 步骤
+          1. 第一个阶段是自上而下的分解问题，引导模型创建子问题
+          1. 第二个阶段是自下而上的依次解决问题
+        - 示例
+          1. Q：“杂耍者可以杂耍16个球。一半的球是高尔夫球，一半的高尔夫球是蓝色的。请问总共有多少个蓝色高尔夫球？”
+          1. A：为了解决“总共有多少个蓝色高尔夫球”这个问题，首先要解决的问题是''
+        - 实例
+          1. LtM提示工程如何用于数据建模：拆分多步，用代码逻辑控制，实现提升模型的推理能力
+             - 步骤
+               1. 先把拆解规范指令和问题一起发给模型，让模型自己拆解问题
+               1. 然后让模型从拆解结果中提取子指令（有约定的规范，如can be solved by: 后面的内容）
+               1. 循环完成每一个子问题的回答：每一个循环的内容都是上一层的问题+上一层的答案+原始的Few-shot提示词不断的累积拼接，用代码for循环就能实现
+             - 代码
+                ```python
+                def llm_predict(scan_data, model="text-davinci-003", cd_few_shot, cm_few_shot):
+                    """
+                    使用OpenAI的大模型对SCAN数据集进行预测。
+                    
+                    此函数的工作流程：
+                    1. 拆解命令（Command Decomposition）。
+                    2. 使用拆解后的短命令进行翻译。
+                    3. 对原始问题提问。
+                    
+                    参数:
+                    - scan_data: 待预测的SCAN数据集。
+                    - model (str): 使用的OpenAI模型名称，默认为"text-davinci-003"。
+                    - cd_few_shot: 命令拆解的提示示例。
+                    - cm_few_shot: 命令映射的提示示例。
+                    
+                    返回:
+                    - pandas.DataFrame: 包含预测结果的数据框。
+                    """
+                    
+                    # 转化为dataframe
+                    data_frame = data.to_pandas()
+                    # 初始化预测列
+                    data_frame['actions_predict'] = 'unkown'
+                    
+                    for i, data in enumerate(scan_data):
+                        
+                        # 阶段一：拆解子命令
+                        prompt_cd = cd_few_shot + 'Q：“%s” A:' % data['commands']
+                        response_cd = openai.Completion.create(
+                              model=model,
+                              prompt=prompt_cd,
+                              temperature=0.8,
+                              max_tokens=1000
+                        )
+                        # 拆解命令结果
+                        cd_result = extract_subcommands(response_cd["choices"][0]["text"].strip())
+                        
+                        # 阶段二：短命令翻译
+                        cm_few_shot_temp = cm_few_shot
+                        for qs in cd_result:
+                            cm_few_shot_temp += 'Q:“%s” A：' % qs
+                            response_cm = openai.Completion.create(
+                                                model=model,
+                                                prompt=cm_few_shot_temp,
+                                                temperature=0.8,
+                                                max_tokens=1000
+                            )
+                            cm_few_shot_temp += response_cm["choices"][0]["text"].strip()
+                        
+                        # 对原始问题提问
+                        prompt_cm = cm_few_shot_temp + 'Q：“%s” A:' % data['commands']
+                        response_c, = openai.Completion.create(
+                              model=model,
+                              prompt=prompt_cm,
+                              temperature=0.8,
+                              max_tokens=1000
+                        )
+                        
+                        # 将结果保存在dataframe的对应位置
+                        data_frame['actions_predict'][i] = format_model_output(response_cm["choices"][0]["text"].strip())
+                        
+                    return data_frame
+                # 验证实际预测效果
+                data_frame = llm_predict(scan_data=testing_data)
+                ```
    - 最佳实践
      1. prompt描述的越准确，返回的结果越准确，表现上就是字数写的比较多
      1. 数据标注是需要积累的核心的数据资产
