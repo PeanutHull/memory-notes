@@ -227,3 +227,8 @@
      1. mcfly：小型神经网络搜索输入历史，ctrl-r使用
    - 感兴趣
      1. tokei：统计目录内的代码行数
+### vs code
+1. 单词的分隔符设置：`editor.wordSeparators`
+   - 认识：设置哪些字符被视为单词分隔符，影响光标移动、选择等操作
+1. 快捷键
+   - 换行：Shift + Enter
