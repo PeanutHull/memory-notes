@@ -313,7 +313,14 @@
    - embedding：是文本的数值表示，可以用来衡量两段文本之间的相关性。是一种将离散的符号或类别信息（如单词、字符或实体）映射到连续向量空间的技术，如将长文本编码为紧凑的高维向量、保持上下文连贯性
 1. MCP
    - 认识：Model Context Protocol 模型上下文协议。解决AI模型与外部工具集成的高定制化问题，提供了一种跨模型、跨平台的统一标准。比OpenAI的Function Calling更先进，前OpenAI高管搞的
+   - 发展历史
+     1. 2023.6.13：OpenAI宣布在Chat Completion模型中加入函数调用（Function calling）功能，全面开放16K对话长度的模型、降低模型调用资费等，这代表着Chat模型不再需要借助LangChain框架就可以直接在模型内部调用外部工具API
+     1. MCP
+   - Function Calling：函数调用，开发者描述函数给AI模型，然后模型可以智能地决定输出一个包含调用这些函数的参数的JSON对象
 #### 基础知识
+1. openAI API交互模型
+   - 认识
+     1. 官方推荐的数据交互格式是json
 1. openAI API交互模型
    - 文本
      1. completion：补全模式，适用于单次文本生成任务，核心功能是根据提示prompt进⾏提示语句的补全（即继续进行后续⽂本创作），它本质上是文本补全模型。如gpt-3.5-turbo
@@ -325,19 +332,34 @@
         )
         ```
      1. chat：对话模式，支持多轮对话，通过messages数组管理上下文，包含system、user、assistant三种角色。升级版，更常用。如gpt-4o
+        - 参数
+          1. model：使用的模型名
+          1. messages：List[Dict]，对话消息列表
+          1. 概率控制
+             - temperature：控制输出的随机性
+             - top_p：核采样概率，与temperature二选一
+             - presence_penalty：避免重复话题
+             - frequency_penalty：避免重复用词
+             - logit_bias：调整特定 token 的生成概率
+             - top_p
+          1. 回复设置
+             - stream：是否流式输出
+             - stop：遇到指定字符串时停止生成
+             - max_tokens：回复的最大 token 数
         - role分类
-          1. system：系统消息，提供背景信息和指令
+          1. system：系统消息，提供背景信息和指令，使得回答更加精准
           1. user：用户消息，用户输入的内容
           1. assistant：助手消息，助手生成的回复
         - 实例
             ```python
-            // 多轮会话
+            // 多轮会话的两种实现方式
             // 1. 直接累计上下文都传过去
             completion_second = openai.ChatCompletion.create(
                 model="gpt-3.5-turbo-16k-0613",
                 messages=[
                     {"role": "system", "content": "你是一位精通机器学习和自然语言处理的AI领域专家，具备20年相关经验"}, 
                     {"role": "user", "content": "我是一个小白，我想入门AI领域，我需要学习哪些知识"},
+                    {"role": "user", "content": "我是一个小白，我想入门AI领域，我需要学习哪些知识"},                   # 多条信息模型只会回答最后一条
                     
                     # 注意：这里通过设置role =  assistant可以告诉Chat模型，这个输入是模型返回的答案
                     {"role": "assistant", "content": "这里填写上一轮对话模型的回复"},
@@ -360,6 +382,28 @@
                 input=[{"role": "user", "content": "explain why this is funny."}],
             )
 
+            // 返回值
+            {
+                "id": "chatcmpl-7Hcl1s2t6u1X2K3l4Q5p6r7s8t9u0v",
+                "object": "chat.completion",
+                "created": 1677654321,
+                "model": "gpt-3.5-turbo",
+                "choices": [
+                    {
+                    "index": 0,
+                    "message": {
+                        "role": "assistant",
+                        "content": "Hello! How can I assist you today?"
+                    },
+                    "finish_reason": "stop"
+                    }
+                ],
+                "usage": {                                                                  # 消耗的tokens
+                    "prompt_tokens": 15,
+                    "completion_tokens": 10,
+                    "total_tokens": 25
+                }
+            }
             ```
      1. edit：编辑模式，用户提供待修改文本和修改指令，模型返回调整后的内容。用于文本润色、代码优化、语法修正。目前较少使用，部分功能已整合至chat模式
    - embedding：嵌入模式，将文本转换为向量表示，用于语义搜索、聚类、相似性匹配、知识检索等任务
@@ -635,6 +679,14 @@
         })
         ```
 #### 最佳实践
+1. 大模型的用法
+   - 方法
+     1. 方法一：system中提示类似RAG的很多的数据，让大模型更加了解，从而提升回答的准确性
+     1. 方法二：system中写入多轮对话，或者使用user和assistant告诉大模型多轮对话的结果。所以如何用system来提供背景信息是关键的技术手段
+        - 超大规模的本地文本采用时间窗口算法，会产生遗忘，可以用总结全面且关键的信息的方式提升效果
+        - 实时匹配用户的问题来选取不同的prompt，将与用户问题相关性最高的文本片段以system消息形式输入模型，然后再获取回答
+   - 实现的效果
+     1. 可以实现一个本地知识库问答系统，根据库中知识实时喂给大模型来实现问答
 1. 最佳实践
    - 如何使用：和AI协作就像带新人，目标明确、步骤细化、实时盯进度，才能高效拿到结果
      1. 描述清晰目标
