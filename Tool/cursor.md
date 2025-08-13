@@ -344,16 +344,37 @@
            ├─ 04_business_glossary.md   # 领域术语
            └─ 99_prompt_snippets.md     # 常用提示词片段
         ```
+   - Memories：记住对话信息并在未来交流过程中引用，按项目和个人级别存储，可在设置中管理。
+     1. 如强制记住php的版本号
    - rules：设置通用、场景rules
      1. go
         - 判断nil时使用`if x != nil`，而不是`if x == nil`
-     1. 举例
-        ```json
-        1. 遵循 docs/ai-template/03_coding_rules.md。
-        2. 信息不足时先提问，不得臆测。
-        3. SQL安全
-         - [强制] 仅用参数化查询
-         - [强制] 密码字段存 bcrypt hash
+        - 查询不要使用first，要使用find
+     1. base
+        - 代码风格要参考现有的风格
+        - 不要创建SQL文件、README文档、测试用例
+     1. sql
+        - 删除要使用软删除
+     1. 实例
+        ```conf
+        ---
+        description: |
+        你是一个优秀的技术架构师和优秀的程序员，
+        在进行架构分析、功能模块分析，以及进行编码的时候，请遵循如下规则：
+        1. 分析问题和技术架构、代码模块组合等的时候请遵循“第一性原理”
+        2. 在编码的时候，请遵循 “DRY原则”、“KISS原则”、“SOLID原则”、“YAGNI原则”
+        3. 如果单独的类、函数或代码文件超过500行，请进行识别分解和分离
+        globs: "**/*"
+        alwaysApply: true
+        ---
+
+        ---
+        description: 参考项目中相同功能定位的代码来写代码。不要将代码换行，一行代码多长都可以
+        globs:
+        - "**/*.php"
+        - "**/*.go"
+        alwaysApply: true
+        ---
         ```
 1. 一些方法
    - claude code处理终端任务，cursor负责ide内编码
