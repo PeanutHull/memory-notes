@@ -130,9 +130,10 @@
           1. 可定制化：通过创建Modelfile来定制自己的模型
         - 使用
           1. 命令
-             - ollama run llama3：运行模型
+             - ollama run deepseek-r1:8b：运行模型
              - ollama pull：下载模型
              - ollama list：查看已安装的模型
+             - ollama ps：查看正在运行的模型
              - ollama rm：删除模型
      1. LM Studio：图形化界面，功能不如Ollama，适用于普通用户
      1. text-generation-webui：专业人士使用
@@ -146,29 +147,59 @@
    - llm越狱：安全机制，避免生成不当内容
    - maas：模型即服务 model as a service，提供api接口的llm服务，如Hugging Face
    - 模型厂家
-     1. 开源
-        - ChatGLM、BLOOM、meta的LLaMA、Mistral、Mixtral、CodeLlama、Phi-2 
-        - 有名
-          1. Claude
-             - Claude 3.7：2025-02
-          1. Gemini
-          1. Copilot
-          1. Mistral
-          1. BERT
-          1. RoBERTa
-        - 国内
-          1. 阿里：Qwen3、通义千问
-          1. 智谱清言
-          1. 月之暗面 kimi k2
-          1. 字节跳动：豆包
-          1. 百度：文心一言
-          1. 科大讯飞：讯飞星火
-          1. 百川智能：百小应
-          1. 海螺
      1. 闭源
-        - GPT
-          1. GPT-4o：2024-05
+        - OpenAI
+          1. GPT-4o：2024-05，当前主力
+          1. GPT-4 Turbo
           1. GPT-4.5：2025-02
+        - Anthropic：美国
+          1. Claude 3.5
+          1. Claude 3.7 Sonnet：2025-02
+          1. 
+          1. 
+          1. 
+        - Google DeepMind
+          1. Gemini
+        - Mistral AI：法国
+          1. Mistral 7B
+        - Microsoft
+          1. Copilot：背后基于openai的gpt
+        - 阿里巴巴
+          1. 通义千问 Qwen-Max
+        - 字节跳动
+          1. 豆包，基于云雀模型
+        - 月之暗面 Moonshot AI
+          1. kimi k2
+        - 智谱AI
+          1. 智谱清言 GLM系列、GLM-4
+        - 百度
+          1. 文心一言
+        - 科大讯飞
+          1. 讯飞星火
+        - 百川智能
+          1. 百小应
+     1. 开源
+        - Meta
+          1. LLaMA
+          1. Code Llama
+        - DeepSeek
+          1. R1
+          1. V3
+        - 阿里
+          1. Qwen3、Qwen2.5 
+        - 智谱AI
+          1. ChatGLM3
+        - 01.AI
+          1. Yi 系列
+        - Mistral AI
+          1. Mixtral
+        - Microsoft
+          1. Phi-2
+          1. Phi-3：小型、能力强大
+     1. 其他重要历史模型
+        - BERT：由Google发布，开创了Transformer的先河，主要用于NLP任务而非对话
+        - RoBERTa：BERT的优化版
+        - BLOOM：BigScience项目
    - 周边厂家
      1. 硅基流动：专注于llm推理和部署优化，使开源的llm更快、更便宜的部署
 ### AI应用
@@ -841,6 +872,9 @@
         - Chatflow 对话流：适用于定义等复杂流程的多轮对话场景，具有记忆功能的应用编排方式
         - Workflow 工作流：适用于自动化、批处理等单轮生成类任务的场景的应用编排方式
 #### 开发框架
+1. coze
+   - coze studio：扣子开发平台
+   - coze loop：扣子罗盘
 1. wiki
    - java：DJL Deep Java Library，是java的开源的深度学习库
      1. LangChain4j：最活跃、最受关注的AI应用开发框架
