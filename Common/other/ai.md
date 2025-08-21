@@ -100,9 +100,6 @@
              - Hugging Face的BAAI/bge-small-en-v1.5（多语言支持）
           1. 领域专用模型：法律、医疗等
      1. rerank：在初步检索（如基于嵌入的语义搜索）后，对候选结果进行精细化排序，进一步提升Top结果的准确性。通常使用更复杂的模型对“查询-文档”对进行相关性评分。rerank是精修，text embedding是粗筛
-   - 操作
-     1. finetune：微调，补充和强化LLM。如使用中文数据集微调LLaMA 3 8B可大幅提升中文能力
-     1. LoRA：插件式微调，对大语言模型进行个性化的特定任务的定制，其将模型的权重矩阵分解成低秩的相似矩阵，降低了参数空间的复杂性，从而减少微调的计算成本和模型存储
    - 实现原理
      1. 概念
         - 条件概率：在已知一个事件已经发生的情况下，另一个事件发生的概率
@@ -125,15 +122,24 @@
      1. ONNX：Open Neural Network Exchange，开放的、代表机器学习模型的标准文件格式。
         - 由微软和Facebook于2017年共同创建，旨在促进不同深度学习框架之间的互操作性
         - 支持多种框架，如PyTorch、TensorFlow、MXNet、Caffe2等
-1. 大模型微调
-   - 认识：还是基于冻结的模型(已经训练好不动的)，给大模型多次不同的黑盒向量数值，影响大模型的计算，进而最终得出最好的结果，有一点点微调的味道了
+     1. tflite：
+1. 开发
+   - llama.cpp：用c和c++编写的高性能开源推理框架
+   - ROCM：Radeon Open Compute Platform，AMD的主要用于GPU计算的开源软件平台
+   - CUDA：NVIDIA的
+   - Vulkan：现代的跨平台的移动端的低开销的高性能图形和计算api，能高效地利用gpu，对比传统的OpenGL，即移动端的CUDA
+     1. 主要应用场景是推理(inference)，不是训练
+1. finetune
+   - 认识：大模型微调，补充和强化LLM。还是基于冻结的模型(已经训练好不动的)，给大模型多次不同的黑盒向量数值，影响大模型的计算，进而最终得出最好的结果，就是微调llm
    - 概念
      1. 选择性微调：只更新部分参数，放在参数里，技术有Freeze、BitFit
      1. 加性微调：在模型中增加新的参数、模块，追在参数后，技术有Prompt-Tuning软提示、Adapter插入小型层
      1. 重参数化微调：技术有LoRA
-   - Prompt-Tuning：![](../../images/ai/prompt-tuning-type.jpg)，RAG本质上还是属于硬提示的范围，只不过提供了更多准确的参考资料、用向量比文字更精确，并没有影响到llm本身，软提示是会影响llm的
+   - Prompt-Tuning：RAG本质上还是属于硬提示的范围，只不过提供了更多准确的参考资料、用向量比文字更精确，并没有影响到llm本身，软提示是会影响llm的，是一种高级的提示工程，![](../../images/ai/prompt-tuning-type.jpg)
      1. 硬提示：人工设计，仅限于输入层
      1. 软提示：可进行训练，表现比硬的更稳定，增加一点模型参数
+   - LoRA：低秩适应，插件式微调，对大语言模型进行个性化的特定任务的定制，其将模型的权重矩阵分解成低秩的相似矩阵，降低了参数空间的复杂性，从而减少微调的计算成本和模型存储
+     1. 核心假设：权重更新（ΔW）其实具有较低的“内在秩”（Intrinsic Rank）。意思是，巨大的参数变化可以用一个更小的矩阵来近似表示。
 1. 本地部署
    - 工具：ollama、LlamaIndex、Haystack
      1. Ollama
@@ -446,7 +452,8 @@
      1. 2023.6.13：OpenAI宣布在Chat Completion模型中加入函数调用（Function calling）功能，全面开放16K对话长度的模型、降低模型调用资费等，这代表着Chat模型不再需要借助LangChain框架就可以直接在模型内部调用外部工具API
      1. MCP
 1. wiki
-   - 聊天前端项目：open webUI（原名ollama webUI）、chatbox、chatbot-ui，类似gpt的界面
+   - 聊天前端项目：open webUI（原名ollama webUI）、chatbox、Cherry Studio、Page Assist、chatbot-ui，类似gpt的界面
+     1. chatbox的功能：文字聊天(markdown渲染、代码渲染、mermaid图像表格渲染、思维导图、语法高亮、内置html渲染)、联网搜索(网页爬取)、文件交互(图片)、调用mcp服务、本地化向量知识库、图像生成
 #### 基础知识
 1. openAI
    - 认识
@@ -1225,6 +1232,11 @@
      1. 迭代验证：让ai每步汇报进展，人检查通过后再往下走，大幅减少幻觉
    - 提示词prompt是进入的门槛，也是基础
    - ai做的是执行层，思考层还要人来，帮助人更好的思考
+1. 使用高级设置
+   - 大模型的topP、topK
+   - 提示词模版
+   - mcp调用是提示词还是function calling
+   - 向量库的切分模式、向量维度的调整
 ### wiki
 1. 视频应用
    - 大模型
