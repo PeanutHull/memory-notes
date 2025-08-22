@@ -172,12 +172,9 @@
           1. GPT-4o：2024-05，当前主力
           1. GPT-4 Turbo
           1. GPT-4.5：2025-02
-        - Anthropic：美国
+        - Anthropic：美国，前身为BLOOM
           1. Claude 3.5
           1. Claude 3.7 Sonnet：2025-02
-          1. 
-          1. 
-          1. 
         - Google DeepMind
           1. Gemini
         - Mistral AI：法国
