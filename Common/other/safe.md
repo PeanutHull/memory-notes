@@ -261,6 +261,18 @@
      1. intext：网页正文包含的字符串
    - 实践
      1. 查询登录界面
+1. Frida
+   - 认识：功能极其强大的运行时插桩框架，它通过向目标进程注入一个javascript运行时，使开发者能够像“开上帝模式”一样动态地检测、分析和修改任何正在运行的程序的行为
+     1. 跨平台：支持windows/macos/linux/ios/android/qnx等
+     1. 多语言支持：核心脚本语言是javascript，但控制端可以用python/node/c等来写
+   - 组成
+     1. Frida Core (注入引擎)：用 C 语言编写，负责核心的注入和交互工作
+     1. Frida Gadget (动态库)：一个特殊的动态库（.so、.dylib、.dll），它包含了 Frida 的核心功能和一个 JavaScript 运行时（Google V8、Duktape）
+   - 原理
+     1. 注入：frida通过多种方式(如ptrace)将frida-gadget库注入到目标进程中
+     1. 建立通信通道：注入后，gadget会启动一个与外部frida控制台（如你的python脚本）的通信通道
+     1. 执行你的脚本：你通过frida的python api或其他语言的绑定，将你编写的javascript脚本发送到目标进程中的gadget里
+     1. 交互与控制：你的js脚本在目标进程内部执行，可以挂钩（hook）函数、读写内存。脚本执行的结果通过通信通道返回给你的控制端
 ### 防御
 1. 网络防御
    - 防火墙 Firewall：网络NAT、包过滤规则、端口映射
@@ -287,15 +299,18 @@
 #### 加密方式
 1. 认识
    - 没有绝对安全的加密，越复杂、越难破解的加密算法需要的计算时间也越长
-1. 摘要算法
+1. 哈希算法/摘要算法
    - 特点
-     1. 只要源文本不同，计算得到的结果，必然不同（或者说机会很少），哈希碰撞
-     1. 无法从结果反推出源数据
-   - 分类
-     1. MD5：Message-Digest Algorithm 5，消息摘要算法，单向加密
-     1. SHA：Secure Hash Algorithm 安全散列算法，单向加密，SHA-256、SHA-1
-     1. MAC：Message Authentication Code 消息认证码，即带密钥的hash函数，用于验证消息完整性放篡改，md5、sha256等都可用来实现mac算法
-     1. HMAC：把key混入计算哈希，从而避免相同内容密文相同，对所有哈希算法都通用，md5、sha256等都可用来实现hmac算法
+     1. 相同的输入必定产生相同的输出
+     1. 只要源文本不同，计算得到的结果，必然不同，除非哈希碰撞，几率极低
+     1. 输入数据即使发生最微小的改变如一个比特，也会导致产生的哈希值发生巨大、不可预测的变化
+     1. 单向性：无法从结果反推出源数据
+   - 用途分类
+     1. 纯哈希函数：不需要密钥，将任意长度的数据映射为固定长度的摘要，md5是128位，sha-256是256位
+        - MD5：Message-Digest Algorithm 5，消息摘要算法，单向加密
+        - SHA：Secure Hash Algorithm 安全散列算法，单向加密，SHA-256、SHA-1。相比md5更慢更安全，生成的摘要也更长
+     1. MAC：Message Authentication Code 消息认证码，需要密钥的生成哈希的函数，用于验证消息完整性、真实性，防篡改，md5、sha256等都可用来实现mac算法
+        - HMAC：把key混入计算哈希，从而避免相同内容密文相同，对所有哈希算法都通用
 1. 对称加密算法
    - DES：Data Encryption Standard，对称加密标准，被AES替代
    - AES
