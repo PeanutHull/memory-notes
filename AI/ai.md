@@ -172,6 +172,9 @@
    - 学习路径
      1. 模型量化：QLora/GPTQ
      1. PET/P - Tuning技术
+   - 工具
+     1. unsloth：高效的微调开源框架，使用python
+        - 替代了PyTorch中原生的一些操作
 1. 本地部署
    - 工具：ollama、LlamaIndex、Haystack
      1. Ollama
