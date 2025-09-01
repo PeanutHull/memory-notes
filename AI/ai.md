@@ -428,6 +428,8 @@
         - client发起initial request，server返回initial response
         - client发送notification
 1. A2A
+   - 认识：解决不同来源不同框架的agent之间高效、安全、互操作的开放的通信协议标准，google推出
+     1. MCP解决智能体与工具/数据源的连接，A2A解决智能体之间的协作，二者互补
 1. wiki
    - 聊天前端项目：open webUI（原名ollama webUI）、chatbox、Cherry Studio、Page Assist、chatbot-ui，类似gpt的界面
      1. chatbox的功能：文字聊天(markdown渲染、代码渲染、mermaid图像表格渲染、思维导图、语法高亮、内置html渲染)、联网搜索(网页爬取)、文件交互(图片)、调用mcp服务、本地化向量知识库、图像生成
@@ -1085,6 +1087,8 @@
      1. JARVIS是开源的代码实现，微软和浙江大学
 1. AutoGen
    - 认识：类似HuggingGPT，微软、python
+1. MetaGPT
+   - 认识：将llm的能力与标准化软件工程流程（SOP）相结合的开源的多智能体框架
 1. CrewAI
    - 认识：多智能体ai编排平台
 1. coze
