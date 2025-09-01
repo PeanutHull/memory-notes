@@ -22,7 +22,7 @@
     python manage.py shell      # 进入shell
     Article.objects.all()       # 查询数据
     ```
-1. FastAPI
+1. FastAPI：高性能的最快的其中之一的web框架，得益于Starlette和Pydantic，
 1. flask：流行的微框架
 1. bottle：类似flask
 1. web.py：小巧
@@ -111,7 +111,7 @@
     }
     ```
 1. gunicorn
-   - 认识：轻量级、高性能WSGI HTTP Server，兼容多数python web框架，只在linux运行
+   - 认识：轻量级、高性能WSGI HTTP Server，兼容多数python web框架，只在linux运行。搭建高性能一般是FastAPI + Gunicorn
      1. 反向代理、负载均衡、web应用
      1. pre-fork worker model：就php那种形式，请求来之前就fork好了
 ### 爬虫

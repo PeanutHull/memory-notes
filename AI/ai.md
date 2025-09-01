@@ -407,6 +407,15 @@
              - 生成质量：最终答案是否准确、相关、基于上下文
              - 真实性：答案是否减少了“幻觉”
              - 可视化调试
+     1. FastGPT
+        - 认识：支持工作流的开源的RAG，NextJs + TS + MongoDB + PostgreSQL (PG Vector 插件)/Milvus
+        - 组成
+          1. 应用编排能力
+             - 支持工作流、MCP
+          1. 知识库能力
+             - 支持编辑知识库
+             - 支持各种格式
+          1. 应用调试能力：知识库单点搜索、调用链路日志等
    - 算法
      1. 余弦相似度
      1. 欧氏距离
@@ -431,8 +440,13 @@
         - client发起initial request，server返回initial response
         - client发送notification
 1. A2A
-   - 认识：解决不同来源不同框架的agent之间高效、安全、互操作的开放的通信协议标准，google推出
+   - 认识：Agent-to-Agent，解决不同来源不同框架的agent之间高效、安全、互操作的开放的通信协议标准，google推出
      1. MCP解决智能体与工具/数据源的连接，A2A解决智能体之间的协作，二者互补
+   - 工作模式
+     1. 顺序流水线（Sequential Pipeline）
+     1. 管理者-工作者（Manager-Worker）
+     1. 民主共识（Democratic Consensus）：投票
+     1. 竞争性（Competitive）
 1. wiki
    - 聊天前端项目：open webUI（原名ollama webUI）、chatbox、Cherry Studio、Page Assist、chatbot-ui，类似gpt的界面
      1. chatbox的功能：文字聊天(markdown渲染、代码渲染、mermaid图像表格渲染、思维导图、语法高亮、内置html渲染)、联网搜索(网页爬取)、文件交互(图片)、调用mcp服务、本地化向量知识库、图像生成
@@ -1091,9 +1105,11 @@
 1. AutoGen
    - 认识：类似HuggingGPT，微软、python
 1. MetaGPT
-   - 认识：将llm的能力与标准化软件工程流程（SOP）相结合的开源的多智能体框架
+   - 认识：将llm的能力与标准化软件工程流程（SOP）相结合的开源的多智能体框架，适用于交付代码、文档、设计图等，类似ChatDev
+     1. 将SOP编码为提示词、模块化输出验证
+     1. 预定义严格流程（产品经理→架构师→工程师）
 1. CrewAI
-   - 认识：多智能体ai编排平台
+   - 认识：角色化多个智能体的开源的ai编排平台，侧重于解决特定任务，如分析报告、决策，适用于股票分析、内容创作、研究自动化等业务流程
 1. coze
    - coze studio：扣子开发平台
    - coze loop：扣子罗盘
@@ -1149,7 +1165,6 @@
      1. collaboration：协作，共享提示模板、跟踪记录、数据集等
 1. Langfuse
    - 认识：llm应用的观测、监控与分析平台，是后台
-1. FastGPT
 ##### Eino
 1. Eino
    - 字节开源的Golang的AI应用开发框架
