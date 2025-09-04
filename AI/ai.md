@@ -423,22 +423,51 @@
      1. 数据蒸馏：将大型数据集浓缩为小型数据集
      1. embedding：是文本的数值表示，可以用来衡量两段文本之间的相关性。是一种将离散的符号或类别信息（如单词、字符或实体）映射到连续向量空间的技术，如将长文本编码为紧凑的高维向量、保持上下文连贯性
 1. MCP
-   - 认识：Model Context Protocol 模型上下文协议。解决ai模型与外部工具集成的高定制化问题，提供了一种跨模型、跨平台的统一标准。比openai的function calling更先进
-     1. 发展历史
-        - 2023.6.13：OpenAI宣布在Chat Completion模型中加入函数调用（Function calling）功能，全面开放16K对话长度的模型、降低模型调用资费等，这代表着Chat模型不再需要借助LangChain框架就可以直接在模型内部调用外部工具API
-        - MCP：前openai高管、anthropic公司开发
+   - 认识：Model Context Protocol 模型上下文协议。解决ai模型与外部工具集成的高定制化问题，提供了一种跨模型、跨平台的统一标准，让使用更加灵活。比openai的function calling更先进
+     1. MCP跟Function Calling的逻辑基本一致，差异点在于Function Calling是API调用，MCP是JSON-RPC请求
+     1. MCP 的能力描述和功能逻辑统一封装在 Server 端，而Function Calling的能力描述配置在客户端，功能逻辑在API，相对比较割裂，不容易管理
    - 特点
+     1. 动态发现工具、即插即用
      1. 一次标准化整合
      1. 实时双向通信
-     1. 动态发现工具、即插即用
+   - 类型
+     1. 标准输入/输出（stdio）：以标准输入和输出，连接客户端和mcp server。传统的c/s架构、本地、与linux管道技术一样
+     1. 服务器发送事件（SSE）：通过SSE协议交换数据，B/S架构
+        - 客户端无法主动发送事件
+        - 并发连接数受限：如chrome同一源默认最多6个
+        - SSE只能传输utf-8，不支持二进制
+        - 重连和断线恢复机制不够健壮、缺乏扩展性和标准的认证机制：对此存疑
+     1. 可流式传输的HTTP（StreamableHttp）：使用普通HTTP方式进行交互，按需用SSE的方式交互，采用Streamable HTTP传输方式。SSE方式的升级版，B/S架构
+        - 依靠HTTP/2以上协议实现TCP多路复用
    - 组成
      1. mcp server
      1. mcp client：中介层，在mcp hosts中，处理与MCP服务器的通信，查询工具功能，管理请求/响应/通知
-     1. mcp hosts：AI应用环境/载体，可以是agent、IDE
-   - 步骤/workflow
-     1. transfer layer
-        - client发起initial request，server返回initial response
-        - client发送notification
+        - mcp hosts：AI应用环境/载体，可以是agent、IDE
+   - 步骤
+     1. client发起initial request
+     1. server返回initial response
+        - 能力交换：详细回复自己的能力，可动态地发现服务器提供的功能，同时客户端无需修改代码或重新部署。server有新特性下次client连接时即可获知
+          1. Tools（工具）
+          1. Resources（资源）
+          1. Prompts（提示词） 
+     1. client发送notification
+   - 最佳实践
+     1. server更新时，需要保证服务的连贯性、向下兼容性
+   - 原理
+     1. server
+        - 先通过prompts/resources/tools的描述信息，定义服务的能力
+        - 再通过server.setRequestHandler定义接到客户端请求后，执行怎样的逻辑，响应怎样的数据
+        - 最后把server连接到transport，启动服务在本地监听客户端的RPC请求
+     1. client
+        - 客户端提供让用户提前把需要用到的MCP Servers填到配置里
+        - 客户端启动时，连接到transport，通过client.getServerCapabilities()获取所有已配置的MCP Servers能力，包括prompts/resources/tools等
+        - 用户在客户端输入问题，客户端把用户提问 + MCP Servers能力描述发送给大模型，做意图识别，大模型返回应该调用哪些服务，应该传哪些参数
+        - 客户端带上MCP Server名称和对应的参数，发起一次RPC请求，获得MCP Server响应的数据
+        - 客户端带上用户提问 + MCP Server响应的数据，请求大模型回答，可以理解为一次RAG（Rpc-call-Augmented Generation）
+   - wiki
+     1. 发展历史
+        - 2023.6.13：OpenAI宣布在Chat Completion模型中加入函数调用（Function calling）功能，全面开放16K对话长度的模型、降低模型调用资费等，这代表着Chat模型不再需要借助LangChain框架就可以直接在模型内部调用外部工具API
+        - MCP：前openai高管、anthropic公司开发
 1. A2A
    - 认识：Agent-to-Agent，解决不同来源不同框架的agent之间高效、安全、互操作的开放的通信协议标准，google推出
      1. MCP解决智能体与工具/数据源的连接，A2A解决智能体之间的协作，二者互补

@@ -469,7 +469,7 @@
    - 优化
      1. 减少http请求数：每个新的请求都需要3次握手，很费时间
      1. 减少传输文件大小：使用压缩
-1. http/2
+1. HTTP/2
    - 认识：在ssl层之上增加二进制分帧层，用frame封装header和body，实现了双向并行传输，提高传输性能，突破性能限制，没有改变1.x的语义，前身是SPDY
      1. web发展的背景
         - 更多要请求的资源数
@@ -499,7 +499,7 @@
         - 高级特征：允许服务器对客户端发起连接并推送数据
         - 请求优先级
      1. 原理：在ssl层之上增加SPDY会话层，为编码和传输数据设计新帧格式，这样一个tcp可以实现并发流
-1. http/3
+1. HTTP/3
    - 认识：即HTTP over QUIC，运行在quic之上的协议被称为HTTP/3
      1. 以前是http2+tls+tcp实现，quic是http3+quic+udp实现，![](../../images/common/network/http2_http3_diff.webp)
      1. http/3与http/2几乎相同，但是http/3使用了quic有更好性能
