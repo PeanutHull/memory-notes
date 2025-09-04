@@ -74,7 +74,7 @@
      1. 生成式人工智能（Generative AI）
 ### LLM
 1. LLM
-   - 认识：large language model 大语言模型，通过海量数据训练的、能识别人类语言、执行语言类任务、拥有大量参数的模型。![](../../images/ai/llm_model.png)
+   - 认识：large language model 大语言模型，通过海量数据训练的、能识别人类语言、执行语言类任务、拥有大量参数的模型。![](../images/ai/llm_model.png)
      1. 玩的是文字接龙
      1. 不同于数据库和搜索引擎，LLM能创造性地生成历史上没有出现过的文本内容。
      1. 会有幻觉，会生成无中生有的回复；训练信息更新不及时、逻辑能力差、推理速度慢
@@ -162,7 +162,7 @@
      1. 选择性微调：只更新部分参数，放在参数里，技术有Freeze、BitFit
      1. 加性微调：在模型中增加新的参数、模块，追在参数后，技术有Prompt-Tuning软提示、Adapter插入小型层
      1. 重参数化微调：技术有LoRA
-   - Prompt-Tuning：RAG本质上还是属于硬提示的范围，只不过提供了更多准确的参考资料、用向量比文字更精确，并没有影响到llm本身，软提示是会影响llm的，是一种高级的提示工程，![](../../images/ai/prompt-tuning-type.jpg)
+   - Prompt-Tuning：RAG本质上还是属于硬提示的范围，只不过提供了更多准确的参考资料、用向量比文字更精确，并没有影响到llm本身，软提示是会影响llm的，是一种高级的提示工程，![](../images/ai/prompt-tuning-type.jpg)
      1. 硬提示：人工设计，仅限于输入层
      1. 软提示：可进行训练，表现比硬的更稳定，增加一点模型参数
    - LoRA：低秩适应，插件式微调，对大语言模型进行个性化的特定任务的定制，其将模型的权重矩阵分解成低秩的相似矩阵，降低了参数空间的复杂性，从而减少微调的计算成本和模型存储
@@ -314,7 +314,7 @@
           1. 观察（Observe）：接收执行后返回的结果
           1. 循环：基于新的观察结果，再次进行推理，决定下一步行动，如此循环，直到完成
 1. agent
-   - 背景：大模型时代的人机交互范式，llm将结构化/非结构化的数据结合工具自动处理，变为了人和llm交互，![](../../images/ai/why_agent.jpg)
+   - 背景：大模型时代的人机交互范式，llm将结构化/非结构化的数据结合工具自动处理，变为了人和llm交互，![](../images/ai/why_agent.jpg)
    - 认识：智能体，搭配查网、查数据库等能力，可以执行任务、推理，实现一定程度的自主行动
      1. 现阶段的Agent只能算工作流，什么时候Agent能根据用户要求直接创建好Agent，才算是真正的智能体
         - 早期的如搜索引擎、个人助理等
@@ -576,11 +576,11 @@
 1. 分类
    - 语言提示词工程：有局限性，但是灵活、快
    - 代码提示词工程：可以更加深入
-1. CoT：思维链
+1. CoT：思维链，![](../images/ai/prompt-level-chai.jpg)
    - One-shot、Few-shot：先给出一段相似的问题和答案，然后提问，就能增强模型的推理能力。问题越复杂，推理越难
    - Zero-shot-CoT：提示词尾部追加一句“Let’s think step by step”，深度思考模式
    - Few-shot-CoT：通过编写思维链样本作为提示词，让模型学会思维链的推导方式，从而更好的完成推导任务。结果不稳定
-   - LtM提示法：LEAST-TO-MOST PROMPTING，让大模型自己找到解决当前问题的思维链，是一种Zer-shot-LtM方法，最为有效的提示学习方法。Few-Shot-LtM流程图：![](../../images/ai/Few-Shot-LtM_flow.jpeg)
+   - LtM提示法：LEAST-TO-MOST PROMPTING，让大模型自己找到解决当前问题的思维链，是一种Zer-shot-LtM方法，最为有效的提示学习方法。Few-Shot-LtM流程图：![](../images/ai/Few-Shot-LtM_flow.jpeg)
      1. 步骤
         - 第一个阶段是自上而下的分解问题，引导模型创建子问题
         - 第二个阶段是自下而上的依次解决问题
@@ -1166,7 +1166,7 @@
    - 项目
      1. langchain-ChatGLM
         - 认识：利用ChatGLM-6B + langchain实现的基于本地知识的问答机器人，如淘宝衣服尺寸机器人
-        - 架构：![](../../images/langchain-ChatGLM-struct.webp)
+        - 架构：![](../images/langchain-ChatGLM-struct.webp)
 1. LangGraph
    - 认识：复杂工作流的编排引擎。构建具有循环和状态的复杂的多步骤llm应用程序的库，基于langChain构建，弥补传统链chain的不足，采用了有向图graph的概念。2024年初推出
    - 功能
