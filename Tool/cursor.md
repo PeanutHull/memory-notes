@@ -16,6 +16,16 @@
      1. ctrl + k的即时对话框，提前选中代码或者@添加任意上下文的引用：让提问更准
    - Memories：记住对话信息并在未来交流过程中引用，按项目和个人级别存储，可在设置中管理。
      1. 如强制记住php的版本号
+1. 基础设置
+    ```json
+    {
+        // 设置go安装的位置
+        "go.goroot": "/usr/local/Cellar/go/1.25.1",
+        "go.alternateTools": {
+            "go": "/usr/local/Cellar/go/1.25.1/bin/go"
+        }
+    }
+    ```
 1. 主题样式
    - 认识
      1. 样式定义的组成
