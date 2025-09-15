@@ -275,7 +275,15 @@
           1. 包含子查询、join或distinct、union等需要额外处理的查询，可能会创建临时表来存储中间结果
           1. 如果没有适当的索引，可能会创建临时表来优化查询性能
           1. `tmp_table_size`和`max_heap_table_size`参数控制内存中临时表的最大大小，设置得小可能会导致更多的临时表落到磁盘上，特别是在处理大数据量的查询时
-     1. 派生表：是select返回的虚拟表，即from使用的独立子查询，可以和子查询互换使用。如`from(select * from table2)derivedTableName`
+     1. 派生表：查询中由子查询生成的临时的虚拟表，即上层from使用的独立的查询范围。如`from (select * from table2) as derivedTableName`。现在用CTE替代
+        - 特点
+          1. 只在当前查询执行期间存在
+          1. 在内存中处理
+          1. 必须要有别名
+        - 作用
+          1. 绕过数据库的限制
+          1. 让复杂查询更易读
+          1. 分步骤处理数据
      1. 公共表表达式：CTE，是一个命名的临时结果集，仅在单个SQL语句的执行范围内存在，比派生表更易读，性能更高
    - 行
      1. 单表最大值还受主键大小和磁盘大小限制，索引结构只是增加了io次数
@@ -481,6 +489,69 @@
         - insert duplicate key update的方式是更新，而不是replace的删除
      1. 原理：将数据插入，成功则结束；否则引发重复键错误，先删除原有记录，然后更新。所以可能会有删除操作，会删除其他字段的值、引发外键约束或触发器
    - update
+     1. 认识
+        - mysql不允许在 update 语句的 where 子句中直接引用正在被更新的表
+          1. 解决方案：通过多嵌套一层子查询（派生表）来绕过这个限制
+            ```sql
+            UPDATE staff_department_member
+            SET is_main_dept = 1
+            WHERE member_id NOT IN (
+                SELECT member_id                                -- 多套一层子查询
+                FROM (
+                    SELECT member_id
+                    FROM staff_department_member
+                    WHERE status = 1
+                    GROUP BY member_id
+                    HAVING COUNT(dept_id) > 1
+                ) AS multi_dept_members
+            )
+            AND status = 1;
+            ```
+          1. 其他解决方案
+             - 使用临时表
+                ```sql
+                CREATE TEMPORARY TABLE temp_multi_dept_members AS
+                SELECT member_id
+                FROM staff_department_member
+                WHERE status = 1
+                GROUP BY member_id
+                HAVING COUNT(dept_id) > 1;
+
+                UPDATE staff_department_member
+                SET is_main_dept = 1
+                WHERE member_id NOT IN (SELECT member_id FROM temp_multi_dept_members)
+                AND status = 1;
+
+                DROP TEMPORARY TABLE temp_multi_dept_members;
+                ```
+             - 使用join：v8.0+
+                ```sql
+                UPDATE staff_department_member sdm
+                LEFT JOIN (
+                    SELECT member_id
+                    FROM staff_department_member
+                    WHERE status = 1
+                    GROUP BY member_id
+                    HAVING COUNT(dept_id) > 1
+                ) AS multi ON sdm.member_id = multi.member_id
+                SET sdm.is_main_dept = 1
+                WHERE multi.member_id IS NULL
+                AND sdm.status = 1;
+                ```
+             - 使用CTE
+               ```sql
+                WITH multi_dept_members AS (
+                    SELECT member_id
+                    FROM staff_department_member
+                    WHERE status = 1
+                    GROUP BY member_id
+                    HAVING COUNT(dept_id) > 1
+                )
+                UPDATE staff_department_member sdm
+                SET sdm.is_main_dept = 1
+                WHERE sdm.member_id NOT IN (SELECT member_id FROM multi_dept_members)
+                AND sdm.status = 1;
+               ```
 1. 用户和权限管理
    - user
     ```sql
@@ -515,6 +586,51 @@
         - RELOAD：重载授权表、清空日志/主机缓存/表缓存
         - SHUTDOWN：关闭服务器
 #### 进阶操作
+1. CTE
+   - 认识：Recursive CTE 递归公用表表达式，即with子句，和派生表类似，像语句级别的临时表或视图，用完就不用管了，类似临时的变量等。是一种sql中强大的功能，特别适合处理层次结构或树形数据，如组织架构、评论回复链、产品分类等
+     1. 可以引用其他cte
+   - 语法
+    ```sql
+    WITH RECURSIVE cte_name AS (                                        # 声明
+        -- 基础查询：提供递归的起点
+        SELECT columns FROM table WHERE base_condition
+        
+        UNION [ALL]
+        
+        -- 递归部分：引用CTE自身，逐步构建结果
+        SELECT columns FROM table JOIN cte_name ON join_condition
+    )
+    SELECT * FROM cte_name;
+    ```
+   - 实例
+    ```sql
+    # 查询部门层级结构，由parent_id关联上下级
+    WITH RECURSIVE dept_path AS (
+        -- 基础查询：选择顶级部门
+        SELECT 
+            id,
+            dept_name,
+            parent_id,
+            level,
+            CAST(dept_name AS CHAR(1000)) AS path
+        FROM staff_department
+        WHERE parent_id = 0
+        
+        UNION ALL
+        
+        -- 递归查询：连接子部门
+        SELECT 
+            sd.id,
+            sd.dept_name,
+            sd.parent_id,
+            sd.level,
+            CONCAT(dp.path, ' > ', sd.dept_name) AS path
+        FROM staff_department sd
+        JOIN dept_path dp ON sd.parent_id = dp.id
+    )
+    SELECT * FROM dept_path
+    ORDER BY path;
+    ```
 1. 删除
    - 删除库表
      1. 认识
@@ -2222,50 +2338,6 @@
           1. 降序索引：descending index，只有innodb支持，只支持btree
         - 支持函数索引：在索引中使用函数，支持json数据索引，基于虚拟列实现
      1. 支持公用表表达式：CTE
-        - 认识：Recursive CTE 递归公用表表达式，即with子句，和派生表类似，像语句级别的临时表或视图，用完就不用管了，类似临时的变量等。是一种sql中强大的功能，特别适合处理层次结构或树形数据，如组织架构、评论回复链、产品分类等
-          1. 可以引用其他cte
-        - 语法
-            ```sql
-            WITH RECURSIVE cte_name AS (                                        # 声明
-                -- 基础查询：提供递归的起点
-                SELECT columns FROM table WHERE base_condition
-                
-                UNION [ALL]
-                
-                -- 递归部分：引用CTE自身，逐步构建结果
-                SELECT columns FROM table JOIN cte_name ON join_condition
-            )
-            SELECT * FROM cte_name;
-            ```
-        - 实例
-            ```sql
-            # 查询部门层级结构，由parent_id关联上下级
-            WITH RECURSIVE dept_path AS (
-                -- 基础查询：选择顶级部门
-                SELECT 
-                    id,
-                    dept_name,
-                    parent_id,
-                    level,
-                    CAST(dept_name AS CHAR(1000)) AS path
-                FROM staff_department
-                WHERE parent_id = 0
-                
-                UNION ALL
-                
-                -- 递归查询：连接子部门
-                SELECT 
-                    sd.id,
-                    sd.dept_name,
-                    sd.parent_id,
-                    sd.level,
-                    CONCAT(dp.path, ' > ', sd.dept_name) AS path
-                FROM staff_department sd
-                JOIN dept_path dp ON sd.parent_id = dp.id
-            )
-            SELECT * FROM dept_path
-            ORDER BY path;
-            ```
      1. 支持窗口函数，也叫分析函数，over，和分组聚合类似，是每一行生成一个结果，可以结合统计函数一起使用，非常灵活
         - row_number/rank
         - first_value/last_value/lead
