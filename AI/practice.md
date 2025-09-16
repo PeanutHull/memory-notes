@@ -1,19 +1,64 @@
 ### 数字人方案
-1. 认识
+1. 认识：就是后台定义好主题问题和参考回答，通过数字人和学生一对一进行英文对话，锻炼用户的口语能力
+   - 是一个专业的、非常专业的在线教育一对一学习场景，真正实现了千人千面，让学生张开了口说英语，提升互动和学习兴趣
+     1. 基于大模型做出了自己的可定制流程和响应的产品
+     1. 专业的promt保证学生互动的效果，非常有效、连贯
+   - 未来业务上可以继续深化交互场景，做的更加细致；技术上用超拟人来提升交互体验，比如科大讯飞的超拟人，场景更真实、人物动作更真实，就像一个真人；另一方面采用音频表征(音色、韵律、情感)和文本语义进行对齐提高情感感知度(貌似和英语训练场景不太搭边)，通过多模态llm，将现在你问我答模式切换到更快速的“通话模式”
+1. 业务场景
    - 系统：预制好数字人，并且和老师关联
    - 后台：新增主题，包含问题内容、参考答案、问题类型等，关联到课节上
    - 课中：导播发起、结束数字人互动
    - 主讲：学生的互动内容弹幕展示
-1. 即构作为中间商，其sdk提供数字人的初始化，其server提供连接用户和我们服务端大模型能力的连接
-   - 我们基于大模型做出了自己的可定制流程和响应的产品
-   - 即构只是个外边的壳子，提供数字人展示和大模型请求、tts请求、asr请求的转发，内容是掌握在自己手里的
-   - tts、asr能力是其他家提供的，用的是minimax
 1. 组成
-   - 数字人：各个老师，Kim、KK等。包含了对应即构的数字人id，预设的llm、asr、tts等参数
-   - 数字人智能体：是数字人的实例化，包含了llm、tts、asr等组件
-   - 互动主题：名称、文案描述。是某一次互动的数据载体，关联了某一个智能体
+   - 数字人智能体：设计上依托于数字人，是数字人的实例化，包含了llm、tts、asr等组件
+     1. 数字人：各个老师，Kim、KK等。包含了对应即构的数字人id，预设的llm、asr、tts等参数
+   - 互动主题：名称、文案描述。是某一次互动的数据载体，关联了某一个数字人智能体
      1. 问题类型（开放性、精准性）、问题本身、参考回答、互动倒计时
      1. 课程分类：英语小王者班等。用于业务场景选择过滤等
+1. 详细流程
+   - 业务服务端
+     1. 初始化数字人：传入数字人id、使用的哪个提示词、互动主题等自定义参数，提前写入redis供teachbot后续读取
+     1. 发起medadata，启动所有用户的数字人界面
+   - 即构：壳子，提供基于视频流rtc、cpu渲染的数字人展示和大模型请求、tts请求、asr请求的转发，内容是掌握在自己手里的
+     1. 即构sdk提供数字人初始化，其server提供连接用户和我们服务端大模型能力teachbot的连接
+        - 数字人形象是即构获取老师图片后生成的
+        - llm用的豆包Doubao-1.5-lite-32k
+        - tts用的minimax的ai训练后的精品SFT音色克隆(和真人非常类似)，speech-01-turbo模型
+        - asr用的即构默认的腾讯云
+     1. 将自定义参数、asr识别后的学生回答转发给teachbot
+        - systemPrompt的是teachbot自己组装的
+   - teachbot：提供SSE接口(openai规范的)接受即构的请求，从redis中读取参数并和大模型交互，通过一定的业务逻辑返回给即构
+     1. 总体：即构发送http请求->api-key验证->从redis获取topic和systempropt->重新组织messags里面的system的content->通过ark包调用大模型->sse
+	    - 缓存包括：1v1互动缓存、提示词、互动主题数据
+     1. chatCompletion请求llm的方法`s.Model128.Stream`
+     1. 工作流方式：使用`chatWorkflow.Invoke`方式进行工作流的初始化，如果这个方法的err不为nil表示工作流执行失败，有一个降级策略，直接转换原始消息，退回到标准对话模式
+        - compose.NewGraph：创建一个工作流图
+        - AddLambdaNode
+          1. 添加PrepareStateNode数据准备节点
+          1. 添加ClassifierNode问题回答分类节点，先用轻量llm对最近5次对话的学生回答内容分成两类，一类是否完全正确，另一类是提醒类型如会话结束提醒、询问学生是否还在
+          1. 添加PromptBuilderNode提示词构建节点，针对所有，动态生成系统提示
+          1. 添加MessageFinalizerNode节点，根据ClassifierNode的分类和PromptBuilderNode的systemPrompt数据写入，构建最终的messages，为后续和普通chatCompletion调用做数据准备
+     1. 倒计时提醒功能：根据redis中的结束时间，下一次交互来到时(http请求过来时)，判断不足3秒就直接提醒返回课堂继续学习
+   - 即构：根据返回的文本通过tts转为语音、进行3D视频渲染
+     1. tts请求：调用minimax的tts接口，传入文本和实例id，返回音频url
+     1. 渲染：数字人根据音频进行rtc频道内的播放
+1. 项目发展历程
+   - 项目可行性研究阶段
+     1. 使用dify快速搭建一个数字人出发，验证llm+提示词进行交互的可行性，其中锤炼了prompt能力
+     1. 调研市面上可行的数字人方案，发现了即构其llm、tts、asr能力的分发，使用rtc视频流播放数字人，其cpu渲染是其强大的能力
+     1. 调研市面的tts方案：训练出一个minimax的高仿真人声，给一个实例id，就可以生成高仿真的人声
+   - 项目落地阶段
+     1. 知道dify的api不适合生产环境的高并发，需要自己搭建api，引入eino调用大模型
+        - 其中引入mongo存储、trace能力、全流程日志能力、压测能力
+     1. eino一开始仅仅是简单的chatCompletion，后边使用workflow扩展更多能力，比如扩展了倒计时提醒、数据上报到coze罗盘的交互能力
+1. 数据
+   - 主题参数
+     1. interactive_name：互动主题名称，如What time do you get dressed?
+     1. topic：主题，如dressed
+     1. question_type：问题类型，如开放性、精准性
+     1. reference_answer：参考回答，如I get dressed at seven o'clock.
+     1. expanding_issues：拓展问题，如What do you do after you get dressed?
+     1. countdown：倒计时，如120
 1. 数据库设计
     ```sql
     -- 数字人
@@ -267,36 +312,6 @@
         KEY `idx_classroom_topic_interaction_id` (`classroom_id`,`topic_id`,`interaction_id`) USING BTREE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='1v1私教主题弹幕记录表';
     ```
-1. 数据
-   - 主题参数
-     1. interactive_name：互动主题名称，如What time do you get dressed?
-     1. topic：主题，如dressed
-     1. question_type：问题类型，如开放性、精准性
-     1. reference_answer：参考回答，如I get dressed at seven o'clock.
-     1. expanding_issues：拓展问题，如What do you do after you get dressed?
-     1. countdown：倒计时，如120
-
-1. 流程
-   - 业务服务端 —— 初始化数字人：传入数字人id、使用的哪个提示词等自定义参数，这些参数已经提前写入redis供teachbot后续读取，包括当前的提问是什么
-   - 即构：将自定义参数转发给teachbot
-   - teachbot：从redis中读取参数并和大模型交互，通过一定的业务逻辑返回给即构
-     1. 即构将ASR识别的学生文本组合发给teachbot，然后teachbot一起送给大模型
-     1. 传入system prompt和user promt，找llm要assistant的回答
-     1. 即构、teachbot、llm三者之间都是用sse交互，teachbot将llm的返回整理好(去除标点等)再用sse发给即构
-     1. client发送http请求->api-key验证->从redis获取topic和systempropt->重新组织messags里面的system的content->通过ark包调用大模型->sse
-	    - 缓存包括：1v1互动缓存、提示词、互动主题数据
-     1. 封装流式 + 工作流
-   - 即构：将数据进行3D视频渲染
-1. 项目发展历程
-   - 项目可行性研究阶段
-     1. 从dify搭建一个数字人出发，进行全通流程的可行性的验证，其中锤炼了prompt能力
-     1. 调研市面上可行的数字人方案
-     1. 调研市面的asr方案：训练出一个minimax的高仿真人声，给一个实例id，就可以tts为高仿真的人声
-   - 项目落地阶段
-     1. 到一开始的单纯引入eino调用大模型
-     1. 到加入Hertz框架提供sse能力，后边包裹eino的逻辑
-        - 其中引入mongo存储、trace能力、全流程日志能力、压测能力
-     1. eino一开始仅仅是简单的chatCompletion，后边使用workflow扩展更多能力，比如扩展了倒计时提醒的交互能力。成为了可卖钱的产品
 #### 提示词
 1. 实际在用的
     ```md
@@ -471,12 +486,20 @@
    - 看下是怎么入库的
 	 1. 就是普通的mongo写入代码，`s.chatRequestLogsColl.InsertOne(ctx, log)`
    - 看下工作流是怎么编排的
+     1. 为什么要请求两遍llm？直接一次让重模型判断是否完全正确不就可以了？
+     1. 为什么要对回答进行分类
+     1. 为什么动态生成系统提示：因为要生成两个分类，一个回答是否完全正确，一个是否提醒类型
+     1. 为什么将最终要发送给 LLM 的消息组装到FinalMessages字段：为的是后续和普通chatCompletion调用做数据准备，分别输出自己的ChatHistory
+     1. 糟糕设计
+	    - MessageFinalizerNode根据ClassifierNode的分类和PromptBuilderNode的数据写入，污染了systemPrompt，给程序和systemPrompt数据带来二义性，后边处理需要关心
+	    - 根本用不着NewGraph，直接chain就够了，没有分支逻辑
    - 看下倒计时的需求和实现逻辑
+     1. 统一时区，通过判断时间是否不足3秒，不足就提醒时间快到了让我们回到课堂继续学习
    - 业务这边接入数字人
      1. 包括数字人资源的预加载，即构每个学生token的下发
 	 1. 数字人设计表结构包括数字人基本信息表、数字人每次互动生成的实例、历史互动记录表
 	 1. 不同内容对应不同的回应，这个是重点，是prompt设计的重点，要搞清楚！！！
    - 扒下来
-     1. 看下dify中的数字人，看下1v1数字人中的表结构设计，以及对应的数据
-	    - 将dify中的dsl数据导出，将mysql中的数据结构和数据保存
+     1. 看下1v1数字人中的表结构设计，以及对应的数据
 	    - 拿下整套的数字人方案
+   - 扣子罗盘的作用是什么？

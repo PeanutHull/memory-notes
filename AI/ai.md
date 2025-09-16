@@ -1207,33 +1207,35 @@
           1. DataOperator组件：核心，数据处理
           1. Tool组件：BindTools绑定外部工具，如数据库、爬虫、OCR服务
           1. 流程编排
+     1. 扩展与集成能力：bindtools绑定外部api或自定义函数
+     1. 复杂逻辑编排：ReAct智能体通过graph编排实现自主决策，如模型判断是否调用工具（如天气查询api），并将工具结果作为下一轮输入，形成循环推理链，以及是否及时中断等
+
      1. RAG：结合向量化知识库，通过语义检索召回相关信息，增强模型回答的准确性
         - 文档加载器和检索器组件
-     1. 复杂逻辑编排：ReAct智能体通过graph编排实现自主决策，如模型判断是否调用工具（如天气查询api），并将工具结果作为下一轮输入，形成循环推理链，以及是否及时中断
      1. 内容生成、多模态：multicontent字段
-     1. 扩展与集成能力：bindtools绑定外部api或自定义函数
    - 组成
      1. 功能组件
      1. prompt模板
      1. 流程编排
    - 功能组件
+     1. ChatModel：与大模型交互，输入Message上下文，得到模型的输出Message
      1. ChatTemplate：接收外界输入，转化成预设格式的prompt交给模型
+     1. Tool：与世界交互的工具，根据模型的输出，执行对应的动作
+     1. Lambda：用户定制function
 
+     1. Document Loader：加载指定的文本
+     1. Document Transformer：按照特定规则转化指定的文本
      1. Embedding：Retriever和Indexer的共同依赖，文本转向量，捕获文本语义
      1. Indexer：存储文件并建立索引，供后续Retriever使用
      1. Retriever：获取相关的上下文，让模型的输出基于高质量的事实
 
-     1. ChatModel：与大模型交互，输入Message上下文，得到模型的输出Message
-     1. Tool：与世界交互的工具，根据模型的输出，执行对应的动作
-
-     1. Document Loader：加载指定的文本
-     1. Document Transformer：按照特定规则转化指定的文本
-
      1. DataOperator
         - StreamOperator：流式数据支持     
-     1. Lambda：用户定制function
-
      1. EinoDev：可视化工具
+   - 高级功能
+     1. Compose：声明式地组合多个组件或逻辑单元，构建数据处理流程。将独立模块（如模型调用、工具执行、数据处理）串联成可复用的任务流水线
+        - Compose快速组合线性/简单分支逻辑，Graph处理复杂拓扑（循环、多分支）
+     1. 并发处理、扇入扇出、通用横切面、option分配
    - prompt模板
      1. 功能
         - 动态变量填充：将上下文数据（如用户输入、历史对话）自动插入模板
@@ -1383,11 +1385,6 @@
             \`\`\`
             `
             ```
-   - 功能
-     1. Compose：声明式地组合多个组件或逻辑单元，构建数据处理流程。将独立模块（如模型调用、工具执行、数据处理）串联成可复用的任务流水线
-        - Compose快速组合线性/简单分支逻辑，Graph处理复杂拓扑（循环、多分支）
-   - 高级功能
-     1. 并发处理、扇入扇出、通用横切面、option分配
    - 实例
      1. 图编排
         ```go
