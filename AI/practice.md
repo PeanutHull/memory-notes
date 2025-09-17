@@ -19,7 +19,7 @@
    - 业务服务端
      1. 初始化数字人：传入数字人id、使用的哪个提示词、互动主题等自定义参数，提前写入redis供teachbot后续读取
      1. 发起medadata，启动所有用户的数字人界面
-   - 即构：壳子，提供基于视频流rtc、cpu渲染的数字人展示和大模型请求、tts请求、asr请求的转发，内容是掌握在自己手里的
+   - 即构：壳子，提供基于视频流rtc、cpu渲染的数字人展示和大模型请求、tts请求、asr请求的转发，老师返回的内容是掌握在自己手里的
      1. 即构sdk提供数字人初始化，其server提供连接用户和我们服务端大模型能力teachbot的连接
         - 数字人形象是即构获取老师图片后生成的
         - llm用的豆包Doubao-1.5-lite-32k
@@ -27,6 +27,32 @@
         - asr用的即构默认的腾讯云
      1. 将自定义参数、asr识别后的学生回答转发给teachbot
         - systemPrompt的是teachbot自己组装的
+        - 每有一轮对话，都会请求teachbot的接口，这样同一个会话会不断累积message
+            ```json
+            {
+                "messages": [                                                                   // 不断累积这个数组，会产生多对数据
+                    {
+                        "role": "assistant",
+                        "content": "hello，雨，What extraodinary things can we do？"
+                    },
+                    {
+                        "role": "user",
+                        "content": "这句话是什么意思呢？"
+                    }
+                ],
+                "model": "doubao-chat",
+                "stream": true,
+                "max_tokens": 4096,
+                "temperature": 0.7,
+                "top_p": 0.7,
+                "agent_info": {
+                    "agent_instance_id": "1967045374829211648",
+                    "agent_user_id": "ai_agent_1967045374829211648",
+                    "room_id": "room_id_6746_10007492_125_630",
+                    "user_id": "agent-wz2lMbQl-10007492"
+                }
+            }
+            ```
    - teachbot：提供SSE接口(openai规范的)接受即构的请求，从redis中读取参数并和大模型交互，通过一定的业务逻辑返回给即构
      1. 总体：即构发送http请求->api-key验证->从redis获取topic和systempropt->重新组织messags里面的system的content->通过ark包调用大模型->sse
 	    - 缓存包括：1v1互动缓存、提示词、互动主题数据
