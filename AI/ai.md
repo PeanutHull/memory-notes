@@ -304,6 +304,10 @@
           1. 结果输出
      1. ReAct
         - 认识：Reason + Act，是一个方法论，让llm通过推理(Reasoning)和行动(Acting)的循环来完成任务
+        - 认识：reasoning + acting，基于动态推理与工具调用的智能体实现模式，是通过组件拼装实现的高级功能模式。和chain、graph区别在于是动态决定下一步，是Eino支持的一种高级任务解决策略、或者动态组合出“推理-行动”的循环能力。就是让大模型从一句话中找出来要调用的方法名和参数，然后代码执行即可
+          1. reasoning：模型自主分析问题，拆解步骤，如需要查询天气api
+          1. acting：调用工具执行具体操作，并根据工具返回结果决定下一步动作
+          1. 循环迭代：重复“推理-行动”直到任务完成或达到终止条件
         - 优点
           1. 透明：推理过程以文字形式展现出来，我们可以理解它的“思考过程”，便于调试和信任。
           1. 减少幻觉：通过外部工具获取事实信息，减少模型依赖内部知识、从而“胡编乱造”的可能性
@@ -357,10 +361,33 @@
    - 认识：Retrieval Augmented Generation 检索增强生成，用于提升llm生成答案的准确性和时效性的技术框架
      1. 背景：LLM本身的知识滞后、可能“幻觉”两个缺陷，用RAG来增强
      1. 步骤
+        - 数据准备
+          1. 切分：transformer，切分成小块chunk
+          1. 嵌入：使用嵌入模型将每个小块转换为高维度的数字向量
+          1. 存储：向量数据库，以便后续进行高效的相似性搜索
         - 检索：提出一个问题时，RAG系统先从向量化后的知识库中搜索与问题最相关的信息片段
-        - 增强生成：将检索到的最新相关文档和原始问题打包在一起，形成“增强版的提示”。并指令“请根据以下提供的资料来回答问题”。这样LLM的回答就基于提供的最新的确凿的证据，而不是仅仅依赖它可能过时或不完整的内部知识，从而大大提高了回答的质量和可靠性
+          1. 转换：将这个查询也转换为一个向量
+          1. 相似性搜索：在向量数据库中进行相似性搜索
+        - 增强生成
+          1. 构建增强提示：将检索到的最新相关文档和原始问题打包在一起，形成“增强版的提示”。并指令“请根据以下提供的资料来回答问题”
+          1. llm有了“实时”的参考资料，大大提高了回答的质量和可靠性
      1. 特点
         - 数据越规范，查询效果越好，结合树形结构或知识图谱结构的数据，RAG可以实现更好的效果
+   - 向量化
+     1. 认识：一种有损的语义压缩过程。将高维、稀疏的离散符号(token)映射到低维、稠密的连续向量空间
+     1. 目的
+        - 语义化：保留文本的语义信息，同时降低其表示的复杂性和存储成本
+        - 可计算化
+     1. 特性
+        - 固定大小：输出向量的维度是模型定义的（如768维），与输入文本长度无关。这是实现对长文本“体积压缩”的基础
+        - 不可逆：无法从向量完美还原原始文本。丢失精确词法、句法细节，保留核心语义
+        - 几何语义：向量空间中的距离、方向表征语义相似性（余弦相似度、欧氏距离）
+     1. 最佳实践
+        - 需要评估场景：注意对短文本向量体积可能大于文本长度，对长文本如一本书向量化是强大的压缩手段
+        - 语义>语法：向量擅长捕获“意思”，但几乎丢弃了“写法”。如果任务严重依赖句法结构（如代码生成、语法检查），需谨慎使用或结合其他特征
+        - 模型是核心：高质量的现代嵌入模型（如text-embedding-3）的效果远超陈旧模型，这是成本最低的优化手段
+        - 无法完美处理反义词、否定和复杂的逻辑关系
+        - 实践工具：直接使用成熟的Embedding API（如OpenAI, Cohere）或开源模型（如HuggingFace上的all-MiniLM-L6-v2）开始实验，无需从零训练。
    - 组成
      1. 嵌入模型：一种将非结构化数据(如文本、图像、音频)转换为可以被计算机理解和处理的数值向量(如由1024或1536个数字组成的列表)的AI模型。把人类能看懂的文字，翻译成计算机能看懂的“数学语言”
         - 特性：能捕捉原始数据的语义，如“狗”和“宠物”的向量距离会比“狗”和“汽车”的向量距离近得多
@@ -387,7 +414,7 @@
              - chroma：轻量、简单，中小型应用的首选
              - qdrant：高性能、企业级、功能丰富。Rust编写，性能极佳
              - weaviate：功能最全，内置模块化的机器学习模型、自动将数据向量化、支持graphql查询
-             - milvus：支持大规模数据，部署和维护相对复杂
+             - milvus：支持大规模数据，部署和维护相对复杂，开源，最常用
              - lancedb：向量数据库里的SQLite
           1. 云服务
              - Pinecone
@@ -416,6 +443,17 @@
              - 支持编辑知识库
              - 支持各种格式
           1. 应用调试能力：知识库单点搜索、调用链路日志等
+   - 向量数据库
+     1. milvus
+        - 组成
+          1. collection：向量集合，相当于关系型数据库的表
+             - 主键
+             - 向量字段
+          1. partition：分区，相当于表的分区
+          1. index：索引，加速向量搜索
+          1. segment：段，存储实际数据
+          1. field：字段，相当于表的列
+          1. vector：向量，存储实际的向量数据
    - 算法
      1. 余弦相似度
      1. 欧氏距离
@@ -476,6 +514,19 @@
      1. 管理者-工作者（Manager-Worker）
      1. 民主共识（Democratic Consensus）：投票
      1. 竞争性（Competitive）
+1. Content Engineering
+   - 认识：内容工程，利用大模型和自动化技术，提升内容创作的效率和质量
+     1. 目标：提升内容生产效率、增强内容质量、实现个性化内容推荐、优化内容分发渠道
+   - 组成
+     1. 保存context：memory，筛选总结，找个地方保存起来
+     1. 选择context
+        - 静态选择：每次全都要，永远重要必须遵守的信息，一般比较短小，如cursor.rules、claude.md
+        - 动态选择：根据每次任务选择
+     1. 压缩context：快占满上下文时要进行压缩，
+        - 方式
+          1. 总结方式：总结后把原来的内容扔掉，会丢失细节，但是降低了大小。如claude的压缩方案有重点保存测试输出和代码改动
+          1. 向量方式：越长的文本向量化效果越好，但是向量化的目的不是压缩，是语义化和可计算化
+     1. 隔离context：不同的上下文之间是隔离的，常见于multi-agent中 
 1. wiki
    - 聊天前端项目：open webUI（原名ollama webUI）、chatbox、Cherry Studio、Page Assist、chatbot-ui，类似gpt的界面
      1. chatbox的功能：文字聊天(markdown渲染、代码渲染、mermaid图像表格渲染、思维导图、语法高亮、内置html渲染)、联网搜索(网页爬取)、文件交互(图片)、调用mcp服务、本地化向量知识库、图像生成
@@ -683,16 +734,27 @@
           1. model：使用的模型名
           1. messages：List[Dict]，对话消息列表
           1. 概率控制
-             - temperature：控制输出的随机性
-             - top_p：核采样概率，与temperature二选一
-             - presence_penalty：避免重复话题
-             - frequency_penalty：避免重复用词
-             - logit_bias：调整特定 token 的生成概率
-             - top_p
+             - temperature：温度，控制输出的随机性，0~1
+               1. 0.0-0.5：低，输出更具聚焦、更保守、也更可预测，容易重复，适用事实问答或代码生成
+               1. 0.5-0.8：中，常用的，平衡创造性和连贯性
+               1. 0.9-1.0：高，输出更具创造性，但也更容易出现不连贯或不合逻辑的内容，适用创意写作或头脑风暴
+             - top_p：核采样概率，控制输出的随机性，更高级，会选择累积概率达到top_p值的词汇，0~1
+               1. 在生成多样化文本的同时，避免选择概率极低的词汇，从而减少生成不相关或无意义内容的风险
+               1. 0.5为低和高的分界线
+               1. 和temperature建议调整其中一个，而不是同时精细调整两者，因为你知道二者的作用机制吗？
+             - frequency_penalty：频率惩罚，避免生成重复的词，有助于提高文本的多样性，-2.0 ~ 2.0，适用于发现输出重复啰嗦
+               1. <1.0：鼓励重复使用已出现过的词
+               1. 0.0：无惩罚。
+               1. 1.0：最大惩罚，显著降低重复词的概率
+               1. >1.0：非常强的惩罚，可能使文本不自然
+             - presence_penalty：存在惩罚，避免重复话题，只关心词语是否出现过，也有助于提高文本的多样性，-2.0 ~ 2.0，适用避免老生常谈
+               1. 机制同frequency_penalty
+             - logit_bias：直接修改特定词汇在采样前的概率值，最精细、最强大的控制手段，-100 ~ 100
+               1. 负减小，正增大；-100禁止，100强制使用
           1. 回复设置
              - stream：是否流式输出
-             - stop：遇到指定字符串时停止生成
-             - max_tokens：回复的最大 token 数
+             - stop：遇到指定字符串时停止生成，对于控制模型输出的结构和长度非常有用
+             - max_tokens：回复的最大token数
         - role分类
           1. system：系统消息，提供背景信息和指令，使得回答更加精准
           1. user：用户消息，用户输入的内容
@@ -1121,6 +1183,13 @@
                         print("Retrying...")
         ```
 #### 开发框架
+1. airflow
+   - 认识：Apache Airflow，用于编排、调度和监控工作流的开源平台
+   - 概念
+     1. DAG：有向无环图
+        - Task：任务，一个节点
+     1. Operator：单个任务操作
+     1. Scheduler：调度器，执行工作流
 1. AutoGPT
    - 认识：能够利用llm的能力，自主决策并生成结果的ai智能体的开源项目，是ReAct一个非常强大和自动化的实现，python写的，autoGPT风格
    - 特点
@@ -1214,205 +1283,529 @@
         - 文档加载器和检索器组件
      1. 内容生成、多模态：multicontent字段
    - 组成
-     1. 功能组件
-     1. prompt模板
+     1. 基础组件
+        - ChatModel：与大模型交互，输入Message上下文，得到模型的输出Message
+          1. DataOperator
+             - StreamOperator：流式数据支持     
+          1. ChatTemplate：接收外界输入，转化成预设格式的prompt交给模型
+     1. 工具
+        - Tool：与世界交互的工具，根据模型的输出，执行对应的动作
+        - Lambda：用户定制function
      1. 流程编排
-   - 功能组件
-     1. ChatModel：与大模型交互，输入Message上下文，得到模型的输出Message
-     1. ChatTemplate：接收外界输入，转化成预设格式的prompt交给模型
-     1. Tool：与世界交互的工具，根据模型的输出，执行对应的动作
-     1. Lambda：用户定制function
-
-     1. Document Loader：加载指定的文本
-     1. Document Transformer：按照特定规则转化指定的文本
-     1. Embedding：Retriever和Indexer的共同依赖，文本转向量，捕获文本语义
-     1. Indexer：存储文件并建立索引，供后续Retriever使用
-     1. Retriever：获取相关的上下文，让模型的输出基于高质量的事实
-
-     1. DataOperator
-        - StreamOperator：流式数据支持     
+        - chain
+        - graph
+     1. RAG
+        - Embedding：将文本转为向量，即捕获文本语义，Retriever和Indexer的共同依赖
+        - Indexer：存储文本并建立向量索引
+        - Retriever：从向量数据库中查询
+        - Transformer：用于文档转换和处理的组件，如分割、过滤、合并等
+        - Loader：加载指定文本
      1. EinoDev：可视化工具
    - 高级功能
      1. Compose：声明式地组合多个组件或逻辑单元，构建数据处理流程。将独立模块（如模型调用、工具执行、数据处理）串联成可复用的任务流水线
         - Compose快速组合线性/简单分支逻辑，Graph处理复杂拓扑（循环、多分支）
      1. 并发处理、扇入扇出、通用横切面、option分配
-   - prompt模板
-     1. 功能
-        - 动态变量填充：将上下文数据（如用户输入、历史对话）自动插入模板
-        - 多格式支持：兼容FString（Python 风格）、Jinja2（逻辑控制）等模板引擎
-        - 角色定义：为模型设定行为风格（如客服、编程助手）
-        - 工具描述集成：在ReAct模式中，自动生成工具调用指令
-     1. 模版
-        - FString：Formatted String Literals。简洁的 {variable} 占位符，适合简单插值，python v3.6+引入的字符串格式化方式，允许在字符串中直接嵌入表达式（变量、运算、函数调用等），使代码更简洁直观
-            ```python
-            # 伪代码：用户问答模板
-            template = """
-            你是一个专业客服，请回答用户问题：
-            用户输入: {user_input}
-            历史记录: {history}
-            请用中文回复，不超过100字。
-            """
-            ```
-        - Jinja2：支持条件判断、循环等逻辑的适合复杂场景的模板引擎
-            ```python
-            {% if user.role == "vip" %}             # 逻辑判断是控制块 {% %}
-            尊贵的VIP用户，您的问题已优先处理：
-            {{ user_input }}                        # 变量是表达式 {{ }}
-            {% else %}
-            您好，您的问题正在处理中：
-            {{ user_input }}
-            {% endif %}
-            ```
-        - ReAct专用模板
-            ```python
-            请根据任务决定是否需要调用工具：
-            问题: {{question}}
-            可用工具:
-            - 天气查询: 输入地点，返回天气数据
-            - 订单查询: 输入订单号，返回状态
-            逐步思考后，按格式响应：
-            Thought: <推理步骤>
-            Action: <工具名|null>                   # 方法<>
-            ActionInput: <参数>             # 方法<># 参数<>
-            ```
-     1. 功能
-        - 模板继承
-            ```jinja2
-            {% extends "base_prompt.j2" %}
-            {% block content %}用户问题: {{input}}{% endblock %}
-            ```
-        - 自动变量补全：`{{time|default:"2024-07-15"}}`
-        - 多模态支持：`![image]({{image_url}})`
-   - 流程编排
-     1. 概念
-        - 节点：node
-        - 边：edge，节点之间的关系
-        - 分支：branch，节点之间的分支关系
-     1. 实现方式
-        - chain：线性执行多个数据处理步骤，链式有向图，始终向前
-        - graph：有向图，有最大的灵活性，通过可视化节点（如分支、循环）实现复杂条件逻辑
-     1. 可实现的模式
-        - ReAct：reasoning + acting，基于动态推理与工具调用的智能体实现模式，是通过组件拼装实现的高级功能模式。和chain、graph区别在于是动态决定下一步，是Eino支持的一种高级任务解决策略、或者动态组合出“推理-行动”的循环能力。就是让大模型从一句话中找出来要调用的方法名和参数，然后代码执行即可
-          1. 认识
-             - reasoning：模型自主分析问题，拆解步骤，如需要查询天气api
-             - acting：调用工具执行具体操作，并根据工具返回结果决定下一步动作
-             - 循环迭代：重复“推理-行动”直到任务完成或达到终止条件
-          1. 实现本质
-             - 通过prompt模板引导模型生成推理步骤，包含工具描述、推理步骤占位符等
-             - 通过graph的循环实现“行动结果→重新推理”的闭环
-             - 通过tool绑定提供可调用的外部能力，如api、数据库
-          1. 示例
-            ```go
-            // 1. 定义工具函数
-            func fetchWeather(location string) string {
-                // 模拟天气API调用
-                return fmt.Sprintf(`{"location": "%s", "weather": "晴", "temp": 25}`, location)
-            }
-
-            // 2. ReAct Prompt模板（简化版）
-            const reactPrompt = `
-            请逐步思考并决定是否需要调用工具。可用工具：
-            - get_weather(location): 查询天气
-
-            当前任务: {{.input}}
-            按格式响应：
-            Thought: <思考步骤>
-            Action: <get_weather|null>
-            ActionInput: <参数>`
-
-            func main() {
-                // 3. 初始化Eino组件
-                // 绑定工具
-                weatherTool := eino.BindTool("get_weather", fetchWeather)
-                
-                // 创建ChatModel（加载ReAct模板）
-                model := eino.ChatModel{
-                    PromptTemplate: eino.NewPromptTemplate("react", reactPrompt, "jinja2"),
-                    Tools:          []eino.Tool{weatherTool},
-                }
-
-                // 4. 构建ReAct Graph
-                graph := eino.NewGraph().
-                    AddNode("reason", model).                                                       // 推理节点
-                    AddNode("act_weather", weatherTool).                                            // 工具节点
-                    AddEdge("reason", "act_weather", eino.If(func(ctx eino.Context) bool {
-                        // 条件边：当模型输出Action=get_weather时触发
-                        return ctx.LastOutput().Action == "get_weather"
-                    })).
-                    AddEdge("act_weather", "reason", eino.OnSuccess())                              // 循环边：工具结果返回推理
-
-                // 5. 执行任务
-                input := "杭州明天适合穿什么？"
-                result := graph.Run(input)
-                fmt.Println("最终回答:", result.Text)
-                
-                /* 预期输出流程：
-                1. 模型推理: Thought: 需要查询杭州天气 → Action: get_weather, ActionInput: 杭州
-                2. 调用工具: fetchWeather("杭州") 返回天气数据
-                3. 二次推理: Thought: 晴天25度建议穿短袖 → Action: null
-                4. 输出结果: "杭州明天晴25°C，建议穿短袖"
-                */
-            }
-
-
-            // ReAct Prompt模板（完整版，但是上边的代码用不了，因为返回的格式不一样）
-            const reactPrompt = `
-            # 角色与任务
-            你是一个自主智能体（AI Agent），能够通过结合推理（Reasoning）和工具调用（Acting）解决复杂问题。请严格按以下步骤执行：
-
-            # 可用工具
-            {{tools}}
-            {{#each tools}}
-            - **{{this.name}}**: {{this.description}} 
-            参数格式: {{this.parameters}}
-            {{/each}}
-
-            # 执行规则
-            1. **逐步思考**：明确任务目标，拆解必要步骤。
-            2. **工具调用**：若需外部数据或操作，选择合适工具并生成调用指令。
-            3. **验证结果**：检查工具返回是否满足需求，必要时迭代。
-
-            # 输出格式
-            必须按以下格式响应，禁止缺失字段：
-            \`\`\`json
-            {
-            "thought": "当前思考步骤和计划",
-            "action": "工具名|null",
-            "action_input": {"参数键": "参数值"} | null,
-            "observation": "工具返回结果或用户输入补充",
-            "final_answer": "最终回答（若无需工具）"
-            }
-            \`\`\`
-            `
-            ```
+1. 基础组件
+   - 类型定义
+     1. `schema.Message{}`：和llm交互的消息，包含了system、assistant、user、tool四种类型
+     1. `schema.MultiContent{}`：多模态内容，包含Text、ImageURL
+   - 接口
+     1. BaseChatModel接口
+        - `Generate(ctx context.Context, input []*schema.Message, opts ...Option) (*schema.Message, error)`：普通输出模式方法
+        - `Stream(ctx context.Context, input []*schema.Message, opts ...Option) (*schema.StreamReader[*schema.Message], error)`：流式输出模式方法
+     1. ChatModel接口：废弃，使用ToolCallingChatModel接口
+     1. ToolCallingChatModel接口
+        - `BaseChatModel{}`：组合基础chatModel接口
+        - `WithTools(tools []*schema.ToolInfo) (ToolCallingChatModel, error)`：绑定工具
+1. Tool组件
+   - 认识：通过调用外部工具来扩展模型能力的组件
+     1. 适用场景：访问外部数据库、执行计算任务、调用API等
+   - 类型定义
+     1. `schema.ToolInfo{}`：工具信息，包含Name、Desc、*ParamsOneOf
+        - Name：工具名称，唯一标识
+        - Desc：工具描述，告诉模型如何/何时/为什么使用这个工具，可以在描述中包含少量示例
+        - *ParamsOneOf：支持两种方式描述
+          1. 使用ParameterInfo：`schema.NewParamsOneOfByParams(params)`
+          1. 使用OpenAPIV3：`schema.NewParamsOneOfByOpenAPIV3(openAPIV3)`
+   - 接口
+     1. BaseTool接口：基础工具接口，提供工具信息
+        - `Info(ctx context.Context) (*schema.ToolInfo, error)`
+     1. InvokableTool接口：同步执行工具
+        - `BaseTool`
+        - `InvokableRun(ctx context.Context, argumentsInJSON string, opts ...Option) (string, error)`
+     1. StreamableTool接口：流式执行工具
+        - `BaseTool`
+        - `StreamableRun(ctx context.Context, argumentsInJSON string, opts ...Option) (*schema.StreamReader[string], error)`
    - 实例
-     1. 图编排
+     1. 调用本地函数
         ```go
-        // 定义查询工具
-        dbTool := eino.BindTool("photo_db", func(query Query) Result {
-            return DB.Execute("SELECT * FROM photos WHERE year=? ORDER BY size", query.Year)
-        })
+        type Game struct {
+            Name string `json:"name"`
+            Url  string `json:"url"`
+        }
+        type InputParams struct {
+            Name string `json:"name" jsonschema:"description=the name of game"`
+        }
 
-        // 图编排
-        graph := eino.NewGraph().
-            AddNode("parse_input", ChatModel.WithPrompt(intent_prompt)).
-            AddNode("query_db", dbTool).
-            AddEdge("parse_input", "query_db", eino.IfNeedTool())
-
-        // 执行
-        result := graph.Run(userInput)
-        ```
-     1. Hertz路由中处理SSE连接
-        ```go
-        eino.Get("/stream", func(c context.Context, ctx *app.RequestContext) {
-            ctx.SetContentType("text/event-stream")
-            for {
-                data := getStreamData()                 // 从 Eino 流式节点获取数据
-                ctx.SSEvent("message", data)            // 发送 SSE 事件
-                ctx.Flush()                             // 立即推送至客户端
+        // CreateTool 创建一个获取游戏网址的工具
+        func CreateTool() tool.InvokableTool {
+            getGameTool := utils.NewTool(&schema.ToolInfo{
+                Name: "get_game",
+                Desc: "get a game url by name",
+                ParamsOneOf: schema.NewParamsOneOfByParams(
+                    map[string]*schema.ParameterInfo{
+                        "name": &schema.ParameterInfo{
+                            Type:     schema.String,
+                            Desc:     "game's name",
+                            Required: true,
+                        },
+                    },
+                ),
+            }, GetGame)
+            return getGameTool
+        }
+        // GetGame 根据游戏名称返回对应的游戏网址
+        func GetGame(_ context.Context, params *InputParams) (string, error) {
+            GameSet := []Game{
+                {Name: "原神", Url: "https://ys.mihoyo.com/tool"},
+                {Name: "鸣潮", Url: "https://mc.kurogames.com/tool"},
+                {Name: "明日方舟", Url: "https://ak.hypergryph.com/tool"},
             }
-        })
+            for _, game := range GameSet {
+                if game.Name == params.Name {
+                    return game.Url, nil
+                }
+            }
+            return "", nil
+        }
         ```
+     1. 调用浏览器
+        ```go
+        func main() {
+            ctx := context.Background()
+            but, err := browseruse.NewBrowserUseTool(ctx, &browseruse.Config{})
+            if err != nil {
+                log.Fatal(err)
+            }
+
+            url := "https://www.google.com"
+            result, err := but.Execute(&browseruse.Param{
+                Action: browseruse.ActionGoToURL,
+                URL:    &url,
+            })
+            if err != nil {
+                log.Fatal(err)
+            }
+            fmt.Println(result)
+            time.Sleep(10 * time.Second)
+            but.Cleanup()
+        }
+        ```
+1. prompt模板
+   - 接口
+     1. ChatTemplate接口
+        - `Format(ctx context.Context, vs map[string]any, opts ...Option) ([]*schema.Message, error)`：格式化模版
+   - 实现结构体
+     1. DefaultChatTemplate：默认的ChatTemplate实现
+        - 组成
+          1. `templates []schema.MessagesTemplate`：模板列表
+          1. `formatType`：模板类型，如FString、GoTemplate、Jinja2
+        - 方法
+          1. `Format(ctx context.Context, vs map[string]any, opts ...Option) ([]*schema.Message, error)`：格式化模版
+   - 方法
+     1. `FromMessages(formatType schema.FormatType, templates ...schema.MessagesTemplate) *DefaultChatTemplate`：创建默认的ChatTemplate
+   - 功能
+     1.  动态变量填充：将上下文数据（如用户输入、历史对话）自动插入模板
+     1.  多格式支持：兼容FString（Python 风格）、Jinja2（逻辑控制）等模板引擎
+     1.  角色定义：为模型设定行为风格（如客服、编程助手）
+     1.  工具描述集成：在ReAct模式中，自动生成工具调用指令
+   - 模版
+     1.  FString：Formatted String Literals。简洁的 {variable} 占位符，适合简单插值，python v3.6+引入的字符串格式化方式，允许在字符串中直接嵌入表达式（变量、运算、函数调用等），使代码更简洁直观
+        ```go
+        template := prompt.FromMessages(schema.FString,
+            schema.SystemMessage("你是一个{role}"),
+            &schema.Message{
+                Role:    schema.User,
+                Content: "请帮帮我，史瓦罗先生，{task}",
+            },
+        )
+        params := map[string]any{
+            "role":        "机器人史瓦罗先生",
+            "task":        "写一首诗",
+        }
+        messages, err := template.Format(ctx, params)
+        ```
+     1.  Jinja2：支持条件判断、循环等逻辑的适合复杂场景的模板引擎
+        ```python
+        {% if user.role == "vip" %}             # 逻辑判断是控制块 {% %}
+        尊贵的VIP用户，您的问题已优先处理：
+        {{ user_input }}                        # 变量是表达式 {{ }}
+        {% else %}
+        您好，您的问题正在处理中：
+        {{ user_input }}
+        {% endif %}
+        ```
+     1.  ReAct专用模板
+        ```python
+        请根据任务决定是否需要调用工具：
+        问题: {{question}}
+        可用工具:
+        - 天气查询: 输入地点，返回天气数据
+        - 订单查询: 输入订单号，返回状态
+        逐步思考后，按格式响应：
+        Thought: <推理步骤>
+        Action: <工具名|null>                   # 方法<>
+        ActionInput: <参数>             # 方法<># 参数<>
+        ```
+   - 功能
+     1. 模板继承
+        ```jinja2
+        {% extends "base_prompt.j2" %}
+        {% block content %}用户问题: {{input}}{% endblock %}
+        ```
+     1. 自动变量补全：`{{time|default:"2024-07-15"}}`
+     1. 多模态支持：`![image]({{image_url}})`
+1. RAG
+   - 类型定义
+     1. `schema.Document{}`：文档，包含ID、Content、MetaData
+   - 接口
+     1. Embedder接口
+        - `EmbedStrings(ctx context.Context, texts []string, opts ...Option) ([][]float64, error)`：将文本切片转换为向量
+     1. Indexer接口
+        - `Store(ctx context.Context, docs []*schema.Document, opts ...Option) (ids []string, err error)`：用于存储文档(包括文本和向量值)的组件
+     1. Retriever接口
+        - `Retrieve(ctx context.Context, query string, opts ...Option) ([]*schema.Document, error)`：用于检索文档
+     1. Transformer接口
+        - `Transform(ctx context.Context, src []*schema.Document, opts ...TransformerOption) ([]*schema.Document, error)`：用于转换文档
+   - 认识
+     1. 支持的向量数据库：milvus、es8、redis
+     1. Transformer官网还有很多例子，可以参考使用
+     1. 整体的实例可以看stage6
+   - 实例
+     1. NewEmbedder
+        ```go
+        func EmbedText() {
+            ctx := context.Background()
+
+            // 初始化嵌入器
+            timeout := 30 * time.Second
+            embedder, err := ark.NewEmbedder(ctx, &ark.EmbeddingConfig{
+                APIKey:  os.Getenv("ARK_API_KEY"),
+                Model:   os.Getenv("EMBEDDER"),                                 // 使用的嵌入模型，决定了生成的向量即变量embeddings的长度
+                Timeout: &timeout,
+            })
+            if err != nil {
+                panic(err)
+            }
+
+            // 生成文本向量
+            texts := []string{
+                "这是第一段示例文本",
+                "这是第二段示例文本",
+            }
+            embeddings, err := embedder.EmbedStrings(ctx, texts)
+            if err != nil {
+                panic(err)
+            }
+
+            // 使用生成的向量
+            for i, embedding := range embeddings {
+                println("文本", i+1, "的向量维度:", len(embedding))
+            }
+            // 如2560个浮点数的向量
+            fmt.Println(embeddings)
+        }
+        ```
+     1. Indexer
+        ```go
+        import (
+            cli "github.com/milvus-io/milvus-sdk-go/v2/client"
+        )
+
+        var MilvusCli cli.Client
+        // 初始化客户端
+        func InitClient() {
+            ctx := context.Background()
+            client, err := cli.NewClient(ctx, cli.Config{
+                Address: "localhost:19530",
+            })
+            if err != nil {
+                log.Fatalf("Failed to create client: %v", err)
+            }
+            MilvusCli = client
+        }
+
+        var collection = "AwesomeEino"                                      // 集合名
+        var fields = []*entity.Field{                                       // 定义字段，包括主键id、向量字段vector、文本内容content、元数据metadata
+            {
+                Name:     "id",
+                DataType: entity.FieldTypeVarChar,
+                TypeParams: map[string]string{
+                    "max_length": "255",
+                },
+                PrimaryKey: true,
+            },
+            {
+                Name:     "vector", // 确保字段名匹配
+                DataType: entity.FieldTypeBinaryVector,
+                TypeParams: map[string]string{
+                    "dim": "81920",
+                },
+            },
+            {
+                Name:     "content",
+                DataType: entity.FieldTypeVarChar,
+                TypeParams: map[string]string{
+                    "max_length": "8192",
+                },
+            },
+            {
+                Name:     "metadata",
+                DataType: entity.FieldTypeJSON,
+            },
+        }
+
+        func IndexerRAG() {
+            ctx := context.Background()
+            // 初始化嵌入器
+            timeout := 30 * time.Second
+            embedder, err := ark.NewEmbedder(ctx, &ark.EmbeddingConfig{
+                APIKey:  os.Getenv("ARK_API_KEY"),
+                Model:   os.Getenv("EMBEDDER"),
+                Timeout: &timeout,
+            })
+            if err != nil {
+                panic(err)
+            }
+
+            indexer, err := milvus.NewIndexer(ctx, &milvus.IndexerConfig{           // 创建索引器
+                Client:            MilvusCli,
+                Collection:        collection,
+                Fields:            fields,
+                Embedding:         embedder,
+                DocumentConverter: floatDocumentConverter,
+            })
+            if err != nil {
+                log.Fatalf("Failed to create indexer: %v", err)
+            }
+
+            docs := []*schema.Document{
+                {
+                    ID:      "1",
+                    Content: "你说得对。但是原神是一款二次元开放大世界游戏",
+                    MetaData: map[string]any{
+                        "author": "木乔",
+                    },
+                },
+            }
+
+            ids, err := indexer.Store(ctx, docs)                                    // 保存
+            if err != nil {
+                log.Panicf("Failed to store documents: %v", err)
+            }
+
+            log.Printf("Stored documents with IDs: %v", ids)
+        }
+        ```
+     1. Retriever
+        ```go
+        retriever, err := milvus.NewRetriever(ctx, &milvus.RetrieverConfig{
+            Client:            MilvusCli,                                               // 引入上边的milvus连接
+            Collection:        "AwesomeEino",
+            Partition:         nil,
+            VectorField:       "vector",
+            OutputFields: []string{
+                "id",
+                "content",
+                "metadata",
+            },
+            TopK:      1,
+            Embedding: embedder,                                                        // 引入上边的embedder
+        })
+        if err != nil {
+            panic(err)
+        }
+
+        results, err := retriever.Retrieve(ctx, "原神")
+        if err != nil {
+            panic(err)
+        }
+        ```
+     1. Transformer
+        ```go
+        // 一个分割的例子
+        // go get github.com/cloudwego/eino-ext/components/document/transformer/splitter/markdown
+        splitter, err := markdown.NewHeaderSplitter(ctx, &markdown.HeaderConfig{            // 初始化分割器
+            Headers: map[string]string{
+                "#":   "h1",
+                "##":  "h2",
+                "###": "h3",
+            },
+            TrimHeaders: false,
+        })
+        if err != nil {
+            panic(err)
+        }
+
+        // 准备要分割的文档
+        content, err := os.OpenFile("./document.md", os.O_CREATE|os.O_RDWR, 0755)           // 对一个md文件进行分割
+        if err != nil {
+            panic(err)
+        }
+        defer content.Close()
+        bs, err := os.ReadFile("./document.md")
+        if err != nil {
+            panic(err)
+        }
+        docs := []*schema.Document{
+            {
+                ID:      "doc1",
+                Content: string(bs),
+            },
+        }
+
+        // 执行分割
+        results, err := splitter.Transform(ctx, docs)
+        if err != nil {
+            panic(err)
+        }
+
+        // 处理分割结果
+        for i, doc := range results {
+            println("片段", i+1, ":", doc.Content)
+            println("标题层级：")
+            for k, v := range doc.MetaData {
+                if k == "h1" || k == "h2" || k == "h3" {
+                    println("  ", k, ":", v)
+                }
+            }
+        }
+        ```
+1. 流程编排
+   - 概念
+     1. 节点：node
+     1. 边：edge，节点之间的关系
+     1. 分支：branch，节点之间的分支关系
+   - 实现方式
+     1. chain：线性执行多个数据处理步骤，链式有向图，始终向前
+     1. graph：有向图，有最大的灵活性，通过可视化节点（如分支、循环）实现复杂条件逻辑
+   - ReAct模式
+     1. 实现本质
+        - 通过prompt模板引导模型生成推理步骤，包含工具描述、推理步骤占位符等
+        - 通过graph的循环实现“行动结果→重新推理”的闭环
+        - 通过tool绑定提供可调用的外部能力，如api、数据库
+     1. 示例
+        ```go
+        // 1. 定义工具函数
+        func fetchWeather(location string) string {
+            // 模拟天气API调用
+            return fmt.Sprintf(`{"location": "%s", "weather": "晴", "temp": 25}`, location)
+        }
+
+        // 2. ReAct Prompt模板（简化版）
+        const reactPrompt = `
+        请逐步思考并决定是否需要调用工具。可用工具：
+        - get_weather(location): 查询天气
+
+        当前任务: {{.input}}
+        按格式响应：
+        Thought: <思考步骤>
+        Action: <get_weather|null>
+        ActionInput: <参数>`
+
+        func main() {
+            // 3. 初始化Eino组件
+            // 绑定工具
+            weatherTool := eino.BindTool("get_weather", fetchWeather)
+            
+            // 创建ChatModel（加载ReAct模板）
+            model := eino.ChatModel{
+                PromptTemplate: eino.NewPromptTemplate("react", reactPrompt, "jinja2"),
+                Tools:          []eino.Tool{weatherTool},
+            }
+
+            // 4. 构建ReAct Graph
+            graph := eino.NewGraph().
+                AddNode("reason", model).                                                       // 推理节点
+                AddNode("act_weather", weatherTool).                                            // 工具节点
+                AddEdge("reason", "act_weather", eino.If(func(ctx eino.Context) bool {
+                    // 条件边：当模型输出Action=get_weather时触发
+                    return ctx.LastOutput().Action == "get_weather"
+                })).
+                AddEdge("act_weather", "reason", eino.OnSuccess())                              // 循环边：工具结果返回推理
+
+            // 5. 执行任务
+            input := "杭州明天适合穿什么？"
+            result := graph.Run(input)
+            fmt.Println("最终回答:", result.Text)
+            
+            /* 预期输出流程：
+            1. 模型推理: Thought: 需要查询杭州天气 → Action: get_weather, ActionInput: 杭州
+            2. 调用工具: fetchWeather("杭州") 返回天气数据
+            3. 二次推理: Thought: 晴天25度建议穿短袖 → Action: null
+            4. 输出结果: "杭州明天晴25°C，建议穿短袖"
+            */
+        }
+
+
+        // ReAct Prompt模板（完整版，但是上边的代码用不了，因为返回的格式不一样）
+        const reactPrompt = `
+        # 角色与任务
+        你是一个自主智能体（AI Agent），能够通过结合推理（Reasoning）和工具调用（Acting）解决复杂问题。请严格按以下步骤执行：
+
+        # 可用工具
+        {{tools}}
+        {{#each tools}}
+        - **{{this.name}}**: {{this.description}} 
+        参数格式: {{this.parameters}}
+        {{/each}}
+
+        # 执行规则
+        1. **逐步思考**：明确任务目标，拆解必要步骤。
+        2. **工具调用**：若需外部数据或操作，选择合适工具并生成调用指令。
+        3. **验证结果**：检查工具返回是否满足需求，必要时迭代。
+
+        # 输出格式
+        必须按以下格式响应，禁止缺失字段：
+        \`\`\`json
+        {
+        "thought": "当前思考步骤和计划",
+        "action": "工具名|null",
+        "action_input": {"参数键": "参数值"} | null,
+        "observation": "工具返回结果或用户输入补充",
+        "final_answer": "最终回答（若无需工具）"
+        }
+        \`\`\`
+        `
+        ```
+1. 实例
+   - 图编排
+    ```go
+    // 定义查询工具
+    dbTool := eino.BindTool("photo_db", func(query Query) Result {
+        return DB.Execute("SELECT * FROM photos WHERE year=? ORDER BY size", query.Year)
+    })
+
+    // 图编排
+    graph := eino.NewGraph().
+        AddNode("parse_input", ChatModel.WithPrompt(intent_prompt)).
+        AddNode("query_db", dbTool).
+        AddEdge("parse_input", "query_db", eino.IfNeedTool())
+
+    // 执行
+    result := graph.Run(userInput)
+    ```
+   - Hertz路由中处理SSE连接
+    ```go
+    eino.Get("/stream", func(c context.Context, ctx *app.RequestContext) {
+        ctx.SetContentType("text/event-stream")
+        for {
+            data := getStreamData()                 // 从 Eino 流式节点获取数据
+            ctx.SSEvent("message", data)            // 发送 SSE 事件
+            ctx.Flush()                             // 立即推送至客户端
+        }
+    })
+    ```
 #### 应用平台
 1. coze：字节跳动旗下
 ##### Dify
@@ -1449,6 +1842,7 @@
    - 提示词prompt是进入的门槛，也是基础
    - ai做的是执行层，思考层还要人来，帮助人更好的思考
    - 大模型最与众不同的能力是意图提取，是自然语言理解
+   - 现在llm的能力非常强了，只要给出足够的资料，准确的要求，都能准确的输出
 1. 大模型的用法
    - 认识
      1. 模型的能力快到达极限，前10名的能力差距从10%缩小到5%
