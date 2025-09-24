@@ -303,8 +303,10 @@
           1. 调整与迭代：这个过程会循环多次，直到输出满足要求或达到最大迭代次数
           1. 结果输出
      1. ReAct
-        - 认识：Reason + Act，是一个方法论，让llm通过推理(Reasoning)和行动(Acting)的循环来完成任务
-        - 认识：reasoning + acting，基于动态推理与工具调用的智能体实现模式，是通过组件拼装实现的高级功能模式。和chain、graph区别在于是动态决定下一步，是Eino支持的一种高级任务解决策略、或者动态组合出“推理-行动”的循环能力。就是让大模型从一句话中找出来要调用的方法名和参数，然后代码执行即可
+        - 认识：Reason + Acting，是一个方法论，基于动态推理与工具调用的智能体实现模式，其核心是让llm通过推理和行动的循环来完成任务
+          1. 是通过组件拼装实现的高级任务解决策略和功能模式，和chain、graph区别在于是动态决定下一步
+          1. 就是让大模型从一句话中找出来要调用的方法名和参数，然后代码执行即可
+        - 步骤
           1. reasoning：模型自主分析问题，拆解步骤，如需要查询天气api
           1. acting：调用工具执行具体操作，并根据工具返回结果决定下一步动作
           1. 循环迭代：重复“推理-行动”直到任务完成或达到终止条件
@@ -329,7 +331,7 @@
    - 组成
      1. llm：大脑，充当协调者的智能体核心，某llm
      1. planning：规划，赋予智能体类似思维模式，精准拆解复杂任务，分步解决
-        - 有反馈规划方法：包括ReAct和Reflexion
+        - 有反馈规划方法，如ReAct和Reflexion
      1. memory：记忆，管理智能体的过往行为
         - 形式：
           1. 短期：上下文窗口限制
@@ -368,6 +370,8 @@
    - 分类
      1. chain：链式
      1. graph：图式
+     1. MoE：Mixture of Experts Orchestration，混合专家式
+        - 一个agent的力量是有限的
 1. RAG
    - 认识：Retrieval Augmented Generation 检索增强生成，用于提升llm生成答案的准确性和时效性的技术框架
      1. 背景：LLM本身的知识滞后、可能“幻觉”两个缺陷，用RAG来增强
@@ -538,6 +542,15 @@
           1. 总结方式：总结后把原来的内容扔掉，会丢失细节，但是降低了大小。如claude的压缩方案有重点保存测试输出和代码改动
           1. 向量方式：越长的文本向量化效果越好，但是向量化的目的不是压缩，是语义化和可计算化
      1. 隔离context：不同的上下文之间是隔离的，常见于multi-agent中 
+1. 开发评估
+   - 追踪与可观测性 (Tracing & Observability)
+   - 评估 (Evaluation)
+     1. 数据集与评估
+     1. 版本对比
+   - 监控与指标 (Monitoring & Metrics)
+     1. 实时仪表盘
+     1. 用户反馈收集
+     1. 会话分析
 1. wiki
    - 聊天前端项目：open webUI（原名ollama webUI）、chatbox、Cherry Studio、Page Assist、chatbot-ui，类似gpt的界面
      1. chatbox的功能：文字聊天(markdown渲染、代码渲染、mermaid图像表格渲染、思维导图、语法高亮、内置html渲染)、联网搜索(网页爬取)、文件交互(图片)、调用mcp服务、本地化向量知识库、图像生成
@@ -1195,7 +1208,8 @@
         ```
 #### 开发框架
 1. airflow
-   - 认识：Apache Airflow，用于编排、调度和监控工作流的开源平台
+   - 认识：Apache Airflow，代码优先的编排、调度和监控工作流的开源平台，纯python代码定义DAGs的编程模式
+     1. 调度能力极其强大，是n8n、dify等？？？
    - 概念
      1. DAG：有向无环图
         - Task：任务，一个节点
@@ -1264,16 +1278,18 @@
      1. 数据连接器：各种数据源，如本地文件(pdf/word/ppt)、数据库(sql, nosql)、api(notion/slack/discord)等
      1. 索引：将加载的非结构化或结构化数据转换成一种易于LLM查询的优化格式，将数据分割成块chunks，并创建向量嵌入embeddings，存储在向量数据库中，实现快速、准确的语义搜索
      1. 查询接口：提供一个自然的语言接口来向你索引的数据提问。它接收你的问题，在索引中检索最相关的上下文信息，然后将“问题+上下文”一起组装成一个提示prompt发送给LLM，从而得到一个基于你私有数据的准确回答
-1. langSmith
-   - 认识：LLM应用的开发运维LLMOps平台，提供了贯穿开发、测试、生产全周期的工具。是LLM应用的集成开发环境IDE+应用性能管理APM工具”
-     1. 解决如提示词prompt难以调试、评估困难、监控缺失等问题
-   - 功能
-     1. debugging & tracing：调试和溯源，自动记录每次llm的调用的溯源图。看到输入、输出、耗时、成本，快速定位问题
-     1. testing & evaluation：测试和评估，创建数据集、运行批量测试等
-     1. monitoring：监控，延迟、错误率、输出质量，设置警报
-     1. collaboration：协作，共享提示模板、跟踪记录、数据集等
-1. Langfuse
-   - 认识：llm应用的观测、监控与分析平台，是后台
+1. 开发平台
+   - CozeLoop
+   - Langfuse
+     1. 认识：llm应用的观测、监控与分析平台，开源
+   - langSmith
+     1. 认识：LLM应用的开发运维LLMOps平台，提供了贯穿开发、测试、生产全周期的工具。是LLM应用的集成开发环境IDE+应用性能管理APM工具，LangGraph官方出品，闭源
+        - 解决如提示词prompt难以调试、评估困难、监控缺失等问题
+     1. 功能
+        - debugging & tracing：调试和溯源，自动记录每次llm的调用的溯源图。看到输入、输出、耗时、成本，快速定位问题
+        - testing & evaluation：测试和评估，创建数据集、运行批量测试等
+        - monitoring：监控，延迟、错误率、输出质量，设置警报
+        - collaboration：协作，共享提示模板、跟踪记录、数据集等
 ##### Eino
 1. Eino
    - 字节开源的Golang的AI应用开发框架
@@ -1311,7 +1327,16 @@
         - Retriever：从向量数据库中查询
         - Transformer：用于文档转换和处理的组件，如分割、过滤、合并等
         - Loader：加载指定文本
-     1. EinoDev：可视化工具
+     1. EinoDev插件：辅助开发的可视化工具，用于快速生成和验证，支持调试
+        - 使用步骤
+          1. 编辑器安装插件
+          1. 新建Graph编排，增加编排内容
+          1. 导出为代码
+     1. CozeLoop插件
+        - 痛点
+          1. 运行流程黑盒：无法清晰了解模型具体的运行逻辑；采用callback模式查看日志过于原始过于繁琐；相同输入内部graph走的逻辑和节点可能完全不同
+          1. 迭代和评估异常原始：修改prompt、RAG语料、编排，数据都无法回收，进行筛选清洗重运用
+          1. prompt没有版本管理
    - 高级功能
      1. Compose：声明式地组合多个组件或逻辑单元，构建数据处理流程。将独立模块（如模型调用、工具执行、数据处理）串联成可复用的任务流水线
         - Compose快速组合线性/简单分支逻辑，Graph处理复杂拓扑（循环、多分支）
@@ -1455,18 +1480,6 @@
         您好，您的问题正在处理中：
         {{ user_input }}
         {% endif %}
-        ```
-     1.  ReAct专用模板
-        ```python
-        请根据任务决定是否需要调用工具：
-        问题: {{question}}
-        可用工具:
-        - 天气查询: 输入地点，返回天气数据
-        - 订单查询: 输入订单号，返回状态
-        逐步思考后，按格式响应：
-        Thought: <推理步骤>
-        Action: <工具名|null>                   # 方法<>
-        ActionInput: <参数>             # 方法<># 参数<>
         ```
    - 功能
      1. 模板继承
@@ -1693,122 +1706,455 @@
         }
         ```
 1. 流程编排
-   - 概念
-     1. 节点：node
-     1. 边：edge，节点之间的关系
-     1. 分支：branch，节点之间的分支关系
-   - 实现方式
-     1. chain：线性执行多个数据处理步骤，链式有向图，始终向前
-     1. graph：有向图，有最大的灵活性，通过可视化节点（如分支、循环）实现复杂条件逻辑
+   - 节点
+     1. Lambda：用户自定义节点
    - 特性
      1. 横切：使用callback在节点前后插入逻辑、通用逻辑(日志、监控、错误处理等)
      1. state：全局状态、节点间共享状态
-   - ReAct模式
-     1. 实现本质
-        - 通过prompt模板引导模型生成推理步骤，包含工具描述、推理步骤占位符等
-        - 通过graph的循环实现“行动结果→重新推理”的闭环
-        - 通过tool绑定提供可调用的外部能力，如api、数据库
-     1. 示例
+   - 实现分类
+     1. chain：线性执行多个数据处理步骤，链式有向图，始终向前
+     1. graph：有向图，有最大的灵活性，通过可视化节点（如分支、循环）实现复杂条件逻辑
+   - 实现步骤
+     1. 注册链条/图
+     1. 编写节点
+     1. 编写分支
+     1. 加入节点
+        - model节点放在最后，用于接收前边的分支结果，或者放在中间用于判断输出
+     1. 节点连接
+     1. 编译运行
+   - 图编排
+     1. 组成
+        - 节点：node，`AddChatModelNode/AddLambdaNode/AddGraphNode`
+        - 分支：branch，节点之间的分支关系，用于连接不同的节点，用分支连接就不用边来连接了，`AddBranch`
+        - 边：edge，节点之间的关系，`AddEdge`
+     1. 高级特性
+        - state：全局状态各节点共享，eino框架会在所有读写state的位置加锁。`compose.WithGenLocalState`
+          1. 作用
+             - 跨节点数据共享：存入state用作记忆功能
+             - 添加一些配置：如maxStep最大步数，限制模型反复思考的次数
+          1. 使用场景
+             - 节点执行前读写：`StatePreHandler/StreamStatePreHandler `
+             - 节点执行后读写：`StatePostHandler/StreamStatePostHandler`
+        - callback：在固定的时机，把自己是谁(runInfo)，以及当时发生了什么(input/output)传出去，横切点思路，不影响主流程
+          1. 作用：汇报、打印、日志记录
+          1. 使用：`callbacks.NewHandlerBuilder().OnStartFn/OnEndFn().Build()`
+        - 图嵌套：图编排产物runnable与lambda的接口形式非常相似，因此编译好的图可以简单的封装为lambda，并以lambda节点的形式嵌套进其他图中，实现上就是保持上下游类型对齐
+   - 实例
+     1. Lambda节点、简单的chain
         ```go
-        // 1. 定义工具函数
-        func fetchWeather(location string) string {
-            // 模拟天气API调用
-            return fmt.Sprintf(`{"location": "%s", "weather": "晴", "temp": 25}`, location)
+        // 初始化模型
+        model, err := ark.NewChatModel(ctx, &ark.ChatModelConfig{
+            APIKey:  os.Getenv("ARK_API_KEY"),
+            Model:   "doubao-1.5-pro-32k-250115",
+            Timeout: &timeout,
+        })
+        if err != nil {
+            panic(err)
         }
 
-        // 2. ReAct Prompt模板（简化版）
-        const reactPrompt = `
-        请逐步思考并决定是否需要调用工具。可用工具：
-        - get_weather(location): 查询天气
+        //编写lambda节点
+        lambda := compose.InvokableLambda(func(ctx context.Context, input string) (output []*schema.Message, err error) {
+            desuwa := input + "回答结尾加上desuwa"
+            output = []*schema.Message{
+                {
+                    Role:    schema.User,
+                    Content: desuwa,
+                },
+            }
+            return output, nil
+        })
 
-        当前任务: {{.input}}
-        按格式响应：
-        Thought: <思考步骤>
-        Action: <get_weather|null>
-        ActionInput: <参数>`
+        // 注册链条
+        chain := compose.NewChain[string, *schema.Message]()
+        // 连接起各个节点
+        chain.AppendLambda(lambda).AppendChatModel(model)
 
-        func main() {
-            // 3. 初始化Eino组件
-            // 绑定工具
-            weatherTool := eino.BindTool("get_weather", fetchWeather)
+        // 编译
+        r, err := chain.Compile(ctx)
+        if err != nil {
+            panic(err)
+        }
+        // 执行
+        answer, err := r.Invoke(ctx, "你好，请告诉我你的名字")
+        if err != nil {
+            panic(err)
+        }
+        fmt.Println(answer.Content)
+        ```
+     1. 使用工具的简单的链式agent
+        ```go
+        func SimpleAgent() {
+            ctx := context.Background()
+            // 创建工具
+            getGameTool := CreateTool()
+            // 大模型的回调函数
+            modelHandler := &callbackHelpers.ModelCallbackHandler{
+                OnEnd: func(ctx context.Context, info *callbacks.RunInfo, output *model.CallbackOutput) context.Context {
+                    // 1. output.Result 类型是 string
+                    fmt.Println("模型思考过程为：")
+                    fmt.Println(output.Message.Content)
+                    return ctx
+                },
+            }
+            // 工具的回调函数
+            toolHandler := &callbackHelpers.ToolCallbackHandler{
+                OnStart: func(ctx context.Context, info *callbacks.RunInfo, input *tool.CallbackInput) context.Context {
+                    fmt.Printf("开始执行工具，参数: %s\n", input.ArgumentsInJSON)
+                    return ctx
+                },
+                OnEnd: func(ctx context.Context, info *callbacks.RunInfo, output *tool.CallbackOutput) context.Context {
+                    fmt.Printf("工具执行完成，结果: %s\n", output.Response)
+                    return ctx
+                },
+            }
+            // 构建实际回调函数Handler
+            handler := callbackHelpers.NewHandlerHelper().
+                ChatModel(modelHandler).
+                Tool(toolHandler).
+                Handler()
             
-            // 创建ChatModel（加载ReAct模板）
-            model := eino.ChatModel{
-                PromptTemplate: eino.NewPromptTemplate("react", reactPrompt, "jinja2"),
-                Tools:          []eino.Tool{weatherTool},
+            // 初始化模型
+            timeout := 30 * time.Second
+            model, err := ark.NewChatModel(ctx, &ark.ChatModelConfig{
+                APIKey:  os.Getenv("ARK_API_KEY"),
+                Model:   "doubao-1.5-pro-32k-250115",
+                Timeout: &timeout,
+            })
+            if err != nil {
+                panic(err)
             }
 
-            // 4. 构建ReAct Graph
-            graph := eino.NewGraph().
-                AddNode("reason", model).                                                       // 推理节点
-                AddNode("act_weather", weatherTool).                                            // 工具节点
-                AddEdge("reason", "act_weather", eino.If(func(ctx eino.Context) bool {
-                    // 条件边：当模型输出Action=get_weather时触发
-                    return ctx.LastOutput().Action == "get_weather"
-                })).
-                AddEdge("act_weather", "reason", eino.OnSuccess())                              // 循环边：工具结果返回推理
+            // 绑定工具
+            info, err := getGameTool.Info(ctx)
+            if err != nil {
+                panic(err)
+            }
+            infos := []*schema.ToolInfo{
+                info,
+            }
+            err = model.BindTools(infos)
+            if err != nil {
+                panic(err)
+            }
 
-            // 5. 执行任务
-            input := "杭州明天适合穿什么？"
-            result := graph.Run(input)
-            fmt.Println("最终回答:", result.Text)
-            
-            /* 预期输出流程：
-            1. 模型推理: Thought: 需要查询杭州天气 → Action: get_weather, ActionInput: 杭州
-            2. 调用工具: fetchWeather("杭州") 返回天气数据
-            3. 二次推理: Thought: 晴天25度建议穿短袖 → Action: null
-            4. 输出结果: "杭州明天晴25°C，建议穿短袖"
-            */
+            // 创建tools节点
+            ToolsNode, err := compose.NewToolNode(context.Background(), &compose.ToolsNodeConfig{
+                Tools: []tool.BaseTool{
+                    getGameTool,
+                },
+            })
+            if err != nil {
+                panic(err)
+            }
+            // 创建完整的处理链
+            chain := compose.NewChain[[]*schema.Message, []*schema.Message]()
+            chain.
+                AppendChatModel(model, compose.WithNodeName("chat_model")).
+                AppendToolsNode(ToolsNode, compose.WithNodeName("tools"))
+
+            // 编译
+            agent, err := chain.Compile(ctx)
+            if err != nil {
+                log.Fatal(err)
+            }
+            // 运行
+            resp, err := agent.Invoke(ctx, []*schema.Message{
+                {
+                    Role:    schema.User,
+                    Content: "请告诉我原神的URL是什么",
+                },
+            }, compose.WithCallbacks(handler))
+            if err != nil {
+                log.Fatal(err)
+            }
+
+            // 输出结果
+            for _, msg := range resp {
+                fmt.Println(msg.Content)
+            }
         }
-
-
-        // ReAct Prompt模板（完整版，但是上边的代码用不了，因为返回的格式不一样）
-        const reactPrompt = `
-        # 角色与任务
-        你是一个自主智能体（AI Agent），能够通过结合推理（Reasoning）和工具调用（Acting）解决复杂问题。请严格按以下步骤执行：
-
-        # 可用工具
-        {{tools}}
-        {{#each tools}}
-        - **{{this.name}}**: {{this.description}} 
-        参数格式: {{this.parameters}}
-        {{/each}}
-
-        # 执行规则
-        1. **逐步思考**：明确任务目标，拆解必要步骤。
-        2. **工具调用**：若需外部数据或操作，选择合适工具并生成调用指令。
-        3. **验证结果**：检查工具返回是否满足需求，必要时迭代。
-
-        # 输出格式
-        必须按以下格式响应，禁止缺失字段：
-        \`\`\`json
-        {
-        "thought": "当前思考步骤和计划",
-        "action": "工具名|null",
-        "action_input": {"参数键": "参数值"} | null,
-        "observation": "工具返回结果或用户输入补充",
-        "final_answer": "最终回答（若无需工具）"
-        }
-        \`\`\`
-        `
         ```
+     1. 使用一个分支的图编排
+        ```go
+        func OrcGraphWithCallback(ctx context.Context, input map[string]string) {
+            g := compose.NewGraph[map[string]string, *schema.Message](
+                compose.WithGenLocalState(genFunc),
+            )
+            lambda := compose.InvokableLambda(func(ctx context.Context, input map[string]string) (output map[string]string, err error) {
+                //在节点内部处理state
+                _ = compose.ProcessState[*State](ctx, func(_ context.Context, state *State) error {
+                    state.History["tsundere_action"] = "我喜欢你"
+                    state.History["cute_action"] = "摸摸头"
+                    return nil
+                })
+                if input["role"] == "tsundere" {
+                    return map[string]string{"role": "tsundere", "content": input["content"]}, nil
+                }
+                if input["role"] == "cute" {
+                    return map[string]string{"role": "cute", "content": input["content"]}, nil
+                }
+                return map[string]string{"role": "user", "content": input["content"]}, nil
+            })
+            TsundereLambda := compose.InvokableLambda(func(ctx context.Context, input map[string]string) (output []*schema.Message, err error) {
+                _ = compose.ProcessState[*State](ctx, func(_ context.Context, state *State) error {
+                    input["content"] = input["content"] + state.History["tsundere_action"].(string)
+                    return nil
+                })
+                return []*schema.Message{
+                    {
+                        Role:    schema.System,
+                        Content: "你是一个高冷傲娇的大小姐，每次都会用傲娇的语气回答我的问题",
+                    },
+                    {
+                        Role:    schema.User,
+                        Content: input["content"],
+                    },
+                }, nil
+            })
+
+            CuteLambda := compose.InvokableLambda(func(ctx context.Context, input map[string]string) (output []*schema.Message, err error) {
+                return []*schema.Message{
+                    {
+                        Role:    schema.System,
+                        Content: "你是一个可爱的小女孩，每次都会用可爱的语气回答我的问题",
+                    },
+                    {
+                        Role:    schema.User,
+                        Content: input["content"],
+                    },
+                }, nil
+            })
+
+            cutePreHandler := func(ctx context.Context, input map[string]string, state *State) (map[string]string, error) {
+                input["content"] = input["content"] + state.History["cute_action"].(string)
+                return input, nil
+            }
+
+            model, err := ark.NewChatModel(ctx, &ark.ChatModelConfig{
+                APIKey: os.Getenv("ARK_API_KEY"),
+                Model:  os.Getenv("MODEL"),
+            })
+            if err != nil {
+                panic(err)
+            }
+
+            //注册节点
+            err = g.AddLambdaNode("lambda", lambda)
+            if err != nil {
+                panic(err)
+            }
+            err = g.AddLambdaNode("tsundere", TsundereLambda)
+            if err != nil {
+                panic(err)
+            }
+            err = g.AddLambdaNode("cute", CuteLambda, compose.WithStatePreHandler(cutePreHandler))
+            if err != nil {
+                panic(err)
+            }
+            err = g.AddChatModelNode("model", model)
+            if err != nil {
+                panic(err)
+            }
+
+            //加入分支
+            g.AddBranch("lambda", compose.NewGraphBranch(func(ctx context.Context, in map[string]string) (endNode string, err error) {
+                if in["role"] == "tsundere" {
+
+                    return "tsundere", nil
+                }
+                if in["role"] == "cute" {
+                    return "cute", nil
+                }
+                return "tsundere", nil
+            }, map[string]bool{"tsundere": true, "cute": true}))
+
+            //链接节点
+            err = g.AddEdge(compose.START, "lambda")
+            if err != nil {
+                panic(err)
+            }
+            err = g.AddEdge("tsundere", "model")
+            if err != nil {
+                panic(err)
+            }
+            err = g.AddEdge("cute", "model")
+            if err != nil {
+                panic(err)
+            }
+            err = g.AddEdge("model", compose.END)
+            if err != nil {
+                panic(err)
+            }
+
+            //编译
+            r, err := g.Compile(ctx)
+            if err != nil {
+                panic(err)
+            }
+            //执行
+            answer, err := r.Invoke(ctx, input, compose.WithCallbacks(genCallback()))
+            if err != nil {
+                panic(err)
+            }
+            fmt.Println(answer.Content)
+        }
+
+        func genCallback() callbacks.Handler {
+            handler := callbacks.NewHandlerBuilder().OnStartFn(func(ctx context.Context, info *callbacks.RunInfo, input callbacks.CallbackInput) context.Context {
+                fmt.Printf("当前%s节点输入:%s\n", info.Component, input)
+                return ctx
+            }).OnEndFn(func(ctx context.Context, info *callbacks.RunInfo, output callbacks.CallbackOutput) context.Context {
+                fmt.Printf("当前%s节点输出:%s\n", info.Component, output)
+                return ctx
+            }).Build()
+            return handler
+        }
+        ```
+     1. 使用state
+        ```go
+        // 定义上下文状态结构体
+        func genFunc(ctx context.Context) *State {
+            return &State{
+                History: make(map[string]any),
+            }
+        }
+
+        // 初始化state
+        g := compose.NewGraph[map[string]string, *schema.Message](
+            compose.WithGenLocalState(genFunc),
+        )
+
+        // 使用state
+        lambda := compose.InvokableLambda(func(ctx context.Context, input map[string]string) (output map[string]string, err error) {
+            //在节点内部处理state
+            _ = compose.ProcessState[*State](ctx, func(_ context.Context, state *State) error {
+                state.History["tsundere_action"] = "我喜欢你"
+                state.History["cute_action"] = "摸摸头"
+                return nil
+            })
+            if input["role"] == "tsundere" {
+                return map[string]string{"role": "tsundere", "content": input["content"]}, nil
+            }
+            if input["role"] == "cute" {
+                return map[string]string{"role": "cute", "content": input["content"]}, nil
+            }
+            return map[string]string{"role": "user", "content": input["content"]}, nil
+	    })
+        ```
+     1. 使用callback
+        ```go
+        func genCallback() callbacks.Handler {
+            handler := callbacks.NewHandlerBuilder().OnStartFn(func(ctx context.Context, info *callbacks.RunInfo, input callbacks.CallbackInput) context.Context {
+                fmt.Printf("当前%s节点输入:%s\n", info.Component, input)
+                return ctx
+            }).OnEndFn(func(ctx context.Context, info *callbacks.RunInfo, output callbacks.CallbackOutput) context.Context {
+                fmt.Printf("当前%s节点输出:%s\n", info.Component, output)
+                return ctx
+            }).Build()
+            return handler
+        }
+        ```
+     1. ReAct的简单实现
+        - 实现本质
+          1. 通过prompt模板引导模型生成推理步骤，包含工具描述、推理步骤占位符等
+          1. 通过graph的循环实现“行动结果→重新推理”的闭环
+          1. 通过tool绑定提供可调用的外部能力，如api、数据库
+        - 示例
+            ```go
+            // 核心实现
+            请根据任务决定是否需要调用工具：
+            问题: {{question}}
+            可用工具:
+            - 天气查询: 输入地点，返回天气数据
+            - 订单查询: 输入订单号，返回状态
+            逐步思考后，按格式响应：
+            Thought: <推理步骤>
+            Action: <工具名|null>                   # 方法<>
+            ActionInput: <参数>             # 方法<># 参数<>
+
+
+            // 1. 定义工具函数
+            func fetchWeather(location string) string {
+                // 模拟天气API调用
+                return fmt.Sprintf(`{"location": "%s", "weather": "晴", "temp": 25}`, location)
+            }
+
+            // 2. ReAct Prompt模板（简化版）
+            const reactPrompt = `
+            请逐步思考并决定是否需要调用工具。可用工具：
+            - get_weather(location): 查询天气
+
+            当前任务: {{.input}}
+            按格式响应：
+            Thought: <思考步骤>
+            Action: <get_weather|null>
+            ActionInput: <参数>`
+
+            func main() {
+                // 3. 初始化Eino组件
+                // 绑定工具
+                weatherTool := eino.BindTool("get_weather", fetchWeather)
+                
+                // 创建ChatModel（加载ReAct模板）
+                model := eino.ChatModel{
+                    PromptTemplate: eino.NewPromptTemplate("react", reactPrompt, "jinja2"),
+                    Tools:          []eino.Tool{weatherTool},
+                }
+
+                // 4. 构建ReAct Graph
+                graph := eino.NewGraph().
+                    AddNode("reason", model).                                                       // 推理节点
+                    AddNode("act_weather", weatherTool).                                            // 工具节点
+                    AddEdge("reason", "act_weather", eino.If(func(ctx eino.Context) bool {
+                        // 条件边：当模型输出Action=get_weather时触发
+                        return ctx.LastOutput().Action == "get_weather"
+                    })).
+                    AddEdge("act_weather", "reason", eino.OnSuccess())                              // 循环边：工具结果返回推理
+
+                // 5. 执行任务
+                input := "杭州明天适合穿什么？"
+                result := graph.Run(input)
+                fmt.Println("最终回答:", result.Text)
+                
+                /* 预期输出流程：
+                1. 模型推理: Thought: 需要查询杭州天气 → Action: get_weather, ActionInput: 杭州
+                2. 调用工具: fetchWeather("杭州") 返回天气数据
+                3. 二次推理: Thought: 晴天25度建议穿短袖 → Action: null
+                4. 输出结果: "杭州明天晴25°C，建议穿短袖"
+                */
+            }
+
+
+            // ReAct Prompt模板（完整版，但是上边的代码用不了，因为返回的格式不一样）
+            const reactPrompt = `
+            # 角色与任务
+            你是一个自主智能体（AI Agent），能够通过结合推理（Reasoning）和工具调用（Acting）解决复杂问题。请严格按以下步骤执行：
+
+            # 可用工具
+            {{tools}}
+            {{#each tools}}
+            - **{{this.name}}**: {{this.description}} 
+            参数格式: {{this.parameters}}
+            {{/each}}
+
+            # 执行规则
+            1. **逐步思考**：明确任务目标，拆解必要步骤。
+            2. **工具调用**：若需外部数据或操作，选择合适工具并生成调用指令。
+            3. **验证结果**：检查工具返回是否满足需求，必要时迭代。
+
+            # 输出格式
+            必须按以下格式响应，禁止缺失字段：
+            \`\`\`json
+            {
+            "thought": "当前思考步骤和计划",
+            "action": "工具名|null",
+            "action_input": {"参数键": "参数值"} | null,
+            "observation": "工具返回结果或用户输入补充",
+            "final_answer": "最终回答（若无需工具）"
+            }
+            \`\`\`
+            ```
 1. 实例
-   - 图编排
-    ```go
-    // 定义查询工具
-    dbTool := eino.BindTool("photo_db", func(query Query) Result {
-        return DB.Execute("SELECT * FROM photos WHERE year=? ORDER BY size", query.Year)
-    })
-
-    // 图编排
-    graph := eino.NewGraph().
-        AddNode("parse_input", ChatModel.WithPrompt(intent_prompt)).
-        AddNode("query_db", dbTool).
-        AddEdge("parse_input", "query_db", eino.IfNeedTool())
-
-    // 执行
-    result := graph.Run(userInput)
-    ```
    - Hertz路由中处理SSE连接
     ```go
     eino.Get("/stream", func(c context.Context, ctx *app.RequestContext) {
