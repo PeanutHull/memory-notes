@@ -1101,6 +1101,31 @@
         fibonacci(c, quit)
     }
     ```
+1. 递归
+    ```go
+    // 递归计算阶乘，在函数内部
+    func factorial(n int) int {
+        var fact func(n int) int                // 在函数内部就得先声明，要不然内部的fact函数会未定义
+        fact = func(n int) int {
+            if n == 0 {
+                return 1
+            }
+            return n * fact(n-1)
+        }
+        return fact(n)
+    }
+    // 递归计算阶乘，在函数外部
+    func factorial(n int) int {
+        if n == 0 {
+            return 1
+        }
+        return n * factorial(n-1)
+    }
+
+    func main() {
+        fmt.Println(factorial(5)) // 输出: 120
+    }
+    ```
 1. 命令行执行
     ```go
     // 转换pdf为图片，依赖imageMagick
