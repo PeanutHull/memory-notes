@@ -2220,6 +2220,24 @@
    - 提示词模版
    - mcp调用是提示词还是function calling
    - 向量库的切分模式、向量维度的调整
+### AI实践
+1. spec工作流
+   - 认识：规格/规范，在做任何事/生成任何代码之前，必须先通过结构化的文档明确需求、设计与任务
+     1. 在于其方法论本身非常强大
+     1. 解决AI编程需求理解偏差及工程质量不高等核心痛点
+     1. AI编程2.0时代的轮廓：一个由规范驱动、流程严谨、人机协同的全新开发模式。从“能用”到“好用”，再到“专业”的需求升级
+   - Kiro的实现
+     1. 需求分析 (Requirements)：requirements.md
+        - EARS语法：以标准句式消除需求歧义，Easy Approach to Requirements Syntax
+          1. 用户故事 (User Story): As a [role], I want [feature], so that [benefit].
+          1. 验收标准 (Acceptance Criteria): WHEN [event] THEN the system SHALL [response].
+     1. 系统设计 (Design)：design.md
+        - 系统架构图 (Architecture)
+        - 组件与接口定义 (Components and Interfaces)
+        - 数据模型 (Data Models)
+        - 错误处理机制 (Error Handling)
+        - 测试策略 (Testing Strategy)
+     1. 实现计划 (Implementation)：tasks.md
 ### wiki
 1. 图像和视频应用
    - 大模型

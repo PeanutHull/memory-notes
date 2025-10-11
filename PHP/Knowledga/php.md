@@ -700,8 +700,36 @@
         }
         ```
    - 最佳实践
-     1. 生产代码中应该书写指定的版本号，防止以后的上线构建时执行composer install因为依赖包的更新可能带来的问题，比如依赖包更新了一个版本写了一个bug，就会影响服务
-     1. composer.lock提交到代码库，利用lock文件确认深层次依赖中每一个的版本号
+     1. 通常使用
+        - 原则
+          1. 生产代码中应该书写指定的版本号，防止以后的上线构建时执行composer install因为依赖包的更新可能带来的问题，比如依赖包更新了一个版本写了一个bug，就会影响服务
+          1. composer.lock提交到代码库，利用lock文件确认深层次依赖中每一个的版本号
+        - 举例
+            ```
+            1. json中固定版本
+            {
+                "require": {
+                    "your-company/pulsar-client": "1.2.3",  // 固定主版本
+                    "some/dependency-package": "2.4.0"      // 明确依赖的子包版本
+                },
+                "minimum-stability": "dev",                // 如有必要，允许开发版本
+                "prefer-stable": true                      // 优先使用稳定版
+            }
+
+            2. 做lock锁文件
+            composer install --no-plugins --no-scripts
+
+            3. 严格按锁文件安装
+            composer install --no-dev --no-update --no-plugins --no-scripts
+            3.1 同时在json中通过extra标记某个依赖不更新
+            {
+                "extra": {
+                    "merge-plugin": {
+                        "exclude": ["your-company/pulsar-client"]
+                    }
+                }
+            }
+            ```
      1. 优化自动加载器：命令`composer install -vvv --no-dev --ignore-platform-reqs --no-interaction --optimize-autoloader`
 ### 测试与性能
 1. 代码调试和性能分析

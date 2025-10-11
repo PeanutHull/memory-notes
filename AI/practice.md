@@ -144,7 +144,7 @@
         PRIMARY KEY (`id`),
         KEY `idx_definition_platform` (`rtbot_id`,`platform`)
         ) ENGINE=InnoDB AUTO_INCREMENT=10005 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='互动agent表(用户侧的实例定义配置)';
-    -- 智能体参数配置表
+    -- 智能体参数配置表————用于配置prompt中都有哪些需要动态拼接的参数
         CREATE TABLE `ds_rtbot_agent_params_key` (
         `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
         `rtbot_id` int unsigned NOT NULL DEFAULT '0' COMMENT 'ds_rtbot_info.id',
@@ -200,7 +200,6 @@
         PRIMARY KEY (`id`),
         UNIQUE KEY `uk_prompt_key` (`prompt_key`)
         ) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='直播LLM服务辅助提示词表';
-
     -- tts相关
     -- tts配置表
         CREATE TABLE `ds_tts_config` (
@@ -225,7 +224,6 @@
         PRIMARY KEY (`id`),
         KEY `idx_rtbot_agent_attr` (`tts_config_id`,`attr_key`)
         ) ENGINE=InnoDB AUTO_INCREMENT=43 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='实时互动agent表(详细属性配置项)';
-
     -- asr
         CREATE TABLE `ds_asr_config` (
         `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
@@ -255,7 +253,7 @@
         PRIMARY KEY (`id`),
         KEY `idx_rai` (`rtbot_agent_id`)
         ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='1v1互动topic';
-    -- 主题参数表
+    -- 主题参数表————用于配置prompt中动态拼接的参数的值是什么
         CREATE TABLE `ds_interact_topic_agent_params` (
         `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
         `topic_id` int unsigned NOT NULL DEFAULT '0' COMMENT 'ds_class_lesson_topic.id',
