@@ -2,13 +2,14 @@
 1. 认识：全称golang，静态强类型、编译型、并发型具有垃圾回收的开源编程语言。现代的、良好支持网络与多核计算的语言，结合了解释型语言的游刃有余，动态类型语言的开发效率，以及静态类型的安全性
    - 性能
      1. 并发机制，goroutine跟channel，有效利用多核和网络，为并发而生
-     1. 可直接编译成机器码运行，支持跨平台编译
+     1. 直接编译成机器码运行
    - 简单：清晰高效
-     1. 类似于C+Python
-   - 强大
+     1. 语法类似于C+Python
      1. 方便的自动垃圾回收
+   - 强大
+     1. 支持跨平台编译，几秒内编译完成，比java快
      1. 丰富的内置类型如slice、map、struct等，支持函数多返回值
-     1. 丰富的标准库、强大的工具类库
+     1. 丰富的标准库、强大的工具类库如fmt、go get等
      1. 强大的运行时反射机制，便于在线的性能分析，以及堆栈分析
 1. 特点
    - 原则
@@ -23,8 +24,7 @@
      1. 函数式编程
      1. 并发编程
 1. 用途
-   - 网络编程：web、api应用
-   - 服务器编程：处理日志
+   - 网络/服务器编程：web、api应用
    - 云平台：k8s
    - 分布式系统：数据库代理器、NewSQL
    - 内存数据库：groupcache、couchbase
@@ -1117,7 +1117,11 @@
     *ptr = 21         // 设置i
     ```
 1. 错误和异常
-   - 错误处理：通过内置的error接口作为错误处理的标准模式，如果函数要返回错误，则返回值类型列表中肯定包含error。为nil时表示成功；非nil表示错误
+   - 认识
+     1. 意料之中用error，如文件打不开；意料之外用panic，如数组越界
+     1. 异常定义为无法预测的，几乎不可能失败但是特殊条件下也会发生，同时没法返回错误，也无法继续执行的情况
+     1. 在错误处理上采用了与c类似的检查返回值方式
+   - 错误处理：通过内置的error接口作为错误处理的标准模式，如果函数要返回错误，则返回值类型列表中肯定包含error。为nil时表示没有错误；非nil表示错误
     ```go
     // 定义
     type error interface {
@@ -1133,7 +1137,7 @@
 
     // 判断错误的类型
     var targetErr *MyCustomError
-    if errors.As(err, &targetErr) {                                                 // errors.As，复制为目标类型
+    if errors.As(err, &targetErr) {                                                 // errors.As，检查错误链中是否包含特定的错误类型，找到了会提取为目标类型
         // err是MyCustomError类型，可以用targetErr访问MyCustomError的方法和属性
         targetErr.Xxx
     }
@@ -1143,26 +1147,20 @@
     if specificErr, ok := err.(*MyCustomError); ok {}                               // err.(Type)，使用断言复制为目标类型。传统使用，不如errors.As清晰
     if reflect.TypeOf(err) == reflect.TypeOf(&MyCustomError{}) {}                   // reflect.TypeOf，使用反射判断是否目标类型。性能差，代码可读性差
     ```
-   - 异常
+   - 异常处理
      1. 认识：`panic recover`，抛出、接收异常
         - panic：中断原有流程，进入panic流程。执行每一层的已经载入的defer函数，如果没有遇到recover进程打印异常信息后程序退出
           1. 可手动触发，也可运行时发生错误产生
-          1. panic无法跨协程, 当前协程产生的异常, 必须由当前协程处理，如果当前协程不处理，整个进程所有协程退出。 每个协程只维护自己的panic、defer、recover链表，只在单个协程中生效
+          1. panic无法跨协程, 当前协程产生的异常, 必须由当前协程处理，如果当前协程不处理，整个进程所有协程退出即整个程序panic。每个协程只维护自己的panic、defer、recover链表，只在单个协程中生效
           1. panic可以嵌套
         - recover：可以捕获到panic的输入值，让进入panic流程中的goroutine恢复正常执行
-          1. recover只能捕获以下两种情况的错误
-             - 由panic触发的错误
-             - 由Go运行时隐式触发的panic：如
-               1. 空指针解引用：`panic: runtime error: invalid memory address or nil pointer dereference`
-               1. 数组或切片越界：`panic: runtime error: index out of range`
-               1. 类型断言失败：`panic: interface conversion: interface {} is <type>, not <expected type>`
-               1. 除零错误：`panic: runtime error: integer divide by zero`
-               1. 关闭已关闭的 channel：panic: close of closed channel`
-               1. 类型断言失败：``
-          1. 只能在defer语句中使用，只能捕获当前协程的异常。如果发生panic没用recover捕获那么该协程会终止并且会导致整个程序panic，协程中一定要使用recover函数
+          1. 只能在defer语句中使用，只能捕获当前协程的panic，以下情况无法捕获
+             - 普通错误error
+             - 致命错误或Go运行时无法恢复的严重问题：Map并发写、栈内存耗尽、所有协程都死锁
+             - 信号导致的退出、调用os.Exit导致的退出
           1. 直接使用没有任何效果且返回nil，因为只要panic后面的代码都不会被执行
-          1. 通过判断recover的返回值查看是否发生了panic
           1. 如果无法处理，可以重新panic
+          1. recover中可以继续调用方法重启执行，但需要确保资源关闭，且明确控制重试逻辑和退出条件，避免潜在的资源泄漏和栈溢出问题
      1. 定义
         ```go
         func panic(interface{})         // 接受任意类型参数 无返回值 
@@ -1170,7 +1168,10 @@
         ```
      1. 实例
         ```go
-        // 最佳实践
+        panic("haha")                   // string类型
+        panic(errors.New("kuku"))       // error类型
+
+        // recover最佳实践
         defer func() {                                      // 直接执行的匿名方法
             if err := recover(); err != nil {               // 发生panic才会返回非nil
                 fmt.Println("错误原因为：", err)
@@ -1183,25 +1184,37 @@
             }
         }()
 
-        // 复杂版
-        defer func() {                  
-            msg := recover()                        // 捕获，判断类型
-            switch msg.(type) {
-                case string:
-                    fmt.Print("string", msg)
-                case error:
-                    fmt.Print("error", msg)
-                default:
+        // recover重试版
+        func saferRetry(fn func() error, maxAttempts int) error {
+            for i := 0; i < maxAttempts; i++ {
+                err := func() (err error) {
+                    defer func() {
+                        if r := recover(); r != nil {
+                            err = fmt.Errorf("recovered from panic: %v", r)
+                        }
+                    }()
+                    return fn()
+                }()
+                
+                if err == nil {
+                    return nil
+                }
+                
+                if i == maxAttempts-1 {
+                    return err
+                }
+                
+                // 等待后重试
+                time.Sleep(time.Second * time.Duration(i+1))
             }
-        }()
-        panic("haha")                   // string类型
-        panic(errors.New("kuku"))       // error类型
+            return nil
+        }
         ```
      1. 常见panic情况
-        - 除数为0
-        - slice越界：判断长度
+        - 除数为0：`panic: runtime error: integer divide by zero`
+        - slice越界：先判断长度，`panic: runtime error: index out of range`
         - map没有初始化就直接使用、多个groutine写写map
-        - 空指针异常
+        - 空指针解引用`panic: runtime error: invalid memory address or nil pointer dereference`
           1. 结构体连续取值中间的为nil：req.UserInfo.Signature：改为使用方法获取
             ```go
             var p *Person
@@ -1211,7 +1224,7 @@
             // panic: runtime error: invalid memory address or nil pointer dereference
             ```
           1. 方法连续调用中间的为nil：req.GetUserInfo().GetSignature()：逻辑增加先判断是否为nil
-        - 类型断言失败：判断断言是否成功
+        - 类型断言失败：先判断断言是否成功，`panic: interface conversion: interface {} is <type>, not <expected type>`
             ```go
             func main() {
                 add(20, 18)
@@ -1224,7 +1237,7 @@
             }
             // panic: interface conversion: interface {} is string, not int
             ```
-        - 写已关闭的通道，重复关闭chan
+        - 写已关闭的通道、重复关闭chan：`panic: close of closed channel`
             ```go
             func main() {
                 var ch chan int
@@ -1245,12 +1258,18 @@
             // fatal error: all goroutines are asleep - deadlock!
             ```
         - 多个协程并行写一个websocket连接
-   - fatal error：致命错误，不能被recover捕获，会导致程序直接崩溃。如`concurrent map writes`、`stack overflow`、`runtime: out of memory`
-   - 比较
-     1. 在错误处理上采用了与c类似的检查返回值方式
-     1. 意料之中用error，如文件打不开；意料之外用panic，如数组越界。异常定义为无法预测的，几乎不可能失败但是特殊条件下也没法返回错误，也无法继续执行
+   - 致命错误
+     1. 认识：fatal error，不能被recover捕获，会导致程序直接崩溃
+     1. 常见情况
+        - map并发写：`concurrent map writes`
+
+        - goroutine泄露：`too many open files`
+        - 所有协程都死锁：`fatal error: all goroutines are asleep - deadlock!`
+
+        - 栈内存耗尽：`fatal error: stack overflow`
+        - 内存溢出：`fatal error/runtime: out of memory`
 1. 运行时
-   - 认识：对goroutine进行调度，获取运行时信息等
+   - 认识：负责goroutine调度、垃圾回收、网络I/O、获取运行时信息等，是go可执行程序的重要组成部分
    - 功能
      1. `runtime.GC()`：手动触发GC
      1. 打印内存占用
@@ -1286,6 +1305,9 @@
             }
             ```
         - hacker方式：每个运行的goroutine结构的g指针保存在当前goroutine的TLS对象中，不同Go版本的goroutine的结构可能不同，常用库`petermattis/goid`
+1. GC
+   - 认识
+     1. 既有内存自动管理的便利(像解释型语言），又无需承受像java那样复杂的JVM调优
 ### 面向接口
 1. 理解：面向对象，核心是合成复用
 1. struct
@@ -5191,7 +5213,7 @@
         - RAII技巧性太强，隐藏了意图
           1. Resource Acquisition Is Initialization：资源获取就是初始化，是c++一种管理资源、避免泄漏的惯用法。构造时获取资源，对象生命期内控制对资源的访问，对象析构时释放资源
 1. 箴言
-   - 不要通过共享内存进行通信，通过通信共享内存
+   - 不要通过共享内存进行通信，通过通信共享内存：大大降低传统多线程编程中竞态条件和死锁的风险
    - 组合优于继承
    - 并发不是并行
    - 管道用于协调；互斥量（锁）用于同步
