@@ -1247,16 +1247,6 @@
             }
             // panic: close of nil channel
             ```
-        - 递归死循环或者超出栈空间造成内存溢出
-        - 使得所有线程睡眠、或goroutine互相竞争资源造成死锁
-            ```go
-            func main() {
-                var ch chan int
-                ch = make(chan int)
-                ch <- 108
-            }
-            // fatal error: all goroutines are asleep - deadlock!
-            ```
         - 多个协程并行写一个websocket连接
    - 致命错误
      1. 认识：fatal error，不能被recover捕获，会导致程序直接崩溃
@@ -1265,9 +1255,19 @@
 
         - goroutine泄露：`too many open files`
         - 所有协程都死锁：`fatal error: all goroutines are asleep - deadlock!`
+          1. 使得所有线程睡眠、或goroutine互相竞争资源造成死锁
+            ```go
+            func main() {
+                var ch chan int
+                ch = make(chan int)
+                ch <- 108
+            }
+            // fatal error: all goroutines are asleep - deadlock!
+            ```
 
         - 栈内存耗尽：`fatal error: stack overflow`
         - 内存溢出：`fatal error/runtime: out of memory`
+          1. 递归死循环或超出栈空间
 1. 运行时
    - 认识：负责goroutine调度、垃圾回收、网络I/O、获取运行时信息等，是go可执行程序的重要组成部分
    - 功能
