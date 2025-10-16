@@ -1187,6 +1187,8 @@
      1. Request 对象方法：SetHeaders()/SetResult()/ToJSON()
      1. Response 对象方法：StatusCode()/Time()
    - 最佳实践
+     1. 使用
+        - 不同域名new出来不同的resty实例，这样可以防止配置被覆盖和连接池等灵活配置
      1. 初始化resty
         ```go
         // 设置http.Client
