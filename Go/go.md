@@ -74,6 +74,7 @@
           1. make、new、close
           1. panic、recover
           1. complex、real、imag
+     1. 用户自定义标识符
    - 方法
      1. 数据操作
         - `len(v T)`：长度，string、array、slice、map、chan、pointer(指向元素的数量)
@@ -88,7 +89,7 @@
      1. 资源操作
         - make：只用于slice、map、chan三种类型的内存分配，参数是类型；返回有初始值非零(非nil)的T类型，即初始化好容器，使其处于立即可用的状态
           1. 因为这三种类型是引用类型，就没有必要返回他们的指针
-        - new：用于任意类型的内存分配，返回传入类型的零值的指针，会将分配出来的内存置零，参数是类型。是go进行动态内存分配的一种方式
+        - new：用于任意类型的内存分配，用于分配内存，返回指向传入类型零值的指针，会将分配出来的内存置零，参数是类型。是go进行动态内存分配的一种方式
             ```go
             type Person struct {  
                 Name string  
@@ -101,19 +102,44 @@
             
                 // 为Person结构体类型分配内存  
                 p := new(Person)  
-                fmt.Println(p)  // 输出: &{ 0}，显示p是指向Person的指针，Person的字段被初始化为零值  
-                fmt.Println(*p) // 输出: { 0}，解引用p，显示Person结构体的内容  
+                fmt.Println(p)  // 输出: &{0}，p是指向Person的指针，Person的字段被初始化为零值  
+                fmt.Println(*p) // 输出: {0}，解引用p，显示Person结构体的内容  
             
                 // 使用复合字面量创建Person实例，更为常用  
                 p2 := Person{Name: "John"}  
                 fmt.Println(p2) // 输出: {John}  
 
-                p3 := &Person{Name: "Mary"}
-                fmt.Println(p3) // 输出: &{Mary}
+                p3 := &Person{Name: "John"}
+                fmt.Println(p3) // 输出: &{John}
             }
             ```
-        - 复合字面量：通过类型后跟由花括号{}括起来的复合元素列表来定义，提供了定义时的简洁和灵活性。基础数据类型和复合类型的都是这样定义的，如`s := []int{1,2}`
-        - &：返回指针，不仅可以取出已经存在变量的地址分配内存，还可以直接初始化类型并输出指针变量，更常用，如搭配复合字面量使用`&Aaa{a:1}`，new的话需要先new再赋值，费劲
+        - &：返回指针，用于取地址，不仅可以取出已经存在变量的地址分配内存，还可以直接初始化类型并输出指针变量，更常用，如搭配复合字面量使用`&Aaa{a:1}`，new的话需要先new再赋值，费劲。[](../images/go/new_&.jpg)
+          1. 认识：通过&操作符获取到的指针，其值永远不会是nil。另外一个指针为nil，只可能是因为它没有被初始化指向任何有效的变量，如用var声明的指针变量
+            ```go
+            // 直接初始化类型并输出指针变量
+            var num int = 42
+            ptr := &num // ptr现在是一个*int类型，其值是一个明确的内存地址(如0xc00001a0c0)，不是nil
+            ```
+        - 复合字面量：`Type{...}`，创建值类型，也可以创建指针类型。提供了定义时的简洁和灵活性。基础数据类型和复合类型的都可以这样定义，如`s := []int{1,2}`。[](../images/go/complex_literal.jpg)
+           1. 认识
+            ```go
+            // 值类型的场景
+            user := User{Name: "Alice", Age: 25}
+            printUser(user)                                 // 传递副本
+
+            func createUser() User {                        // 作为返回值的副本
+                return User{Name: "Bob", Age: 30}
+            }
+
+            // 指针类型的场景
+            userPtr := &User{Name: "Charlie", Age: 35}
+            updateUser(userPtr)                             // 传递指针，函数内可修改
+
+            users := []*User{                               // 在切片或映射中存储指针
+                &User{Name: "User1", Age: 20},
+                &User{Name: "User2", Age: 25},
+            }
+            ```
         - close：`func close(c chan<- Type)`，关闭
      1. 其他
         - 异常
@@ -124,16 +150,10 @@
           1. `func real(c ComplexType) FloatType`
           1. `func imag(c ComplexType) FloatType`
    - nil
-     1. 认识：是一个预先声明的标识符，表示声明了没有赋值，即零值，只表示slice/map/channel/point/func/interface六种类型的零值，go中没有null，设计理念也不同
-        - 设计思想：能不分配的内存就先不分配，nil pointer其实是一切nil值的根本形态，制定很多固定的特殊用法，目的使得nil的使用是非常自然的，这样是好是坏？
+     1. 认识：是一个预先声明的标识符，只表示slice/map/channel/point/interface/func六种类型的零值，即声明了没有赋值，go中没有null，设计理念也不同
+        - 设计思想：能不分配的内存就先不分配，nil pointer其实是一切nil值的根本形态，制定很多固定的特殊用法，目的使得nil的使用是非常自然的
         - nil和空不同，nil不会指向底层地址，空会
         - 直接声明的都是nil，使用make的不是
-
-
-   - 零值：不指定变量的默认值时，即是零值
-     1. 一般：bool false、数值类 0、字符串 ""
-     1. nil：slice/map/channel/point/func/interface，只有这6个
-
      1. 特点
         - nil有类型，(*int)(nil)和(interface{})(nil)就是两个不同的变量，即不相等
         - nil是不能比较的，`nil==nil`
@@ -155,18 +175,6 @@
         - 当一个interface的value和type都unset的时候，它才等于nil
 
         - 不是关键字只是变量名(在buildin/buildin.go中)，如可以定义一个名为nil的变量`var nil = errors.New("11")`不推荐
-     1. 实例
-        ```go
-        type A interface{}
-        type B struct{}
-        var a *B
-
-        print(a == nil)                 // true
-        print(a == (*B)(nil))           // true
-        print((A)(a) == (*B)(nil))      // true，类型都是*B，值都是nil
-
-        print((A)(a) == nil)            // false，结构体的type不是nil
-        ```
 1. 运算符
    - :=：短变量声明运算符
    - + 字符串连接符
@@ -185,35 +193,55 @@
    - 赋值：=、+=等
 1. 数据类型
    - 意义：将数据分为所需内存不同的，充分利用内存
-   - 基本类型
-     1. 布尔：bool，只能是true、false
-     1. 字符串：string，统一编码为utf-8，16byte
-     1. 数值
-        - 有符号整形：int8 int16 int32 int64，数字是位数，如int32为前后20亿
-        - 无符号整形：uint8 uint16 uint32 uint64
-        - 浮点型：float32 float64
-        - 复数：complex64 complex128，即实部和虚部
-     1. 其他
-        - int/uint：32位cpu为4byte，64位为8byte
-        - byte：类似uint8，代表ASCII码的一个字符
-        - rune：类似int32，代表一个Unicode码，可用来操作中文
-        - uintptr：无符号整型，足够大可以容纳任何指针的位模式，跟系统位数有关系，用于存放一个指针
-        - 引用：8byte
-   - 复合类型
-     1. 非引用类型：array、struct
-     1. 引用类型：slice、map、channel、pointer
-     1. 派生
-        - func
-        - interface
-   - 扩展类型
-     1. 组合扩展：struct组合之前的类型
-     1. 别名扩展：type定义别名再扩展
+   - 组成
+     1. 基本类型
+        - 布尔：bool，只能是true、false
+        - 字符串：string，统一编码为utf-8，16byte
+        - 数值
+          1. 有符号整形：int8 int16 int32 int64，数字是位数，如int32为前后20亿
+          1. 无符号整形：uint8 uint16 uint32 uint64
+          1. 浮点型：float32 float64
+          1. 复数：complex64 complex128，即实部和虚部
+        - 其他
+          1. int/uint：32位cpu为4byte，64位为8byte
+          1. byte：类似uint8，代表ASCII码的一个字符
+          1. rune：类似int32，代表一个Unicode码，可用来操作中文
+          1. uintptr：无符号整型，足够大可以容纳任何指针的位模式，跟系统位数有关系，用于存放一个指针
+          1. 引用：8byte
+     1. 复合类型
+        - 非引用类型：array、struct(零值非nil)
+        - 引用类型：slice、map、channel、pointer(零值为nil)
+        - 派生
+          1. func(零值为nil)
+          1. interface(零值为nil)
+     1. 扩展类型
+        - 组合扩展：struct组合之前的类型
+        - 别名扩展：type定义别名再扩展
    - 应用
-     1. 类型零值：变量无初始化时的默认值，可以表现为false，0，""，nil
-        - struct{}{}结构体不占用内存，但是空切片和nil切片都占用内存
+     1. 类型零值
+        - 认识：变量无初始化时的默认值，每种类型都有自己的零值
+          1. struct{}{}结构体不占用内存，但是空切片和nil切片都占用内存
+        - 组成
+          1. 一般类型
+             - 布尔类：false
+             - 数值类：0
+             - 字符串：""
+          1. nil类型：slice/map/channel/point/func/interface，只有这6个
+          1. 结构体类型：所有字段都是零值才为零值
+        - 实例
+            ```go
+            type A interface{}
+            type B struct{}
+            var a *B
+
+            print(a == nil)                 // true
+            print(a == (*B)(nil))           // true
+            print((A)(a) == (*B)(nil))      // true，类型都是*B，值都是nil
+
+            print((A)(a) == nil)            // false，结构体的type不是nil
+            ```
      1. 类型推导：不指定其类型时，由右值推导得出
      1. 类型转换：T(v)，将值v转换为类型T，不同类型相互转换的时候需要显式转换
-     1. 类型别名：type可以定义任何自定义的类型
      1. 类型比较：可不可以比较需要根据类型的特性去判断取舍
         - 不同类型不能比较
         - 不可比较的类型：slice、map、func
@@ -222,6 +250,7 @@
         - 比较interface用反射，reflect.DeepEqual(a, b interface{})
         - 如果复合类型中有不可比较的类型，那么复合类型就不可比较
         - 接口值的动态值不可比较，直接比较会panic
+     1. 类型别名：type可以定义任何自定义的类型
 1. string
    - 认识：字符串，是一串字符连接的任意字节的固定长度的变宽常量字符序列，由单个字节连接起来，使用utf-8编码
      1. 使用双引号或反引号创建
