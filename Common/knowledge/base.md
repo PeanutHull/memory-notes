@@ -1587,8 +1587,8 @@
      1. 分布式存储：一致性hash，解决缓存等分布式系统的扩容、缩容导致数据大量搬移的
 #### 应用
 1. 缓存淘汰策略
-   - FIFO：First In First－Out，先入先出
-   - LIFO：Last In First Out，先入后出
+   - FIFO：First In First－Out，先近先出
+   - LIFO：Last In First Out，先近后出
    - LFU：Least Frequently Used，最少使用算法，需要额外空间记录字块的使用频率
    - LRU：Least Recently Used，最近最少使用算法
 1. LRU

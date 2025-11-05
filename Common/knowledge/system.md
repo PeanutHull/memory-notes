@@ -236,6 +236,597 @@
      1. PushGateway支持Client主动推送metrics到PushGateway，而Prometheus只是定时去Gateway上抓取数据
      1. Alertmanager是独立于Prometheus的一个组件，可以支持Prometheus的查询语句，提供十分灵活的报警方式
    - PromQL：时间序列数据查询语音
+### 直播系统设计
+1. 表结构
+   - 教室
+    ```sql
+    # 教室相关
+    CREATE TABLE `ds_classroom` (
+    `classroom_id` int unsigned NOT NULL AUTO_INCREMENT COMMENT '自增id',
+    `type` tinyint unsigned NOT NULL DEFAULT '0' COMMENT '教室类型:1=>分组教室,2=>大班教室,3=>面授教室,4=>公开课',
+    `title` varchar(512) NOT NULL COMMENT '教室名称（直播课标题）',
+    `template_id` tinyint unsigned NOT NULL DEFAULT '1' COMMENT '模板id，1语文模板 2英语模版',
+    `theme_id` int unsigned NOT NULL DEFAULT '1' COMMENT '主题id',
+    `cover_id` int unsigned NOT NULL COMMENT '封面id（腾讯云图片id）',
+    `platform` varchar(50) NOT NULL COMMENT '直播平台(多平台使用|分割):1=>百家云',
+    `limit` int unsigned NOT NULL COMMENT '人数限制:0=>不限制，非0=>限制最大人数',
+    `pre_enter_time` int unsigned NOT NULL COMMENT '用户可提前进入教室时间（秒）',
+    `close_delay` int unsigned NOT NULL DEFAULT '7200' COMMENT '拖堂时间,秒',
+    `start_at` datetime NOT NULL DEFAULT '1970-01-01 00:00:01' COMMENT '开始时间',
+    `end_at` datetime NOT NULL DEFAULT '1970-01-01 00:00:01' COMMENT '结束时间',
+    `status` tinyint unsigned NOT NULL COMMENT '状态:0=>未开课,1=>上课中,2=>已下课,3=>回放生成中,4=>回放已生成,5=>已取消',
+    `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '最后更新时间',
+    `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`classroom_id`) USING BTREE,
+    KEY `idx_start_at` (`start_at`) USING BTREE
+    ) ENGINE=InnoDB AUTO_INCREMENT=9357 DEFAULT CHARSET=utf8 COMMENT='直播教室表';
+
+    CREATE TABLE `ds_live_room` (
+    `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT '自增id',
+    `classroom_id` int unsigned NOT NULL DEFAULT '0' COMMENT '教室id',
+    `platform` int unsigned NOT NULL DEFAULT '0' COMMENT '直播平台:1=>百家云,2=>声网',
+    `status` tinyint unsigned NOT NULL DEFAULT '0' COMMENT '状态:0=>待创建1=>已创建 2=>禁用',
+    `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '最后更新时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_crid` (`classroom_id`)
+    ) ENGINE=InnoDB AUTO_INCREMENT=8349 DEFAULT CHARSET=utf8 COMMENT='直播间表';
+
+    # 教室模版相关
+    CREATE TABLE `ds_classroom_template` (
+    `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT '自增id',
+    `name` varchar(255) NOT NULL DEFAULT '' COMMENT '模板名称',
+    `description` varchar(255) NOT NULL DEFAULT '' COMMENT '描述',
+    `status` tinyint unsigned NOT NULL DEFAULT '1' COMMENT '状态:1=>启用,2=>禁用',
+    `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '最后更新时间',
+    `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8 COMMENT='教室模板';
+
+    CREATE TABLE `ds_classroom_template_config` (
+    `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `template_id` int unsigned NOT NULL DEFAULT '0' COMMENT 'ds_classroom_template.id',
+    `config_name` varchar(255) NOT NULL DEFAULT '' COMMENT '配置名称',
+    `config_value` text COMMENT '配置值',
+    `config_desc` varchar(255) NOT NULL DEFAULT '' COMMENT '配置描述',
+    `status` tinyint unsigned NOT NULL DEFAULT '1' COMMENT '状态: 0-禁用, 1-启用',
+    `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_template_config` (`template_id`,`config_name`),
+    KEY `idx_config_name` (`config_name`),
+    KEY `idx_status` (`status`)
+    ) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='教室模板配置表';
+
+    # 教室组件相关
+    CREATE TABLE `ds_classroom_components` (
+    `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT '自增id',
+    `template_id` int unsigned NOT NULL DEFAULT '0' COMMENT '模板id',
+    `component_id` int unsigned NOT NULL DEFAULT '0' COMMENT '组件id',
+    `role_id` tinyint unsigned NOT NULL DEFAULT '1' COMMENT '1=>讲师,2=>班主任,3=>导播,4=>学生,5=>希沃',
+    `status` tinyint unsigned NOT NULL DEFAULT '1' COMMENT '状态:1=>启用,2=>禁用',
+    `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '最后更新时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_tpl_id` (`template_id`)
+    ) ENGINE=InnoDB AUTO_INCREMENT=82 DEFAULT CHARSET=utf8 COMMENT='模板组件';
+
+    CREATE TABLE `ds_classroom_seat_config` (
+    `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT '自增id',
+    `classroom_id` int unsigned NOT NULL DEFAULT '0' COMMENT '教室id',
+    `template_code` varchar(25) NOT NULL DEFAULT '' COMMENT '坐席模版批次code，对应',
+    `status` tinyint unsigned NOT NULL DEFAULT '1' COMMENT '状态:1=>启用,2=>禁用',
+    `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '最后更新时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uniq_id` (`classroom_id`,`template_code`) USING BTREE
+    ) ENGINE=InnoDB AUTO_INCREMENT=4301 DEFAULT CHARSET=utf8 COMMENT='班级座位配置表';
+
+    CREATE TABLE `ds_magic_role` (
+    `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT '魔法角色 ID',
+    `role_name` varchar(50) NOT NULL DEFAULT '' COMMENT '角色名称',
+    `role_code` varchar(50) NOT NULL DEFAULT '' COMMENT '角色代码',
+    `description` text NOT NULL COMMENT '角色描述',
+    `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '最后更新时间',
+    PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8 COMMENT='学生魔法角色表';
+
+    CREATE TABLE `ds_magic_role_skin` (
+    `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT '皮肤 ID',
+    `role_id` int unsigned NOT NULL DEFAULT '0' COMMENT '关联的魔法角色 ID',
+    `skin_name` varchar(50) NOT NULL DEFAULT '' COMMENT '皮肤名称',
+    `skin_code` varchar(50) NOT NULL DEFAULT '' COMMENT '皮肤代码',
+    `avatar_url` varchar(255) NOT NULL DEFAULT '' COMMENT '皮肤的头像',
+    `image_url` varchar(255) NOT NULL DEFAULT '' COMMENT '皮肤的图片链接或资源路径',
+    `is_default` tinyint unsigned NOT NULL DEFAULT '0' COMMENT '是否为默认皮肤（1=是，0=否）',
+    `description` text NOT NULL COMMENT '皮肤描述',
+    `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '最后更新时间',
+    PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8 COMMENT='魔法角色皮肤表';
+
+    CREATE TABLE `ds_live_config_student` (
+    `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT '主键 ID',
+    `student_id` int unsigned NOT NULL DEFAULT '0' COMMENT '学生 ID',
+    `config_key` varchar(50) NOT NULL DEFAULT '' COMMENT '配置项名称',
+    `is_enabled` tinyint(1) NOT NULL DEFAULT '1' COMMENT '是否启用（1=启用，0=禁用）',
+    `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '最后更新时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_student_config` (`student_id`,`config_key`) COMMENT '学生 ID 和配置项唯一约束',
+    KEY `idx_student_id` (`student_id`) COMMENT '学生 ID 索引'
+    ) ENGINE=InnoDB AUTO_INCREMENT=13990 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='学生直播配置表';
+
+    # 教室主题相关
+    CREATE TABLE `ds_classroom_theme` (
+    `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT '自增id',
+    `name` varchar(255) NOT NULL DEFAULT '' COMMENT '主题名称',
+    `description` varchar(255) NOT NULL DEFAULT '' COMMENT '描述',
+    `status` tinyint unsigned NOT NULL DEFAULT '1' COMMENT '状态:1=>启用,2=>禁用',
+    `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '最后更新时间',
+    PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='直播间主题表';
+    ```
+   - 声网直播间
+    ```sql
+    # rtc相关
+    CREATE TABLE `ds_agora_rtc_room` (
+    `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT '自增id',
+    `title` varchar(255) NOT NULL DEFAULT '' COMMENT '直播间名称',
+    `live_room_id` int NOT NULL DEFAULT '0' COMMENT 'ds_live_room.id',
+    `classroom_id` int unsigned NOT NULL DEFAULT '0' COMMENT '教室id',
+    `channel_id` varchar(26) NOT NULL DEFAULT '' COMMENT '频道id',
+    `room_type` tinyint unsigned NOT NULL DEFAULT '4' COMMENT '直播间类型 0：1对1互动教学 2：大班课 4：在线互动小班课',
+    `is_mock_live` tinyint unsigned NOT NULL DEFAULT '0' COMMENT '是否伪直播:0=>否,1=>是',
+    `mock_video_id` varchar(64) NOT NULL DEFAULT '' COMMENT '关联伪直播视频id',
+    `pre_enter_time` int unsigned NOT NULL DEFAULT '1800' COMMENT '提前进入直播间时间，秒',
+    `close_delay` int unsigned NOT NULL DEFAULT '7200' COMMENT '拖堂时间，秒',
+    `start_at` datetime NOT NULL DEFAULT '1970-01-01 00:00:00' COMMENT '开始时间',
+    `end_at` datetime NOT NULL DEFAULT '1970-01-01 00:00:00' COMMENT '结束时间',
+    `live_status` tinyint unsigned NOT NULL DEFAULT '0' COMMENT '直播状态：0=>未开始,1=>正在直播,2=>直播结束',
+    `playback_status` tinyint unsigned NOT NULL DEFAULT '0' COMMENT '回放状态：0=>未录制 10=>录制中 20=>转码中 30=>回放生成失败 100=>回放生成成功',
+    `pull_stream` varchar(1024) NOT NULL DEFAULT '' COMMENT '直播源拉流地址',
+    `push_stream` varchar(1024) NOT NULL DEFAULT '' COMMENT '直播源推流地址',
+    `stream_name` varchar(128) NOT NULL DEFAULT '' COMMENT '直播流名称',
+    `status` tinyint unsigned NOT NULL DEFAULT '0' COMMENT '状态:0=>未上架,1=>定时上架,2=>已上架,3=>已下架',
+    `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '最后更新时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_crid` (`classroom_id`),
+    KEY `idx_channel_id` (`channel_id`)
+    ) ENGINE=InnoDB AUTO_INCREMENT=5894 DEFAULT CHARSET=utf8 COMMENT='声网直播间表';
+
+    CREATE TABLE `ds_classroom_cloud_player` (
+    `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `classroom_id` int unsigned NOT NULL DEFAULT '0' COMMENT '教室ID',
+    `channel_name` varchar(128) NOT NULL DEFAULT '' COMMENT '频道名称',
+    `player_id` varchar(64) NOT NULL DEFAULT '' COMMENT '声网云播放器ID',
+    `player_name` varchar(128) NOT NULL DEFAULT '' COMMENT '播放器名称',
+    `player_account` varchar(128) NOT NULL DEFAULT '' COMMENT '播放用户(player_uid二选一)',
+    `player_uid` varchar(128) NOT NULL DEFAULT '' COMMENT '播放用户uid(player_account二选一)',
+    `stream_url` varchar(512) NOT NULL DEFAULT '' COMMENT '流媒体URL',
+    `token` varchar(512) NOT NULL DEFAULT '' COMMENT 'Token',
+    `status` tinyint NOT NULL DEFAULT '1' COMMENT '播放器状态: 1=creating, 2=playing, 3=paused, 4=stopped, 5=error, 6=deleted',
+    `audio_options` json DEFAULT NULL COMMENT '音频配置选项',
+    `video_options` json DEFAULT NULL COMMENT '视频配置选项',
+    `idle_timeout` int NOT NULL DEFAULT '300' COMMENT '空闲超时时间(秒)',
+    `play_ts` int NOT NULL DEFAULT '0' COMMENT '播放时间戳',
+    `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_player_id` (`player_id`),
+    KEY `idx_classroom_id` (`classroom_id`),
+    KEY `idx_channel_name` (`channel_name`),
+    KEY `idx_status_created` (`status`,`created_at`),
+    KEY `idx_classroom_status` (`classroom_id`,`status`)
+    ) ENGINE=InnoDB AUTO_INCREMENT=88 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='教室云播放器关联表';
+
+    CREATE TABLE `ds_classroom_cloud_player_event` (
+    `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `player_id` varchar(255) NOT NULL DEFAULT '' COMMENT '云端播放器ID',
+    `event_type` tinyint NOT NULL DEFAULT '0' COMMENT '事件类型: 1=Player Created, 3=Player Destroyed, 4=Player Status Changed',
+    `x_request_id` varchar(255) NOT NULL DEFAULT '' COMMENT '请求ID',
+    `lts` bigint NOT NULL DEFAULT '0' COMMENT '事件时间戳(毫秒)',
+    `status` varchar(50) NOT NULL DEFAULT '' COMMENT '播放器状态: connecting, success, running, failed, stopped',
+    `destroy_reason` varchar(100) NOT NULL DEFAULT '' COMMENT '销毁原因: Delete Request, Internal Error, Idle Timeout, Stream Stopped',
+    `payload` json DEFAULT NULL COMMENT '原始事件载荷数据',
+    `received_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '接收时间',
+    `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_player_id` (`player_id`),
+    KEY `idx_lts` (`lts`),
+    KEY `idx_received_at` (`received_at`),
+    KEY `idx_player_event_time` (`player_id`,`event_type`,`lts`)
+    ) ENGINE=InnoDB AUTO_INCREMENT=490 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='教室云端播放器事件日志表';
+
+    CREATE TABLE `ds_agora_rtc_room_cloud_recording_log` (
+    `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT '自增id',
+    `classroom_id` int unsigned NOT NULL DEFAULT '0' COMMENT '教室id',
+    `channel_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '直播间名称',
+    `mode` varchar(25) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'individual' COMMENT '录制模式',
+    `recording_uid` int unsigned NOT NULL DEFAULT '0' COMMENT '录制uid',
+    `resource_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '回放录制resource_id',
+    `sid` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '云录制sid',
+    `remark` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '请求开启云录制' COMMENT '状态中文说明',
+    `detail` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '事件详细信息',
+    `status` tinyint NOT NULL DEFAULT '-1' COMMENT '状态:-1=>开启云录制(上课),-2=>停止云录制(下课),其它与声网一致',
+    `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '最后更新时间',
+    `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`id`) USING BTREE,
+    KEY `cls_id` (`classroom_id`) USING BTREE COMMENT '教室id'
+    ) ENGINE=InnoDB AUTO_INCREMENT=315499 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='云录制日志';
+
+    CREATE TABLE `ds_agora_rtc_room_playback_state_log` (
+    `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT '自增id',
+    `stream_id` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '声网创建后返回的id',
+    `stream_name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '推流名称',
+    `channel_id` varchar(26) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '频道id',
+    `raw_options` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '原配置参数',
+    `audio_options` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci COMMENT '转码配置',
+    `video_options` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci COMMENT '视频转码配置',
+    `rtmp_url` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT 'rtmp链接',
+    `create_ts` datetime NOT NULL DEFAULT '1970-01-01 00:00:00' COMMENT '声网创建时间',
+    `update_ts` datetime NOT NULL DEFAULT '1970-01-01 00:00:00' COMMENT '声网最后更新时间',
+    `idle_time_out` int unsigned NOT NULL DEFAULT '0' COMMENT '最长超时时间',
+    `agora_lts` datetime NOT NULL DEFAULT '1970-01-01 00:00:00' COMMENT '声网服务器触发时间',
+    `agora_request_id` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '声网响应id',
+    `agora_sid` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '声网sid',
+    `status` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '状态',
+    `destroy_reason` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '失败原因',
+    `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '最后更新时间',
+    `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`id`) USING BTREE
+    ) ENGINE=InnoDB AUTO_INCREMENT=5818 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='声网推流日志';
+
+    CREATE TABLE `ds_classroom_sessions` (
+    `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT ' ',
+    `classroom_id` int NOT NULL DEFAULT '0' COMMENT '教室id',
+    `channel_id` varchar(26) NOT NULL DEFAULT '' COMMENT '频道id',
+    `student_id` int NOT NULL DEFAULT '0' COMMENT '学生Id',
+    `call_id` varchar(50) NOT NULL DEFAULT '' COMMENT '通话 ID',
+    `join_ts` int NOT NULL DEFAULT '0' COMMENT '用户加入频道的时间戳',
+    `leave_ts` int NOT NULL DEFAULT '0' COMMENT '用户离开频道的时间戳',
+    `start_ts` int NOT NULL DEFAULT '0' COMMENT '查询的起始时间 Unix UTC+0时间戳（秒）',
+    `end_ts` int NOT NULL DEFAULT '0' COMMENT '查询的结束时间 Unix UTC+0时间戳（秒）',
+    `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '最后更新时间',
+    `start_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '查询的起始时间 Unix UTC+8时间',
+    `end_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '查询的结束时间 Unix UTC+8时间',
+    PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB AUTO_INCREMENT=27177 DEFAULT CHARSET=utf8 COMMENT='声网拉取的通话详情表';
+
+    CREATE TABLE `ds_playback` (
+    `playback_id` int unsigned NOT NULL COMMENT '回放id',
+    `classroom_id` int NOT NULL COMMENT '直播教室id',
+    `platform` tinyint unsigned NOT NULL COMMENT '直播平台:1=>百家云',
+    `platform_room_id` bigint NOT NULL COMMENT '平台对应直播间id',
+    `duration` int unsigned NOT NULL DEFAULT '0' COMMENT '回放时长',
+    `video_id` varchar(255) NOT NULL COMMENT '视频id',
+    `upload_time` datetime NOT NULL COMMENT '上传时间',
+    `update_result` text NOT NULL COMMENT '上传结果',
+    `playback_expires` datetime NOT NULL COMMENT '回放失效时间',
+    `status` tinyint unsigned NOT NULL COMMENT '回放状态 0、无回放 1、生成回放中 2、回放已上架 3、回放已下架 4.定时上架5.暂不上架''',
+    `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '最后更新时间',
+    `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`playback_id`) USING BTREE,
+    KEY `idx_crid` (`classroom_id`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='直播回放';
+
+    CREATE TABLE `ds_classroom_playback` (
+    `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT '自增id',
+    `classroom_id` int unsigned NOT NULL DEFAULT '0' COMMENT '直播教室ID',
+    `mock_video_id` varchar(64) NOT NULL DEFAULT '' COMMENT '伪直播视频id',
+    `playback_file_id` bigint unsigned NOT NULL DEFAULT '0' COMMENT '直播回放文件id（伪直播使用）',
+    `playback_id` bigint unsigned NOT NULL DEFAULT '0' COMMENT '回放关联id',
+    `status` tinyint unsigned NOT NULL DEFAULT '1' COMMENT '状态:0=>无效,1=>有效',
+    `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '最后更新时间',
+    `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`id`) USING BTREE,
+    KEY `cr_id` (`classroom_id`) USING BTREE COMMENT '直播教室id'
+    ) ENGINE=InnoDB AUTO_INCREMENT=994 DEFAULT CHARSET=utf8 COMMENT='直播教室回放表';
+
+    # rtm相关
+    CREATE TABLE `ds_rtm` (
+    `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT '自增id',
+    `classroom_id` int unsigned NOT NULL DEFAULT '0' COMMENT '教室id',
+    `class_id` int unsigned NOT NULL DEFAULT '0' COMMENT '大班id',
+    `subclass_id` int unsigned NOT NULL DEFAULT '0' COMMENT '小班id',
+    `platform` int unsigned NOT NULL DEFAULT '0' COMMENT '所属平台',
+    `type` tinyint unsigned NOT NULL DEFAULT '1' COMMENT '通道类型:1=>老师,2=>小班,3=>学生,4=>希沃',
+    `status` tinyint(1) NOT NULL DEFAULT '1' COMMENT '1:正常 2:禁用',
+    `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '最后更新时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_crid` (`classroom_id`)
+    ) ENGINE=InnoDB AUTO_INCREMENT=373849 DEFAULT CHARSET=utf8 COMMENT='信令表';
+
+    CREATE TABLE `ds_agora_rtm` (
+    `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT '自增id',
+    `rtm_id` int unsigned NOT NULL DEFAULT '0' COMMENT 'rtm_id',
+    `classroom_id` int unsigned NOT NULL DEFAULT '0' COMMENT '教室id',
+    `channel_id` varchar(255) NOT NULL DEFAULT '' COMMENT '频道id',
+    `status` tinyint(1) NOT NULL DEFAULT '1' COMMENT '1:正常 2:禁用',
+    `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '最后更新时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_crid` (`classroom_id`),
+    KEY `idx_rtm_id` (`rtm_id`)
+    ) ENGINE=InnoDB AUTO_INCREMENT=373849 DEFAULT CHARSET=utf8 COMMENT='声网信令表';
+
+
+    # im相关
+    CREATE TABLE `ds_chat_room` (
+    `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT '自增id',
+    `classroom_id` int unsigned NOT NULL DEFAULT '0' COMMENT '教室id',
+    `class_id` int unsigned NOT NULL DEFAULT '0' COMMENT '大班id',
+    `subclass_id` int unsigned NOT NULL DEFAULT '0' COMMENT '小班id',
+    `platform` int unsigned NOT NULL DEFAULT '2' COMMENT '平台id:1=>百家云,2=>声网',
+    `status` tinyint(1) NOT NULL DEFAULT '1' COMMENT '1:正常 2:禁用',
+    `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '最后更新时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_crid` (`classroom_id`)
+    ) ENGINE=InnoDB AUTO_INCREMENT=485550 DEFAULT CHARSET=utf8 COMMENT='聊天室表';
+
+    CREATE TABLE `ds_huanxin_chat_room` (
+    `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT '自增id',
+    `classroom_id` int unsigned NOT NULL DEFAULT '0' COMMENT '教室id',
+    `chat_room_id` int unsigned NOT NULL DEFAULT '0' COMMENT '聊天室id',
+    `room_id` varchar(50) NOT NULL DEFAULT '' COMMENT '环信聊天室id',
+    `name` varchar(255) NOT NULL DEFAULT '' COMMENT '组件名称',
+    `description` varchar(255) NOT NULL DEFAULT '' COMMENT '描述',
+    `status` tinyint unsigned NOT NULL DEFAULT '1' COMMENT '状态:1=>启用,2=>禁用',
+    `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '最后更新时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_crid` (`classroom_id`),
+    KEY `idx_chat_room_id` (`chat_room_id`)
+    ) ENGINE=InnoDB AUTO_INCREMENT=485549 DEFAULT CHARSET=utf8 COMMENT='环信聊天室表';
+
+
+    CREATE TABLE `ds_class_chat_message` (
+    `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT '自增id',
+    `msg_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '百家云的消息ID',
+    `mass_id` varchar(255) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '群发消息ID(ds_class_chat_mass_message.id),环信的主消息id',
+    `class_id` int unsigned NOT NULL DEFAULT '0' COMMENT '大班id',
+    `class_name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '大班名称',
+    `assistant_id` int unsigned NOT NULL DEFAULT '0' COMMENT '老师id',
+    `subclass_id` int unsigned NOT NULL DEFAULT '0' COMMENT '小班id',
+    `subclass_name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '小班名称',
+    `group_id` varchar(255) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '分组id',
+    `group_name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '分组名称',
+    `schedule_class_id` int unsigned NOT NULL DEFAULT '0' COMMENT '大班排课id',
+    `message_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '消息ID',
+    `send_time` datetime NOT NULL DEFAULT '1970-01-01 00:00:00' COMMENT '发送时间',
+    `recall_status` tinyint unsigned NOT NULL DEFAULT '1' COMMENT '撤回状态 1:正常，2:撤回',
+    `reference_message_id` varchar(255) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0' COMMENT '引用消息的message_id',
+    `audio_duration` int unsigned NOT NULL DEFAULT '0' COMMENT '语音的音频时长',
+    `attachment_type` tinyint NOT NULL DEFAULT '0' COMMENT '附件类型',
+    `attachment_url` varchar(255) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '附件地址',
+    `msg_type` tinyint unsigned NOT NULL DEFAULT '1' COMMENT '消息类型 1=>文本,2=>语音',
+    `user_id` int unsigned NOT NULL DEFAULT '0' COMMENT '用户id',
+    `bjy_user_id` int unsigned NOT NULL DEFAULT '0' COMMENT '用户ID',
+    `name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '发言用户名称',
+    `user_role` tinyint unsigned NOT NULL DEFAULT '0' COMMENT '用户角色',
+    `avatar` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '头像地址',
+    `send_msg_role` tinyint unsigned NOT NULL DEFAULT '0' COMMENT '发送消息角色',
+    `content` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci COMMENT '学生姓名',
+    `has_reference` tinyint unsigned NOT NULL COMMENT '是否有引用消息:0=>无,1=>有',
+    `reference_message` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci COMMENT '引用内容',
+    `ip` varchar(15) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT '0.0.0.0' COMMENT '发言人IP',
+    `area` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '城市名称',
+    `is_filtered` tinyint unsigned NOT NULL COMMENT '是否过滤消息:0=>否,1=>是',
+    `is_virtual_chat` tinyint unsigned NOT NULL COMMENT '是否虚拟消息:0=>否,1=>是',
+    `is_delete` tinyint unsigned NOT NULL DEFAULT '0' COMMENT '是否删除:1=>是,0=>否',
+    `owner_id` varchar(255) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '所有者标识',
+    `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '最后更新时间',
+    `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `classroom_id` int unsigned NOT NULL DEFAULT '0' COMMENT '教室id',
+    PRIMARY KEY (`id`),
+    KEY `idx_send_time` (`send_time`) USING BTREE,
+    KEY `idx_msg_id` (`msg_id`) USING BTREE,
+    KEY `idx_class_id` (`class_id`) USING BTREE,
+    KEY `idx_assistant_id` (`assistant_id`) USING BTREE,
+    KEY `idx_message_id` (`message_id`) USING BTREE,
+    KEY `idx_classroom_id` (`classroom_id`),
+    KEY `idx_subclass_id` (`subclass_id`),
+    KEY `idex_sci` (`schedule_class_id`)
+    ) ENGINE=InnoDB AUTO_INCREMENT=13675638 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='班级聊天记录表';
+
+    CREATE TABLE `ds_class_chat_mass_message` (
+    `id` int unsigned NOT NULL AUTO_INCREMENT,
+    `class_id` int unsigned NOT NULL DEFAULT '0' COMMENT '大班id',
+    `class_name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '大班名称',
+    `assistant_id` int unsigned NOT NULL DEFAULT '0' COMMENT '老师id',
+    `schedule_class_id` int unsigned NOT NULL DEFAULT '0' COMMENT '大班排课id',
+    `send_time` datetime NOT NULL DEFAULT '1970-01-01 00:00:00' COMMENT '发送时间',
+    `content` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci COMMENT '学生姓名',
+    `has_reference` tinyint unsigned NOT NULL COMMENT '是否有引用消息:0=>无,1=>有',
+    `reference_message` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci COMMENT '引用内容',
+    `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '最后更新时间',
+    `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_assistant_id` (`assistant_id`) USING BTREE,
+    KEY `idx_schedule_class_id` (`schedule_class_id`) USING BTREE,
+    KEY `idx_send_time` (`send_time`) USING BTREE
+    ) ENGINE=InnoDB AUTO_INCREMENT=491 DEFAULT CHARSET=utf8 COMMENT='班主任群发消息';
+    ```
+   - 教室成员
+    ```sql
+    # 教室成员
+    CREATE TABLE `ds_classroom_member` (
+    `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT '自增id',
+    `classroom_id` int unsigned NOT NULL DEFAULT '0' COMMENT '教室id',
+    `class_id` int unsigned NOT NULL DEFAULT '0' COMMENT '大班id',
+    `subclass_id` int unsigned NOT NULL DEFAULT '0' COMMENT '小班id',
+    `member_id` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '0' COMMENT '教室成员id',
+    `role` tinyint unsigned NOT NULL DEFAULT '1' COMMENT '配置所属角色:1=>讲师,2=>班主任,3=>导播,4=>学生',
+    `status` tinyint unsigned NOT NULL DEFAULT '1' COMMENT '状态：1=>正常,2=>无效',
+    `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '最后更新时间',
+    `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`id`) USING BTREE,
+    KEY `idx_cid_mid` (`classroom_id`,`member_id`),
+    KEY `idx_cir` (`classroom_id`,`role`)
+    ) ENGINE=InnoDB AUTO_INCREMENT=16549620 DEFAULT CHARSET=utf8 COMMENT='教室成员表';
+
+    CREATE TABLE `ds_classroom_event` (
+    `id` int unsigned NOT NULL AUTO_INCREMENT,
+    `classroom_id` int unsigned NOT NULL COMMENT '教室id',
+    `name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '用户名称',
+    `student_id` int NOT NULL COMMENT '用户id',
+    `event_type` varchar(8) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '事件类型: user_in或user_out',
+    `event_category` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'app' COMMENT '事件分类:app表示是豆伴匠各端的事件；mirror表示投屏类事件',
+    `client_seq` bigint NOT NULL DEFAULT '0' COMMENT '事件顺序号（毫秒级时间戳），来自Webhook的clientSeq字段',
+    `event_time` datetime NOT NULL DEFAULT '1970-01-01 00:00:01' COMMENT '发生时间',
+    `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '最后更新时间',
+    `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`id`),
+    KEY `cid_sid_etp_et` (`classroom_id`,`student_id`,`event_type`,`event_time`)
+    ) ENGINE=InnoDB AUTO_INCREMENT=10903686 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='成员进出教室记录';
+    ```
+   - 班课
+    ```sql
+    CREATE TABLE `ds_schedule_class` (
+    `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+    `classroom_id` int unsigned NOT NULL DEFAULT '0' COMMENT '教室id',
+    `classroom_type` tinyint unsigned NOT NULL DEFAULT '1' COMMENT '教室类型:1=>分组教室,2=>大班教室',
+    `class_id` int unsigned NOT NULL DEFAULT '0' COMMENT '大班id',
+    `course_id` int unsigned NOT NULL DEFAULT '0' COMMENT '课程id',
+    `course_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '课程名称',
+    `class_lesson_id` int unsigned NOT NULL DEFAULT '0' COMMENT '课节id',
+    `teacher_schedule_id` int unsigned NOT NULL DEFAULT '0' COMMENT '主讲排课表id',
+    `lesson_name` varchar(256) NOT NULL COMMENT '课节名称',
+    `lesson_sort` int unsigned NOT NULL DEFAULT '0' COMMENT '课序',
+    `show_lesson_sort` tinyint unsigned NOT NULL DEFAULT '1' COMMENT '是否展示课序:1=>展示,2=>不展示',
+    `teaching_mode` tinyint unsigned NOT NULL DEFAULT '1' COMMENT '教学方式:1=>直播课,2=>伪直播,3=>面授',
+    `classroom_playback_id` bigint unsigned NOT NULL DEFAULT '0' COMMENT '课节资源&回放关联id',
+    `lesson_type` tinyint unsigned NOT NULL DEFAULT '1' COMMENT '课节类型:1=>正常课程,2=>报到课',
+    `class_date` date NOT NULL COMMENT '课程日期',
+    `week_day` tinyint NOT NULL COMMENT '周几:1(周一)-7(周日)',
+    `start_at` time NOT NULL DEFAULT '00:00:00' COMMENT '开始时间',
+    `end_at` time NOT NULL DEFAULT '00:00:00' COMMENT '结束时间',
+    `status` tinyint unsigned NOT NULL DEFAULT '0' COMMENT '状态:0=>未上课,1=>已上课,2=>上课中,3=>已下课,4=>其它',
+    `schedule_status` tinyint unsigned NOT NULL DEFAULT '0' COMMENT '排课状态:0=>未排课,1=>已排课',
+    `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '最后更新时间',
+    `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `teaching_platform` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '2' COMMENT '教学平台:1百家云|2声网|3线下教室，多个平台使用英文逗号分割',
+    `delivery_platform` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '1,2,6' COMMENT '交付应用:1=>豆伴匠 App|2=>豆伴匠 Pc|3=>豆伴匠训练营小程序|4=>王者Club App|5=>线下教室|6=>学习机，多个交付app使用英文逗号分割',
+    `online_status` tinyint unsigned NOT NULL DEFAULT '1' COMMENT '上架状态：1=>上架，0=>下架',
+    PRIMARY KEY (`id`),
+    KEY `idx_cid` (`class_id`),
+    KEY `idx_cdate` (`class_date`),
+    KEY `idx_crid` (`classroom_id`)
+    ) ENGINE=InnoDB AUTO_INCREMENT=8861 DEFAULT CHARSET=utf8 COMMENT='班级排课表';
+
+    CREATE TABLE `ds_schedule_director` (
+    `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+    `schedule_class_id` int unsigned NOT NULL DEFAULT '0' COMMENT '大班排课id',
+    `teacher_id` int NOT NULL COMMENT '老师id',
+    `class_id` int NOT NULL COMMENT '大班id',
+    `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '最后更新时间',
+    `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`id`),
+    KEY `schedule_class_id` (`schedule_class_id`) USING BTREE,
+    KEY `idx_tid` (`teacher_id`)
+    ) ENGINE=InnoDB AUTO_INCREMENT=6156 DEFAULT CHARSET=utf8 COMMENT='导播排课表';
+
+    CREATE TABLE `ds_schedule_student` (
+    `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+    `student_id` int unsigned NOT NULL COMMENT '学生id',
+    `class_id` int NOT NULL COMMENT '大班id',
+    `subclass_id` int NOT NULL COMMENT '小班id',
+    `schedule_class_id` int unsigned NOT NULL DEFAULT '0' COMMENT '班级排课id',
+    `origin_schedule_id` int unsigned NOT NULL DEFAULT '0' COMMENT '原排课id',
+    `type` tinyint unsigned NOT NULL DEFAULT '0' COMMENT '课表类型:0=>正常课程,1=>补课,2=>退课,3=>转出,4=>转入,5=>赠课',
+    `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '最后更新时间',
+    `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`id`),
+    KEY `schedule_class_id` (`schedule_class_id`) USING BTREE,
+    KEY `idx_uid` (`student_id`),
+    KEY `idx_cid` (`class_id`),
+    KEY `idx_scid` (`subclass_id`),
+    KEY `idx_subclass_schedule_type` (`subclass_id`,`schedule_class_id`,`type`)
+    ) ENGINE=InnoDB AUTO_INCREMENT=6406943 DEFAULT CHARSET=utf8 COMMENT='学生排课表';
+
+    CREATE TABLE `ds_class_roster` (
+    `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT '自增id',
+    `student_id` int unsigned NOT NULL COMMENT '学生id',
+    `class_id` int unsigned NOT NULL DEFAULT '0' COMMENT '所属大班id',
+    `subclass_id` int unsigned NOT NULL DEFAULT '0' COMMENT '所属小班id',
+    `origin_class_id` int unsigned NOT NULL DEFAULT '0' COMMENT '原所属大班id',
+    `origin_subclass_id` int unsigned NOT NULL DEFAULT '0' COMMENT '原所属小班id',
+    `alloc_flow_id` int unsigned NOT NULL DEFAULT '0' COMMENT '记录分班过程日志',
+    `status` tinyint unsigned NOT NULL DEFAULT '1' COMMENT '状态:入班类型:1=>正常分班,2=>转入,3=退班,4=>转出',
+    `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '最后更新时间',
+    `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_cid` (`class_id`),
+    KEY `idx_scid` (`subclass_id`),
+    KEY `uid_status` (`student_id`,`status`)
+    ) ENGINE=InnoDB AUTO_INCREMENT=580313 DEFAULT CHARSET=utf8 COMMENT='班级花名册';
+
+    CREATE TABLE `ds_schedule_assistant` (
+    `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+    `schedule_class_id` int unsigned NOT NULL DEFAULT '0' COMMENT '大班排课id',
+    `teacher_id` int NOT NULL COMMENT '老师id',
+    `class_id` int NOT NULL COMMENT '大班id',
+    `subclass_id` int NOT NULL COMMENT '小班id',
+    `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '最后更新时间',
+    `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`id`),
+    KEY `schedule_class_id` (`schedule_class_id`) USING BTREE,
+    KEY `idx_tid` (`teacher_id`),
+    KEY `idx_class_id` (`class_id`) USING BTREE,
+    KEY `idx_subclass_id` (`subclass_id`) USING BTREE
+    ) ENGINE=InnoDB AUTO_INCREMENT=601588 DEFAULT CHARSET=utf8 COMMENT='班主任排课表';
+
+    CREATE TABLE `ds_student_assistant_relation` (
+    `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT '自增id',
+    `student_id` int unsigned NOT NULL DEFAULT '0' COMMENT '学生id',
+    `class_id` int unsigned NOT NULL DEFAULT '0' COMMENT '所属大班id',
+    `assistant_id` int unsigned NOT NULL DEFAULT '0' COMMENT '班主任id',
+    `status` tinyint(1) NOT NULL DEFAULT '1' COMMENT '1:在读 2:退班',
+    `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '最后更新时间',
+    `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_student_id` (`student_id`),
+    KEY `idx_cid_sid_sts` (`class_id`,`student_id`,`status`)
+    ) ENGINE=InnoDB AUTO_INCREMENT=231579 DEFAULT CHARSET=utf8 COMMENT='学生归属班级班主任表';
+
+    CREATE TABLE `ds_schedule_teacher` (
+    `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+    `teacher_id` int NOT NULL COMMENT '老师id',
+    `classroom_id` int unsigned NOT NULL DEFAULT '0' COMMENT '教室id',
+    `classroom_type` tinyint unsigned NOT NULL DEFAULT '1' COMMENT '教室类型:1=>分组教室,2=>大班教室',
+    `classroom_seat_template_code` varchar(25) NOT NULL DEFAULT '' COMMENT '座位模版编码',
+    `course_id` int unsigned NOT NULL DEFAULT '0' COMMENT '课程id',
+    `course_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '课程名称',
+    `lesson_name` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '课节名称',
+    `lesson_type` tinyint unsigned NOT NULL DEFAULT '1' COMMENT '课节类型:1=>正常课程,2=>报到课',
+    `lesson_sort` int unsigned NOT NULL DEFAULT '0' COMMENT '课序',
+    `show_lesson_sort` tinyint unsigned NOT NULL DEFAULT '1' COMMENT '是否展示课序:1=>展示,2=>不展示',
+    `teaching_mode` tinyint unsigned NOT NULL DEFAULT '1' COMMENT '教学方式:1=>直播课,2=>伪直播',
+    `classroom_playback_id` bigint unsigned NOT NULL DEFAULT '0' COMMENT '课节资源&回放关联id',
+    `online_status` tinyint unsigned NOT NULL DEFAULT '1' COMMENT '上架状态：1=>上架，0=>下架',
+    `class_date` date NOT NULL DEFAULT '1970-01-01' COMMENT '课程日期',
+    `week_day` tinyint NOT NULL COMMENT '周几:1(周一)-7(周日)',
+    `start_at` time NOT NULL DEFAULT '00:00:00' COMMENT '开始时间',
+    `end_at` time NOT NULL DEFAULT '00:00:00' COMMENT '结束时间',
+    `teaching_start_at` datetime NOT NULL DEFAULT '1970-01-01 00:00:00' COMMENT '课节开始时间',
+    `teaching_end_at` datetime NOT NULL DEFAULT '1970-01-01 00:00:00' COMMENT '课节结束时间',
+    `status` tinyint unsigned NOT NULL DEFAULT '0' COMMENT '状态:0=>未开课,1=>上课中,2=>已下课,3=>其它',
+    `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '最后更新时间',
+    `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `teaching_platform` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '2' COMMENT '教学平台:1百家云|2声网|3线下教室，多个平台使用英文逗号分割',
+    `delivery_platform` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '1,2,6' COMMENT '交付应用:1=>豆伴匠 App|2=>豆伴匠 Pc|3=>豆伴匠训练营小程序|4=>王者Club App|5=>线下教室|6=>学习机，多个交付app使用英文逗号分割',
+    PRIMARY KEY (`id`),
+    KEY `idx_tid` (`teacher_id`),
+    KEY `idx_class_date` (`class_date`) USING BTREE
+    ) ENGINE=InnoDB AUTO_INCREMENT=8231 DEFAULT CHARSET=utf8 COMMENT='主讲排课表';
+    ```
 ### IM设计
 1. 认知
    - 消息是广义的，还存在用户看不见的各种指令和通知，如进群退群通知、好友添加通知等
