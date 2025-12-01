@@ -79,9 +79,12 @@
         });
         ```
    - SSE
-     1. 认识：Server-Sent Events，基于http的允许服务端主动推送的技术，客户端不能向上发数据，是单向通讯，是html5标准的一部分，比websocket更简单轻量
+     1. 认识：Server-Sent Events，基于http的允许服务端主动推送的技术，是html5标准的一部分，比websocket更简单轻量
+        - 数据传输
+          1. 使用纯文本格式：content-type：text/event-stream
+          1. 数据由一系列消息组成，每条消息以两个换行符 \n\n 结尾
         - 自动重连机制：一旦连接断开，靠的是浏览器自动重连，每个浏览器的重连策略和措施可能不同
-        - content-type：text/event-stream
+        - 单向通讯：客户端不能向上发数据，客户端发送普通的HTTP请求，但那是另一个连接
      1. 作用
         - 可实现长耗时的异步处理后通知
         - 消息通知

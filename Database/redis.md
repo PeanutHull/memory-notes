@@ -54,9 +54,9 @@
         - srandmember：返回一个随机元素
    - sorted set
      1. 认识：有序集合 zset，string类型的成员唯一的有序集合，每个元素关联一个double类型的分数
-        - 成员唯一，分数可重复
-        - 可通过分数进行排序，通过哈希表实现，最多40亿个(2^232-1)
-        - 适用于有序且不重复
+        - 适用于有序且不重复：成员(字符串)唯一，分数可重复
+        - 排序规则：先根据score由小到大升序排序，score按照成员字典序升序排列
+        - 通过哈希表实现，最多40亿个(2^232-1)
      1. 命令
         - zadd/zrem/zremrangebylex/zremrangebyscore/zremrangebyrank：增加、删除
         - zcard/zcount/zlexcount/zscan：成员数、指定分数区间的成员数、指定字典区间的成员数
@@ -65,6 +65,8 @@
         - zscore/zrank：返回分数值、返回指定成员索引
         - zincrby：已存在的score值增量加increment，不存在则添加
         - zinterstore/zunionstore：计算交并集
+     1. 实例
+        - 获取所有成员：`zrange myzset 0 -1`
    - stream
      1. 认识：强大的支持多播的可持久化消息队列，代替PubSub未来消息队列的最佳方案，借鉴kafka，v5.0
         - 消息链表存储id和内容，是持久化的
@@ -274,7 +276,10 @@
    - 认识：用在集群环境中，允许将键强制存储在同一个哈希槽hash slot中，v4.0
      1. 用法：`xxxx{}:xxxx`，redis会只计算{}中的数据作为分槽依据
    - 常见错误
-     1. `CROSSSLOT Keys in request don't hash to the same slot`：是因为集群模式的redis，一次请求多个key不在同一个槽中会报错，可以使用hashtag只对某些字符进行tag计算，从而指向同一个槽
+     1. `CROSSSLOT Keys in request don't hash to the same slot`：是因为集群模式的redis，一次请求多个key必须同一个槽solt中，使用相同内容的hashtag进行tag计算，从而指向同一个槽
+        - 常见于
+          1. lua脚本中操作的多个key没有位于同一个slot
+          1. 使用的多键命令如mset、sunion中的多个key散列到了不同的slot
 #### 应用
 1. 锁：锁的性能很高
    - 使用incr的原子计数特性实现库存扣减，防止超卖

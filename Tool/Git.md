@@ -101,7 +101,7 @@
     git push XXX
     ```
 #### revert
-1. 认识：撤销某次提交，修改HEAD继续往前，产生新的commit，但是会撤销特定的提交(某次提交的代码)，同时不会修改分支的历史，就很好用
+1. 认识：撤销某n次提交，修改HEAD继续往前，产生新的commit，不会修改分支的历史，不应该使用reset --hard和push -f，使用revert
 1. git revert < HASH >
 1. git revert HEAD
 1. 理解：reset是把HEAD向后移动。revert继续往前，不会改变项目历史

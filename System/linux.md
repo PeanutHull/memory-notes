@@ -1155,11 +1155,13 @@
    - pwdx <pid>：打印出指定进程号的工作目录
    - 查看/设置允许打开的最大文件句柄数：`ulimit -n xx`，重启或用户退出失效
 1. 运行
-   - 后台运行：xx &
+   - 后台运行：xx &，断开shell后进程终止
    - 断开shell继续运行：因为shell断开进程收到SIGHUP，该信号的默认处理导致进程终止，进程不终止主要是处理SIGHUP信号
      1. 未运行
         - `nohup xx &`：需要按下任意键返回shell，并且使用exit退出，不能直接断开shell，否则还是会shutdown
-          1. 同时不输出日志：`nohup xx 1>/dev/null 2>&1 &`
+          1. 输出日志到文件(覆盖模式)：`nohup command > output.log 2>&1 &`
+          1. 输出日志到文件(最佳模式)：`nohup command >> output.log 2>&1 &`
+          1. 同时不输出日志(包括标准输出和标准错误)：`nohup xx > /dev/null 2>&1 &`
         - `setsid xx &`
      1. 已运行
         - disown

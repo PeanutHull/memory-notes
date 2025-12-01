@@ -368,8 +368,17 @@
             }
             ```
 1. 功能
+   - Command
+     1. 认识：可以通过artisan来调用
+     1. 使用
+        - 创建：继承于Illuminate\Console\Command
+        - 注册：Laravel\Lumen\Console\Kernel的$commands中
+        - 执行：php artisan signature
    - Job
      1. 认识：任务，代表了一个需要在后台执行的具体任务逻辑的类
+     1. 使用
+        - 创建：继承于Illuminate\Contracts\Queue\ShouldQueue
+        - 调用：Illuminate\Support\Facades\Bus::dispatchNow()
    - Queue
      1. 认识：是一种异步处理的任务调度的队列，将job放入队列中，等待后台的队列worker处理
         - 队列worker会从队列中取出任务并执行
