@@ -289,6 +289,8 @@
      1. 启动/停止：`pm2 start/restart/delete app.js`
      1. 查看：`pm2 list/log`
      1. 监控：`pm2 monit`
+1. playwright
+   - 认识：更现代化的框架，支持Chromiu/Firefox/WebKit等浏览器，适用于测试、数据抓取等场景，使用python
 1. puppeteer
    - 认识：headless chrome node api，chrome团队开发。导致其他自动化库停止维护，如phantomJS、selenium
      1. 截图、生成pdf
@@ -296,18 +298,18 @@
      1. 模拟用户操作
      1. 分析网页性能
      1. 提供自动化测试环境
+1. selenium
+   - 理解：支持用脚本控制浏览器的工具，核心基于jsUnit，完全由js编写，运行在浏览器中，04年诞生
+     1. 在爬虫行不通的情况下，可以上这个
+   - 成员
+     1. IDE：脚本录制工具
+     1. WebDriver：编写和运行
+     1. Grid：并行处理
 1. helium
    - 认识：Selenium-Python-Helium，web自动化开源框架，使用python，封装selenium，屏蔽很多细节，自带webDriver浏览器驱动，不适合二次开发，适合快速使用
 1. cypress
    - 认识：和其他工具在浏览器外部运行不同，cypress将所有代码注入空白页面，测试代码和业务代码一起运行。可用于UI集成测试、API接口测试和单元测试
      1. 由于运行在由Cypress全权控制的浏览器中，Cypress的测试代码可以直接操作DOM、Window Objects甚至Local Storages而无须通过网络访问，也因此它更快
-1. selenium
-   - 理解：支持用脚本控制浏览器的工具，核心基于jsUnit，完全由js编写，运行在浏览器中，04年诞生
-     1. 在爬虫行不通下，可以上这个
-   - 成员
-     1. IDE：脚本录制工具
-     1. WebDriver：编写和运行
-     1. Grid：并行处理
 1. ffi：Foreign Function Interface，用js加载、调用动态库，俗称调dll，php也有相关扩展
    - 不需要源代码，不需要每次重编译node
    - 性能有折损，类似其他语言的FFI调试，此方法近似黑盒调用，调错比较困难

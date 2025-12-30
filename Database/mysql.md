@@ -6,6 +6,13 @@
    - 符号
      1. %百分号通配符: 表示任何字符出现任意次数 (可以是0次).
      1. _下划线通配符:表示只能匹配单个字符,不能多也不能少,就是一个字符.
+   - 编码：`CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci`
+     1. CHARACTER SET：定义字符集，如utf8mb4支持所有Unicode字符，兼容性最好
+     1. COLLATE：定义字符集的排序规则和比较规则，如决定字符串在排序时的顺序、是否区分大小写等
+        - utf8mb4_general_ci：不区分大小写（常用）
+        - utf8mb4_unicode_ci：更精确的Unicode标准排序，性能稍差
+        - utf8mb4_bin：二进制比较，区分大小写
+        - utf8mb4_0900_as_ci/utf8mb4_0900_as_cs：是否区分重音
 1. 数据类型
    - 数字
      1. 整数
@@ -325,6 +332,12 @@
           1. 不支持压缩表，即该表行格式不能是COMPRESSED
           1. 不支持包含全文索引的表；不支持临时表；不支持在数据字典表空间中创建的表
         - 实例：`ALTER TABLE t1 ADD COLUMN c INT, ADD COLUMN d INT DEFAULT 1000, ALGORITHM=INSTANT;`
+   - 改变编码
+     1. 操作
+        - `ALTER TABLE ds_agora_rtc_room_event DEFAULT CHARACTER SET utf8mb4;`：不改变现有数据、索引的字符集；新增列时默认使用utf8mb4
+        - `ALTER TABLE ds_agora_rtc_room_event CONVERT TO CHARACTER SET utf8mb4;`：转换整个表字段、数据、索引的字符集，会锁表，大表可能耗时长；不会更新表的默认字符集
+     1. 最佳实践
+        - 已有数据的表，需要两个语句都执行
 #### sql
 1. sql
    - 分类
