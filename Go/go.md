@@ -1512,39 +1512,154 @@
 		Dog{2},
 	}
     ```
-1. interface 接口
-   - 理解：是一种定义了一组方法的抽象类型，它本身不包含也不能包含字段。接口类型是一组具有共性的方法定义在一起的集合。即抽象、封装、多态
-     1. ‌是派生类型
-     1. 接口是松散的结构，不与定义绑定，可以同时从多个维度对数据进行抽象，找出共同点，并使用同一套逻辑来处理。弱关联关系，接口已经可以在很多方面替代继承的作用，比如多态和泛型，而且接口的关系松散、随意，可以有更高的自由度、更多的抽象角度。
-   - 接口实现：接口的实现都是隐式的，实现接口了的所有方法就隐式地实现了接口，是duck-type编程的一种体现，不关心属性（数据），只关心行为（方法）
-     1. 没有了显式声明的必要。解藕了实现接口的包和定义接口的包
-     1. 结构体指针实现接口，结构体初始化变量不会编译通过，因为go的传参值拷贝特性，全新的变量不会指向原来的结构体，也就找不到了，所以提示未实现接口
-        - 反之则可以，因为可以隐式的对变量解引用（dereference）获取指针指向的结构体
-        - 实现接口的具体方法时，如果以指针作为接收者，接口的具体实现类型只能以指针方式使用，值接收者既可以按指针方式使用也可以按值方式使用
-   - 接口变量赋值
-     1. 认识：只有实现了这个接口类型的对象才可赋值
-     1. 方式
-        - 实现接口的对象实例赋值给接口
-        - 另外一个接口赋值给接口
+#### interface
+1. 认识：interface 接口，是一种定义了一组方法的抽象类型，它本身不包含也不能包含字段。接口类型是一组具有共性的方法定义在一起的集合。即抽象、封装、多态
+   - 是派生类型
+   - 是松散的结构，不与定义绑定，可以同时从多个维度对数据进行抽象，找出共同点，并使用同一套逻辑来处理。弱关联关系，接口已经可以在很多方面替代继承的作用，比如多态和泛型，而且接口的关系松散、随意，可以有更高的自由度、更多的抽象角度。
+1. 组成
    - 空接口类型：`interface{}`，可用于存储任意数据类型的实例，达到抽象数据类型的目的
      1. 所有的数据类型都实现了空接口，参数是的话表明可以使用任何类型的数据，函数内部该变量仍然为空接口类型，而不是传入的实参类型
      1. 函数也是一种类型，也可以实现接口`type funcTypeName func() int`
-   - 接口组合：继承，和struct一样，支持组合
-    ```go
-    // 接口组合,默认继承了IReader和IWriter中的抽象方法
-    type IReader interface {
-       Read(file string) []byte
-    }
-    type IWriter interface {
-        Write(file string, data string)
-    }
+   - 内置接口
+     1. error
+     1. Stringer
+        ```go    
+        type Person struct {
+	        name string
+	        age int
+        }
 
-    type IReadWriter interface {
-        IReader
-        IWriter
-    }
-    ```
-   - 接口和方法
+        func (p Person) String() string {                                   // 改变了结构体输出时的样式，Stringer是一个用字符串描述自己的类型
+	        return fmt.Sprintf("(name is %v) (%v years)", p.name, p.age)
+        }
+
+        func main() {
+            a := Person{"Arthur Dent", 42}
+            z := Person{"Zaphod Beeblebrox", 9001}
+            fmt.Println(a, z)
+        }
+        ```
+1. 特性
+   - 接口实现
+     1. 认识：接口的实现都是隐式的，实现接口了的所有方法就隐式地实现了接口，是duck-type编程的一种体现，不关心属性（数据），只关心行为（方法）
+        - 没有了显式声明的必要。解藕了实现接口的包和定义接口的包
+        - 结构体指针实现接口，结构体初始化变量不会编译通过，因为go的传参值拷贝特性，全新的变量不会指向原来的结构体，也就找不到了，所以提示未实现接口
+          1. 反之则可以，因为可以隐式的对变量解引用（dereference）获取指针指向的结构体
+          1. 实现接口的具体方法时，如果以指针作为接收者，接口的具体实现类型只能以指针方式使用，值接收者既可以按指针方式使用也可以按值方式使用
+     1. 实例
+        ```go
+        // 定义
+        type ISayHello interface {
+            sayHello()
+            sayGoodbye()
+        }
+
+        // 实现
+        type AmericalPerson struct {}
+        func (person AmericalPerson) sayHello(){
+            fmt.Println("Hello！")
+        }
+        func (person AmericalPerson) sayGoodbye(){
+            fmt.Println("Goodbye！")
+        }
+        ```
+   - 接口组合
+     1. 认识：即继承，和struct一样，支持组合
+     1. 实例
+        ```go
+        // 接口组合
+        type IReader interface {
+        Read(file string) []byte
+        }
+        type IWriter interface {
+            Write(file string, data string)
+        }
+
+        // 默认继承了IReader和IWriter中的抽象方法
+        type IReadWriter interface {
+            IReader
+            IWriter
+        }
+        ```
+   - 接口变量赋值
+     1. 认识：只有实现了这个接口类型的对象才可被赋值为这个接口，接口变量保存了一个具体类型的值和具体类型的值对应的类型信息，`var a ImInterface = &imStruct{}`
+        - 接口变量本质上是一个两元组，包含值和具体类型
+        - 接口变量的值可以是nil，但接口变量本身不是nil，接口变量为nil的条件是它的具体类型和值都为nil
+     1. 方式
+        - 实现接口的对象实例赋值给接口
+        - 另外一个接口赋值给接口
+     1. 实例
+        ```go
+        // 使用
+        ameriacal := AmericalPerson{}
+        var i ISayHello                             // 定义接口变量
+        i = ameriacal                               // 赋值给变量，即ameriacal实现了ISayHello
+        i.sayHello()                                // 调用接口方法
+        ```
+   - 方法重写
+     1. 认识：通过接口和结构体嵌入提供了灵活的多态机制，虽然语法上与传统的面向对象语言不同，但功能上同样强大
+     1. 实现：
+        - 结构体嵌入实现方法重写：子结构体组合父结构体，然后再实现自己的方法
+        - 接口嵌入实现方法重写：先是子接口组合父接口，然后再实现自己的方法
+     1. 实例
+        ```go
+        // 定义接口
+        type Animal interface {
+            Speak() string
+            Move() string
+        }
+
+        // 基础结构体
+        type Dog struct {
+            Name string
+        }
+
+        // Dog 实现 Animal 接口
+        func (d Dog) Speak() string {
+            return "Woof!"
+        }
+
+        func (d Dog) Move() string {
+            return "Running on four legs"
+        }
+
+        // 派生结构体
+        type Bulldog struct {
+            Dog  // 嵌入Dog，继承字段和方法
+            Type string
+        }
+
+        // 重写 Speak 方法
+        func (b Bulldog) Speak() string {
+            return "Grrr! Woof!"
+        }
+
+        // 可以添加新方法
+        func (b Bulldog) Guard() string {
+            return "Guarding the house"
+        }
+
+        func main() {
+            var animal Animal
+            
+            animal = Dog{Name: "Buddy"}
+            fmt.Println(animal.Speak())                                 // Woof!
+            fmt.Println(animal.Move())                                  // Running on four legs
+
+            animal = Bulldog{
+                Dog:  Dog{Name: "Spike"},
+                Type: "Bulldog",
+            }
+            fmt.Println(animal.Speak())                                 // Grrr! Woof! (重写的方法)
+            fmt.Println(animal.Move())                                  // Running on four legs (继承的方法)
+            
+            // 类型断言访问子类特有方法
+            if b, ok := animal.(Bulldog); ok {
+                fmt.Println(b.Guard())  // Guarding the house
+            }
+        }
+        ```
+   - 值接收器、指针接收器在接口实现上的区别
     ```go
     type animal interface {
         code()
@@ -1563,60 +1678,14 @@
         p.age += 1
     }
 
-    var a animal = &dog{age:1}              // 正常，
-    var b animal = dog{age:1}               // 报错，dog类型没有实现animal接口，以为growUp指向了dog本身
+    var a animal = &dog{age:1}              // 正常。指针类型既可以调用值接收器方法，也可以调用指针接收器方法
+    var b animal = dog{age:1}               // 报错，dog类型没有实现animal接口，因为值类型不能调用指针接收器方法growUp
     ```
-   - 内置接口
-     1. Stringer
-        ```go    
-        type Person struct {
-	        name string
-	        age int
-        }
-
-        func (p Person) String() string {                                   // 改变了结构体输出时的样式，Stringer是一个用字符串描述自己的类型
-	        return fmt.Sprintf("(name is %v) (%v years)", p.name, p.age)
-        }
-
-        func main() {
-            a := Person{"Arthur Dent", 42}
-            z := Person{"Zaphod Beeblebrox", 9001}
-            fmt.Println(a, z)
-        }
-        ```
-     1. error
-   - 最佳实践
-     1. 计算内存分配：请记住，要为接口分配值时，首先需要将其复制到某处，然后将指针黏贴给它。关键是复制。事实证明，接口的装箱和拆箱的成本将近似于结构体大小的一次分配
-     1. 选择最优类型：在某些情况下，接口的装箱和拆箱期间没有分配。例如，变量和常量的小值或布尔值、具有一个简单字段的结构体、指针（包括 map、channel、func）
-     1. 避免内存分配：与其他地方一样，尽量避免不必要的分配。例如将一个接口分配给另一个接口，而不是装箱两次
-     1. 仅在需要时使用：避免在频繁调用的函数参数和返回结果中使用接口。我们不需要额外的拆装包操作。减少使用接口方法调用的频率，因为它会阻止内联
-   - 实例
-    ```go
-    // 定义
-    type ISayHello interface {
-        sayHello()
-        sayGoodbye()
-    }
-    // 实现
-    type AmericalPerson struct {}
-    func (person AmericalPerson) sayHello(){
-        fmt.Println("Hello！")
-    }
-    func (person AmericalPerson) sayGoodbye(){
-        fmt.Println("Goodbye！")
-    }
-    // 使用
-    ameriacal := AmericalPerson{}
-    var i ISayHello                             // 1. 定义接口变量
-    i = ameriacal                               // 2. 赋值给变量，即ameriacal实现了ISayHello
-    i.sayHello()                   
-    // 惯用用法：在多个接口的大型项目中允许实现灵活决定是否要实现某个接口
-    func (dc *driverConn) resetSession(ctx context.Context) error {
-        if cr, ok := dc.ci.(driver.SessionResetter); ok {               // 实现了才执行
-            return cr.ResetSession(ctx)
-        }
-    }
-    ```
+1. 最佳实践
+   - 计算内存分配：请记住，要为接口分配值时，首先需要将其复制到某处，然后将指针黏贴给它。关键是复制。事实证明，接口的装箱和拆箱的成本将近似于结构体大小的一次分配
+   - 选择最优类型：在某些情况下，接口的装箱和拆箱期间没有分配。例如，变量和常量的小值或布尔值、具有一个简单字段的结构体、指针（包括 map、channel、func）
+   - 避免内存分配：与其他地方一样，尽量避免不必要的分配。例如将一个接口分配给另一个接口，而不是装箱两次
+   - 仅在需要时使用：避免在频繁调用的函数参数和返回结果中使用接口。我们不需要额外的拆装包操作。减少使用接口方法调用的频率，因为它会阻止内联
 ### 协程
 #### 基本
 1. 协程

@@ -1074,6 +1074,78 @@
         fmt.Printf("%x=>%s\n", ciphertext, plaintextCopy)
     }
     ```
+1. 命令行执行
+    ```go
+    // 转换pdf为图片，依赖imageMagick
+    cmd := exec.Command("convert",
+        "-density", "108", // 200时间超长？
+        "-units", "PixelsPerInch",
+        "-resize", "1040x1471^>",
+        "-background", "white",
+        "-flatten",
+        fmt.Sprintf("%s[%d]", i.OutPut.FilePath, j),
+        filepath.Join(i.OutPut.ImageDir, "%d.jpeg"))
+    
+    // 获取执行结果
+    result, err := cmd.CombinedOutput()
+
+    // 错误判断
+    code := 0
+    if ee, ok := err.(*exec.ExitError); ok {
+        code = ee.ProcessState.ExitCode()
+    }
+    ```
+#### 代码实例
+1. 使用接口实现策略模式
+    ```go
+    // 排序策略接口
+    type Sorter interface {
+        Sort([]int) []int
+    }
+
+    // 冒泡排序
+    type BubbleSort struct{}
+
+    func (b BubbleSort) Sort(arr []int) []int {
+        // 实现冒泡排序
+        return arr
+    }
+
+    // 快速排序
+    type QuickSort struct{}
+
+    func (q QuickSort) Sort(arr []int) []int {
+        // 实现快速排序
+        return arr
+    }
+
+    // 上下文
+    type SortContext struct {
+        sorter Sorter
+    }
+
+    func (c *SortContext) SetStrategy(s Sorter) {
+        c.sorter = s
+    }
+
+    func (c *SortContext) ExecuteSort(arr []int) []int {
+        return c.sorter.Sort(arr)
+    }
+
+    func main() {
+        context := &SortContext{}
+        
+        // 使用冒泡排序
+        context.SetStrategy(BubbleSort{})
+        result1 := context.ExecuteSort([]int{5, 2, 8, 1})
+        fmt.Println("Bubble sort:", result1)
+        
+        // 切换到快速排序
+        context.SetStrategy(QuickSort{})
+        result2 := context.ExecuteSort([]int{5, 2, 8, 1})
+        fmt.Println("Quick sort:", result2)
+    }
+    ```
 1. goroutine的斐波那契数列
     ```go
     func fibonacci(c, quit chan int) {
@@ -1103,7 +1175,15 @@
     ```
 1. 递归
     ```go
-    // 递归计算阶乘，在函数内部
+    // 方式一：递归计算阶乘，在函数外部
+    func factorial(n int) int {
+        if n == 0 {
+            return 1
+        }
+        return n * factorial(n-1)
+    }
+
+    // 方式二：递归计算阶乘，在函数内部
     func factorial(n int) int {
         var fact func(n int) int                // 在函数内部就得先声明，要不然内部的fact函数会未定义
         fact = func(n int) int {
@@ -1114,37 +1194,9 @@
         }
         return fact(n)
     }
-    // 递归计算阶乘，在函数外部
-    func factorial(n int) int {
-        if n == 0 {
-            return 1
-        }
-        return n * factorial(n-1)
-    }
 
     func main() {
         fmt.Println(factorial(5)) // 输出: 120
-    }
-    ```
-1. 命令行执行
-    ```go
-    // 转换pdf为图片，依赖imageMagick
-    cmd := exec.Command("convert",
-        "-density", "108", // 200时间超长？
-        "-units", "PixelsPerInch",
-        "-resize", "1040x1471^>",
-        "-background", "white",
-        "-flatten",
-        fmt.Sprintf("%s[%d]", i.OutPut.FilePath, j),
-        filepath.Join(i.OutPut.ImageDir, "%d.jpeg"))
-    
-    // 获取执行结果
-    result, err := cmd.CombinedOutput()
-
-    // 错误判断
-    code := 0
-    if ee, ok := err.(*exec.ExitError); ok {
-        code = ee.ProcessState.ExitCode()
     }
     ```
 1. 插件
