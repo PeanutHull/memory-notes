@@ -35,6 +35,8 @@
 1. 使用
    - `mvn install:install-file -Dfile=name.jar -DgroupId= -DartifactId= -Dversion= -Dpackaging=jar` // 本地jar安装到本地仓库
    - `mvn clean package -Dmaven.test.skip=true` // 清除以前的包后重新打包，跳过测试类
+1. wiki
+   - Nexus：Sonatype Nexus Repository Manager Maven私有仓库管理软件，主流使用
 1. 其他构建工具
    - Gradle：基于Groovy和XML的构建工具
    - Ant：集编译、测试、部署的自动化打包部署工具

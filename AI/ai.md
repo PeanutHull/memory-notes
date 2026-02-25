@@ -527,6 +527,19 @@
      1. 发展历史
         - 2023.6.13：OpenAI宣布在Chat Completion模型中加入函数调用（Function calling）功能，全面开放16K对话长度的模型、降低模型调用资费等，这代表着Chat模型不再需要借助LangChain框架就可以直接在模型内部调用外部工具API
         - MCP：前openai高管、anthropic公司开发
+1. Skills
+   - 认识：Claude推出的用于提升执行特定任务效果的方式；skills是包含指令、脚本和资源的文件夹，Claude应用可以根据需要加载；如使用excel或操作pdf
+   - 特点
+     1. 可组合使用：会自动协调使用
+     1. 可移植性：都使用相同的格式，只需构建一次，即可在Claude应用、Claude Code和API中使用
+     1. 高效：只会在Skill与当前任务相关时才使用，只会加载所需的最少信息和文件
+   - 组成
+     1. SKILL.md
+     1. scripts、references、assets等文件夹
+   - 使用
+     1. 创建skill：创建一个包含SKILL.md文件和相关脚本/资源的文件夹
+     1. 加载skill：在Claude应用或API请求中指定要加载的skill
+     1. 执行任务：Claude会根据用户请求，自动调用相关的skill脚本和资源来完成任务
 1. A2A
    - 认识：Agent-to-Agent，解决不同来源不同框架的agent之间高效、安全、互操作的开放的通信协议标准，google推出
      1. MCP解决智能体与工具/数据源的连接，A2A解决智能体之间的协作，二者互补
@@ -2229,12 +2242,16 @@
    - mcp调用是提示词还是function calling
    - 向量库的切分模式、向量维度的调整
 ### AI实践
-1. spec工作流
-   - 认识：规格/规范，在做任何事/生成任何代码之前，必须先通过结构化的文档明确需求、设计与任务
+1. spec-driven
+   - 认识：规范驱动开发，在做任何事/生成任何代码之前，必须先通过结构化的文档明确需求、设计与任务。就是说话先于代码，之前是先有代码后有文档
      1. 在于其方法论本身非常强大
      1. 解决AI编程需求理解偏差及工程质量不高等核心痛点
      1. AI编程2.0时代的轮廓：一个由规范驱动、流程严谨、人机协同的全新开发模式。从“能用”到“好用”，再到“专业”的需求升级
-   - Kiro的实现
+     1. 主要实现路径是强化和标准化规范的编写与使用，提升ai协作的清晰度和质量
+   - spec kit框架
+     1. 认识：GitHub开发的命令行工具
+   - Kiro工具的使用方式
+     1. 认识：亚马逊开发
      1. 需求分析 (Requirements)：requirements.md
         - EARS语法：以标准句式消除需求歧义，Easy Approach to Requirements Syntax
           1. 用户故事 (User Story): As a [role], I want [feature], so that [benefit].

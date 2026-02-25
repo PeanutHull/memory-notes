@@ -1,4 +1,4 @@
-### 认识
+#### http服务器
 1. caddy：开源的go写的http服务器
    - http新特性支持全面，如http2、quic、https
    - 配置简便，5秒可完成配置
@@ -57,14 +57,6 @@
         - 大负载会导致worker节点cpu的负载不平衡，导致运行缓慢；以及重cpu或阻塞io会减慢其他请求的速度
         - 请求和进程的锁定和隔离效应，最大问题是无法做到很好的连接重用(减少握手)，即加速请求的TTFB，大负载时更多的workder会导致隔离池中的重用性更差
      1. c写的内存不安全，nginx的应用逻辑通过Lua性能不高
-1. 部署：基于systemctl + nginx实现高可用，不是nginx + keepalive？
-1. zookeeper
-   - 认识
-     1. 端口：2181
-   - mac运维
-     1. 启动/停止：zkServer start/stop
-     1. 客户端连接：zkCli [-server ip:port]
-### 服务组件
 #### etcd + confd 分布式配置管理、也可热备监控器
 1. etcd
    - 认识：分布式高可用强一致性的键值对的开源的数据存储系统，被用来作共享配置、服务注册和发现，依赖其作为分布式协调服务。web、k8s、openstack都在用，go编写
@@ -214,14 +206,6 @@
         - commitC：用于将 entries 提交到持久化模块中
         - proposeC：用于日志更新
         - confChangeC：提交配置变更信息
-1. 服务注册中心的比较
-   - 认识：![avatar](../images/serviceSupport.png)
-   - 分类
-     1. Consul：内置服务注册与发现框架、分布一致性协议实现、健康检查、KV存储、多数据中心方案，go编写
-     1. Zookeeper：ZooKeeper是一个分布式的，开放源码的分布式应用程序协调服务，是Google的Chubby一个开源的实现，是Hadoop和Hbase的重要组件。它是一个为分布式应用提供一致性服务的软件，提供的功能包括：配置维护、域名服务、分布式同步、组服务等。现在都用下边俩了，zk out了
-     1. Nacos ：是构建以“服务”为中心的现代应用架构 (例如微服务范式、云原生范式) 的服务基础设施致力于发现、配置和管理微服务。并且提供了一组简单易用的特性集，能够快速实现动态服务发现、服务配置、服务元数据及流量管理。帮助开发人员更敏捷和容易地构建、交付和管理微服务平台。
-     1. Apollo
-     1. Eureka：netflix的服务发现框架，基于REST服务，定位运行在AWS域中的中间层服务，负载均衡和中间层服务故障转移目的。SpringCloud将它集成在其子项目spring-cloud-netflix中，以实现服务发现功能。主要是包含两个组件，Eureka Server和Eureka Client
 1. confd
    - 认识：是一个轻量级的配置管理工具，应用非常广泛的是etcd+confd，后端支持的数据类型有：etcd、consul、vault、environment variables、redis、zookeeper、dynamodb、stackengine、rancher
      1. 可通过查询etcd，结合配置模板引擎，用于保持本地配置最新
@@ -349,8 +333,17 @@
         - keepalive设计是对lvs做故障转移，用在nginx上要写脚本
      1. 线上故障：vrrp通道被占用
 #### 服务注册
-1. consul
-   - 认识：注册中心，支持多数据中心的分布式高可用的服务发布和注册服务，基于go开发
+1. 服务注册中心的比较
+   - 认识：![avatar](../images/serviceSupport.png)
+   - 分类
+     1. Nacos ：是构建以“服务”为中心的现代应用架构 (例如微服务范式、云原生范式) 的服务基础设施致力于发现、配置和管理微服务。并且提供了一组简单易用的特性集，能够快速实现动态服务发现、服务配置、服务元数据及流量管理。帮助开发人员更敏捷和容易地构建、交付和管理微服务平台。
+     1. Apollo：java开发，携程开源
+     1. Consul：内置服务注册与发现框架、分布一致性协议实现、健康检查、KV存储、多数据中心方案，go开发
+     1. Etcd：go开发，k8s的服务发现组件
+     1. Zookeeper：分布式、开源应用程序协调服务，Google的Chubby的开源实现，是Hadoop和Hbase的重要组件。它是一个为分布式应用提供一致性服务的软件，提供的功能包括：配置维护、域名服务、分布式同步、组服务等。过时了，java开发
+     1. Eureka：netflix的服务发现框架，基于REST服务，定位运行在AWS域中的中间层服务，负载均衡和中间层服务故障转移目的。SpringCloud将它集成在其子项目spring-cloud-netflix中，以实现服务发现功能。主要是包含两个组件，Eureka Server和Eureka Client
+1. Consul
+   - 认识：注册中心，支持多数据中心的分布式高可用的服务发布和注册服务，go开发
      1. 可组合构建完整的服务管理系统
      1. 是一种服务网格解决方案
    - 功能
@@ -371,6 +364,12 @@
      1. Gossip Protocol：八卦，一个事件发生时，其他节点需要知道这个事件
         - lan pool：局域网池
         - wan pool
+1. zookeeper
+   - 认识
+     1. 端口：2181
+   - mac运维
+     1. 启动/停止：zkServer start/stop
+     1. 客户端连接：zkCli [-server ip:port]
 #### 集群
 1. Pacemaker + Corosync：用于构建高可用集群的开源的软件工具、资源管理器
    - 集群通信和成员管理：Corosync负责在集群中的节点之间建立和维护通信，以及监控节点的状态

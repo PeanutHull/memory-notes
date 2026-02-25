@@ -66,6 +66,45 @@
           1. 添加PromptBuilderNode提示词构建节点，针对所有，动态生成系统提示
           1. 添加MessageFinalizerNode节点，根据ClassifierNode的分类和PromptBuilderNode的systemPrompt数据写入，构建最终的messages，为后续和普通chatCompletion调用做数据准备
      1. 倒计时提醒功能：根据redis中的结束时间，下一次交互来到时(http请求过来时)，判断不足3秒就直接提醒返回课堂继续学习
+     1. v2重构做的工作
+        - 支持扩展多模型：使用map代替写死的ArkConfig从而动态模型配置
+        - 使用策略模式支持各种功能配置：如过滤内容、倒计时提醒、获取提示词、获取redis
+          1. 使用BusinessStrategy接口定义业务策略
+          1. 使用set、get设置和获取对应的组合了业务策略的业务场景，如引导解题、思维导引
+     1. 优化响应速度
+        ```go
+        // 框架设置
+        h := server.New(
+            server.WithHostPorts(app.Config.ServerAddress),
+            server.WithIdleTimeout(0),                    // 禁用空闲超时，适合长连接SSE
+            server.WithReadTimeout(0),                    // 禁用读超时
+            server.WithWriteTimeout(0),                   // 禁用写超时，避免流式传输中断
+            server.WithStreamBody(true),                  // 启用流式响应体
+            server.WithMaxRequestBodySize(100*1024*1024), // 100MB 最大请求体
+            server.WithNetwork("tcp"),                    // 使用标准TCP（默认启用TCP_NODELAY）
+        )
+
+        // 流式响应
+        // 使用io.Pipe改造实现无阻塞、无缓冲的流式传输，之前是用的*app.RequestContext
+        // 原理
+        // 1. 无阻塞：因为原HandleStreamResponse方法里边的for+select会阻塞外边调用的hander从而无法第一时间返回SetSSEHeaders，导致TTFB(首字节时间)太大；修改后可立即返回handler，只会在独立的goroutine里边阻塞，同时节约了route中的goroutine资源
+        // 1. 无缓冲：io.Pipe内部是无缓冲立即发送的，而app.RequestContext的SetBodyStream有缓冲区机制，导致无法第一时间发送响应
+
+        // 实现
+        pr, pw := io.Pipe()
+        c.Response.SetBodyStream(pr, -1) // -1 表示未知长度，启用 chunked 传输
+        go func() {
+            defer pw.Close() // 关闭pipe writer，表示响应结束
+            // 立即发送连接确认
+            pw.Write([]byte(": connection established\n\n"))
+            // 使用 pipe writer 处理流式响应
+            sseHandler.HandleStreamResponseWithWriter(ctx, pw, responseChan, errorChan, traceID, stats)
+            hlog.CtxInfof(ctx, "[性能] traceID=%s 步骤8-流式响应完成: 耗时=%dms, 总耗时=%dms", traceID, time.Since(step8Start).Milliseconds(), time.Since(startTime).Milliseconds())
+        }()
+
+        // 更好的nginx兼容性，搭配io.Pipe效果更好
+        c.Header("X-Accel-Buffering", "no") // 告诉Nginx不要缓冲
+        ```
    - 即构：根据返回的文本通过tts转为语音、进行3D视频渲染
      1. tts请求：调用minimax的tts接口，传入文本和实例id，返回音频url
      1. 渲染：数字人根据音频进行rtc频道内的播放
