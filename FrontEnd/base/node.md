@@ -319,7 +319,8 @@
    - egg：阿里开源的企业级框架
    - adonis
    - nest
-   - Next.js：采用react，实现了SSR和SPA
+   - Next.js：基于react的用于构建全栈web的框架，实现了SSR和SPA
+     1. 默认打包器：Turbopack，基于Rust
    - Nuxt：采用vue，实现了SSR和SPA
 ### wiki
 1. 历史

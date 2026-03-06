@@ -392,3 +392,24 @@
    - claude code处理终端任务、调用MCP，cursor负责ide内编码
    - 多模型协作：让不同模型独立生成，用第三款模型做diff评论，合并交集，由人类确认冲突
    - 任务清单驱动：使用Markdown task‑list，AI可自动勾选已完成项
+### claude code
+1. 组成
+   - .claude/settings.json
+    ```conf
+    {
+        "hooks": {
+            "SessionStart": [
+                {
+                    "hooks": [
+                    {
+                        "type": "command",
+                        "command": ".claude/hooks/session_start.sh"
+                    }
+                    ]
+                }
+            ]
+        }
+    }
+    ```
+   - .claude/skill
+   - .claude/hooks
