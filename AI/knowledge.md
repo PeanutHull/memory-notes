@@ -1,3 +1,36 @@
+### MCP
+1. go实现mcp的方法
+   - 新建独立的mcp服务：作为mcp的入口，独立mcp服务通过http等方式调用现有服务的接口
+     1. 官方SDK：modelcontextprotocol/go-sdk
+     1. 最流行的社区库：mark3labs/mcp-go，很多Claude Code插件就是这样写的
+        - api简洁、文档好
+        - 支持mcp spec
+   - 现有服务内嵌：新增一个/mcp路由，自己写协议层，即实现mcp的sse传输协议，直接复用内部logic层，开发成本高
+     1. 常用库
+        - github.com/sourcegraph/jsonrpc2
+        - github.com/r3labs/sse
+        - net/http
+1. cursor等工具配置mcp服务器的方式
+    ```json
+    // stdio方式
+    {
+        "mcpServers": {
+            "token-sr": {
+                "command": "/Users/huasheng/go/token-sr/token-sr-mcp",          // 指向可执行文件，cursor等工具自己启动
+                "args": ["-base-url", "http://localhost:8888"]                  // 可选参数，告诉cursor传递给mcp server
+            }
+        }
+    }
+    // sse方式
+    {
+        "mcpServers": {
+            "token-sr": {
+                "url": "http://localhost:9090/sse"                              // 需要自己启动mcp
+            }
+        }
+    }
+    ```
+### prompt
 1. 提示词模版
    - 通用提示词模板
      1. 角色扮演模板

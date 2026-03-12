@@ -351,6 +351,16 @@
              - Redis，v7.0
              - PostgreSQL，pgvector扩展
    - 框架
+     1. WeKnora
+        - 认识：基于llm的文档理解与语义搜索框架，专注于文档问答流程，腾讯开源
+          1. 基于RAG的核心搜索流程，将上下文相关片段与语言模型结合
+        - 功能
+          1. Agent模式：支持ReACT Agent模式
+          1. 精准理解：支持PDF、Word、图片等文档的结构化内容提取，统一构建语义视图
+          1. 智能推理：支持精准问答与多轮对话
+          1. 强效检索：混合多种检索关键词、向量、知识图谱，支持跨知识库检索
+          1. 便于集成与扩展：从解析、嵌入、召回到生成全流程解耦
+          1. 支持mcp
      1. RagFlow：开源开发框架，用于多文档深度理解，文档处理能力强
         - 功能：文档解析、向量检索、生成答案、引用溯源
         - 关键技术：深度文档理解、多路召回、融合重排序
@@ -391,51 +401,121 @@
      1. 数据蒸馏：将大型数据集浓缩为小型数据集
      1. embedding：是文本的数值表示，可以用来衡量两段文本之间的相关性。是一种将离散的符号或类别信息（如单词、字符或实体）映射到连续向量空间的技术，如将长文本编码为紧凑的高维向量、保持上下文连贯性
 1. MCP
-   - 认识：Model Context Protocol 模型上下文协议。解决ai模型与外部工具集成的高定制化问题，提供了一种跨模型、跨平台的统一标准，让使用更加灵活。比openai的function calling更先进
-     1. MCP跟Function Calling的逻辑基本一致，差异点在于Function Calling是API调用，MCP是JSON-RPC请求
-     1. MCP 的能力描述和功能逻辑统一封装在 Server 端，而Function Calling的能力描述配置在客户端，功能逻辑在API，相对比较割裂，不容易管理
+   - 认识：Model Context Protocol 模型上下文协议。解决llm与外部工具集成的高定制化问题的协议，提供了一种跨模型、跨平台的统一标准，任何工具或数据源只要实现MCP，就可以被不同ai客户端使用。比openai的function calling更先进
+     1. MCP跟Function Calling的逻辑基本一致
+        - MCP的能力描述和功能逻辑统一封装在Server端，而Function Calling的能力描述配置在客户端，但是功能逻辑却在API，相对割裂，不容易管理
+        - Function Calling的方式是API调用，MCP的协议是JSON-RPC 2.0
+            ```json
+            // 请求
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/call",
+                "params": {
+                    "name": "search",
+                    "arguments": {
+                        "query": "MCP protocol"
+                    }
+                }
+            }
+            // 响应
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "result": {
+                    "content": "..."
+                }
+            }
+            ```
+     1. 解决三个问题
+        - 标准化ai工具调用：提供不同ai应用可以调用同一个MCP server的能力
+        - 解耦ai与系统：ai不直接访问数据库/API/文件系统，而是通过mcp
+        - 支持agent架构：mcp是ai agent工具层标准
    - 特点
-     1. 动态发现工具、即插即用
+     1. 动态发现工具、即插即用，AI决定是否调用
      1. 一次标准化整合
      1. 实时双向通信
-   - 类型
-     1. 标准输入/输出（stdio）：以标准输入和输出，连接客户端和mcp server。传统的c/s架构、本地、与linux管道技术一样
-     1. 服务器发送事件（SSE）：通过SSE协议交换数据，B/S架构
-        - 客户端无法主动发送事件
-        - 并发连接数受限：如chrome同一源默认最多6个
-        - SSE只能传输utf-8，不支持二进制
-        - 重连和断线恢复机制不够健壮、缺乏扩展性和标准的认证机制：对此存疑
-     1. 可流式传输的HTTP（StreamableHttp）：使用普通HTTP方式进行交互，按需用SSE的方式交互，采用Streamable HTTP传输方式。SSE方式的升级版，B/S架构
-        - 依靠HTTP/2以上协议实现TCP多路复用
    - 组成
-     1. mcp server
-     1. mcp client：中介层，在mcp hosts中，处理与MCP服务器的通信，查询工具功能，管理请求/响应/通知
-        - mcp hosts：AI应用环境/载体，可以是agent、IDE
-   - 步骤
-     1. client发起initial request
-     1. server返回initial response
-        - 能力交换：详细回复自己的能力，可动态地发现服务器提供的功能，同时客户端无需修改代码或重新部署。server有新特性下次client连接时即可获知
-          1. Tools（工具）
-          1. Resources（资源）
-          1. Prompts（提示词） 
-     1. client发送notification
+     1. 三种标准能力
+        - tools：工具，用于调用函数
+            ```json
+            {
+                "name": "search",
+                "description": "Search documents",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                    "query": { "type": "string" }
+                    }
+                }
+            }
+            ```
+        - resources：资源，提供数据源
+            ```c
+            docs://api
+            db://tables
+            files://repo
+            ```
+        - prompts：提示词，提供prompt，在skill hub/ai工具市场里很常见
+            ```
+            code_review
+            write_tests
+            ```
+     1. 标准传输协议
+        - 标准输入/输出（stdio）：用于本地进程通信，即IPC的一种实现方式
+        - 可流式传输的HTTP（Streamable Http）：用于远程通信，主要使用POST方式，按需用SSE。Streamable HTTP不是通用协议，是MCP spec定义的一种传输模式
+          1. 返回两种可能
+            ```
+            HTTP 200
+            JSON result
+
+            HTTP 200
+            Content-Type: text/event-stream
+            ```
+        - 服务器推（SSE + POST）：已废弃
+          1. 旧版HTTP+SSE transport 想要双向通信得弄两个接口；在生产化和规模化部署上存在一些工程局限，因此后来被 Streamable HTTP 取代
+     1. 角色
+        - mcp server
+          1. server capability：向客户端声明自己支持哪些功能接口
+            ```json
+            {
+                "capabilities": {
+                    "tools": {},
+                    "resources": {},
+                    "prompts": {},
+                    "logging": {}
+                }
+            }
+            ```
+        - mcp client：处在llm和mcp server的中间，在mcp hosts中，处理与mcp server的通信，查询工具，管理请求/响应/通知
+          1. mcp hosts：AI应用环境/载体，可以是agent、IDE
+   - 实现
+     1. 步骤
+        - client发起initial request
+        - server返回initial response
+          1. 能力交换：详细回复自己的能力，可动态地发现服务器提供的功能，同时客户端无需修改代码或重新部署。server有新特性下次client连接时即可获知
+        - client发送notification
+     1. 实现细节
+        - server
+          1. 先通过prompts/resources/tools的描述信息，定义服务的能力
+          1. 再通过server.setRequestHandler定义接到客户端请求后，执行怎样的逻辑，响应怎样的数据
+          1. 最后把server连接到transport，启动服务在本地监听客户端的RPC请求
+        - client
+          1. 客户端提供让用户提前把需要用到的MCP Servers填到配置里
+          1. 客户端启动时，连接到transport，通过client.getServerCapabilities()获取所有已配置的MCP Servers能力，包括prompts/resources/tools等
+          1. 用户在客户端输入问题，客户端把用户提问 + MCP Servers能力描述发送给大模型，做意图识别，大模型返回应该调用哪些服务，应该传哪些参数
+          1. 客户端带上MCP Server名称和对应的参数，发起一次RPC请求，获得MCP Server响应的数据
+          1. 客户端带上用户提问 + MCP Server响应的数据，请求大模型回答，可以理解为一次RAG（Rpc-call-Augmented Generation）
    - 最佳实践
      1. server更新时，需要保证服务的连贯性、向下兼容性
-   - 原理
-     1. server
-        - 先通过prompts/resources/tools的描述信息，定义服务的能力
-        - 再通过server.setRequestHandler定义接到客户端请求后，执行怎样的逻辑，响应怎样的数据
-        - 最后把server连接到transport，启动服务在本地监听客户端的RPC请求
-     1. client
-        - 客户端提供让用户提前把需要用到的MCP Servers填到配置里
-        - 客户端启动时，连接到transport，通过client.getServerCapabilities()获取所有已配置的MCP Servers能力，包括prompts/resources/tools等
-        - 用户在客户端输入问题，客户端把用户提问 + MCP Servers能力描述发送给大模型，做意图识别，大模型返回应该调用哪些服务，应该传哪些参数
-        - 客户端带上MCP Server名称和对应的参数，发起一次RPC请求，获得MCP Server响应的数据
-        - 客户端带上用户提问 + MCP Server响应的数据，请求大模型回答，可以理解为一次RAG（Rpc-call-Augmented Generation）
+     1. go非常适合写mcp server，很多AI工具如Claude Code/Cursor/Windsurf的MCP Server90%都是Go写的，而不是Python
+        - 单文件部署(即装即用，没有运行时依赖、跨平台发布容易)、内存占用少、go对stdio支持好、并发高
+     1. claude code的插件其实就是一个mcp server，使用mcp server是最合适的选择
    - wiki
-     1. 发展历史
+     1. MCP Spec：mcp协议的正式规范文档
+     1. 历史
         - 2023.6.13：OpenAI宣布在Chat Completion模型中加入函数调用（Function calling）功能，全面开放16K对话长度的模型、降低模型调用资费等，这代表着Chat模型不再需要借助LangChain框架就可以直接在模型内部调用外部工具API
-        - MCP：前openai高管、anthropic公司开发
+        - MCP：前openai高管、anthropic公司提出
 1. Skills
    - 认识：Claude推出的用于提升执行特定任务效果的方式；skills是包含指令、脚本和资源的文件夹，Claude应用可以根据需要加载；如使用excel或操作pdf
      1. 是师傅教会徒弟，形成知识固化、一次教会永久使用
@@ -482,6 +562,8 @@
      1. 执行任务：Claude会根据用户请求，自动调用相关的skill脚本和资源来完成任务
    - 最佳实践
      1. 其他llm使用skill有挑战：claude官方对skill的规范描述的比较清晰，但对于llm怎么使用skill并没有详细描述
+     1. 好用的
+        - next-chat-skills：自动发现、安装、调用、新建skills的工具，能自动安装skill的依赖、出错自动修复
 1. A2A
    - 认识：Agent-to-Agent，解决不同来源不同框架的agent之间高效、安全、互操作的开放的通信协议标准，google推出
      1. MCP解决智能体与工具/数据源的连接，A2A解决智能体之间的协作，二者互补
@@ -1191,8 +1273,6 @@
             # 验证实际预测效果
             data_frame = llm_predict(scan_data=testing_data)
             ```
-1. 优化
-   - 
 #### workflow
 1. 编排
    - 认识
@@ -1354,6 +1434,8 @@
         - 缩短ai反馈的速度：增强反应速度并降低大模型幻觉
           1. 提示词方法：预先准备好答案
 #### 开发框架
+1. OpenCode
+   - 认识：
 1. airflow
    - 认识：Apache Airflow，代码优先的编排、调度和监控工作流的开源平台，纯python代码定义DAGs的编程模式
      1. 调度能力极其强大，是n8n、dify等？？？
@@ -2355,11 +2437,15 @@
      1. 记忆系统
      1. 技能积累
      1. 定时任务
+   - 架构
+     1. Gateway：做接入
+     1. Agent：做智能
+     1. Bridge：做桥接
    - 特点
      1. 持续记忆更新：长期记忆模块，记录和积累用户的交互历史、偏好和反馈
      1. 直接im远程对话：方便快捷
      1. agent + 电脑：拓展能力范围
-     1. skill实时更新
+     1. clawHub生态：skill实时更新
    - 使用
      1. 配置：`~/.openclaw/openclaw.json`
      1. openclaw gateway restart
@@ -2371,9 +2457,12 @@
         - 日常记录放在memory文件夹里，长期记忆放在MEMORY.md里
         - 记忆刷写：启动对话历史压缩
         - 裁剪信息：如执行命令时大量的打印信息
+   - wiki
+     1. 其他产品
+        - Nanobot：4K行代码，理解AI Agent是怎么工作的，如工具调用循环、上下文管理、多轮对话状态
+        - KimiClaw：全球部署，封装的利用了Cloudflare的边缘网络
+        - PicoClaw：路由器、开发板适用
 ### AI编程
-1. OpenCode
-   - 认识：
 1. 理解
    - 代码理解的架构方式
      1. agent+全仓库工具链式的推理：动态代码探索，更进一步的agent模式写代码，比较费token。如claude code和codex
@@ -2427,6 +2516,14 @@
         - 错误处理机制 (Error Handling)
         - 测试策略 (Testing Strategy)
      1. 实现计划 (Implementation)：tasks.md
+1. Codex
+   - 功能
+     1. 多Workspace管理：支持Workspace工作区，可以放多个项目
+     1. 支持并行处理
+     1. 内置Worktrees：对同一个项目并行开发，不会冲突，可以查看clean diff
+     1. 支持Plan Mode
+     1. 内置Skills管理界面
+     1. 支持Automations自动化、定时任务
 1. wiki
    - 其他编辑器
      1. Windsurf
@@ -2536,6 +2633,8 @@
     ```
    - .claude/skill
    - .claude/hooks
+1. 命令
+   - /insights：分析当前claude code的工作成果和改进地方
 1. 命令：按下/开始操作，--model指定模型
    - /clear
    - /model：切换模型

@@ -348,6 +348,14 @@
      1. tls1.3：2018
         - 握手时间降低一半
         - 废除不安全的秘钥协商方式：解决1.2太多安全套件中那些不安全的
+1. 长连接发展历史
+    ```
+    Polling：就是轮询
+    ↓
+    Long Polling：等待有数据再再次请求
+    ↓
+    SSE/WebSocket
+    ```
 1. websocket
    - 认识：全双工通讯的应用层协议，复用http的握手通道，基于tcp传输，属于http1.1
      1. 更好的二进制支持
@@ -395,6 +403,40 @@
         - 1000：Normal Closure，正常关闭
         - 1001：Going Away，端点离开，如服务器关闭、浏览器关闭
         - 1005：Abnormal Closure，异常关闭，如没有发送关闭帧
+1. SSE
+   - 认识：Server-Sent Events，服务器发送事件， 基于http的单向实时通信技术，允许服务器持续向客户端推送数据，基于http传输，属于http1.1
+   - 特点
+     1. 只能单向的服务器向客户端推送数据，客户端需要另外发送post请求来与服务器进行交互
+     1. SSE只能传输utf-8，不支持二进制：想要二进制可以base64编码成文本
+     1. SSE 依赖 长连接，可能受到反向代理、负载均衡、CDN的影响
+     1. 浏览器环境中同一域名常见限制大约6个连接，可替换为http2、websocket
+   - 使用
+     1. 响应头
+        ```
+        Content-Type: text/event-stream
+        Cache-Control: no-cache
+        Connection: keep-alive
+        ```
+     1. 数据：每个事件之间用空行分隔
+        ```
+        data: 这是第一条消息
+
+        data: 这是第二条消息
+        ```
+     1. 浏览器使用
+        ```javascript
+        // 特点：
+        // •	自动建立连接
+        // •	自动处理事件
+        // •	自动重连
+        const eventSource = new EventSource('http://example.com/sse');
+        eventSource.onmessage = function(event) {
+            console.log('Received message:', event.data);
+        };
+        eventSource.onerror = () => {
+           console.log("connection error")
+        }
+        ```
 1. 应用
    - 连接控制
      1. 认识：keepalive，复用tcp连接，要和tcp的keepalive区别
