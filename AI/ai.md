@@ -1499,8 +1499,6 @@
         - 缩短ai反馈的速度：增强反应速度并降低大模型幻觉
           1. 提示词方法：预先准备好答案
 #### 开发框架
-1. OpenCode
-   - 认识：
 1. airflow
    - 认识：Apache Airflow，代码优先的编排、调度和监控工作流的开源平台，纯python代码定义DAGs的编程模式
      1. 调度能力极其强大，是n8n、dify等？？？
@@ -1516,20 +1514,17 @@
      1. 自我提示：会自己给自己生成提示，驱动ReAct循环。会思考“为了达成最终目标，我现在应该先做什么？”
      1. 多模态和能力：集成多种工具
      1. 记忆管理：解决llm的有限上下文窗口问题，引入了向量数据库等外部记忆体
+1. MetaGPT
+   - 认识：将llm的能力与标准化软件工程流程（SOP）相结合的开源的多智能体框架，适用于交付代码、文档、设计图等，类似ChatDev
+     1. 将SOP编码为提示词、模块化输出验证
+     1. 预定义严格流程（产品经理→架构师→工程师）
 1、 HuggingGPT
    - 认识：用一个中心llm来协调调用众多专家模型(其他领域的模型)共同完成复杂任务的系统框架。侧重多模态
      1. JARVIS是开源的代码实现，微软和浙江大学
 1. AutoGen
    - 认识：类似HuggingGPT，微软、python
-1. MetaGPT
-   - 认识：将llm的能力与标准化软件工程流程（SOP）相结合的开源的多智能体框架，适用于交付代码、文档、设计图等，类似ChatDev
-     1. 将SOP编码为提示词、模块化输出验证
-     1. 预定义严格流程（产品经理→架构师→工程师）
 1. CrewAI
    - 认识：角色化多个智能体的开源的ai编排平台，侧重于解决特定任务，如分析报告、决策，适用于股票分析、内容创作、研究自动化等业务流程
-1. coze
-   - coze studio：扣子开发平台
-   - coze loop：扣子罗盘
 1. wiki
    - java：DJL Deep Java Library，是java的开源的深度学习库
      1. LangChain4j：最活跃、最受关注的AI应用开发框架
@@ -2462,6 +2457,9 @@
     ```
 ##### Goclaw
 #### 应用平台
+1. coze
+   - coze studio：扣子开发平台
+   - coze loop：扣子罗盘
 1. Dify
    - 认识：简单快速创建AI应用的LLMOps平台，内置了构建LLM应用所需的关键技术栈
    - 功能
@@ -2548,6 +2546,14 @@
         - 错误处理机制 (Error Handling)
         - 测试策略 (Testing Strategy)
      1. 实现计划 (Implementation)：tasks.md
+1. OpenCode
+   - 认识：TUI客户端+本地服务器的架构，天然支持“多客户端驱动同一个agent能力”，不只是终端里打一行命令那么简单
+   - 组成
+     1. 模块化实现
+        - cmd 命令行入口
+        - app 核心应用服务、config 配置管理、db 数据库与存储、llm 模型抽象层
+        - message 消息管理、session 会话管理、lsp 语言服务器协议集成
+     1. 工作流：llm + 工具调用，工具包括读写、bash、todowrite 任务编排、skill等
 1. Codex
    - 功能
      1. 多Workspace管理：支持Workspace工作区，可以放多个项目
@@ -2713,6 +2719,14 @@
         - 任务到期，会等Claude当前回合结束再执行，不会打断会话
      1. 实现
         - 底层依赖CronCreate、CronList、CronDelete三个工具，每个任务有8位ID，单个session最多50个任务
+   - /todos：让claude按顺序一个个做，支持任务依赖追踪
+     1. 使用
+        ```
+        任务1: 创建数据库schema
+        任务2: 写CRUD接口 (依赖任务1)
+        任务3: 写单元测试 (依赖任务2)
+        任务4: 写文档 (可以并行)
+        ```
    - /simplify：代码审查和直接修复，从三个方面，之后再总结。代码复用性、代码质量和可维护性、性能和效率
      1. 对刚写完、"能跑就行"状态的代码特别有用。趁着context还新鲜，跑一遍/simplify，代码质量能上一个台阶。不适合在别人的代码上乱跑，那个需要上下文，让它随便改会出问题
    - /batch：跨文件、跨模块的大规模代码迁移
@@ -2727,17 +2741,17 @@
         - `claude plugin install code-simplifier`：保证功能的前提下的代码优化工具
         - `claude plugin install gopls/php/-lsp@claude-plugins-official`：支持lsp：真正理解代码的语义
    - /mcp
-     1. 使用：`claude mcp add Laravel boost/k8s/grafana`:
+     1. 常用：`claude mcp add Laravel boost/k8s/grafana`
    - /skills
-     1. 使用：mcp和skill都会进入llm inference pipeline从而占用token，插件和command不会
-   - /chrome：claude in chrome，官方出品的浏览器控制插件
-   - command
-     1. 认识：自定义的命令，.claude/commands/目录下的Markdown文件
-     1. 组成
-        - allowed-tools：限制Claude可以使用的工具（安全考虑）
-        - argument-hint：向用户显示需要提供哪些参数
-        - description：在/help中显示，提高可发现性
-     1. 举例：如/create-api
+     1. 使用
+        - token黑洞：注意mcp对于token的占用，使用不当或者装多了，可能没说话就占用41%的上下文，更新了自动模式机制，检测占多了就懒加载
+        - mcp和skill都会进入llm inference pipeline从而占用token，插件和command不会
+     1. command：自定义的命令，.claude/commands/目录下的Markdown文件，集成到了skill里
+        - 组成
+          1. allowed-tools：限制Claude可以使用的工具（安全考虑）
+          1. argument-hint：向用户显示需要提供哪些参数
+          1. description：在/help中显示，提高可发现性
+        - 举例：如/create-api
         ```md
         ---
         description: 生成带有完整设置的REST API端点
@@ -2801,10 +2815,15 @@
         code-reviewer等他们完成后审查 &     // 最后一个等前两个完成再动手。全程自动协调
         ```
    - agent teams
-     1. 从单会话到Subagent再到Agent Teams
-
+     1. 认识：从单会话到Subagent再到Agent Teams，Subagent就是各干各的，中间没有沟通，最后拿到所有的结果总结一下输出，而team是互相沟通
+        - 二者在跨层级重构、多模块联调时差距非常明显，可以省掉大量上下文传递开销
+        - 更加耗费token，几个team成员就是几倍的token，因为team中的成员是整个team全量的数据，不光包含自己的，还有其他人的
+        - Agent Teams目前还是实验性功能，默认关闭
+        - 有人用tmux脚本、OpenClaw搞过类似的东西，可以看出原生集成和脚本糊出来的体验完全不在一个量级
+        - 子agent之间的上下文同步、冲突处理、错误回滚，都是硬骨头
+1. 特性
    - /memory：auto memory
-     1. 认识：Claude写给自己的笔记，Claude主动维护
+     1. 认识：claude写给自己的笔记，claude主动维护
         - 前200行的硬上限自动加载进系统prompt，其他按需获取
         - 和CLAUDE.md冲突时，更具体的规则优先
      1. 结构
@@ -2813,14 +2832,17 @@
         // 项目目录
         ~/.claude/projects/<git-root-hash>/memory/
         ├── MEMORY.md          # 主入口，每次session自动加载前200行
-        ├── debugging.md       # Claude记录的调试经验
-        ├── api-conventions.md # API设计决策
+        ├── debugging.md       # claude记录的调试经验
+        ├── api-conventions.md # api设计决策
         └── patterns.md        # 发现的代码模式
         ```
-
-        
+     1. 使用
+        - 看到“Recalled X memories”，说明claude加载了之前的记忆
+        - 看到“Wrote X memories”，说明增加了新的记忆
+1. 使用
    - /init：分析当前repo，生成说明文档claude.md
      1. esc：暂停当前操作
+     1. --add-dir：从额外的目录加载claude.md文件
    - /clear
    - /model：切换模型
      1. shift+tab：切换plan和自动编辑、yolo(更高权限)模式
@@ -2831,10 +2853,14 @@
           1. --effort high、/model：设置强度
           1. ultrathink：单次超控，这次最高，下次恢复
    - /compact：压缩对话，不希望丢掉之前的记忆
-   - /insights：分析当前claude code的工作成果和改进地方
+     1. `Summarize from here`：只想压缩前半段，后面的几条消息还有用，前面的背景交代可以浓缩掉，对于超长session特别有用
+   - /insights：分析当前claude code的工作成果和改进地方，分析你使用的特点和不足
+   - /debug：让claude排查当前session的问题，如反应慢、某工具调用总是失败等
+   - /status、/doctor
    - /cost：花费
    - /logout、/login
-   - /status、/doctor
+   - /chrome：claude in chrome，官方出品的浏览器控制插件
+   - IDE集成：显示“IDE connected”，即可让IDE显示代码变更，就跟cursor一样
    - claude remote-control：支持手机或浏览器扫码，远程控制当前的claude
 1. 原理
    - 认识：是一个Node.js应用
@@ -2866,54 +2892,56 @@
                 <skill name="pdf" description="Generate PDF documents from markdown"/>
             </available_skills>
             ```
-     1. 提示词的衔接：以"帮我修复src/utils/parser.ts里的类型错误"举例
-        - 主上下文
-            ```
-            [主系统提示词]
-            - 包含：不要改没读过的代码、避免过度设计等规则
+     1. 提示词的衔接内部prompt举例：如"帮我修复src/utils/parser.ts里的类型错误"
+        ```
+        ---------------------------------------------- 主上下文
+        [主系统提示词]
+        - 包含：不要改没读过的代码、避免过度设计等规则
 
-            [工具描述]
-            - ReadFile工具：怎么读文件
-            - Edit工具：怎么编辑文件
-            - Bash工具：怎么跑测试
+        [工具描述]
+        - ReadFile工具：怎么读文件
+        - Edit工具：怎么编辑文件
+        - Bash工具：怎么跑测试
 
-            [你的消息]
-            - 帮我修复src/utils/parser.ts里的类型错误
-            ```
-        - 规划模式
-            ```
-            [Plan Mode系统提醒]
-            - 你现在不能执行任何修改操作
-            - 按照五步工作流进行规划
-            - 可以启动Explore Agent搜索代码
-            - 最后要调用ExitPlanMode
-            ```
-        - 决定使用Explore Agent时，用Task工具启动
-            ```
-            [Explore Agent专属提示词]
-            - 你是文件搜索专家
-            - 只能读取，不能修改
-            - 使用Glob、Grep、ReadFile工具
+        [你的消息]
+        - 帮我修复src/utils/parser.ts里的类型错误
 
-            [工具描述]
-            - 只包含只读工具的描述
+        ---------------------------------------------- 规划模式
+        [Plan Mode系统提醒]
+        - 你现在不能执行任何修改操作
+        - 按照五步工作流进行规划
+        - 可以启动Explore Agent搜索代码
+        - 最后要调用ExitPlanMode
 
-            [父代理传递的任务]
-            - 探索认证模块的代码结构
-            ```
-        - 自动压缩
-            ```
-            [总结Agent专属提示词]
-            - 按照8个维度进行总结
-            - 保留所有用户消息
-            - 特别关注错误和修复
+        ---------------------------------------------- 决定使用Explore Agent时，用Task工具启动
+        [Explore Agent专属提示词]
+        - 你是文件搜索专家
+        - 只能读取，不能修改
+        - 使用Glob、Grep、ReadFile工具
 
-            [之前的完整对话历史]
-            ```
-        - 
+        [工具描述]
+        - 只包含只读工具的描述
+
+        [父代理传递的任务]
+        - 探索认证模块的代码结构
+        
+        ---------------------------------------------- 自动压缩
+        [总结Agent专属提示词]
+        - 按照8个维度进行总结
+        - 保留所有用户消息
+        - 特别关注错误和修复
+
+        [之前的完整对话历史]
+        ```
    - 三层架构
      1. prompt system：几千token的system prompt
      1. agent loop：think->tool->observe->repeat
+        - llm当指挥官：核心就是一个while循环，没有复杂的DAG、状态机、编排引擎。理念是llm当指挥官知道应该怎么做，不需要去编排每一步
+        - llm会话无状态：每次都叠加上次会话数据一起扔给llm
+          1. cc的server端会递次缓存之前的每轮会话，产生多个递进的缓存，只要没有修改之前的都会命中缓存，如果修改了就会在缓存后边进入新的会话分支，所以无状态不会导致上下文爆炸，大多数90%都会命中缓存，缓存读取花费是输入token的10%、缓存写入成本是输入token的125%、缓存有效期5分钟每次命中会刷新
+             - ps：openai的api默认无状态，需要请求方自己拼接历史会话，同时提供2种官方会话能力conversation/previous_response_id不需要自己传历史会话，默认保存30天，其他background/streaming临时10分钟，音频多轮状态1小时
+          1. 上下文快满时会压缩
+        - 有最多100轮限制防止死循环，
      1. tooling：read/write/edit/bash/git
    - 设计
      1. Haiku模型做辅助任务：如生成对话摘要(用于resume功能)、检测bash命令是否有注入攻击(用llm来判断另一个llm生成的命令是否危险)
@@ -2924,7 +2952,19 @@
      1. 开始工作：大多数会话从Plan mode开始，讨论好细节和计划后，再一次性接受所有改动
    - 模型对比
      1. 2025年2月24日，Claude Code随着Claude 3.7 Sonnet一起发布
-     1. Opus 4：做到70%开始出错；Opus 4.5：一次过，每个都对，错误率下降了50-75%
+     1. Opus 4：做到70%开始出错
+     1. Opus 4.5：一次过，每个都对，比4错误率下降了50-75%
+     1. Opus 4.6："vibe working"，从编程扩展到全面办公，支持1M上下文
      1. Sonnet4.6只比Opus4.6低了大概2%的能力，但是价格是其五分之一。Sonnet4.6把以前"要用旗舰才能做"的事，拿到了中档价位
         - SWE-bench Verified：评测AI解决真实开源项目bug的能力
         - OSWorld-Verified：评测AI操控真实电脑界面的能力
+### 最佳实践
+1. 在ai开发中要摒弃一切都是确定的的传统思维，要相信llm可以像人一样灵活应变
+1. 心得
+   - compact压缩一次上下文就丢一次细节，越到后面越拉胯
+   - 现在llm的大小一般为128k、256k，最大的1m
+     1. 类似live-sr、student-rtim-sr这种项目就是100~200k，live-class-sr是1m
+1. 胡思乱想
+   - 真正的高精尖技术都是从学术中来的，只考虑实现一个专有的场景，之后再添砖加瓦扩展到其他领域
+     1. 如agent team功能从“分别从安全性、性能、测试覆盖率等不同角度同时审查代码，然后互相质疑和补充”开始mesh架构工作
+     1. 那种一上来就要吃个胖子，面面俱到的往往无法获取成功
