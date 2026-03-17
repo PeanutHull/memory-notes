@@ -511,6 +511,21 @@
      1. go非常适合写mcp server，很多AI工具如Claude Code/Cursor/Windsurf的MCP Server90%都是Go写的，而不是Python
         - 单文件部署(即装即用，没有运行时依赖、跨平台发布容易)、内存占用少、go对stdio支持好、并发高
      1. claude code的插件其实就是一个mcp server，使用mcp server是最合适的选择
+   - mcp推荐
+     1. 网络数据获取
+        - firecrawl mcp：网页内容提取，支持js渲染
+        - playwright mcp：浏览器自动化，模拟真实用户操作
+        - fetch mcp：轻量级http请求，快速获取api数据
+     1. 数据处理
+        - clickhouse mcp
+        - mysql mcp
+     1. 内容制作
+        - word mcp/excel mcp/powerpoint mcp
+        - context7 mcp：代码文档智能管理
+     1. 桌面自动化
+        - desktop commander mcp：操作电脑系统
+        - file system mcp：文件系统
+        - browser tools mcp：打开浏览器查数据
    - wiki
      1. MCP Spec：mcp协议的正式规范文档
      1. 历史
@@ -526,7 +541,11 @@
      1. 透明：没有任何黑盒逻辑
      1. 社区即仓库
    - 设计
-     1. 渐进式披露：既能保持核心指令的简洁，又能在需要时按需加载深度能力
+     1. 渐进式加载机制：既能保持核心指令的简洁，又能在需要时按需加载深度能力
+        - 三层懒加载机制
+          1. 元数据层：启动时只加载name和description。500个skills也就50k tokens
+          1. 指令层：匹配上后才加载完整SKILL.md，通常2k-5k tokens
+          1. 资源层：执行时按需加载scripts(直接执行，不占token)和references(按需读取)
    - 组成
      1. SKILL.md
         ```
@@ -561,6 +580,11 @@
      1. 加载skill：在Claude应用或API请求中指定要加载的skill
      1. 执行任务：Claude会根据用户请求，自动调用相关的skill脚本和资源来完成任务
    - 最佳实践
+     1. skill要小而专注
+        - description明确触发条件，一定写清楚，有时候skill不起作用就是因为这
+        - skill.md要包含具体示例
+        - 分离确定性操作
+        - 持续迭代
      1. 其他llm使用skill有挑战：claude官方对skill的规范描述的比较清晰，但对于llm怎么使用skill并没有详细描述
      1. 好用的
         - next-chat-skills：自动发现、安装、调用、新建skills的工具，能自动安装skill的依赖、出错自动修复
@@ -1330,6 +1354,47 @@
         - 嵌入：embedding，人类指定，ai执行
         - 副驾驶：copilot，人类和ai是伙伴关系共同完成任务，ai提供建议并协助任务，ai像知识丰富的伙伴而非工具
         - 智能体：agent，人类设定目标并提供资源，ai独立完成大部分工作，最后人类监督和评估结果
+1. Claude Desktop
+   - Cowork：AI Agent模式。把Claude从“聊天助手”升级为一个真正能替你在电脑上干活的AI同事，可以自动执行复杂的多步骤任务。如整理文件、分析excel、整理笔记为报告
+     1. 常见能力
+        - 文件操作
+        - 文档生成
+        - 数据分析
+        - 自动化任务：多任务并行、定期
+        - 操作应用：如浏览器
+1. OpenClaw
+   - 认识：
+     1. 累积知识、错误的不再犯
+   - 组成：ai + 记忆memory + 技能skill + 电脑
+     1. 聊天交互
+     1. 记忆系统
+     1. 技能积累
+     1. 定时任务
+   - 架构
+     1. Gateway：做接入
+     1. Agent：做智能
+     1. Bridge：做桥接
+   - 特点
+     1. 持续记忆更新：长期记忆模块，记录和积累用户的交互历史、偏好和反馈
+     1. 直接im远程对话：方便快捷
+     1. agent + 电脑：拓展能力范围
+     1. clawHub生态：skill实时更新
+   - 使用
+     1. 配置：`~/.openclaw/openclaw.json`
+     1. openclaw gateway restart
+     1. openclaw plugins install/list @openclaw/acpx
+   - 实现
+     1. 记忆系统：Memory = MEMORY.md + memory/*.md + Session Transcripts
+        - memory_search、memory_get：在你保存记忆文件后，系统会用Chokidar工具监控文件变化，为了避免频繁写入触发重复操作，还设置了1.5秒的防抖延迟；然后，系统会把文件内容分成约400个token的文本块，相邻文本块会保留80个token的重叠区域，这样既能保证语义连贯，又能提高检索精度；接着每个文本块会被传入embedding模型，转换成1536维的embedding数据，最后存储在数据库里。这个数据库里有四张核心表，分别存储文本块、embedding数据、全文检索内容和向量缓存（存储文本哈希值和对应向量，用于避免生成重复向量）。过程中，会结合语义检索（向量检索）和关键词检索（BM25）两种方式，按 7:3 的权重计算最终检索得分，公式如下最终得分 = 0.7 × 向量检索得分 + 0.3 × 关键词检索得分这样的混合检索方式，既能匹配语义相近的抽象内容（比如 “关于数据库的相关讨论”），又能精准捕捉人名、编号、日期这类具体信息（比如某人哪天提了什么信息）。
+        - 不同agent有自己独特的MEMORY.md
+        - 日常记录放在memory文件夹里，长期记忆放在MEMORY.md里
+        - 记忆刷写：启动对话历史压缩
+        - 裁剪信息：如执行命令时大量的打印信息
+   - wiki
+     1. 其他产品
+        - Nanobot：4K行代码，理解AI Agent是怎么工作的，如工具调用循环、上下文管理、多轮对话状态
+        - KimiClaw：全球部署，封装的利用了Cloudflare的边缘网络
+        - PicoClaw：路由器、开发板适用
 ### AI应用
 1. 认识
    - 大模型的强大的通用计算能力和涌现性，这使得其在应用开发中成本效益极高
@@ -2429,39 +2494,6 @@
      1. Tabbit
         - 智能代理模式（Agent）：录制Skill与脚本Script
         - 全能输入框：一键@所有数据，链接、截图、文件夹
-1. OpenClaw
-   - 认识：
-     1. 累积知识、错误的不再犯
-   - 组成：ai + 记忆memory + 技能skill + 电脑
-     1. 聊天交互
-     1. 记忆系统
-     1. 技能积累
-     1. 定时任务
-   - 架构
-     1. Gateway：做接入
-     1. Agent：做智能
-     1. Bridge：做桥接
-   - 特点
-     1. 持续记忆更新：长期记忆模块，记录和积累用户的交互历史、偏好和反馈
-     1. 直接im远程对话：方便快捷
-     1. agent + 电脑：拓展能力范围
-     1. clawHub生态：skill实时更新
-   - 使用
-     1. 配置：`~/.openclaw/openclaw.json`
-     1. openclaw gateway restart
-     1. openclaw plugins install/list @openclaw/acpx
-   - 实现
-     1. 记忆系统：Memory = MEMORY.md + memory/*.md + Session Transcripts
-        - memory_search、memory_get：在你保存记忆文件后，系统会用Chokidar工具监控文件变化，为了避免频繁写入触发重复操作，还设置了1.5秒的防抖延迟；然后，系统会把文件内容分成约400个token的文本块，相邻文本块会保留80个token的重叠区域，这样既能保证语义连贯，又能提高检索精度；接着每个文本块会被传入embedding模型，转换成1536维的embedding数据，最后存储在数据库里。这个数据库里有四张核心表，分别存储文本块、embedding数据、全文检索内容和向量缓存（存储文本哈希值和对应向量，用于避免生成重复向量）。过程中，会结合语义检索（向量检索）和关键词检索（BM25）两种方式，按 7:3 的权重计算最终检索得分，公式如下最终得分 = 0.7 × 向量检索得分 + 0.3 × 关键词检索得分这样的混合检索方式，既能匹配语义相近的抽象内容（比如 “关于数据库的相关讨论”），又能精准捕捉人名、编号、日期这类具体信息（比如某人哪天提了什么信息）。
-        - 不同agent有自己独特的MEMORY.md
-        - 日常记录放在memory文件夹里，长期记忆放在MEMORY.md里
-        - 记忆刷写：启动对话历史压缩
-        - 裁剪信息：如执行命令时大量的打印信息
-   - wiki
-     1. 其他产品
-        - Nanobot：4K行代码，理解AI Agent是怎么工作的，如工具调用循环、上下文管理、多轮对话状态
-        - KimiClaw：全球部署，封装的利用了Cloudflare的边缘网络
-        - PicoClaw：路由器、开发板适用
 ### AI编程
 1. 理解
    - 代码理解的架构方式
@@ -2473,7 +2505,7 @@
           1. 长上下文推理
           1. 代码关系理解
           1. 递归分析
-     1. 向量检索+代码理解：Hybrid Retrieval 多层检索架构。，如cursor
+     1. 向量检索+代码理解：Hybrid Retrieval 多层检索架构。如cursor
         - 特点
           1. 需要不断指挥AI进行代码修改，，本质是AI原生IDE，AI更像一个智能工具而不是完全自动化的agent
           1. 10万行以上代码Claude Code理解能力会突然“碾压” Cursor：因为数据多了相似度会增加，向量检索都是废话了(历史代码多个版本)
@@ -2520,7 +2552,7 @@
    - 功能
      1. 多Workspace管理：支持Workspace工作区，可以放多个项目
      1. 支持并行处理
-     1. 内置Worktrees：对同一个项目并行开发，不会冲突，可以查看clean diff
+     1. 内置Worktrees：对同一个项目并行开发，不会冲突，可以查看clean diff，即git的Worktree，相当与不同的git分支
      1. 支持Plan Mode
      1. 内置Skills管理界面
      1. 支持Automations自动化、定时任务
@@ -2547,6 +2579,10 @@
      1. ctrl + k的即时对话框，提前选中代码或者@添加任意上下文的引用：让提问更准
    - Memories：记住对话信息并在未来交流过程中引用，按项目和个人级别存储，可在设置中管理。
      1. 如强制记住php的版本号
+   - Commands：以“/”前缀触发的可复用工作流程。使用命令来规范流程，并提高常见任务的效率
+   - SubAgents
+   - Skills
+   - Rules
 1. 基础设置
     ```json
     {
@@ -2614,40 +2650,281 @@
    - Cursor Automations：类似OpenClaw，自动化审核、监控、修复代码，定时任务等
 #### claude code
 1. 组成
+   - CLAUDE.md：写给Claude的规则、init会初始化项目简介、项目规范、代码风格、不能动的配置、工作流规则
+   - MEMORY.md
    - .claude/settings.json
-    ```conf
-    {
-        "hooks": {
-            "SessionStart": [
-                {
-                    "hooks": [
-                    {
-                        "type": "command",
-                        "command": ".claude/hooks/session_start.sh"
-                    }
-                    ]
-                }
-            ]
-        }
-    }
-    ```
    - .claude/skill
    - .claude/hooks
-1. 命令
-   - /insights：分析当前claude code的工作成果和改进地方
-1. 命令：按下/开始操作，--model指定模型
+1. 功能
+   - worktree：隔离支持，包括memory维度、agent维度
+     1. 使用：`claude --worktree`，创建独立的git worktree并运行
+   - /hook：支持各个操作节点添加钩子：支持本地shell命令和http hook
+     1. 分类
+        ```md
+        | Hook类型        | 触发时机                | 常见用途                     |
+        |-----------------|------------------------|------------------------------|
+        | SessionStart    | 会话启动时              | 加载项目配置、初始化环境     |
+        | SessionEnd      | 会话结束时              | 清理临时文件、发送总结       |
+        | UserPromptSubmit| 用户提交prompt时        | 添加上下文信息、预处理输入   |
+        | PreToolUse      | Claude执行工具前        | 拦截危险命令、权限检查       |
+        | PostToolUse     | Claude执行工具后        | 自动格式化、运行测试         |
+        | Stop            | Claude停止响应时        | 发送完成通知                 |
+        | PreCompact      | 上下文压缩前            | 保存重要信息                 |
+        | PostCompact     | 上下文压缩后            | 恢复必要上下文               |
+        | Notification    | 收到通知时              | 转发到其他渠道               |
+        | SubagentStop    | Subagent停止时          | 汇总子任务结果               |
+        ```
+     1. 示例
+        ```conf
+        {
+            "hooks": {
+                "PreToolUse": [
+                    // http hook
+                    {
+                        "type": "http",
+                        "url": "https://your-internal-audit.company.com/claude-events",
+                        "headers": {
+                            "Authorization": "Bearer ${AUDIT_TOKEN}"
+                        }
+                    }
+                    // 本地shell
+                    // 危险命令拦截
+                    {
+                        "matcher": "Bash",
+                        "hooks": [
+                            {
+                                "type": "command",
+                                "command": "if echo \"$CLAUDE_BASH_COMMAND\" | grep -qE '(rm -rf|DROP TABLE|DELETE FROM)'; then echo '危险命令已拦截' >&2; exit 2; fi"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+        ```
+   - /loop：定时调度，直接写做什么，就直接能理解
+     1. 使用
+        - `/loop 5m check if the deployment finished and tell me what happened`，每5分钟
+        - `/loop check the build every 2 hours`，每2小时
+        - `remind me at 3pm to push the release branch in 45 minutes, check whether the integration tests passed`：也支持处理一次性的事，到时候自动删除这个任务
+     1. 特性
+        - 是session级别的，session消息，则任务消失
+        - 3天自动过期，防止无限跑下去
+        - 任务到期，会等Claude当前回合结束再执行，不会打断会话
+     1. 实现
+        - 底层依赖CronCreate、CronList、CronDelete三个工具，每个任务有8位ID，单个session最多50个任务
+   - /simplify：代码审查和直接修复，从三个方面，之后再总结。代码复用性、代码质量和可维护性、性能和效率
+     1. 对刚写完、"能跑就行"状态的代码特别有用。趁着context还新鲜，跑一遍/simplify，代码质量能上一个台阶。不适合在别人的代码上乱跑，那个需要上下文，让它随便改会出问题
+   - /batch：跨文件、跨模块的大规模代码迁移
+     1. 使用：`/batch 把 src/ 目录的组件从 React class 语法迁移到 hooks`
+     1. 步骤：先展示一个迁移计划，然后把工作拆成若干个独立的工作单元，每个单元分配一个独立Agent、在独立的git worktree里运行，并行推进，互不干扰
+   - /claude-api：把完整的Anthropic SDK参考注入到当前会话上下文里，避免开浏览器标签翻文档和当前上下文的频繁切换。包括各种编程语言的完整Claude API参考、工具使用模式和流式实现细节、消息批处理和结构化输出、常见坑的说明，如go、php、curl等
+     1. 专门把某个领域的知识确定性地装进去
+   
+   - /plugins、/reload-plugins
+     1. 认识：插件可以包含斜杠命令、Subagent定义、Hooks配置、MCP服务器配置、各种设置，还能发布到marketplace让别人用，成为团队的共同插件
+     1. 常用插件
+        - `claude plugin install code-simplifier`：保证功能的前提下的代码优化工具
+        - `claude plugin install gopls/php/-lsp@claude-plugins-official`：支持lsp：真正理解代码的语义
+   - /mcp
+     1. 使用：`claude mcp add Laravel boost/k8s/grafana`:
+   - /skills
+     1. 使用：mcp和skill都会进入llm inference pipeline从而占用token，插件和command不会
+   - /chrome：claude in chrome，官方出品的浏览器控制插件
+   - command
+     1. 认识：自定义的命令，.claude/commands/目录下的Markdown文件
+     1. 组成
+        - allowed-tools：限制Claude可以使用的工具（安全考虑）
+        - argument-hint：向用户显示需要提供哪些参数
+        - description：在/help中显示，提高可发现性
+     1. 举例：如/create-api
+        ```md
+        ---
+        description: 生成带有完整设置的REST API端点
+        argument-hint: [endpoint-name] [method?]
+        ---
+
+        # API端点生成器：$ARGUMENTS
+
+        创建一个完整的API端点，包含所有必要的组件：
+
+        ## 实现文件
+        1. **路由处理程序**（`routes/${endpoint}.ts`）
+        2. **控制器**（`controllers/${endpoint}Controller.ts`）
+        3. **服务**（`services/${endpoint}Service.ts`）
+        4. **类型**（`types/${endpoint}Types.ts`）
+
+        ## 附加组件
+        - 使用Joi/Yup进行输入验证
+        - 所有层的单元测试
+        - API文档（OpenAPI/Swagger）
+        - 速率限制配置
+
+        @routes/ @types/ @controllers/
+        ```
+
+   - /agents：subagent，独立的专业分工的可并行执行的claude实例，有自己的上下文，后加&即可异步执行
+     1. 创建demo
+        ```
+        ---
+        name: backend-dev
+        description: 后端API开发专家，专注Spring Boot和微服务。
+        tools: Read, Write, Edit, Bash
+        ---
+
+        你是我的后端开发专家。
+
+        技术栈：
+        - Spring Boot 3.x + Spring Cloud
+        - MyBatis Plus
+        - MySQL 8 + Redis 7
+        - Kafka消息队列
+        - Elasticsearch搜索
+
+        开发规范：
+        - Controller只做参数校验和结果封装
+        - Service处理业务逻辑
+        - DAO只负责数据访问
+        - 所有接口都要做幂等
+        - 统一异常处理
+
+        每个API endpoint：
+        1. 先校验参数
+        2. 处理异常
+        3. 返回统一格式
+        4. 写清楚日志
+        ```
+     1. 使用demo
+        ```
+        用backend-dev重构用户服务 &
+        用frontend-dev更新前端组件 &
+        code-reviewer等他们完成后审查 &     // 最后一个等前两个完成再动手。全程自动协调
+        ```
+   - agent teams
+     1. 从单会话到Subagent再到Agent Teams
+
+   - /memory：auto memory
+     1. 认识：Claude写给自己的笔记，Claude主动维护
+        - 前200行的硬上限自动加载进系统prompt，其他按需获取
+        - 和CLAUDE.md冲突时，更具体的规则优先
+     1. 结构
+        ```
+        // 用户目录
+        // 项目目录
+        ~/.claude/projects/<git-root-hash>/memory/
+        ├── MEMORY.md          # 主入口，每次session自动加载前200行
+        ├── debugging.md       # Claude记录的调试经验
+        ├── api-conventions.md # API设计决策
+        └── patterns.md        # 发现的代码模式
+        ```
+
+        
+   - /init：分析当前repo，生成说明文档claude.md
+     1. esc：暂停当前操作
    - /clear
    - /model：切换模型
+     1. shift+tab：切换plan和自动编辑、yolo(更高权限)模式
+     1. effort
+        - 认识：推理强度，默认中等，绝大多数日常任务够用
+          1. Opus 4.6用的是自适应思维（adaptive thinking），模型会根据任务的复杂程度自行判断推理深度
+        - 操作
+          1. --effort high、/model：设置强度
+          1. ultrathink：单次超控，这次最高，下次恢复
    - /compact：压缩对话，不希望丢掉之前的记忆
+   - /insights：分析当前claude code的工作成果和改进地方
    - /cost：花费
    - /logout、/login
    - /status、/doctor
-1. 使用
-   - 场景
-     1. Shift+Tab：切换plan和自动编辑、yolo(更高权限)模式
-     1. Esc：暂停当前操作
+   - claude remote-control：支持手机或浏览器扫码，远程控制当前的claude
 1. 原理
-   - 三层架构：
-     1. Prompt System：几千token的system prompt
-     1. Agent Loop：think -> tool -> observe -> repeat
-     1. Tooling：read / write / edit / bash / git
+   - 认识：是一个Node.js应用
+   - 提示词组装
+     1. 认识
+        - 根据状态、工具、模式动态组装出来的，类似数字人课件，是企业级的做法
+        - 不是一个单一的长提示词，而是几十个模块化的提示词组合在一起，会用到变量替换、if判断等
+     1. 组成
+        - 主系统提示词：约3000tokens
+        - 工具描述提示词：如bash工具约1000tokens，write工具约150tokens
+        - 子代理提示词：每个子代理独立的系统提示词，如Explore Agent分析代理、Plan Agent计划代理、总结Agent
+        - 系统提醒提示词：特殊提示词，会在特定条件下动态注入
+          1. 五步工作流
+             - Phase 1: Initial Understanding - 理解需求，启动Explore Agent搜索代码
+             - Phase 2: Design - 启动Plan Agent设计方案
+             - Phase 3: Review - 审查方案，确保和用户意图一致
+             - Phase 4: Final Plan - 写最终方案到plan文件
+             - Phase 5: Call ExitPlanMode - 告诉用户规划完成
+        - Skills提示词
+          1. 认识：安装的每个Skill的元数据(name + description)会格式化成XML注入到这里
+            ```xml
+            # 语法
+            ${FORMAT_SKILLS_AS_XML_FN(LIMITED_COMMANDS, AVAILABLE_SKILLs.length)}
+            
+            # 举例
+            <available_skills>
+                <skill name="commit" description="Create git commits with conventional commit messages"/>
+                <skill name="review-pr" description="Review pull requests for code quality"/>
+                <skill name="pdf" description="Generate PDF documents from markdown"/>
+            </available_skills>
+            ```
+     1. 提示词的衔接：以"帮我修复src/utils/parser.ts里的类型错误"举例
+        - 主上下文
+            ```
+            [主系统提示词]
+            - 包含：不要改没读过的代码、避免过度设计等规则
+
+            [工具描述]
+            - ReadFile工具：怎么读文件
+            - Edit工具：怎么编辑文件
+            - Bash工具：怎么跑测试
+
+            [你的消息]
+            - 帮我修复src/utils/parser.ts里的类型错误
+            ```
+        - 规划模式
+            ```
+            [Plan Mode系统提醒]
+            - 你现在不能执行任何修改操作
+            - 按照五步工作流进行规划
+            - 可以启动Explore Agent搜索代码
+            - 最后要调用ExitPlanMode
+            ```
+        - 决定使用Explore Agent时，用Task工具启动
+            ```
+            [Explore Agent专属提示词]
+            - 你是文件搜索专家
+            - 只能读取，不能修改
+            - 使用Glob、Grep、ReadFile工具
+
+            [工具描述]
+            - 只包含只读工具的描述
+
+            [父代理传递的任务]
+            - 探索认证模块的代码结构
+            ```
+        - 自动压缩
+            ```
+            [总结Agent专属提示词]
+            - 按照8个维度进行总结
+            - 保留所有用户消息
+            - 特别关注错误和修复
+
+            [之前的完整对话历史]
+            ```
+        - 
+   - 三层架构
+     1. prompt system：几千token的system prompt
+     1. agent loop：think->tool->observe->repeat
+     1. tooling：read/write/edit/bash/git
+   - 设计
+     1. Haiku模型做辅助任务：如生成对话摘要(用于resume功能)、检测bash命令是否有注入攻击(用llm来判断另一个llm生成的命令是否危险)
+1. 最佳实践
+   - 项目初始化
+     1. 编辑CLAUDE.md：补充项目特殊信息，如技术栈、架构决策、编码规范、注意事项等
+     1. 安装团队skill
+     1. 开始工作：大多数会话从Plan mode开始，讨论好细节和计划后，再一次性接受所有改动
+   - 模型对比
+     1. 2025年2月24日，Claude Code随着Claude 3.7 Sonnet一起发布
+     1. Opus 4：做到70%开始出错；Opus 4.5：一次过，每个都对，错误率下降了50-75%
+     1. Sonnet4.6只比Opus4.6低了大概2%的能力，但是价格是其五分之一。Sonnet4.6把以前"要用旗舰才能做"的事，拿到了中档价位
+        - SWE-bench Verified：评测AI解决真实开源项目bug的能力
+        - OSWorld-Verified：评测AI操控真实电脑界面的能力
