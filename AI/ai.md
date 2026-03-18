@@ -1391,10 +1391,14 @@
         - 记忆刷写：启动对话历史压缩
         - 裁剪信息：如执行命令时大量的打印信息
    - wiki
+     1. 名字历史：Clawdbot、Moltbot
      1. 其他产品
         - Nanobot：4K行代码，理解AI Agent是怎么工作的，如工具调用循环、上下文管理、多轮对话状态
         - KimiClaw：全球部署，封装的利用了Cloudflare的边缘网络
         - PicoClaw：路由器、开发板适用
+
+        - Qclaw：对openclaw产品化封装变成傻瓜式的本地安装包，直连微信（使用微信下命令、操作微信🐶）
+        - WorkBuddy：CodeBuddy团队自己做的独立产品，偏商务（企业级的安全审计能力、支持多个im平台）
 ### AI应用
 1. 认识
    - 大模型的强大的通用计算能力和涌现性，这使得其在应用开发中成本效益极高
@@ -2509,7 +2513,7 @@
           1. 10万行以上代码Claude Code理解能力会突然“碾压” Cursor：因为数据多了相似度会增加，向量检索都是废话了(历史代码多个版本)
         - 理解方式
           1. embedding search：向量检索，提供了快速定位相关代码的能力，但是向量索引 ≠ 深度理解
-          1. keyword search：关键词/BM25搜索，通常会会同时跑这个搜索，如keyword search、regex search、symbol search
+          1. keyword search：关键词/BM25搜索，通常会会同时跑这个搜索，如keyword search 关键字检索、regex search 正则查找、symbol search 符号查找
           1. symbol analysis：Symbol索引分析，用的AST
         - 目标：Cursor默认不会主动递归读取大量文件，因为这会增大延迟、token成本
           1. 低延迟
@@ -2959,9 +2963,11 @@
         - SWE-bench Verified：评测AI解决真实开源项目bug的能力
         - OSWorld-Verified：评测AI操控真实电脑界面的能力
 ### 最佳实践
-1. 在ai开发中要摒弃一切都是确定的的传统思维，要相信llm可以像人一样灵活应变
+1. 在ai开发中要摒弃一切都是确定的的传统思维，要相信llm可以像人一样灵活应变。
 1. 心得
    - compact压缩一次上下文就丢一次细节，越到后面越拉胯
+   - 如果要处理确定性强的、不容有失的，可以使用流程编排等确定性手段
+1. 知识
    - 现在llm的大小一般为128k、256k，最大的1m
      1. 类似live-sr、student-rtim-sr这种项目就是100~200k，live-class-sr是1m
 1. 胡思乱想

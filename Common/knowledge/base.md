@@ -1670,7 +1670,7 @@
      1. 无法处理长文本
       1. 词序问题：BM25不考虑词序，"我喜欢吃苹果"和"苹果喜欢吃我"的相关性是一样的
    - 最佳实践
-     1. 混合检索：BM25 + vector search。这种方法叫Hybrid Retrieval
+     1. 混合检索：BM25 + vector search(即semantic search) + RRF。这种方法叫Hybrid Retrieval
      1. 一个典型BM25搜索流程是
         ```
         用户 query
@@ -1685,6 +1685,8 @@
             ↓
         返回 topK
     ```
+1. RRF
+   - 认识：Reciprocal Rank Fusion 倒数排名融合，是信息检索中一种经典、工程上非常实用的多路召回结果融合算法。用“排名倒数”来融合多个检索结果，避免score不一致问题，是BM25 + 向量检索的工业级标准解法。
 1. 并行运算
    - 对数据分片然后并行处理
      1. 一：先随意分片，再比较后合并

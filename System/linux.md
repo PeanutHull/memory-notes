@@ -1575,3 +1575,16 @@
     git tag $newTag;
     git push origin tag $newTag;
     ```
+### 库和工具
+1. tmux
+   - 认识：Terminal Multiplexer 终端复用器，是运行在命令行里的用来在一个终端中管理多个终端会话的开源工具
+   - 使用
+    ```s
+    # 创建 session
+    tmux new-session -d -s $SESSION
+
+    # 进入 session
+    tmux attach -t $SESSION
+
+    tmux send-keys -t $SESSION:0 "cd backend && go run main.go" C-m
+    ```
