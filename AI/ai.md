@@ -1364,41 +1364,149 @@
         - 操作应用：如浏览器
 1. OpenClaw
    - 认识：
-     1. 累积知识、错误的不再犯
-   - 组成：ai + 记忆memory + 技能skill + 电脑
-     1. 聊天交互
-     1. 记忆系统
-     1. 技能积累
-     1. 定时任务
-   - 架构
-     1. Gateway：做接入
-     1. Agent：做智能
-     1. Bridge：做桥接
+     1. 渐进式生长：累积知识、错误的不再犯，通过搭配SOUL.md、MEMORY.md不断积累更新
+   - 组成
+     1. 模块：ai + 记忆memory + 技能skill + 电脑
+        - 聊天交互
+        - 记忆系统
+        - 技能积累
+        - 定时任务
+     1. 文件
+        - 配置：`~/.openclaw/openclaw.json`
+        - 身份
+          1. SOUL.md：智能体的"人格文件"
+          1. IDENTITY.md：快速参考名片
+          1. USER.md：智能体需要了解的"甲方画像"
+        - 行为
+          1. AGENTS.md：行为手册，告诉agent具体怎么干活。定义会话启动流程、任务处理规则、安全边界
+          1. TOOLS.md：能力清单
+          1. Cron：定时调度
+          1. HEARTBEAT.md：自愈机制
+        - 知识层
+          1. memory/*.md、MEMORY.md：日常记忆、精炼的长期记忆
+          1. shared-context/：跨智能体共享知识
+        - 其他
+          - agents/
+          - sessions/
+          - skills/
+          - credentials/
    - 特点
+     1. agent + 电脑：拓展能力范围
      1. 持续记忆更新：长期记忆模块，记录和积累用户的交互历史、偏好和反馈
      1. 直接im远程对话：方便快捷
-     1. agent + 电脑：拓展能力范围
+     1. 安全模型是加法思维，默认什么都能做
      1. clawHub生态：skill实时更新
    - 使用
-     1. 配置：`~/.openclaw/openclaw.json`
      1. openclaw gateway restart
      1. openclaw plugins install/list @openclaw/acpx
+   - 架构：在pi agent之上包了一层gateway和bridge，加了skill marketplace、多渠道接入、企业管理后台
+     1. 接入层：用户层，接收用户消息。如飞书、web控制台
+     1. bridge层：协议转换 + 消息标准化，即渠道适配 + 消息格式统一转换
+        - 渠道适配：channel plugin
+          1. websocket桥接
+          1. webhook
+          1. 原生协议
+        - 消息格式统一：msgContext
+          1. body、from、to、channel、sessionkey等
+     1. gateway层：网关层，端口18789、认证、路由、分发
+        - 设备配对、token认证
+          1. 风险：token无过期时间、默认无设备绑定
+        - 消息路由：agent路由表
+          1. agentId + sessionKey解析
+        - websocket 双向通信
+          1. ai中间状态实时推送
+        - 心跳&多设备广播
+          1. ping/pong
+          1. 断线重连
+          1. 全端同步
+     1. agent runtime层：核心执行层，pi agent引擎 + openclaw平台层
+        - pi agent引擎
+          1. pi-ai多模型抽象：10+模型供应商
+          1. system prompt：< 1000 token
+          1. agent循环：while + 工具调用
+          1. 工具能力：四工具，read/write/edit/bash
+          1. session管理：jsonl树形/支持分支
+        - openclaw 平台层
+          4. 子agent系统
+          1. skill系统：1700+技能
+          3. 安全配置：白名单/审计
+          5. 管理后台
    - 实现
-     1. 记忆系统：Memory = MEMORY.md + memory/*.md + Session Transcripts
-        - memory_search、memory_get：在你保存记忆文件后，系统会用Chokidar工具监控文件变化，为了避免频繁写入触发重复操作，还设置了1.5秒的防抖延迟；然后，系统会把文件内容分成约400个token的文本块，相邻文本块会保留80个token的重叠区域，这样既能保证语义连贯，又能提高检索精度；接着每个文本块会被传入embedding模型，转换成1536维的embedding数据，最后存储在数据库里。这个数据库里有四张核心表，分别存储文本块、embedding数据、全文检索内容和向量缓存（存储文本哈希值和对应向量，用于避免生成重复向量）。过程中，会结合语义检索（向量检索）和关键词检索（BM25）两种方式，按 7:3 的权重计算最终检索得分，公式如下最终得分 = 0.7 × 向量检索得分 + 0.3 × 关键词检索得分这样的混合检索方式，既能匹配语义相近的抽象内容（比如 “关于数据库的相关讨论”），又能精准捕捉人名、编号、日期这类具体信息（比如某人哪天提了什么信息）。
-        - 不同agent有自己独特的MEMORY.md
-        - 日常记录放在memory文件夹里，长期记忆放在MEMORY.md里
-        - 记忆刷写：启动对话历史压缩
-        - 裁剪信息：如执行命令时大量的打印信息
-   - wiki
-     1. 名字历史：Clawdbot、Moltbot
-     1. 其他产品
-        - Nanobot：4K行代码，理解AI Agent是怎么工作的，如工具调用循环、上下文管理、多轮对话状态
-        - KimiClaw：全球部署，封装的利用了Cloudflare的边缘网络
-        - PicoClaw：路由器、开发板适用
+     1. 流程
+        - 微信clawchat → bridge（消息格式转换）→ gateway（认证、路由）→ agent runtime（意图理解、skill 调度、模型调用）→ 文件系统操作 → 结果回传 → gateway → bridge → 微信 clawchat
+     1. 记忆系统
+        - 认识：关机重启都存在
+          1. memory_search、memory_get：在你保存记忆文件后，系统会用Chokidar工具监控文件变化，为了避免频繁写入触发重复操作，还设置了1.5秒的防抖延迟；然后，系统会把文件内容分成约400个token的文本块，相邻文本块会保留80个token的重叠区域，这样既能保证语义连贯，又能提高检索精度；接着每个文本块会被传入embedding模型，转换成1536维的embedding数据，最后存储在数据库里。这个数据库里有四张核心表，分别存储文本块、embedding数据、全文检索内容和向量缓存（存储文本哈希值和对应向量，用于避免生成重复向量）。过程中，会结合语义检索（向量检索）和关键词检索（BM25）两种方式，按 7:3 的权重计算最终检索得分，公式如下最终得分 = 0.7 × 向量检索得分 + 0.3 × 关键词检索得分这样的混合检索方式，既能匹配语义相近的抽象内容（比如 “关于数据库的相关讨论”），又能精准捕捉人名、编号、日期这类具体信息（比如某人哪天提了什么信息）。
+          1. 不同agent有自己独特的MEMORY.md
+          1. 记忆刷写：启动对话历史压缩
+        - 组成
+          1. 本地markdown文件 + sqlite向量索引
+          1. 日志层记忆 memory/YYYY-MM-DD.md + 长期记忆层 MEMORY.md
+     1. Skill执行引擎
+     1. 上下文管理器
+     1. 模型路由器
+     1. Gateway
 
-        - Qclaw：对openclaw产品化封装变成傻瓜式的本地安装包，直连微信（使用微信下命令、操作微信🐶）
-        - WorkBuddy：CodeBuddy团队自己做的独立产品，偏商务（企业级的安全审计能力、支持多个im平台）
+     1. Skill Marketplace
+1. Pi Agent
+   - 流程：用户发消息 → 加载session(jsonl历史)→ 构建上下文(system prompt+工具定义+对话历史)→ 进入while循环 → 调用llm(流式请求)→ 接收响应(text_delta/tool_call)→ 判断是否需工具调用 → 执行工具并收集结果 → 写回上下文 → 继续循环（直到完成）→ 持久化session(写入jsonl)→ 返回结果
+   - 组成
+     1. jsonl session管理
+        - jsonl：即每行只能一条压缩的json数据
+        - jsonl树结构：在json中标记自己的父级是谁(每条记录带id和parentId)，这样一点点往上推就能得到整个有分支的会话历史
+     1. extension系统设计
+        - 拒绝mcp，私有协议，用cli工具 + readme做渐进式发现，agent需要某个能力时，通过bash调用cli，按需付上下文成本。避免了mcp的一般情况下的13k~18k token预加载开销
+     1. 极简system prompt：对赌未来模型能力，留给用户更多上下文，关键时刻安全性可能不足
+   - 架构：四层分包架构，每层解决一个问题
+     1. pi-ai
+        - 认识：模型通信层，多供应商统一接口
+        - 特性
+          1. 统一流式接口：text_delta | toolcall_start | done | error —— 所有供应商统一输出格式
+          1. 10+ 供应商支持：anthropic/openai/google/xai/groq/mistral/ollama/deepseek
+          1. 一行代码切换模型：getmodel(provider, model) —— 不改业务逻辑，只换供应商
+     1. pi-agent-core
+        - 认识：agent循环层，业界共识架构
+        - 特性
+          1. while循环：即核心，无DAG、无编排引擎，`发消息 → 工具调用 → 执行 → 循环直到完成`
+          1. 事件订阅系统：实时感知agent状态，message_update/tool_start/tool_end/done
+          1. 流式处理：逐字符推流，ui实时更新。text_delta/toolcall_delta
+     1. pi-coding-agent
+        - 认识：交互式编码代理cli，开发者实际使用的入口
+        - 特性
+          1. session持久化：jsonl树结构，支持分支/恢复，原始历史一条不丢
+          1. 内置工具：四工具。read · write · edit · bash：grep/find等通过bash调用
+          1. extension系统
+     1. pi-tui
+        - 认识：终端ui层
+        - 特性
+          1. markdown渲染 + 语法高亮：差分渲染，只重绘变化行。比 claude code 闪烁少
+          1. 多行编辑器 + tab自动补全：历史命令、vi快捷键支持
+          1. synchronized output：终端缓冲区批量刷新，消除流式渲染的撕裂感
+1. wiki
+   - agent对话中工具响应占67.6%token，工具定义占10.7%，system prompt只占3.4%。这意味着优化工具输出（限制返回长度、截取关键信息）比优化prompt“更能省钱
+   - 对比
+    ```
+    | 维度           | Claude Code                              | Pi Agent（OpenClaw 引擎）                  |
+    |----------------|------------------------------------------|-------------------------------------------|
+    | Agent 循环     | while 循环 + 工具调用                    | 同样是 while 循环 + 工具调用              |
+    | System Prompt  | 几千 token，详细的行为规范               | <1000 token，极简指令                     |
+    | 核心工具       | Read / Write / Edit / Bash / Glob / Grep | Read / Write / Edit / Bash（四个）        |
+    | 扩展机制       | MCP 协议（标准化、生态大）               | Extension 系统（私有、高效）              |
+    | 模型绑定       | 深度优化 Claude                          | 模型无关，支持十几个 Provider            |
+    | 上下文管理     | 自动压缩（85% 阈值触发）                 | 无内置压缩，依赖极简 prompt 控制上下文    |
+    | 权限模型       | 默认拒绝（白名单机制）                   | YOLO 模式（默认全开）                     |
+    | Sub-Agent      | Task 工具生成子 Agent                    | 反对编排式子 Agent，推荐 bash 调自身      |
+    | Session 持久化 | 内存 + 自动摘要                          | JSONL 树形结构，支持分支 / 恢复           |
+    | 终端 UI        | SSE 流式渲染                             | 差分渲染 + synchronized output            |
+    ```
+   - openclaw的名字历史：Clawdbot、Moltbot
+   - agent其他产品
+     1. Nanobot：4K行代码，理解AI Agent是怎么工作的，如工具调用循环、上下文管理、多轮对话状态
+     1. KimiClaw：全球部署，封装的利用了Cloudflare的边缘网络
+     1. PicoClaw：路由器、开发板适用
+
+     1. Qclaw：对openclaw产品化封装变成傻瓜式的本地安装包，直连微信（使用微信下命令、操作微信🐶）
+     1. WorkBuddy：CodeBuddy团队自己做的独立产品，偏商务（企业级的安全审计能力、支持多个im平台）
 ### AI应用
 1. 认识
    - 大模型的强大的通用计算能力和涌现性，这使得其在应用开发中成本效益极高
@@ -2939,13 +3047,16 @@
         ```
    - 三层架构
      1. prompt system：几千token的system prompt
+        - claude的prompt非常细致，本质上是把十几年工程实践中总结的"好习惯"硬编码进了prompt，这些在关键操作上是救命稻草，如git commit不能主动加--no-verify
      1. agent loop：think->tool->observe->repeat
         - llm当指挥官：核心就是一个while循环，没有复杂的DAG、状态机、编排引擎。理念是llm当指挥官知道应该怎么做，不需要去编排每一步
-        - llm会话无状态：每次都叠加上次会话数据一起扔给llm
+          1. 收到用户输入 → 组装prompt → 发给claude → claude返回结果(可能包含工具调用)→ 执行工具 → 把结果塞回prompt → 再发给claude → 直到claude说"我完成了"
+          1. 简单不简陋，有很多细活。如上下文压缩、工具失败不会破坏循环会发给llm判断失败原因
+        - llm会话无状态：每次都叠加上次会话数据一起扔给服务端，然后服务端处理缓存后扔给llm
           1. cc的server端会递次缓存之前的每轮会话，产生多个递进的缓存，只要没有修改之前的都会命中缓存，如果修改了就会在缓存后边进入新的会话分支，所以无状态不会导致上下文爆炸，大多数90%都会命中缓存，缓存读取花费是输入token的10%、缓存写入成本是输入token的125%、缓存有效期5分钟每次命中会刷新
              - ps：openai的api默认无状态，需要请求方自己拼接历史会话，同时提供2种官方会话能力conversation/previous_response_id不需要自己传历史会话，默认保存30天，其他background/streaming临时10分钟，音频多轮状态1小时
           1. 上下文快满时会压缩
-        - 有最多100轮限制防止死循环，
+        - 有最多100轮限制防止死循环
      1. tooling：read/write/edit/bash/git
    - 设计
      1. Haiku模型做辅助任务：如生成对话摘要(用于resume功能)、检测bash命令是否有注入攻击(用llm来判断另一个llm生成的命令是否危险)
@@ -2964,12 +3075,15 @@
         - OSWorld-Verified：评测AI操控真实电脑界面的能力
 ### 最佳实践
 1. 在ai开发中要摒弃一切都是确定的的传统思维，要相信llm可以像人一样灵活应变。
+1. openclaw的提示词维度更加的高，并没有详细说明什么情况下应该怎么做，而是给出了理想和原则，是更高维度的提示词，是适配更高级模型的正确思路
 1. 心得
    - compact压缩一次上下文就丢一次细节，越到后面越拉胯
    - 如果要处理确定性强的、不容有失的，可以使用流程编排等确定性手段
 1. 知识
-   - 现在llm的大小一般为128k、256k，最大的1m
-     1. 类似live-sr、student-rtim-sr这种项目就是100~200k，live-class-sr是1m
+   - 现在llm
+     1. 上下文窗口一般为128k、256k，最大的1m
+        - 类似live-sr、student-rtim-sr这种项目就是100~200k，live-class-sr是1m
+     1. 参数量为数千亿→万亿级，通常是MoE(混合专家)实际每次只激活一部分参数，本地的是几亿(即几B)
 1. 胡思乱想
    - 真正的高精尖技术都是从学术中来的，只考虑实现一个专有的场景，之后再添砖加瓦扩展到其他领域
      1. 如agent team功能从“分别从安全性、性能、测试覆盖率等不同角度同时审查代码，然后互相质疑和补充”开始mesh架构工作
