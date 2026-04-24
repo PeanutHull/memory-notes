@@ -1034,8 +1034,23 @@
         - 找出发包最多的ip：`tcpdump -nnn -t -c 200 | cut -f 1,2,3,4 -d '.' | sort | uniq -c | sort -nr | head -n 20`
         - 抓ip是xx的包并写入pcap文件：`tcpdump -iany host 125.39.223.xx -w xx.pcap`
 1. 登录
-   - ssh
    - telnet：用于远程登录，基于TCP/IP协议族一员的telnet协议，采用明文传送报文安全性不好，都用ssh
+   - SSH
+   - RDP：Remote Desktop Protocol 远程桌面协议，微软定义，用于在网络上远程控制另一台计算机的桌面环境。被广泛用于服务器运维、云桌面VDI和远程办公场景
+     1. 认识
+        - 运行在tcp之上：端口3389
+     1. 技术细节
+        - 使用MCS（Multipoint Communication Service）实现多路复用：图形通道（主通道）、输入通道（键盘/鼠标）、剪贴板通道、磁盘映射、音频通道。在一条tcp连接上multiplex多个逻辑流（有点像 http/2）
+        - 图形指令 + 直接发送压缩视频流：早期GDI画矩形、绘制文本等命令虽然带宽低但是复杂UI表现差
+        - 输入事件回传：客户端捕获键盘、鼠标等事件发送到服务端，服务端当作本地输入处理
+        - 设备重定向：支持本地设备映射到远端，
+     1. 性能优化
+        - UDP加速：RDP 8+
+        - 自适应压缩：根据网络情况自动选择RLE/JPEG/H.264
+        - 帧率 / 分辨率动态调整
+     1. 其他
+        - RDP：windows原生、体验好、功能完整
+        - VNC：纯像素传输，简单但效率低
 1. 其他
    - bestTrace：查看AS等网络包跳转路由，命令行和客户端形式
    - netcat：即nc，tcp/ip的瑞士军刀，体积小，功能灵活

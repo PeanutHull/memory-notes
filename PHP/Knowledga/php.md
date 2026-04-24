@@ -1045,13 +1045,10 @@
             # 安装必要的依赖
             RUN apt-get update && apt-get install -y \
                 libpq-dev \
-                && docker-php-ext-install pdo pdo_mysql
+                && docker-php-ext-install pdo pdo_mysql bcmath
 
             # 安装 Redis 扩展
             RUN pecl install redis && docker-php-ext-enable redis
-
-            # 安装 BCMath 扩展
-            RUN docker-php-ext-install bcmath
             ```
         - v7.3的
             ```conf
@@ -1060,13 +1057,10 @@
             # 安装必要的依赖
             RUN apt-get update && apt-get install -y \
                 libpq-dev \
-                && docker-php-ext-install pdo pdo_mysql
+                && docker-php-ext-install pdo pdo_mysql bcmath
 
             # 安装 Redis 扩展
             RUN pecl install redis-5.3.7 && docker-php-ext-enable redis
-
-            # 安装 BCMath 扩展
-            RUN docker-php-ext-install bcmath
             ```
      1. default.conf
         ```sh
