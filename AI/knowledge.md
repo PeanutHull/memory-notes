@@ -248,6 +248,16 @@
      1. 首尾帧：有了首尾帧就有了完整的画面
      1. 分镜
      1. 运镜
+1. 我曾经用过的提示词
+   - 抽象鉴权中间件php翻译为go
+    ```
+    参考auth-center这个skill（其源码目录在~/php/auth-center，需要查看详细源码时来这里）将~/go/portal-api中middleware中的功能抽象到~/go/doushen-common的auth_center文件夹中，即同一个鉴权组件分别的php和go版本。
+    1. 可以修改go.mod文件临时引入这个包即可，稍后我自己改已网络的方式导入包
+    2. php/auth-center是基于laravel框架定制程度较高，go不能只能接入go-zero，go还需要接入其他框架或者原生的go，所以封装成独立方法或者什么，你自己定，但是要求封装简洁、容易接入
+    3. 功能上现在portal-api和php/auth-center基本是一致的，只是实现方式上因为不同语言的特性实现方式不同，这个不必追求一致，按照portal-api这种go语言的方式即可
+    4. go也要改一下，修改allowed_dict_codes的过滤行为，如果allowed_dict_codes为空，则不过滤任何的字段
+    5. php/auth-center中go没有的功能，列出来，我看看是否需加入
+    ```
 ### cursor
 1. 主题样式
    - 认识

@@ -3537,8 +3537,9 @@
         )
 
         replace (                                                       // 指定替换包
-            golang.org/x/text => github.com/golang/text v0.3.0
+            golang.org/x/xx => github.com/golang/xx v0.3.0
         )
+        replace xx/xx => ../xx                                          // 指定本地包
         
         exclude example.com/thismodule v1.3.0                           // 从使用中排除特定模块版本
         ```
@@ -3578,10 +3579,10 @@
           1. `-d`：不构建和安装，只下载，go-get应该与-d标志一起使用，以调整当前模块的依赖关系而不构建包，不推荐使用go-get来构建和安装包。在未来的版本中，-d标志将始终启用
           1. 支持build的参数
           1. `golang.org/x/text@latest`：指定包名和版本
-             - latest：拉取最新的版本，若存在tag，则优先使用
-             - master：拉取 master 分支的最新 commit
              - v0.3.2：指定tag
-             - 342b2e：指定commit，最终转换为tag
+             - latest：拉取最新的版本，若存在tag，则优先使用
+             - feature-xxx：指定分支的最新commit。（本质是通过pseudo-version 伪版本实现，格式为vX.Y.Z-yyyymmddhhmmss-commitHash，）
+             - 342b2e：指定commit，也是伪版本
              - none
           1. `-u`：强制使用网络更新直接或间接的依赖模块
           1. `-t ./...`：包括单元测试中用到的
