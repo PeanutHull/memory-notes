@@ -1302,20 +1302,31 @@
             # 验证实际预测效果
             data_frame = llm_predict(scan_data=testing_data)
             ```
-#### content
-1. Content Engineering
-   - 认识：内容工程，利用大模型和自动化技术，提升内容创作的效率和质量
-     1. 目标：提升内容生产效率、增强内容质量、实现个性化内容推荐、优化内容分发渠道
+#### context
+1. context Engineering
+   - 认识：上下文工程
    - 组成
-     1. 保存context：memory，筛选总结，找个地方保存起来
+     1. 保存context：记忆系统，筛选总结，即找个地方保存起来
      1. 选择context
         - 静态选择：每次全都要，永远重要必须遵守的信息，一般比较短小，如cursor.rules、claude.md
         - 动态选择：根据每次任务选择
      1. 压缩context：快占满上下文时要进行压缩，
         - 方式
-          1. 总结方式：总结后把原来的内容扔掉，会丢失细节，但是降低了大小。如claude的压缩方案有重点保存测试输出和代码改动
-          1. 向量方式：越长的文本向量化效果越好，但是向量化的目的不是压缩，是语义化和可计算化
+          1. 总结：总结后把原来的内容扔掉，会丢失细节，但是降低了大小。如claude的压缩方案有重点保存测试输出和代码改动
+          1. 外化：
+            - 移除不重要的、大段的
+            - 向量化：越长的文本向量化效果越好，但是向量化的目的不是压缩，是语义化和可计算化
+          1. 预算管理
+            ```
+            Token Budget Allocation
+            - system: 10%
+            - instruction: 10%
+            - memory: 30%
+            - history: 30%
+            - tools/output: 20%
+            ```
      1. 隔离context：不同的上下文之间是隔离的，常见于multi-agent中 
+     1. 
 #### workflow
 1. 编排
    - 认识
@@ -2773,12 +2784,26 @@
    - 任务清单驱动：使用Markdown task‑list，AI可自动勾选已完成项
    - Cursor Automations：类似OpenClaw，自动化审核、监控、修复代码，定时任务等
 ##### claude code
+1. 亮点
+   - 与其让每个环节都变复杂，不如让一个环节足够强，其他环节保持简单
+     1. 不使用向量数据库/向量索引，只用grep和ripgrep。因为有足够聪明的大脑llm理解搜索结果
+   - llm当指挥官，llm知道应该怎么做
+     1. 工具决策、任务决策都交给llm
 1. 组成
    - CLAUDE.md：写给Claude的规则、init会初始化项目简介、项目规范、代码风格、不能动的配置、工作流规则
+     1. 简介、干净第一
+     1. 应该是个索引，而不是大全
+     1. 如果规则太多，就拆到rules/
    - MEMORY.md
-   - .claude/settings.json
-   - .claude/skill
-   - .claude/hooks
+   - .claude/
+     1. 分类
+        - 项目级
+        - 全局级
+     1. 组成
+        - .claude/settings.json
+        - .claude/skill/
+        - .claude/hooks/
+        - .claude/rules/
 1. 功能
    - worktree：隔离支持，包括memory维度、agent维度
      1. 使用：`claude --worktree`，创建独立的git worktree并运行
@@ -2939,6 +2964,20 @@
         - Agent Teams目前还是实验性功能，默认关闭
         - 有人用tmux脚本、OpenClaw搞过类似的东西，可以看出原生集成和脚本糊出来的体验完全不在一个量级
         - 子agent之间的上下文同步、冲突处理、错误回滚，都是硬骨头
+     1. 认识：像真实公司一样运转。utils/swarm/目录下是完整多agent协作框架
+        - 每个team有leader和多个teammate
+        - 支持三种执行方式：同进程隔离、tmux窗口、iterm2分割窗格
+        - 每个agent有自己的邮箱文件做异步通信
+        - 每个agent可在独立的git worktree中工作，互不干扰
+        - 权限冒泡：teammate遇到需确认的操作，权限请求冒泡给leader而非直接弹给用户
+     1. 对比
+        - | 维度 | sub-agents | agent teams |
+          |------|------------|-------------|
+          | 进程模型 | 主agent的子进程 | 独立的对等进程 |
+          | 通信方式 | 任务结束时返回摘要 | 持续的消息/广播ipc |
+          | context | 隔离，任务后丢弃 | 独立，持久保留 |
+          | 协调方式 | 顺序委托 | 共享任务列表，自主认领 |
+          | 适合场景 | 研究、探索、代码审查 | 跨模块并行实现 |
 1. 特性
    - /memory：auto memory
      1. 认识：claude写给自己的笔记，claude主动维护
@@ -2981,7 +3020,7 @@
    - IDE集成：显示“IDE connected”，即可让IDE显示代码变更，就跟cursor一样
    - claude remote-control：支持手机或浏览器扫码，远程控制当前的claude
 1. 原理
-   - 认识：是一个Node.js应用
+   - 认识：是一个Node.js应用，用ts写的
    - 提示词组装
      1. 认识
         - 根据状态、工具、模式动态组装出来的，类似数字人课件，是企业级的做法
@@ -3057,13 +3096,55 @@
      1. agent loop：think->tool->observe->repeat
         - llm当指挥官：核心就是一个while循环，没有复杂的DAG、状态机、编排引擎。理念是llm当指挥官知道应该怎么做，不需要去编排每一步
           1. 收到用户输入 → 组装prompt → 发给claude → claude返回结果(可能包含工具调用)→ 执行工具 → 把结果塞回prompt → 再发给claude → 直到claude说"我完成了"
-          1. 简单不简陋，有很多细活。如上下文压缩、工具失败不会破坏循环会发给llm判断失败原因
+          1. 只负责驱动循环、执行工具调用、感知结果。所有的推理、决策、何时停止，全部都交给模型
+             - 对比LangChain这种在框架层做各种“聪明编排”的路线形成了鲜明对比
+          1. 简单不简陋，有很多细活。如工具失败不会破坏循环会发给llm判断失败原因
         - llm会话无状态：每次都叠加上次会话数据一起扔给服务端，然后服务端处理缓存后扔给llm
           1. cc的server端会递次缓存之前的每轮会话，产生多个递进的缓存，只要没有修改之前的都会命中缓存，如果修改了就会在缓存后边进入新的会话分支，所以无状态不会导致上下文爆炸，大多数90%都会命中缓存，缓存读取花费是输入token的10%、缓存写入成本是输入token的125%、缓存有效期5分钟每次命中会刷新
              - ps：openai的api默认无状态，需要请求方自己拼接历史会话，同时提供2种官方会话能力conversation/previous_response_id不需要自己传历史会话，默认保存30天，其他background/streaming临时10分钟，音频多轮状态1小时
-          1. 上下文快满时会压缩
         - 有最多100轮限制防止死循环
-     1. tooling：read/write/edit/bash/git
+     1. tooling：read/write/edit/bash(git/npm/docker)
+   - 其他部分
+     1. context window
+        - 原则
+          1. context不是越大越好，而是越干净越好
+        - 治理体系
+          1. 自动压缩：占用约70%时自动触发，用llm摘要替换原始对话轮次，释放空间同时保留关键决策
+          1. sub-agent隔离：重型探索、研究任务卸载给独立子agent
+              - 子agent运行自己独立的taor循环，有自己的context预算
+              - 任务完成后只把摘要返回给主agent，主agent的context不被污染
+              - 细节：子agent有自己的maxtokens上限、compaction机制、memory.md
+           1. prompt cache：递进缓存
+        - session管理
+          1. context管理不只在单次会话内，而是跨会话的
+          1. 会话像git branch运作，可checkpoint、rollback、fork
+        - wiki
+          1. 最普遍的失败模式 context collapse：上下文窗口被填满 → 记忆退化 → 幻觉出现 → agent在噪音里迷失
+     1. memory
+        - 原则
+          1. 核心是索引，不是存储
+          1. 能从代码库中重新推导出的信息，绝不应该被存储
+        - 分层：每次会话启动时按层加载
+          1. user preferences：用户偏好，个人层面的习惯和偏好设置
+          1. project claude.md：项目配置，当前项目的特定指令和上下文
+          1. managed policy：组织级策略，企业或团队层面的统一规范
+          1. auto-memory：自动学习模式，agent从历史交互中学到的用户模式
+             - 允许agent学习用户工作模式，并写入memory.md供未来会话使用
+             - 用户不需要反复解释相同的事情
+          1. session：会话上下文，当前会话的临时信息
+          1. sub-agent memory：子agent记忆，各子agent独立维护的专项记忆
+        - 机制
+          1. 下次调用时自动加载前200行记忆
+          1. 记忆提取机制：会自动更新记忆
+             - 触发时机：每轮回答完成后启动，有限流
+             - 由独立fork agent完成：继承主对话上下文，但只能读文件和写入记忆目录，不能执行bash
+     1. 权限系统
+        - 工具调用都经过静态分析层的多层白名单校验：bashsecurity.ts里有23项编号的安全检查
+          1. 18个被阻止的zsh内置命令
+          1. 防御zsh equals expansion：=curl这种写法可以绕过对curl的权限检查
+          1. unicode零宽字符注入
+          1. ifs null-byte注入
+          1. 一个在hackeron审查期间发现的恶意token绕过
    - 设计
      1. Haiku模型做辅助任务：如生成对话摘要(用于resume功能)、检测bash命令是否有注入攻击(用llm来判断另一个llm生成的命令是否危险)
 1. 最佳实践
@@ -3084,6 +3165,7 @@
 1. openclaw的提示词维度更加的高，并没有详细说明什么情况下应该怎么做，而是给出了理想和原则，是更高维度的提示词，是适配更高级模型的正确思路
 1. 心得
    - compact压缩一次上下文就丢一次细节，越到后面越拉胯
+     1. 记录关键决策可以减轻
    - 如果要处理确定性强的、不容有失的，可以使用流程编排等确定性手段
    - 模型能力的提升正在让"精心设计的 prompt"变得越来越不重要
 1. 知识
