@@ -1445,3 +1445,176 @@
             return Merge(MergeN(inputs[:m]...), MergeN(inputs[m:]...))      // slide和可变参数的转换
         }
         ```
+1. Graph Orchestrator
+   - 理解
+    ```go
+    // 最少需要4个东西
+    State // 流程上下文，贯穿全流程
+    Node  // 执行单元，读取/修改State
+    Edge  // 节点之间的关系，决定下一个Node
+    Engine // 调度器，负责调度执行
+    ```
+   - 最小设计
+    ```go
+    type State map[string]any
+
+    // 节点定义
+    type NodeFunc func(ctx context.Context, state State) (State, error)
+
+    type Node struct {
+        Name string
+        Run  NodeFunc
+    }
+
+    // 边定义
+    type ConditionFunc func(state State) bool
+
+    type Edge struct {
+        From      string
+        To        string
+        Condition ConditionFunc
+    }
+
+    // Graph定义
+    type Graph struct {
+        Nodes map[string]Node
+        Edges []Edge
+        Start string
+        End   string
+    }
+
+    // Engine最小定义
+    type Engine struct {
+        graph Graph
+    }
+
+    func NewEngine(g Graph) *Engine {
+        return &Engine{graph: g}
+    }
+
+    func (e *Engine) Run(ctx context.Context, init State) (State, error) {
+        current := e.graph.Start
+        state := init
+
+        for {
+            if current == e.graph.End {
+                return state, nil
+            }
+
+            node, ok := e.graph.Nodes[current]
+            if !ok {
+                return nil, fmt.Errorf("node not found: %s", current)
+            }
+
+            nextState, err := node.Run(ctx, state)
+            if err != nil {
+                return nil, fmt.Errorf("node %s failed: %w", current, err)
+            }
+
+            state = nextState
+
+            next, ok := e.nextNode(current, state)
+            if !ok {
+                return nil, fmt.Errorf("no next node from: %s", current)
+            }
+
+            current = next
+        }
+    }
+
+    func (e *Engine) nextNode(current string, state State) (string, bool) {
+        for _, edge := range e.graph.Edges {
+            if edge.From != current {
+                continue
+            }
+
+            if edge.Condition == nil || edge.Condition(state) {
+                return edge.To, true
+            }
+        }
+
+        return "", false
+    }
+    
+    // 使用
+    g := Graph{
+        Start: "analyze",
+        End:   "end",
+        Nodes: map[string]Node{
+            "analyze": {
+                Name: "analyze",
+                Run: func(ctx context.Context, state State) (State, error) {
+                    input := state["input"].(string)
+
+                    // 这里可以调用 LLM 判断是否需要工具
+                    if strings.Contains(input, "天气") {
+                        state["need_tool"] = true
+                    } else {
+                        state["need_tool"] = false
+                    }
+
+                    return state, nil
+                },
+            },
+            "call_tool": {
+                Name: "call_tool",
+                Run: func(ctx context.Context, state State) (State, error) {
+                    // 调工具，比如 HTTP / MCP / 内部服务
+                    state["tool_result"] = "今天北京晴，25℃"
+                    return state, nil
+                },
+            },
+            "answer": {
+                Name: "answer",
+                Run: func(ctx context.Context, state State) (State, error) {
+                    if state["need_tool"] == true {
+                        state["answer"] = "根据查询结果：" + state["tool_result"].(string)
+                    } else {
+                        state["answer"] = "这是一个普通问题回答"
+                    }
+                    return state, nil
+                },
+            },
+            "end": {
+                Name: "end",
+                Run: func(ctx context.Context, state State) (State, error) {
+                    return state, nil
+                },
+            },
+        },
+        Edges: []Edge{
+            {
+                From: "analyze",
+                To:   "call_tool",
+                Condition: func(state State) bool {
+                    return state["need_tool"] == true
+                },
+            },
+            {
+                From: "analyze",
+                To:   "answer",
+                Condition: func(state State) bool {
+                    return state["need_tool"] == false
+                },
+            },
+            {
+                From: "call_tool",
+                To:   "answer",
+            },
+            {
+                From: "answer",
+                To:   "end",
+            },
+        },
+    }
+    // 执行
+    engine := NewEngine(g)
+    result, err := engine.Run(context.Background(), State{
+        "input": "北京今天天气怎么样？",
+    })
+    if err != nil {
+        panic(err)
+    }
+
+    fmt.Println(result["answer"])
+    ```

@@ -169,6 +169,27 @@
      1. 发布包：`yarn publish`
    - wiki
      1. v2.x：Plug'n'Play (PnP) 特性，进一步改善性能和一致性
+1. pnpm
+   - 认识：
+   - wiki
+     1. 第一代（npm）解决：有没有包管理，2010
+        - 价值
+          1. 统一包分发（registry）
+          1. 自动依赖安装
+          1. 推动js模块化爆发
+        - 问题
+          1. 依赖树爆炸：每个项目重复安装、node_modules巨大
+          1. 不确定性：无lock，同一项目，不同机器版本不同
+          1. 幽灵依赖：hoisting导致没声明也能用
+     1. 第二代（Yarn）解决：稳定性&性能，还是沿用npm的node_modules模型
+        - 改进：
+          1. lockfile（确定性）
+          1. 并行安装（更快）
+          1. 更稳定依赖解析 
+     1. 第三代（pnpm）解决：架构级效率问题，2017
+        - 技术本质
+          1. 内容寻址存储（类似 Git / Docker）
+          1. 硬链接复用
 1. node版本管理工具
    - nvm
      1. nvm ls-remote：列出所有远程服务器的官方node version list

@@ -640,6 +640,12 @@
           1. 行动（Act）：选择工具
           1. 观察（Observe）：接收执行后返回的结果
           1. 循环：基于新的观察结果，再次进行推理，决定下一步行动，如此循环，直到完成
+     1. REPL
+        - 认识：交互式执行环境的通用模式，核心就是一条循环
+          1. Read：读取，读取你输入的一行代码
+          1. Eval：求值，执行/解释这行代码
+          1. Print：输出，把结果打印出来
+          1. Loop：循环，继续等下一条输入
 #### openAI API
 1. openAI
    - 认识
@@ -1395,14 +1401,6 @@
    - 智能体团队
      1. 子智能体
      1. 消息网关
-1. Claude Desktop
-   - Cowork：AI Agent模式。把Claude从“聊天助手”升级为一个真正能替你在电脑上干活的AI同事，可以自动执行复杂的多步骤任务。如整理文件、分析excel、整理笔记为报告
-     1. 常见能力
-        - 文件操作
-        - 文档生成
-        - 数据分析
-        - 自动化任务：多任务并行、定期
-        - 操作应用：如浏览器
 1. OpenClaw
    - 认识：
      1. 渐进式生长：累积知识、错误的不再犯，通过搭配SOUL.md、MEMORY.md不断积累更新
@@ -1489,7 +1487,8 @@
      1. Gateway
 
      1. Skill Marketplace
-1. Pi Agent
+1. pi-mono
+   - 认识：openclaw底层依赖的llm库
    - 流程：用户发消息 → 加载session(jsonl历史)→ 构建上下文(system prompt+工具定义+对话历史)→ 进入while循环 → 调用llm(流式请求)→ 接收响应(text_delta/tool_call)→ 判断是否需工具调用 → 执行工具并收集结果 → 写回上下文 → 继续循环（直到完成）→ 持久化session(写入jsonl)→ 返回结果
    - 组成
      1. jsonl session管理
@@ -1498,31 +1497,47 @@
      1. extension系统设计
         - 拒绝mcp，私有协议，用cli工具 + readme做渐进式发现，agent需要某个能力时，通过bash调用cli，按需付上下文成本。避免了mcp的一般情况下的13k~18k token预加载开销
      1. 极简system prompt：对赌未来模型能力，留给用户更多上下文，关键时刻安全性可能不足
-   - 架构：四层分包架构，每层解决一个问题
-     1. pi-ai
-        - 认识：模型通信层，多供应商统一接口
-        - 特性
-          1. 统一流式接口：text_delta | toolcall_start | done | error —— 所有供应商统一输出格式
-          1. 10+ 供应商支持：anthropic/openai/google/xai/groq/mistral/ollama/deepseek
-          1. 一行代码切换模型：getmodel(provider, model) —— 不改业务逻辑，只换供应商
-     1. pi-agent-core
-        - 认识：agent循环层，业界共识架构
-        - 特性
-          1. while循环：即核心，无DAG、无编排引擎，`发消息 → 工具调用 → 执行 → 循环直到完成`
-          1. 事件订阅系统：实时感知agent状态，message_update/tool_start/tool_end/done
-          1. 流式处理：逐字符推流，ui实时更新。text_delta/toolcall_delta
-     1. pi-coding-agent
-        - 认识：交互式编码代理cli，开发者实际使用的入口
-        - 特性
-          1. session持久化：jsonl树结构，支持分支/恢复，原始历史一条不丢
-          1. 内置工具：四工具。read · write · edit · bash：grep/find等通过bash调用
-          1. extension系统
+   - 架构：四层分包架构，每层解决一个问题，可以单独引用某一个包，核心的是后三层
      1. pi-tui
         - 认识：终端ui层
         - 特性
           1. markdown渲染 + 语法高亮：差分渲染，只重绘变化行。比 claude code 闪烁少
           1. 多行编辑器 + tab自动补全：历史命令、vi快捷键支持
           1. synchronized output：终端缓冲区批量刷新，消除流式渲染的撕裂感
+     1. pi-coding-agent
+        - 认识：开发者实际使用的入口，面向用户的最厚的那层
+        - 特性
+          1. cli/tui(Terminal UI)、sdk嵌入、extension、skill
+          1. session
+             - session持久化：jsonl树结构，支持分支/恢复，原始历史一条不丢
+          1. tool：四工具(read/write/edit/bash)。grep/find等通过bash调用
+     1. pi-agent-core
+        - 认识：agent运行时内核，即loop 循环层(发消息 → 调工具 → 再发消息)
+          1. 这层不知道"文件系统"、"bash"、"session"这些概念，干干净净
+          1. while循环：即核心，无DAG、无编排引擎，`发消息 → 工具调用 → 执行 → 循环 → 直到完成`
+        - 特性
+          1. 双消息队列机制、并发工具执行、生命周期事件总线
+          1. 支持事件订阅：实时感知agent状态，message_update/tool_start/tool_end/done
+          1. 流式处理：逐字符推流，ui实时更新。text_delta/toolcall_delta
+     1. pi-ai
+        - 认识：模型通信层，多供应商统一接口
+        - 特性
+          1. 统一流式接口：text_delta | toolcall_start | done | error —— 所有供应商统一输出格式
+          1. 10+ 供应商支持：anthropic/openai/google/xai/groq/mistral/ollama/deepseek
+          1. 一行代码切换模型：getmodel(provider, model) —— 不改业务逻辑，只换供应商
+1. 原理
+   - loop
+     1. 架构图：![](../images/ai/agent_loop_struct.png)
+     1. 代码示例
+        ```py
+        while True:
+            response = client.messages.create(messages=messages, tools=tools)
+            if response.stop_reason != "tool_use":
+                break
+            for tool_call in response.content:
+                result = execute_tool(tool_call.name, tool_call.input)
+                messages.append(result)
+        ```
 1. wiki
    - agent对话中工具响应占67.6%token，工具定义占10.7%，system prompt只占3.4%。这意味着优化工具输出（限制返回长度、截取关键信息）比优化prompt“更能省钱
    - 对比
@@ -1548,6 +1563,8 @@
      1. 定期审计skill
    - openclaw的名字历史：Clawdbot、Moltbot
    - agent其他产品
+     1. Claude Desktop
+        - Cowork：AI Agent模式。把Claude从“聊天助手”升级为一个真正能替你在电脑上干活的AI同事，可以自动执行复杂的多步骤任务。如整理文件、分析excel、整理笔记为报告
      1. Nanobot：4K行代码，理解AI Agent是怎么工作的，如工具调用循环、上下文管理、多轮对话状态
      1. KimiClaw：全球部署，封装的利用了Cloudflare的边缘网络
      1. PicoClaw：路由器、开发板适用
@@ -2500,6 +2517,31 @@
             }
             \`\`\`
             ```
+1. ADK
+   - 认识：Agent Development Kit，帮助构建、运行、管理agent的开发框架
+   - 组成
+     1. ChatModelAgent：“思考”部分，利用llm作为核心，理解自然语言，进行推理、规划、生成响应，并动态决定如何执行或使用哪些工具
+     1. Workflow Agents：协调管理部分，基于预定义的逻辑，按照自身类型（顺序/并发/循环）控制子agent执行流程，产生确定性的，可预测的执行模式，不同于ChatModel Agent生成的动态随机的决策
+     1. Supervisor Agent：监督者模式，一个supervisorAgent和多个subAgents，supervisorAgent控制所有通信流程和任务委托，并根据当前上下文和任务需求决定调用哪个agent
+     1. Plan-Execute Agent：计划-执行模式，生成含多个步骤的计划，Execute Agent根据用户query和计划来完成任务。Execute后会再次调用Plan，决定完成任务/重新进行规划
+        - 组成：Planner 规划器先规划步骤、Executor 执行器将结果汇总到Replanner 重规划器决定结束还是loop运行
+     1. deepagents：基于chatmodelagent，开箱即用的agent方案
+        - 能力
+          1. 规划能力：通过write_todos进行任务拆解与进度跟踪
+          1. 文件系统：提供read_file、write_file、edit_file、ls、glob、grep，用于读取和写入上下文
+          1. shell访问：使用execute运行命令
+          1. 子agent：通过task将工作委派给拥有独立上下文窗口的子智能体
+          1. 智能默认配置：内置prompt，教模型如何高效使用这些工具
+          1. 上下文管理：长对话历史自动摘要，大体量输出自动保存到文件
+   - 结构
+     1. 核心结构
+        ```go
+        type Agent interface {
+            Name(ctx context.Context) string
+            Description(ctx context.Context) string
+            Run(ctx context.Context, input *AgentInput) *AsyncIterator[*AgentEvent]
+        }
+        ```
 1. 实例
    - Hertz路由中处理SSE连接
     ```go
@@ -2513,6 +2555,13 @@
     })
     ```
 ##### Goclaw
+1. 认识
+   - 对比Eino ADK
+     1. Goclaw：偏执行器框架、agent runtime，专业的REPL+工具调度器
+        - 诞生于小龙虾之后，架构上更先进，有控制台，能动态接入其他能力，是个完整的管理平台，eino的能力太少了
+        - 有全部的源码可直接定制化
+     1. Eino ADK：偏平台框架，帮把agent变成“可管理系统”的一整套工程体系，不是一个开放性的能接入更多能力的平台，包含了确定性的编排如graph/DAG/状态机
+        - 其迭代直接从BaseChatModel/ToolCallingChatModel变为了ChatModelAgent，可见其落后性
 #### 开发平台
 1. coze
    - coze studio：扣子开发平台
@@ -2588,6 +2637,10 @@
      1. 能够实现既定目标
    - harness engineering：建筑工地、系统工程
      1. 设定边界和验收标准
+1. 编程工作流
+   - Spec-Kit
+   - OpenSpec
+   - Superpowers
 1. vibe coding
    - 认识：氛围编程，氛围指的是开发者想表达的整体意图、风格、上下文和目标，让AI在“理解氛围”的情况下生成代码。即不需要精确写每一行代码，而是描述想做什么+怎么感觉比较对
    - 基本组成
@@ -2675,7 +2728,9 @@
      1. 控制工程：反馈回路、约束条件、安全联锁、降级策略
      1. 目前最成熟的harness系统是claude code本身
 1. OpenCode
-   - 认识：TUI客户端+本地服务器的架构，天然支持“多客户端驱动同一个agent能力”，不只是终端里打一行命令那么简单
+   - 认识：开源的ai编程工具，对标cc
+   - 架构
+     1. TUI客户端+本地服务器的架构，天然支持“多客户端驱动同一个agent能力”，不只是终端里打一行命令那么简单
    - 组成
      1. 模块化实现
         - cmd 命令行入口

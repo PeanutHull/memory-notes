@@ -154,10 +154,19 @@
 1. git stash pop     栈顶恢复，并删除
 1. git stash clear   清空暂存
 1. git stash -p/--keep-index   只备份没有add的文件，1.add不想备份的文件2.-p备份3.reset取消已经add的文件的备份
+#### worktree
+1. 认识：支持一个目录创建不同工作区，相互独立、修改隔离
+1. git worktree add -b wt/<name> <path> <base_ref>
+1. git worktree remove [--force] <path>
+#### subtree
+1. 认识：把另一个仓库的代码合并进当前仓库的某个目录，并保留历史，还能双向同步
+1. git subtree add --prefix=libs/foo https://github.com/xxx/foo.git main --squash： 引入
+1. git subtree pull --prefix=libs/foo https://github.com/xxx/foo.git main --squash：更新，即拉取远程变化
+1. git subtree push --prefix=libs/foo https://github.com/xxx/foo.git main：反向推送，即把改动推回原仓库
 #### submodule
-1. 认识：支持子模块的需求，可将多个独立仓库包含到同一个主工程中
-   - 通过子模块既可以各自独立的修改和提交代码，又可以将改动作用到依赖它的父工程
+1. 认识：在一个仓库里嵌入另n个独立仓库（带固定版本 commit引用），即子模块
    - 主工程并不直接跟踪子模块的代码，而仅仅只跟踪子模块的commit id的改动
+     1. 子模块pull更新了，主仓库必须“记录这个变化”即更新主仓库的commit id，即更新子模块的指针
    - 支持嵌套添加子模块
 1. 使用
    - 添加
@@ -237,6 +246,12 @@
 1. 认识：远程操作
 1. git remote -v     查看远程服务器地址和仓库名称
 1. git remote show origin   查看仓库状态
+1. 多源同步：可实现一个代码目录同时从不同的远端拉代码，常用于拉取github上项目在公司内开发同时想不断从github上获取更新使用，就可以明确看到github的更新diff
+    ```
+    git remote add upstream xxx
+    git fetch upstream
+    git merge upstream/main
+    ```
 
 ### 运维
 #### 使用

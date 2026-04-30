@@ -155,6 +155,7 @@
         - nil和空不同，nil不会指向底层地址，空会
         - 直接声明的都是nil，使用make的不是
      1. 特点
+        - 值类型永远不为nil，引用类型才可以为nil(这不就是nil本身的定义)
         - nil有类型，(*int)(nil)和(interface{})(nil)就是两个不同的变量，即不相等
         - nil是不能比较的，`nil==nil`
         - untyped nil：没有类型的nil，直接写一个nil就是untyped nil
