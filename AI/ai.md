@@ -1318,10 +1318,14 @@
         - 动态选择：根据每次任务选择
      1. 压缩context：快占满上下文时要进行压缩，
         - 方式
-          1. 总结：总结后把原来的内容扔掉，会丢失细节，但是降低了大小。如claude的压缩方案有重点保存测试输出和代码改动
-          1. 外化：
-            - 移除不重要的、大段的
-            - 向量化：越长的文本向量化效果越好，但是向量化的目的不是压缩，是语义化和可计算化
+          1. 摘要/外化：
+             - 移除不重要的、大段的：如旧的工具输出内容
+             - 向量化：越长的文本向量化效果越好，但是向量化的目的不是压缩，是语义化和可计算化
+          1. ai总结：总结后把原来的内容扔掉，会丢失细节，但是降低了大小。如claude的压缩方案有重点保存测试输出和代码改动
+          1. 其他总结
+             - 向量代替文本
+             - 状态机代替对话
+             - AST代替代码
           1. 预算管理
             ```
             Token Budget Allocation
@@ -1404,7 +1408,7 @@
 1. OpenClaw
    - 认识：
      1. 渐进式生长：累积知识、错误的不再犯，通过搭配SOUL.md、MEMORY.md不断积累更新
-   - 组成
+   - 组成：![](../images/ai/openclaw_struct.jpg)
      1. 模块：ai + 记忆memory + 技能skill + 电脑
         - 聊天交互
         - 记忆系统
@@ -1526,6 +1530,8 @@
           1. 10+ 供应商支持：anthropic/openai/google/xai/groq/mistral/ollama/deepseek
           1. 一行代码切换模型：getmodel(provider, model) —— 不改业务逻辑，只换供应商
 1. 原理
+   - 整体
+     1. 架构图：![](../images/ai/hermes_agent_struct.jpg)
    - loop
      1. 架构图：![](../images/ai/agent_loop_struct.png)
      1. 代码示例
@@ -1538,6 +1544,51 @@
                 result = execute_tool(tool_call.name, tool_call.input)
                 messages.append(result)
         ```
+1. 其他
+   - HappyCapy：agent原生电脑，专门运行在远程电脑上的openclaw
+   - Hermes Agent：
+     1. 自我进化循环：闭合学习循环机制，能自动将任务执行经验转化为可复用技能文件
+     1. 三层记忆架构：核心记忆层、会话档案层、程序化记忆层
+   - Evolver
+     1. 认识：把ai agent从一次性工具变成可积累、可遗传、可进化的数字生命体系，像文明一样持续演化
+        - agent自进化：基于GEP协议的AI智能体自进化引擎
+        - agent交易市场：把零散的prompt调优变成可审计、可复用的进化资产
+        - 反幻觉：用一套评估标准
+        - 碳硅共生：双螺旋宣言、宪法、伦理委员会
+     1. 解决的问题
+        - agent不会“遗传”和”共享“：一个agent花了3天学习了新东西，别的agent完全不知道，等于每个ai都在重复踩坑
+        - prompt无法工业化：无法像npm包一样传播、无法被别的agent自动采用
+        - ai没有“文明”：人类文明发展靠知识积累、经验传播、技能遗传、方法论进化
+     1. 存在挑战：虽然理念很酷，但是有很多挑战
+        - “自我进化”容易失控：无限循环、性能退化、幻觉放大
+        - knowledge graph很难维护：schema难设计、entity resolution复杂
+        - 真正的“能力遗传”其实非常难：很多时候依赖当前模型/当前上下文/当前Tool/当前环境，未必真的能泛化
+     1. 特点
+        - GEP协议：Genome Evolution Protocol 基因进化协议，即ai能力遗传协议，“任务完成后自动提取可复用资产”的闭环范式
+          1. gene：基因，agent的技能包，可以是
+             - 网页自动化策略
+             - 代码修复能力
+             - mcp tool调度逻辑
+             - prompt模板
+             - react推理链
+             - 某种workflow
+             - 某种记忆机制
+          1. capsule：胶囊，经过验证的经验结论，如“这个API要先sleep2秒，否则429”
+          1. GDI：Global Desirability Index，给Agent能力打分，维度有使用量、fork、调用次数、社区反馈、成功率
+        - 三层记忆体系：持久事实层 + 程序性记忆层 + 历史搜索层
+        - 周期性反射循环：“技能在使用中自我改进”
+        - 真正核心：知识图谱，号称跨会话知识持久性、代理的语义记忆、图形推理，用关系网络支持ai的记忆
+     1. 适用
+        - 团队维护大规模agent提示词和日志
+        - 需要可审计进化痕迹的场景（genes、capsules、events）
+        - 需要确定性、协议约束变更的环境
+     1. evolver做什么
+        - evolver是一个提示词生成器，不是代码修改器
+        - 每个进化周期
+          1. 扫描`memory/`目录中的运行日志、错误模式和信号
+          1. 从`assets/gep/`中选择最匹配的gene或capsule
+          1. 输出一份严格的、受协议约束的gep提示词来引导下一步进化
+          1. 记录可审计的evolutionEvent以便追溯
 1. wiki
    - agent对话中工具响应占67.6%token，工具定义占10.7%，system prompt只占3.4%。这意味着优化工具输出（限制返回长度、截取关键信息）比优化prompt“更能省钱
    - 对比
@@ -1561,16 +1612,17 @@
      1. 不要把api密钥写进记忆文件
      1. 禁止公网暴露端口
      1. 定期审计skill
-   - openclaw的名字历史：Clawdbot、Moltbot
-   - agent其他产品
-     1. Claude Desktop
-        - Cowork：AI Agent模式。把Claude从“聊天助手”升级为一个真正能替你在电脑上干活的AI同事，可以自动执行复杂的多步骤任务。如整理文件、分析excel、整理笔记为报告
-     1. Nanobot：4K行代码，理解AI Agent是怎么工作的，如工具调用循环、上下文管理、多轮对话状态
-     1. KimiClaw：全球部署，封装的利用了Cloudflare的边缘网络
-     1. PicoClaw：路由器、开发板适用
+   - openclaw
+     1. 名字历史：Clawdbot、Moltbot
+     1. openclaw其他产品
+        - Claude Desktop
+          1. Cowork：AI Agent模式。把Claude从“聊天助手”升级为一个真正能替你在电脑上干活的AI同事，可以自动执行复杂的多步骤任务。如整理文件、分析excel、整理笔记为报告
+        - Nanobot：4K行代码，理解AI Agent是怎么工作的，如工具调用循环、上下文管理、多轮对话状态
+        - KimiClaw：全球部署，封装的利用了Cloudflare的边缘网络
+        - PicoClaw：路由器、开发板适用
 
-     1. Qclaw：对openclaw产品化封装变成傻瓜式的本地安装包，直连微信（使用微信下命令、操作微信🐶）
-     1. WorkBuddy：CodeBuddy团队自己做的独立产品，偏商务（企业级的安全审计能力、支持多个im平台）
+        - Qclaw：对openclaw产品化封装变成傻瓜式的本地安装包，直连微信（使用微信下命令、操作微信🐶）
+        - WorkBuddy：CodeBuddy团队自己做的独立产品，偏商务（企业级的安全审计能力、支持多个im平台）
 ### AI开发
 #### 开发框架
 1. airflow
@@ -3075,11 +3127,67 @@
    - IDE集成：显示“IDE connected”，即可让IDE显示代码变更，就跟cursor一样
    - claude remote-control：支持手机或浏览器扫码，远程控制当前的claude
 1. 原理
-   - 认识：是一个Node.js应用，用ts写的
+   - 认识：是一个node.js应用，用ts写的
+     1. 将全套的完整的经过实际工程经验都传递给llm的”操作系统“
+   - 特点
+     1. claude api的prompt cache是基于字节级前缀匹配的，就是字母匹配
+
+     1. 静动分离的提示词组装
+     1. 独立小模型快速扫描所有记忆文件，选出5个跟当前对话最相关的，放入提示词
+
+     1. 详细的给llm看的工具手册，且工具手册是延迟加载的
+     1. ”先读后改“的铁律：禁止不看就改
+
+     1. 三层压缩
+        - 微压缩：压缩旧的工具调用结果，如把"10分钟前读的那个500行文件的内容"替换成[Oldtoolresult content cleared].
+        - 自动压缩：接近上下文窗口的87%自动触发，有熔断器压缩3次失败停止
+        - 完全压缩：用ai总结，并且提醒不要调用任何工具(任务是总结，别干别的)
+
+     1. kairos模式：做梦模式，低活跃期蒸馏原始日志形成结构化主题文件
+   - 总览
+    ```
+    用户输入
+        -> 动态组装7层系统提示词
+        -> 注入git状态、项目约定、历史记忆
+        -> 42个工具各自附带使用手册：详细说明了工具的作用、禁忌、边界
+        -> llm决定使用哪个工具
+        -> 9层安全审查(ast解析、ml分类器、沙箱检查)
+        -> 权限竞争解析(本地键盘/ide/hook)
+        -> 200ms防误触延迟
+        -> 执行工具
+        -> 结果流式返回
+        -> 上下文接近极限？三层压缩
+        -> 需要并行？生成子Agent蜂群
+        -> 循环直到任务完成
+    ```
    - 提示词组装
      1. 认识
         - 根据状态、工具、模式动态组装出来的，类似数字人课件，是企业级的做法
         - 不是一个单一的长提示词，而是几十个模块化的提示词组合在一起，会用到变量替换、if判断等
+        - 静态内容在先，动态内容在后：静态的在前边claude服务端可以缓存(加速/省钱)
+        - 组成
+          1. Intro：你是一个交互式代理，帮助用户执行软件工程任务
+          1. System：你输出给用户的文字会直接显示、用户拒绝工具后不要机械重试
+          1. Doing tasks：不要只口头回答，要真的改代码/处理任务、改代码前先读代码
+          1. Executing actions with care：对高风险、高破坏性、难回滚、影响共享环境的动作先确认
+          1. Using your tools：能用专用工具就不要用Bash、用task/todo工具管理任务
+          1. Tone and style：除非用户要求，不要用emoji、回复应简洁、引用代码要带file_path:line_number
+          1. Output efficiency / Communicating with the user
+          1. 
+          1. __SYSTEM_PROMPT_DYNAMIC_BOUNDARY__：静动边界标记，这不是给模型看的业务规则，更多是给系统做缓存切分，前面的静态段尽量跨session复用
+          1. 
+          1. Session-specific guidance
+          1. Memory
+          1. Environment
+          1. Language
+          1. Output Style: xxx
+          1. MCP Server Instructions
+          1. Scratchpad Directory
+          1. Function Result Clearing
+          1. Summarize tool results
+          1. Numeric length anchors
+          1. Token budget
+          1. Brief
      1. 组成
         - 主系统提示词：约3000tokens
         - 工具描述提示词：如bash工具约1000tokens，write工具约150tokens
