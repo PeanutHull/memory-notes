@@ -1623,7 +1623,62 @@
 
         - Qclaw：对openclaw产品化封装变成傻瓜式的本地安装包，直连微信（使用微信下命令、操作微信🐶）
         - WorkBuddy：CodeBuddy团队自己做的独立产品，偏商务（企业级的安全审计能力、支持多个im平台）
+   - agent连接chrome
+     1. 方式一
+        - 原理：extension + native bridge，由于是多进程间状态同步 + IPC时序问题，导致连接不稳定
+        - 涉及组件
+            ```
+            Codex Runtime（Agent）
+                    ↓
+            browser-client.mjs              控制浏览器的客户端，通常运行在node、cli中，负责：找Chrome、建立连接、bootstrap browser context、claim session、发送控制命令、接收页面状态、
+                    ↓
+            Chrome Extension（扩展）          浏览器内部的当前tab、DOM、JS、模拟用户行为，基于安全原因都是不开放外部的，扩展可以，扩展是浏览器里的代理人
+                    ↓
+            Native Messaging Host           扩展不能启动本地进程、操作文件系统、跟Node runtime建立任意socket，chrome官方机制，解决了浏览器世界和本地系统世界互通，可以启动native host进程，如go、node、python、rust
+                    ↓
+            指定的 Chrome Profile            浏览器用户环境，可以有多个，互相是独立的，包含登录状态、cookie、localstorage、浏览器配置、扩展
+                    ↓
+            当前浏览器 Tab / Session
+            ```
+        - 为什么不用remote-debugging-port
+          1. 不安全：会开放9222端口，容易让黑客完全控制浏览器、获取浏览器的所有数据
+          1. 更像调试接口，不是稳定API：过程中tab 生命周期变化、页面刷新、Chrome 崩了、profile 切换都会使浏览器环境发生变化，从而让agent的基础条件遭到破坏；DevTools模式通常要求单独启动Chrome；多profile很难管理
+          1. chrome升级经常变更影响协议，不好适配
+     1. 方式二
+        - 原理：Computer Use MCP，即依赖操作系统的ui自动化能力，通过操作系统的可访问性api获取accessibility tree（优先于截图使用tree这种结构化的数据），同时搭配窗口截图（视觉上下文，就是截图然后提取文字，让llm知道界面上都有啥）实现通用的应用操作，可以操作鼠标、键盘点击、滚动
 ### AI开发
+1. 开发平台
+   - coze
+     1. coze studio：扣子开发平台
+     1. coze loop：扣子罗盘
+   - dify
+     1. 认识：简单快速创建ai应用的llmops平台，内置了构建llm应用所需的关键技术栈
+     1. 功能
+        - 支持开箱即用的聊天对话模式的web站点
+        - 后端api（组件、上下文增强）
+        - 可视化prompt编排界面、上下文、插件等
+        - 数据集管理（标注、改进）、日志等
+        - 兼容openai、langchain等多种llm
+        - 高质量的rag引擎
+        - 灵活的agent框架
+        - 声明式yaml文件做配置
+     1. 组成
+        - 模型：系统推理、embedding文本嵌入、rerank、tts、asr
+     1. 应用
+        - 交付结果：有鉴权的控制api、可二开的webapp、一套包含提示词工程、上下文管理、日志分析和标注的易用界面
+        - 分类
+          1. chatbot聊天助手：基于llm构建对话式交互的助手
+          1. text generator文本生成应用：面向文本生成类任务的助手，例如撰写故事、文本分类、翻译等
+          1. agent：能够分解任务、推理思考、调用工具的对话式智能助手
+          1. chatflow对话流：适用于定义等复杂流程的多轮对话场景，具有记忆功能的应用编排方式
+          1. workflow工作流：适用于自动化、批处理等单轮生成类任务的场景的应用编排方式
+1. Ai浏览器
+   - 认识：浏览器作为web主入口，仅仅展示数据太可惜了
+   - 产品
+     1. ChatGPT Atlas
+     1. Tabbit
+        - 智能代理模式（Agent）：录制Skill与脚本Script
+        - 全能输入框：一键@所有数据，链接、截图、文件夹
 #### 开发框架
 1. airflow
    - 认识：Apache Airflow，代码优先的编排、调度和监控工作流的开源平台，纯python代码定义DAGs的编程模式
@@ -2614,42 +2669,11 @@
         - 有全部的源码可直接定制化
      1. Eino ADK：偏平台框架，帮把agent变成“可管理系统”的一整套工程体系，不是一个开放性的能接入更多能力的平台，包含了确定性的编排如graph/DAG/状态机
         - 其迭代直接从BaseChatModel/ToolCallingChatModel变为了ChatModelAgent，可见其落后性
-#### 开发平台
-1. coze
-   - coze studio：扣子开发平台
-   - coze loop：扣子罗盘
-1. Dify
-   - 认识：简单快速创建AI应用的LLMOps平台，内置了构建LLM应用所需的关键技术栈
-   - 功能
-     1. 支持开箱即用的聊天对话模式的web站点
-     1. 后端api(组件、上下文增强)
-
-     1. 可视化Prompt编排界面、上下文、插件等
-     1. 数据集管理(标注、改进）、日志等
-     1. 兼容OpenAI、Langchain等多种LLM
-
-     1. 高质量的RAG引擎
-     1. 灵活的Agent框架
-     1. 声明式YAML文件做配置
-   - 组成
-     1. 模型：系统推理、Embedding 文本嵌入、Rerank、TTS、ASR
-   - 应用
-     1. 交付结果：有鉴权的控制api、可二开的webApp、一套包含提示词工程、上下文管理、日志分析和标注的易用界面
-     1. 分类
-        - Chatbot 聊天助手：基于 LLM 构建对话式交互的助手
-        - Text Generator 文本生成应用：面向文本生成类任务的助手，例如撰写故事、文本分类、翻译等
-        - Agent：能够分解任务、推理思考、调用工具的对话式智能助手
-        - Chatflow 对话流：适用于定义等复杂流程的多轮对话场景，具有记忆功能的应用编排方式
-        - Workflow 工作流：适用于自动化、批处理等单轮生成类任务的场景的应用编排方式
-   - 其他产品
-     1. coze：字节跳动旗下
-1. Ai浏览器
-   - 认识：浏览器作为web主入口，仅仅展示数据太可惜了
-   - 产品
-     1. ChatGPT Atlas
-     1. Tabbit
-        - 智能代理模式（Agent）：录制Skill与脚本Script
-        - 全能输入框：一键@所有数据，链接、截图、文件夹
+1. 理解
+   - 提示词是如何组装的：SOUL.md像“底座人格”，调用方system prompt像“本次会话的临时场景说明”
+1. 组成
+   - internal/tools：分全局和垂直的基础工具
+   - internal/skills：skill管理相关
 ### AI编程
 1. 理解
    - 代码理解的架构方式
