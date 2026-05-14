@@ -1680,6 +1680,22 @@
         - 智能代理模式（Agent）：录制Skill与脚本Script
         - 全能输入框：一键@所有数据，链接、截图、文件夹
 #### 开发框架
+1. agent的分层的技术栈
+   - Agent 产品层
+     1. Coze
+     1. Manus
+     1. Devin
+   - Agent 编排层（Workflow/Graph）
+     1. LangGraph：仅python
+     1. Eino ADK
+     1. Google ADK：仅支持python
+   - Agent 执行层（Engine/Runtime）：engine层负责怎么思考、怎么编排、怎么执行，runtime层负责怎么稳定运行、怎么管理生命周期、怎么接入环境
+     1. Pi
+     1. Claude Agent SDK：官方开源的agent运行时的sdk，开放了loop、自动压缩上下文、子agent、读写、bash、mcp等能力，目前支持python/typescript
+     1. OpenAi Agents SDK：仅支持python
+     1. Goclaw
+   - agent平台基础设施层
+     1. Veadk：Volcengine Agent Development Kit 火山引擎智能体开发套件，agent平台+agent框架，偏平台化
 1. airflow
    - 认识：Apache Airflow，代码优先的编排、调度和监控工作流的开源平台，纯python代码定义DAGs的编程模式
      1. 调度能力极其强大，是n8n、dify等？？？
@@ -3355,6 +3371,7 @@
      1. 记录关键决策可以减轻
    - 如果要处理确定性强的、不容有失的，可以使用流程编排等确定性手段
    - 模型能力的提升正在让"精心设计的 prompt"变得越来越不重要
+   - 不论是dot-skill、nuwa-skill这种生成skill的skill，都是普通的提示词，其他核心价值在于其提示词怎么写，如从哪些维度、有哪些验证规则(提炼规则、质量验证规则)，所以如果你是一个专家，才可以全面、专业的生成指导
 1. 知识
    - 现在llm
      1. 上下文窗口一般为128k、256k，最大的1m

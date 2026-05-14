@@ -170,7 +170,7 @@
    - wiki
      1. v2.x：Plug'n'Play (PnP) 特性，进一步改善性能和一致性
 1. pnpm
-   - 认识：
+   - 认识：最新的依赖管理工具，解决了稳定性、性能、复用问题
    - wiki
      1. 第一代（npm）解决：有没有包管理，2010
         - 价值
@@ -190,6 +190,11 @@
         - 技术本质
           1. 内容寻址存储（类似 Git / Docker）
           1. 硬链接复用
+1. npx
+   - 认识：临时执行npm包命令的工具，即直接运行工具
+     1. 如果本地没有就临时下载并执行它
+     1. npx xxx底层相当于npm exec xxx
+     1. pnpm对应的是pnpm dlx
 1. node版本管理工具
    - nvm
      1. nvm ls-remote：列出所有远程服务器的官方node version list

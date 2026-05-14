@@ -292,6 +292,9 @@
     $o = new MyHelloWorld();
     $o->sayHello ();                        // 输出Hello World!
     ```
+1. 类型属性
+   - 认识： Typed Property，给类的成员变量声明类型，降低弱类型带来的混乱，v7.4+
+     1. 语法：`public string $name;`
 ### 应用
 #### 基础
 1. 文件/目录
