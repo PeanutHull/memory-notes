@@ -1,0 +1,4 @@
+interface:
+  display_name: "Safe Prod MySQL Query"
+  short_description: "Readonly MySQL query guardrails"
+  default_prompt: "Use $safe-prod-mysql-query to safely inspect online MySQL instances and require confirmation before running business SELECT queries."

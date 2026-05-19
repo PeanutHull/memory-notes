@@ -796,7 +796,6 @@
           1. 代码示例
             ```python
             functions = [calculate_total_age_from_split_json]
- ​
             response = openai.ChatCompletion.create(
                 model="gpt-3.5-turbo-16k-0613",
                 messages=messages,
@@ -1691,8 +1690,8 @@
      1. Google ADK：仅支持python
    - Agent 执行层（Engine/Runtime）：engine层负责怎么思考、怎么编排、怎么执行，runtime层负责怎么稳定运行、怎么管理生命周期、怎么接入环境
      1. Pi
-     1. Claude Agent SDK：官方开源的agent运行时的sdk，开放了loop、自动压缩上下文、子agent、读写、bash、mcp等能力，目前支持python/typescript
-     1. OpenAi Agents SDK：仅支持python
+     1. Claude Agent SDK：官方开源的agent运行时的sdk，开放了loop、自动压缩上下文、子agent、读写、bash、mcp等能力，目前支持python/typescript，都是偏向自家模型api，不够中立
+     1. OpenAi Agents SDK：仅支持python，都是偏向自家模型api，不够中立
      1. Goclaw
    - agent平台基础设施层
      1. Veadk：Volcengine Agent Development Kit 火山引擎智能体开发套件，agent平台+agent框架，偏平台化
