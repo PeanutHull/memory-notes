@@ -525,15 +525,14 @@ I/O 操作：当 Goroutine 进行 I/O 操作时，会释放 M，让其他 Gorout
     }
     ```
 ### 内存管理
-1. 认识
+1. 组成
    - 内存分配
-     1. 内存什么时候栈分配什么时候堆分配：主要取决于变量的作用域和类型。局部变量和函数参数在栈上分配，这些变量的生命周期通常与语句块的范围一致；而全局变量和动态分配的内存会在堆上分配
+     1. 堆栈分配
         - 逃逸分析：编译器进行，如果一个对象只在当前函数作用域内使用，编译器可能会将其分配在栈上，以减少堆分配的开销
         - 内联：编译器会尽可能内联小函数，减少函数调用开销，同时减少栈帧分配
      1. TCMalloc
    - 内存回收
-     1. gc
-        - 内存碎片整理：gc会特定情况进行，形成紧凑堆，提高内存利用率
+     1. gc：内存碎片整理，gc会特定情况进行，形成紧凑堆，提高内存利用率
      1. 对象池`sync.Pool`
    - 内存手动处理
      1. 内存对齐：不进行内存对齐，很可能增加cpu访问内存的次数
@@ -554,6 +553,83 @@ I/O 操作：当 Goroutine 进行 I/O 操作时，会释放 M，让其他 Gorout
    - 内存线性分配：用到哪标识到哪，释放的使用FreeList链表标识
      1. 没有Next属性，使用前8字节存放下一个节点的指针
      1. 分配出去的节点，节点整块内存空间可以被复写
+1. 堆栈分配
+   - 认识：将变量的内存分配在合适的地方
+     1. 栈
+        - 特点：编译器直接挪指针，没有GC/极快
+        - 规则：局部变量、函数参数，这些变量的生命周期通常与语句块的范围一致
+     1. 堆
+        - 特点：malloc/写屏障/加大GC扫描成本/更频繁GC，每一步操作都是开销
+        - 规则：全局变量、动态分配的内存
+   - 分配规则
+     1. 编译器会自动优化放堆还是放栈
+     1. 变量整个生命周期运行时完全可知(能在编译期确定作用域)，就可以在栈上分配，否则会逃逸到堆上
+   - 内存逃逸
+     1. 逃逸分析：基本原则是如果函数返回了变量的引用，那么这个变量就会逃逸
+        - 如何进行逃逸分析普通使用者不用关心，这是语言编译该考虑的，但是使用上可避免
+     1. 引发内存逃逸的情况
+        - 在方法内把局部变量指针返回：局部变量逃逸。局部变量原本应在栈中分配、栈中回收。但由于返回时被外部引用，因此其生命周期大于栈，则溢出
+        - 发送指针或带有指针的值到channel中：指针的值逃逸。编译时没有办法知道哪个goroutine会在channel上接收数据，所以编译器无法知道变量什么时候被释放
+        - 在一个切片上存储指针或带指针的值：切片的值逃逸。其底层数组可能在栈上分配，但其引用的值一定在堆上，如`[]*string`
+        - slice的底层数组重新分配，因为append时可能会超出其容量cap：slice逃逸，slice编译时在栈上，基于运行时扩充则会在堆上
+        - slice不设置容量，每次扩容分配+拷贝
+        - 在interface上调用方法：方法都是动态调度的因为方法的真正实现只能在运行时知道，如变量r io.Reader, 调用r.Read(b)会使r的值和切片b的背后存储都逃逸
+        - 在热路径里堆interface{}接口转换
+            ```go
+            // 举例：go要把具体类型装箱 boxing成interface，创建iface结构(类型指针+数据指针)，很可能触发堆分配，高qps不是小问题
+            func process(v interface{}) {
+                fmt.Println(v)
+            }
+            // 优化
+            func process[T any](v T) {          // 编译期确定类型，避免装箱
+            }
+            ```
+        - 循环里拼字符串，每次拼接都是新分配，使用strings.Builder代替
+        - goroutine随便开，使用协程池/优化逻辑减少goroutine
+     1. 最佳实践
+        - 当参数为变量自身时复制在栈上完成
+        - 不要盲目使用指针作为函数参数，虽然会减少复制操作
+        - 分配分析
+            ```go
+            go test -bench=. -memprofile=mem.prof -memprofilerate=1 ./...
+            go tool pprof -alloc_objects mem.prof
+            ```
+        - 带分配统计的benchmark：`go test -bench=BenchmarkYourFunc -benchmem ./...`
+     1. 使用
+        - 观察逃逸情况：`go build -gcflags=-m main.go`，提示了`xx escapes to heap`
+        - 避免逃逸检测
+            ```go
+            // 作用是遮蔽输入和输出的依赖关系。使编译器不认为p会通过x逃逸， 因为uintptr()产生的引用是编译器无法理解的
+            // 用于清楚被unsafe.Pointer引用的数据肯定不会被逃逸但编译器却不知道的情况，要小心使用
+            func noescape(p unsafe.Pointer) unsafe.Pointer {
+                x := uintptr(p)
+                return unsafe.Pointer(x ^ 0)
+            }
+            // 使用示例
+            func NewA(s string) A {                                 // NewA会逃逸
+            return A{S: &s}
+            }
+            func NewATrick(s string) ATrick {
+                return ATrick{S: noescape(unsafe.Pointer(&s))}
+            }
+            ```
+   - local cache的优化思路
+     1. 使用offheap(堆外内存)：GC只会扫描堆上的对象，那就把对象都放到栈上，缓存库就高度依赖malloc和free操作了
+     1. 利用v1.5+特性：当map中的key和value都是基础类型时，GC就不会扫到map里的key和value
+     1. 参考freecache的思路，用ringbuffer存entry，绕过了map里存指针
+   - 拷贝场景
+     1. 投射到 interface
+     1. chan的接收和发送
+     1. 替换map中的元素
+     1. 向slice添加元素
+     1. 迭代（range）
+   - 不会内联的场景
+     1. recovery
+     1. select 块
+     1. 类型声明
+     1. defer
+     1. goroutine
+     1. for-range
 1. TCMalloc
    - 认识：Thread Cache Memory alloc 线程缓存内存分配器，基于FreeList实现，添加线程的内存缓存，性能更加优异。google开源
      1. 给线程添加内存缓存，减少竞争从而提高性能，当线程内存不足时才会加锁去共享的内存中获取内存
@@ -571,6 +647,57 @@ I/O 操作：当 Goroutine 进行 I/O 操作时，会释放 M，让其他 Gorout
    - 其他
      1. libc
      1. jemalloc
+1. 并发读写的顺序
+   - 认识：编程语言有自己的内存模型，提供上层对内存访问的控制，并允许编译器开发者和硬件对程序做一些优化
+     1. 由于cpu和编译器优化的指令重排和多级cache的存在，保证多核访问同一个变量变得非常复杂
+     1. 重排、可见性：看不到其他协程对数据的操作，可能导致程序一直被hang住，甚至出现半初始化的情况
+        ```go
+        var a string
+        var done bool
+
+        func setup() {
+            a = "hello, world"
+            done = true
+        }
+        func main() {
+            go setup()
+            for !done {                 // 即使观察到done变成true了，读取到的a仍然可能为空
+            }
+            print(a)
+        }
+        ```
+   - happens-before
+     1. 认识：描述两个时间的顺序关系
+        - 在一个goroutine内部，程序的执行顺序和它们的代码指定的顺序是一样的，即使编译器或者 CPU 重排了读写顺序，从行为上来看，也和代码指定的顺序一样。
+            ```go
+            // 一个goroutine里，打印结果依然能保证是 1、2、3
+            var a = 1
+            var b = 2
+            var c = 3
+            println(a)
+            println(b)
+            println(c)
+            ```
+     1. 保证方式
+        - init函数：main函数一定在导入的包的init函数之后执行
+        - goroutine：启动goroutine的go语句的执行，一定happens-before此goroutine内的代码执行，如go语句传入的参数是一个函数执行的结果，那么这个函数一定先于goroutine内部的代码被执行
+          1. goroutine退出的时候没有保证
+        - channel
+          1. 给chan发送happens-before从该chann接收相应数据的动作完成之前：发送早于接收
+          1. close操作happens-before从关闭的chan中读取出一个零值
+          1. unbuffered的即容量为0的chan，读取happens-before发送，因为读取会阻塞
+          1. 容量为m的chan，第n个receive一定happens-before第n+m个send的完成
+        - Mutex/RWMutex
+          1. 第n次的m.Unlock一定happens before第n+1的m.Lock方法的返回
+          1. 读写锁RWMutex如果它的第n个m.Lock方法的调用已返回，那么它的第n个m.Unlock的方法调用一定happens before任何一个m.RLock方法调用的返回，只要这些m.RLock方法调用happens after第n次m.Lock的调用的返回。这就可以保证只有释放了持有的写锁，那些等待的读请求才能请求到读锁
+          1. 读写锁RWMutex如果它的第n个m.RLock方法的调用已返回，那么它的第k（k<=n）个成功的m.RUnlock方法的返回一定happens before任意的m.RUnlockLock方法调用，只要这些m.Lock方法调用happens after第n次m.RLock
+        - WaitGroup
+          1. Wait 方法等到计数值归零之后才返回
+        - Once
+          1. 对于once.Do(f)调用，f函数的那个单次调用一定happens before任何once.Do(f)调用的返回
+        - atomic
+          1. go内存模型的官方文档并没有明确给出atomic的保证，相关研究太复杂，现阶段还是不要使用atomic来保证顺序性
+#### GC
 1. go的GC
    - 认识：自动垃圾回收，独立进程运行
      1. 是一种比例GC, GC结束时堆大小和上一次GC存活堆大小成比例
@@ -717,107 +844,6 @@ I/O 操作：当 Goroutine 进行 I/O 操作时，会释放 M，让其他 Gorout
         - 标记阶段要STW暂停应用程序
           1. 改进一：Steele 的写入屏障，发出引用的对象是黑色对象，且新的引用的目标对象为灰色或白色，那么我们就把发出引用的对象涂成灰色
           1. 改进二：删除屏障：被删除的对象，如果自身为灰色或者白色，那么需要被标记为灰色。C被B删除时，C本身为白色，所以需要被标记为灰色
-1. 并发读写的顺序
-   - 认识：编程语言有自己的内存模型，提供上层对内存访问的控制，并允许编译器开发者和硬件对程序做一些优化
-     1. 由于cpu和编译器优化的指令重排和多级cache的存在，保证多核访问同一个变量变得非常复杂
-     1. 重排、可见性：看不到其他协程对数据的操作，可能导致程序一直被hang住，甚至出现半初始化的情况
-        ```go
-        var a string
-        var done bool
-
-        func setup() {
-            a = "hello, world"
-            done = true
-        }
-        func main() {
-            go setup()
-            for !done {                 // 即使观察到done变成true了，读取到的a仍然可能为空
-            }
-            print(a)
-        }
-        ```
-   - happens-before
-     1. 认识：描述两个时间的顺序关系
-        - 在一个goroutine内部，程序的执行顺序和它们的代码指定的顺序是一样的，即使编译器或者 CPU 重排了读写顺序，从行为上来看，也和代码指定的顺序一样。
-            ```go
-            // 一个goroutine里，打印结果依然能保证是 1、2、3
-            var a = 1
-            var b = 2
-            var c = 3
-            println(a)
-            println(b)
-            println(c)
-            ```
-     1. 保证方式
-        - init函数：main函数一定在导入的包的init函数之后执行
-        - goroutine：启动goroutine的go语句的执行，一定happens-before此goroutine内的代码执行，如go语句传入的参数是一个函数执行的结果，那么这个函数一定先于goroutine内部的代码被执行
-          1. goroutine退出的时候没有保证
-        - channel
-          1. 给chan发送happens-before从该chann接收相应数据的动作完成之前：发送早于接收
-          1. close操作happens-before从关闭的chan中读取出一个零值
-          1. unbuffered的即容量为0的chan，读取happens-before发送，因为读取会阻塞
-          1. 容量为m的chan，第n个receive一定happens-before第n+m个send的完成
-        - Mutex/RWMutex
-          1. 第n次的m.Unlock一定happens before第n+1的m.Lock方法的返回
-          1. 读写锁RWMutex如果它的第n个m.Lock方法的调用已返回，那么它的第n个m.Unlock的方法调用一定happens before任何一个m.RLock方法调用的返回，只要这些m.RLock方法调用happens after第n次m.Lock的调用的返回。这就可以保证只有释放了持有的写锁，那些等待的读请求才能请求到读锁
-          1. 读写锁RWMutex如果它的第n个m.RLock方法的调用已返回，那么它的第k（k<=n）个成功的m.RUnlock方法的返回一定happens before任意的m.RUnlockLock方法调用，只要这些m.Lock方法调用happens after第n次m.RLock
-        - WaitGroup
-          1. Wait 方法等到计数值归零之后才返回
-        - Once
-          1. 对于once.Do(f)调用，f函数的那个单次调用一定happens before任何once.Do(f)调用的返回
-        - atomic
-          1. go内存模型的官方文档并没有明确给出atomic的保证，相关研究太复杂，现阶段还是不要使用atomic来保证顺序性
-1. 最佳实践
-   - 内存使用
-     1. 认识：将变量的内存分配在合适的地方，确保变量整个生命周期运行时完全可知，就可以在栈上分配，否则就是逃逸到堆上分配了
-        - 模糊堆栈，编译器自动优化放堆还是放栈
-        - 能在编译期确定作用域的，就会到堆上
-        - 堆上分配开销大很多
-        - 逃逸分析：基本原则是如果函数返回了变量的引用，那么这个变量就会逃逸。编译器通过分析代码决定变量分配的地方
-          1. 如何进行逃逸分析普通使用者不用关心，这是语言编译该考虑的，但是使用上可避免
-     1. 引发内存逃逸的情况
-        - 在方法内把局部变量指针返回：局部变量逃逸。局部变量原本应在栈中分配、栈中回收。但由于返回时被外部引用，因此其生命周期大于栈，则溢出
-        - 发送指针或带有指针的值到channel中：指针的值逃逸。编译时没有办法知道哪个goroutine会在channel上接收数据，所以编译器无法知道变量什么时候被释放
-        - 在一个切片上存储指针或带指针的值：切片的值逃逸。其底层数组可能在栈上分配，但其引用的值一定在堆上，如`[]*string`
-        - slice的底层数组重新分配，因为append时可能会超出其容量cap：slice逃逸，slice编译时在栈上，基于运行时扩充则会在堆上
-        - 在interface上调用方法：方法都是动态调度的因为方法的真正实现只能在运行时知道，如变量r io.Reader, 调用r.Read(b)会使r的值和切片b的背后存储都逃逸
-     1. 最佳实践
-        - 不要盲目使用指针作为函数参数，虽然会减少复制操作。当参数为变量自身时，复制是在栈上完成，开销远比变量逃逸到堆上开销小
-     1. 操作
-        - 观察逃逸情况：`go build -gcflags=-m main.go`，提示`xx escapes to heap`
-        - 避免逃逸检测
-            ```go
-            // 作用是遮蔽输入和输出的依赖关系。使编译器不认为p会通过x逃逸， 因为uintptr()产生的引用是编译器无法理解的
-            // 用于清楚被unsafe.Pointer引用的数据肯定不会被逃逸但编译器却不知道的情况，要小心使用
-            func noescape(p unsafe.Pointer) unsafe.Pointer {
-                x := uintptr(p)
-                return unsafe.Pointer(x ^ 0)
-            }
-            // 使用示例
-            func NewA(s string) A {                                 // NewA会逃逸
-            return A{S: &s}
-            }
-            func NewATrick(s string) ATrick {
-                return ATrick{S: noescape(unsafe.Pointer(&s))}
-            }
-            ```
-   - local cache的优化思路
-     1. 使用offheap(堆外内存)：GC只会扫描堆上的对象，那就把对象都放到栈上，缓存库就高度依赖malloc和free操作了
-     1. 利用v1.5+特性：当map中的key和value都是基础类型时，GC就不会扫到map里的key和value
-     1. 参考freecache的思路，用ringbuffer存entry，绕过了map里存指针
-   - 拷贝场景
-     1. 投射到 interface
-     1. chan的接收和发送
-     1. 替换map中的元素
-     1. 向slice添加元素
-     1. 迭代（range）
-   - 不会内联的场景
-     1. recovery
-     1. select 块
-     1. 类型声明
-     1. defer
-     1. goroutine
-     1. for-range
 ### 其他机制
 #### Once
 1. 要求

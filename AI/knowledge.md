@@ -1,4 +1,4 @@
-### MCP
+### mcp
 1. go实现mcp的方法
    - 新建独立的mcp服务：作为mcp的入口，独立mcp服务通过http等方式调用现有服务的接口
      1. 官方SDK：modelcontextprotocol/go-sdk
@@ -257,6 +257,29 @@
     3. 功能上现在portal-api和php/auth-center基本是一致的，只是实现方式上因为不同语言的特性实现方式不同，这个不必追求一致，按照portal-api这种go语言的方式即可
     4. go也要改一下，修改allowed_dict_codes的过滤行为，如果allowed_dict_codes为空，则不过滤任何的字段
     5. php/auth-center中go没有的功能，列出来，我看看是否需加入
+    ```
+### codex
+1. AGENTS.md的编写原则
+    ```md
+    # AGENTS.md
+    
+    ## 目标（每个PR选择一个）                                                   // 聚焦功能，防止烂写
+    - 改进 CLI：改进用户体验、错误消息、帮助文本、标志和输出清晰度。
+    - 提高可靠性：通过测试修复错误、边界情况和回归问题。
+    - 提高开发速度：简化代码路径，降低复杂性，保持行为明确。
+    - 改进质量把关：加强测试/检查/检验，而不增加繁重的流程。
+
+    ## 构建与测试
+    make build # 构建（首先运行fetch_meta）
+    make unit-test # PR之前必须执行（使用-race运行）
+    make test # 完整的是vet + unit + integration
+
+    ## 谁在使用此命令行界面
+    此命令行界面的主要用户包括人工智能代理（Claude Code、Cursor、Gemini CLI）。您的代码会被机器读取——错误信息、输出格式和标志位设计都会直接影响代理的成功率。
+    必须牢记的一条规则：**你编写的每一个错误信息都会被人工智能解析，以决定下一步操作。** 确保错误信息结构清晰、可操作且具体。
+
+    ## 代码规范
+    ...
     ```
 ### cursor
 1. 主题样式
