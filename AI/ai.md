@@ -161,12 +161,19 @@
           1. 编码器：将输入转换为向量化表示
           1. 解码器：将向量化反推出对应的输出，即利用概率预测下一个
      1. 注意力机制
+        - $\mathrm{Attention}(Q,K,V)=\mathrm{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V$
         - 组成：Q（Query，查询）、K（Key，标签）、V（Value，含义）三个核心组成
         - 计算公式：算相似度、归一化概率、加权求和
         - 多头注意力机制：多次查询Q，即不同角度理解问题
         - 上下文爆炸：要理解当前词和前面所有词的关系，显存爆炸、计算量爆炸、重要信息淹没
      1. 混合注意力架构
         - 上下文压缩：短期记忆对应CSA的滑动窗口，中期记忆对应CSA的压缩+筛选，长期记忆对应HCA的重度压缩。类似人记得当前的所有细节，很久之前缩成模糊印象，细节基本忘光，但"大概发生过什么"还是知道的
+   - 前缀缓存
+     1. LLM的推理两阶段
+        - prefill：处理历史上下文，适合缓存
+        - decode：生成新token，基本不能缓存
+     1. 缓存原理：利用前缀prompt的中间结果kv cache，就可以跳过把所有token从头做完整计算，适合每轮都一样的巨大系统提示词(知识库、Agent SDK等)，
+        - kv cache很大，几十M到几G
    - ORT：ONNX Runtime，用于高性能推理（即模型预测）的跨平台引擎，用于加载和运行由ONNX格式定义的机器学习模型
      1. ONNX：Open Neural Network Exchange，开放的、代表机器学习模型的标准文件格式。
         - 由微软和Facebook于2017年共同创建，旨在促进不同深度学习框架之间的互操作性
@@ -690,11 +697,15 @@
              - logit_bias：直接修改特定词汇在采样前的概率值，最精细、最强大的控制手段，-100 ~ 100
                1. 负减小，正增大；-100禁止，100强制使用
           1. 回复设置
-             - stream：是否流式输出
+             - stream/stream_options：是否流式输出
              - stop：遇到指定字符串时停止生成，对于控制模型输出的结构和长度非常有用
              - max_tokens：回复的最大token数
+          1. 工具相关
+             - tools：strict模式支持严格遵循Function的JSON Schema的格式要求，以确保模型输出的Function符合用户的定义
+               1. $def定义模块，$ref引用模块或递归
+             - tool_choice
         - role分类
-          1. system：系统消息，提供背景信息和指令，使得回答更加精准
+          1. system：系统消息，提供背景信息和指令，使得回答更加精准，更高的指令优先级、更底层的指令约束
           1. user：用户消息，用户输入的内容
           1. assistant：助手消息，助手生成的回复
         - 实例
@@ -711,8 +722,35 @@
                     # 注意：这里通过设置role =  assistant可以告诉Chat模型，这个输入是模型返回的答案
                     {"role": "assistant", "content": "这里填写上一轮对话模型的回复"},
                     {"role": "user", "content": "关于第5条深度学习方面，你帮我更加详细的介绍一下"}
-                ]
+                ],
+                tools=tools
             )
+            tools = [
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "get_weather",
+                        "description": "Get weather of a location, the user should supply a location first.",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "location": {
+                                    "type": "string",
+                                    "description": "The city and state, e.g. San Francisco, CA",
+                                }
+                            },
+                            "required": ["location"]
+                        },
+                    }
+                },
+            ]
+            tool = message.tool_calls[0]
+            messages.append(message)
+
+            messages.append({"role": "tool", "tool_call_id": tool.id, "content": "24℃"})
+            message = send_messages(messages)
+            print(f"Model>\t {message.content}")
+
             // 2. 使用会话id
             from openai import OpenAI
             client = OpenAI()
@@ -2789,6 +2827,26 @@
      1. 技术氛围：技术栈、代码风格
      1. 项目上下文
 1. spec-driven
+   - spec
+     1. 认识：Specification 规范，软件系统的详细行为描述，不仅是文档，是开发流程的核心驱动力
+     1. 特点
+        - 可执行性：可运行、可验证。如使用Gherkin语法编写的.feature文件(验收测试)，或OpenAPI/Swagger规范(可生成mock服务器和客户端)
+        - 单一事实来源：开发/测试/文档/甚至部署配置都从这份spec生成或校验
+        - 约定优先于实现：先明确系统应该做什么(spec)，再讨论怎么写代码(实现)
+        - 人机可读：既让业务方、QA、开发者能理解业务规则，又能被工具自动解析
+     1. Gherkin举例
+        ```gherkin
+        Feature: 用户登录
+            Scenario: 正确密码
+                Given 用户已注册
+                When 用户输入正确密码
+                Then 登录成功
+        ```
+     1. BDD：行为驱动开发，是一套将spec落地为可执行验证的实践方法论，包含了协作流程+工具链，内容是如何编写、维护、验证这些行为描述，核心特征是spec必须可执行，包括了从需求到验收的整个过程
+        - Given-When-Then模板：是BDD规范的核心编写格式，强制用统一的语法来描述行为
+          1. Given：上下文/前置条件，设定场景开始前的状态，如“用户已注册且已登录”
+          1. When：事件/动作，描述用户或系统执行的操作，如“用户将一件商品添加到购物车”
+          1. Then：预期结果，描述操作后系统应该发生的、可观察的变化，如“购物车中的商品数量增加1”
    - 认识：规范驱动开发，在做任何事/生成任何代码之前，必须先通过结构化的文档明确需求、设计与任务。就是说话先于代码，之前是先有代码后有文档
      1. 在于其方法论本身非常强大
      1. 解决AI编程需求理解偏差及工程质量不高等核心痛点
