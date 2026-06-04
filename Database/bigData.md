@@ -3,6 +3,9 @@
    - hadoop和spark的基础大数据框架
    - 实时数据处理、离线数据处理、数据分析、日志分析、数据挖掘、机器算法预测分析
    - 大数据组件需要分场景使用，基础理论基本在hadoop基础上建立，
+1. 理解
+   - 为什么会有离线计算：算不过来，或者成本和响应时间无法接受，即把查询时的计算，提前到夜里完成
+   - 实时计算为什么又能算了呢：不再每次从头算，而是增量算，如kafka提供事件流，flink提供状态计算，两者结合实现实时计算
 1. 分类：![avatar](../images/bigData.jpeg)
    - 数据生态
    - 数据技术、数据治理
@@ -238,6 +241,7 @@
      1. supervisor
      1. worker
 1. Flink
+   - 认识：数据不是表而是流，用checkpoint、state、容错实现
    - flink-cdc-connectors：Flink SQL CDC，可以直接从MySQl等数据库直接读取全量和增量变更数据的source组件，用户只需声明CDC的connector即可
    - 实时数仓实践：![avatar](../images/Flink_SQL_done.png)
 1. Beam
