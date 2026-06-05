@@ -1620,6 +1620,37 @@
     ```
 #### 任务调度
 1. github.com/robfig/cron
+#### 熔断器
+1. sony/gobreaker/v2
+   - 认识：用它来保护下游依赖如http、rpc、mysql、redis、第三方api等，go生态里最经典、最轻量的熔断器实现之一，sony开发
+     1. 级联故障：即当下游服务持续故障时，主动拒绝请求，而不是傻傻地继续调用，会产生
+        - goroutine堆积
+        - 连接池耗尽
+        - cpu飙高
+        - 最终服务本身也挂掉
+     1. 分布式熔断器能力，用redis多个实例之间共享熔断状态，v2
+   - 配置
+     1. ReadyToTrip：决定什么时候熔断
+     1. Timeout：熔断状态持续多久
+     1. MaxRequests：half-open状态允许多少探测流量
+     1. OnStateChange：状态切换回调
+   - 使用
+    ```go
+    // 连续失败超过5次熔断，30秒后尝试恢复
+    st := gobreaker.Settings{
+        Name: "user-service",
+        Timeout: 30 * time.Second,
+        ReadyToTrip: func(counts gobreaker.Counts) bool {
+            return counts.ConsecutiveFailures > 5
+        },
+    }
+
+    // 调用
+    cb := gobreaker.NewCircuitBreaker[any](st)
+    result, err := cb.Execute(func() (string, error) {
+        return callUserService()
+    })
+    ```
 #### 其他
 1. engo：游戏引擎
 ### 技术方案

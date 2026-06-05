@@ -1816,6 +1816,58 @@
           1. chrome升级经常变更影响协议，不好适配
      1. 方式二
         - 原理：Computer Use MCP，即依赖操作系统的ui自动化能力，通过操作系统的可访问性api获取accessibility tree（优先于截图使用tree这种结构化的数据），同时搭配窗口截图（视觉上下文，就是截图然后提取文字，让llm知道界面上都有啥）实现通用的应用操作，可以操作鼠标、键盘点击、滚动
+#### 效果验收
+1. LLM-as-Judge：用一个llm来评价另一个llm的输出质量
+1. 工具
+   - Langfuse
+     1. 认识：llm应用的观测、监控与分析平台，ts写的，开源
+        - 属于目前业界最主流的llm基础设施之一，很多团队会直接接入
+        - 架构定位
+            ```
+            Agent App
+                │
+                ▼
+            Agent Runtime (ADK/LangGraph/OpenAI SDK)
+                │
+                ▼
+            Langfuse (Trace/Eval/Prompt)
+                │
+                ▼
+            ClickHouse/Postgres
+            ```
+     1. 功能
+        - Prompt Trace：链路追踪，包括
+          1. User Input
+          1. LLM Call #1
+          1. Tool Call(Search/DB)
+          1. LLM Call #2
+          1. Final Output
+        - Token和成本统计
+        - Agent可视化
+        - Evaluation评测
+   - CozeLoop
+   - LangSmith
+     1. 认识：LLM应用的开发运维的商业LLMOps平台，提供了贯穿开发、测试、生产全周期的工具。是LLM应用的集成开发环境IDE+应用性能管理APM工具，LangGraph官方出品，闭源
+        - 解决如提示词prompt难以调试、评估困难、监控缺失等问题
+     1. 功能
+        - debugging & tracing：调试和溯源，自动记录每次llm的调用的溯源图。看到输入、输出、耗时、成本，快速定位问题
+        - testing & evaluation：测试和评估，创建数据集、运行批量测试等
+        - monitoring：监控，延迟、错误率、输出质量，设置警报
+        - collaboration：协作，共享提示模板、跟踪记录、数据集等
+#### 架构
+1. 工作流/agent
+1. 评估工具
+1. 如
+Agent App
+    │
+    ▼
+Agent Runtime (ADK/LangGraph/OpenAI SDK)
+    │
+    ▼
+Langfuse (Trace/Eval/Prompt)
+    │
+    ▼
+ClickHouse/Postgres
 ### AI开发
 1. 开发平台
    - coze
@@ -1934,18 +1986,6 @@
      1. 数据连接器：各种数据源，如本地文件(pdf/word/ppt)、数据库(sql, nosql)、api(notion/slack/discord)等
      1. 索引：将加载的非结构化或结构化数据转换成一种易于LLM查询的优化格式，将数据分割成块chunks，并创建向量嵌入embeddings，存储在向量数据库中，实现快速、准确的语义搜索
      1. 查询接口：提供一个自然的语言接口来向你索引的数据提问。它接收你的问题，在索引中检索最相关的上下文信息，然后将“问题+上下文”一起组装成一个提示prompt发送给LLM，从而得到一个基于你私有数据的准确回答
-1. 开发平台
-   - CozeLoop
-   - Langfuse
-     1. 认识：llm应用的观测、监控与分析平台，开源
-   - langSmith
-     1. 认识：LLM应用的开发运维LLMOps平台，提供了贯穿开发、测试、生产全周期的工具。是LLM应用的集成开发环境IDE+应用性能管理APM工具，LangGraph官方出品，闭源
-        - 解决如提示词prompt难以调试、评估困难、监控缺失等问题
-     1. 功能
-        - debugging & tracing：调试和溯源，自动记录每次llm的调用的溯源图。看到输入、输出、耗时、成本，快速定位问题
-        - testing & evaluation：测试和评估，创建数据集、运行批量测试等
-        - monitoring：监控，延迟、错误率、输出质量，设置警报
-        - collaboration：协作，共享提示模板、跟踪记录、数据集等
 ##### Eino
 1. Eino
    - 字节开源的Golang的AI应用开发框架
