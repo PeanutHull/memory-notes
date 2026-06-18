@@ -136,6 +136,54 @@
         - 压缩数据(参数训练)更高，那么对于规律的把握就更好：模型规模更大时可以压缩更多规律
         - 大模型的智能，本质是把世界规律压缩进参数里
 1. 原理
+   - 简述
+     1. 把文字变成向量
+     1. 把向量变成矩阵
+     1. 让GPU疯狂做矩阵乘法
+     1. 最后预测下一个Token
+   - 搁浅
+     1. Q、K、V 到底是怎么来的：这是从“知道 Transformer 在干什么”到“真正理解 Attention”的分水岭。理解了 QKV，你基本就能读懂大部分 LLM 架构图了
+        ```go
+        // 把大模型推理想成
+        for {
+            hidden := Transformer(tokens)
+
+            next := Predict(hidden)
+
+            tokens = append(tokens, next)
+
+            if next == EOS {
+                break
+            }
+        }
+
+        // Transformer(tokens)内部干的就是：
+        Embedding
+        ↓
+        Attention
+        ↓
+        矩阵乘法
+        ↓
+        Attention
+        ↓
+        矩阵乘法
+        ↓
+        ...
+
+        // 把Transformer看成
+        func Predict(input string) string {
+
+            x := Embedding(input)
+
+            x = Layer1(x)
+            x = Layer2(x)
+            x = Layer3(x)
+            ...
+            x = Layer64(x)
+
+            return Decode(x)
+        }
+        ```
    - 理解：用神经网络表示函数，用损失函数最小化为目标，通过反向传播训练参数
      1. 神经网络：多个输入——(进行线性变换——进行激活函数)得到隐藏层——继续进行线性变换+激活函数——得到输出层。这是前向传播，就是一点点分步骤把函数计算了出来
         - 从而构成非常复杂的非线性函数，从而根据参数猜出结果，找近似解
@@ -871,312 +919,6 @@
             )
             ```
         - 在本地执行外部函数，将计算过程和结果保存为message并追加到messages后面，并第二次调用Chat Completion模型分析函数的计算结果，并最终根据函数计算结果输出用户问题的答案
-     1. 实践
-        ```python
-        // 对话小助理，while True执行具体的业务逻辑，然后通过依赖ChatConversation对话基类，这个基类又依赖AutoFunctionGenerator进行自动回复
-        def chat_with_assistant(functions_list=None, 
-            prompt="您好！", 
-            model="gpt-3.5-turbo-16k-0613", 
-            system_message="你是我的专属小助理"):
-     
-        # 创建ChatConversation实例
-        chat_conversation = ChatConversation(model=model)
-        
-        # 添加系统消息和用户输入到messages列表中
-        messages = [{"role": "system", "content": system_message}]
-        messages.append({"role": "user", "content": prompt})
-        chat_conversation.messages = messages
-        
-        while True:
-            # 调用run方法处理对话，并得到模型的回答
-            answer = chat_conversation.run(functions_list=functions_list)
-            
-            # 打印模型的回答
-            print(f"模型回答: {answer}")
-            
-            # 添加模型的回答到messages列表中
-            messages.append({"role": "assistant", "content": answer})
-            
-            # 询问用户是否还有其他问题
-            user_input = input("如何没有其他问题，可以输入'退出'结束对话): ")
-            
-            # 如果用户输入'退出'，则结束对话
-            if user_input.lower() == "退出":
-                break
-            
-            # 添加用户的问题到messages列表中
-            messages.append({"role": "user", "content": user_input})
-            
-            # 更新ChatConversation实例的messages列表
-            chat_conversation.messages = messages
-
-
-        # ChatConversation的定义——————————————————————————————————————————————————————————————————————————————————————————————
-        class ChatConversation:
-        """
-        ChatConversation 类用于与 OpenAI GPT-3 模型进行聊天对话，并可选地调用外部功能函数。
-        
-        属性:
-        - model (str): 使用的 OpenAI GPT模型名称。
-        - messages (list): 存储与 GPT 模型之间的消息。
-        - function_repository (dict): 存储可选的外部功能函数。
-        
-        方法:
-        - __init__ : 初始化 ChatConversation 类。
-        - add_functions : 添加外部功能函数到功能仓库。
-        - _call_chat_model : 调用 OpenAI GPT 模型进行聊天。
-        - run : 运行聊天会话并获取最终的响应。
-        """
-        def __init__(self, model="gpt-3.5-turbo-16k-0613"):
-            """
-            初始化ChatConversation类。
-            """
-            self.model = model
-            self.messages = []
-            self.function_repository = {}
-        
-        def add_functions(self, functions_list):
-            """
-            添加功能函数到功能仓库。
-    ​
-            参数:
-            functions_list (list): 包含功能函数的列表。
-            """
-            self.function_repository = {func.__name__: func for func in functions_list}
-    ​
-        def _call_chat_model(self, functions=None, include_functions=False):
-            """
-            调用大模型。
-    ​
-            参数:
-            functions (dict): 功能函数的描述。
-            include_functions (bool): 是否包括功能函数和自动功能调用。
-    ​
-            返回:
-            dict: 大模型的响应。
-            """
-            params = {
-                "model": self.model,
-                "messages": self.messages,
-            }
-    ​
-            if include_functions:
-                params['functions'] = functions
-                params['function_call'] = "auto"
-    ​
-            try:
-                return openai.ChatCompletion.create(**params)
-            except Exception as e:
-                print(f"Error calling chat model: {e}")
-                return None
- ​
-        def run(self, functions_list=None):
-            """
-            运行聊天会话，可能包括外部功能函数调用。
-            
-            参数:
-            functions_list (list): 包含功能函数的列表。如果为 None，则只进行常规对话。
-    ​
-            返回:
-            str: 最终的聊天模型响应。
-            """
-            try:
-                # 如果不传入外部函数仓库，就进行常规的对话
-                if functions_list is None:
-                    response = self._call_chat_model()
-                    final_response = response["choices"][0]["message"]["content"]
-                    return final_response
-                
-                else:
-                
-                    # 添加功能函数到功能仓库
-                    self.add_functions(functions_list)
-    ​
-                    # 如果存在外部的功能函数，生成每个功能函数对应的JSON Schema对象描述
-                    functions = AutoFunctionGenerator(functions_list).auto_generate()
-    ​
-                    # 第一次调用大模型，获取到first reponse
-                    response = self._call_chat_model(functions, include_functions=True)
-                    response_message = response["choices"][0]["message"]
-    ​
-                    # 检查在first reponse中是否存在function_call，如果存在，说明需要调用到外部函数仓库
-                    if "function_call" in response_message:
-    ​
-                        # 获取函数名
-                        function_name = response_message["function_call"]["name"]
-    ​
-                        # 获取函数对象
-                        function_call_exist = self.function_repository.get(function_name)
-    ​
-                        if not function_call_exist:
-                            print(f"Function {function_name} not found in functions repository.")
-                            return None
-    ​
-                        # 获取函数关键参数信息
-                        function_args = json.loads(response_message["function_call"]["arguments"])
-    ​
-                        # 获取函数逻辑处理后的结果
-                        function_response = function_call_exist(**function_args)
-    ​
-                        # messages = 原始输入 + first reponse + function_response
-    ​
-                        # messages中拼接first response消息
-                        self.messages.append(response_message)  
-                        # messages中拼接函数输出结果
-                        self.messages.append(
-                            {
-                                "role": "function",
-                                "name": function_name,
-                                "content": function_response,
-                            }
-                        )  
-    ​
-    ​
-                        # 第二次调用模型
-                        second_response = self._call_chat_model()
-    ​
-                        # 获取最终的计算结果
-                        final_response = second_response["choices"][0]["message"]["content"]
-    ​
-                    else:
-                        final_response = response_message["content"]
-    ​
-                    return final_response
-    ​
-            except Exception as e:
-                print(f"An error occurred: {e}")
-                return None
-        
-        # 封装一个自动回复的方法，用于调用函数后自动追加message，是类ChatConversation的基础——————————————————————————————————————————————————————
-        class AutoFunctionGenerator:
-        """
-        AutoFunctionGenerator 类用于自动生成一系列功能函数的 JSON Schema 描述。
-        该类通过调用 OpenAI API，采用 Few-shot learning 的方式来生成这些描述。
-
-        属性:
-        - functions_list (list): 一个包含多个功能函数的列表。
-        - max_attempts (int): 最大尝试次数，用于处理 API 调用失败的情况。
-        
-        方法:
-        - __init__ : 初始化 AutoFunctionGenerator 类。
-        - generate_function_descriptions : 自动生成功能函数的 JSON Schema 描述。
-        - _call_openai_api : 调用 OpenAI API。
-        - auto_generate : 自动生成功能函数的 JSON Schema 描述，并处理任何异常。
-        """
-        
-        def __init__(self, functions_list, max_attempts=3):
-            """
-            初始化 AutoFunctionGenerator 类。
-
-            参数:
-            - functions_list (list): 一个包含多个功能函数的列表。
-            - max_attempts (int): 最大尝试次数。
-            """
-            self.functions_list = functions_list
-            self.max_attempts = max_attempts
-
-        def generate_function_descriptions(self):
-            """
-            自动生成功能函数的 JSON Schema 描述。
-
-            返回:
-            - list: 包含 JSON Schema 描述的列表。
-            """
-            # 创建空列表，保存每个功能函数的JSON Schema描述
-            functions = []
-            
-            for function in self.functions_list:
-                
-                # 读取指定函数的函数说明
-                function_description = inspect.getdoc(function)
-                
-                # 读取函数的函数名
-                function_name = function.__name__
-                
-                # 定义system role的Few-shot提示
-                system_Q = "你是一位优秀的数据分析师，现在有一个函数的详细声明如下：%s" % function_description
-                system_A = "计算年龄总和的函数，该函数从一个特定格式的JSON字符串中解析出DataFrame，然后计算所有人的年龄总和并以JSON格式返回结果。\
-                            \n:param input_json: 必要参数，要求字符串类型，表示含有个体年龄数据的JSON格式字符串 \
-                            \n:return: 计算完成后的所有人年龄总和，返回结果为JSON字符串类型对象"
-                
-                
-                # 定义user role的Few-shot提示
-                user_Q = "请根据这个函数声明，为我生成一个JSON Schema对象描述。这个描述应该清晰地标明函数的输入和输出规范。具体要求如下：\
-                        1. 提取函数名称：%s，并将其用作JSON Schema中的'name'字段  \
-                        2. 在JSON Schema对象中，设置函数的参数类型为'object'.\
-                        3. 'properties'字段如果有参数，必须表示出字段的描述. \
-                        4. 从函数声明中解析出函数的描述，并在JSON Schema中以中文字符形式表示在'description'字段.\
-                        5. 识别函数声明中哪些参数是必需的，然后在JSON Schema的'required'字段中列出这些参数. \
-                        6. 输出的应仅为符合上述要求的JSON Schema对象内容,不需要任何上下文修饰语句. "  % function_name
-
-                user_A = "{'name': 'calculate_total_age_function', \
-                                'description': '计算年龄总和的函数，从给定的JSON格式字符串（按'split'方向排列）中解析出DataFrame，计算所有人的年龄总和，并以JSON格式返回结果。 \
-                                'parameters': {'type': 'object', \
-                                                'properties': {'input_json': {'description': '执行计算年龄总和的数据集', 'type': 'string'}}, \
-                                                'required': ['input_json']}}"
-                
-                
-                # 定义输入
-
-                system_message = "你是一位优秀的数据分析师，现在有一个函数的详细声明如下：%s" % function_description
-                user_message = "请根据这个函数声明，为我生成一个JSON Schema对象描述。这个描述应该清晰地标明函数的输入和输出规范。具体要求如下：\
-                                1. 提取函数名称：%s，并将其用作JSON Schema中的'name'字段  \
-                                2. 在JSON Schema对象中，设置函数的参数类型为'object'.\
-                                3. 'properties'字段如果有参数，必须表示出字段的描述. \
-                                4. 从函数声明中解析出函数的描述，并在JSON Schema中以中文字符形式表示在'description'字段.\
-                                5. 识别函数声明中哪些参数是必需的，然后在JSON Schema的'required'字段中列出这些参数. \
-                                6. 输出的应仅为符合上述要求的JSON Schema对象内容,不需要任何上下文修饰语句. "  % function_name
-                
-                messages=[
-                            {"role": "system", "content": "Q:" +  system_Q + user_Q + "A:" + system_A + user_A },
-
-                            {"role": "user", "content": 'Q:' + system_message + user_message}
-                ]
-
-                response = self._call_openai_api(messages)
-                functions.append(json.loads(response.choices[0].message['content']))
-            return functions
-
-        def _call_openai_api(self, messages):
-            """
-            私有方法，用于调用 OpenAI API。
-
-            参数:
-            - messages (list): 包含 API 所需信息的消息列表。
-
-            返回:
-            - object: API 调用的响应对象。
-            """
-            # 请根据您的实际情况修改此处的 API 调用
-            return openai.ChatCompletion.create(
-                model="gpt-3.5-turbo-16k-0613",
-                messages=messages,
-            )
-        
-        def auto_generate(self):
-            """
-            自动生成功能函数的 JSON Schema 描述，并处理任何异常。
-
-            返回:
-            - list: 包含 JSON Schema 描述的列表。
-
-            异常:
-            - 如果达到最大尝试次数，将抛出异常。
-            """
-            attempts = 0
-            while attempts < self.max_attempts:
-                try:
-                    functions = self.generate_function_descriptions()
-                    return functions
-                except Exception as e:
-                    attempts += 1
-                    print(f"Error occurred: {e}")
-                    if attempts >= self.max_attempts:
-                        print("Reached maximum number of attempts. Terminating.")
-                        raise
-                    else:
-                        print("Retrying...")
-        ```
 #### deepseek API
 1. 多轮对话
    - chat/completions无状态：需将之前所有对话历史拼接好后，传递给对话API
@@ -1518,6 +1260,12 @@
    - 分类
      1. chain：链式
      1. graph：图式
+1. 最佳实践
+   - 保证llm返回的一定是json结构
+     1. prompt约束：可靠性低，不推荐生产，结构可能跑偏如age应该返回int类型的18，却返回了字符串类型的"18岁"
+     2. json mode：一些api支持严格返回json格式，只能保证输出是json，不能保证字段正确（缺少、类型错误），ds只支持这个
+     3. structured output：能保证符合schema，国外基本支持，国内豆包和千问部分模型支持
+     4. function calling/tool calling：保证符合tool schema，agent常用，因为agent本来就是大量使用function calling，构建一个假的函数就可以拿到很严格的json，agent常用这个就是因为顺手的事儿，使用姿势有点偏门，推荐structured output
 #### agent
 1. agent
    - 背景：大模型时代的人机交互范式，llm将结构化/非结构化的数据结合工具自动处理，变为了人和llm交互，![](../images/ai/why_agent.jpg)
@@ -2975,13 +2723,25 @@
 1. 怎么确保AI编程工程生成代码的质量
    - 理解：出发点是对AI低信任度，但是把AI产物纳入工程质量体系
    - 做法
+     1. 第零层
+        - 使用plan模式
      1. 第一层：做prompt约束
-        - 对项目编写agent.md，明确目录结构、编码规范、异常处理、日志、单测要求等 
-        - codex编辑啥文件，就是自己写进去的那个？？？
-     1. 第二层：自动化工具检测，go和php有哪些工具？实际可以用哪些？
+        - 对项目编写agent.md，明确目录结构、编码规范、异常处理、日志、单测要求等（项目层）
+        - codex编辑config.toml的developer_instructions（全局层）
+     1. 第二层：自动化工具检测
         - 静态扫描、lint、安全扫描
-        - 编排agent对结果进行同步检查，重点ai助手和人同时进行检查，输出可行结果，怎么玩？怎么快速启动检查？（如何自动触发？如用另一个模型或者编程工具（如codex写就用claude检查）利用钩子让电脑界面弹出对话框人工确认是否执行检查？）
-          1. 特点：又快又多一重保障，ai检查结果为辅，扫一眼就行，重点输出逻辑错误、隐患、
+          1. agent会自动跑检查
+             - go
+               1. gofmt -w .：格式化
+               1. go build ./...：编译检查
+               1. go test ./...：单元测试
+               1. golangci-lint run：lint检查
+             - php
+               1. php -l
+               1. vendor/bin/phpunit
+        - 编排agent对结果进行同步检查，重点是ai助手和人同时进行检查，输出可行结果
+          1. 特点：又快又多一重保障，ai检查结果为辅，扫一眼就行，重点输出逻辑错误、隐患
+          1. 实现：配置codex/cc的after_edit hook执行`./review.sh`，利用钩子让电脑界面弹出对话框人工确认是否执行检查，是的话让其二者互相检查，检查者输出一个报告即可
      1. 第三层：人工code review
         - 人工确认业务逻辑，保证自己知道业务逻辑，避免“ai写的，我也不知道，我得翻翻”
         - 重点看边界条件、事务一致性、并发安全、权限校验
@@ -2991,6 +2751,14 @@
           1. 实际踩过的坑：ai会生成了清除数据的测试脚本，导致自己清掉了测试环境的数据，工作上第一次这种低级错误丢人了
         - 回归测试：按需把所有的单测都跑一遍，考虑到每次修改的成本，在发布到测试环境时执行一次即可
         - 线上通过灰度、监控、回滚保证风险可控
+1. 最佳实践
+   - 代码得一行一行过
+     1. 业务逻辑得自己知道，是自己设计的，并且达到了自己的设计目标
+     1. 测试用例正确、全面，不能有危险操作，如删库表
+        - 如：任何操作包括编写测试用例，不要有删除数据库表的操作
+   - 不同任务的调整
+     1. 调整权限的检查方式：线上数据要一点点放行
+     1. 调整推理强度，让项目该健壮的时候健壮，该快速的时候快速
 #### 编程范式
 1. 交互范式
    - prompt engineering：怎么问，通过调整提示词的措辞、格式和示例来获得更好的回答
@@ -3123,7 +2891,13 @@
         - app 核心应用服务、config 配置管理、db 数据库与存储、llm 模型抽象层
         - message 消息管理、session 会话管理、lsp 语言服务器协议集成
      1. 工作流：llm + 工具调用，工具包括读写、bash、todowrite 任务编排、skill等
-#### 编辑器
+#### 编程agent
+1. wiki
+   - 其他编辑器
+     1. Windsurf
+     1. Augment：插件形式，上下文很强，复杂项目很给力，比cursor好用
+     1. Roo Code：完全免费，对token的使用非常透明会有显示
+##### codex
 1. Codex
    - 功能
      1. 多Workspace管理：支持Workspace工作区，可以放多个项目
@@ -3132,11 +2906,22 @@
      1. 支持Plan Mode
      1. 内置MCP、Skills管理界面
      1. 支持Automations自动化、定时任务
-1. wiki
-   - 其他编辑器
-     1. Windsurf
-     1. Augment：插件形式，上下文很强，复杂项目很给力，比cursor好用
-     1. Roo Code：完全免费，对token的使用非常透明会有显示
+1. ~/.codex
+   - config.toml
+     1. developer_instructions：被注入到prompt stack的developer role(开发者层)，优先级高于AGENTS.md产生的用户指令，但低于codex内置的system prompt
+1. Agent Loop
+   - 流程
+    ```
+    System Prompt
+        ↓
+    Permissions Instructions
+        ↓
+    developer_instructions   ← config.toml
+        ↓
+    AGENTS.md
+        ↓
+    User Prompt
+    ```
 ##### cursor
 1. 认识：把ai变成可信的工程伙伴。AI是工具，不是魔法：给足够上下文、清晰约束、微粒度任务，就能成为可靠的协作伙伴
    - AI编码助手 VS AI编码代理
@@ -3666,6 +3451,14 @@
    - 如果要处理确定性强的、不容有失的，可以使用流程编排等确定性手段
    - 模型能力的提升正在让"精心设计的 prompt"变得越来越不重要
    - 不论是dot-skill、nuwa-skill这种生成skill的skill，都是普通的提示词，其他核心价值在于其提示词怎么写，如从哪些维度、有哪些验证规则(提炼规则、质量验证规则)，所以如果你是一个专家，才可以全面、专业的生成指导
+   - dify是一个低代码llm应用编排平台，适合快速跑通，验证业务、调试提示词和业务。大规模部署还是自己实现一遍
+   - ai能够大量生成代码，节省人力
+   - 人要驱动ai，而不是被ai左右
+     1. ai是执行工具，不能替代人进行架构设计和方案决策
+     1. 与ai持续battle，明确技术栈和规范，掌握实现逻辑、避免黑盒开发、确保实现符合规范
+1. 历程
+   - ai太好了，我不会的全部可以教我，记得遇到不懂的不要妥协，去问ai老师
+   - 现在掌握信息的效率太低了，提高方法
 1. 知识
    - 现在llm
      1. 上下文窗口一般为128k、256k，最大的1m
@@ -3675,6 +3468,7 @@
    - 真正的高精尖技术都是从学术中来的，只考虑实现一个专有的场景，之后再添砖加瓦扩展到其他领域
      1. 如agent team功能从“分别从安全性、性能、测试覆盖率等不同角度同时审查代码，然后互相质疑和补充”开始mesh架构工作
      1. 那种一上来就要吃个胖子，面面俱到的往往无法获取成功
+   - agent治理是一个大问题，很快就会有通用的agent面世，当下有Claude Managed Agents
 1. 基础思考
    - ai做的是执行层，思考层还要人来，帮助人更好的思考
    - 大模型最与众不同的能力是意图提取，是自然语言理解
@@ -3690,6 +3484,13 @@
      1. mcp调用是提示词还是function calling
      1. 向量库的切分模式、向量维度的调整
    - 调提示词，效果不明显时，换模型
+1. 工程实践
+   - 用ai分析一个db，快速数据导入，本来需要3天的事情，半天搞定，作为项目写进去
+   - 接入shengwang mcp
+     1. 背景：临时需要踢出用户
+     1. 方案：接入shengwang mcp后生成curl，快速解决、高效解决
+     1. 意义：人工翻文档、生成token得尝试1天；接入mcp加速对声网文档的理解
+   - 想做生产级系统，要性能，要部署简单，要吞吐量。所以选了Go
 ### wiki
 1. 其他方面的应用
    - 图像应用
@@ -3750,3 +3551,11 @@
              - 提示词方法：预先准备好答案
    - 聊天前端项目：open webUI（原名ollama webUI）、chatbox、Cherry Studio、Page Assist、chatbot-ui，类似gpt的界面
      1. chatbox的功能：文字聊天(markdown渲染、代码渲染、mermaid图像表格渲染、思维导图、语法高亮、内置html渲染)、联网搜索(网页爬取)、文件交互(图片)、调用mcp服务、本地化向量知识库、图像生成
+1. 算力
+   - 单位
+     1. 计算速度：TOPS = TFLOPS = PFLOPS/1024
+        - TOPS   = 10¹² Operations/s
+        - TFLOPS = 10¹² Floating Point Operations/s
+     1. 浮点数位数：FP32/FP16/FP8/FP4，同样的算力32位/16位/8位/4位的TFLOPS差距为数十、数百、上千、数千
+        - 高精度适用于游戏、低精度适用于推理
+   - 大模型开发者看显卡AI性能的注意顺序：显存容量>显存带宽>FP8/FP4算力>TOPS数字

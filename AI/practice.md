@@ -627,3 +627,320 @@
    - 扣子罗盘的作用是什么？帮助进行提示词打分进而为优化提示词提供参考
 ### LongCat-Video
 1. 认识：模型LongCat-Video-Avatar-1.5，基座模型LongCat-Video
+### demo
+1. AI医疗大模型智能导诊系统
+   - 项目介绍
+     1. 概述
+        - 核心上它是面向患者预问诊、分诊推荐、科室匹配和就医引导的ai导诊系统。我主要负责大模型应用层和工程化落地，包括rag知识库、prompt模板、agent调度、工具调用、会话状态机、风险分级和线上观测。生产上我重点做了医疗意图识别、症状结构化抽取、科室路由、敏感问题拦截和hitl转人工，保证系统不是“自由聊天”，而是受控导诊流程
+     1. 解决了什么问题
+        - 它主要解决患者不知道挂什么科、描述不清症状、导诊台压励力大、线上咨询不标准的问题。核心不是替代医生诊断，而是把患者主诉结构化，识别风险等级，给出合理科室建议和下一步就医路径。生产上通过多轮问诊补全关键槽位，比如年龄、性别、部位、持续时间、伴随症状;通过RAG降低幻觉，通过规则兜底高危症状，避免把胸痛、意识障碍、严重过敏等场景误导成普通咨询
+     1. 架构是哪样的，为什么要这样设计
+        - 架构分为接入层、会话编排层、agent决策层、rag检索层、工具服务层、模型网关层和治理观测层。这样设计是为了把大模型从核心业务里解耦，避免一个prompt承担所有逻辑
+        - 生产上通过状态机控制问诊流程，通过路由机制区分症状问诊、科室推荐、挂号咨询和风险预警;rag负责医疗知识grounding, 工具负责查科室、排班、医院规则，审计和监控负责安全闭环。
+   - 项目企业运营分析多智能体系统技术难点是什么，什么方案解决的?
+     1. 项目核心有四大技术难点，对应解决方案如下:
+        - 多agent协同不可控，易出现重复分析、流程跑偏
+          1. 解决方案: 采用状态机+任务dag约束执行边界，由router判定流转路径，planner做受控任务拆解
+        - 数据准确性难保障，llm易编造指标
+          1. 解决方案: 所有经营数据统一由后端tool提供，入参经过schema校验
+        - 分析结果可解释性不足
+          1. 解决方案: 报告强制留存数据来源、计算口径、中间结论
+        - 线上稳定性差，存在工具调用失败、模型超时、格式异常等问题
+          1. 解决方案:配置重试、降级、人工兜底机制
+     1. 整体落地方案: workflow编排 + tool权限控制 + memory上下文存储 + checkpoint链路回放 + 日志审计，保障系统可控、可查、可优化
+   - 企业运营分析多智能体系统有哪些智能体?智能体之间是怎么协同完成任务的?
+     1. 组成：五类agent，数据理解agent、指标分析agent、异常诊断agent、策略建议agent、报告生成agent。用户提出运营问题后，router先识别意图和业务域，planner拆解任务
+        - 数据agent调用后端指标api查询gmv、转化率、留存、客单价等数据
+        - 分析agent完成同比、环比、漏斗、分群分析
+        - 诊断agent结合规则库与历史数据定位异常原因
+        - 策略agent输出运营优化动作
+        - 报告agent汇总生成结构化结论
+     1. 协同逻辑：多个agent不自由交互，依靠workflow + 状态机固定流程，每一步写入共享state，依托checkpoint实现失败重试与链路回放
+   - 讲讲问答的调用链路是哪样的
+     1. 用户输入先进接入层，做鉴权、限流、脱敏和安全检查
+     1. 然后进入意图识别，判断是导诊、挂号、报告解读还是闲聊。导诊类请求进入会话状态机，抽取症状槽位，不完整就追问
+     1. 完整后触发RAG 检索医疗知识，同时调用科窒规则、医院科窒映射和排班工具
+     1. 最后由模型生成受控答案，经事实校验、风险拦截、审计落库后返回。高危场景直接转急诊或人工
+   - 讲讲生产运行时有遇到重大事故吗，是怎么解决的
+     1. 遇到过一次高峰期响应超时和部分科窒推荐不稳定的问题，本质是向量检索、模型调用和外部排班接口串行叠加，导致p95延迟升高。处理上先做降级，关闭非关键解释生成，保留症状抽取和科窒推荐;再把链路拆成并行检索、模型网关超时控制、接口缓存和熔断。事后补了全链路trace、prompt版本审计、慢查询告警和checkpoint回放，避免只靠日志事后排查。
+   - 还有优化的空间吗，如果让你进行版本迭代，要怎么做
+     1. 有优化空间，重点在专业准确率、流程稳定性和运营闭环。下一版我会做三件事:第一, RAG从普通向量检索升级为混合检索加 rerank，并按疾病、症状、科室构建医疗知识图谱;第二,Agent从单轮决策升级为状态机Workflow， 支持 Checkpoint、重试和HITL;第三，建立反馈学习闭环，把医生修正、用户点击、转诊结果回流到评测集，持续优化 Prompt、召回策略和科窒路由。
+1. 实践
+    ```python
+    // 对话小助理，while True执行具体的业务逻辑，然后通过依赖ChatConversation对话基类，这个基类又依赖AutoFunctionGenerator进行自动回复
+    def chat_with_assistant(functions_list=None, 
+        prompt="您好！", 
+        model="gpt-3.5-turbo-16k-0613", 
+        system_message="你是我的专属小助理"):
+    
+    # 创建ChatConversation实例
+    chat_conversation = ChatConversation(model=model)
+    
+    # 添加系统消息和用户输入到messages列表中
+    messages = [{"role": "system", "content": system_message}]
+    messages.append({"role": "user", "content": prompt})
+    chat_conversation.messages = messages
+    
+    while True:
+        # 调用run方法处理对话，并得到模型的回答
+        answer = chat_conversation.run(functions_list=functions_list)
+        
+        # 打印模型的回答
+        print(f"模型回答: {answer}")
+        
+        # 添加模型的回答到messages列表中
+        messages.append({"role": "assistant", "content": answer})
+        
+        # 询问用户是否还有其他问题
+        user_input = input("如何没有其他问题，可以输入'退出'结束对话): ")
+        
+        # 如果用户输入'退出'，则结束对话
+        if user_input.lower() == "退出":
+            break
+        
+        # 添加用户的问题到messages列表中
+        messages.append({"role": "user", "content": user_input})
+        
+        # 更新ChatConversation实例的messages列表
+        chat_conversation.messages = messages
+
+
+    class ChatConversation:
+    """
+    ChatConversation 类用于与 OpenAI GPT-3 模型进行聊天对话，并可选地调用外部功能函数。
+    
+    属性:
+    - model (str): 使用的 OpenAI GPT模型名称。
+    - messages (list): 存储与 GPT 模型之间的消息。
+    - function_repository (dict): 存储可选的外部功能函数。
+    
+    方法:
+    - __init__ : 初始化 ChatConversation 类。
+    - add_functions : 添加外部功能函数到功能仓库。
+    - _call_chat_model : 调用 OpenAI GPT 模型进行聊天。
+    - run : 运行聊天会话并获取最终的响应。
+    """
+    def __init__(self, model="gpt-3.5-turbo-16k-0613"):
+        """
+        初始化ChatConversation类。
+        """
+        self.model = model
+        self.messages = []
+        self.function_repository = {}
+    
+    def add_functions(self, functions_list):
+        """
+        添加功能函数到功能仓库。
+        参数:
+        functions_list (list): 包含功能函数的列表。
+        """
+        self.function_repository = {func.__name__: func for func in functions_list}
+    def _call_chat_model(self, functions=None, include_functions=False):
+        """
+        调用大模型。
+        参数:
+        functions (dict): 功能函数的描述。
+        include_functions (bool): 是否包括功能函数和自动功能调用。
+        返回:
+        dict: 大模型的响应。
+        """
+        params = {
+            "model": self.model,
+            "messages": self.messages,
+        }
+        if include_functions:
+            params['functions'] = functions
+            params['function_call'] = "auto"
+        try:
+            return openai.ChatCompletion.create(**params)
+        except Exception as e:
+            print(f"Error calling chat model: {e}")
+            return None
+    def run(self, functions_list=None):
+        """
+        运行聊天会话，可能包括外部功能函数调用。
+        参数:
+        functions_list (list): 包含功能函数的列表。如果为 None，则只进行常规对话。
+        返回:
+        str: 最终的聊天模型响应。
+        """
+        try:
+            # 如果不传入外部函数仓库，就进行常规的对话
+            if functions_list is None:
+                response = self._call_chat_model()
+                final_response = response["choices"][0]["message"]["content"]
+                return final_response
+            
+            else:
+            
+                # 添加功能函数到功能仓库
+                self.add_functions(functions_list)
+                # 如果存在外部的功能函数，生成每个功能函数对应的JSON Schema对象描述
+                functions = AutoFunctionGenerator(functions_list).auto_generate()
+                # 第一次调用大模型，获取到first reponse
+                response = self._call_chat_model(functions, include_functions=True)
+                response_message = response["choices"][0]["message"]
+                # 检查在first reponse中是否存在function_call，如果存在，说明需要调用到外部函数仓库
+                if "function_call" in response_message:
+                    # 获取函数名
+                    function_name = response_message["function_call"]["name"]
+                    # 获取函数对象
+                    function_call_exist = self.function_repository.get(function_name)
+                    if not function_call_exist:
+                        print(f"Function {function_name} not found in functions repository.")
+                        return None
+                    # 获取函数关键参数信息
+                    function_args = json.loads(response_message["function_call"]["arguments"])
+                    # 获取函数逻辑处理后的结果
+                    function_response = function_call_exist(**function_args)
+                    # messages = 原始输入 + first reponse + function_response
+                    # messages中拼接first response消息
+                    self.messages.append(response_message)  
+                    # messages中拼接函数输出结果
+                    self.messages.append(
+                        {
+                            "role": "function",
+                            "name": function_name,
+                            "content": function_response,
+                        }
+                    )  
+                    # 第二次调用模型
+                    second_response = self._call_chat_model()
+                    # 获取最终的计算结果
+                    final_response = second_response["choices"][0]["message"]["content"]
+                else:
+                    final_response = response_message["content"]
+                return final_response
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            return None
+    # 封装一个自动回复的方法，用于调用函数后自动追加message，是类ChatConversation的基础
+    class AutoFunctionGenerator:
+    """
+    AutoFunctionGenerator 类用于自动生成一系列功能函数的 JSON Schema 描述。
+    该类通过调用 OpenAI API，采用 Few-shot learning 的方式来生成这些描述。
+
+    属性:
+    - functions_list (list): 一个包含多个功能函数的列表。
+    - max_attempts (int): 最大尝试次数，用于处理 API 调用失败的情况。
+    
+    方法:
+    - __init__ : 初始化 AutoFunctionGenerator 类。
+    - generate_function_descriptions : 自动生成功能函数的 JSON Schema 描述。
+    - _call_openai_api : 调用 OpenAI API。
+    - auto_generate : 自动生成功能函数的 JSON Schema 描述，并处理任何异常。
+    """
+    
+    def __init__(self, functions_list, max_attempts=3):
+        """
+        初始化 AutoFunctionGenerator 类。
+
+        参数:
+        - functions_list (list): 一个包含多个功能函数的列表。
+        - max_attempts (int): 最大尝试次数。
+        """
+        self.functions_list = functions_list
+        self.max_attempts = max_attempts
+
+    def generate_function_descriptions(self):
+        """
+        自动生成功能函数的 JSON Schema 描述。
+
+        返回:
+        - list: 包含 JSON Schema 描述的列表。
+        """
+        # 创建空列表，保存每个功能函数的JSON Schema描述
+        functions = []
+        
+        for function in self.functions_list:
+            
+            # 读取指定函数的函数说明
+            function_description = inspect.getdoc(function)
+            
+            # 读取函数的函数名
+            function_name = function.__name__
+            
+            # 定义system role的Few-shot提示
+            system_Q = "你是一位优秀的数据分析师，现在有一个函数的详细声明如下：%s" % function_description
+            system_A = "计算年龄总和的函数，该函数从一个特定格式的JSON字符串中解析出DataFrame，然后计算所有人的年龄总和并以JSON格式返回结果。\
+                        \n:param input_json: 必要参数，要求字符串类型，表示含有个体年龄数据的JSON格式字符串 \
+                        \n:return: 计算完成后的所有人年龄总和，返回结果为JSON字符串类型对象"
+            
+            
+            # 定义user role的Few-shot提示
+            user_Q = "请根据这个函数声明，为我生成一个JSON Schema对象描述。这个描述应该清晰地标明函数的输入和输出规范。具体要求如下：\
+                    1. 提取函数名称：%s，并将其用作JSON Schema中的'name'字段  \
+                    2. 在JSON Schema对象中，设置函数的参数类型为'object'.\
+                    3. 'properties'字段如果有参数，必须表示出字段的描述. \
+                    4. 从函数声明中解析出函数的描述，并在JSON Schema中以中文字符形式表示在'description'字段.\
+                    5. 识别函数声明中哪些参数是必需的，然后在JSON Schema的'required'字段中列出这些参数. \
+                    6. 输出的应仅为符合上述要求的JSON Schema对象内容,不需要任何上下文修饰语句. "  % function_name
+
+            user_A = "{'name': 'calculate_total_age_function', \
+                            'description': '计算年龄总和的函数，从给定的JSON格式字符串（按'split'方向排列）中解析出DataFrame，计算所有人的年龄总和，并以JSON格式返回结果。 \
+                            'parameters': {'type': 'object', \
+                                            'properties': {'input_json': {'description': '执行计算年龄总和的数据集', 'type': 'string'}}, \
+                                            'required': ['input_json']}}"
+            
+            
+            # 定义输入
+
+            system_message = "你是一位优秀的数据分析师，现在有一个函数的详细声明如下：%s" % function_description
+            user_message = "请根据这个函数声明，为我生成一个JSON Schema对象描述。这个描述应该清晰地标明函数的输入和输出规范。具体要求如下：\
+                            1. 提取函数名称：%s，并将其用作JSON Schema中的'name'字段  \
+                            2. 在JSON Schema对象中，设置函数的参数类型为'object'.\
+                            3. 'properties'字段如果有参数，必须表示出字段的描述. \
+                            4. 从函数声明中解析出函数的描述，并在JSON Schema中以中文字符形式表示在'description'字段.\
+                            5. 识别函数声明中哪些参数是必需的，然后在JSON Schema的'required'字段中列出这些参数. \
+                            6. 输出的应仅为符合上述要求的JSON Schema对象内容,不需要任何上下文修饰语句. "  % function_name
+            
+            messages=[
+                        {"role": "system", "content": "Q:" +  system_Q + user_Q + "A:" + system_A + user_A },
+
+                        {"role": "user", "content": 'Q:' + system_message + user_message}
+            ]
+
+            response = self._call_openai_api(messages)
+            functions.append(json.loads(response.choices[0].message['content']))
+        return functions
+
+    def _call_openai_api(self, messages):
+        """
+        私有方法，用于调用 OpenAI API。
+
+        参数:
+        - messages (list): 包含 API 所需信息的消息列表。
+
+        返回:
+        - object: API 调用的响应对象。
+        """
+        # 请根据您的实际情况修改此处的 API 调用
+        return openai.ChatCompletion.create(
+            model="gpt-3.5-turbo-16k-0613",
+            messages=messages,
+        )
+    
+    def auto_generate(self):
+        """
+        自动生成功能函数的 JSON Schema 描述，并处理任何异常。
+
+        返回:
+        - list: 包含 JSON Schema 描述的列表。
+
+        异常:
+        - 如果达到最大尝试次数，将抛出异常。
+        """
+        attempts = 0
+        while attempts < self.max_attempts:
+            try:
+                functions = self.generate_function_descriptions()
+                return functions
+            except Exception as e:
+                attempts += 1
+                print(f"Error occurred: {e}")
+                if attempts >= self.max_attempts:
+                    print("Reached maximum number of attempts. Terminating.")
+                    raise
+                else:
+                    print("Retrying...")
+    ```
