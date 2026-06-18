@@ -2287,12 +2287,15 @@
    - 严格模式
    - NULL与任何其它值的比较永远返回false，即使NULL=NULL也返回false
    - 修饰符：格式化显示 \G、取消当前sql \c、退出 \q、显示状态 \s、\h、\d
-   - 数据大小写：取决于字段的校对规则 collation
-     1. 默认的字符检索策略：xx_general_ci、xx_unicode_ci，不区分大小写
-     1. utf8_general_cs 表示区分大小写，utf8_bin表示二进制比较，同样也区分大小写
-     1. 解决方案
-        - 直接修改字符集属性
-        - 搜索时添加关键字binary表示二进制区分：`SELECT * FROM a WHERE binary name LIKE 'a%';`
+   - 大小写特性：基本只有查询、比较的时候不区分，写入是区分的
+     1. sql关键字/字段名：不区分大小写
+     1. 库名/表名：跟操作系统和配置(lower_case_table_names)有关
+     1. 字符串比较：取决于字段的校对规则 collation
+        - 默认的字符检索策略：xx_general_ci、xx_unicode_ci，不区分大小写
+        - utf8_general_cs 表示区分大小写，utf8_bin表示二进制比较，同样也区分大小写
+        - 解决方案
+          1. 直接修改字符集属性
+          1. 搜索时添加关键字binary表示二进制区分：`SELECT * FROM a WHERE binary name LIKE 'a%';`
 1. 历史
    - 5.6
      1. server参数默认值改变

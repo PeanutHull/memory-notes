@@ -87,9 +87,10 @@
      1. GPT：生成型预训练变换模型，是基于深度学习的大语言模型，旨在通过训练模型预测下一个单词或字符的来学习自然语言的统计规律
      1. 用处是理解和生成自然语言和代码、推理
    - 分类
-     1. 多模态LLM：除了文字能力外，还可以理解和生成图片、语音、视频
+     1. 多模态llm：除了文字能力外，还可以理解和生成图片、语音、视频
         - 额外的图片识别模块，如GPT-4V和LLaVA
         - 原生多模态：GPT-4o和Gemini
+     1. ai生成音视频：从随机噪声出发，通过逐步“去噪”，生成一段在时间上连续一致的图像序列（视频）。即ai并不理解视频内容，只是经验推论，而且不是单帧生成，是连续的
    - 组成
      1. token：将文本、音频、视频分解成不可分割的最小单位，大语言模型中基于token进行上下文长度计算
         - 1个token通常对应英文中的约0.75个单词或3-4个字符；中文1个汉字通常为1-2个token，具体取决于分词方式
@@ -174,11 +175,48 @@
         - decode：生成新token，基本不能缓存
      1. 缓存原理：利用前缀prompt的中间结果kv cache，就可以跳过把所有token从头做完整计算，适合每轮都一样的巨大系统提示词(知识库、Agent SDK等)，
         - kv cache很大，几十M到几G
-   - ORT：ONNX Runtime，用于高性能推理（即模型预测）的跨平台引擎，用于加载和运行由ONNX格式定义的机器学习模型
-     1. ONNX：Open Neural Network Exchange，开放的、代表机器学习模型的标准文件格式。
+1. ML工程基础术语
+   - 模型生命周期
+     1. pretraining：预训练，从零开始训练大模型，成本极高，普通公司一般不会自己做
+     1. fine-tuning：微调，用自己的数据继续训练一个已经训练好的大模型
+     1. training：让模型学习数据的过程（泛指）
+     1. inference：推理，使用训练好的模型生成结果
+   - 模型文件格式
+     1. ONNX：Open Neural Network Exchange，开放的机器学习模型的标准文件格式
         - 由微软和Facebook于2017年共同创建，旨在促进不同深度学习框架之间的互操作性
         - 支持多种框架，如PyTorch、TensorFlow、MXNet、Caffe2等
-     1. tflite：
+     1. ckpt：.checkpoint，完整模型权重文件
+     1. safetensors：更安全、更常见于HuggingFace生态
+     1. GGUF：GGML Unified Format，llama.cpp生态常用的量化模型格式，适合本地CPU/GPU混合推理
+     1. TFLite：TensorFlow Lite格式，面向移动端和边缘设备的轻量推理格式
+   - 推理框架 / 运行时
+     1. ORT：ONNX Runtime，用于高性能推理（即模型预测）的跨平台引擎，用于加载和运行由ONNX格式定义的机器学习模型
+     1. vLLM：高性能llm推理框架
+     1. SGLang：llm推理和agent workflow框架，适合高性能结构化推理
+     1. llama.cpp：基于GGUF格式的本地推理引擎，支持CPU和GPU混合运行
+1. 微调
+   - 微调范式
+     1. SFT：Supervised Fine-Tuning，监督微调，用标注的输入输出对直接训练模型，是最基础的微调方式
+     1. RLHF：Reinforcement Learning from Human Feedback，人类反馈强化学习，让模型输出更符合人类偏好
+        - 通常流程：先SFT → 训练reward model → 用PPO优化
+     1. PPO：Proximal Policy Optimization，RLHF中常用的强化学习算法
+     1. DPO：Direct Preference Optimization，直接偏好优化，RLHF的简化替代方案，不需要单独训练reward model，直接用偏好数据对比训练
+   - 微调方式分类
+     1. 选择性微调：只更新部分参数，技术有Freeze、BitFit
+     1. 加性微调：在模型中增加新的参数、模块，技术有Prompt-Tuning软提示、Adapter插入小型层
+     1. 重参数化微调：技术有LoRA
+   - PEFT：Parameter-Efficient Fine-Tuning，参数高效微调，不训练全部参数，只训练极少部分参数
+     1. LoRA：Low-Rank Adaptation，低秩适配，在原权重旁边训练一个低秩增量矩阵，是PEFT最流行的一种实现
+        - 认识：必须拿到原始模型权重，或者公有云模型开放微调，否则无法训练；要依附基础模型
+        - 使用：原始矩阵外挂小矩阵，只训练LoRA Adapter，降低几十倍的量
+        - 核心假设：权重更新（ΔW）其实具有较低的"内在秩"（Intrinsic Rank）；巨大的参数变化可以用一个更小的矩阵来近似表示
+     1. QLoRA：LoRA + 4bit量化，在消费级显卡上微调大模型的主流方案
+     1. Adapter Tuning：在transformer层之间插入小型适配器模块，只训练Adapter参数
+     1. Prefix-Tuning：在输入前添加可训练的虚拟token前缀，不修改原始模型参数
+     1. Prompt-Tuning：软提示，只训练输入层的prompt embedding，是Prefix-Tuning的简化版
+   - 模型量化
+     1. GPTQ：基于GPU的训练后量化方法，将权重压缩至4bit/8bit，常见于HuggingFace生态
+     1. GGUF/llama.cpp量化：面向本地CPU推理的量化方案，支持Q4_K_M等多种精度
 1. 开发
    - llama.cpp：用c和c++编写的高性能开源推理框架
    - ROCM：Radeon Open Compute Platform，AMD的主要用于GPU计算的开源软件平台
@@ -188,25 +226,6 @@
    - TPU：专用于大规模神经网络训练和推理的
    - NPU：终端设备的ai加速芯片
      1. TOPS：每秒万亿次运算，衡量NPU理论峰值算力的主要指标，即引擎的最大马力
-1. finetune
-   - 认识：大模型微调，补充和强化LLM。还是基于冻结的模型(已经训练好不动的)，给大模型多次不同的黑盒向量数值，影响大模型的计算，进而最终得出最好的结果，就是微调llm
-   - 概念
-     1. 选择性微调：只更新部分参数，放在参数里，技术有Freeze、BitFit
-     1. 加性微调：在模型中增加新的参数、模块，追在参数后，技术有Prompt-Tuning软提示、Adapter插入小型层
-     1. 重参数化微调：技术有LoRA
-   - Prompt-Tuning：RAG本质上还是属于硬提示的范围，只不过提供了更多准确的参考资料、用向量比文字更精确，并没有影响到llm本身，软提示是会影响llm的，是一种高级的提示工程，![](../images/ai/prompt-tuning-type.jpg)
-     1. 硬提示：人工设计，仅限于输入层
-     1. 软提示：可进行训练，表现比硬的更稳定，增加一点模型参数
-   - LoRA：低秩适应，插件式微调，对大语言模型进行个性化的特定任务的定制，其将模型的权重矩阵分解成低秩的相似矩阵，降低了参数空间的复杂性，从而减少微调的计算成本和模型存储
-     1. 核心假设：权重更新（ΔW）其实具有较低的“内在秩”（Intrinsic Rank）。意思是，巨大的参数变化可以用一个更小的矩阵来近似表示。
-   - PEFT
-   - RLFT：人类反馈强化学习，让模型输出更适合人
-   - 学习路径
-     1. 模型量化：QLora/GPTQ
-     1. PET/P - Tuning技术
-   - 工具
-     1. unsloth：高效的微调开源框架，使用python
-        - 替代了PyTorch中原生的一些操作
 1. 本地部署
    - 工具：ollama、LlamaIndex、Haystack
      1. Ollama
@@ -592,6 +611,7 @@
    - 使用
      1. 创建skill：创建一个包含SKILL.md文件和相关脚本/资源的文件夹
      1. 加载skill：在Claude应用或API请求中指定要加载的skill
+        - 安装：`npx skills add https://github.com/op7418/guizang-ppt-skill --skill guizang-ppt-skill`
      1. 执行任务：Claude会根据用户请求，自动调用相关的skill脚本和资源来完成任务
    - 最佳实践
      1. skill要小而专注
@@ -1856,18 +1876,43 @@
         - collaboration：协作，共享提示模板、跟踪记录、数据集等
 #### 架构
 1. 工作流/agent
+   - 架构如
+     1. Agent App
+     1. Agent Runtime (ADK/LangGraph/OpenAI SDK)
+     1. Langfuse (Trace/Eval/Prompt)
+     1. ClickHouse/Postgres
 1. 评估工具
-1. 如
-Agent App
-    │
-    ▼
-Agent Runtime (ADK/LangGraph/OpenAI SDK)
-    │
-    ▼
-Langfuse (Trace/Eval/Prompt)
-    │
-    ▼
-ClickHouse/Postgres
+#### 多模态
+1. ai生成ppt
+   - 认识：应该追求视觉效果
+   - 生成方式
+     1. 以前：问题就是设计能力弱，看起来不高级
+        - llm生成大纲
+        - 选择模版
+        - llm对模版的内容进行替换
+     1. 现在：核心是解决了页面设计这个做ppt的核心，把页面设计交给了图像模型，而不是模板引擎。如Codex + Image2 + Presentation Skills
+        - llm生成大纲
+        - 利用图像模型生成每页图片，规划页面结构、排版、字体等，如image2
+        - 利用skill生成ppt等格式
+   - 如何生成质量更高&定制化更高的ppt
+     1. 利用skill：生成流程 + 全方面的经验教训标注是核心，即注意事项等。参考https://github.com/op7418/guizang-ppt-skill
+        - skill里说明工作流步骤，让生成变的完善和可控制
+        - 将大量、巨量的专业经验落地在references中，是效果的保障
+1. ComfyUI：复杂工作流编排生成音视频，Stable Diffusion生态发展而来
+   - 功能
+     1. 文生图、图生图、视频生成
+     1. 局部重绘Inpaint(就是局部修改，如人物衣服区域打mask)、高清放大/细节修复
+     1. ControlNet：控制姿势、构图、边缘、空间结构
+        - 姿势 OpenPose
+        - 边缘 Canny
+        - 深度 Depth
+        - 线稿 Lineart
+        - 涂鸦 Scribble
+        - 法线 Normal
+        - 分割图 Segmentation
+     1. LoRA：小型风格/角色/概念模型，用于保持角色风格
+     1. IP-Adapter：让模型参考图片内容
+     1. SDXL：是个模型
 ### AI开发
 1. 开发平台
    - coze
@@ -3649,9 +3694,13 @@ ClickHouse/Postgres
 1. 其他方面的应用
    - 图像应用
      1. 大模型：文生图像、图像编辑、图像扩展
-        - gpt-image-2
-        - dall-e：最新dall-e 3，openai的闭源
-        - stable diffusion：生态丰富如lora微调、controlnet控制构图。stability ai开源的2022年发布
+        - 产品
+          1. gpt-image-2：对文字处理很强，生成商业广告图
+          1. stable diffusion：生态丰富如lora微调、controlnet控制构图。stability ai开源的2022年发布
+          1. dall-e：最新dall-e 3，openai的闭源
+        - 模型
+          1. FLUX.1(Dev/Pro)：更前沿研究路线
+          1. LongCat-Image：diffusion原理
      1. 图像翻译
         - 分类：配对、非配对
         - 应用
