@@ -1248,6 +1248,62 @@
    - 生成层：证据约束、引用返回、无答案兜底
    - 平台层：会话管理、Feedback、评测集、Prompt版本、灰度发布
    - 运维层：tracing、成本、延迟、命中率、幻觉率监控。重点不是做一个聊天框，而是把权限、召回质量、可观测、评测闭环和知识更新机制打通
+1. 框架
+   - WeKnora：腾讯开源
+     1. 组成
+        - 前端Vue.js 3 + Vite
+        - 文档格式：pdf/word/excel/ppt/html/markdown/图片/音频/csv/json
+        - 向量数据库：pgvector/Qdrant/Milvus/Weaviate/Elasticsearch
+        - llm provider：openai/deepseek/qwen/智谱/gemini/ollama等13+
+        - agent 工具：mcp 协议/skill 系统/数据分析/网络搜索
+        - im集成：企业微信/飞书/钉钉/slack/telegram/mattermost
+        - 部署方式：docker compose/kubernetes/离线
+     1. 功能
+        - 问答模式
+          1. 快速问答：RAG流水线，`用户提问 → 查询重写 → 混合检索（向量+关键词）→ RRF 融合 → Reranking → LLM 生成`
+          1. 智能推理：ReACT Agent，`用户提问 → Agent 分析 → 检索知识 → 调用 MCP 工具 → 网络搜索 → 反思推理 → 多轮迭代 → 最终回答`
+     1. 架构
+        - handler层：gin
+        - service层：knowledge base + agent engine + session service
+        - repository层：gorm
+        - infrastructure层：postgre + vector store + neo4j(graphrag)
+     1. 实现
+        - 依赖注入：uber-go/dig，让每一层都只依赖接口而非具体实现，实现切换向量数据库从Qdrant到Milvus只需要换一个Provider，业务逻辑代码零修改
+            ```go
+            container := dig.New()
+            // 注册基础设施
+            conntainer.Provide(NewPostgresDB)
+
+            // 注册Repository层
+            container.Provide(repository.NewKnowledgeBaseRepo)
+
+            // 注册Service层
+            container.Provide(service.NewSessionService)
+
+            // 注册Handler层
+            container.Provide(handler.NewSessionHandler)
+
+            // 启动
+            container.Invoke(StartServer)
+            ```
+        - 异步任务处理：文档处理(解析/分块/向量化)使用Asynq + Redis实现异步，比Python的Celery更轻量，类型安全的任务定义，goroutine天然支持高并发消费
+        - RAG流水线
+          1. 文档解析和提取：在Asynq中，使用DocReader这个Python的gRPC服务，解析PDF/PPT/OCR等，因为其更成熟
+          1. 父子分块策略：子块用于精确匹配语义，父块提供完整上下文——解决了传统固定大小分块"要么太碎丢失上下文，要么太粗匹配不准"的问题。
+            ```go
+            // 层级化分块
+            type Chunk struct {
+                ID         string
+                ParentID   *string     // 父块 ID（可选）
+                Content    string      // 块内容
+                TokenCount int         // Token 数
+                Metadata   ChunkMeta   // 元数据（来源、页码等）
+            }
+
+            // 检索时：用子块（小粒度）匹配，返回父块（大上下文）
+            // 这样既保证了检索精度，又提供了足够的上下文
+            ```
+          1. 混合检索：多路召回 + RRF融合
 #### workflow
 1. 编排
    - 认识
@@ -1324,16 +1380,21 @@
         - 副驾驶：copilot，人类和ai是伙伴关系共同完成任务，ai提供建议并协助任务，ai像知识丰富的伙伴而非工具
         - 智能体：agent，人类设定目标并提供资源，ai独立完成大部分工作，最后人类监督和评估结果
 1. 组成
-   - Agent Loop
+   - Agent Loop：写一个循环
      1. 沙盒环境
    - 状态管理
-   - 记忆系统
-     1. 长期记忆
+     1. metadata：记录干到哪了、共享数据等
    - 工具集
+     1. rg等
    - 技能模块
+     1. skill
+     1. mcp
+   - 记忆系统
+     1. 记忆入口
+     1. 短期记忆
+     1. 长期记忆
    - 智能体团队
-     1. 子智能体
-     1. 消息网关
+     1. 子智能体：subagents
 1. OpenClaw
    - 认识：
      1. 渐进式生长：累积知识、错误的不再犯，通过搭配SOUL.md、MEMORY.md不断积累更新
@@ -1570,11 +1631,11 @@
                     ↓
             browser-client.mjs              控制浏览器的客户端，通常运行在node、cli中，负责：找Chrome、建立连接、bootstrap browser context、claim session、发送控制命令、接收页面状态、
                     ↓
-            Chrome Extension（扩展）          浏览器内部的当前tab、DOM、JS、模拟用户行为，基于安全原因都是不开放外部的，扩展可以，扩展是浏览器里的代理人
+            Chrome Extension（扩展）         浏览器内部的当前tab、DOM、JS、模拟用户行为，基于安全原因都是不开放外部的，扩展可以，扩展是浏览器里的代理人
                     ↓
             Native Messaging Host           扩展不能启动本地进程、操作文件系统、跟Node runtime建立任意socket，chrome官方机制，解决了浏览器世界和本地系统世界互通，可以启动native host进程，如go、node、python、rust
                     ↓
-            指定的 Chrome Profile            浏览器用户环境，可以有多个，互相是独立的，包含登录状态、cookie、localstorage、浏览器配置、扩展
+            指定的Chrome Profile            浏览器用户环境，可以有多个，互相是独立的，包含登录状态、cookie、localstorage、浏览器配置、扩展
                     ↓
             当前浏览器 Tab / Session
             ```
@@ -1584,6 +1645,12 @@
           1. chrome升级经常变更影响协议，不好适配
      1. 方式二
         - 原理：Computer Use MCP，即依赖操作系统的ui自动化能力，通过操作系统的可访问性api获取accessibility tree（优先于截图使用tree这种结构化的数据），同时搭配窗口截图（视觉上下文，就是截图然后提取文字，让llm知道界面上都有啥）实现通用的应用操作，可以操作鼠标、键盘点击、滚动
+          1. 能驾驭那些完全没有可用api的应用，甚至使用iPhone镜像
+          1. 但是有些应用可访问性(盲人操作、阅读)做的比较差，那codex就会完不成任务，比如飞书 这种应用
+     1. 方式三
+        - @Browser：内置浏览器，不需要登录、cookie等，是安全的屏障
+     1. 方式四
+        - 截图：不断的截图
 #### 效果验收
 1. LLM-as-Judge：用一个llm来评价另一个llm的输出质量
 1. 工具
@@ -2892,9 +2959,14 @@
         - message 消息管理、session 会话管理、lsp 语言服务器协议集成
      1. 工作流：llm + 工具调用，工具包括读写、bash、todowrite 任务编排、skill等
 #### 编程agent
+1. Windsurf
+   - 认识
+     1. 依托Devin(一个完全的编程智能体/虚拟程序员)，设计了Agent Command Center 智能体指挥中心，即工头驾驶舱，把多智能体管理做成了产品
+     1. 设计了ACP，Agent Client Protocol 智能体客户端协议，开源协议，现在说支持cc、codex等
+        - 智能体这边只管按协议把自己包装好，编辑器那边只管按协议接。任何一个兼容ACP的智能体，就能在任何一个兼容ACP的编辑器里跑起来
+     1. 改名为Devin Desktop，模型在变成水电煤，谁攥住那个壳谁赢
 1. wiki
    - 其他编辑器
-     1. Windsurf
      1. Augment：插件形式，上下文很强，复杂项目很给力，比cursor好用
      1. Roo Code：完全免费，对token的使用非常透明会有显示
 ##### codex
@@ -3442,6 +3514,10 @@
      1. Sonnet4.6只比Opus4.6低了大概2%的能力，但是价格是其五分之一。Sonnet4.6把以前"要用旗舰才能做"的事，拿到了中档价位
         - SWE-bench Verified：评测AI解决真实开源项目bug的能力
         - OSWorld-Verified：评测AI操控真实电脑界面的能力
+1. wiki
+   - 更新
+     1. 2.1.172：subagent能自己再起subagent，最多套五层，意义是增强了处理 复杂问题的能力，因为一个复杂的问题到了subagent还是复杂需要继续拆，不继续嵌套的话主agent不可能管理那么多细节，就像公司组织架构不能只有两层
+     1. 2.1.178：删掉TeamCreate、TeamDelete工具，team改成"按session隐式存在"，收缩Agent Teams概念，一是用户心智负担重玩不明白，二是工程上制造的复杂度大于它带来的价值。本来就应该是在干活的过程中自然形成team，teammate(隐式团队成员)可以在tmux的独立pane里跑起来
 ### 最佳实践
 1. 在ai开发中要摒弃一切都是确定的的传统思维，要相信llm可以像人一样灵活应变。
 1. openclaw的提示词维度更加的高，并没有详细说明什么情况下应该怎么做，而是给出了理想和原则，是更高维度的提示词，是适配更高级模型的正确思路
