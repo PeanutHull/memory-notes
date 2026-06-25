@@ -1262,6 +1262,8 @@
         - 问答模式
           1. 快速问答：RAG流水线，`用户提问 → 查询重写 → 混合检索（向量+关键词）→ RRF 融合 → Reranking → LLM 生成`
           1. 智能推理：ReACT Agent，`用户提问 → Agent 分析 → 检索知识 → 调用 MCP 工具 → 网络搜索 → 反思推理 → 多轮迭代 → 最终回答`
+        - 集成6大im
+        - 多租户架构：rbac权限、oidc集成(sso)、ssrf防护
      1. 架构
         - handler层：gin
         - service层：knowledge base + agent engine + session service
@@ -1304,6 +1306,118 @@
             // 这样既保证了检索精度，又提供了足够的上下文
             ```
           1. 混合检索：多路召回 + RRF融合
+             - 特性
+               1. BM25的中文分词：结巴分词的中文分词的gojieba
+               1. 并行检索：用errgroup让混合检索的两路召回并行
+             - 代码
+                ```go
+                func (s *SearchService) HybridSearch(ctx context.Context, query string) ([]Result, error) {
+                    g, ctx := errgroup.WithContext(ctx)
+
+                    var sparseResults []Result  // BM25 关键词检索
+                    var denseResults []Result   // 向量语义检索
+
+                    // 并行执行两路检索
+                    g.Go(func() error {
+                        // BM25：基于 gojieba 中文分词
+                        sparseResults = s.bm25.Search(ctx, query)
+                        returnnil
+                    })
+                    g.Go(func() error {
+                        // Dense：向量相似度搜索
+                        denseResults = s.vectorStore.Search(ctx, queryEmbedding)
+                        returnnil
+                    })
+                    g.Wait()
+
+                    // RRF (Reciprocal Rank Fusion) 合并
+                    merged := s.rrf.Fuse(sparseResults, denseResults)
+
+                    // Reranking 重排
+                    reranked := s.reranker.Rerank(ctx, query, merged)
+
+                    // MMR 去重
+                    return s.mmr.Deduplicate(reranked), nil
+                }
+                ```
+        - ReACT Agent引擎
+          1. 流程
+             - 用户提问
+             - Agent思考：需要什么信息？
+             - Agent反思：信息够了吗？不够继续调用工具，够了返回结果
+          1. 组成
+             - 工具系统
+                ```go
+                type Tool interface {
+                    Name() string
+                    Description() string
+                    Execute(ctx context.Context, params map[string]any) (string, error)
+                }
+
+                // 内置工具
+                tools := []Tool{
+                    &KnowledgeSearchTool{Store: vectorStore},
+                    &WebSearchTool{Client: httpClient},
+                    &DataAnalysisTool{},  // CSV/Excel 分析
+                    &FinalAnswerTool{},   // 带耗时跟踪的最终回答
+                }
+
+                // MCP 扩展工具
+                mcpTools := mcpManager.DiscoverTools()
+                tools = append(tools, mcpTools...)
+                ```
+             - 并行工具调用
+                ```go
+                func (a *Agent) executeTools(ctx context.Context, calls []ToolCall) []ToolResult {
+                    g, ctx := errgroup.WithContext(ctx)
+                    results := make([]ToolResult, len(calls))
+
+                    for i, call := range calls {
+                        i, call := i, call
+                        g.Go(func() error {
+                            result := a.executeTool(ctx, call)
+                            results[i] = result
+                            returnnil
+                        })
+                    }
+                    g.Wait()
+                    return results
+                }
+                ```
+             - mcp集成：使用mark3labs/mcp-go
+                ```go
+                // MCP 配置
+                type MCPServerConfig struct {
+                    Transport string // "stdio" | "sse" | "streamable-http"
+                    Command   string // stdio 模式的启动命令
+                    URL       string // SSE/HTTP 模式的 URL
+                    Args      []string
+                }
+
+                // 支持 uvx 和 npx 启动器
+                // 自动发现工具并注册到 Agent 工具表
+                // v0.3.6 新增自动重连机制
+                ```
+        - GraphRAG 知识图谱增强检索：当知识分散在多份文档中时，传统 RAG 只能检索片段，而 GraphRAG 可以沿关系图谱找到完整的信息链
+            ```go
+            // GraphRAG 工作流
+            // 1. 文档摄取时：LLM 提取实体和关系 → 写入 Neo4j
+            // 2. 查询时：先从知识图谱找到相关实体 → 沿关系扩展 → 获取更完整的上下文
+
+            type GraphRAGService struct {
+                neo4j    *neo4j.DriverWithContext
+                llm      LLMProvider
+                chunkRepo ChunkRepository
+            }
+
+            // 实体提取
+            func (g *GraphRAGService) ExtractEntities(ctx context.Context, chunk Chunk) ([]Entity, []Relation) {
+                // LLM 从文本中提取实体和关系
+                prompt := fmt.Sprintf("从以下文本中提取实体和关系：\n%s", chunk.Content)
+                result := g.llm.Chat(ctx, prompt)
+                return parseEntities(result), parseRelations(result)
+            }
+            ```
 #### workflow
 1. 编排
    - 认识
@@ -1534,6 +1648,7 @@
                 result = execute_tool(tool_call.name, tool_call.input)
                 messages.append(result)
         ```
+   - 反思
 1. 设计
    - 如果Agent需要执行系统命令或访问文件，你怎么防止它越权删除数据库、读取主机敏感文件?
      1. 理解：核心原则是模型不能直接碰系统权限，只能调用受控 Tool。生产上做五层防护
