@@ -66,7 +66,8 @@
      1. NN：神经网络 Neural Network
      1. NLP：自然语言处理 Natural Language Processing
 
-     1. LLM：大型语言模型 Large Language Model
+     1. LLM：Large Language Model 大型语言模型
+     1. VLM：Vision Language Model 视觉语言模型
      1. AIGC(人工智能生成内容)、UGC、PGC(专业机构，如影视公司、专家等)
      1. AGI：通用人工智能 Artificial General Intelligence，具备像人类一样全面智能的人工智能系统
         - 能够跨领域、跨任务地发挥作用
@@ -400,22 +401,28 @@
         - 无法完美处理反义词、否定和复杂的逻辑关系
         - 实践工具：直接使用成熟的Embedding API（如OpenAI, Cohere）或开源模型（如HuggingFace上的all-MiniLM-L6-v2）开始实验，无需从零训练。
    - 组成
-     1. 嵌入模型：一种将非结构化数据(如文本、图像、音频)转换为可以被计算机理解和处理的数值向量(如由1024或1536个数字组成的列表)的AI模型。把人类能看懂的文字，翻译成计算机能看懂的“数学语言”
+     1. 嵌入模型
+        - 认识：Embedding模型层/向量生成器，一种将非结构化数据(如文本、图像、音频)转换为可以被计算机理解和处理的数值向量(如由1024或1536个数字组成的列表)的AI模型。把人类能看懂的文字，翻译成计算机能看懂的“数学语言”
         - 特性：能捕捉原始数据的语义，如“狗”和“宠物”的向量距离会比“狗”和“汽车”的向量距离近得多
         - 原理：通常基于大型语言模型（如BERT、GPT系列）进行训练。通过阅读海量文本学会将含义相似的词或句子映射到向量空间中相近的位置
         - 用途
-          1. 搜索：不再只是匹配关键词，而是搜索含义相似的文本
-          1. 聚类：将含义相近的文本自动分组
+          1. 向量检索：不再只是匹配关键词，而是搜索含义相似的文本
+          1. 聚类：语义相似度匹配，将含义相近的文本自动分组
           1. 推荐：推荐与用户喜欢的内容在语义上相似的内容
           1. 异常检测：找出与其他数据在语义上差异很大的outlier
+          1. rerank
         - 分类
           1. API调用
              - OpenAI：text-embedding-3-small/text-embedding-3-large，最好的
              - Google：text-embedding-004
           1. 开源&可本地部署：通用顶尖
-             - BGE系列：BGE-large-en-v1.5、BGE-large-zh-v1.5，开源翘楚，北京智源人工智能研究院
+             - BGE系列
+               1. 认识：BAAI General Embedding，中文优化很强、多任务、国内RAG非常主流，开源翘楚，北京智源人工智能研究院
+               1. 模型：BGE-large-en-v1.5、BGE-large-zh-v1.5
              - e5系列：e5-large-v2、e5-base-v2，性能强劲，微软
-             - GTE系列：GTE-large、GTE-base，达摩院
+             - GTE系列
+               1. 认识：英文+多语言能力较均衡，常用于替代openai embedding，达摩院
+               1. 模型：GTE-large、GTE-base
           1. 开源&可本地部署：轻量高效
              - all-MiniLM-L6-v2：开源之王
              - Snowflake Arctic Embed
@@ -1248,50 +1255,98 @@
    - 生成层：证据约束、引用返回、无答案兜底
    - 平台层：会话管理、Feedback、评测集、Prompt版本、灰度发布
    - 运维层：tracing、成本、延迟、命中率、幻觉率监控。重点不是做一个聊天框，而是把权限、召回质量、可观测、评测闭环和知识更新机制打通
-1. 框架
-   - WeKnora：腾讯开源
-     1. 组成
-        - 前端Vue.js 3 + Vite
-        - 文档格式：pdf/word/excel/ppt/html/markdown/图片/音频/csv/json
-        - 向量数据库：pgvector/Qdrant/Milvus/Weaviate/Elasticsearch
-        - llm provider：openai/deepseek/qwen/智谱/gemini/ollama等13+
-        - agent 工具：mcp 协议/skill 系统/数据分析/网络搜索
-        - im集成：企业微信/飞书/钉钉/slack/telegram/mattermost
-        - 部署方式：docker compose/kubernetes/离线
-     1. 功能
-        - 问答模式
-          1. 快速问答：RAG流水线，`用户提问 → 查询重写 → 混合检索（向量+关键词）→ RRF 融合 → Reranking → LLM 生成`
-          1. 智能推理：ReACT Agent，`用户提问 → Agent 分析 → 检索知识 → 调用 MCP 工具 → 网络搜索 → 反思推理 → 多轮迭代 → 最终回答`
-        - 集成6大im
-        - 多租户架构：rbac权限、oidc集成(sso)、ssrf防护
-     1. 架构
-        - handler层：gin
-        - service层：knowledge base + agent engine + session service
-        - repository层：gorm
-        - infrastructure层：postgre + vector store + neo4j(graphrag)
-     1. 实现
-        - 依赖注入：uber-go/dig，让每一层都只依赖接口而非具体实现，实现切换向量数据库从Qdrant到Milvus只需要换一个Provider，业务逻辑代码零修改
-            ```go
-            container := dig.New()
-            // 注册基础设施
-            conntainer.Provide(NewPostgresDB)
+1. WeKnora：腾讯开源，前后端一体的RAG框架
+   - 平台能力
+     1. 前端：vue3 + vite
+     1. 界面：web ui/restful api/weknora cli/chrome extension/网站嵌入widget/微信小程序
+     1. 后端：go + python(文档解析)
+     1. 部署方式：docker compose/helm
 
-            // 注册Repository层
-            container.Provide(repository.NewKnowledgeBaseRepo)
+     1. 多租户架构
+        - rbac权限(四级租户owner/admin/contributor/viewer)、跨租户超级管理员
+        - oidc集成(sso)
+     1. 安全
+        - ssrf防护
+        - skill沙箱隔离
+          1. 理解：永远不直接访问系统资源
+             - Actor：独立空间、不共享全局对象
+             - capability：包装能力对象去用，如带校验和审核的工具执行器。如skill只会执行`runtime.readfile("a.txt")`，完全不知道文件在哪儿、有没有ssh等
+             - virtual resource：资源虚拟化，如真实是/home/user/project，skill看到的是workspace://main
+          1. 组成：权限隔离 + 运行时隔离 + 上下文隔离 + 生命周期管理
+          1. 实现方面
+             - prompt sandbox：利用前置prompt限制行为，框定在特定条件下。如不要修改源文件、只完成xx功能
+             - memory sandbox：只抽取和skill相关的记忆
+             - environment/workspace sandbox：目录路径、范围控制
+             - permission sandbox：执行命令经过包装后的执行器，执行器会校验
+             - process/lifecycle sandbox：限制硬件资源最大使用量、超时时间、生命周期
+   - 集成
+     1. llm provider：yaml声明式管理，openai/anthropic/gemini、deepseek/qwen、ollama/openrouter等13+
+     1. 向量数据库：PostgreSQL(pgvector)/ES/OpenSearch/Milvus/Weaviate/Qdrant/Doris/VectorDB
+     1. embedding：BGE/GTE/智谱/openai兼容接口/ollama
+     1. 可观测性：集成langfuse
 
-            // 注册Service层
-            container.Provide(service.NewSessionService)
+     1. 网络搜索：duckduckgo/bing/google/tavily/baidu/ollama/searxng
+        - duckduckgo：一个主打“隐私保护”的互联网搜索引擎，尽量不收集或追踪用户的个人数据
+        - tavily：专门为llm/agent设计的搜索api服务，解决传统搜索对llm不友好(html太脏、广告多、需要清洗)
+        - searXNG：开源元搜索引擎，自己不建搜索索引，而是转发查询→聚合多个搜索引擎结果
+          1. 隐私优先：无用户搜索历史、无用户画像、可自托管(放在自己服务器上运行)
+          1. 去中心化：可配置来源
+          1. 可定制：排序策略、引擎权重等
+     1. 网站嵌入：支持给某个网站嵌入widget形式的智能体，支持域名白名单、限流与安全模式token交换
+     1. 对象存储：本地/腾讯云COS/火山引擎TOS/MinIO/AWS S3/阿里云 OSS/金山云 KS3/华为云 OBS
 
-            // 注册Handler层
-            container.Provide(handler.NewSessionHandler)
+     1. im集成：wecom/feishu/dingding/slack/telegram/mattermost
+   - 智能对话
+     1. 问答模式
+        - 快速问答：RAG流水线，`用户提问 → 查询重写 → 混合检索（向量+关键词）→ RRF 融合 → Reranking → LLM生成`
+        - 智能推理：ReACT Agent，`用户提问 → Agent分析 → 检索知识 → 调用MCP工具 → 网络搜索 → 反思推理 → 多轮迭代 → 最终回答`
+        - wiki：agent驱动从原始文档中自动生成并维护结构化、相互链接的markdown wiki知识页面
+     1. agent工具：mcp协议(含oauth2远程服务)/skill系统/数据分析/网络搜索
+     1. 特性操作
+        - 支持会话管理、分组会话
+        - 对话策略：在线prompt编辑、检索阈值调节、多轮上下文感知
+        - 引用与RAG进度：对话内引用浮层、RAG流水线分阶段进度展示
+        - 支持相关问题推荐
+     1. 支持异步任务管理
+   - 知识管理
+     1. 知识库类型：faq/文档/wiki
+     1. 文档格式：pdf/word/excel/ppt/html/markdown/picture/audio/csv/json
+     1. 检索策略：BM25 稀疏召回/Dense 稠密召回/GraphRAG 图谱增强/父子分块/pgvector HNSW加速(1024维)/多维度索引
+     1. 端到端测试：检索+生成全链路可视化，评估召回命中率、BLEU/ROUGE等指标
+     1. 导入
+        - 支持增量/全量
+        - 数据源支持飞书/Notion/语雀/RSS
+        - 导入方式：文件夹、URL、在线录入
+        - 支持多标签管理
+        - 按批次解析配置：覆盖解析引擎、分块、多模态(VLM/ASR)、图谱抽取与问题生成；支持 reparse 时调整配置
+   - 架构
+     1. handler层：gin
+     1. service层：knowledge base + agent engine + session service
+     1. repository层：gorm
+     1. infrastructure层：postgre + vector store + neo4j(graphrag)
+   - 实现
+     1. 依赖注入：uber-go/dig，让每一层都只依赖接口而非具体实现，实现切换向量数据库从Qdrant到Milvus只需要换一个Provider，业务逻辑代码零修改
+        ```go
+        container := dig.New()
+        // 注册基础设施
+        conntainer.Provide(NewPostgresDB)
 
-            // 启动
-            container.Invoke(StartServer)
-            ```
-        - 异步任务处理：文档处理(解析/分块/向量化)使用Asynq + Redis实现异步，比Python的Celery更轻量，类型安全的任务定义，goroutine天然支持高并发消费
-        - RAG流水线
-          1. 文档解析和提取：在Asynq中，使用DocReader这个Python的gRPC服务，解析PDF/PPT/OCR等，因为其更成熟
-          1. 父子分块策略：子块用于精确匹配语义，父块提供完整上下文——解决了传统固定大小分块"要么太碎丢失上下文，要么太粗匹配不准"的问题。
+        // 注册Repository层
+        container.Provide(repository.NewKnowledgeBaseRepo)
+
+        // 注册Service层
+        container.Provide(service.NewSessionService)
+
+        // 注册Handler层
+        container.Provide(handler.NewSessionHandler)
+
+        // 启动
+        container.Invoke(StartServer)
+        ```
+     1. 异步任务处理：文档处理(解析/分块/向量化)使用Asynq + Redis实现异步，比Python的Celery更轻量，类型安全的任务定义，goroutine天然支持高并发消费
+     1. RAG流水线
+        - 文档解析和提取：在Asynq中，使用DocReader这个Python的gRPC服务，解析PDF/PPT/OCR等，因为其更成熟
+        - 父子分块策略：子块用于精确匹配语义，父块提供完整上下文——解决了传统固定大小分块"要么太碎丢失上下文，要么太粗匹配不准"的问题。
             ```go
             // 层级化分块
             type Chunk struct {
@@ -1305,119 +1360,119 @@
             // 检索时：用子块（小粒度）匹配，返回父块（大上下文）
             // 这样既保证了检索精度，又提供了足够的上下文
             ```
-          1. 混合检索：多路召回 + RRF融合
-             - 特性
-               1. BM25的中文分词：结巴分词的中文分词的gojieba
-               1. 并行检索：用errgroup让混合检索的两路召回并行
-             - 代码
-                ```go
-                func (s *SearchService) HybridSearch(ctx context.Context, query string) ([]Result, error) {
-                    g, ctx := errgroup.WithContext(ctx)
-
-                    var sparseResults []Result  // BM25 关键词检索
-                    var denseResults []Result   // 向量语义检索
-
-                    // 并行执行两路检索
-                    g.Go(func() error {
-                        // BM25：基于 gojieba 中文分词
-                        sparseResults = s.bm25.Search(ctx, query)
-                        returnnil
-                    })
-                    g.Go(func() error {
-                        // Dense：向量相似度搜索
-                        denseResults = s.vectorStore.Search(ctx, queryEmbedding)
-                        returnnil
-                    })
-                    g.Wait()
-
-                    // RRF (Reciprocal Rank Fusion) 合并
-                    merged := s.rrf.Fuse(sparseResults, denseResults)
-
-                    // Reranking 重排
-                    reranked := s.reranker.Rerank(ctx, query, merged)
-
-                    // MMR 去重
-                    return s.mmr.Deduplicate(reranked), nil
-                }
-                ```
-        - ReACT Agent引擎
-          1. 流程
-             - 用户提问
-             - Agent思考：需要什么信息？
-             - Agent反思：信息够了吗？不够继续调用工具，够了返回结果
-          1. 组成
-             - 工具系统
-                ```go
-                type Tool interface {
-                    Name() string
-                    Description() string
-                    Execute(ctx context.Context, params map[string]any) (string, error)
-                }
-
-                // 内置工具
-                tools := []Tool{
-                    &KnowledgeSearchTool{Store: vectorStore},
-                    &WebSearchTool{Client: httpClient},
-                    &DataAnalysisTool{},  // CSV/Excel 分析
-                    &FinalAnswerTool{},   // 带耗时跟踪的最终回答
-                }
-
-                // MCP 扩展工具
-                mcpTools := mcpManager.DiscoverTools()
-                tools = append(tools, mcpTools...)
-                ```
-             - 并行工具调用
-                ```go
-                func (a *Agent) executeTools(ctx context.Context, calls []ToolCall) []ToolResult {
-                    g, ctx := errgroup.WithContext(ctx)
-                    results := make([]ToolResult, len(calls))
-
-                    for i, call := range calls {
-                        i, call := i, call
-                        g.Go(func() error {
-                            result := a.executeTool(ctx, call)
-                            results[i] = result
-                            returnnil
-                        })
-                    }
-                    g.Wait()
-                    return results
-                }
-                ```
-             - mcp集成：使用mark3labs/mcp-go
-                ```go
-                // MCP 配置
-                type MCPServerConfig struct {
-                    Transport string // "stdio" | "sse" | "streamable-http"
-                    Command   string // stdio 模式的启动命令
-                    URL       string // SSE/HTTP 模式的 URL
-                    Args      []string
-                }
-
-                // 支持 uvx 和 npx 启动器
-                // 自动发现工具并注册到 Agent 工具表
-                // v0.3.6 新增自动重连机制
-                ```
-        - GraphRAG 知识图谱增强检索：当知识分散在多份文档中时，传统 RAG 只能检索片段，而 GraphRAG 可以沿关系图谱找到完整的信息链
+        - 混合检索：多路召回 + RRF融合
+          1. 特性
+             - BM25的中文分词：结巴分词的中文分词的gojieba
+             - 并行检索：用errgroup让混合检索的两路召回并行
+          1. 代码
             ```go
-            // GraphRAG 工作流
-            // 1. 文档摄取时：LLM 提取实体和关系 → 写入 Neo4j
-            // 2. 查询时：先从知识图谱找到相关实体 → 沿关系扩展 → 获取更完整的上下文
+            func (s *SearchService) HybridSearch(ctx context.Context, query string) ([]Result, error) {
+                g, ctx := errgroup.WithContext(ctx)
 
-            type GraphRAGService struct {
-                neo4j    *neo4j.DriverWithContext
-                llm      LLMProvider
-                chunkRepo ChunkRepository
-            }
+                var sparseResults []Result  // BM25 关键词检索
+                var denseResults []Result   // 向量语义检索
 
-            // 实体提取
-            func (g *GraphRAGService) ExtractEntities(ctx context.Context, chunk Chunk) ([]Entity, []Relation) {
-                // LLM 从文本中提取实体和关系
-                prompt := fmt.Sprintf("从以下文本中提取实体和关系：\n%s", chunk.Content)
-                result := g.llm.Chat(ctx, prompt)
-                return parseEntities(result), parseRelations(result)
+                // 并行执行两路检索
+                g.Go(func() error {
+                    // BM25：基于 gojieba 中文分词
+                    sparseResults = s.bm25.Search(ctx, query)
+                    returnnil
+                })
+                g.Go(func() error {
+                    // Dense：向量相似度搜索
+                    denseResults = s.vectorStore.Search(ctx, queryEmbedding)
+                    returnnil
+                })
+                g.Wait()
+
+                // RRF (Reciprocal Rank Fusion) 合并
+                merged := s.rrf.Fuse(sparseResults, denseResults)
+
+                // Reranking 重排
+                reranked := s.reranker.Rerank(ctx, query, merged)
+
+                // MMR 去重
+                return s.mmr.Deduplicate(reranked), nil
             }
             ```
+     1. ReACT Agent引擎
+        - 流程
+          1. 用户提问
+          1. Agent思考：需要什么信息？
+          1. Agent反思：信息够了吗？不够继续调用工具，够了返回结果
+        - 组成
+          1. 工具系统
+            ```go
+            type Tool interface {
+                Name() string
+                Description() string
+                Execute(ctx context.Context, params map[string]any) (string, error)
+            }
+
+            // 内置工具
+            tools := []Tool{
+                &KnowledgeSearchTool{Store: vectorStore},
+                &WebSearchTool{Client: httpClient},
+                &DataAnalysisTool{},  // CSV/Excel 分析
+                &FinalAnswerTool{},   // 带耗时跟踪的最终回答
+            }
+
+            // MCP 扩展工具
+            mcpTools := mcpManager.DiscoverTools()
+            tools = append(tools, mcpTools...)
+            ```
+          1. 并行工具调用
+            ```go
+            func (a *Agent) executeTools(ctx context.Context, calls []ToolCall) []ToolResult {
+                g, ctx := errgroup.WithContext(ctx)
+                results := make([]ToolResult, len(calls))
+
+                for i, call := range calls {
+                    i, call := i, call
+                    g.Go(func() error {
+                        result := a.executeTool(ctx, call)
+                        results[i] = result
+                        returnnil
+                    })
+                }
+                g.Wait()
+                return results
+            }
+            ```
+          1. mcp集成：使用mark3labs/mcp-go
+            ```go
+            // MCP 配置
+            type MCPServerConfig struct {
+                Transport string // "stdio" | "sse" | "streamable-http"
+                Command   string // stdio 模式的启动命令
+                URL       string // SSE/HTTP 模式的 URL
+                Args      []string
+            }
+
+            // 支持 uvx 和 npx 启动器
+            // 自动发现工具并注册到 Agent 工具表
+            // v0.3.6 新增自动重连机制
+            ```
+     1. GraphRAG 知识图谱增强检索：当知识分散在多份文档中时，传统 RAG 只能检索片段，而 GraphRAG 可以沿关系图谱找到完整的信息链
+        ```go
+        // GraphRAG 工作流
+        // 1. 文档摄取时：LLM 提取实体和关系 → 写入 Neo4j
+        // 2. 查询时：先从知识图谱找到相关实体 → 沿关系扩展 → 获取更完整的上下文
+
+        type GraphRAGService struct {
+            neo4j    *neo4j.DriverWithContext
+            llm      LLMProvider
+            chunkRepo ChunkRepository
+        }
+
+        // 实体提取
+        func (g *GraphRAGService) ExtractEntities(ctx context.Context, chunk Chunk) ([]Entity, []Relation) {
+            // LLM 从文本中提取实体和关系
+            prompt := fmt.Sprintf("从以下文本中提取实体和关系：\n%s", chunk.Content)
+            result := g.llm.Chat(ctx, prompt)
+            return parseEntities(result), parseRelations(result)
+        }
+        ```
 #### workflow
 1. 编排
    - 认识

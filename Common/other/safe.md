@@ -80,6 +80,10 @@
    - 解决方案
      1. 同源策略：检测Referer和Origin字段，非法的Reffer来源直接拒绝访问
      1. 根据当前session构造唯一token放入请求头、参数中，处理请求时校验，因为攻击者无法拿到这个token
+1. SSRF
+   - 认识：Server-Side Request Forgery Protection，防止攻击者利用服务器去请求本来不应该访问的资源，有多层次的防护和攻击方式
+   - 实现
+     1. url白名单、协议百度
 1. http首部注入
    - 认识：被动攻击模式，需要诱使用户触发已设置的陷阱，也需要web站点存在用于生成http首部的输入点
    - 攻击步骤
