@@ -1948,6 +1948,100 @@
      1. Goclaw
    - agent平台基础设施层
      1. Veadk：Volcengine Agent Development Kit 火山引擎智能体开发套件，agent平台+agent框架，偏平台化
+1. go
+   - trpc-agent-go
+     1. 认识：以agent抽象为中心，五种内置agent组合使用，生态功能丰富，官方定位go版langGraph，25年5月发布
+        - agent-first：统一agent run返回 <-chan *event.event/tools/info/subagents
+        - 理念比eino起步高，原生agent更易使用，生态更全，带session/memory/artifacts/代码执行沙箱/agent评估框架(eino都没有)
+     1. 组成
+        - agent能力：5种
+          1. LLMAgent：llm对话 + 工具调用
+          1. ChainAgent：顺序流水线
+          1. GraphAgent：类型安全图工作流，多条件路由
+          1. ParallelAgent：并发合并
+          1. CycleAgent：planner+executor迭代循环
+        - tool
+          1. 工具接口
+             - CallableTool：同步
+             - StreamableTool：流式
+          1. 函数工具：function.NewFunctionTool
+          1. 内置工具
+             - 沙箱代码执行：本地/Docker/e2b/jupyter
+             - duckduckgo搜索
+             - 文件操作
+        - session：内存/redis/mysql/postgres/sqlite
+        - memory：跨会话
+        - rag：向量库嵌入与检索
+        - mcp：基于trpc-mcp-go，支持stdio/SSE/streamable三种传输
+        - artifacts文件
+     1. 能力
+        - llm支持：openai兼容api为主，原生anthropic适配器，各大模型都支持
+        - 编排能力
+          1. 编排方式：通过agent组合（chain/parallel/cycle/graph即编排原语）
+          1. 类型安全：GraphAgent类型安全
+          1. 编排产物复用：agent可嵌套为subagent
+        - 多agent支持
+          1. 委托机制
+             - SubAgents()/FindSubAgent() + llmagent.WithSubAgents()
+             - transfer_to_agent事件转移
+          1. 人机协作：无
+          1. 跨语言互操作
+             - A2A：兼容Google ADK Python，跨语言多agent系统可行
+        - 流式处理
+          1. 事件驱动：run返回事件channel，实时接收模型对话、工具调用/响应、agent转移、错误四类事件
+          1. 自动化：GenerationConfig{Stream: true}
+        - 可观测性
+          1. 追踪/指标：内置opentelemetry全链路(model/tool/runner层，OTLP导出)，langfuse集成示例
+          1. 可视化调试：兼容Google ADK Web UI的Debug Server(非自带 GUI) + AG-UI/SSE
+             - AG-UI：前端协议，SSE，对接CopilotKit/TDesign
+        - agent评估框架：可复用eval set + 可插拔指标
+   - eino
+     1. 认识：以组件+编排为中心，提供chain/graph/workflow三套泛型安全编排工具，流式处理自动化程度业界领先，ADK模块补齐多agent与人机协作能力
+        - 编排-first：组件抽象(ChatModel/Tool/Retriever/Embedding/Lambda等) + 编排图，ADK模块提供agent抽象
+        - 设计借鉴 langChain/llamaIndex/Google ADK
+        - 前期起步太早借鉴langChain，后期为了赶上ReAct agent的步伐，引入ADK，设计上有明显的历史包袱，使用上稍微有点别扭，但是理念跟得上
+        - 编排表达力强(字段级映射、泛型约束)，流式自动化更强(拼接/装箱/合并/复制业界领先)，支持人机协作interrupt/resume，和Kitex/Hertz生态协同
+        - 组件+编排+流范式概念多于agent-first模型
+     1. 组成
+        - agent能力：ADK提供
+          1. ChatModelAgent：内部实现ReAct循环
+          1. Deep Agent：任务拆解/委派/进度跟踪
+          1. Supervisor：层级协调
+          1. SequentialAgent
+        - 工具
+          1. 工具接口
+            - Tool组件
+            - InvokableGraphTool
+          1. 函数工具：通过组件封装
+          1. 内置工具：eino-ext支持
+        - session：无
+        - memory：无
+        - rag：eino-ext支持，Retriever/Indexer/Embedding组件
+        - mcp：eino-ext支持
+        - artifacts文件
+     1. 能力
+        - llm支持：ChatModel组件抽象，eino-ext提供各厂商实现
+        - 编排能力：编排表达力强(字段级映射、泛型约束)
+          1. 编排方式：三套独立编排工具
+             - chain：链式，只能前进
+             - graph：有向有环/无环图
+             - workflow：DAG，支持结构体字段级数据映射
+          1. 类型安全：泛型NewChain[I,O]/NewGraph[I,O]/NewWorkflow[I,O]，编译期类型检查
+          1. 编排产物复用：编排图可独立运行，或经NewInvokableGraphTool包装为Agent的工具
+        - 多agent支持
+          1. 委托机制：ADK多智能体协同，跨agent边界上下文自动管理
+          1. 人机协作：Interrupt/Resume：任意 Agent 可暂停等待人工审批并从中断处精确恢复
+          1. 跨语言互操作：不支持A2A
+        - 流式处理
+          1. 四范式Invoke/Stream/Collect/Transform
+          1. 自动化
+             - 编排层自动处理：拼接(concatenate)/装箱(box)/合并(merge扇入)/复制(copy 扇出)
+             - 对非流式下游节点自动拼接流，基本无需手写流转换(自定义类型需注册Concat函数)
+        - 可观测性
+          1. 追踪/指标：固定切面回调，`OnStart/OnEnd/OnError/OnStartWithStreamInput/OnEndWithStreamOutput，经WithCallbacks注入`
+          1. 可视化调试：无
+        - agent评估框架：无
+
 1. airflow
    - 认识：Apache Airflow，代码优先的编排、调度和监控工作流的开源平台，纯python代码定义DAGs的编程模式
      1. 调度能力极其强大，是n8n、dify等？？？
