@@ -423,6 +423,18 @@
         - **保留英文括号** `()`（数学公式、课件指令等必须保留）
         - 语言亲切自然，适合在线教学场景
         ```
+1. 将数字人抽象成服务
+   - 数据流向简图
+    ```go
+    Frontend ←→ course-sr ←→ live-class-service (数字人/房间)
+                        ↕
+                Redis hash (lc:learn_courseware_interaction_info)
+                        ↕
+                teachbot-sr (跟读LLM推句)
+    ```
+1. 自定义asr
+   - 认识：即构自定义ASR + 阿里云语音测评SDK 
+   - 架构：Zego(学生端) ←→ ws-gateway(即构asr服务依赖方改为自己的服务) → 阿里云NLS C SDK
 #### 提示词
 1. 英语实际在用的
     ```md

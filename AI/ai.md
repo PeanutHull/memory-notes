@@ -3258,6 +3258,73 @@
         ↓
     User Prompt
     ```
+1. 组成
+   - Agent Runtime
+     1. 认识：用于支持Thread、Tool、Sandbox、Skill、Memory、Permission等能力
+     1. 事件流组成
+        - event_msg：runtime自己记录的数据
+        - response_item：全部会送给模型
+        - turn_context 轮次的上下文，每轮都会变化
+     1. 机制
+        - tool_search_output：大模型让codex搜索自身的工具库
+        - subagent：spawn_agent/resume_agent/close_agent/wait_agent/send_input
+        - codex更新自身：automation_update/fork_thread/create_thread
+1. Codex Agent Runtime的事件流Event Stream
+   - session_meta：首先写入metadata
+     1. 最顶级的system prompt：你是codex...
+     1. fork、create等codex thread的操作方法
+   - event_msg：runtime自己记录的数据，方便日志、恢复、重放、debug
+     1. task_started 开始一轮，唯一轮次id、有开始和结束
+   - response_item：全部会送给模型
+     1. message
+        - 权限系统介绍
+        - codex app的上下文
+        - 当前模式，是默认还是计划
+        - skill介绍，所有已开启的skill都会存在
+        - plugins介绍
+        - 记忆介绍
+          1. 记忆的标准用法、位置、组成
+          1. 包含了用户独有的总结的记忆
+     1. message
+        - 用户环境上下文：目录、语言
+     1. message
+        - output_text：展示给用户看的
+     1. tool_search_call/tool_search_output
+   - turn_context 轮次的上下文，每轮都会变化
+     1. 权限信息
+     1. 沙箱信息
+     1. 时区、时间
+     1. 用的什么模型、推理强度
+   - response_item
+     1. message：用户的原始问题
+   - event_msg
+     1. user_message：用户的原始问题
+     1. agent_reasoning 内部推理过程
+   - response_item
+     1. reasoning：加密了
+     1. function_call：如何执行工具
+        ```json
+        // 数据示例
+        {
+            "type": "function_call",
+            "id": "fc_0aa4395ab2a315e1016a4380b644948191a43dcb0da05df4d1",
+            "name": "exec_command",
+            "arguments": "{\"cmd\":\"date\",\"workdir\":\"/Users/huasheng/js\",\"yield_time_ms\":1000,\"max_output_tokens\":2000}",     // 标识了命令本身、执行目录、最长执行时间、最大接受的token
+            "call_id": "call_mKcqdi9Q1uM1rfGQlUCEuGa2",
+            "internal_chat_message_metadata_passthrough": {
+                "turn_id": "019f17ae-ad3a-79f2-8c41-391d4c2dbdfa"
+            }
+        }
+        ```
+     1. function_call_output
+   - event_msg
+     1. token_count
+     1. agent_message：展示给用户的提示
+   - response_item
+     1. message：llm返回的结果
+   - event_msg
+     1. token_count
+     1. task_complete
 ##### cursor
 1. 认识：把ai变成可信的工程伙伴。AI是工具，不是魔法：给足够上下文、清晰约束、微粒度任务，就能成为可靠的协作伙伴
    - AI编码助手 VS AI编码代理
@@ -3831,6 +3898,10 @@
      1. 方案：接入shengwang mcp后生成curl，快速解决、高效解决
      1. 意义：人工翻文档、生成token得尝试1天；接入mcp加速对声网文档的理解
    - 想做生产级系统，要性能，要部署简单，要吞吐量。所以选了Go
+1. 程序员如何用ai
+   - 应用ai的方面
+     1. 编码
+     1. 查找问题、资料：飞书的知识问答、aily
 ### wiki
 1. 其他方面的应用
    - 图像应用
