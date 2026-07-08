@@ -8,9 +8,10 @@
    - 大型：功能大而全
      1. tars：腾讯开源
      1. kratos
-     1. hertz/kitex：字节开源
+     1. hertz：字节开源
    - rpc
      1. tars：性能强
+     1. kitex：高性能rpc框架，字节开源
    - web
      1. Echo：简约、高性能，2万star
      1. Iris：最快，完善的mvc

@@ -720,15 +720,31 @@
           1. reasoning：模型自主分析问题，拆解步骤，如需要查询天气api
           1. acting：调用工具执行具体操作，并根据工具返回结果决定下一步动作
           1. 循环迭代：重复“推理-行动”直到任务完成或达到终止条件
+        - 特点
+          1. 多步推理
+          1. 自我修正
+          1. 动态决策
+          1. 长任务拆解
         - 优点
+          1. 适应不确定任务：无需预先固定流程，可根据执行结果动态调整。适合开放式、探索式、多步骤任务，而流程固定、确定性强的业务，预定义workflow更高效、成本更低
+          1. 支持复杂工具编排：能串联多个tool、mcp服务或subAgent完成复杂任务
+          1. 具备一定容错能力：执行失败后可重新规划，而不是直接终止
+          1. 可扩展性强：容易加入memory、RAG、Human-in-the-loop、预算控制等能力
           1. 透明：推理过程以文字形式展现出来，我们可以理解它的“思考过程”，便于调试和信任。
           1. 减少幻觉：通过外部工具获取事实信息，减少模型依赖内部知识、从而“胡编乱造”的可能性
           1. 能力增强：可调用工具
+        - 局限
+          1. token消耗更高：每轮都需要再次调用llm
+          1. 延迟增加
+          1. 需要终止机制：通常会设置最大循环次数、超时时间或成本预算，避免陷入无限循环
+          1. 依赖Planner能力：随着模型能力提升，这不是问题
         - 流程
           1. 推理（Think/Reason）：决定下一步该做什么
           1. 行动（Act）：选择工具
           1. 观察（Observe）：接收执行后返回的结果
           1. 循环：基于新的观察结果，再次进行推理，决定下一步行动，如此循环，直到完成
+        - 最佳实践
+          1. 不能planner一次全部规划：复杂问题不能一步到位
      1. REPL
         - 认识：交互式执行环境的通用模式，核心就是一条循环
           1. Read：读取，读取你输入的一行代码
@@ -1952,25 +1968,48 @@
      1. Goclaw
    - agent平台基础设施层
      1. Veadk：Volcengine Agent Development Kit 火山引擎智能体开发套件，agent平台+agent框架，偏平台化
+1. 架构
+   - 编排方式
+     1. Compose：函数组合的简单的固定的流水线，没有显式的edge、条件跳转、循环，整个compose本身又可以看成一个新的node
+        - 用于封装一个能力
+     1. Graph
+        - 可以Fan-out（并行）、Fan-in（汇聚）、Condition（条件）、Loop（循环）、Retry、Router
+        - 用于编排多个能力
+   - 构建分层、多智能体的执行架构：不同层面的机制
+     1. cycleAgent：控制同一个Agent内部的迭代推理(Plan → Execute → Reflect)
+     1. transfer_to_agent：控制不同agent之间的职责切换和控制权转移。
+   - Agent Runtime的自动化：帮开发者完成agent的生命周期管理
+     1. 能自动管理的场景：多轮循环、tool calling、context维护、agent transfer等
+     1. 能力要素
+        - stream→stream     节点连接、invoke↔stream 自动适配
+        - metadata/context/event/cancellation 自动传播、传递
+        - 生命周期/backpressure 管理
+        - graph中混合stream/非stream节点
+1. go做agent的优势
+   - 高性能的并发模型
+   - 单二进制部署
 1. go
    - trpc-agent-go
      1. 认识：以agent抽象为中心，五种内置agent组合使用，生态功能丰富，官方定位go版langGraph，25年5月发布
         - agent-first：统一agent run返回 <-chan *event.event/tools/info/subagents
         - 理念比eino起步高，原生agent更易使用，生态更全，带session/memory/artifacts/代码执行沙箱/agent评估框架(eino都没有)
+          1. Artifacts：agent运行过程中产生的可持久化的大文件对象(文件资产)，而不是普通的上下文消息Message或者短期状态Memory，就是支持内存/S3/COS等方式去存储文件
      1. 组成
         - agent能力：5种
           1. LLMAgent：llm对话 + 工具调用
           1. ChainAgent：顺序流水线
           1. GraphAgent：类型安全图工作流，多条件路由
           1. ParallelAgent：并发合并
-          1. CycleAgent：planner+executor迭代循环
+          1. CycleAgent：planner+executor迭代循环，ReAct模式，
         - tool
           1. 工具接口
              - CallableTool：同步
-             - StreamableTool：流式
+             - StreamableTool：流式，那种支持流式输出的工具，如Web Search、RAG、A2A等，可以让llm可以边看边思考，加快速度，但是现在llm基本不支持流式输入，某些场景如语音测评可以，只是在agent边执行边调度、持续产出事件等场景使用
           1. 函数工具：function.NewFunctionTool
           1. 内置工具
-             - 沙箱代码执行：本地/Docker/e2b/jupyter
+             - 沙箱代码执行：本地/docker/e2b/jupyter，docker是最合适的agent代码执行环境
+               1. Jupyter：一种交互式计算环境，可以运行在宿主机、Docker 容器或云服务中，支持多语音、脱胎于python，真正执行代码的是kernel
+               1. E2B：专门提供AI Agent安全代码执行环境(Code Interpreter)的云平台，可以理解为托管版的docker/jupyter沙箱
              - duckduckgo搜索
              - 文件操作
         - session：内存/redis/mysql/postgres/sqlite
@@ -1982,12 +2021,16 @@
         - llm支持：openai兼容api为主，原生anthropic适配器，各大模型都支持
         - 编排能力
           1. 编排方式：通过agent组合（chain/parallel/cycle/graph即编排原语）
-          1. 类型安全：GraphAgent类型安全
+          1. 类型安全：GraphAgent类型安全，明确声明输入和输出类型，而不是依赖map[string]any或interface{}，可以编译期发现问题、更好的可维护性、IDE支持完善、大型agent编排更可靠
           1. 编排产物复用：agent可嵌套为subagent
         - 多agent支持
           1. 委托机制
              - SubAgents()/FindSubAgent() + llmagent.WithSubAgents()
-             - transfer_to_agent事件转移
+             - transfer_to_agent：本质是agent handoff智能体移交事件，不是普通的tool call。表示当前agent决定把后续任务交给另一个agent，由另一个agent接管整个会话或当前子任务的执行。最大的作用是agent路由，可以交由专家agent执行
+               1. 类似概念
+                  - OpenAI Agents SDK：Handoff
+                  - Google ADK：Agent Transfer
+                  - AutoGen：Agent Routing
           1. 人机协作：无
           1. 跨语言互操作
              - A2A：兼容Google ADK Python，跨语言多agent系统可行
@@ -1997,8 +2040,8 @@
         - 可观测性
           1. 追踪/指标：内置opentelemetry全链路(model/tool/runner层，OTLP导出)，langfuse集成示例
           1. 可视化调试：兼容Google ADK Web UI的Debug Server(非自带 GUI) + AG-UI/SSE
-             - AG-UI：前端协议，SSE，对接CopilotKit/TDesign
-        - agent评估框架：可复用eval set + 可插拔指标
+             - AG-UI：一种agent与前端ui通信的标准协议，还没有达到mcp那样的行业标准地位。采用SSE，最初是由CopilotKit团队提出并开源，支持者有LangGraph/CrewAI/Google ADK/Microsoft Agent Framework/LlamaIndex，对接CopilotKit/TDesign
+        - agent评估框架：可复用eval set + 可插拔指标    
    - eino
      1. 认识：以组件+编排为中心，提供chain/graph/workflow三套泛型安全编排工具，流式处理自动化程度业界领先，ADK模块补齐多agent与人机协作能力
         - 编排-first：组件抽象(ChatModel/Tool/Retriever/Embedding/Lambda等) + 编排图，ADK模块提供agent抽象
@@ -2015,7 +2058,8 @@
         - 工具
           1. 工具接口
             - Tool组件
-            - InvokableGraphTool
+            - InvokableGraphTool：把整个graph封装成一个标准tool，可调用一个完整的graph，实现graph的模块化与组合，用于子agent、workflow复用、graph嵌套
+              1. 利用 Go 反射自动适配任意输入/输出类型
           1. 函数工具：通过组件封装
           1. 内置工具：eino-ext支持
         - session：无
@@ -2031,51 +2075,127 @@
              - graph：有向有环/无环图
              - workflow：DAG，支持结构体字段级数据映射
           1. 类型安全：泛型NewChain[I,O]/NewGraph[I,O]/NewWorkflow[I,O]，编译期类型检查
-          1. 编排产物复用：编排图可独立运行，或经NewInvokableGraphTool包装为Agent的工具
+          1. 编排产物复用：编排图可独立运行，经NewInvokableGraphTool包装为Agent的工具
         - 多agent支持
           1. 委托机制：ADK多智能体协同，跨agent边界上下文自动管理
           1. 人机协作：Interrupt/Resume：任意 Agent 可暂停等待人工审批并从中断处精确恢复
           1. 跨语言互操作：不支持A2A
-        - 流式处理
-          1. 四范式Invoke/Stream/Collect/Transform
-          1. 自动化
-             - 编排层自动处理：拼接(concatenate)/装箱(box)/合并(merge扇入)/复制(copy 扇出)
-             - 对非流式下游节点自动拼接流，基本无需手写流转换(自定义类型需注册Concat函数)
+        - 自动化
+          1. 四范式：四种io组合，是eino最核心的设计之一，很多框架LangChain/LlamaIndex只有invoke和stream两种调用方式
+             - 认识：让所有组件都遵循一致的调用协议，框架能够自动适配不同的数据流形态，在graph中与其他组件组合
+               1. 使得graph节点无需关心上下游的数据是一次性还是流式的，大幅降低了组件组合和复用的复杂度，使得eino在构建复杂agent工作流时能够天然支持端到端的数据流处理
+             - 组成
+               1. Invoke：普通的同步调用
+               1. Stream：流式输出
+               1. Collect：流输入转为一次输出，得到完整消息，如ASR
+               1. Transform：流输入转为流输出，入和出都是流，可以让整个 Pipeline每一层都不用等待上一层结束。如实时翻译、markdown→html、流式过滤、事件转换、流水线处理
+          1. Automatic Data Wiring 编排层自动处理
+             - 认识：上游节点输出的数据结构，如何自动适配下游节点的输入。
+               1. 编排层里一个比较有特色的能力，很多Agent框架如LangGraph要求你写大量lambda/adapter/mapper来转换节点之间的数据，而eino把这些数据流转换内置到了编排层
+               1. 很多agent框架的编排图除了控制执行顺序，还需要开发者编写大量胶水代码来完成节点间的数据转换
+             - 数据流变换方式
+               1. 复制：copy 扇出，一个输出复制给多个节点
+               1. 合并：merge 扇入，多个输入合并到一个节点
+               1. 装箱：box，把简单值包装成结构体
+               1. 拼接：concatenate，更偏顺序拼接，多个连续数据拼接为一个连续数据
         - 可观测性
           1. 追踪/指标：固定切面回调，`OnStart/OnEnd/OnError/OnStartWithStreamInput/OnEndWithStreamOutput，经WithCallbacks注入`
           1. 可视化调试：无
         - agent评估框架：无
    - adk-go
-     1. 认识：构建、评估、部署复杂agent的go工具包，声明式确定性多agent编排，官方的
-        - code-first
+     1. 认识：Agent Development Kit，构建、评估、部署复杂agent的go工具包，声明式确定性多agent编排，官方的
+        - code-first：用代码定义agent逻辑、工具和编排，而一堆prompt
+          1. 整个Agent的定义就是一个llmagent.Config结构体，没有装饰器和元编程这种隐式的写法，非常直接，源于显式优于隐式的理念
+             - 装饰器：go没有@xxx这种不修改原函数代码的情况下，给函数增加能力的python语法糖语法
+             - 元编程：程序去操作程序本身，如反射和自动注册等机制，如自动提取类的元数据组成JSON Schema`User.__annotations__`这种写法
         - 工作流原语 + llm委派：确定性最高，可预测、可测试
         - 2026年5月，v2.0
-        - 目前只支持只支持gemini格式
+        - 局限
+          1. 生态还在早期
+          1. google强绑定味道：如Gemini 偏向、a2a的google cloud优先支持
      1. 组成
-        - 工作流原语：
-          1. SequentialAgent：按列表声明顺序线性执行
-             - 会共享session state
-          1. LoopAgent：循环执行，支持max_iterations与escalate退出条件
-          1. ParallelAgent：子agent并行执行
-        - InvocationContext 状态共享
         - MCP
         - A2A
-        - OpenTelemetry
+        - OpenTelemetry：原生内置，支持生成结构化的trace和span，如agent调用链(模型延迟/工具执行/错误定位)
      1. 能力
         - 工作流
           1. Agents、Tools、Functions作为工作流图中的节点
-        - 多agent模式
-          1. Coordinator/AutoFlow
-             - 父agent配置subagents列表，框架基于子agent的description做llm驱动的任务委派（agent transfer）
-             - llmagent.config暴露subagents、description、disallowTransferToParent/peers字段
+        - agent
+          1. llmagent.config暴露subagents、description、disallowTransferToParent/peers字段
           1. AgentTool：将子agent包装为工具，父agent显式调用
+          1. InvocationContext 状态共享
+        - 多agent模式：8种设计模式
+          1. Sequential Pipeline：顺序流水线，最基础的模式，按列表声明顺序线性执行，如提取、解析、提取、生成
+             - 会共享session state
+          1. Coordinator/Dispatcher：调度器，中央agent指挥，如客服系统
+             - 也叫Agent Transfer、Dynamic Routing、LLM-Driven Delegation
+             - AutoFlow
+               1. 父agent配置subagents列表，框架基于子agent的description做llm驱动的任务委派（agent transfer）
+          1. Parallel Fan-Out：并行扇出，多个agent同时执行不相关的任务，最后聚合结果。如代码审查中安全审计、风格检查、性能分析三个Agent同时跑，最后结果汇总
+          1. Hierarchical Decomposition：层次分解，复杂任务被分解为子任务，子任务再分解为更小的子任务。像套娃一样层层递进。如研究报告
+          1. Generator and Critic：生成器与评审者，一个生成内容，另一个审查，不通过就打回去重来。如SQL生成，包含生成器和评审器
+          1. Iterative Refinement：迭代优化，类似生成器-评审者，不是"通过/不通过"的二分法，而是"不够好，再改进一点"的渐进优化。如文案优化
+          1. Human-in-the-Loop：人机协作，高风险操作、未确定事项
+            ```go
+            myTool, _ := functiontool.New(functiontool.Config{
+                Name:                "delete_database",
+                Description:         "Deletes a production database instance.",
+                RequireConfirmation: true, // 触发 HITL 审批流程
+            }, deleteDBFunc)
+            ```
+          1. Composite：组合模式，以上模式的组合
+        - model-agnostic：gemini特定优化，支持任何llm
+          1. agnostic：与某个具体实现无关
+        - Plugin系统
+          1. Retry and Reflect：自修复插件系统，这个插件可以拦截工具调用的错误，模型根据反馈调整参数，重新调用
+            ```go
+            r, _ := runner.New(runner.Config{
+                Agent: myAgent,
+                SessionService: mySessionService,
+                PluginConfig: runner.PluginConfig{
+                    Plugins: []*plugin.Plugin{
+                        // 工具调用失败时，自动反思并重试3次
+                        retryandreflect.MustNew(retryandreflect.WithMaxRetries(3)),
+                        // 集中记录每个turn的日志
+                        loggingplugin.MustNew(""),
+                    },
+                },
+            })
+            ```
      1. 示例
         ```go
-        ag := agent.New("search-agent",
-        agent.WithModel("gemini-2.5-flash"),
-        agent.WithTools(searchTool))
+        func main() {
+            ctx := context.Background()
 
-        result, _ := ag.Run(context.Background(), "查询最近的go版本发布时间")
+            model, err := gemini.NewModel(ctx, "gemini-flash-latest", &genai.ClientConfig{
+                APIKey: os.Getenv("GOOGLE_API_KEY"),
+            })
+            if err != nil {
+                log.Fatalf("Failed to create model: %v", err)
+            }
+
+            timeAgent, err := llmagent.New(llmagent.Config{
+                Name:        "hello_time_agent",
+                Model:       model,
+                Description: "Tells the current time in a specified city.",
+                Instruction: "You are a helpful assistant that tells the current time in a city.",
+                Tools: []tool.Tool{
+                    geminitool.GoogleSearch{},
+                },
+            })
+            if err != nil {
+                log.Fatalf("Failed to create agent: %v", err)
+            }
+
+            config := &launcher.Config{
+                AgentLoader: agent.NewSingleLoader(timeAgent),
+            }
+
+            l := full.NewLauncher()
+            if err = l.Execute(ctx, config, os.Args[1:]); err != nil {
+                log.Fatalf("Run failed: %v\n\n%s", err, l.CommandLineSyntax())
+            }
+        }
         ```
    - langchaingo
      1. 认识：生态组件最广，维护已显著放缓，2025年10月最后一次release，2023年2月创建，历史最久
@@ -2101,10 +2221,10 @@
 1、 HuggingGPT
    - 认识：用一个中心llm来协调调用众多专家模型(其他领域的模型)共同完成复杂任务的系统框架。侧重多模态
      1. JARVIS是开源的代码实现，微软和浙江大学
-1. AutoGen
-   - 认识：类似HuggingGPT，微软、python
 1. CrewAI
-   - 认识：角色化多个智能体的开源的ai编排平台，侧重于解决特定任务，如分析报告、决策，适用于股票分析、内容创作、研究自动化等业务流程
+   - 认识：角色化多个智能体的开源的ai编排平台，侧重于解决特定任务，如分析报告、决策，适用于股票分析、内容创作、研究自动化等业务流程，python
+1. AutoGen
+   - 认识：类似HuggingGPT，微软、python，生产上是实验性质的
 1. wiki
    - java：DJL Deep Java Library，是java的开源的深度学习库
      1. LangChain4j：最活跃、最受关注的AI应用开发框架
@@ -2142,11 +2262,18 @@
      1. edges：边，连接节点的线，表示节点之间的依赖关系
      1. state：状态，即上下文，表示工作流在某个时刻的具体情况，包括变量值、上下文等信息
 1. LlamaIndex
-   - 认识：用于构建检索增强生成RAG系统的数据框架，解决给llm提供私有数据的问题。LLM看作是聪明但失忆的大脑，LlamaIndex就是为它打造的“外接硬盘和高效搜索引擎”，让它能随时读取和回忆你的专属知识
+   - 认识：帮助llm高效连接外部数据的数据框架，用于构建agent、rag、workflow等ai应用  
    - 功能
-     1. 数据连接器：各种数据源，如本地文件(pdf/word/ppt)、数据库(sql, nosql)、api(notion/slack/discord)等
+     1. 数据连接器：Data Connectors，各种数据源
+        - 本地文件：pdf/word/ppt
+        - 数据库：sql/nosql
+        - 向量数据库：milvus/pinecone
+        - 云存储
+        - saas：notion/slack/discord/github等
      1. 索引：将加载的非结构化或结构化数据转换成一种易于LLM查询的优化格式，将数据分割成块chunks，并创建向量嵌入embeddings，存储在向量数据库中，实现快速、准确的语义搜索
-     1. 查询接口：提供一个自然的语言接口来向你索引的数据提问。它接收你的问题，在索引中检索最相关的上下文信息，然后将“问题+上下文”一起组装成一个提示prompt发送给LLM，从而得到一个基于你私有数据的准确回答
+     1. 检索：Retriever，提供一个自然的语言接口来向你索引的数据提问。它接收你的问题，在索引中检索最相关的上下文信息，然后将“问题+上下文”一起组装成一个提示prompt发送给LLM，从而得到一个基于你私有数据的准确回答
+     1. query engine：自动组合retriever、prompt交给llm
+     1. agent能力
 ##### Eino
 1. Eino
    - 字节开源的Golang的AI应用开发框架
