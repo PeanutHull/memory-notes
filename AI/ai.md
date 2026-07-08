@@ -969,6 +969,10 @@
      1. 前缀续写
      1. FIM：补全中间内容
    - 对话前缀缓存：用户的每一个请求都会触发硬盘缓存，依据请求内容是否和之前的完全相同进行判断
+1. Gemini API
+   - 认识：功能差不多，字段名字不一样
+     1. 对话对象：不是messages，是contents
+     1. 消息角色：不是system/user/assistant/tool，是system_instruction+user/model
 ### AI应用
 1. 演进历史
    - chatbot：无状态问答
@@ -2041,7 +2045,40 @@
           1. 追踪/指标：固定切面回调，`OnStart/OnEnd/OnError/OnStartWithStreamInput/OnEndWithStreamOutput，经WithCallbacks注入`
           1. 可视化调试：无
         - agent评估框架：无
+   - adk-go
+     1. 认识：构建、评估、部署复杂agent的go工具包，声明式确定性多agent编排，官方的
+        - code-first
+        - 工作流原语 + llm委派：确定性最高，可预测、可测试
+        - 2026年5月，v2.0
+        - 目前只支持只支持gemini格式
+     1. 组成
+        - 工作流原语：
+          1. SequentialAgent：按列表声明顺序线性执行
+             - 会共享session state
+          1. LoopAgent：循环执行，支持max_iterations与escalate退出条件
+          1. ParallelAgent：子agent并行执行
+        - InvocationContext 状态共享
+        - MCP
+        - A2A
+        - OpenTelemetry
+     1. 能力
+        - 工作流
+          1. Agents、Tools、Functions作为工作流图中的节点
+        - 多agent模式
+          1. Coordinator/AutoFlow
+             - 父agent配置subagents列表，框架基于子agent的description做llm驱动的任务委派（agent transfer）
+             - llmagent.config暴露subagents、description、disallowTransferToParent/peers字段
+          1. AgentTool：将子agent包装为工具，父agent显式调用
+     1. 示例
+        ```go
+        ag := agent.New("search-agent",
+        agent.WithModel("gemini-2.5-flash"),
+        agent.WithTools(searchTool))
 
+        result, _ := ag.Run(context.Background(), "查询最近的go版本发布时间")
+        ```
+   - langchaingo
+     1. 认识：生态组件最广，维护已显著放缓，2025年10月最后一次release，2023年2月创建，历史最久
 1. airflow
    - 认识：Apache Airflow，代码优先的编排、调度和监控工作流的开源平台，纯python代码定义DAGs的编程模式
      1. 调度能力极其强大，是n8n、dify等？？？
