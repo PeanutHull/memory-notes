@@ -1990,6 +1990,8 @@
 1. go做agent的优势
    - 高性能的并发模型
    - 单二进制部署
+1. 最佳实践
+   - "什么时候用 Graph，什么时候用 Agent"仍然是一个需要经验判断的决策。
 1. go
    - trpc-agent-go
      1. 认识：以agent抽象为中心，五种内置agent组合使用，生态功能丰富，官方定位go版langGraph，25年5月发布
@@ -2051,6 +2053,16 @@
         - 前期起步太早借鉴langChain，后期为了赶上ReAct agent的步伐，引入ADK，设计上有明显的历史包袱，使用上稍微有点别扭，但是理念跟得上
         - 编排表达力强(字段级映射、泛型约束)，流式自动化更强(拼接/装箱/合并/复制业界领先)，支持人机协作interrupt/resume，和Kitex/Hertz生态协同
         - 组件+编排+流范式概念多于agent-first模型
+        - 用Graph表示确定性编排，用ADK表示自主决策
+     1. 特点
+        - 数据流类型自动互转、流式优先的架构：组件只管业务，框架兜底流式。开发效率高、降低开发所需成本
+          1. 组件只需根据真实业务场景实现对应的流式范式(如chatmodel实现stream，tool实现invoke)框架自动处理流的拼接(concat)/流化(box)/合并(merge)和复制(copy)
+          1. 译后的runnable统一支持四种执行模式，不管内部组件实现了哪些范式
+        - 泛型驱动的类型安全：编译器即可发现
+        - 显式优于隐式：编排是显式的定义(graph/workflow)，状态管理是显式的(state handler)，不是隐式注入。易于排查、定义明确
+        - 薄抽象，厚编排：ChatModel/Tool/Retriever这些概念是通用的，组件接口只定义I/O类型和必要方法；编排层承担类型检查、流式处理、并发管理等横切关注点。让组件实现者负担小，也让编排能力足够强
+          1. 抽象越多，灵活性越差；抽象越少，重复代码越多
+        - 是sdk的定位而非平台
      1. 组成
         - agent能力：ADK提供
           1. ChatModelAgent：内部实现ReAct循环
@@ -2076,7 +2088,7 @@
              - chain：链式，只能前进
              - graph：有向有环/无环图
              - workflow：DAG，支持结构体字段级数据映射
-          1. 类型安全：泛型NewChain[I,O]/NewGraph[I,O]/NewWorkflow[I,O]，编译期类型检查
+          1. 类型安全：使用泛型，编译期类型检查，就能发现节点间类型不匹配的问题，而不是等到运行时才炸，`NewChain[I,O]/NewGraph[I,O]/NewWorkflow[I,O]`
           1. 编排产物复用：编排图可独立运行，经NewInvokableGraphTool包装为Agent的工具
         - 多agent支持
           1. 委托机制：ADK多智能体协同，跨agent边界上下文自动管理
@@ -2084,7 +2096,7 @@
           1. 跨语言互操作：不支持A2A
         - 自动化
           1. 四范式：四种io组合，是eino最核心的设计之一，很多框架LangChain/LlamaIndex只有invoke和stream两种调用方式
-             - 认识：让所有组件都遵循一致的调用协议，框架能够自动适配不同的数据流形态，在graph中与其他组件组合
+             - 认识：让所有组件都遵循一致的调用协议，框架能够自动适配不同的数据流形态，在graph中与其他组件组合，`schema.StreamReader[T]`
                1. 使得graph节点无需关心上下游的数据是一次性还是流式的，大幅降低了组件组合和复用的复杂度，使得eino在构建复杂agent工作流时能够天然支持端到端的数据流处理
              - 组成
                1. Invoke：普通的同步调用
@@ -2104,12 +2116,28 @@
           1. 追踪/指标：固定切面回调，`OnStart/OnEnd/OnError/OnStartWithStreamInput/OnEndWithStreamOutput，经WithCallbacks注入`
           1. 可视化调试：无
         - agent评估框架：无
+        - 架构
+          1. schema层：定义层，`schema.Message(支持多模态)、schema.ToolInfo(基于json schema)、schema.StreamReader[T]`
+          1. component层：组件层，定义了清晰的组件接口，如`type ChatModel interface`，在eino-ext
+          1. composition层：编排层
+             - 类型
+               1. chain：一个节点的输出是下一个节点的输入，像流水线
+               1. graph：支持pregel模式、条件分支、并行执行，react agent基于graph实现
+               1. workflow：声明式数据映射，支持在结构体字段级别进行FieldMapping，适合复杂的数据流转场景
+             - 编译过程做了几件关键的事：类型检查(确保相邻节点类型匹配)、构建执行引擎(runner)、注入回调切面。最终产出Runnable[I, O]，统一支持四种执行方式
+          1. adk层：是高层抽象。如GraphTool可以把一个编译好的Graph暴露为Tool，供Agent调用，确定性工作流和自主决策不再是互斥的选择
+             - ChatModelAgent：封装了ReAct循环
+             - DeepAgent：支持多智能体编排、任务分解和子智能体委派
+         1. cross-cutting concerns层：横切关注点
+             - callback系统：OnStart/OnEnd/OnError/OnStartWithStreamInput/OnEndWithStreamOutput五个切面点，可以注入日志、追踪、指标
+             - interrupt/resume：任何Agent或Tool都可以暂停执行等待人工审批，然后从checkpoint精确恢复
+             - option分配：可以全局设置，也可以针对特定组件类型或特定节点设置
    - adk-go
      1. 认识：Agent Development Kit，构建、评估、部署复杂agent的go工具包，声明式确定性多agent编排，官方的
         - code-first：用代码定义agent逻辑、工具和编排，而一堆prompt
           1. 整个Agent的定义就是一个llmagent.Config结构体，没有装饰器和元编程这种隐式的写法，非常直接，源于显式优于隐式的理念
              - 装饰器：go没有@xxx这种不修改原函数代码的情况下，给函数增加能力的python语法糖语法
-             - 元编程：程序去操作程序本身，如反射和自动注册等机制，如自动提取类的元数据组成JSON Schema`User.__annotations__`这种写法
+             - 元编程：程序去操作程序本身，如反射和自动注册等机制，如自动提取类的元数据组成json schema`User.__annotations__`这种写法
         - 工作流原语 + llm委派：确定性最高，可预测、可测试
         - 2026年5月，v2.0
         - 局限
@@ -2209,6 +2237,7 @@
    - 概念
      1. DAG：有向无环图
         - Task：任务，一个节点
+     1. Pregel：有环有向图
      1. Operator：单个任务操作
      1. Scheduler：调度器，执行工作流
 1. AutoGPT
@@ -3231,9 +3260,13 @@
    - 理解：出发点是对AI低信任度，但是把AI产物纳入工程质量体系
    - 做法
      1. 第零层
-        - 使用plan模式
+        - 难任务使用plan模式：不要一上来就动代码
+        - 长时间任务使用goal模式：要明确完成标准
      1. 第一层：做prompt约束
-        - 对项目编写agent.md，明确目录结构、编码规范、异常处理、日志、单测要求等（项目层）
+        - 提示词组成的标准：目标、上下文、约束、完成标准
+        - 使用截图、粘贴原始需求：增加原始资料，你的转述是一个信息的有损管道
+        - 对项目编写agent.md，明确项目偏好、目录结构、编码规范、异常处理、日志、单测要求等（项目层）
+          1. AGENTS.md可以放在不同层级，越靠近当前目录的说明优先级越高
         - codex编辑config.toml的developer_instructions（全局层）
      1. 第二层：自动化工具检测
         - 静态扫描、lint、安全扫描
@@ -3266,6 +3299,12 @@
    - 不同任务的调整
      1. 调整权限的检查方式：线上数据要一点点放行
      1. 调整推理强度，让项目该健壮的时候健壮，该快速的时候快速
+   - 不要只看“生成了多少代码”，要看“节省了多少流程”
+     1. 哪些重复任务被自动化了？
+     1. 哪些测试、排查、修复流程变短了？
+     1. 哪些内部工具可以通过插件共享给全团队？
+     1. 哪些人已经把codex融入真实工作流？
+     1. 哪些业务场景最适合做agent化改造？
 #### 编程范式
 1. 交互范式
    - prompt engineering：怎么问，通过调整提示词的措辞、格式和示例来获得更好的回答
@@ -3318,6 +3357,8 @@
      1. 解决AI编程需求理解偏差及工程质量不高等核心痛点
      1. AI编程2.0时代的轮廓：一个由规范驱动、流程严谨、人机协同的全新开发模式。从“能用”到“好用”，再到“专业”的需求升级
      1. 主要实现路径是强化和标准化规范的编写与使用，提升ai协作的清晰度和质量
+   - 理念设计
+     1. 
    - spec kit框架
      1. 认识：GitHub开发的命令行工具
    - Kiro工具的使用方式
