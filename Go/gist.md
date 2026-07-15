@@ -205,6 +205,51 @@
         dissByOption := optionNew(WithTopic("something bad"), WithTime(2), WithPerson("funk"))
     }
     ```
+1. ws-gateway的cgo项目
+   - 架构：![](../images/go/ws_gateway_go_and_c.png)
+   - 一些用法
+     1. 用//go:build linux + 非Linux平台的纯Go空实现(如aliyun_stub.go)，来保障做平台隔离和各平台可用。如mac上编译时完全不涉及cgo，aliyun.Engine.NewSession直接返回unsupported错误
+     1. `#cgo CFLAGS`、`#cgo LDFLAGS`指定头文件路径和链接的.so，-Wl,-rpath让运行时能找到同目录下的lib/
+        ```go
+        //go:build linux
+
+        package aliyun
+
+        /*
+        #cgo CFLAGS: -I. -Iinclude                                                                                                      # 传给C编译器(cgo底层调用gcc/clang)的参数。头文件搜索路径，-I.(表示当前目录)和-Iinclude(表示当前目录下的include/子目录)
+        #cgo linux  LDFLAGS: -L${SRCDIR}/lib -lssound-3-linux-3.0.1-20200825093756-SSL -Wl,-rpath,${SRCDIR}/lib                         # LDFLAGS是传给链接器的参数
+        #include <stdlib.h>
+        #include "include/ssound.h"
+
+        // 声明 Go export 的回调，供 C 层使用
+        extern int goAsrCallback(const void *usrdata, const char *id, int type, const void *message, int size);                         # extern声明
+        */
+        import "C"                                                                                                                      # 特定c库
+        import (
+            "context"
+        )
+        ```
+     1. 代码
+        - 原则
+          1. 写法字符串传递统一C.CString + defer C.free，避免内存泄漏
+          1. 传*session给C时不直接传Go指针，而是用整数key查表——这是cgo场景下避免持有Go GC 指针导致的悬空/GC冲突问题的常见模式
+        - 实例
+            ```go
+            // 通过C.CString转成C，调用C.ssound_new创建引擎、C.ssound_start启动会话。回调函数指针传的是G侧//export的goAsrCallback，usrdata参数传的不是Go指针，而是uintptr key(registerSession注册进map)，这是标准cgo规避手法，因为cgo规则禁止把包含Go指针的Go内存长期交给C持有
+            cCfg := C.CString(cfgJSON)
+            defer C.free(unsafe.Pointer(cCfg))
+
+            engine := C.ssound_new(cCfg)
+
+            var id [64]C.char
+	        ret := C.ssound_start(                                              # 初始化c方法
+                engine,
+                cParam,
+                &id[0],
+                (C.ssound_callback)(unsafe.Pointer(C.goAsrCallback)),           # 指针方式
+                unsafe.Pointer(s.key),
+            )
+            ```
 ### 练习
 #### 语法练习
 1. 数据类型
