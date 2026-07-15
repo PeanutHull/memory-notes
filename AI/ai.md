@@ -3310,6 +3310,8 @@
    - prompt engineering：怎么问，通过调整提示词的措辞、格式和示例来获得更好的回答
    - context engineering：让ai看到什么，光提示词不够，要完善上下文
    - harness engineering：系统能预防/测量/修复什么
+     1. 给ai套上装备，让它能够干活
+     1. 设定边界和验收标准
    - loop engineering：来源于cc的/loop命令，底层本身就是个定时任务，就是套个循环壳用于定时和llm交互保证任务效果，有点炒概念。如之前的分布式Raft循环完成选主、k8s中通过循环监控保证节点、负载、各项指标的稳定
      1. 小心循环打爆token /狗头
      1. 三道防线：迭代上限、无进度检测、预算硬上限
@@ -3319,8 +3321,6 @@
      1. 适合快速实现、小工具；商业项目慎用、关键系统不可靠
    - spec-driven：蓝图、规范执行
      1. 能够实现既定目标
-   - harness engineering：建筑工地、系统工程
-     1. 设定边界和验收标准
 1. 编程工作流
    - Spec-Kit
    - OpenSpec
@@ -3482,9 +3482,9 @@
 1. 组成
    - Agent Runtime
      1. 认识：用于支持Thread、Tool、Sandbox、Skill、Memory、Permission等能力
-     1. 事件流组成
-        - event_msg：runtime自己记录的数据
-        - response_item：全部会送给模型
+     1. 事件流组成：双通道设计，同一份内容会沿两条不同用途的通道各走一遍
+        - event_msg：UI/事件通道(衍生品)，发给前端渲染、给人看、做记账用的，方便日志、恢复、重放、debug
+        - response_item：模型上下文通道，真正拼进prompt、发给模型api的东西
         - turn_context 轮次的上下文，每轮都会变化
      1. 机制
         - tool_search_output：大模型让codex搜索自身的工具库
@@ -3502,14 +3502,14 @@
         ```
      1. 自动审批：用了一个llm驱动的审批副模型，cc更多依赖应用层的权限提示加上hook钩子来把关
    - 核心用rust重写(即codex-rs)
-1. Codex Agent Runtime的事件流Event Stream
+1. Codex Agent Runtime的事件流Event Stream Rollout
    - session_meta：首先写入metadata
      1. 最顶级的system prompt：你是codex...
      1. fork、create等codex thread的操作方法
-   - event_msg：runtime自己记录的数据，方便日志、恢复、重放、debug
+   - event_msg
      1. task_started 开始一轮，唯一轮次id、有开始和结束
-   - response_item：全部会送给模型
-     1. message
+   - response_item
+     1. message：这批前言每一轮都会重新拼进上下文，是token消耗和"上下文很快被填满"的主要来源之一，所以AGENTS.md要按目录作用域收窄，别放全局。
         - 权限系统介绍
         - codex app的上下文
         - 当前模式，是默认还是计划
@@ -3523,7 +3523,7 @@
      1. message
         - output_text：展示给用户看的
      1. tool_search_call/tool_search_output
-   - turn_context 轮次的上下文，每轮都会变化
+   - turn_context 轮次的上下文，每轮都会变化、都会写一条
      1. 权限信息
      1. 沙箱信息
      1. 时区、时间
