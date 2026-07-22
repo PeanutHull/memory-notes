@@ -115,8 +115,15 @@
         - 条件概率：在已知一个事件已经发生的情况下，另一个事件发生的概率
         - 温度参数：控制生成文本的随机性，温度越高，生成的文本越随机；温度越低，生成的文本越确定
      1. 训练方式
-        - 大量数据训练
-        - 指令微调阶段：instruction tuning
+        - 预训练：让模型阅读海量文本，决定模型的智商上限。
+          1. 预训练结束后的模型，并不会聊天，只会补全
+        - 后训练：指令微调阶段：instruction tuning
+          1. 训练技术
+            - SFT：监督微调
+            - Preference Training：偏好训练
+            - Reasoning：推理强化，近两年最大的变化。模型会学会：分解问题/写中间步骤/检查错误/自我反思等
+            - Safety：安全，拒绝敏感话题
+         
            - 通过人类反馈强化学习（RLHF）来优化模型的输出质量。如为理解Jinja2模版语法，模型会被显式训练处理结构化指令，从而强化对特定语法的理解
            - 通过人类标注的示例来指导模型生成更符合人类期望的回答
    - wiki
@@ -211,11 +218,26 @@
           1. 编码器：将输入转换为向量化表示
           1. 解码器：将向量化反推出对应的输出，即利用概率预测下一个
      1. 注意力机制
-        - $\mathrm{Attention}(Q,K,V)=\mathrm{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V$
-        - 组成：Q（Query，查询）、K（Key，标签）、V（Value，含义）三个核心组成
-        - 计算公式：算相似度、归一化概率、加权求和
-        - 多头注意力机制：多次查询Q，即不同角度理解问题
-        - 上下文爆炸：要理解当前词和前面所有词的关系，显存爆炸、计算量爆炸、重要信息淹没
+        - 稀释：注意力是一个归一化的固定预算，不是无限追加的资源。往prompt里塞的每一句强调，都在和其他所有token抢同一份预算。生成每个新token时,当前位置的Query会和上下文里所有token的Key做点积,得到的分数经过softmax变成注意力权重。关键在softmax所有权重加起来恒等于1。上下文1000token时,平均每个token分到千分之一;10万token就是十万分之一。模型只能重新分配这1的机制。这就是"稀释"的数学本质——你加内容不是在增加模型的关注度总量,而是在切碎它。
+          1. 全都重要等于全都不重要：一句重要它的Key和Query的匹配分会相对突出，多个重要就互相抹平了对比度
+          1. 重复不线性加权：重复三遍同一条规则，这三处的Key向量高度相似，注意力会在三个副本之间分摊，而不是三倍强化
+          1. 位置效应：经验上模型对上下文开头和结尾更敏感
+          1. 训练分布：模型在训练时见到的指令遵循数据，大多是少量、清晰的指令。上百条互相牵制的规则本身就偏离了它擅长的分布,遵循能力自然下降。
+        - 原理
+          1. $\mathrm{Attention}(Q,K,V)=\mathrm{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V$
+          1. 组成：Q（Query，查询）、K（Key，标签）、V（Value，含义）三个核心组成，来源于提示词tokenizer后的数字，再token embedding变成4096维矩阵，然后进入多层Transformer，每一层都有Attention，Q,K,V来自模型内部权重的隐藏状态经过投影得到
+             - Q（Query）：我现在想找什么信息
+             - K（Key）：我这里有什么信息，可以被匹配
+             - V（Value）：如果匹配成功，我实际提供什么内容
+          1. 计算公式：算相似度、归一化概率、加权求和
+          1. 多头注意力机制：多套Q,K,V，多次查询Q，即不同角度理解问题，如Head1学习语法、Head2学习指代、Head3学习知识、
+          1. 上下文爆炸：要理解当前词和前面所有词的关系，显存爆炸、计算量爆炸、重要信息淹没
+        - 对agent开发的实际含义
+          1. 做减法比做加法有效。发现模型不守某条规则,第一反应不该是再加一句强调,而是删掉别的、或把冲突/冗余的规则合并
+          1. 关键约束放开头或结尾,别埋中间
+          1. 与其用形容词强调("非常重要"),不如给一个正反例。示例改变的是 Key/Value 的语义匹配,比空洞的强调词信号强得多
+          1. 能用架构解决的别用 prompt 解决:该验证的用代码校验输出,该分工的拆子 agent(每个 agent 上下文短、规则少),该动态的按需注入上下文而不是全量常驻
+          1. 长对话中系统提示会被越冲越淡,必要时在临近任务处重申一次关键约束(一次,不是三次)
      1. 混合注意力架构
         - 上下文压缩：短期记忆对应CSA的滑动窗口，中期记忆对应CSA的压缩+筛选，长期记忆对应HCA的重度压缩。类似人记得当前的所有细节，很久之前缩成模糊印象，细节基本忘光，但"大概发生过什么"还是知道的
    - 前缀缓存
@@ -3777,33 +3799,253 @@
    - Cursor Automations：类似OpenClaw，自动化审核、监控、修复代码，定时任务等
 ##### claude code
 1. 亮点
-   - 与其让每个环节都变复杂，不如让一个环节足够强，其他环节保持简单
-     1. 不使用向量数据库/向量索引，只用grep和ripgrep。因为有足够聪明的大脑llm理解搜索结果
-   - llm当指挥官，llm知道应该怎么做
+   - llm当指挥官，llm知道应该怎么做：与其让每个环节都变复杂，不如让一个环节足够强，其他环节保持简单
      1. 工具决策、任务决策都交给llm
+     1. 不使用向量数据库/向量索引，只用grep和ripgrep。因为有足够聪明的大脑llm理解搜索结果
    - claude code大约90%、超过80%的合并进生产环境的代码是它自己写的，初期就3个工程师
      1. 代码审查，一下子把所有代码都跑一遍
      1. 测试用TDD，写的成本极低，达成的效果极高，总之效率极高
      1. 值班和线上事故响应，找根因极快
-1. 组成
-   - CLAUDE.md：写给Claude的规则、init会初始化项目简介、项目规范、代码风格、不能动的配置、工作流规则
-     1. 简介、干净第一
-     1. 应该是个索引，而不是大全
-     1. 如果规则太多，就拆到rules/
-   - MEMORY.md
-   - .claude/
-     1. 分类
-        - 项目级
-        - 全局级
-     1. 组成
+1. 命令
+   - `/init`
+     1. 认识：分析当前repo，自动生成说明文档claude.md
+     1. esc：暂停当前操作
+     1. --add-dir：从额外的目录加载claude.md文件
+   - `/clear`
+   - `/model`
+     1. 认识：切换模型
+     1. shift+tab：切换plan和自动编辑、yolo(更高权限)模式
+     1. effort
+        - 认识：推理强度，默认中等，绝大多数日常任务够用
+          1. Opus 4.6用的是自适应思维（adaptive thinking），模型会根据任务的复杂程度自行判断推理深度
+        - 操作
+          1. --effort high、/model：设置强度
+          1. ultrathink：单次超控，这次最高，下次恢复
+   - `/compact`
+     1. 认识：压缩对话，不希望丢掉之前的记忆
+     1. `Summarize from here`：只想压缩前半段，后面的几条消息还有用，前面的背景交代可以浓缩掉，对于超长session特别有用
+   - `/insights`：分析当前claude code的工作成果和改进地方，分析你使用的特点和不足
+   - `/debug`：让claude排查当前session的问题，如反应慢、某工具调用总是失败等
+   - `/status、/doctor`
+   - `/cost`：花费
+   - `/logout、/login`
+1. .claude
+   - 认识
+     1. 将.claude/视为基础架构
+   - 分类
+     1. 全局级：在当前用户下，包含很多东西
         - .claude/settings.json
+        - .claude/CLAUDE.md
+        - .claude/memory/
         - .claude/skill/
-        - .claude/hooks/
         - .claude/rules/
+
+        - .claude/projects/
+        - .claude/plans/
+
+        - .claude/hooks/
+     1. 项目级
+        - CLAUDE.md
+        - .claude/settings.local.json
+   - `CLAUDE.md`
+     1. 认识：写给cc的规则，包括项目规范、代码风格、不能动的配置、工作流规则等
+        - 给agent看的配置：作为基准事实、默认前提
+          1. 每个session开始的时候，都会自动把这类文件读一遍放入上下文
+          1. 每层代码都可以有，越接近代码的优先级越高
+          1. README是写给人看的，CLAUDE.md是写给agent看的
+        - 简洁、干净第一：应该是个索引，而不是大全
+        - 精确、可验证第一：不要让ai猜
+     1. 最佳实践
+        - 四大原则
+          1. 简洁
+             - 单文件控制在200行以内
+             - 根目录的CLAUDE.md应该只放指针和关键的坑，其他细节都会变成噪音
+             - 控制在200行以内的时候，规则遵守率大概92%。但写到400行往上，遵守率就肉眼可见地往下掉；如果把200行拆成5个30行的模块化文件，丢到.claude/rules/目录里，遵守率反而能涨到96%
+             - 对每一行CLAUDE.md都问「如果删掉这行，Claude还会按这条规则做事吗？」答案是会(常识或代码已经体现)就该删，答案是不会才值得留
+          1. 精确
+             - 直接在你要改的子目录启动：注意力立刻聚焦到xx领域
+          1. 告诉为什么
+          1. 持续更新
+        - 分层编写
+          1. `~/.claude/CLAUDE.md`：全局，跨项目的个人偏好，如4空格缩进、测试用户不要清空数据库
+          1. `项目根的CLAUDE.md`：整个项目的通用约定，如技术栈、目录、命令、硬约束
+          1. `子目录的CLAUDE.md`：特定组件的特定约束，是按需加载，claude工作到该目录才生效，不污染整个项目上下文
+        - /init会自动分析项目，并生成
+          1. 会引用全局~/.claude/CLAUDE.md的内容注入项目中
+          1. 不完美，得review一遍删掉不准的、补上漏掉的
+        - 如果规则太多，就拆到rules/
+        - 三类反例
+          1. 复述、不及时更新：如复制大幅官方文档/教程、架构变更不同步更新
+          1. 愿望型：如目标是0bug、希望多写测试、保持代码整洁、遵循最佳实践
+          1. 术语型：通用术语都懂不要废话，真正需要解释的是团队特有的黑话
+        - 实际使用
+          1. CLAUDE.md：写`@AGENTS.md`，@是引用指令，将内容引到AGENTS.md
+          1. AGENTS.md：写实际内容
+          1. GEMINI.md
+   - `.claude/rules/`
+     1. 认识：每条规则是一个独立的md文件，组成包括元数据和规范，支持条件规则。如security.md、testing.md
+     1. 举例
+        ```c
+        ---
+        name: 前端规范
+        description: React + Tailwind 项目规范
+        paths: ["**/*.tsx", "**/*.jsx"]                 // path-scoped rules 路径作用域规则：只有修改tsx文件时才起效
+        ---
+
+        # 前端规范
+        ...（规则正文）
+        ```
+   - `.claude/agents/`
+     1. 认识：每个subagent就是一个独立的.md文件，![](../images/ai/cc_command_vs_agent.png)
+   - `memory`
+     1. 认识：auto memory，claude写给自己的笔记，claude主动维护
+        - 前200行的硬上限自动加载进系统prompt，其他按需获取
+        - 和CLAUDE.md冲突时，更具体的规则优先
+     1. 结构
+        ```c
+        // 用户目录
+        // 项目目录
+        ~/.claude/projects/<git-root-hash>/memory/
+        ├── MEMORY.md          # 主入口，每次session自动加载前200行
+        ├── debugging.md       # claude记录的调试经验
+        ├── api-conventions.md # api设计决策
+        └── patterns.md        # 发现的代码模式
+        ```
+     1. 使用
+        - 看到“Recalled X memories”，说明claude加载了之前的记忆
+        - 看到“Wrote X memories”，说明增加了新的记忆
 1. 功能
-   - worktree：隔离支持，包括memory维度、agent维度
+   - `/skills`
+     1. 使用
+        - token黑洞：注意mcp对于token的占用，使用不当或者装多了，可能没说话就占用41%的上下文，更新了自动模式机制，检测占多了就懒加载
+        - mcp和skill都会进入llm inference pipeline从而占用token，插件和command不会
+     1. command：自定义的命令，.claude/commands/目录下的Markdown文件，集成到了skill里
+        - 组成
+          1. allowed-tools：限制Claude可以使用的工具（安全考虑）
+          1. argument-hint：向用户显示需要提供哪些参数
+          1. description：在/help中显示，提高可发现性
+        - 举例：如/create-api
+        ```md
+        ---
+        description: 生成带有完整设置的REST API端点
+        argument-hint: [endpoint-name] [method?]
+        ---
+
+        # API端点生成器：$ARGUMENTS
+
+        创建一个完整的API端点，包含所有必要的组件：
+
+        ## 实现文件
+        1. **路由处理程序**（`routes/${endpoint}.ts`）
+        2. **控制器**（`controllers/${endpoint}Controller.ts`）
+        3. **服务**（`services/${endpoint}Service.ts`）
+        4. **类型**（`types/${endpoint}Types.ts`）
+
+        ## 附加组件
+        - 使用Joi/Yup进行输入验证
+        - 所有层的单元测试
+        - API文档（OpenAPI/Swagger）
+        - 速率限制配置
+
+        @routes/ @types/ @controllers/
+        ```
+   - `/mcp`
+     1. 常用：`claude mcp add Laravel boost/k8s/grafana`
+   - `/plugins、/reload-plugins`
+     1. 认识：插件可以包含斜杠命令、Subagent定义、Hooks配置、MCP服务器配置、各种设置，还能发布到marketplace让别人用，成为团队的共同插件
+     1. 常用插件
+        - `claude plugin install code-simplifier`：保证功能的前提下的代码优化工具
+        - `claude plugin install gopls/php/-lsp@claude-plugins-official`：支持lsp：真正理解代码的语义
+
+   - `/agents`
+     1. 认识：subagent，独立的专业分工的可并行执行的claude实例，有自己的上下文，后加&即可异步执行
+     1. 创建demo
+        ```
+        ---
+        name: backend-dev
+        description: 后端API开发专家，专注Spring Boot和微服务。
+        tools: Read, Write, Edit, Bash
+        ---
+
+        你是我的后端开发专家。
+
+        技术栈：
+        - Spring Boot 3.x + Spring Cloud
+        - MyBatis Plus
+        - MySQL 8 + Redis 7
+        - Kafka消息队列
+        - Elasticsearch搜索
+
+        开发规范：
+        - Controller只做参数校验和结果封装
+        - Service处理业务逻辑
+        - DAO只负责数据访问
+        - 所有接口都要做幂等
+        - 统一异常处理
+
+        每个API endpoint：
+        1. 先校验参数
+        2. 处理异常
+        3. 返回统一格式
+        4. 写清楚日志
+        ```
+     1. 使用demo
+        ```
+        用backend-dev重构用户服务 &
+        用frontend-dev更新前端组件 &
+        code-reviewer等他们完成后审查 &     // 最后一个等前两个完成再动手。全程自动协调
+        ```
+   - `agent teams`
+     1. 认识：从单会话到Subagent再到Agent Teams，Subagent就是各干各的，中间没有沟通，最后拿到所有的结果总结一下输出，而team是互相沟通
+        - 二者在跨层级重构、多模块联调时差距非常明显，可以省掉大量上下文传递开销
+        - 更加耗费token，几个team成员就是几倍的token，因为team中的成员是整个team全量的数据，不光包含自己的，还有其他人的
+        - Agent Teams目前还是实验性功能，默认关闭
+        - 有人用tmux脚本、OpenClaw搞过类似的东西，可以看出原生集成和脚本糊出来的体验完全不在一个量级
+        - 子agent之间的上下文同步、冲突处理、错误回滚，都是硬骨头
+     1. 认识：像真实公司一样运转。utils/swarm/目录下是完整多agent协作框架
+        - 每个team有leader和多个teammate
+        - 支持三种执行方式：同进程隔离、tmux窗口、iterm2分割窗格
+        - 每个agent有自己的邮箱文件做异步通信
+        - 每个agent可在独立的git worktree中工作，互不干扰
+        - 权限冒泡：teammate遇到需确认的操作，权限请求冒泡给leader而非直接弹给用户
+     1. 对比
+        - | 维度 | sub-agents | agent teams |
+          |------|------------|-------------|
+          | 进程模型 | 主agent的子进程 | 独立的对等进程 |
+          | 通信方式 | 任务结束时返回摘要 | 持续的消息/广播ipc |
+          | context | 隔离，任务后丢弃 | 独立，持久保留 |
+          | 协调方式 | 顺序委托 | 共享任务列表，自主认领 |
+          | 适合场景 | 研究、探索、代码审查 | 跨模块并行实现 |
+
+   - `/loop`
+     1. 认识：定时调度，直接写做什么，就直接能理解
+     1. 使用
+        - `/loop 5m check if the deployment finished and tell me what happened`，每5分钟
+        - `/loop check the build every 2 hours`，每2小时
+        - `remind me at 3pm to push the release branch in 45 minutes, check whether the integration tests passed`：也支持处理一次性的事，到时候自动删除这个任务
+     1. 特性
+        - 是session级别的，session消息，则任务消失
+        - 3天自动过期，防止无限跑下去
+        - 任务到期，会等Claude当前回合结束再执行，不会打断会话
+     1. 实现
+        - 底层依赖CronCreate、CronList、CronDelete三个工具，每个任务有8位ID，单个session最多50个任务
+   - `/goal`
+     1. 认识：不达目标不罢休，先由ai制定一个工作流，然后依次执行，称为动态工作流
+   - `/todos`
+     1. 认识：让claude按顺序一个个做，支持任务依赖追踪
+     1. 使用
+        ```
+        任务1: 创建数据库schema
+        任务2: 写CRUD接口 (依赖任务1)
+        任务3: 写单元测试 (依赖任务2)
+        任务4: 写文档 (可以并行)
+        ```
+
+   - `worktree`
+     1. 认识：隔离支持，包括agent/memory维度
      1. 使用：`claude --worktree`，创建独立的git worktree并运行
-   - /hook：支持各个操作节点添加钩子：支持本地shell命令和http hook
+   - `/hook`
+     1. 认识：支持各个操作节点添加钩子：支持本地shell命令和http hook
      1. 分类
         ```md
         | Hook类型        | 触发时机                | 常见用途                     |
@@ -4026,9 +4268,20 @@
    - /status、/doctor
    - /cost：花费
    - /logout、/login
-   - /chrome：claude in chrome，官方出品的浏览器控制插件
+   - chrome：claude in chrome，官方出品的浏览器控制插件，现在支持ios模拟器
    - IDE集成：显示“IDE connected”，即可让IDE显示代码变更，就跟cursor一样
    - claude remote-control：支持手机或浏览器扫码，远程控制当前的claude
+
+   - `/simplify`
+     1. 认识：代码审查和直接修复，从三个方面，之后再总结。代码复用性、代码质量和可维护性、性能和效率
+        - 对刚写完、"能跑就行"状态的代码特别有用。趁着context还新鲜，跑一遍/simplify，代码质量能上一个台阶。不适合在别人的代码上乱跑，那个需要上下文，让它随便改会出问题
+   - `/batch`
+     1. 认识：跨文件、跨模块的大规模代码迁移
+     1. 使用：`/batch 把 src/ 目录的组件从 React class 语法迁移到 hooks`
+     1. 步骤：先展示一个迁移计划，然后把工作拆成若干个独立的工作单元，每个单元分配一个独立Agent、在独立的git worktree里运行，并行推进，互不干扰
+   - `/claude-api`
+     1. 认识：把完整的Anthropic SDK参考注入到当前会话上下文里，避免开浏览器标签翻文档和当前上下文的频繁切换。包括各种编程语言的完整Claude API参考、工具使用模式和流式实现细节、消息批处理和结构化输出、常见坑的说明，如go、php、curl等
+        - 专门把某个领域的知识确定性地装进去
 1. 原理
    - 认识：是一个node.js应用，用ts写的
      1. 将全套的完整的经过实际工程经验都传递给llm的”操作系统“
@@ -4171,7 +4424,7 @@
         - 有最多100轮限制防止死循环
      1. tooling：read/write/edit/bash(git/npm/docker)
    - 其他部分
-     1. context window
+     1. context window：![](../images/ai/cc_use.png)
         - 原则
           1. context不是越大越好，而是越干净越好
         - 治理体系
@@ -4204,6 +4457,14 @@
           1. 记忆提取机制：会自动更新记忆
              - 触发时机：每轮回答完成后启动，有限流
              - 由独立fork agent完成：继承主对话上下文，但只能读文件和写入记忆目录，不能执行bash
+     1. 读代码
+        - 认识：agentic search，让claude像agent一样去搜，只靠grep、读文件、看目录，不使用向量
+        - 理由
+          1. 索引会过期：每天提交几百个commit，embedding pipeline根本跟不上，都是过时的代码
+          1. 冷启动为零。RAG在百万行代码库上建一次索引要十几分钟
+          1. 精确匹配向量干不了：代码大多数要的是精确，不是相似
+        - 特点
+          1. 严重依赖一个好的起点context
      1. 权限系统
         - 工具调用都经过静态分析层的多层白名单校验：bashsecurity.ts里有23项编号的安全检查
           1. 18个被阻止的zsh内置命令
@@ -4211,6 +4472,14 @@
           1. unicode零宽字符注入
           1. ifs null-byte注入
           1. 一个在hackeron审查期间发现的恶意token绕过
+   - harness架构
+     1. CLAUDE.md
+     1. LSP
+     1. Skills
+     1. MCP
+     1. Plugins
+     1. Subagent
+     1. Hooks
    - 设计
      1. Haiku模型做辅助任务：如生成对话摘要(用于resume功能)、检测bash命令是否有注入攻击(用llm来判断另一个llm生成的命令是否危险)
 1. 最佳实践
@@ -4251,6 +4520,7 @@
    - 现在llm
      1. 上下文窗口一般为128k、256k，最大的1m
         - 类似live-sr、student-rtim-sr这种项目就是100~200k，live-class-sr是1m
+        - 1m token大概两百多万字母
      1. 参数量为数千亿→万亿级，通常是MoE(混合专家)实际每次只激活一部分参数，本地的是几亿(即几B)
 1. 胡思乱想
    - 真正的高精尖技术都是从学术中来的，只考虑实现一个专有的场景，之后再添砖加瓦扩展到其他领域
@@ -4291,6 +4561,7 @@
         - 测试用TDD，写的成本极低，达成的效果极高，总之效率极高
         - 值班和线上事故响应，找根因极快
      1. 查找问题、资料：飞书的知识问答、aily
+   - CLAUDE.md起步；长了拆到rules/；高频工作流写到commands/；可复用能力封装成skills/；高隔离度的添加agents/
 ### wiki
 1. 其他方面的应用
    - 图像应用

@@ -2314,6 +2314,7 @@
    - MIT
    - GPL：GUN Public License，包括linux。为最初的作者保留版权，可以改但是得开源
    - LGPL
+1. LSP：Language Server Protocol 提供了如`go to definition`、`find references`功能
 1. 一些语言
    - Haskell：是纯函数式的静态类型的编程语言，具有类型推断和惰性求值，为教学、研究和工业应用而设计。开创了许多高级编程语言功能，例如类型类，这些功能支持类型安全的运算符重载
 #### 编译
