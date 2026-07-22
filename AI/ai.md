@@ -3367,6 +3367,10 @@
           1. 实际踩过的坑：ai会生成了清除数据的测试脚本，导致自己清掉了测试环境的数据，工作上第一次这种低级错误丢人了
         - 回归测试：按需把所有的单测都跑一遍，考虑到每次修改的成本，在发布到测试环境时执行一次即可
         - 线上通过灰度、监控、回滚保证风险可控
+1. 大型项目的ai编程
+   - 爆上下文
+     1. 严重依赖一个好的起点context
+     1. 并行subagent分摊独立任务
 1. 最佳实践
    - 代码得一行一行过
      1. 业务逻辑得自己知道，是自己设计的，并且达到了自己的设计目标
@@ -3972,7 +3976,7 @@
    - `/mcp`
      1. 常用：`claude mcp add Laravel boost/k8s/grafana`
    - `/plugins、/reload-plugins`
-     1. 认识：插件可以包含斜杠命令、Subagent定义、Hooks配置、MCP服务器配置、各种设置，还能发布到marketplace让别人用，成为团队的共同插件
+     1. 认识：skill的升级版，包含斜杠命令、Subagent定义、Hooks配置、MCP服务器配置、各种设置等更多内容，还能发布到marketplace让别人用，成为团队的共同插件
      1. 常用插件
         - `claude plugin install code-simplifier`：保证功能的前提下的代码优化工具
         - `claude plugin install gopls/php/-lsp@claude-plugins-official`：支持lsp：真正理解代码的语义
@@ -4433,6 +4437,8 @@
         - 测试用TDD，写的成本极低，达成的效果极高，总之效率极高
         - 值班和线上事故响应，找根因极快
      1. 查找问题、资料：飞书的知识问答、aily
+     1. 把每天做超过一次的事都做成了command、skill
+     1. 使用hook做自动化桥接
    - CLAUDE.md起步；长了拆到rules/；高频工作流写到commands/；可复用能力封装成skills/；高隔离度的添加agents/
 ### wiki
 1. 其他方面的应用
