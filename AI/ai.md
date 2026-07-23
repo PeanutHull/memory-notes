@@ -3838,6 +3838,11 @@
           1. ultrathink：单次超控，这次最高，下次恢复
    - `/compact`
      1. 认识：压缩对话，不希望丢掉之前的记忆
+     1. 使用场景
+        - 探索阶段结束，准备开始编码之前
+        - 完成一个里程碑之后
+        - 上下文用量到60%-70%的时候
+        - 任务方向发生重大转变时
      1. `Summarize from here`：只想压缩前半段，后面的几条消息还有用，前面的背景交代可以浓缩掉，对于超长session特别有用
    - `/insights`：分析当前claude code的工作成果和改进地方，分析你使用的特点和不足
    - `/debug`：让claude排查当前session的问题，如反应慢、某工具调用总是失败等
@@ -4343,6 +4348,33 @@
           1. 精确匹配向量干不了：代码大多数要的是精确，不是相似
         - 特点
           1. 严重依赖一个好的起点context
+     1. 压缩
+        - 认识：上下文窗口有最大限制；窗口越大模型注意力越分散容易“忘记”早期的关键指令，或者把中间某次失败的尝试和最终的修复方案搞混
+        - 机制
+          1. 微压缩：MicroCompaction，规则驱动/预处理，对工具结果在llm读取后做裁剪、去掉冗余输出，不会调用llm
+             - 有一个可压缩工具的名单：FILE_READ/EDIT/WRITE_TOOL_NAME、GREP/GLOB_TOOL_NAME、WEB_SEARCH/FETCH_TOOL_NAME等
+             - 这些结果在模型处理完之后，完整的返回值就没什么用了，把旧的tool_result内容截断或替换成占位文本[Old tool result content cleared]
+             - 基于时间间隔的清理：Anthropic的kv cache是5分钟或60分钟，MicroCompaction统一设为60分钟，缓存已经冷掉时，下次请求本来就要重新计算前缀，那就先把旧工具结果瘦身，减少重新发送的数据量
+             - 保留最近5个可压缩工具的结果：基于经验值
+          1. 自动压缩：AutoCompaction
+             - 触发阈值：输入输出共享同一个上下文大小，既要接收输入，又要为输出留出。200K为83.5%，1M为96.7%
+             - 压缩路径
+               1. 会话记忆压缩：开启了会话记忆功能，会在后台持续做增量笔记。压缩时直接用这些笔记作为摘要，不需要原文了，至少保留5条最近对话和10K token的内容。速度快、实验功能
+               1. 全量对话压缩：forked独立agent，消耗的token相当于全部会话+输出的压缩内容
+                  - 只有一轮机会maxTurns:1，禁止调用工具(前后插入严厉的提示词，但是和主agent共享工具集用于复用kv cache)
+                  - 压缩提示词要求模型输出两个XML块：一个analysis块记录思考过程类似CoT，一个summary块正式的摘要（包含）
+                    1. Primary Request and Intent：用户的核心需求和意图
+                    1. Key Technical Concepts：涉及的技术概念和框架
+                    1. Files and Code Sections：操作过的文件、代码片段、修改记录
+                    1. Errors and Fixes：遇到的错误和修复方案
+                    1. Problem Solving：解决的问题和正在排查的问题
+                    1. All User Messages：所有非工具结果的用户消息（原文）
+                    1. Pending Tasks：待完成的任务
+                    1. Current Work：压缩前正在做什么
+                    1. Optional Next Step：下一步计划
+               1. 部分压缩：只需要压缩之前压缩后的新增部分，输入少、速度快
+          1. 阻塞限制：超88.5%时拒绝发送api请求，避免浪费api；连续失败3次停止自动压缩
+          1. 响应式兜底：API返回prompt_too_long直接逐条删除最旧的消息
      1. 权限系统
         - 工具调用都经过静态分析层的多层白名单校验：bashsecurity.ts里有23项编号的安全检查
           1. 18个被阻止的zsh内置命令
