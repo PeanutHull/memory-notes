@@ -111,6 +111,18 @@
      1. MoE：Mixture of Experts Orchestration，混合专家式，模型内部的专家路由机制
         - 每个专家都是一个子模型，专门处理特定类型的输入或任务
    - 实现原理
+     1. 模型在大量文本训练过程中，学习到一种空间结构
+        ```
+        密码重置 ───── 登录问题
+            │
+            └──────── 账号安全
+
+        水果苹果 ───── 香蕉
+            │
+            └──────── 食物
+
+        苹果公司 ───── iPhone ───── 科技产品
+        ```
      1. 概念
         - 条件概率：在已知一个事件已经发生的情况下，另一个事件发生的概率
         - 温度参数：控制生成文本的随机性，温度越高，生成的文本越随机；温度越低，生成的文本越确定
@@ -689,184 +701,199 @@
           1. Print：输出，把结果打印出来
           1. Loop：循环，继续等下一条输入
 #### openAI API
-1. openAI
-   - 认识
-     1. 官方推荐的数据交互格式是json
-1. openAI API交互模型
-   - 文本
-     1. completion：补全模式，适用于单次文本生成任务，核心功能是根据提示prompt进⾏提示语句的补全（即继续进行后续⽂本创作），它本质上是文本补全模型。如gpt-3.5-turbo
-        ```python
-        response = openai.Completion.create(            # 已经淘汰
-           model="text-davinci-003",
-           prompt="This is a test message",
-           max_tokens=1000,
-        )
-        ```
-     1. chat：对话模式，支持多轮对话，通过messages数组管理上下文，包含system、user、assistant三种角色。升级版，更常用。如gpt-4o
-        - 参数
-          1. model：使用的模型名
-          1. messages：List[Dict]，对话消息列表
-          1. 概率控制
-             - temperature：温度，控制输出的随机性，0~1
-               1. 0.0-0.5：低，输出更具聚焦、更保守、也更可预测，容易重复，适用事实问答或代码生成
-               1. 0.5-0.8：中，常用的，平衡创造性和连贯性
-               1. 0.9-1.0：高，输出更具创造性，但也更容易出现不连贯或不合逻辑的内容，适用创意写作或头脑风暴
-             - top_p：核采样概率，控制输出的随机性，更高级，会选择累积概率达到top_p值的词汇，0~1
-               1. 在生成多样化文本的同时，避免选择概率极低的词汇，从而减少生成不相关或无意义内容的风险
-               1. 0.5为低和高的分界线
-               1. 和temperature建议调整其中一个，而不是同时精细调整两者，因为你知道二者的作用机制吗？
-             - frequency_penalty：频率惩罚，避免生成重复的词，有助于提高文本的多样性，-2.0 ~ 2.0，适用于发现输出重复啰嗦
-               1. <1.0：鼓励重复使用已出现过的词
-               1. 0.0：无惩罚。
-               1. 1.0：最大惩罚，显著降低重复词的概率
-               1. >1.0：非常强的惩罚，可能使文本不自然
-             - presence_penalty：存在惩罚，避免重复话题，只关心词语是否出现过，也有助于提高文本的多样性，-2.0 ~ 2.0，适用避免老生常谈
-               1. 机制同frequency_penalty
-             - logit_bias：直接修改特定词汇在采样前的概率值，最精细、最强大的控制手段，-100 ~ 100
-               1. 负减小，正增大；-100禁止，100强制使用
-          1. 回复设置
-             - stream/stream_options：是否流式输出
-             - stop：遇到指定字符串时停止生成，对于控制模型输出的结构和长度非常有用
-             - max_tokens：回复的最大token数
-          1. 工具相关
-             - tools：strict模式支持严格遵循Function的JSON Schema的格式要求，以确保模型输出的Function符合用户的定义
-               1. $def定义模块，$ref引用模块或递归
-             - tool_choice
-        - role分类
-          1. system：系统消息，提供背景信息和指令，使得回答更加精准，更高的指令优先级、更底层的指令约束
-          1. user：用户消息，用户输入的内容
-          1. assistant：助手消息，助手生成的回复
-        - 实例
-            ```python
-            // 多轮会话的两种实现方式
-            // 1. 直接累计上下文都传过去
-            completion_second = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo-16k-0613",
-                messages=[
-                    {"role": "system", "content": "你是一位精通机器学习和自然语言处理的AI领域专家，具备20年相关经验"}, 
-                    {"role": "user", "content": "我是一个小白，我想入门AI领域，我需要学习哪些知识"},
-                    {"role": "user", "content": "我是一个小白，我想入门AI领域，我需要学习哪些知识"},                   # 多条信息模型只会回答最后一条
-                    
-                    # 注意：这里通过设置role =  assistant可以告诉Chat模型，这个输入是模型返回的答案
-                    {"role": "assistant", "content": "这里填写上一轮对话模型的回复"},
-                    {"role": "user", "content": "关于第5条深度学习方面，你帮我更加详细的介绍一下"}
-                ],
-                tools=tools
-            )
-            tools = [
-                {
-                    "type": "function",
-                    "function": {
-                        "name": "get_weather",
-                        "description": "Get weather of a location, the user should supply a location first.",
-                        "parameters": {
-                            "type": "object",
-                            "properties": {
-                                "location": {
-                                    "type": "string",
-                                    "description": "The city and state, e.g. San Francisco, CA",
-                                }
-                            },
-                            "required": ["location"]
-                        },
-                    }
-                },
-            ]
-            tool = message.tool_calls[0]
-            messages.append(message)
-
-            messages.append({"role": "tool", "tool_call_id": tool.id, "content": "24℃"})
-            message = send_messages(messages)
-            print(f"Model>\t {message.content}")
-
-            // 2. 使用会话id
-            from openai import OpenAI
-            client = OpenAI()
-
-            response = client.responses.create(
-                model="gpt-4o-mini",
-                input="tell me a joke",
-            )
-            print(response.output_text)
-
-            second_response = client.responses.create(
-                model="gpt-4o-mini",
-                previous_response_id=response.id,                                           # 传入会话id
-                input=[{"role": "user", "content": "explain why this is funny."}],
-            )
-
-            // 返回值
+1. 认识
+   - 官方推荐的数据交互格式是json
+1. 组成
+   - 协议演变
+     1. completion（废弃）：prompt → text，就是文本续写器，聊天都得自己拼
+     1. chat completions：messages → message，聊天接口，奠定了整个llm行业的api格式
+        - 新增messages，需要手动把结果塞进messages
+     1. function calling：messages → tool_calls → tool result，从chatbot到agent的关键一步
+     1. assistants api（废弃）：抽象比较重，又重新设计，assistant/thread/run/step
+     1. responses api：定位原生agent api，是agent执行接口，2025年3月发布
+        - message仅仅是一种item
+1. completion
+   - 认识：补全模式，适用于单次文本生成任务，核心功能是根据提示prompt进⾏提示语句的补全（即继续进行后续⽂本创作），它本质上是文本补全模型。如gpt-3.5-turbo
+   - 实例
+    ```python
+    response = openai.Completion.create(
+        model="text-davinci-003",
+        prompt="This is a test message",
+        max_tokens=1000,
+    )
+    ```
+1. chat completion
+   - 认识：对话模式，支持多轮对话，通过messages数组管理上下文，包含system、user、assistant三种角色。升级版，更常用。如gpt-4o
+   - 参数
+     1. model：使用的模型名
+     1. messages：List[Dict]，对话消息列表
+     1. 概率控制
+        - temperature：温度，控制输出的随机性，0~1
+          1. 0.0-0.5：低，输出更具聚焦、更保守、也更可预测，容易重复，适用事实问答或代码生成
+          1. 0.5-0.8：中，常用的，平衡创造性和连贯性
+          1. 0.9-1.0：高，输出更具创造性，但也更容易出现不连贯或不合逻辑的内容，适用创意写作或头脑风暴
+        - top_p：核采样概率，控制输出的随机性，更高级，会选择累积概率达到top_p值的词汇，0~1
+          1. 在生成多样化文本的同时，避免选择概率极低的词汇，从而减少生成不相关或无意义内容的风险
+          1. 0.5为低和高的分界线
+          1. 和temperature建议调整其中一个，而不是同时精细调整两者，因为你知道二者的作用机制吗？
+        - frequency_penalty：频率惩罚，避免生成重复的词，有助于提高文本的多样性，-2.0 ~ 2.0，适用于发现输出重复啰嗦
+          1. <1.0：鼓励重复使用已出现过的词
+          1. 0.0：无惩罚。
+          1. 1.0：最大惩罚，显著降低重复词的概率
+          1. >1.0：非常强的惩罚，可能使文本不自然
+        - presence_penalty：存在惩罚，避免重复话题，只关心词语是否出现过，也有助于提高文本的多样性，-2.0 ~ 2.0，适用避免老生常谈
+          1. 机制同frequency_penalty
+        - logit_bias：直接修改特定词汇在采样前的概率值，最精细、最强大的控制手段，-100 ~ 100
+          1. 负减小，正增大；-100禁止，100强制使用
+     1. 回复设置
+        - stream/stream_options：是否流式输出
+        - stop：遇到指定字符串时停止生成，对于控制模型输出的结构和长度非常有用
+        - max_tokens：回复的最大token数
+     1. 工具相关
+        - tools：strict模式支持严格遵循Function的JSON Schema的格式要求，以确保模型输出的Function符合用户的定义
+          1. $def定义模块，$ref引用模块或递归
+        - tool_choice
+     1. 其他
+        - vision：视觉模式，图像识别与分析，支持url或base64编码的图像输入
+   - role分类
+     1. system：系统消息，提供背景信息和指令，使得回答更加精准，更高的指令优先级、更底层的指令约束
+     1. user：用户消息，用户输入的内容
+     1. assistant：助手消息，助手生成的回复
+   - 实例
+    ```python
+    // 多轮会话的两种实现方式
+    // 1. 直接累计上下文都传过去
+    completion_second = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo-16k-0613",
+        messages=[
+            {"role": "system", "content": "你是一位精通机器学习和自然语言处理的AI领域专家，具备20年相关经验"}, 
+            {"role": "user", "content": "我是一个小白，我想入门AI领域，我需要学习哪些知识"},
             {
-                "id": "chatcmpl-7Hcl1s2t6u1X2K3l4Q5p6r7s8t9u0v",
-                "object": "chat.completion",
-                "created": 1677654321,
-                "model": "gpt-3.5-turbo",
-                "choices": [
+                "role": "user",
+                "content": [
                     {
-                    "index": 0,
-                    "message": {
-                        "role": "assistant",
-                        "content": "Hello! How can I assist you today?"
+                        "type": "text",
+                        "text": "分析这张图片"
                     },
-                    "finish_reason": "stop"
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": "..."
+                        }
                     }
-                ],
-                "usage": {                                                                  # 消耗的tokens
-                    "prompt_tokens": 15,
-                    "completion_tokens": 10,
-                    "total_tokens": 25
-                }
-            }
-            ```
-     1. edit：编辑模式，用户提供待修改文本和修改指令，模型返回调整后的内容。用于文本润色、代码优化、语法修正。目前较少使用，部分功能已整合至chat模式
-   - embedding：嵌入模式，将文本转换为向量表示，用于语义搜索、聚类、相似性匹配、知识检索等任务
-     1. 不直接生成文本，而是提供数值化表示
-     1. 适用于机器学习任务
-
-   - responses api：响应模式，支持状态化交互，可集成外部工具（如mcp协议、文件搜索、代码解释器）
-   - multi-agent：多代理模式，支持多个ai代理协同工作，如orchestrator-sub-agent模式或直接handoffs（子代理直接与用户交互）
-
-   - vision：视觉模式，图像识别与分析，支持url或base64编码的图像输入
-   - streaming：流式模式，支持实时流式返回生成内容，适用于长文本或动态交互
-1. openAI的其他
-   - Function calling
-     1. 背景
-        - 大模型的知识是有限的，无法获取最新的知识
-        - 大模型能给出建议，但是无法直接解决
-     1. 认识：函数调用，开发者描述函数给AI模型，然后模型可以智能地决定输出一个包含调用这些函数的参数的JSON对象
-        - 大模型处理的步骤具体是
-          1. 匹配给到大模型的外部函数库
-          1. 选择合适的函数
-          1. 根据函数逻辑给出回复
-     1. 使用
-        - 定义JSON Schema
-            ```json
-             {
-                "$schema": "http://json-schema.org/draft-07/schema#",
-                "type": "object",
-                "properties": {
-                    "Name": {
-                        "type": "string"
+                ]
+            },                                                                                         # 视觉模式
+            {"role": "user", "content": "我是一个小白，我想入门AI领域，我需要学习哪些知识"},                   # 多条信息模型只会回答最后一条
+            
+            # 注意：这里通过设置role =  assistant可以告诉Chat模型，这个输入是模型返回的答案
+            {"role": "assistant", "content": "这里填写上一轮对话模型的回复"},
+            {"role": "user", "content": "关于第5条深度学习方面，你帮我更加详细的介绍一下"}
+        ],
+        tools=tools
+    )
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "get_weather",
+                "description": "Get weather of a location, the user should supply a location first.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "location": {
+                            "type": "string",
+                            "description": "The city and state, e.g. San Francisco, CA",
+                        }
                     },
-                    "Age": {
-                        "type": "integer",
-                        "minimum": 0
-                    },
-                    "Salary": {
-                        "type": "number"
-                    },
-                    "IsMarried": {
-                        "type": "boolean"
-                    }
+                    "required": ["location"]
                 },
-                "required": ["Name", "Age"]
             }
-            ```
-        - 传入参数
-          1. 参数组成
-             - functions参数：声明外部函数库
-             - function_call参数：控制是否执行Function calling功能
-          1. 代码示例
+        },
+    ]
+    tool = message.tool_calls[0]
+    messages.append(message)
+
+    messages.append({"role": "tool", "tool_call_id": tool.id, "content": "24℃"})
+    message = send_messages(messages)
+    print(f"Model>\t {message.content}")
+
+    // 2. 使用会话id
+    from openai import OpenAI
+    client = OpenAI()
+
+    response = client.responses.create(
+        model="gpt-4o-mini",
+        input="tell me a joke",
+    )
+    print(response.output_text)
+
+    second_response = client.responses.create(
+        model="gpt-4o-mini",
+        previous_response_id=response.id,                                           # 传入会话id
+        input=[{"role": "user", "content": "explain why this is funny."}],
+    )
+
+    // 返回值
+    {
+        "id": "chatcmpl-7Hcl1s2t6u1X2K3l4Q5p6r7s8t9u0v",
+        "object": "chat.completion",
+        "created": 1677654321,
+        "model": "gpt-3.5-turbo",
+        "choices": [
+            {
+            "index": 0,
+            "message": {
+                "role": "assistant",
+                "content": "Hello! How can I assist you today?"
+            },
+            "finish_reason": "stop"
+            }
+        ],
+        "usage": {                                                                  # 消耗的tokens
+            "prompt_tokens": 15,
+            "completion_tokens": 10,
+            "total_tokens": 25
+        }
+    }
+    ```
+1. function calling
+   - 背景
+     1. 大模型的知识是有限的，无法获取最新的知识
+     1. 大模型能给出建议，但是无法直接解决
+   - 认识：函数调用，开发者描述函数给AI模型，然后模型可以智能地决定输出一个包含调用这些函数的参数的JSON对象
+     1. 大模型处理的步骤具体是
+        - 匹配给到大模型的外部函数库
+        - 选择合适的函数
+        - 根据函数逻辑给出回复
+   - 使用
+     1. 定义JSON Schema
+        ```json
+            {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "properties": {
+                "Name": {
+                    "type": "string"
+                },
+                "Age": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "Salary": {
+                    "type": "number"
+                },
+                "IsMarried": {
+                    "type": "boolean"
+                }
+            },
+            "required": ["Name", "Age"]
+        }
+        ```
+     1. 传入参数
+        - 参数组成
+          1. functions参数：声明外部函数库
+          1. function_call参数：控制是否执行Function calling功能
+        - 代码示例
             ```python
             functions = [calculate_total_age_from_split_json]
             response = openai.ChatCompletion.create(
@@ -878,7 +905,45 @@
                 function_call="auto",  
             )
             ```
-        - 在本地执行外部函数，将计算过程和结果保存为message并追加到messages后面，并第二次调用Chat Completion模型分析函数的计算结果，并最终根据函数计算结果输出用户问题的答案
+     1. 在本地执行外部函数，将计算过程和结果保存为message并追加到messages后面，并第二次调用Chat Completion模型分析函数的计算结果，并最终根据函数计算结果输出用户问题的答案
+1. responses api
+   - 认识：响应模式，支持状态化交互，可集成外部工具，如mcp协议、文件搜索、代码解释器
+   - 功能
+     1. 支持previous_response_id，不需要拼接messages
+     1. 新增responses websocket：多次http调用改为ws，对于tool-call-heavy的agent workflow实现最高约40%的端到端加速
+   - 组成
+     1. instructions：system message
+     1. input items
+        - message
+        - reasoning
+        - function_call
+        - function_call_output
+        - skills/mcp
+        - web search/file search/tool search/shell/code interpreter
+        - computer use
+        - image generation
+     1. output items
+1. conversations api
+   - 认识：长期会话容器，服务端持久化会话数据库，可以跨请求、跨session、跨设备甚至跨job继续使用
+   - 实例
+    ```py
+    // 创建
+    conversation = client.conversations.create()            // 得到conv_xxxxxxxxx
+
+    // 使用
+    response = client.responses.create(
+        model="gpt-5.6",
+        conversation=conversation.id,
+        input="我叫花生，我是一个后端工程师"                     // 不需要关心之前的信息，直接发新的
+    )
+    ```
+1. embeddings api
+   - 认识：独立的api路线，嵌入模式，将文本转换为向量表示，用于语义搜索、聚类、相似性匹配、知识检索等任务
+     1. 不直接生成文本，而是提供数值化表示
+     1. 适用于机器学习任务
+   - 使用：`/v1/embeddings`
+1. wiki
+   - edit：早期独立的编辑api模式，用户提供待修改文本和修改指令，模型返回调整后的内容。用于文本润色、代码优化、语法修正。能力被吞并，目前较少使用，功能已整合至chat模式
 #### deepseek API
 1. 多轮对话
    - chat/completions无状态：需将之前所有对话历史拼接好后，传递给对话API
@@ -922,6 +987,9 @@
      1. 前缀续写
      1. FIM：补全中间内容
    - 对话前缀缓存：用户的每一个请求都会触发硬盘缓存，依据请求内容是否和之前的完全相同进行判断
+1. Responses API兼容
+   - 认识：仅兼容核心协议，不是完整复刻，定义为stateless API无国籍api即不绑定任何特定模型，2026.08.13支持
+     1. 不支持previous_response_id和conversation，其他不支持MCP、file_search、code_interpreter、computer_use等
 1. Gemini API
    - 认识：功能差不多，字段名字不一样
      1. 对话对象：不是messages，是contents
