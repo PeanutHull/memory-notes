@@ -199,8 +199,9 @@
 ### 设计模式
 1. design pattern
    - 理解
-     1. 是遇到问题的解决方案，是自下而上的，来源于实践，发现模式而不是发明模式
-     1. 是特定环境下同类问题的解决方案，但是实现细节却有非常多的差别
+     1. 是特定环境下同类问题的解决方案，是自下而上的，来源于实践，发现模式而不是发明模式
+     1. 是对高频变化点的结构化处理
+        - 未来最可能变化的是什么？变化应该被隔离在哪一层？谁应该依赖谁？运行时还是编译时决定？是数据变化、行为变化，还是流程变化？
      1. 问题是所有的基础
      1. 设计模式是语言无关的
      1. 好处：好的代码风格，易读性，扩展性强，稳定性好
@@ -212,26 +213,58 @@
      1. 尽量解耦
      1. 抽象类高于实现：尽量一般化而不特殊化
 1. 分类：23种设计模式
-   - 创建型
+   - 创建型：解决对象怎么产生，`new谁？什么时候new？`，隔离“实例化变化”
      1. 类模式：工厂方法
      1. 对象模式：单例、工厂(简单工厂/抽象工厂)、建造者、原型
-   - 结构型
+   - 结构型：解决对象怎么组合，`这些东西怎么拼起来？`，隔离“依赖关系变化”
      1. 类模式：适配器
      1. 对象模式：桥接、装饰、组合、外观、享元、代理
-   - 行为型
+   - 行为型：解决对象怎么协作，`逻辑怎么流转？谁负责什么？`，隔离“算法/流程变化”
      1. 类模式：模版方法、解释器
      1. 对象模式：命令、迭代器、观察者、中介者、备忘录、状态、策略、职责链、访问者
 1. 模式理解
-   - 单例模式：就是保证一个类只有一个实例，并提供一个访问它的全局访问点
-   - 工厂模式：定义一个用于创建对象的接口，让子类决定实例化哪一个类。工厂方法使一个类的实例化延迟到其子类
    - 策略模式：封装一堆算法，用的时候注入不同的策略
 1. 单例模式
-   - 理解：建立在面向对象基础上，要确保某个类只有一个实例，避免不断new浪费资源，完善全局变量的功能。php的所有在页面执行完后全部清空削弱了单例的表现，饿汉模式、懒汉模式
+   - 理解：保证只有一个实例，并提供一个访问它的全局访问点，避免不断new浪费资源，同时承担全局唯一的功能。php的所有在页面执行完后全部清空削弱了单例的表现，饿汉模式、懒汉模式
    - 要点
      1. 类只能有一个实例
      1. 它自己自行创建这个实例
      1. 它必须自行向整个系统提供这个实例
-   - 基础例子
+   - 最佳实践
+     1. go中
+        - 一般使用直接实例化就够了，更推荐通过依赖注入管理生命周期
+        - 不封装到内部的单例经常是臭味，会产生隐式依赖和全局状态；和go的设计哲学(显式依赖和可测试性)存在一些冲突
+          1. 隐式全局状态：通过参数传递、结构体字段或接口显式注入依赖，让数据流清晰可见来解决
+             - 状态共享不可见：调用方不知道某个函数内部依赖了全局单例，依赖关系被隐藏
+             - 难以推理：单例的状态可能被任意代码修改，程序的执行结果可能依赖于调用顺序或并发时序
+          1. 测试困难
+             - 无法替换实现：单例硬编码了具体类型，测试时难以用Mock或Fake替换
+             - 状态污染：单例的全局状态可能在测试用例之间残留，导致测试相互影响（需手动重置）
+          1. 并发安全问题：优先使用无状态设计；若有状态，则明确其生命周期和所有者，避免全局共享
+             - 虽然用sync.Once解决了单例初始化线程安全，但单例内部可变状态的并发访问仍需额外加锁
+             - 锁可能成为性能瓶颈或死锁源头
+          1. 违反“显式优于隐式”原则
+             - 让函数签名“说谎”：如函数签名无参数，却依赖全局单例
+             - 增加代码维护者的认知负担（需要查找隐藏的依赖）
+   - 实例
+     1. go
+        ```go
+        // go这么写很多时候已经够了
+        var DefaultClient = &Client{}
+
+        // 更推荐
+        // 1. 通过依赖注入管理生命周期
+        type Service struct {
+            db *sql.DB
+        }
+
+        func NewService(db *sql.DB) *Service {
+            return &Service{db: db}
+        }
+
+        // 2. 通过context或配置结构体传递，避免全局可变状态
+        ```
+     1. php
         ```php
         class User{
             static private $_instance = NULL;               // 静态成员变量，保存全局实例
@@ -269,8 +302,11 @@
         $bar = Bar::getInstance();
         ```
 1. 工厂模式
-   - 理解：创建型模式，定义一个由工厂方法或者类生成对象的工厂，让子类决定实例化哪一个类。本质上将不变的部分提取出来，将可变的部分留作接口，以达到最大程度上的复用
-   - 适用性：有众多子类并且会扩充，创建方法比较复杂的情况下适用。工厂类在多态性编程实践中是至关重要的，它允许动态的替换类，修改配置，使程序更加灵活
+   - 理解：定义一个用于创建对象的接口，让子类决定实例化哪一个类，使实例化延迟到其子类来决定
+     1. 本质是将不变的部分提取出来，将可变的部分留作接口，以达到最大程度上的复用
+   - 场景：有众多子类且会扩充，创建方法比较复杂的情况下适用。工厂类在多态性编程实践中是至关重要的，它允许动态的替换类/修改配置，使程序更加灵活
+   - 最佳实践
+     1. go中通常一次性完成整个dependency graph，`NewApplication(config)`
    - 分类
      1. 简单工厂：违背开闭原则，增加新产品时需修改工厂代码。用于客户只知道传入工厂类的参数，将客户端和对象创建隔离
         ```php
@@ -298,119 +334,151 @@
         $teacher = $factory->getPerson('teacher');
         $teacher->getName();
         ```
-     1. 工厂方法：只有一条产品线，抽象工厂的简化。遵守了开闭原则，但是将选择实例化交给了客户。将创建对象的职责转移给子类中的一个，从而实现扩展不修改根代码
+     1. 工厂方法：遵守开闭原则，一个方法只创建一种产品，通过继承让子类决定创建哪个具体产品
         ```php
-        // 工厂方法
-        interface Factory
-        {
-            public function produce();
+        // 产品接口
+        interface Button {
+            public function render();
         }
-        // 具体实现
-        class Farm implements Factory
-        {
-            public function produce() {}
+
+        // 具体产品
+        class WindowsButton implements Button {
+            public function render() { echo "Windows 按钮\n"; }
         }
-        class Airport implements Factory
-        {
-            public function produce() {}
+
+        class MacButton implements Button {
+            public function render() { echo "Mac 按钮\n"; }
         }
-        // 客户端
-        $farm = new Farm();
-        $farm->produce();
+
+        // 抽象创建者
+        abstract class Dialog {
+            // 工厂方法：子类决定创建什么
+            abstract protected function createButton(): Button;
+
+            // 使用产品的逻辑
+            public function renderDialog() {
+                $button = $this->createButton();
+                $button->render();
+            }
+        }
+
+        // 具体创建者
+        class WindowsDialog extends Dialog {
+            protected function createButton(): Button {
+                return new WindowsButton();
+            }
+        }
+
+        class MacDialog extends Dialog {
+            protected function createButton(): Button {
+                return new MacButton();
+            }
+        }
+
+        // 使用
+        $dialog = new WindowsDialog();
+        $dialog->renderDialog();  // 输出：Windows 按钮
         ```
-     1. 抽象工厂：有多条产品线，系统提供一个产品类的库，所有的产品以同样的接口出现，从而使客户端不依赖于实现
-        ```php
-        // 定义集团
-        interface Factory {
-            public function createFarm();
-            public function createZoo();
-        }
-        class AnimalFactory implements Factory {
-            public function createFarm() {
-                return new PigFarm();
-            }
-            public function createZoo() {
-                return new PandaZoo();
-            }
+     1. 抽象工厂：Abstract Factory，一个工厂创建一组相关的产品，通过组合切换整个产品族，保证产品之间风格/版本一致
+        ```go
+        // 产品接口
+        type Button interface {
+            Render()
         }
 
-        $animal = new AnimalFactory();                                  // 初始化一个动物生产线, 包含了一类产品
-        $plant = new PlantFactory();                                    // 初始化一个植物生产线, 包含了一类产品
-
-        // 调用，最后都调用money方法
-        function call($factory) {
-            $earn = function($income) {
-                $income->money();
-            };
-            $earn($factory->createFarm());
-            $earn($factory->createZoo());
+        type InputBox interface {
+            Render()
         }
-        call($animal);
-        call($plant);
+
+        // Windows 产品族
+        type WindowsButton struct{}
+        func (b WindowsButton) Render() { fmt.Println("Windows 按钮") }
+
+        type WindowsInputBox struct{}
+        func (b WindowsInputBox) Render() { fmt.Println("Windows 输入框") }
+
+        // Mac 产品族
+        type MacButton struct{}
+        func (b MacButton) Render() { fmt.Println("Mac 按钮") }
+
+        type MacInputBox struct{}
+        func (b MacInputBox) Render() { fmt.Println("Mac 输入框") }
+
+        // 抽象工厂接口
+        type UIFactory interface {
+            CreateButton() Button
+            CreateInputBox() InputBox
+        }
+
+        // Windows 工厂
+        type WindowsUIFactory struct{}
+        func (f WindowsUIFactory) CreateButton() Button { return WindowsButton{} }
+        func (f WindowsUIFactory) CreateInputBox() InputBox { return WindowsInputBox{} }
+
+        // Mac 工厂
+        type MacUIFactory struct{}
+        func (f MacUIFactory) CreateButton() Button { return MacButton{} }
+        func (f MacUIFactory) CreateInputBox() InputBox { return MacInputBox{} }
+
+        func main() {
+            var factory UIFactory = WindowsUIFactory{}
+            
+            button := factory.CreateButton()
+            inputBox := factory.CreateInputBox()
+            
+            button.Render()    // Windows 按钮
+            inputBox.Render()  // Windows 输入框
+        }
         ```
 1. 建造者模式
-   - 理解：就是用一个建造类建造另一个类让对象更方便建造，同样的建造过程创建不同的表示，定义建造的配置，不关心建造过程和细节，简单对象构建复杂对象，
+   - 理解：把复杂对象的构建过程从对象本身剥离
+     1. 用于参数很多、构建过程复杂的对象
      1. 良好封装性，使用者可以不用了解内部组成就创建可使用的对象
      1. 建造者独立，被建造类容易扩展
-   - 实例：建造几个王者荣耀英雄
-     1. 被建造类
-        ```java
-        public class HeroConfig{
-            HeroBuilder mbuilder = null;
-            // 英雄的两个技能
-            private String firstSkill;
-            private String secondSkill;
-            private String TPeffect = "无回城特效";
+   - 最佳实践
+     1. go中
+        - 是非常值得掌握的模式，大量go sdk都这么设计
+   - 实例
+    ```go
+    // functional options
+    type Server struct {
+        addr    string
+        timeout time.Duration
+    }
 
-            public HeroConfig(HeroBuilder builder) {
-                mbuilder = builder;
-                init();
-            }
-            private void init() {
-                if(mbuilder.firstSkill != null) {
-                    firstSkill = mbuilder.firstSkill;
-                }
-                if(mbuilder.secondSkill != null) {
-                    secondSkill = mbuilder.secondSkill;
-                }
-                if(mbuilder.TPeffect != null) {
-                    TPeffect = mbuilder.TPeffect;
-                }
-            }
-            @Override
-            public String toString() {
-                return "技能1-->" + firstSkill + " 技能2-->" + secondSkill + " 技能2-->" + thirdSkill + " 回城特效-->" + TPeffect;
-            }
+    type Option func(*Server)
+
+    func WithAddr(addr string) Option {
+        return func(s *Server) {
+            s.addr = addr
         }
-        ```
-     1. 建造者(即建造执行者)
-        ```java
-        public static class HeroBuilder{
-            // 英雄的两个技能
-            private String firstSkill;
-            private String secondSkill;
-            private String TPeffect;        // 回城效果
-
-            public HeroBuilder(String firstSkill, String secondSkill) {
-                this.firstSkill = firstSkill;
-                this.secondSkill = secondSkill;
-            }
-
-            public HeroConfig create() {
-                HeroConfig mHeroConfig = new HeroConfig(this);
-                return mHeroConfig;
-            }
-
-            public HeroBuilder builderTPeffect(String effect) {
-                this.TPeffect = effect;
-                return this;                // 实现链式调用
-            }
+    }
+    func WithTimeout(timeout time.Duration) Option {
+        return func(s *Server) {
+            s.timeout = timeout
         }
-        ```
-     1. 使用，来建造类
-        ```java
-        HeroConfig 韩信 = new HeroConfig.HeroBuilder("无情冲锋","背水一战","国士无双").BuilTPeffect("金光闪闪").create();
-        ```
+    }
+
+    // 建造者
+    func NewServer(opts ...Option) *Server {
+        s := &Server{
+            addr:    ":8080",
+            timeout: 3 * time.Second,
+        }
+
+        for _, opt := range opts {
+            opt(s)
+        }
+
+        return s
+    }
+
+    // 调用
+    server := NewServer(
+        WithAddr(":9000"),
+        WithTimeout(5*time.Second),
+    )
+    ```
 1. 原型模式
    - 理解：复制原型创建新的对象，从一个对象克隆一个新的，而不需要知道如何创建的细节。可用于创建对象成本过高
      1. 浅复制：引用不会被复制
