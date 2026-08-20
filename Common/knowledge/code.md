@@ -1223,149 +1223,70 @@
     send("订单支付成功", email)
     ```
 1. 模板方法模式
-   - 理解：定义好骨架，将一些步骤延迟到子类中，使得子类不改变骨架即可重定义某些步骤。把不变的聚合，变的暴露出来
-   - code
-    ```c#
-    class TestPaper
-    {
-        public void TestQuestion1()
-        {
-            Console.WriteLine(" 杨过得到，后来给了郭靖，炼成倚天剑、屠龙刀的玄铁可能是[ ] a.球磨铸铁 b.马口铁 c.高速合金钢 d.碳素纤维 ");
-            Console.WriteLine("答案：" + Answer1());
-        }
-
-        public void TestQuestion2()
-        {
-            Console.WriteLine(" 杨过、程英、陆无双铲除了情花，造成[ ] a.使这种植物不再害人 b.使一种珍稀物种灭绝 c.破坏了那个生物圈的生态平衡 d.造成该地区沙漠化  ");
-            Console.WriteLine("答案：" + Answer2());
-        }
-
-        protected virtual string Answer1()
-        {
-            return "";
-        }
-
-        protected virtual string Answer2()
-        {
-            return "";
-        }
-    }
-    //学生甲抄的试卷
-    class TestPaperA : TestPaper
-    {
-        protected override string Answer1()
-        {
-            return "b";
-        }
-
-        protected override string Answer2()
-        {
-            return "c";
-        }
-    }
-    //学生乙抄的试卷
-    class TestPaperB : TestPaper
-    {
-        protected override string Answer1()
-        {
-            return "c";
-        }
-
-        protected override string Answer2()
-        {
-            return "a";
-        }
+   - 理解：把一套固定流程放在“模板”里，流程中的某些步骤留给具体实现去决定
+     1. 场景：整体流程一样，但某几个步骤会因业务不同而变化
+   - 最佳实践
+     1. go中没有继承，所以通常用接口 + 组合来实现模板方法
+     1. 和策略模式经常一起出现，用策略替换其中的可变部分
+   - 示例
+    ```go
+    // 短信和邮件的发送流程都是参数校验、构造内容、发送
+    type Sender interface {
+        Build() string
+        Send(string)
     }
 
-    // 试卷答题
-    class Program
-    {
-        static void Main(string[] args)
-        {
-            Console.WriteLine("学生甲抄的试卷：");
-            TestPaper studentA = new TestPaperA();
-            studentA.TestQuestion1();
-            studentA.TestQuestion2();
+    func SendMessage(s Sender) {                // 模板方法
+        fmt.Println("校验参数") // 固定
 
-            Console.WriteLine("学生乙抄的试卷：");
-            TestPaper studentB = new TestPaperB();
-            studentB.TestQuestion1();
-            studentB.TestQuestion2();
+        msg := s.Build()       // 可变
+        s.Send(msg)            // 可变
 
-            Console.Read();
-        }
+        fmt.Println("记录日志") // 固定
     }
+
+    // 短信实现
+    type SMS struct{}
+    func (SMS) Build() string {
+        return "验证码：1234"
+    }
+    func (SMS) Send(msg string) {
+        fmt.Println("发送短信:", msg)
+    }
+
+    // 使用
+    SendMessage(SMS{})
     ```
 1. 访问者模式
-   - 理解：设计模式中最复杂的一个模式。表示作用于某对象结构中的各元素的操作，可以在不改变各元素的类的前提下定义作用于这些元素的新操作。即改变的新增的是访问者
-     1. 就是将处理从数据结构分离出来，将数据结构和作用于数据结构的操作解耦合，使得操作可以自由变化，体现开放-封闭原则
-     1. 适用于数据结构相对稳定，又有变化多端的算法。也就是启用条件苛刻：大多时候你并不需要访问者模式，一旦需要时就真的需要了
-     1. 新增数据结构就比较麻烦了
-     1. 双分派技术：不仅受具体状态的影响，还受访问的人的影响
-        - 第一次分派：状态作为参数传递给具体人类
-        - 第二次分派：人类调用某个访问者方法后，将自己(this)作为参数传递进去
-   - 组成
-     1. 一个访问者抽象类：稳定的按照数据结构个数安排的抽象逻辑方法，多个具体算法状态类
-     1. 数据结构抽象类：有一个用结构具体类使用访问者的哪一个方法的抽象方法
-   - demo
-    ```c#
-    // 定义访问者抽象类
-    abstract class Visitor
-    {
-        // 以下两个抽象方法决定了只有两个数据结构
-        public abstract void VisitConcreteElementA(ConcreteElementA concreteElementA);
+   - 理解：对象类型比较稳定，但针对这些对象的“操作”经常增加时，把操作从对象里抽出去
+     1. 数据结构和业务操作解耦：操作可以自由变化，体现开放-封闭原则
+     1. 场景：数据结构稳定，有多变化的算法
+     1. 新增操作会很舒服，于新增对象类型很痛苦(原有的操作都需要补)
+   - 最佳实践
+     1. go没有OOP方法重载，通常用Accept()/VisitXXX()显式的模拟出来
+     1. AST是Visitor的教科书级场景
+   - 示例
+    ```go
+    // 系统里长期存在订单、退款，需要做审计、导出、统计、风控检查等
+    type Order struct{ ID int }
+    func (o *Order) Accept(v Visitor)  { v.VisitOrder(o) }
+    type Refund struct{ ID int }
+    func (r *Refund) Accept(v Visitor) { v.VisitRefund(r) }
 
-        public abstract void VisitConcreteElementB(ConcreteElementB concreteElementB);
+    type Visitor interface {
+        VisitOrder(*Order)
+        VisitRefund(*Refund)
     }
 
-    // 访问者实现类
-    class ConcreteVisitor1 : Visitor
-    {
-        public override void VisitConcreteElementA(ConcreteElementA concreteElementA)
-        {
-            Console.WriteLine("{0}被{1}访问", concreteElementA.GetType().Name, this.GetType().Name);
-        }
+    // 审计操作
+    type AuditVisitor struct{}
+    func (AuditVisitor) VisitOrder(o *Order)   { fmt.Println("审计订单", o.ID) }
+    func (AuditVisitor) VisitRefund(r *Refund) { fmt.Println("审计退款", r.ID) }
 
-        public override void VisitConcreteElementB(ConcreteElementB concreteElementB)
-        {
-            Console.WriteLine("{0}被{1}访问", concreteElementB.GetType().Name, this.GetType().Name);
-        }
-    }
-
-    // 数据结构抽象类
-    abstract class Element
-    {
-        public abstract void Accept(Visitor visitor);
-    }
-
-    // 数据结构具体类
-    class ConcreteElementA : Element
-    {
-        public override void Accept(Visitor visitor)                // 双分派的第一次分派
-        {
-            visitor.VisitConcreteElementA(this);                    // 双分派的第二次分派
-        }
-
-        public void OperationA()
-        { }
-    }
-
-    class Program
-    {
-        static void Main(string[] args)
-        {
-            ConcreteElementA a = new ConcreteElementA();
-            ConcreteElementB b = new ConcreteElementB();
-
-            ConcreteVisitor1 v1 = new ConcreteVisitor1();
-            ConcreteVisitor2 v2 = new ConcreteVisitor2();
-
-            a.Accept(v1);
-            a.Accept(v2);
-            b.Accept(v1);
-            b.Accept(v2);
-        }
-    }
+    // 使用
+    v := AuditVisitor{}                         // 把横向操作拿出去，要不然Order/Refund会逐渐承担一堆本来不属于订单核心领域逻辑的职责
+    (&Order{ID: 1}).Accept(v)                   // 双分派：第一次确定对象类型，第二次执行的操作
+    (&Refund{ID: 2}).Accept(v)
     ```
 ### 软件设计模式
 1. IoC和DI
