@@ -213,16 +213,26 @@
      1. 尽量解耦
      1. 抽象类高于实现：尽量一般化而不特殊化
 1. 分类：23种设计模式
-   - 创建型：解决对象怎么产生，`new谁？什么时候new？`，隔离“实例化变化”
-     1. 类模式：工厂方法
-     1. 对象模式：单例、工厂(简单工厂/抽象工厂)、建造者、原型
-   - 结构型：解决对象怎么组合，`这些东西怎么拼起来？`，隔离“依赖关系变化”
-     1. 类模式：适配器
-     1. 对象模式：桥接、装饰、组合、外观、享元、代理
-   - 行为型：解决对象怎么协作，`逻辑怎么流转？谁负责什么？`，隔离“算法/流程变化”
-     1. 类模式：模版方法、解释器
-     1. 对象模式：命令、迭代器、观察者、中介者、备忘录、状态、策略、职责链、访问者
-1. 模式理解
+    | 类型 | 核心问题 | 关键提问 | 隔离的变化 | 具体模式 |
+    |------|----------|----------|------------|----------|
+    | 创建型 | 解决对象怎么产生 | `new谁？什么时候new？` | 隔离“实例化变化” | 单例、工厂、抽象工厂、建造者、原型 |
+    | 结构型 | 解决对象怎么组合 | `这些东西怎么拼起来？` | 隔离“依赖关系变化” | 适配器、桥接、组合、装饰器、外观、享元、代理 |
+    | 行为型 | 解决对象怎么协作 | `逻辑怎么流转？谁负责什么？` | 隔离“算法/流程变化” | 责任链、命令、解释器、迭代器、中介者、备忘录、观察者、状态、策略、模版方法、访问者 |
+1. 比较
+    | 模式                | 目的                |
+    | ----------------- | ----------------- |
+    | Adapter 适配器                    | 不兼容接口 → 兼容接口           |
+    | Decorator 装饰器                  | 原有功能 → 我给它加点能力        |
+    | Facade 外观                       | 复杂接口 → 提供简单接口         |
+    | Proxy 代理                        | 增加代理的逻辑                 |
+
+    | Chain of Responsibility 责任链    | 请求沿着处理链一个个传递         |
+    | Command  命令                     | 做什么                        |
+    | Mediator 中介者                   | 集中协调多个对象之间的交互        |
+    | Observer 观察者                   | 一个事件发生，通知一批订阅者      |
+    | State 状态                        | 现在是什么状态，所以决定怎么做    |
+    | Strategy 策略                     | 选择怎么做，调用方主动选择策略    |
+
    - 策略模式：封装一堆算法，用的时候注入不同的策略
 1. 单例模式
    - 理解：保证只有一个实例，并提供一个访问它的全局访问点，避免不断new浪费资源，同时承担全局唯一的功能。php的所有在页面执行完后全部清空削弱了单例的表现，饿汉模式、懒汉模式
@@ -481,8 +491,8 @@
     ```
 1. 原型模式
    - 理解：复制原型创建新的对象，从一个对象克隆一个新的，而不需要知道如何创建的细节。可用于创建对象成本过高
-     1. 浅复制：引用不会被复制
-     1. 深复制：可调用被引用对象自身的克隆方法进行复制
+     1. 浅拷贝：引用不会被复制，注意共享修改
+     1. 深拷贝：可调用被引用对象自身的克隆方法进行复制
    - 代码
         ```php
         // 原型接口
@@ -519,276 +529,698 @@
         $prototypeCloneOne->getName();
         ```
 1. 适配器模式
-   - 理解：把实现了不同接口的对象通过适配器的方式组合起来放在一个新的环境
-    ```php
-    class Adapter {
-        private $_advancePlayerInstance;
-        private $_type = '';
-        public function __construct($type='') {
-            switch ($type) {
-                case 'mp4':
-                    $this->_advancePlayerInstance = new AdvanceMp4Player();
-                    break;
-                case 'wma':
-                    $this->_advancePlayerInstance = new AdvanceWmaPlayer();
-                    break;
-                default:
-            }
-            $this->_type = $type;
-        }
-        public function play($file='') {
-            switch ($this->_type) {
-            case 'mp4':
-                $this->_advancePlayerInstance->playMp4($file);
-                break;
-            case 'wma':
-                $this->_advancePlayerInstance->playWma($file);
-                break;
-            default:
-                break;
-            }
-        }
-    }
-    class AudioPlayer implements MediaInterface {
-        public function play($file='', $type='') {
-            switch ($type) {
-            case 'mp3':
-                echo 'playing file: ' . $file . ".mp3\n";
-                break;
-            case 'mp4':
-                $adapter = new Adapter($type);
-                $adapter->play($file);
-                break;
-            case 'wma':
-                $adapter = new Adapter($type);
-                $adapter->play($file);
-                break;
-            default:
-                break;
-            }
-        }
+   - 理解：把一个“接口不兼容”的现有对象，转换成你想要的接口，是“事后兼容”
+     1. 屏蔽多来源细节，统一调用
+     1. 建立防腐层，阻止外部系统的数据结构、接口设计和SDK细节污染自己的业务代码
+   - 场景
+     1. 接第三方SDK
+     1. 多来源(供应商、存储系统、MQ等)统一接口
+     1. 老接口迁移到新接口
+   - 最佳实践
+     1. go中
+        - go里的Adapter往往非常薄，甚至可以只有几行，因为是隐式实现接口
+   - 示例
+    ```go
+    type Payment interface {
+	    Pay() string
     }
 
-    $mp4 = new AudioPlayer();
-    $mp4->play('忍者', 'mp3');
-    $mp4->play('彩虹', 'wma');
+    type Alipay struct{}
+    func (Alipay) DoPay() string {              // 支付宝SDK长这样
+        return "alipay"
+    }
+
+    type AlipayAdapter struct {                 // 针对aliPay的适配器
+        Alipay
+    }
+    func (a AlipayAdapter) Pay() string {
+        return a.DoPay()
+    }
+
+    // 业务代码使用
+    func checkout(p Payment) {
+        fmt.Println(p.Pay())
+    }
+    func main() {
+        checkout(AlipayAdapter{Alipay{}})
+    }
     ```
 1. 桥接模式
-   - 理解：基础的结构型设计模式，将抽象和实现解耦，对抽象的实现是实体行为对接口的实现
-1. 装饰模式
-   - 理解：动态地给一个对象增加一些额外的职责，就增加功能来说比生成子类更加灵活。将一个类的对象嵌入另一个对象中，由另一个对象来决定是否调用嵌入对象的行为以扩展自己的行为，称这个嵌入的对象为装饰器。
-     1. 组装过程中建造者模式要求建造过程是稳定的，装饰模式不稳定
-     1. 就是为已有功能添加更多功能的方式，即这些功能仅仅是特殊情况下才会加入的，装饰模式将装饰功能封装到具体的类中，就可以有选择、有顺序的使用了
-   - 组成
-     1. 结构图
-        - Component接口：下边是Decorator装饰抽象类和ConcreteComponent具体类，继承关系
-        - Decorator装饰抽象类：下边ConcreteDecorator具体装饰类
-     1. 组成
-        - Component接口：定义具体需要装饰的方法，只有一个装饰器的话，需要将Decorator继承ConcreteComponent
-        - ConcreteComponent：具体装饰，给Component添加职责的功能
-        - Decorator：装饰抽象类
-        - ConcreteDecorator：具体装饰类，实现需要装饰的方法，添加自己的特点
-   - demo
-    ```c#
-    namespace 装饰模式
-    {
-        abstract class Component
-        {
-            public abstract void Operation();
+   - 理解：把“抽象”和“实现”拆成两个独立维度，通过组合连接起来，让它们可以分别变化，是“事前解耦”
+     1. 就是解耦了排列组合
+     1. 场景：两个维度都在变化，如果全靠继承/组合类型，会产生类爆炸
+        ```
+        如：
+        消息类型：普通消息、紧急消息
+        发送渠道：短信、微信、Email
+
+        如果直接组合成类型会越来越多：
+        普通短信
+        普通微信
+        紧急短信
+        紧急微信
+        ...
+
+        桥接模式把它拆开：
+        消息类型 ──> 桥接 ──> 发送渠道
+        ```
+   - 示例
+    ```go
+    type Sender interface {
+        Send(string)
+    }
+
+    type SMS struct{}
+    func (SMS) Send(s string) { fmt.Println("SMS:", s) }
+
+    type Message struct {                                       // 桥，不自己实现发送，而是持有一个Sender
+        sender Sender
+    }
+    func (m Message) Send(s string) {
+        m.sender.Send(s)
+    }
+
+    // 使用
+    Message{SMS{}}.Send("hello")
+
+    // 以后增加微信消息
+    type WeChat struct{}
+    func (WeChat) Send(s string) { fmt.Println("WeChat:", s) }
+    // 再增加消息类型
+    type Urgent struct {
+        sender Sender
+    }
+    func (u Urgent) Send(s string) {
+        u.sender.Send("[紧急]" + s)
+    }
+
+    // 直接
+    Message{WeChat{}}.Send("hello")
+    Urgent{SMS{}}.Send("服务器挂了")
+    ```
+1. 组合模式
+   - 认识：单个和整体统一对待，专治树形结构。把“单个对象”和“一组对象”统一成同一种接口，让调用方不用区分叶子节点还是组合节点
+     1. 关键点是文件和目录都实现同一个接口
+     1. 场景：特别适合树形结构，如目录下有目录和文件，目录又有目录和文件
+   - 最佳实践
+     1. go里的组合模式通常非常轻，因为go不需要继承
+   - 示例
+    ```go
+    type Node interface {
+        Print()
+    }
+
+    type File string
+    func (f File) Print() {
+        fmt.Println(f)
+    }
+
+    type Dir []Node
+    func (d Dir) Print() {
+        for _, n := range d {
+            n.Print()
+        }
+    }
+
+    func main() {
+        root := Dir{                        // 最关键的是这个Dir，既可以放File，又可以放Dir
+            File("a.txt"),
+            File("b.txt"),
+            Dir{
+                File("c.txt"),
+            },
         }
 
-        class ConcreteComponent : Component
-        {
-            public override void Operation()
-            {
-                Console.WriteLine("具体对象的操作");
-            }
-        }
-
-        abstract class Decorator : Component
-        {
-            protected Component component;
-
-            public void SetComponent(Component component)
-            {
-                this.component = component;
-            }
-
-            public override void Operation()
-            {
-                if (component != null)
-                {
-                    component.Operation();
-                }
-            }
-        }
-
-        class ConcreteDecoratorA : Decorator
-        {
-            private string addedState;                      // 本类独有功能
-
-            public override void Operation()
-            {
-                base.Operation();                           // 一层层装饰能够连续进行的保证***
-                addedState = "New State";                   // 本装饰的作用
-                Console.WriteLine("具体装饰对象A的操作");
-            }
-        }
-
-        class ConcreteDecoratorB : Decorator
-        {
-            private void AddedBehavior()
-
-            public override void Operation()
-            {
-                base.Operation();
-                AddedBehavior();
-                Console.WriteLine("具体装饰对象B的操作");
-            }
-        }
-
-        class Program
-        {
-            static void Main(string[] args)
-            {
-                ConcreteComponent c = new ConcreteComponent();          // 初始化装饰器
-                ConcreteDecoratorA d1 = new ConcreteDecoratorA();       // 初始化装饰
-                ConcreteDecoratorB d2 = new ConcreteDecoratorB();
-
-                d1.SetComponent(c);                                     // 一层层加入装饰***
-                d2.SetComponent(d1);
-
-                d2.Operation();
-            }
-        }
+        root.Print()
     }
     ```
+1. 装饰器模式
+   - 理解：不修改原对象代码，通过“套一层壳”的方式，动态给对象增加功能
+     1. 即原能力加日志、加重试、加监控、加缓存，每一层都实现同一个接口 + 持有同一个接口
+     1. 组成：原对象、装饰器A、装饰器B
+   - 最佳实践
+     1. 常用于中间件middleware的使用，如
+        ```go
+        func Auth(next Handler) Handler {
+            return func(ctx context.Context, req Request) Response {
+                // check token
+                return next(ctx, req)
+            }
+        }
+        ```
+   - 示例
+    ```go
+    // 通常用interface + struct包装实现
+    // 核心模版代码
+    type Component interface {
+        Do()
+    }
+
+    type Decorator struct {
+        Component
+    }
+
+    func (d Decorator) Do() {
+        // 增强逻辑
+        d.Component.Do()
+    }
+
+
+    // 示例：有一个发送消息的能力
+    type Sender interface {
+        Send()
+    }
+
+    type Email struct{}
+    func (Email) Send() {
+        fmt.Println("send email")
+    }
+
+    // 日志机制
+    type LogSender struct {
+        Sender
+    }
+    func (l LogSender) Send() {
+        fmt.Println("log")
+        l.Sender.Send()
+    }
+
+    // 重试机制
+    type RetrySender struct {
+        Sender
+    }
+    func (r RetrySender) Send() {
+        fmt.Println("retry")
+        r.Sender.Send()
+    }
+    
+    // 使用
+    s := LogSender{Email{}}
+    s.Send()
+    // 继续套
+    s := RetrySender{
+	    LogSender{
+            Email{},
+        },
+    }
+    s.Send()
+    ```
 1. 外观模式
-   - 理解：为子系统中的一组接口提供一致的界面，使得子系统更加容易调用，也可以包装复杂的内部接口，重新提供简单的接口
-   - code
-    ```c#
-    class SubSystemOne
-    {
-        public void MethodOne()
-        {
-            Console.WriteLine(" 子系统方法一");
-        }
+   - 理解：给一堆复杂子系统包一层简单入口，让调用方不用关心内部怎么协作
+     1. 如下单实际涉及库存检查、支付、物流、通知，不能让业务方自己挨个调用
+   - 示例
+    ```go
+    type Stock struct{}
+    func (Stock) Check() { fmt.Println("检查库存") }
+
+    type Pay struct{}
+    func (Pay) Do() { fmt.Println("支付") }
+
+    type OrderFacade struct {
+        stock Stock
+        pay   Pay
     }
 
-    class SubSystemTwo
-    {
-        public void MethodTwo()
-        {
-            Console.WriteLine(" 子系统方法二");
-        }
+    func (o OrderFacade) Place() {
+        o.stock.Check()
+        o.pay.Do()
     }
 
-    class SubSystemThree
-    {
-        public void MethodThree()
-        {
-            Console.WriteLine(" 子系统方法三");
-        }
+    func main() {
+        OrderFacade{}.Place()
+    }
+    ```
+1. 享元模式
+   - 理解：把大量重复对象中“相同的部分”抽出来共享，避免重复创建对象，主要目的是省内存
+     1. 相同的东西只存一份，不同的东西从外面传：大量业务对象主动引用同一个共享对象，从对象模型层面消除重复状态
+     1. 如假设系统里有100万棵树，树种/纹理/颜色大量重复，所以不要创建100万份完整对象，而是100万个坐标 + 共享少量TreeType
+     1. 场景：对象特别多，并且对象之间存在大量重复数据
+   - 示例
+    ```go
+    // 多的是用户，固定的是角色
+    type Role struct {
+        Name  string
     }
 
-    class SubSystemFour
-    {
-        public void MethodFour()
-        {
-            Console.WriteLine(" 子系统方法四");
+    var roles = map[string]*Role{}
+    func GetRole(name string) *Role {
+        if roles[name] == nil {
+            roles[name] = &Role{name}
         }
+        return roles[name]
     }
 
-    class Facade                                                // 门面类
-    {
-        SubSystemOne one;
-        SubSystemTwo two;
-        SubSystemThree three;
-        SubSystemFour four;
-
-        public Facade()
-        {
-            one = new SubSystemOne();
-            two = new SubSystemTwo();
-            three = new SubSystemThree();
-            four = new SubSystemFour();
-        }
-
-        public void MethodA()                                   // 封装了调用，需要对子系统了解
-        {
-            Console.WriteLine("\n方法组A() ---- ");
-            one.MethodOne();
-            two.MethodTwo();
-            four.MethodFour();
-        }
-
-        public void MethodB()
-        {
-            Console.WriteLine("\n方法组B() ---- ");
-            two.MethodTwo();
-            three.MethodThree();
-        }
+    type User struct {
+        ID   int
+        Role *Role
     }
 
-    class Program
-    {
-        static void Main(string[] args)
-        {
-            Facade facade = new Facade();
+    func main() {
+        // 用户可以有很多，但是角色就那么些
+        a := User{1, GetRole("teacher")}
+        b := User{2, GetRole("teacher")}
 
-            facade.MethodA();
-            facade.MethodB();
-
-            Console.Read();
-        }
+        fmt.Println(a.Role == b.Role)       // true，证明只共享了一份角色
     }
     ```
 1. 代理模式
-   - 理解：对其他对象添加一层代理，就可以附加多种用途
-   - 作用
-     1. 可对一个类在不同地址空间进行局部代表，隐藏了一个类在不同空间的事实
-     1. 虚拟代理：提前做一些事情，比如预加载图片时虚拟类先弄个框，速度更快
-     1. 安全代理：控制权限
-     1. 其他：引用计数等
+   - 理解：不让调用方直接访问真实对象，而是先经过一个“代理对象”，由代理决定要不要、什么时候、怎么访问真实对象
+     1. 常用于：缓存、权限校验、限流、远程调用封装、延迟加载
    - code
-    ```c#
-    abstract class Subject
-    {
-        public abstract void Request();             // 定义共同接口，使得proxy可以完全代替实体
+    ```go
+    type UserService interface {
+        Get(id int) string
     }
 
-    class RealSubject : Subject                     // 真实实体
-    {
-        public override void Request()
-        {
-            Console.WriteLine("真实的请求");
+    type DBUserService struct{}
+    func (DBUserService) Get(id int) string {
+        return "用户数据" // 模拟查 DB
+    }
+
+    type UserProxy struct {
+        real  UserService
+        cache map[int]string
+    }
+    func (p *UserProxy) Get(id int) string {
+        if v, ok := p.cache[id]; ok {
+            return v
         }
+
+        v := p.real.Get(id)
+        p.cache[id] = v
+        return v
+    }
+    ```
+1. 注册树模式
+   - 理解：注册表模式，为了解决全局共享，将创建好的对象注册到注册树上，需要访问直接从注册树上查询即可
+     1. 核心是`map[string]xxx`
+   - 示例
+    ```go
+    var registry = map[string]Obj{}
+
+    func Register(name string, p Obj) {
+        registry[name] = p
+    }
+    ```
+1. 责任链模式
+   - 理解：把一堆处理器串成链，请求沿着链往下传，每个处理器只负责自己那一小段逻辑。即把请求交给责任链的下一个节点
+     1. 可以灵活设置链条
+     1. 每一步可以随时终止流程
+     1. 扩展处理方法直接新增、不需要修改之前的
+     1. 在业务开发中很常见，如下单操作为参数→库存→风控→创建订单，中间件middleware的next就是
+   - demo
+    ```go
+    // 一个订单处理流程
+    type Handler interface {
+        Handle(order *Order) error
     }
 
-    class Proxy : Subject                           // 代理类
-    {
-        RealSubject realSubject;
-        public override void Request()
-        {
-            if (realSubject == null)
-            {
-                realSubject = new RealSubject();
+    // 定义链条
+    type HandlerFunc struct {
+        next Handler
+        fn   func(*Order) error
+    }
+    func (h HandlerFunc) Handle(o *Order) error {
+        if err := h.fn(o); err != nil {
+            return err
+        }
+        if h.next != nil {
+            return h.next.Handle(o)
+        }
+        return nil
+    }
+
+    // 定义业务节点
+    stock := HandlerFunc{fn: func(o *Order) error {
+        if o.Stock <= 0 {
+            return errors.New("库存不足")
+        }
+        return nil
+    }}
+    risk := HandlerFunc{fn: func(o *Order) error {
+        if o.Amount > 10000 {
+            return errors.New("触发风控")
+        }
+        return nil
+    }}
+
+    // 串起来
+    stock.next = risk
+    err := stock.Handle(order)
+    ```
+1. 命令模式
+   - 理解：把“一次操作”封装成一个对象，让操作可以被存储、排队、重试、记录、撤销，而不是立即执行
+     1. 以前是“直接调用函数”，现在变成“先把要干什么包装成一个任务，再决定什么时候执行”
+     1. 之前是调用方和具体业务逻辑耦合在一起，现在拆开了
+     1. 意义在于可以：延迟、异步、失败重试、权限校验、批量
+     1. 把函数调用，从“现在立即执行的代码”，升级成“可以被管理的数据/对象化”，把行为本身当成数据传递
+   - 最佳实践
+     1. php中封装成job，可以独立运行，也可以异步运行
+   - 示例
+    ```go
+    // 单支付成功后发优惠券
+    type Command interface {
+        Execute()
+    }
+
+    type SendCoupon struct {                        // 是核心，变成了一个命令
+        userID int
+    }
+    func (c SendCoupon) Execute() {
+        fmt.Println("发优惠券:", c.userID)
+    }
+
+    func run(cmd Command) {
+        cmd.Execute()
+    }
+
+    // 使用
+    run(SendCoupon{userID: 1001})
+    ```
+1. 解释器模式
+   - 理解：把一套“规则/表达式”解析成程序可以执行的逻辑。是自定义的一套小语法/DSL，让不同的“表达式对象”解释它
+     1. 规则不是写死在代码里的，而配置出来的，可以做到动态化组合
+     1. 场景：动态规则、权限表达式、筛选条件、风控规则、优惠规则
+     1. 执行流程：规则配置 -> 表达式树 -> 递归执行每个节点
+   - 示例
+    ```go
+    // 评估对象
+    type Order struct {
+        VIP    bool
+        Amount int
+    }
+
+    // 表达式基结构
+    type Expr interface {
+        Match(Order) bool
+    }
+
+    type VIP struct{}                               // vip规则
+    func (VIP) Match(o Order) bool {
+        return o.VIP
+    }
+
+    type AmountGT struct {
+        N int
+    }
+    func (e AmountGT) Match(o Order) bool {         // 大于规则
+        return o.Amount > e.N
+    }
+
+    type And struct {                               // 且规则
+        A, B Expr
+    }
+    func (e And) Match(o Order) bool {
+        return e.A.Match(o) && e.B.Match(o)
+    }
+
+    type Or struct {                                // 或规则
+        A, B Expr
+    }
+    func (e Or) Match(o Order) bool {
+        return e.A.Match(o) || e.B.Match(o)
+    }
+
+    // 使用
+    func main() {
+        // 定义规则
+        rule := And{
+            VIP{},
+            AmountGT{100},
+        }
+
+        // 进行评判
+        fmt.Println(rule.Match(Order{
+            VIP:    true,
+            Amount: 200,
+        }))
+    }
+    ```
+1. 迭代器模式
+   - 理解：把“怎么遍历一堆数据”这件事，从业务代码里抽出去。即调用方只管不断Next()，不用知道数据底层是数组、链表、分页接口还是数据库游标
+     1. 把for循环背后的“取下一个数据”逻辑封装起来，价值是隐藏了分页/游标/批量查询等复杂的遍历逻辑
+   - 示例
+    ```go
+    // 待处理订单
+    type Order struct {
+        ID int
+    }
+
+    // 迭代器
+    type OrderIterator struct {
+        orders []Order
+        index  int
+    }
+    func (it *OrderIterator) HasNext() bool {
+        return it.index < len(it.orders)
+    }
+    func (it *OrderIterator) Next() Order {
+        o := it.orders[it.index]
+        it.index++
+        return o
+    }
+
+    // 使用
+    it := &OrderIterator{
+        orders: []Order{{1}, {2}, {3}},
+    }
+    for it.HasNext() {
+        order := it.Next()
+        fmt.Println(order.ID)
+    }
+    ```
+1. 中介者模式
+   - 理解：多个业务模块不要互相直接调用，统一通过一个“中间人”协调
+     1. 核心：降低对象之间的网状依赖，因为业务一复杂模块之间就互相引用
+     1. 中介者可以协调逻辑、顺序、条件判断
+     1. EventBus很多时候就是Mediator + Observer
+   - 示例
+    ```go
+    // 如支付成功之后改订单状态、扣库存、发通知
+    type OrderService struct{}
+    func (OrderService) Paid(id int) {}
+
+    type StockService struct{}
+    func (StockService) Deduct(id int) {}
+
+    type NotifyService struct{}
+    func (NotifyService) Send(id int) {}
+
+    type Mediator struct {
+        order  OrderService
+        stock  StockService
+        notify NotifyService
+    }
+    func (m Mediator) PaySuccess(orderID int) {
+        m.order.Paid(orderID)
+        m.stock.Deduct(orderID)
+        m.notify.Send(orderID)
+    }
+
+    // 使用
+    m := Mediator{}
+    m.PaySuccess(1001)
+
+    // 更标准一点的写法是抽接口
+    ```
+1. 备忘录模式
+   - 理解：在不暴露对象内部实现的情况下，保存对象某一时刻的状态，并且以后可以恢复，给业务对象做一个“快照/撤销点”
+     1. 别记录“怎么改回去”，直接保存“改之前是什么样”
+     1. 用于检查点、存档、快照、undo等
+   - 最佳实践
+     1. go中注意slice/map/pointer的浅复制问题
+   - 示例
+    ```go
+    // 修改订单信息，支持撤销
+    type Order struct {
+        Status string
+        Amount int
+    }
+
+    type Snapshot struct {                          // 快照本体
+        Status string
+        Amount int
+    }
+    func (o *Order) Save() Snapshot {
+        return Snapshot{o.Status, o.Amount}
+    }
+    func (o *Order) Restore(s Snapshot) {
+        o.Status = s.Status
+        o.Amount = s.Amount
+    }
+
+
+
+    // 使用
+    var history []Snapshot
+    order := &Order{"pending", 100}
+
+    history = append(history, order.Save())
+    order.Status = "paid"
+    history = append(history, order.Save())
+    order.Status = "refund"
+
+    // 撤销
+    last := history[len(history)-1]
+    history = history[:len(history)-1]
+
+    order.Restore(last)
+    ```
+1. 观察者模式
+   - 理解：一个对象发生变化后，自动通知一批依赖它的对象
+     1. 和发布订阅很像：但观察者通常是发布者直接持有观察者，而Pub/Sub中间通常多一层Broker/EventBus
+   - 示例
+     1. 通常写法
+        ```go
+        // 如支付成功之后改订单状态、扣库存、发通知
+        type Observer interface {                               // 观察者抽象
+            Update(orderID int)
+        }
+
+        type Order struct {
+            observers []Observer
+        }
+        func (o *Order) Subscribe(obs Observer) {               // 用户提供的订阅方法
+            o.observers = append(o.observers, obs)
+        }
+        func (o *Order) Pay(orderID int) {                      // 用户发生的事件
+            for _, obs := range o.observers {                   // 用户主动触发依赖
+                obs.Update(orderID)
             }
-
-            realSubject.Request();
         }
+
+        // 两个观察者
+        type PointService struct{}
+        func (PointService) Update(orderID int) {
+            fmt.Println("增加积分:", orderID)
+        }
+
+        type CouponService struct{}
+        func (CouponService) Update(orderID int) {
+            fmt.Println("发优惠券:", orderID)
+        }
+
+        // 使用
+        order := &Order{}
+
+        order.Subscribe(PointService{})
+        order.Subscribe(CouponService{})
+
+        order.Pay(1001)
+        ```
+     1. 精简写法
+        ```go
+        type Order struct {                                 // interface能省就省，直接把函数当观察者
+            observers []func(int)
+        }
+
+        func (o *Order) Subscribe(fn func(int)) {
+            o.observers = append(o.observers, fn)
+        }
+
+        func (o *Order) Pay(id int) {
+            for _, fn := range o.observers {
+                fn(id)
+            }
+        }
+        // 使用
+        order := &Order{}
+
+        order.Subscribe(func(id int) {
+            fmt.Println("增加积分", id)
+        })
+
+        order.Subscribe(func(id int) {
+            fmt.Println("发优惠券", id)
+        })
+
+        order.Pay(1001)
+        ```
+1. 状态模式
+   - 理解：同一个对象，因为当前状态不同，对同一个操作表现出不同的行为。把`if status == xxx`这种状态判断，拆到不同的状态对象里，因为状态变多判断就变多了
+     1. 把“根据状态判断该干什么”，变成“让当前状态自己决定该干什么”：剥离了本体对于分支业务的不同状态的判断包袱，让分支业务自己处理
+     1. 用于状态流转的逻辑处理，且状态数量较多且可能变化，一两个就没必要复杂设计了
+        - 状态机关注“状态怎么流转”
+        - 状态模式关注“不同状态下行为怎么变化”
+   - 示例
+    ```go
+    // 待支付/已支付/已取消，不同状态下能否取消订单不一样
+    type State interface {
+        Cancel()
     }
 
-    class Program
-    {
-        static void Main(string[] args)
-        {
-            Proxy proxy = new Proxy();              // 代理访问
-            proxy.Request();
-
-            Console.Read();
-        }
+    type Pending struct{}
+    func (Pending) Cancel() {
+        fmt.Println("订单取消成功")
     }
+
+    type Paid struct{}
+    func (Paid) Cancel() {
+        fmt.Println("已支付，不能直接取消")
+    }
+
+    type Order struct {
+        State State
+    }
+    func (o *Order) Cancel() {
+        o.State.Cancel()
+    }
+
+    // 使用
+    order := Order{State: Pending{}}
+    order.Cancel()
+
+    order.State = Paid{}
+    order.Cancel()
+    ```
+1. 策略模式
+   - 理解：把一组“可以互相替换的业务算法”抽出来，调用方根据场景选择其中一个
+     1. 当多个分支代表“同一件事的不同做法”时，把“做法”抽成策略
+        - 不要一看到switch就使用策略模式，关键看这些分支是不是同一个业务目标的不同实现方式
+     1. 调用方主动选择策略
+   - 示例
+    ```go
+    // 打折逻辑
+
+    // 坏味道的代码
+    switch userType {                                                       // 这里会变成巨大的策略分发中心，很糟糕
+    case "vip":
+        price *= 0.9
+    case "svip":
+        price *= 0.8
+    }
+
+    // 策略模式
+    type Discount interface {
+        Calc(float64) float64
+    }
+
+    type VIP struct{}
+    func (VIP) Calc(price float64) float64 { return price * 0.9 }
+    type SVIP struct{}
+    func (SVIP) Calc(price float64) float64 { return price * 0.8 }
+
+    func checkout(price float64, d Discount) float64 {                      // 策略执行器
+        return d.Calc(price)
+    }
+
+    // 使用
+    price := checkout(100, VIP{})  // 90
+    price := checkout(100, SVIP{}) // 80
+
+
+    // 极简写法
+    type Sender func(string)
+
+    func send(msg string, sender Sender) {
+        sender(msg)
+    }
+
+    sms := func(msg string) { fmt.Println("短信:", msg) }
+    email := func(msg string) { fmt.Println("邮件:", msg) }
+
+    send("验证码1234", sms)
+    send("订单支付成功", email)
     ```
 1. 模板方法模式
    - 理解：定义好骨架，将一些步骤延迟到子类中，使得子类不改变骨架即可重定义某些步骤。把不变的聚合，变的暴露出来
@@ -864,151 +1296,6 @@
         }
     }
     ```
-1. 观察者模式
-1. 策略模式
-   - 理解：定义了算法家族，分别封装起来，算法变化和用户使用进行了隔离，减少了算法类和使用算法之间的耦合，使其之间可以相互替换，比简单工厂单纯列举条件（主要是简单工厂遇到算法变化也要变化导致）要高级
-     1. 算法随时可能替换，这是变化点，封装变化点是面向对象的一个很重要的思维方式
-     1. 策略模式封装了变化，即写代码中消除了条件语句
-     1. 可以使用反射消除客户端对于算法选择的switch判断代码
-   - 组成
-     1. 结构图
-        - 策略接口：下边具体的策略类，继承关系
-        - 上下文：用一个配置维护对策略类对象的引用
-     1. 组成
-        - 策略接口：定义所有支持的算法的公共接口
-        - 具体策略类：封装了算法或者行为
-        - 上下文类
-   - demo
-    ```c#
-    namespace 策略模式
-    {
-        //抽象算法类
-        abstract class Strategy
-        {
-            //算法方法
-            public abstract void AlgorithmInterface();
-        }
-        //具体算法A
-        class ConcreteStrategyA : Strategy
-        {
-            //算法A实现方法
-            public override void AlgorithmInterface()
-            {
-                Console.WriteLine("算法A实现");
-            }
-        }
-        //具体算法B
-        class ConcreteStrategyB : Strategy
-        {
-            //算法B实现方法
-            public override void AlgorithmInterface()
-            {
-                Console.WriteLine("算法B实现");
-            }
-        }
-
-        //上下文
-        class Context
-        {
-            Strategy strategy;
-
-            public Context(Strategy strategy)
-            {
-                this.strategy = strategy;
-            }
-            //上下文接口
-            public void ContextInterface()
-            {
-                strategy.AlgorithmInterface();
-            }
-        }
-
-        class Program
-        {
-            static void Main(string[] args)
-            {
-                Context context;
-
-                context = new Context(new ConcreteStrategyA());
-                context.ContextInterface();
-
-                context = new Context(new ConcreteStrategyB());
-                context.ContextInterface();
-            }
-        }
-    }
-    ```
-1. 职责链模式
-   - 理解：利用抽象方法，将业务请求连成一条链层层传递，谁符合条件谁处理，重点在于多个对象都有机会处理请求，需要解耦请求发送者和接受者的关系
-     1. 客户端不需要关心处理类，可以灵活设置链条
-     1. 扩展处理方法不需要修改处理类，直接新增即可
-   - 组成
-     1. 一个抽象类，多个具体处理类：抽象类定义链条上下级和抽象处理方法
-     1. 客户端设置链条中的执行顺序
-   - demo
-    ```c#
-    // 抽象类
-    abstract class Handler
-    {
-        protected Handler successor;
-
-        public void SetSuccessor(Handler successor)                     // 设置链条继任者
-        {
-            this.successor = successor;
-        }
-
-        public abstract void HandleRequest(int request);                // 抽象处理方法
-    }
-
-    // 具体处理类
-    class ConcreteHandler1 : Handler
-    {
-        public override void HandleRequest(int request)
-        {
-            if (request >= 0 && request < 10)
-            {
-                Console.WriteLine("{0}  处理请求  {1}", this.GetType().Name, request);
-            }
-            else if (successor != null)
-            {
-                successor.HandleRequest(request);
-            }
-        }
-    }
-    class ConcreteHandler2 : Handler
-    {
-        public override void HandleRequest(int request)
-        {
-            if (request >= 10 && request < 20)
-            {
-                Console.WriteLine("{0}  处理请求  {1}", this.GetType().Name, request);
-            }
-            else if (successor != null)
-            {
-                successor.HandleRequest(request);
-            }
-        }
-    }
-    // 客户端代码
-    class Program
-    {
-        static void Main(string[] args)
-        {
-            Handler h1 = new ConcreteHandler1();
-            Handler h2 = new ConcreteHandler2();
-            Handler h3 = new ConcreteHandler3();
-            h1.SetSuccessor(h2);                                    // 设置链条
-            h2.SetSuccessor(h3);
-
-            int[] requests = { 2, 5, 14, 22, 18, 3, 27, 20 };
-
-            foreach (int request in requests)
-            {
-                h1.HandleRequest(request);
-            }
-        }
-    }
-    ```
 1. 访问者模式
    - 理解：设计模式中最复杂的一个模式。表示作用于某对象结构中的各元素的操作，可以在不改变各元素的类的前提下定义作用于这些元素的新操作。即改变的新增的是访问者
      1. 就是将处理从数据结构分离出来，将数据结构和作用于数据结构的操作解耦合，使得操作可以自由变化，体现开放-封闭原则
@@ -1080,8 +1367,6 @@
         }
     }
     ```
-1. 注册树模式
-   - 意图：全局共享/交换对象
 ### 软件设计模式
 1. IoC和DI
    - 认识
