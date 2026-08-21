@@ -72,6 +72,7 @@
    - 模式
      1. repository：仓储模式，使领域对象可被透明地持久化和检索，而无需暴露底层数据访问技术细节给领域层，一般将仓储接口定义放在领域层，仓储的具体实现放在基础设施层
         - 就是具体到哪些where条件的实现的那层
+        - `MySQL -─→ Repository Interface ←── Domain`
    - 确定边界的方法：进行领域划分的方法，是递进的关系
      1. 确定子域
      1. 确定子域的界限上下文
@@ -142,10 +143,10 @@
    - 类、对象
      1. 单一职责原则：一个类应该有且只有一条加以修改的理由，是应该和其他类配合共同完成某一行为
      1. 开放封闭原则：对扩展开放、对修改封闭。如每当添加新类型就必须修改时，可以使用工厂模式代替
+     1. 迪米特法则：即最少知识原则，强调类之间的松耦合，应该对其他对象保持最少的了解。在名为Demeter的软件研究项目中提出的
      1. 依赖倒置原则：高层模块不应该依赖底层模块，二者都应该依赖抽象；细节应该依赖于抽象。才能高内聚低耦合，不关心怎么定义，反过来也不关心怎么使用，按照规范实现就好了，don't call me，i will call you
      1. 里氏代换原则：子类必须能够替换父类，并出现在父类出现的任何地方。因为子类可以替换掉父类，父类才能被复用，子类也能增加新的功能
      1. 接口隔离原则：使用多个专门的接口，而不使用单一的总接口，就是接口也要遵从单一职责原则，每一个接口只负责一种角色
-     1. 迪米特法则：即最少知识原则，强调类之间的松耦合，应该对其他对象保持最少的了解
      1. 合成/聚合复用原则：要尽量使用合成/聚合，不要滥用继承
    - 其他
      1. 性能：for循环里不能有调用api、数据库操作等，字符串用单引号代替双引号
@@ -200,7 +201,7 @@
 1. design pattern
    - 理解
      1. 是特定环境下同类问题的解决方案，是自下而上的，来源于实践，发现模式而不是发明模式
-     1. 是对高频变化点的结构化处理
+     1. 控制“变化”：是对高频变化点的结构化处理
         - 未来最可能变化的是什么？变化应该被隔离在哪一层？谁应该依赖谁？运行时还是编译时决定？是数据变化、行为变化，还是流程变化？
      1. 问题是所有的基础
      1. 设计模式是语言无关的
@@ -221,31 +222,210 @@
 1. 比较
     | 模式   | 英文               | 目的 |
     | ---- | ---------------- | -- |
-    | 单例      | Singleton                 |                               |
-    | 工厂方法  | Factory Method            |                               |
-    | 抽象工厂  | Abstract Factory          |                               |
-    | 建造者    | Builder                   |                               |
-    | 原型      | Prototype                 |                               |
+    | 单例      | Singleton                 |                                   |
+    | 工厂方法  | Factory Method            |                                   |
+    | 抽象工厂  | Abstract Factory          | 一个工厂创建一组相关的产品             |
+    | 建造者    | Builder                   | 复杂构建过程从对象本身剥离，sdk常用     |
+    | 原型      | Prototype                 | 复制个新的                          |
 
-    | 适配器    | Adapter                   | 不兼容接口 → 兼容接口             |
-    | 桥接      | Bridge                    |                               |
-    | 组合      | Composite                 |                               |
-    | 装饰器    | Decorator                 | 原有功能 → 我给它加点能力         |
-    | 外观      | Facade                    | 复杂接口 → 提供简单接口           |
-    | 享元      | Flyweight                 |                               |
-    | 代理      | Proxy                     | 增加代理的逻辑                |
+    | 适配器    | Adapter                   | 不兼容接口 → 兼容接口                 |
+    | 桥接      | Bridge                    | 排列组合不同抽象的实现，减少类爆炸      |
+    | 组合      | Composite                 | 单个和整体统一对待，专治树形结构        |
+    | 装饰器    | Decorator                 | 原有功能 → 我给它加点能力             |
+    | 外观      | Facade                    | 复杂接口 → 提供简单接口去调用         |
+    | 享元      | Flyweight                 | 大量重复的抽出来，省内存              |
+    | 代理      | Proxy                     | 增加代理的逻辑                      |
 
-    | 责任链    | Chain of Responsibility   | 请求沿着处理链一个个传递          |
-    | 命令      | Command                   | 做什么                        |
-    | 解释器    | Interpreter               |                               |
-    | 迭代器    | Iterator                  |                               |
-    | 中介者    | Mediator                  | 集中协调多个对象之间的交互        |
-    | 备忘录    | Memento                   |                               |
-    | 观察者    | Observer                  | 一个事件发生，通知一批订阅者      |
-    | 状态      | State                     | 现在是什么状态，所以决定怎么做    |
-    | 策略      | Strategy                  | 选择怎么做，调用方主动选择策略    |
-    | 模板方法  | Template Method           |                               |
-    | 访问者    | Visitor                   |                               |
+    | 责任链    | Chain of Responsibility   | 请求沿着处理链一个个传递处理           |
+    | 命令      | Command                   | 把操作封装成可独立操作的对象           |
+    | 解释器    | Interpreter               | 特定场景，规则解析成可执行的逻辑        |
+    | 迭代器    | Iterator                  | 提供简单迭代方法，不管内部             |
+    | 中介者    | Mediator                  | 各模块不直接相互调用，通过中间人        |
+    | 备忘录    | Memento                   | 特定场景，建快照                     |
+    | 观察者    | Observer                  | 一个事件发生，通知一批订阅者          |
+    | 状态      | State                     | 现在是什么状态，所以决定怎么做        |
+    | 策略      | Strategy                  | 选择怎么做，调用方主动选择策略        |
+    | 模板方法  | Template Method           | 建立流程模版                        |
+    | 访问者    | Visitor                   | 特定场景，类型固定，操作多变，AST绝配   |
+1. 最佳实践
+   - 心得
+     1. 设计模式也是条条框框，而且不止这23种，不同的场景太多，硬套设计模式，会带来很多的副作用
+     1. 优雅的消除重复&面向扩展：那么什么才是最值得抽象的呢？那就是业务代码里重复的、最不变的，目标冲着消除重复&面向扩展，然后什么情况搭配对应的解决方案就行，不用死记硬背，解决目标的过程种有什么工具用什么工具，会什么工具用什么工具，代码是一步步变好的，这样自己既能下得去手，也能把代码改好
+     1. 复杂场景用多了，代码自然会写的好
+   - 使用
+     1. 总览
+        - 找到变化的边界
+        - 用抽象把变化包起来
+        - 让稳定代码依赖抽象
+        - 让变化代码实现抽象
+     1. 判断框架
+        - 什么会变？算法、实现、状态、流程、协议、数据源
+        - 谁需要知道这个变化？把不知道的人隔离出去
+        - 怎么变？
+          1. 一维还是二维？
+             - 一维：策略 Strategy
+             - 二维：桥接 Bridge
+          1. 横向增强还是替换实现？
+             - 增强：装饰器 Decorator
+             - 替换/屏蔽：适配器 Adapter / 代理 Proxy
+          1. 是流程复杂还是规则复杂？
+             - 流程：State / Chain / Command
+             - 规则：策略 Strategy / 语法解释器 Interpreter
+     1. 必须形成条件反射
+        ```
+        策略 —— Strategy
+        适配器 —— Adapter
+        装饰器 —— Decorator
+        代理 —— Proxy
+        工厂 —— Factory
+        外观 —— Facade
+        责任链 —— Chain of Responsibility
+        状态/有限状态机 —— State / FSM
+
+        依赖注入 —— Dependency Injection
+        仓储 —— Repository
+
+        工作池 —— Worker Pool
+        流水线 —— Pipeline
+        扇入/扇出 —— Fan-in / Fan-out
+        上下文 —— Context
+        错误组 —— errgroup
+        请求合并 —— singleflight
+        ```
+     1. 复杂系统非常重要
+        ```
+        命令 —— Command
+        组合 —— Composite
+        观察者 —— Observer
+        中介者 —— Mediator
+        建造者 / 函数式选项 —— Builder / Functional Options
+        桥接 —— Bridge
+        解释器 —— Interpreter
+        规约 —— Specification
+
+        命令查询职责分离 —— CQRS
+        分布式事务 —— Saga
+        事务消息表 —— Outbox
+        幂等 —— Idempotency
+        熔断器 —— Circuit Breaker
+        舱壁隔离 —— Bulkhead
+        ```
+     1. 知道即可
+        ```
+        原型 —— Prototype
+        享元 —— Flyweight
+        备忘录 —— Memento
+        访问者 —— Visitor
+        抽象工厂 —— Abstract Factory
+        模板方法 —— Template Method
+        迭代器 —— Iterator
+        单例 —— Singleton
+        ```
+   - 典型场景
+     1. 依赖注入：控制反转是目的和原则，依赖注入是实现它的常用手段
+        ```go
+        // 最经典：依赖关系由外部决定
+        type UserService struct {
+            repo UserRepository
+        }
+
+        func NewUserService(repo UserRepository) *UserService {
+            return &UserService{
+                repo: repo,
+            }
+        }
+
+        // 而不是
+        func NewUserService() *UserService {
+            return &UserService{
+                repo: NewMySQLRepository(),
+            }
+        }
+        ```
+     1. 领域模式：隔绝了不同的实现细节，这样好替换
+        ```go
+        MySQLUserRepository
+        RedisUserRepository
+        MockUserRepository
+        ```
+     1. 巨大switch：策略 Strategy、工厂 Factory
+     1. 大量状态判断(if status)：状态 State、有限状态机 FSM
+     1. 层层前置逻辑：责任链 Chain of Responsibility、装饰器 Decorator、中间件 Middleware
+     1. 第三方SDK：适配器 Adapter
+     1. 代码知道太多子系统：外观 Facade、应用服务 Application Service
+     1. M×N组合爆炸：桥接 Bridge
+     1. 操作要好调用/排队/重试/记录：命令 Command
+   - go的典型场景
+     1. 接受interfaces，返回structs
+        ```go
+        func NewService(repo Repository) *Service       // Repository是interfaces，*Service是structs
+        ```
+     1. 能用函数表达的行为，不要急着创建interface + struct
+     1. interface应该由消费者定义，而不是实现者定义
+     1. 接口隔离：The bigger the interface, the weaker the abstraction.
+        ```go
+        // 非常go风格
+        type Reader interface {
+            Read([]byte) (int, error)
+        }
+        // 去组合，而不是java的聚集一堆
+        type ReadWriter interface {
+            Reader
+            Writer
+        }
+        ```
+     1. 建造者模式/functional options
+        ```go
+        NewClient(
+            WithTimeout(...),
+            WithRetry(...),
+            WithLogger(...),
+        )
+
+        // 兼容默认值
+        // 参数可扩展
+        // 调用语义清晰
+        // 避免 constructor 爆炸
+        ```
+   - go的并发场景
+     1. 数量控制的并发channel
+     1. 结构化取消机制
+        ```go
+        ctx, cancel := context.WithCancel(ctx)
+        defer cancel()
+        ```
+     1. Singleflight
+        ```go
+        // 1个请求查结果，结果共享给9999个请求
+        var group singleflight.Group
+
+        value, err, _ := group.Do(key, func() (any, error) {
+            return queryDB()
+        })
+        ```
+     1. 并行检测错误
+        ```go
+        g, ctx := errgroup.WithContext(ctx)
+
+        g.Go(func() error {
+            return queryA(ctx)
+        })
+        g.Go(func() error {
+            return queryB(ctx)
+        })
+
+        if err := g.Wait(); err != nil {
+            return err
+        }
+        ```
+   - 分布式场景
+     1. 隔离 bulkhead：一个挂掉不能拖垮所有
+     1. 缓存 Cache-Aside
+     1. 回滚：分布式事务
+
+     1. 限流 rate limiter
+     1. 重试 retry：幂等、最多次数、间隔
+     1. 熔断 circuit breaker
 1. 单例模式
    - 理解：Singleton，保证只有一个实例，并提供一个访问它的全局访问点，避免不断new浪费资源，同时承担全局唯一的功能。php的所有在页面执行完后全部清空削弱了单例的表现，饿汉模式、懒汉模式
    - 要点
@@ -502,7 +682,8 @@
     )
     ```
 1. 原型模式
-   - 理解：Prototype，复制原型创建新的对象，从一个对象克隆一个新的，而不需要知道如何创建的细节。可用于创建对象成本过高
+   - 理解：不重新一步步创建对象，而是拿一个现成对象复制一份，再稍微修改
+     1. 就是复制个新的，不要一步步从头建立
      1. 浅拷贝：引用不会被复制，注意共享修改
      1. 深拷贝：可调用被引用对象自身的克隆方法进行复制
    - 代码
@@ -739,9 +920,9 @@
     ```
 1. 外观模式
    - 理解：Facade，给一堆复杂子系统包一层简单入口，让调用方不用关心内部怎么协作
-     1. 如下单实际涉及库存检查、支付、物流、通知，不能让业务方自己挨个调用
    - 示例
     ```go
+    // 下单涉及库存检查、支付、物流、通知，不能让业务方自己挨个调用
     type Stock struct{}
     func (Stock) Check() { fmt.Println("检查库存") }
 
@@ -1339,21 +1520,6 @@
         // 结果：轻松实例化不同超人，扩展的话增加或修改工厂方法即可        
         ```
    - 依赖注入：工厂模式的问题，只是由对多个外部类的依赖变成了对一个"工厂"的依赖。有了统一的接口实现(契约)，就可以动态注入依赖
-        ```
-        interface SuperModuleInterface {
-            public function activate();
-        }
-        class Superman {
-            protected $module;
-
-            public function __construct(SuperModuleInterface $module) {
-                $this->module = $module;
-            }
-        }
-        // 依赖注入典型示例
-        $superModule = new XPower;                                          // 实例化技能模块
-        $superMan = new Superman($superModule);                             // 注入技能模块依赖
-        ```
    - IoC容器：工厂模式的升华，向工厂提交一个脚本，工厂通过指令自动化生产
         ```
         class Container {                                                   // 容器
