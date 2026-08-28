@@ -1704,6 +1704,7 @@
    - 调度
    - 会话
      1. 沙箱
+        - 即使路径检查或命令策略存在遗漏，工具仍然被限制在一个物理隔离环境中，不能接触宿主机进程、环境和文件系统
      1. 状态管理
         - metadata：记录干到哪了、共享数据等
      1. HITL：Human In The Loop 人在回路中，在Agent/工作流/自动化系统里，系统执行到某个关键步骤时暂停，等待人工确认后继续
@@ -1893,10 +1894,9 @@
    - 反思
 1. 设计
    - 如果Agent需要执行系统命令或访问文件，你怎么防止它越权删除数据库、读取主机敏感文件?
-     1. 理解：核心原则是模型不能直接碰系统权限，只能调用受控 Tool。生产上做五层防护
-     1. 措施
-        - 命令白名单，禁用rm、curl、sCp、chmod、数据库drop 等高危操作
-        - 沙箱执行，用Docker/gVisor 限制 CPU、内存、网络、目录，Agent只能“申请执行”，不能拥有宿主机权限
+     1. 理解：核心原则是模型不能直接碰系统权限，只能调用受控Tool。生产上做五层防护
+        - 命令白名单，禁用rm、curl、scp、chmod、数据库drop等高危操作
+        - 沙箱执行，用docker/gVisor限制CPU、内存、网络、目录，agent只能“申请执行”，不能拥有宿主机权限
         - 文件访问做工作目录隔离和路径规范化，禁止../、/etc、w/.ssh
         - 高危操作必须HITL审批
         - 全量审计Tool入参、执行人、结果和回滚点（就是记日志）
@@ -3475,9 +3475,37 @@
         - 其迭代直接从BaseChatModel/ToolCallingChatModel变为了ChatModelAgent，可见其落后性
 1. 理解
    - 提示词是如何组装的：SOUL.md像“底座人格”，调用方system prompt像“本次会话的临时场景说明”
-1. 组成
-   - internal/tools：分全局和垂直的基础工具
-   - internal/skills：skill管理相关
+   - 流程
+     1. 一次性的ContextStage
+     1. 每次turn都执行一次的顺序是
+        - PruneStage
+        - ThinkStage
+        - ToolStage：并行执行、沙箱执行
+        - ObserveStage：结果整理器，它收集并发新消息、区分中间工具回复与最终回答、执行最终回答 Hook、决定是否需要再给模型一轮机会，并跨轮保存模型生成的图片；但它本身不直接控制流水线退出。
+        - CheckpointStage：保存检查点，每5轮记入Session Store
+     1. 一次性的FinalizeStage
+   - HITL的实现是每次的ToolStage阶段的channel阻塞和唤醒，没有持久化机制，断电丢失，即没有调度器重新装载checkpoint，再恢复pipeline
+   - Provider：对ds的支持还只是使用OpenAI兼容的API格式，并不支持ds新支持的Responses API格式
+   - 窗口上下文大小管理
+     1. 预算计算公式：上下文总窗口大小 - OverheadTokens 每次输入开销(System Message + Tool Schemas) - MaxTokens 为本轮模型回答预留的输出空间 - ReserveTokens 额外的安全缓冲空间(本地token计数与Provider实际计数存在偏差、在恰好贴近硬上限时发生溢出)
+     1. 压缩规则：占用超过70%进行处理，默认5分钟的缓存时间 + 软裁剪 + 分层摘要
+     1. 软裁剪：只处理较老、体积较大的 tool result，保留开头和结尾，删除中间
+     1. llm压缩方法：少于6条不压缩，最少保留最近4条且30%的消息，调整切分点避免拆开tool_call、tool_result，然后进行前70%的分层摘要
+        - 分层摘要：不同类型的消息分别进行压缩，user一个chunk，assistant一个chunk，assistant tool call+tool result一个chunk，最后所有chunk合并要压缩
+   - 工具使用
+     1. 沙箱：启动的时候判断docker命令是否存在，存在就用沙箱，不存在就不用
+     1. filesystem 读工具
+        - 四种职责
+          1. 逻辑文件路由	    提示Context、Memory、System Prompt 虚拟文件直接从上下文读
+          1. 权限与隔离	        多租户、team、group、delegation
+          1. 存储后端	        宿主机文件系统、Docker FsBridge、数据库
+          1. LLM输出适配	    二进制拒绝、分页、50K字符上限、错误提示
+        - 路径检查：计算授权目录workspace，纵深检查路径是否在授权内
+          1. 只能读文本文件，目录、symlink、socket、FIFO/命名管道、字符设备和块设备、hardlink文件不允许，防止永久阻塞、设备数据泄漏等
+        - 命令规范：经过Unicode NFKC规范化、删除零宽字符，防止模型用全角字符、零宽字符拆开危险命令，从而绕过正则匹配
+1. 设计不合理的地方
+   - runGateway的wireExtras、registerAllMethods两个大方法，耦合了很多方面的业务，参数有七八个之多
+   - 负责全局路由表的MethodRouter还负责了公共权限中间层、系统方法处理器，导致MethodRouter类型又循环引用了Server，形成了较强耦合
 ### AI编程
 1. 理解
    - 代码理解的架构方式
@@ -4641,6 +4669,7 @@
    - 人要驱动ai，而不是被ai左右
      1. ai是执行工具，不能替代人进行架构设计和方案决策
      1. 与ai持续battle，明确技术栈和规范，掌握实现逻辑、避免黑盒开发、确保实现符合规范
+   - 实现变的便宜了，做对并没有
 1. 历程
    - ai太好了，我不会的全部可以教我，记得遇到不懂的不要妥协，去问ai老师
    - 现在掌握信息的效率太低了，提高方法
